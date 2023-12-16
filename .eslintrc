@@ -5,7 +5,7 @@
   },
   "rules": {
     "space-before-function-paren": ["error", "always"],
-    "quotes": ["error", "double"],
+    "quotes": ["warn", "double"],
     "semi": ["error", "never"]
     // Other ESLint rules as needed
   }

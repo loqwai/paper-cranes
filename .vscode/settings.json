@@ -26,6 +26,6 @@
         "iResolution": [800, 800, 0]
     },
     "editor.codeActionsOnSave": {
-        "source.fixAll.eslint": "explicit"
-    }
+        "source.fixAll.eslint": true
+      }
 }
