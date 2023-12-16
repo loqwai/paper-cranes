@@ -63,7 +63,7 @@ function init() {
 
     renderer = new THREE.WebGLRenderer() // Initialize renderer here
     renderer.setPixelRatio(window.devicePixelRatio)
-    renderer.audioResize = false
+    renderer.autoResize = false
 
     container.appendChild(renderer.domElement)
 
@@ -79,7 +79,6 @@ function init() {
 function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight
     camera.updateProjectionMatrix()
-    renderer.setSize(window.innerWidth, window.innerHeight)
     uniforms.u_resolution.value.x = renderer.domElement.width
     uniforms.u_resolution.value.y = renderer.domElement.height
 }
