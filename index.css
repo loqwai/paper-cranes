@@ -1,0 +1,13 @@
+canvas {
+  background-color: #00FF00;
+  width: 45%;
+}
+
+#container {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: #00eeff;
+}

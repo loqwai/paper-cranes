@@ -1,61 +1,56 @@
 <!DOCTYPE html>
 <html lang="en">
+    <head>
+        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+        <meta http-equiv="Pragma" content="no-cache" />
+        <meta http-equiv="Expires" content="0" />
+        <link rel="stylesheet" href="index.css" />
+        <style type="text/css">
+            h1 {
+                font-size: 10vmin;
+                font-family: sans-serif;
+                text-align: center;
+                color: #fff;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                padding: 5vh;
+            }
 
-<head>
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
-  <link rel="stylesheet" href="global.css">
-  <style type="text/css">
-    h1 {
-      font-size: 10vmin;
-      font-family: sans-serif;
-      text-align: center;
-      color: #fff;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      padding: 5vh;
-    }
+            small {
+                position: fixed;
+                top: 0;
+                left: 0;
+            }
+        </style>
+        <script type="importmap">
+            {
+                "imports": {
+                    "three": "./node_modules/three/build/three.module.js",
+                    "three/addons/": "https://unpkg.com/three@<version>/examples/jsm/"
+                }
+            }
+        </script>
+    </head>
 
-    small {
-      position: fixed;
-      top: 0;
-      left: 0;
-    }
-  </style>
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "./node_modules/three/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@<version>/examples/jsm/"
-      }
-    }
-  </script>
-</head>
+    <body>
+        <div id="container"></div>
+        <div id="visualizer"></div>
+        <script id="vertexShader" type="x-shader/x-vertex">
+            void main() {
+                gl_Position = vec4( position, 1.0 );
+            }
+        </script>
+        <script id="fragmentShader" type="x-shader/x-fragment">
+            uniform vec2 u_resolution;
+            uniform float u_time;
 
-<body>
-  <div id="container"></div>
-  <div id="visualizer"></div>
-  <script id="vertexShader" type="x-shader/x-vertex">
-      void main() {
-          gl_Position = vec4( position, 1.0 );
-      }
-  </script>
-  <script id="fragmentShader" type="x-shader/x-fragment">
-      uniform vec2 u_resolution;
-      uniform float u_time;
-
-      void main() {
-          vec2 st = gl_FragCoord.xy/u_resolution.xy;
-          gl_FragColor=vec4(st.x,st.y,0.0,1.0);
-      }
-  </script>
-  <script type="module" src="./index.js">
-  </script>
-</body>
-
-
-
+            void main() {
+                vec2 st = gl_FragCoord.xy/u_resolution.xy;
+                gl_FragColor=vec4(st.x,st.y,0.0,1.0);
+            }
+        </script>
+        <script type="module" src="./index.js"></script>
+    </body>
 </html>
