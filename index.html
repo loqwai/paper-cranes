@@ -18,17 +18,25 @@
       transform: translate(-50%, -50%);
       padding: 5vh;
     }
+
     small {
       position: fixed;
       top: 0;
       left: 0;
     }
   </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./node_modules/three/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@<version>/examples/jsm/"
+      }
+    }
+  </script>
 </head>
 
 <body>
   <div id="container"></div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.159.0/three.min.js" integrity="sha512-OviGQIoFPxWNbGybQNprasilCxjtXNGCjnaZQvDeCT0lSPwJXd5TC3usI/jsWepKW9lZLZ1ob1q/Vy4MnlTt7g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script id="vertexShader" type="x-shader/x-vertex">
       void main() {
           gl_Position = vec4( position, 1.0 );
@@ -43,72 +51,7 @@
           gl_FragColor=vec4(st.x,st.y,0.0,1.0);
       }
   </script>
-  <script>
-     var container;
-var camera, scene, renderer, clock;
-var uniforms;
-
-init();
-animate();
-
-function init() {
-    container = document.getElementById( 'container' );
-
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.z = 1;
-
-    scene = new THREE.Scene();
-    clock = new THREE.Clock();
-
-    var geometry = new THREE.PlaneGeometry( 2, 2 );
-
-    uniforms = {
-        u_time: { value: 1.0 },
-        u_resolution: { value: new THREE.Vector2() },
-        u_mouse: { value: new THREE.Vector2() }
-    };
-
-    var material = new THREE.ShaderMaterial( {
-        uniforms: uniforms,
-        vertexShader: document.getElementById( 'vertexShader' ).textContent,
-        fragmentShader: document.getElementById( 'fragmentShader' ).textContent
-    } );
-
-    var mesh = new THREE.Mesh( geometry, material );
-    scene.add( mesh );
-
-    renderer = new THREE.WebGLRenderer();
-    renderer.setPixelRatio( window.devicePixelRatio );
-
-    container.appendChild( renderer.domElement );
-
-    onWindowResize();
-    window.addEventListener( 'resize', onWindowResize, false );
-
-    document.onmousemove = function(e){
-        uniforms.u_mouse.value.x = (e.clientX / window.innerWidth) * 2 - 1;
-        uniforms.u_mouse.value.y = - (e.clientY / window.innerHeight) * 2 + 1;
-    }
-}
-
-function onWindowResize( event ) {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize( window.innerWidth, window.innerHeight );
-    uniforms.u_resolution.value.x = renderer.domElement.width;
-    uniforms.u_resolution.value.y = renderer.domElement.height;
-}
-
-function animate() {
-    requestAnimationFrame( animate );
-    render();
-}
-
-function render() {
-    uniforms.u_time.value += clock.getDelta();
-    renderer.render( scene, camera );
-}
-
+  <script type="module" src="./index.js">
   </script>
 </body>
 
