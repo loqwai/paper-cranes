@@ -8,7 +8,6 @@ const main = async () => {
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   const sourceNode = audioContext.createMediaStreamSource(stream);
   const audioProcessor = new AudioProcessor(audioContext, sourceNode);
-  document.querySelector('h1').remove();
   // Remove event listeners if no longer needed
   document.onclick = null;
   document.ontouchstart = null;
