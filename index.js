@@ -61,7 +61,9 @@ function init() {
     const mesh = new THREE.Mesh(geometry, material)
     scene.add(mesh)
 
-    renderer = new THREE.WebGLRenderer() // Initialize renderer here
+    renderer = new THREE.WebGLRenderer({
+        canvas: document.getElementById('three-visualizer'),
+    }) // Initialize renderer here
     renderer.setPixelRatio(window.devicePixelRatio)
     renderer.autoResize = false
 
