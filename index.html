@@ -27,14 +27,89 @@
 </head>
 
 <body>
-  <small class="sparkly animated"> version 1.0.3</small>
-  <h1 class="sparkly animated">
-    Click anywhere to start
-  </h1>
+  <div id="container"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.159.0/three.min.js" integrity="sha512-OviGQIoFPxWNbGybQNprasilCxjtXNGCjnaZQvDeCT0lSPwJXd5TC3usI/jsWepKW9lZLZ1ob1q/Vy4MnlTt7g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script id="vertexShader" type="x-shader/x-vertex">
+      void main() {
+          gl_Position = vec4( position, 1.0 );
+      }
+  </script>
+  <script id="fragmentShader" type="x-shader/x-fragment">
+      uniform vec2 u_resolution;
+      uniform float u_time;
 
-  <canvas id="visualizer" data-" width="1080" height="1080"></canvas>
-  <script src="https://greggman.github.io/webgl-lint/webgl-lint.js"></script>
-  <script src="src/index.js" type="module"></script>
+      void main() {
+          vec2 st = gl_FragCoord.xy/u_resolution.xy;
+          gl_FragColor=vec4(st.x,st.y,0.0,1.0);
+      }
+  </script>
+  <script>
+     var container;
+var camera, scene, renderer, clock;
+var uniforms;
+
+init();
+animate();
+
+function init() {
+    container = document.getElementById( 'container' );
+
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = 1;
+
+    scene = new THREE.Scene();
+    clock = new THREE.Clock();
+
+    var geometry = new THREE.PlaneGeometry( 2, 2 );
+
+    uniforms = {
+        u_time: { value: 1.0 },
+        u_resolution: { value: new THREE.Vector2() },
+        u_mouse: { value: new THREE.Vector2() }
+    };
+
+    var material = new THREE.ShaderMaterial( {
+        uniforms: uniforms,
+        vertexShader: document.getElementById( 'vertexShader' ).textContent,
+        fragmentShader: document.getElementById( 'fragmentShader' ).textContent
+    } );
+
+    var mesh = new THREE.Mesh( geometry, material );
+    scene.add( mesh );
+
+    renderer = new THREE.WebGLRenderer();
+    renderer.setPixelRatio( window.devicePixelRatio );
+
+    container.appendChild( renderer.domElement );
+
+    onWindowResize();
+    window.addEventListener( 'resize', onWindowResize, false );
+
+    document.onmousemove = function(e){
+        uniforms.u_mouse.value.x = (e.clientX / window.innerWidth) * 2 - 1;
+        uniforms.u_mouse.value.y = - (e.clientY / window.innerHeight) * 2 + 1;
+    }
+}
+
+function onWindowResize( event ) {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize( window.innerWidth, window.innerHeight );
+    uniforms.u_resolution.value.x = renderer.domElement.width;
+    uniforms.u_resolution.value.y = renderer.domElement.height;
+}
+
+function animate() {
+    requestAnimationFrame( animate );
+    render();
+}
+
+function render() {
+    uniforms.u_time.value += clock.getDelta();
+    renderer.render( scene, camera );
+}
+
+  </script>
 </body>
 
 
