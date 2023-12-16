@@ -77,7 +77,7 @@ function init() {
 }
 
 function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight
+    camera.aspect = renderer.domElement.width / renderer.domElement.height
     camera.updateProjectionMatrix()
     uniforms.u_resolution.value.x = renderer.domElement.width
     uniforms.u_resolution.value.y = renderer.domElement.height

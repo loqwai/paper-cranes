@@ -1,7 +1,9 @@
 canvas {
-  background-color: #00FF00;
+  background-color: #FF0000;
   width: 45%;
-  min-width: 300px;
+  min-width: calc(100vh * 0.45);
+  min-height: 100vh;
+  margin: 5px;
 }
 
 #container {
@@ -11,4 +13,9 @@ canvas {
   padding: 0;
   overflow: hidden;
   background-color: #00eeff;
+  display: flex;
+  /* center the items */
+  align-items: center;
+  width: 100vw;
+  justify-content: center;
 }

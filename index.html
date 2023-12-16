@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
     <head>
         <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
@@ -35,9 +35,10 @@
     </head>
 
     <body>
-      <h1>Click anywhere to start visualization</h1>
-        <div id="container"></div>
-        <canvas id="visualizer"></canvas>
+        <h1>Click anywhere to start visualization</h1>
+        <div id="container">
+            <canvas id="visualizer"></canvas>
+        </div>
         <script id="vertexShader" type="x-shader/x-vertex">
             void main() {
                 gl_Position = vec4( position, 1.0 );
