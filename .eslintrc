@@ -1,0 +1,13 @@
+{
+  "parserOptions": {
+    "ecmaVersion": 2021,
+    "sourceType": "module"
+  },
+  "rules": {
+    "prettier/prettier": ["error", { "singleQuote": true, "arrowParens": "always", "semi": false }],
+    "space-before-function-paren": ["error", "always"],
+    // Other ESLint rules as needed
+  },
+  "plugins": ["prettier"],
+  "extends": ["eslint:recommended", "plugin:prettier/recommended"]
+}
