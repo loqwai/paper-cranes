@@ -1,4 +1,4 @@
-function mu(i, amplitudeSpect) {
+function mu (i, amplitudeSpect) {
     let numerator = 0
     let denominator = 0
 
@@ -11,7 +11,7 @@ function mu(i, amplitudeSpect) {
     return numerator / denominator
 }
 
-function calculateSpectralCentroid(ampSpectrum) {
+function calculateSpectralCentroid (ampSpectrum) {
     return mu(1, ampSpectrum)
 }
 

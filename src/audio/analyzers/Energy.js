@@ -1,9 +1,9 @@
 // simple-processor.js
 class Energy extends AudioWorkletProcessor {
-    constructor() {
+    constructor () {
         super()
     }
-    process(inputs, outputs) {
+    process (inputs, outputs) {
         let energy = 0
         // for all inputs
         for (let input of inputs) {
@@ -21,4 +21,4 @@ class Energy extends AudioWorkletProcessor {
     }
 }
 
-registerProcessor('Audio-Energy', Energy)
+registerProcessor("Audio-Energy", Energy)
