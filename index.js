@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {AudioProcessor} from './src/audio/AudioProcessor.js';
-
+import {Visualizer} from './src/Visualizer.js';
 const main = async () => {
   console.log("Main function started");
   const audioContext = new AudioContext();
@@ -22,7 +22,7 @@ const main = async () => {
  if(!shader){
    throw new Error("No shader specified");
  }
- const viz = new ShaderToy(canvas, audioProcessor, shader, initialImageUrl);
+//  const viz = new Visualization(canvas, audioProcessor, shader, initialImageUrl);
  window.shaderToy = viz;
  await viz.init();
  viz.start();
@@ -34,7 +34,7 @@ document.onkeydown = main;
 document.ontouchstart = main;
 
 const container = document.getElementById('container');
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const camera = new THREE.PerspectiveCamera(75, container.width / container.height, 0.1, 1000);
 const scene = new THREE.Scene();
 const clock = new THREE.Clock();
 const uniforms = {
@@ -62,6 +62,7 @@ function init() {
 
     renderer = new THREE.WebGLRenderer(); // Initialize renderer here
     renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.audioResize = false;
 
     container.appendChild(renderer.domElement);
 
@@ -85,6 +86,7 @@ function onWindowResize() {
 function animate() {
     requestAnimationFrame(animate);
     render();
+    onWindowResize();
 }
 
 function render() {
