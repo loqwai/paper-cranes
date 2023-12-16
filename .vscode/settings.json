@@ -25,7 +25,6 @@
         "iTime": 0,
         "iResolution": [800, 800, 0]
     },
-    "editor.codeActionsOnSave": {
-        "source.fixAll.eslint": true
-      }
+
+    "editor.formatOnSave": true
 }

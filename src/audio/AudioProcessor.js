@@ -1,10 +1,10 @@
-import { applyHanningWindow } from "./applyHanningWindow.js"
+import { applyHanningWindow } from './applyHanningWindow.js'
 export class AudioProcessor {
     // An array of strings of names of processors
-    audioProcessors = ["Energy"]
-    thingsThatWork = ["SpectralFlux", "SpectralSpread", "SpectralCentroid"]
+    audioProcessors = ['Energy']
+    thingsThatWork = ['SpectralFlux', 'SpectralSpread', 'SpectralCentroid']
 
-    constructor (audioContext, sourceNode, fftSize = 2048) {
+    constructor(audioContext, sourceNode, fftSize = 2048) {
         this.audioContext = audioContext
         this.sourceNode = sourceNode
         this.fftSize = fftSize
@@ -65,9 +65,9 @@ export class AudioProcessor {
         requestAnimationFrame(this.pullFFTData)
     }
     updateLegacyFeatures = () => {
-        this.features["spectralSpread"] = this.rawFeatures["SpectralSpread"] || 0
-        this.features["spectralCentroid"] = (this.rawFeatures["SpectralCentroid"] || 0) / 4
-        this.features["spectralFlux"] = this.rawFeatures["SpectralFlux"] || 0
-        this.features["energy"] = this.rawFeatures["Energy"] || 0
+        this.features['spectralSpread'] = this.rawFeatures['SpectralSpread'] || 0
+        this.features['spectralCentroid'] = (this.rawFeatures['SpectralCentroid'] || 0) / 4
+        this.features['spectralFlux'] = this.rawFeatures['SpectralFlux'] || 0
+        this.features['energy'] = this.rawFeatures['Energy'] || 0
     }
 }

@@ -1,6 +1,6 @@
 let previousSignal = null
 
-function calculateSpectralFlux (currentSignal) {
+function calculateSpectralFlux(currentSignal) {
     if (!previousSignal) {
         previousSignal = currentSignal
         return 0 // Or handle the first frame differently

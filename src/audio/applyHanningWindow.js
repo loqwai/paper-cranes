@@ -1,4 +1,4 @@
-export function applyHanningWindow (audioBuffer) {
+export function applyHanningWindow(audioBuffer) {
     const N = audioBuffer.length
     const windowedBuffer = new Float32Array(N)
 

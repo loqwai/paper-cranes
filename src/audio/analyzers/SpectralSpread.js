@@ -1,4 +1,4 @@
-function mu (i, amplitudeSpect) {
+function mu(i, amplitudeSpect) {
     let numerator = 0
     let denominator = 0
 
@@ -11,7 +11,7 @@ function mu (i, amplitudeSpect) {
     return numerator / denominator
 }
 
-function calculateSpectralSpread (fftData, sampleRate, fftSize) {
+function calculateSpectralSpread(fftData, sampleRate, fftSize) {
     const meanFrequency = mu(1, fftData, sampleRate, fftSize)
     const secondMoment = mu(2, fftData, sampleRate, fftSize)
 

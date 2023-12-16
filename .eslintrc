@@ -1,12 +1,11 @@
 {
-  "parserOptions": {
-    "ecmaVersion": 2023,
-    "sourceType": "module"
-  },
-  "rules": {
-    "space-before-function-paren": ["error", "always"],
-    "quotes": ["warn", "double"],
-    "semi": ["error", "never"]
-    // Other ESLint rules as needed
-  }
+    "parserOptions": {
+        "ecmaVersion": 2023,
+        "sourceType": "module"
+    },
+    "plugins": ["prettier"],
+
+    "rules": {
+        "prettier/prettier": "error"
+    }
 }
