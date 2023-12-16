@@ -27,7 +27,8 @@ export class AudioProcessor {
     start = async () => {
         const timestamp = Date.now()
         for (const processor of this.audioProcessors) {
-            await this.audioContext.audioWorklet.addModule(`/src/analyzers/${processor}.js?timestamp=${timestamp}`)
+            console.log(`Adding audio worklet ${processor}`)
+            await this.audioContext.audioWorklet.addModule(`/src/audio/analyzers/${processor}.js?timestamp=${timestamp}`)
             console.log(`Audio worklet ${processor} added`)
             const audioProcessor = new AudioWorkletNode(this.audioContext, `Audio-${processor}`)
             this.sourceNode.connect(audioProcessor)
@@ -35,7 +36,7 @@ export class AudioProcessor {
             audioProcessor.port.onmessage = (event) => (this.rawFeatures[processor] = event.data)
         }
         for (const workerName of this.thingsThatWork) {
-            const worker = new Worker(`/src/analyzers/${workerName}.js?timestamp=${timestamp}`)
+            const worker = new Worker(`/src/audio/analyzers/${workerName}.js?timestamp=${timestamp}`)
             console.log(`Worker ${workerName} added`)
             worker.onmessage = (event) => {
                 // console.log(`Worker ${workerName} message received`, event);;

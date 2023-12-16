@@ -8,6 +8,7 @@ const main = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     const sourceNode = audioContext.createMediaStreamSource(stream)
     const audioProcessor = new AudioProcessor(audioContext, sourceNode)
+    audioProcessor.start()
     // Remove event listeners if no longer needed
     document.onclick = null
     document.ontouchstart = null
@@ -22,7 +23,7 @@ const main = async () => {
     if (!shader) {
         throw new Error('No shader specified')
     }
-    //  const viz = new Visualization(canvas, audioProcessor, shader, initialImageUrl);
+    const viz = new Visualizer(canvas, audioProcessor, shader, initialImageUrl)
     window.shaderToy = viz
     await viz.init()
     viz.start()
