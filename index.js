@@ -1,38 +1,39 @@
 import * as THREE from 'three'
 import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { Visualizer } from './src/Visualizer.js'
-const main = async () => {
-    console.log('Main function started')
+
+const events = ['click', 'touchstart', 'keydown']
+
+events.forEach((event) => {
+    document.addEventListener(event, main, { once: true })
+})
+
+const setupAudio = async () => {
     const audioContext = new AudioContext()
     await audioContext.resume()
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     const sourceNode = audioContext.createMediaStreamSource(stream)
     const audioProcessor = new AudioProcessor(audioContext, sourceNode)
-    audioProcessor.start()
-    // Remove event listeners if no longer needed
-    document.onclick = null
-    document.ontouchstart = null
-    document.onkeydown = null
-
-    const canvas = document.querySelector('#visualizer')
-    const body = document.querySelector('body')
-    body.classList.add('ready')
-    const params = new URLSearchParams(window.location.search)
-    const shader = params.get('shader')
-    const initialImageUrl = params.get('image')
-    if (!shader) {
-        throw new Error('No shader specified')
-    }
-    const viz = new Visualizer(canvas, audioProcessor, shader, initialImageUrl)
-    window.shaderToy = viz
-    await viz.init()
-    viz.start()
-    document.onclick = () => (viz.startTime = performance.now())
-    document.onkeydown = () => (viz.startTime = performance.now())
+    return audioProcessor
 }
-document.onclick = main
-document.onkeydown = main
-document.ontouchstart = main
+
+const updateUI = () => {}
+
+const main = async () => {
+    if (window.viz) return // Prevent multiple calls
+    const audio = await setupAudio()
+
+    const canvas = document.getElementById('visualizer')
+
+    const params = new URLSearchParams(window.location.search)
+    const shader = params.get('shader') ?? 'beat-trip'
+    const initialImageUrl = params.get('image') ?? 'https://i.imgur.com/2f2QX9A.jpg'
+
+    const video = new Visualizer(canvas, shader, initialImageUrl)
+    await video.init()
+    updateUI()
+    requestAnimationFrame(() => render({ video, audio }))
+}
 
 const container = document.getElementById('container')
 const camera = new THREE.PerspectiveCamera(75, container.width / container.height, 0.1, 1000)
