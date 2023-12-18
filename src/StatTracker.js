@@ -1,4 +1,4 @@
-class StatTracker {
+class OptimizedStatTracker {
     constructor(historySize) {
         this.historySize = historySize
         this.queue = [] // To keep the last 'historySize' values
@@ -12,7 +12,7 @@ class StatTracker {
     }
 
     set(value) {
-        if (typeof value !== 'number') throw new Error(`StatTracker can only track numbers, received ${value}`)
+        if (typeof value !== 'number') throw new Error('StatTracker can only track numbers')
 
         // Update min and max
         this.min = Math.min(this.min, value)
@@ -64,24 +64,5 @@ class StatTracker {
         this.max = Math.max(...this.queue)
     }
 }
-class StatTrackerProcessor extends AudioWorkletProcessor {
-    constructor() {
-        super()
-        this.statTracker = new StatTracker(500) // Initialize with desired history size
-    }
 
-    process(inputs, outputs) {
-        if (inputs.length === 0) return true
-        const [[[input]]] = inputs
-        const output = outputs ? outputs[0] : []
-        this.port.postMessage({ input, output })
-        return this._process(input, output)
-    }
-    _process(input, outputs) {
-        this.statTracker.set(input) // Assuming mono input for simplicity
-        this.port.postMessage({ input, value: this.statTracker.get() })
-        return true
-    }
-}
-
-registerProcessor('StatTracker', StatTrackerProcessor)
+export { OptimizedStatTracker as StatTracker }

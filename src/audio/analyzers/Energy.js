@@ -1,24 +1,24 @@
-const calculateEnergy = (input) => {
-    return input.reduce((acc, sample) => acc + Math.pow(Math.abs(sample), 2), 0) // Sum the squares of the absolute sample values
-}
+// simple-processor.js
 class Energy extends AudioWorkletProcessor {
     constructor() {
         super()
     }
     process(inputs, outputs) {
-        if (inputs.length === 0) return true
-        const input = inputs[0][0]
-        const output = outputs ? outputs[0][0] : []
-        this.port.postMessage({ type: 'debug', input, output })
-        return this._process(input, output)
-    }
-    _process(input, outputs) {
-        const energy = calculateEnergy(input)
-        this.port.postMessage({ value: energy, input, outputs })
-        this.port.postMessage({ type: 'debug', value: energy, input, outputs })
-        outputs[0] = energy
+        let energy = 0
+        // for all inputs
+        for (let input of inputs) {
+            // for all channels
+            for (let channel of input) {
+                // for all samples
+                for (let sample of channel) {
+                    energy += Math.pow(Math.abs(sample), 2)
+                }
+            }
+        }
+        this.energy = energy
+        this.port.postMessage(this.energy)
         return true
     }
 }
 
-registerProcessor('energy', Energy)
+registerProcessor('Audio-Energy', Energy)
