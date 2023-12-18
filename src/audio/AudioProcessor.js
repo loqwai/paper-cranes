@@ -1,7 +1,7 @@
 import { applyHanningWindow } from './applyHanningWindow.js'
 export class AudioProcessor {
     // An array of strings of names of processors
-    audioProcessors = ['Energy']
+    audioProcessors = ['energy']
     thingsThatWork = ['SpectralFlux', 'SpectralSpread', 'SpectralCentroid']
 
     constructor(audioContext, sourceNode, fftSize = 2048) {
@@ -26,17 +26,26 @@ export class AudioProcessor {
 
     start = async () => {
         const timestamp = Date.now()
+        this.audioContext.audioWorklet.addModule(`/src/audio/analyzers/StatTracker.js?timestamp=${timestamp}`)
         for (const processor of this.audioProcessors) {
             console.log(`Adding audio worklet ${processor}`)
             await this.audioContext.audioWorklet.addModule(`/src/audio/analyzers/${processor}.js?timestamp=${timestamp}`)
             console.log(`Audio worklet ${processor} added`)
-            const audioProcessor = new AudioWorkletNode(this.audioContext, `Audio-${processor}`)
+            this.rawFeatures[processor] = {}
+            const audioProcessor = new AudioWorkletNode(this.audioContext, processor)
             this.sourceNode.connect(audioProcessor)
-            // Don't connect the audioProcessor to the audioContext's destination
+            const statTracker = new AudioWorkletNode(this.audioContext, 'StatTracker')
+            audioProcessor.connect(statTracker)
+
             audioProcessor.port.addEventListener('message', (event) => {
-                this.rawFeatures[processor] = event.data.value
+                // console.log(`Audio worklet ${processor} message received`, event)
+                this.rawFeatures[processor].value = event.data.value
+            })
+            statTracker.port.addEventListener('message', (event) => {
+                this.rawFeatures[processor].stats = event.data.value
             })
             audioProcessor.port.start()
+            statTracker.port.start()
             // audioProcessor.port.onmessage = (event) => {
             //     console.log(`Audio worklet ${processor} message received`, event)
             // }
@@ -72,10 +81,21 @@ export class AudioProcessor {
         requestAnimationFrame(this.pullFFTData)
     }
     updateLegacyFeatures = () => {
-        // console.log({ rawFeatures: this.rawFeatures })
-        this.features['spectralSpread'] = this.rawFeatures['SpectralSpread'] || 0
-        this.features['spectralCentroid'] = (this.rawFeatures['SpectralCentroid'] || 0) / 4
-        this.features['spectralFlux'] = this.rawFeatures['SpectralFlux'] || 0
-        this.features['energy'] = this.rawFeatures['Energy'] || 0
+        this.features = {}
+        for (const processor in this.rawFeatures) {
+            this.mapFeature(processor, this.rawFeatures[processor])
+        }
+    }
+    mapFeature = (name, feature) => {
+        if (!feature.value) return
+        this.features[name] = feature.value
+        if (!feature.stats) return
+        this.features[`${name}Normalized`] = feature.stats.normalized
+        this.features[`${name}Mean`] = feature.stats.mean
+        this.features[`${name}StandardDeviation`] = feature.stats.standardDeviation
+        this.features[`${name}ZScore`] = feature.stats.zScore
+        this.features[`${name}Min`] = feature.stats.min
+        this.features[`${name}Max`] = feature.stats.max
+        console.log({ features: this.features })
     }
 }

@@ -5,16 +5,18 @@ class Energy extends AudioWorkletProcessor {
     constructor() {
         super()
     }
-    process([[input]], outputs) {
+    process(inputs, outputs) {
+        if (inputs.length === 0) return true
+        const input = inputs[0][0]
+        const output = outputs ? outputs[0][0] : []
+        return this._process(input, output)
+    }
+    _process(input, outputs) {
         const energy = calculateEnergy(input)
-        this.port.postMessage({ value: energy, time: performance.now() })
-        // Output the energy to the first element of the output buffer
-        if (outputs[0] && outputs[0][0]) {
-            outputs[0][0][0] = energy
-            outputs[0][0][1] = performance.now()
-        }
+        this.port.postMessage({ value: energy, input, outputs })
+        outputs[0] = energy
         return true
     }
 }
 
-registerProcessor('Audio-Energy', Energy)
+registerProcessor('energy', Energy)
