@@ -7,15 +7,18 @@ export class AudioProcessor {
     constructor(audioContext, sourceNode, fftSize = 2048) {
         const fftAnalyzer = audioContext.createAnalyser()
         fftAnalyzer.fftSize = fftSize
+        sourceNode.connect(fftAnalyzer)
 
         this.fftData = new Uint8Array(fftAnalyzer.frequencyBinCount)
+        this.source = fftAnalyzer
         this.fftAnalyzer = fftAnalyzer
-        this.source = sourceNode.connect(fftAnalyzer)
+        this.source = fftAnalyzer
         this.audioContext = audioContext
         this.fftSize = fftSize
         this.rawFeatures = {}
         this.features = {}
         this.workers = {}
+        this.analyzers = {}
     }
 
     getFrequencyData = () => {
@@ -24,31 +27,35 @@ export class AudioProcessor {
 
     start = async () => {
         const timestamp = Date.now()
-        const { source, audioContext, rawFeatures } = this
+        const { source, audioContext, rawFeatures, pullFFTData, analyzers } = this
         audioContext.audioWorklet.addModule(`/src/audio/analyzers/StatTracker.js?timestamp=${timestamp}`)
-
+        console.log(`Audio worklet StatTracker added`)
         for (const processor of audioProcessors) {
             await audioContext.audioWorklet.addModule(`/src/audio/analyzers/${processor}.js?timestamp=${timestamp}`)
             console.log(`Audio worklet ${processor} added`)
             rawFeatures[processor] = {}
+
             const audioProcessor = new AudioWorkletNode(audioContext, processor)
             source.connect(audioProcessor)
+
             const statTracker = new AudioWorkletNode(audioContext, 'StatTracker')
             audioProcessor.connect(statTracker)
 
             audioProcessor.port.addEventListener('message', (event) => {
-                // console.log(`Audio worklet ${processor} message received`, event)
+                if (event.data.wrapped) console.log(`Audio worklet ${processor} message received`, event)
                 rawFeatures[processor].value = event.data.value
             })
             statTracker.port.addEventListener('message', (event) => {
-                this.rawFeatures[processor].stats = event.data.value
+                rawFeatures[processor].stats = event.data.value
             })
             audioProcessor.port.start()
             statTracker.port.start()
             // audioProcessor.port.onmessage = (event) => {
             //     console.log(`Audio worklet ${processor} message received`, event)
             // }
+            analyzers[processor] = audioProcessor
         }
+        requestAnimationFrame(pullFFTData)
         // for (const workerName of this.thingsThatWork) {
         //     const worker = new Worker(`/src/audio/analyzers/${workerName}.js?timestamp=${timestamp}`)
         //     console.log(`Worker ${workerName} added`)
@@ -58,16 +65,17 @@ export class AudioProcessor {
         //     }
         //     this.workers[workerName] = worker
         // }
-
-        this.pullFFTData()
     }
     pullFFTData = () => {
+        const { analyzers, fftAnalyzer, fftData } = this
         // this.fftAnalyzer.getByteTimeDomainData(this.fftData);
-        this.fftAnalyzer.getByteFrequencyData(this.fftData)
-        this.windowedFftData = applyHanningWindow(this.fftData)
+        fftAnalyzer.getByteFrequencyData(fftData)
+        const windowedFftData = applyHanningWindow(fftData)
 
-        for (const worker in this.workers) {
-            this.workers[worker].postMessage(this.windowedFftData)
+        for (const name in analyzers) {
+            console.log('posting message to worker', { name })
+            const analyzer = analyzers[name]
+            analyzer.port.postMessage({ fftData: windowedFftData })
         }
 
         // this.fftAnalyzer.getFloatFrequencyData(this.fftFloatData);

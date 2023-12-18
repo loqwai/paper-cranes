@@ -1,6 +1,10 @@
 class SpectralCentroidProcessor extends AudioWorkletProcessor {
     constructor() {
         super()
+        this.port.addEventListener('message', (event) => {
+            this.port.postMessage({ wrapped: event.data })
+        })
+        this.port.start()
     }
 
     process(inputs, outputs) {
