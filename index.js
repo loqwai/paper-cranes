@@ -13,7 +13,7 @@ const main = async () => {
     const initialImageUrl = params.get('image')
 
     const canvas = document.getElementById('visualizer')
-    const render = makeVisualizer({ canvas, shader })
+    const render = await makeVisualizer({ canvas, shader })
 
     updateUI()
 
