@@ -67,7 +67,7 @@ class StatTracker {
 class StatTrackerProcessor extends AudioWorkletProcessor {
     constructor() {
         super()
-        this.statTracker = new StatTracker(2000) // Initialize with desired history size
+        this.statTracker = new StatTracker(500) // Initialize with desired history size
     }
 
     process(inputs, outputs) {
