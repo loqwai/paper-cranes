@@ -5,16 +5,18 @@ export class AudioProcessor {
     thingsThatWork = ['SpectralFlux', 'SpectralSpread', 'SpectralCentroid']
 
     constructor(audioContext, sourceNode, fftSize = 2048) {
+        const timestamp = Date.now()
         const fftAnalyzer = audioContext.createAnalyser()
         fftAnalyzer.fftSize = fftSize
         sourceNode.connect(fftAnalyzer)
 
         this.fftData = new Uint8Array(fftAnalyzer.frequencyBinCount)
-        this.source = fftAnalyzer
+
+        this.source = sourceNode
         this.fftAnalyzer = fftAnalyzer
-        this.source = fftAnalyzer
         this.audioContext = audioContext
         this.fftSize = fftSize
+        this.timestamp = timestamp
         this.rawFeatures = {}
         this.features = {}
         this.workers = {}
@@ -26,13 +28,25 @@ export class AudioProcessor {
     }
 
     start = async () => {
-        const timestamp = Date.now()
-        const { source, audioContext, rawFeatures, pullFFTData, analyzers } = this
-        audioContext.audioWorklet.addModule(`/src/audio/analyzers/StatTracker.js?timestamp=${timestamp}`)
+        const { audioContext, rawFeatures, pullFFTData, analyzers, timestamp } = this
+        await audioContext.audioWorklet.addModule(`/src/audio/analyzers/fft.js?timestamp=${timestamp}`)
+        console.log(`Audio worklet fft added`)
+
+        const fftNode = new AudioWorkletNode(audioContext, 'fft')
+        fftNode.port.addEventListener('message', (event) => {
+            if (event.data.type === 'debug') {
+                console.log(`Audio worklet fft message received`, event)
+            }
+        })
+        fftNode.port.start()
+        this.source.connect(fftNode)
+        const source = fftNode
+
+        await audioContext.audioWorklet.addModule(`/src/audio/analyzers/StatTracker.js?timestamp=${timestamp}`)
         console.log(`Audio worklet StatTracker added`)
+
         for (const processor of audioProcessors) {
             await audioContext.audioWorklet.addModule(`/src/audio/analyzers/${processor}.js?timestamp=${timestamp}`)
-            console.log(`Audio worklet ${processor} added`)
             rawFeatures[processor] = {}
 
             const audioProcessor = new AudioWorkletNode(audioContext, processor)
@@ -42,8 +56,13 @@ export class AudioProcessor {
             audioProcessor.connect(statTracker)
 
             audioProcessor.port.addEventListener('message', (event) => {
-                if (event.data.wrapped) console.log(`Audio worklet ${processor} message received`, event)
+                if (event.data.type === 'debug') return
                 rawFeatures[processor].value = event.data.value
+            })
+
+            audioProcessor.port.addEventListener('message', (event) => {
+                if (event.data.type !== 'debug') return
+                console.log(`Audio worklet ${processor} message received`, event)
             })
             statTracker.port.addEventListener('message', (event) => {
                 rawFeatures[processor].stats = event.data.value
@@ -54,6 +73,7 @@ export class AudioProcessor {
             //     console.log(`Audio worklet ${processor} message received`, event)
             // }
             analyzers[processor] = audioProcessor
+            this.fftNode = fftNode
         }
         requestAnimationFrame(pullFFTData)
         // for (const workerName of this.thingsThatWork) {
@@ -71,13 +91,7 @@ export class AudioProcessor {
         // this.fftAnalyzer.getByteTimeDomainData(this.fftData);
         fftAnalyzer.getByteFrequencyData(fftData)
         const windowedFftData = applyHanningWindow(fftData)
-
-        for (const name in analyzers) {
-            console.log('posting message to worker', { name })
-            const analyzer = analyzers[name]
-            analyzer.port.postMessage({ fftData: windowedFftData })
-        }
-
+        this.fftNode.port.postMessage({ fftData: windowedFftData })
         // this.fftAnalyzer.getFloatFrequencyData(this.fftFloatData);
         this.updateLegacyFeatures()
         requestAnimationFrame(this.pullFFTData)

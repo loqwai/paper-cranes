@@ -3,11 +3,13 @@ class SpectralCentroidProcessor extends AudioWorkletProcessor {
         super()
         this.port.addEventListener('message', (event) => {
             this.port.postMessage({ wrapped: event.data })
+            this.calculateSpectralCentroid(event.data.fftData)
         })
         this.port.start()
     }
 
     process(inputs, outputs) {
+        return true
         if (inputs.length === 0) return true
         const input = inputs[0][0]
         const output = outputs ? outputs[0][0] : []

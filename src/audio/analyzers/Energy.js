@@ -9,11 +9,13 @@ class Energy extends AudioWorkletProcessor {
         if (inputs.length === 0) return true
         const input = inputs[0][0]
         const output = outputs ? outputs[0][0] : []
+        this.port.postMessage({ type: 'debug', input, output })
         return this._process(input, output)
     }
     _process(input, outputs) {
         const energy = calculateEnergy(input)
         this.port.postMessage({ value: energy, input, outputs })
+        this.port.postMessage({ type: 'debug', value: energy, input, outputs })
         outputs[0] = energy
         return true
     }
