@@ -11,12 +11,13 @@
   "author": "",
   "license": "UNLICENSED",
   "dependencies": {
-    "three": "^0.159.0"
+    "three": "^0.159.0",
+    "twgl.js": "^5.5.3"
   },
   "devDependencies": {
     "eslint": "^8.56.0",
     "eslint-plugin-prettier": "^5.0.1",
-    "live-server": "^1.2.2",
+    "live-server": "^1.1.0",
     "prettier": "^3.1.1"
   }
 }
