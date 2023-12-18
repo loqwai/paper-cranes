@@ -23,6 +23,8 @@
     "glsl-canvas.uniforms": {
         "beat": true,
         "iTime": 0,
+        "time": 0,
+        "resolution": [800, 800, 0],
         "iResolution": [800, 800, 0]
     },
 

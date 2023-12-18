@@ -23,17 +23,20 @@ const main = async () => {
     if (window.viz) return // Prevent multiple calls
     const audio = await setupAudio()
 
-    const canvas = document.getElementById('visualizer')
-
     const params = new URLSearchParams(window.location.search)
     const shader = params.get('shader') ?? 'beat-trip'
-    const initialImageUrl = params.get('image') ?? 'https://i.imgur.com/2f2QX9A.jpg'
+    const initialImageUrl = params.get('image')
 
-    const video = new Visualizer(canvas, shader, initialImageUrl)
+    const canvas = document.getElementById('visualizer')
+    const video = new Visualizer(canvas, shader, initialImageUrl, THREE)
     await video.init()
+
     updateUI()
+
     requestAnimationFrame(() => render({ video, audio }))
 }
+
+const render = ({ video, audio }) => {}
 
 const container = document.getElementById('container')
 const camera = new THREE.PerspectiveCamera(75, container.width / container.height, 0.1, 1000)
@@ -92,7 +95,7 @@ function animate() {
     onWindowResize()
 }
 
-function render() {
-    uniforms.u_time.value += clock.getDelta()
-    renderer.render(scene, camera)
-}
+// function render() {
+//     uniforms.u_time.value += clock.getDelta()
+//     renderer.render(scene, camera)
+// }
