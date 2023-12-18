@@ -20,6 +20,7 @@ export const makeVisualizer = async ({ canvas, shader }) => {
 
     const render = ({ time, audioFeatures }) => {
         twgl.resizeCanvasToDisplaySize(gl.canvas)
+        console.log({ audioFeatures })
         gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
 
         const uniforms = {
