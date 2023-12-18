@@ -27,7 +27,7 @@ export const makeVisualizer = async ({ canvas, shader }) => {
             resolution: [gl.canvas.width, gl.canvas.height],
             ...audioFeatures,
         }
-
+        console.log(uniforms)
         gl.useProgram(programInfo.program)
         twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo)
         twgl.setUniforms(programInfo, uniforms)

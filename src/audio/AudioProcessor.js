@@ -28,9 +28,7 @@ export class AudioProcessor {
         const timestamp = Date.now()
         for (const processor of this.audioProcessors) {
             console.log(`Adding audio worklet ${processor}`)
-            await this.audioContext.audioWorklet.addModule(
-                `/src/audio/analyzers/${processor}.js?timestamp=${timestamp}`,
-            )
+            await this.audioContext.audioWorklet.addModule(`/src/audio/analyzers/${processor}.js?timestamp=${timestamp}`)
             console.log(`Audio worklet ${processor} added`)
             const audioProcessor = new AudioWorkletNode(this.audioContext, `Audio-${processor}`)
             this.sourceNode.connect(audioProcessor)
