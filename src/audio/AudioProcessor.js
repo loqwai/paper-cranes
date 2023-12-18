@@ -34,8 +34,7 @@ export class AudioProcessor {
             this.sourceNode.connect(audioProcessor)
             // Don't connect the audioProcessor to the audioContext's destination
             audioProcessor.port.addEventListener('message', (event) => {
-                console.log(`Audio worklet ${processor} message received`, event)
-                this.rawFeatures[processor] = event.data
+                this.rawFeatures[processor] = event.data.value
             })
             audioProcessor.port.start()
             // audioProcessor.port.onmessage = (event) => {
