@@ -30,12 +30,14 @@ const setupAudio = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     const sourceNode = audioContext.createMediaStreamSource(stream)
     const audioProcessor = new AudioProcessor(audioContext, sourceNode)
+    await audioProcessor.start()
     return audioProcessor
 }
 
 const updateUI = () => {}
 
 const animate = ({ render, audio }) => {
-    render({ time: performance.now() })
+    const audioFeatures = audio.features
+    render({ time: performance.now(), audioFeatures })
     requestAnimationFrame(() => animate({ render, audio }))
 }

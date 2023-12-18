@@ -18,13 +18,14 @@ export const makeVisualizer = async ({ canvas, shader }) => {
     }
     const bufferInfo = twgl.createBufferInfoFromArrays(gl, arrays)
 
-    const render = ({ time }) => {
+    const render = ({ time, audioFeatures }) => {
         twgl.resizeCanvasToDisplaySize(gl.canvas)
         gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
 
         const uniforms = {
             time,
             resolution: [gl.canvas.width, gl.canvas.height],
+            ...audioFeatures,
         }
 
         gl.useProgram(programInfo.program)

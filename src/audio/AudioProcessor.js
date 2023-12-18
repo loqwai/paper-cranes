@@ -28,24 +28,29 @@ export class AudioProcessor {
         const timestamp = Date.now()
         for (const processor of this.audioProcessors) {
             console.log(`Adding audio worklet ${processor}`)
-            await this.audioContext.audioWorklet.addModule(
-                `/src/audio/analyzers/${processor}.js?timestamp=${timestamp}`,
-            )
+            await this.audioContext.audioWorklet.addModule(`/src/audio/analyzers/${processor}.js?timestamp=${timestamp}`)
             console.log(`Audio worklet ${processor} added`)
             const audioProcessor = new AudioWorkletNode(this.audioContext, `Audio-${processor}`)
             this.sourceNode.connect(audioProcessor)
             // Don't connect the audioProcessor to the audioContext's destination
-            audioProcessor.port.onmessage = (event) => (this.rawFeatures[processor] = event.data)
+            audioProcessor.port.addEventListener('message', (event) => {
+                console.log(`Audio worklet ${processor} message received`, event)
+                this.rawFeatures[processor] = event.data
+            })
+            audioProcessor.port.start()
+            // audioProcessor.port.onmessage = (event) => {
+            //     console.log(`Audio worklet ${processor} message received`, event)
+            // }
         }
-        for (const workerName of this.thingsThatWork) {
-            const worker = new Worker(`/src/audio/analyzers/${workerName}.js?timestamp=${timestamp}`)
-            console.log(`Worker ${workerName} added`)
-            worker.onmessage = (event) => {
-                // console.log(`Worker ${workerName} message received`, event);;
-                this.rawFeatures[workerName] = event.data
-            }
-            this.workers[workerName] = worker
-        }
+        // for (const workerName of this.thingsThatWork) {
+        //     const worker = new Worker(`/src/audio/analyzers/${workerName}.js?timestamp=${timestamp}`)
+        //     console.log(`Worker ${workerName} added`)
+        //     worker.onmessage = (event) => {
+        //         // console.log(`Worker ${workerName} message received`, event);;
+        //         this.rawFeatures[workerName] = event.data
+        //     }
+        //     this.workers[workerName] = worker
+        // }
 
         this.pullFFTData()
     }
@@ -68,6 +73,7 @@ export class AudioProcessor {
         requestAnimationFrame(this.pullFFTData)
     }
     updateLegacyFeatures = () => {
+        // console.log({ rawFeatures: this.rawFeatures })
         this.features['spectralSpread'] = this.rawFeatures['SpectralSpread'] || 0
         this.features['spectralCentroid'] = (this.rawFeatures['SpectralCentroid'] || 0) / 4
         this.features['spectralFlux'] = this.rawFeatures['SpectralFlux'] || 0
