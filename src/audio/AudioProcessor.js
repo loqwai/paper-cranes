@@ -57,7 +57,7 @@ export class AudioProcessor {
                     this.features[`${featureKey}${propertyKey.charAt(0).toUpperCase() + propertyKey.slice(1)}`] = rawFeatures[feature].stats[propertyKey]
                 }
             }
-            console.log(this.features)
+            // console.log(this.features)
         }
 
         this.start = start

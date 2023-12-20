@@ -9,11 +9,11 @@ const main = async () => {
     const audio = await setupAudio()
 
     const params = new URLSearchParams(window.location.search)
-    const shader = params.get('shader') ?? 'beat-trip'
-    const initialImageUrl = params.get('image')
+    const shader = params.get('shader') ?? 'prev-frame-check'
+    const initialImageUrl = params.get('image') ?? 'images/placeholder-image.png'
 
     const canvas = document.getElementById('visualizer')
-    const render = await makeVisualizer({ canvas, shader })
+    const render = await makeVisualizer({ canvas, shader, initialImageUrl })
 
     updateUI()
 
