@@ -1,74 +1,60 @@
 import { applyHanningWindow } from './applyHanningWindow.js'
+
 export class AudioProcessor {
-    // An array of strings of names of processors
-    audioProcessors = ['Energy']
-    thingsThatWork = ['SpectralFlux', 'SpectralSpread', 'SpectralCentroid']
-
     constructor(audioContext, sourceNode, fftSize = 2048) {
-        this.audioContext = audioContext
-        this.sourceNode = sourceNode
-        this.fftSize = fftSize
-        this.rawFeatures = {}
         this.features = {}
-        this.workers = {}
 
-        this.fftAnalyzer = this.audioContext.createAnalyser()
-        this.fftAnalyzer.fftSize = this.fftSize // Example size, can be adjusted
-        this.fftData = new Uint8Array(this.fftAnalyzer.frequencyBinCount)
-        // this.fftFloatData = new Float32Array(this.fftAnalyzer.frequencyBinCount);
-        this.sourceNode.connect(this.fftAnalyzer)
-        // Don't connect the fftAnalyzer to the audioContext's destination
-    }
+        const fftAnalyzer = audioContext.createAnalyser()
+        fftAnalyzer.fftSize = fftSize
+        let fftData = new Uint8Array(fftAnalyzer.frequencyBinCount)
+        sourceNode.connect(fftAnalyzer)
 
-    getFrequencyData = () => {
-        return this.fftData
-    }
+        const rawFeatures = {}
+        const workers = {}
 
-    start = async () => {
-        const timestamp = Date.now()
-        for (const processor of this.audioProcessors) {
-            console.log(`Adding audio worklet ${processor}`)
-            await this.audioContext.audioWorklet.addModule(`/src/audio/analyzers/${processor}.js?timestamp=${timestamp}`)
-            console.log(`Audio worklet ${processor} added`)
-            const audioProcessor = new AudioWorkletNode(this.audioContext, `Audio-${processor}`)
-            this.sourceNode.connect(audioProcessor)
-            // Don't connect the audioProcessor to the audioContext's destination
-            audioProcessor.port.onmessage = (event) => (this.rawFeatures[processor] = event.data)
-        }
-        for (const workerName of this.thingsThatWork) {
-            const worker = new Worker(`/src/audio/analyzers/${workerName}.js?timestamp=${timestamp}`)
-            console.log(`Worker ${workerName} added`)
-            worker.onmessage = (event) => {
-                // console.log(`Worker ${workerName} message received`, event);;
-                this.rawFeatures[workerName] = event.data
+        const start = async () => {
+            const timestamp = Date.now()
+            for (const processor of ['Energy']) {
+                await audioContext.audioWorklet.addModule(`/src/audio/analyzers/${processor}.js?timestamp=${timestamp}`)
+                const audioProcessor = new AudioWorkletNode(audioContext, `Audio-${processor}`)
+                sourceNode.connect(audioProcessor)
+                audioProcessor.port.onmessage = (event) => (rawFeatures[processor] = event.data)
             }
-            this.workers[workerName] = worker
+            for (const workerName of ['SpectralCentroid']) {
+                const worker = new Worker(`/src/audio/analyzers/${workerName}.js?timestamp=${timestamp}`)
+                worker.onmessage = (event) => {
+                    if (event.data.type === 'computedValue') {
+                        console.log(event.data)
+                        rawFeatures[workerName] = event.data.value
+                    }
+                }
+                worker.postMessage({ config: { historySize: 500 } })
+                workers[workerName] = worker
+            }
+
+            pullFFTData()
         }
 
-        this.pullFFTData()
-    }
+        const pullFFTData = () => {
+            fftAnalyzer.getByteFrequencyData(fftData)
+            let windowedFftData = applyHanningWindow(fftData)
 
-    setupFFT = () => {
-        this.fftData = new Uint8Array(this.fftAnalyzer.frequencyBinCount)
-    }
+            for (const worker in workers) {
+                workers[worker].postMessage({ type: 'fftData', data: { fft: windowedFftData } })
+            }
 
-    pullFFTData = () => {
-        // this.fftAnalyzer.getByteTimeDomainData(this.fftData);
-        this.fftAnalyzer.getByteFrequencyData(this.fftData)
-        this.windowedFftData = applyHanningWindow(this.fftData)
-
-        for (const worker in this.workers) {
-            this.workers[worker].postMessage(this.windowedFftData)
+            updateLegacyFeatures()
+            requestAnimationFrame(pullFFTData)
         }
 
-        // this.fftAnalyzer.getFloatFrequencyData(this.fftFloatData);
-        this.updateLegacyFeatures()
-        requestAnimationFrame(this.pullFFTData)
-    }
-    updateLegacyFeatures = () => {
-        this.features['spectralSpread'] = this.rawFeatures['SpectralSpread'] || 0
-        this.features['spectralCentroid'] = (this.rawFeatures['SpectralCentroid'] || 0) / 4
-        this.features['spectralFlux'] = this.rawFeatures['SpectralFlux'] || 0
-        this.features['energy'] = this.rawFeatures['Energy'] || 0
+        const updateLegacyFeatures = () => {
+            console.log(rawFeatures)
+            this.features['spectralSpread'] = rawFeatures['SpectralSpread'] || 0
+            this.features['spectralCentroid'] = (rawFeatures['SpectralCentroid'] || 0) / 4
+            this.features['spectralFlux'] = rawFeatures['SpectralFlux'] || 0
+            this.features['energy'] = rawFeatures['Energy'] || 0
+        }
+
+        this.start = start
     }
 }
