@@ -20,7 +20,7 @@ export class AudioProcessor {
                 sourceNode.connect(audioProcessor)
                 audioProcessor.port.onmessage = (event) => (rawFeatures[processor] = event.data)
             }
-            for (const workerName of ['SpectralCentroid', 'SpectralFlux']) {
+            for (const workerName of ['SpectralCentroid', 'SpectralFlux', 'SpectralSpread']) {
                 const worker = new Worker(`/src/audio/analyzers/${workerName}.js?timestamp=${timestamp}`)
                 worker.onmessage = (event) => {
                     if (event.data.type === 'computedValue') {

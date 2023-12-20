@@ -39,6 +39,7 @@ self.addEventListener('message', ({ data: e }) => {
     if (e.type === 'fftData') {
         let fftData = e.data.fft // Extract FFT data from message
         let computed = calculateSpectralFlux(fftData) // Process FFT data
+        if (computed === 0) return
         self.postMessage({ type: 'computedValue', value: computed, stats: set(computed) })
     }
     if (e.type === 'config') {
@@ -52,7 +53,7 @@ let previousSignal = null
 function calculateSpectralFlux(currentSignal) {
     if (!previousSignal) {
         previousSignal = currentSignal
-        return 0 // Or handle the first frame differently
+        return 0
     }
 
     let sf = 0
