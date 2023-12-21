@@ -57,7 +57,16 @@ export class AudioProcessor {
                     this.features[`${featureKey}${propertyKey.charAt(0).toUpperCase() + propertyKey.slice(1)}`] = rawFeatures[feature].stats[propertyKey]
                 }
             }
+            this.features['beat'] = isBeat()
             // console.log(this.features)
+        }
+
+        const isBeat = () => {
+            const spectralFlux = rawFeatures.SpectralFlux
+            if (!spectralFlux) return false
+            const { stats } = rawFeatures.SpectralFlux
+            const { zScore } = stats
+            return zScore > 1.8
         }
 
         this.start = start
