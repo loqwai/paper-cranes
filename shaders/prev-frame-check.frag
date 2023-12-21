@@ -13,8 +13,9 @@ vec4 getLastFrameColor(vec2 uv){
 }
 
 vec4 mainImage(){
-  return getLastFrameColor(gl_FragCoord.xy/resolution.xy);
   vec2 uv=gl_FragCoord.xy/resolution.xy;
+  return getLastFrameColor(uv);
+  
   if(frame==0){
     return vec4(.3529,.1882,.098,1.);
   }
