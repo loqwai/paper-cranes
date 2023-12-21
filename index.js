@@ -34,7 +34,10 @@ const setupAudio = async () => {
     return audioProcessor
 }
 
-const updateUI = () => {}
+const updateUI = () => {
+    const body = document.querySelector('body')
+    body.classList.add('ready')
+}
 
 const animate = ({ render, audio }) => {
     const audioFeatures = audio.features

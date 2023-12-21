@@ -1,21 +1,126 @@
-canvas {
-  background-color: #FF0000;
-  width: 45%;
-  min-width: calc(100vh * 0.45);
-  min-height: 100vh;
-  margin: 5px;
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+  /* Cosmic Color Scheme */
+  --color-space-black: #000000;
+  --color-nebula-purple: #a365f2;
+  --color-asteroid-pink: #e16ce6;
+  --color-galaxy-blue: #a398f4;
+  --color-comet-tail: #e099e6;
+  --color-starlight-blue: #6195f9;
+  --color-deep-sky: #2198fb;
+  --color-twilight-purple: #6566f4;
+  --color-alien-green: #a22bec;
+  --color-rocket-metal: #2065f5;
+  --color-lunar-white: #e6e6e6;
+
+  --radius: 0.5rem;
 }
 
-#container {
-  width: 100%;
-  height: 100%;
+/* Sparkly Class */
+.sparkly {
+  background: linear-gradient(
+    270deg,
+    var(--color-nebula-purple),
+    var(--color-asteroid-pink),
+    var(--color-comet-tail),
+    var(--color-galaxy-blue),
+    var(--color-starlight-blue),
+    var(--color-deep-sky),
+    var(--color-twilight-purple),
+    var(--color-alien-green),
+    var(--color-rocket-metal),
+    var(--color-nebula-purple)
+  );
+  background-size: 800% 800%;
+  color: var(--color-lunar-white);
+}
+.sparkly.animated {
+  animation: sparkle 8s linear infinite;
+}
+
+/* Sparkly Animation */
+@keyframes sparkle {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+body {
+  min-height: 100vh;
+  min-width: 100vw;
   margin: 0;
   padding: 0;
-  overflow: hidden;
-  background-color: #00eeff;
+  overflow: hidden; /* Prevents scrolling */
   display: flex;
-  /* center the items */
-  align-items: center;
-  width: 100vw;
   justify-content: center;
+  align-items: center;
+  color: #e6e6e6;
+  font-family: 'Space-Age', sans-serif;
+  backdrop-filter: blur(100px);
+}
+
+body::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' ry='20' fill='%23a398f4' /%3E%3Ccircle cx='50' cy='50' r='30' fill='%23e099e6' /%3E%3Ccircle cx='25' cy='25' r='20' fill='%236195f9' /%3E%3Ccircle cx='75' cy='75' r='15' fill='%23a365f2' /%3E%3C/svg%3E");
+  background-size: cover;
+  background-repeat: no-repeat;
+  z-index: -1;
+  filter: blur(100px); /* Adjust this value to control the blur intensity */
+}
+
+body.ready::before {
+  filter: blur(0px); /* Adjust this value to control the blur intensity */
+  transition: all 0.5s ease-in-out;
+  opacity: 0;
+}
+
+.container {
+  width: 100vw; /* Full width of the viewport */
+  height: 100vh; /* Full height of the viewport */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+canvas {
+  margin: 0;
+  height: 100vmin;
+  width: 100vmin;
+  background: transparent;
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+}
+
+.ready canvas {
+  opacity: 1;
+}
+
+.ready h1 {
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+}
+
+.container h1 {
+  margin: 0;
+  font-size: calc(10vw + 10vh); /* Dynamic font size based on viewport size */
+  line-height: 1;
+  white-space: nowrap; /* Prevents text from wrapping */
+}
+
+.container.please  h1{
+  font-size: calc(100vw/34); /* Dynamic font size based on viewport size */
 }
