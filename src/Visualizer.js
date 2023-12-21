@@ -25,6 +25,7 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl }) => {
 
     gl.useProgram(programInfo.program)
 
+    let frame = 0
     const render = ({ time, audioFeatures }) => {
         twgl.resizeCanvasToDisplaySize(gl.canvas)
         gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
@@ -32,6 +33,7 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl }) => {
             time,
             resolution: [gl.canvas.width, gl.canvas.height],
             prevFrame,
+            frame,
             ...audioFeatures,
         }
 
@@ -42,6 +44,7 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl }) => {
             src: canvas,
             crossOrigin: 'anonymous',
         })
+        frame++
     }
 
     return render
