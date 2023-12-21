@@ -28,5 +28,5 @@
         "iResolution": [800, 800, 0]
     },
 
-    "editor.formatOnSave": true
+    "editor.formatOnSave": false
 }

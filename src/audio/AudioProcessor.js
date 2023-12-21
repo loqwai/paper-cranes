@@ -30,7 +30,8 @@ export class AudioProcessor {
         const requestFeatures = () => {
             fftAnalyzer.getByteFrequencyData(fftData)
             let windowedFftData = applyHanningWindow(fftData)
-
+            // if the windowedFftData has a sum of 0, then don't send it to the workers
+            if (windowedFftData.reduce((a, b) => a + b, 0) === 0) requestAnimationFrame(requestFeatures)
             for (const worker in workers) {
                 workers[worker].postMessage({ type: 'fftData', data: { fft: windowedFftData } })
             }
