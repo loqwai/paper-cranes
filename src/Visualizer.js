@@ -36,7 +36,6 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl }) => {
             frame,
             ...audioFeatures,
         }
-
         twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo)
         twgl.setUniforms(programInfo, uniforms)
         twgl.drawBufferInfo(gl, bufferInfo)

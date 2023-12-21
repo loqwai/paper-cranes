@@ -14,13 +14,7 @@ export class AudioProcessor {
 
         const start = async () => {
             const timestamp = Date.now()
-            for (const processor of ['Energy']) {
-                await audioContext.audioWorklet.addModule(`/src/audio/analyzers/${processor}.js?timestamp=${timestamp}`)
-                const audioProcessor = new AudioWorkletNode(audioContext, `Audio-${processor}`)
-                sourceNode.connect(audioProcessor)
-                audioProcessor.port.onmessage = (event) => (rawFeatures[processor] = event.data)
-            }
-            for (const workerName of ['SpectralCentroid', 'SpectralFlux', 'SpectralSpread']) {
+            for (const workerName of ['SpectralCentroid', 'SpectralFlux', 'SpectralSpread', 'Energy']) {
                 const worker = new Worker(`/src/audio/analyzers/${workerName}.js?timestamp=${timestamp}`)
                 worker.onmessage = (event) => {
                     if (event.data.type === 'computedValue') {
