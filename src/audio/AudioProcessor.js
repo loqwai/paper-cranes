@@ -21,14 +21,11 @@ export class AudioProcessor {
                         rawFeatures[workerName] = event.data
                     }
                 }
-                worker.postMessage({ config: { historySize: 500 } })
                 workers[workerName] = worker
             }
-
-            pullFFTData()
         }
 
-        const pullFFTData = () => {
+        const getFeatures = () => {
             fftAnalyzer.getByteFrequencyData(fftData)
             let windowedFftData = applyHanningWindow(fftData)
 
@@ -36,8 +33,7 @@ export class AudioProcessor {
                 workers[worker].postMessage({ type: 'fftData', data: { fft: windowedFftData } })
             }
 
-            updateFeatures()
-            requestAnimationFrame(pullFFTData)
+            return updateFeatures()
         }
 
         const updateFeatures = () => {
@@ -53,6 +49,7 @@ export class AudioProcessor {
             }
             this.features['beat'] = isBeat()
             // console.log(this.features)
+            return this.features
         }
 
         const isBeat = () => {
@@ -64,5 +61,6 @@ export class AudioProcessor {
         }
 
         this.start = start
+        this.getFeatures = getFeatures
     }
 }

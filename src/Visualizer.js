@@ -8,16 +8,24 @@ const vertexShader = `
         gl_Position = position;
     }
 `
-
+const getTexture = async (gl, url) => {
+    return new Promise((resolve) => {
+        const texture = twgl.createTexture(
+            gl,
+            {
+                src: url,
+                crossOrigin: 'anonymous',
+            },
+            () => resolve(texture),
+        )
+    })
+}
 export const makeVisualizer = async ({ canvas, shader, initialImageUrl }) => {
     const gl = canvas.getContext('webgl2')
     const res = await fetch(`/shaders/${shader}.frag`)
     const fragmentShader = await res.text()
     const programInfo = twgl.createProgramInfo(gl, [vertexShader, fragmentShader])
-    let prevFrame = twgl.createTexture(gl, {
-        src: initialImageUrl,
-        crossOrigin: 'anonymous',
-    })
+    let prevFrame = await getTexture(gl, initialImageUrl)
     const arrays = {
         position: [-1, -1, 0, 1, -1, 0, -1, 1, 0, -1, 1, 0, 1, -1, 0, 1, 1, 0],
     }
@@ -36,6 +44,7 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl }) => {
             frame,
             ...audioFeatures,
         }
+        console.log({ audioFeatures })
         twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo)
         twgl.setUniforms(programInfo, uniforms)
         twgl.drawBufferInfo(gl, bufferInfo)

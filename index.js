@@ -2,10 +2,12 @@ import * as THREE from 'three'
 import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { makeVisualizer } from './src/Visualizer.js'
 
+const timeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const events = ['click', 'touchstart', 'keydown']
 
+let ranMain = false
 const main = async () => {
-    if (window.viz) return // Prevent multiple calls
+    if (ranMain) return
     const audio = await setupAudio()
 
     const params = new URLSearchParams(window.location.search)
@@ -18,6 +20,7 @@ const main = async () => {
     updateUI()
 
     requestAnimationFrame(() => animate({ render, audio }))
+    ranMain = true
 }
 
 events.forEach((event) => {
@@ -31,6 +34,7 @@ const setupAudio = async () => {
     const sourceNode = audioContext.createMediaStreamSource(stream)
     const audioProcessor = new AudioProcessor(audioContext, sourceNode)
     await audioProcessor.start()
+    await timeout(100)
     return audioProcessor
 }
 
@@ -40,7 +44,7 @@ const updateUI = () => {
 }
 
 const animate = ({ render, audio }) => {
-    const audioFeatures = audio.features
+    const audioFeatures = audio.getFeatures()
     render({ time: performance.now(), audioFeatures })
     requestAnimationFrame(() => animate({ render, audio }))
 }

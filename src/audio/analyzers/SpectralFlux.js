@@ -5,33 +5,41 @@ let historySize = 500, // Define history size
     min = Infinity,
     max = -Infinity
 
-function set(value) {
+function calculateStats(value) {
     if (typeof value !== 'number') throw new Error('Input must be a number')
-    min = Math.min(min, value)
-    max = Math.max(max, value)
+
+    // Add new value to the queue
     queue.push(value)
     sum += value
     sumOfSquares += value * value
 
+    // Update min and max
+    min = Math.min(min, value)
+    max = Math.max(max, value)
+
+    // Remove old value if queue exceeds history size
     if (queue.length > historySize) {
         let removed = queue.shift()
         sum -= removed
         sumOfSquares -= removed * removed
+
+        // Recalculate min and max if necessary
         if (removed === min || removed === max) {
-            min = Math.min(...queue)
-            max = Math.max(...queue)
+            min = queue.length ? Math.min(...queue) : Infinity
+            max = queue.length ? Math.max(...queue) : -Infinity
         }
     }
 
-    let mean = sum / queue.length,
-        variance = sumOfSquares / queue.length - mean * mean
+    let mean = sum / queue.length
+    let variance = sumOfSquares / queue.length - mean * mean
+
     return {
-        normalized: (value - min) / (max - min || 1),
-        mean: mean,
+        normalized: queue.length && max !== min ? (value - min) / (max - min) : 0,
+        mean,
         standardDeviation: Math.sqrt(variance),
-        zScore: (value - mean) / Math.sqrt(variance || 1),
-        min: min === Infinity ? -1 : min,
-        max: max === -Infinity ? -1 : max,
+        zScore: variance ? (value - mean) / Math.sqrt(variance) : 0,
+        min: min,
+        max: max,
     }
 }
 
@@ -40,7 +48,7 @@ self.addEventListener('message', ({ data: e }) => {
         let fftData = e.data.fft // Extract FFT data from message
         let computed = calculateSpectralFlux(fftData) // Process FFT data
         if (computed === null) return
-        self.postMessage({ type: 'computedValue', value: computed, stats: set(computed) })
+        self.postMessage({ type: 'computedValue', value: computed, stats: calculateStats(computed) })
     }
     if (e.type === 'config') {
         historySize = e.config.historySize
