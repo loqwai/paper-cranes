@@ -6,8 +6,10 @@ const timeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const events = ['click', 'touchstart', 'keydown']
 
 let ranMain = false
+let startTime = 0
 const main = async () => {
     if (ranMain) return
+    startTime = performance.now()
     const audio = await setupAudio()
 
     const params = new URLSearchParams(window.location.search)
@@ -45,6 +47,6 @@ const updateUI = () => {
 
 const animate = ({ render, audio }) => {
     const audioFeatures = audio.getFeatures()
-    render({ time: performance.now(), audioFeatures })
+    render({ time: (performance.now() - startTime) / 1000, audioFeatures })
     requestAnimationFrame(() => animate({ render, audio }))
 }

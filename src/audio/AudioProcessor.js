@@ -1,5 +1,5 @@
 import { applyHanningWindow } from './applyHanningWindow.js'
-
+const timeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 export class AudioProcessor {
     constructor(audioContext, sourceNode, fftSize = 2048) {
         this.features = {}
@@ -23,9 +23,11 @@ export class AudioProcessor {
                 }
                 workers[workerName] = worker
             }
+            await timeout(500)
+            requestAnimationFrame(requestFeatures)
         }
 
-        const getFeatures = () => {
+        const requestFeatures = () => {
             fftAnalyzer.getByteFrequencyData(fftData)
             let windowedFftData = applyHanningWindow(fftData)
 
@@ -33,10 +35,10 @@ export class AudioProcessor {
                 workers[worker].postMessage({ type: 'fftData', data: { fft: windowedFftData } })
             }
 
-            return updateFeatures()
+            requestAnimationFrame(requestFeatures)
         }
 
-        const updateFeatures = () => {
+        const getFeatures = () => {
             // for each feature in raw features
             for (const feature in rawFeatures) {
                 // the key in features is the same as the key in rawFeatures, except the first letter is lowercased
