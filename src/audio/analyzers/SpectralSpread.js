@@ -4,6 +4,7 @@ let historySize = 500, // Define history size
     sumOfSquares = 0,
     min = Infinity,
     max = -Infinity
+
 function calculateStats(value) {
     if (typeof value !== 'number') throw new Error('Input must be a number')
 
@@ -42,9 +43,28 @@ function calculateStats(value) {
     }
 }
 
+let lastFFtSize = 0
+let maxSpread = 0
+
+function calculateMaxSpread(fftSize) {
+    // Create a spectrum with energy at the two extremes
+    const extremeSpectrum = new Array(fftSize).fill(0)
+    extremeSpectrum[0] = 1 // Energy at the lowest frequency
+    extremeSpectrum[fftSize - 1] = 1 // Energy at the highest frequency
+
+    const meanFrequency = mu(1, extremeSpectrum)
+    const secondMoment = mu(2, extremeSpectrum)
+
+    return Math.sqrt(secondMoment - Math.pow(meanFrequency, 2))
+}
+
 self.addEventListener('message', ({ data: e }) => {
     if (e.type === 'fftData') {
         let fftData = e.data.fft // Extract FFT data from message
+
+        if (lastFFtSize !== fftData.length) maxSpread = calculateMaxSpread(fftData.length)
+        lastFFtSize = fftData.length
+
         let computed = calculateSpectralSpread(fftData) // Process FFT data
         self.postMessage({ type: 'computedValue', value: computed, stats: calculateStats(computed) })
     }
@@ -67,8 +87,10 @@ function mu(i, amplitudeSpect) {
 }
 
 function calculateSpectralSpread(fftData, sampleRate, fftSize) {
-    const meanFrequency = mu(1, fftData, sampleRate, fftSize)
-    const secondMoment = mu(2, fftData, sampleRate, fftSize)
+    const meanFrequency = mu(1, fftData)
+    const secondMoment = mu(2, fftData)
 
-    return Math.sqrt(secondMoment - Math.pow(meanFrequency, 2))
+    const spread = Math.sqrt(secondMoment - Math.pow(meanFrequency, 2))
+    // Normalize the spread
+    return spread / maxSpread
 }
