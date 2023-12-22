@@ -121,7 +121,10 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord,float time)
     }
     vec4 prevColor=getLastFrameColor(fragCoord.xy/resolution.xy);
     if(beat){
-        fragColor=vec4(finalColor,1.);
+        // rotate hue by 90 degrees
+        vec3 hsl=rgb2hsl(finalColor);
+        hsl.x+=.25;
+        finalColor=hsl2rgb(hsl);
         return;
     }
     fragColor=vec4(finalColor,1.)*.1+prevColor*.49;
