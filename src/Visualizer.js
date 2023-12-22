@@ -55,13 +55,13 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl }) => {
         twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo)
         twgl.setUniforms(programInfo, uniforms)
         twgl.drawBufferInfo(gl, bufferInfo)
-        // prevFrame = twgl.createTexture(gl, {
-        //     src: canvas,
-        //     crossOrigin: 'anonymous',
-        //     mag: gl.LINEAR,
-        //     min: gl.LINEAR,
+        prevFrame = twgl.createTexture(gl, {
+            src: canvas,
+            crossOrigin: 'anonymous',
+            mag: gl.LINEAR,
+            min: gl.LINEAR,
 
-        // })
+        })
         frame++
     }
 
