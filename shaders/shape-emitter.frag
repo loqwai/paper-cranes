@@ -87,7 +87,7 @@ vec3 palette(in float t)
     
     // vec3 a = vec3(0.138, 0.189, 0.761); vec3 b = vec3(0.448, 0.797, 0.568); vec3 c = vec3(0.591, 1.568, 0.065); vec3 d = vec3(4.347, 2.915, 0.976);
     
-    vec3 a=vec3(0.,.500,.500);
+    vec3 a=vec3(0.,spectralCentroidZScore,.500);
     vec3 b=vec3(2.,.500,.490);
     vec3 c=vec3(2.,2.,.500);
     vec3 d=vec3(0.,.667,.500);
@@ -97,7 +97,7 @@ vec3 palette(in float t)
 
 void mainImage(out vec4 fragColor,in vec2 fragCoord)
 {
-    vec2 uv=fragCoord.xy/resolution.xy;
+    vec2 uv=(fragCoord*2.-resolution.xy)/resolution.y;
     vec2 uv0=uv;
     vec3 finalColor=vec3(0.);
     
