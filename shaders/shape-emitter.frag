@@ -97,20 +97,22 @@ vec3 palette(in float t)
     return a+b*cos(TAU*(c*t+d));
 }
 
-void mainImage(out vec4 fragColor,in vec2 fragCoord)
+void mainImage(out vec4 fragColor,in vec2 fragCoord,float time)
 {
     vec2 uv=(fragCoord*2.-resolution.xy)/resolution.y;
     vec2 uv0=uv;
     vec3 finalColor=vec3(0.);
-    
+    if(beat)time*=2.;
     for(float i=0.;i<200.;i++){
         uv=(fract(6.*uv*pow(.125,i))-.5);
         
         float d=length(uv)*exp(-length(uv0));
         
         vec3 col=palette(length(uv0)+i*.4+time*pow(.4,i));
-        
-        d=sin(d*8.+time*energyNormalized)/8.;
+        float timeAndEnergy=(time*2.)*energyNormalized;
+        if(energyZScore>1.5)timeAndEnergy*=2.;
+        timeAndEnergy+=sin(d*8.+timeAndEnergy)/8.;
+        d=sin(d*8.+timeAndEnergy)/8.;
         
         d=abs(d);
         
@@ -119,12 +121,13 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord)
         finalColor+=col*d;
         
     }
-    
+    vec4 prevColor=getLastFrameColor(fragCoord.xy/resolution.xy);
+    float mixAmt=abs(energyZScore/2.5);
     fragColor=vec4(finalColor,1.);
 }
 
 void main(void){
     vec4 color=vec4(0.f,0.f,0.f,1.f);
-    mainImage(color,gl_FragCoord.xy);
+    mainImage(color,gl_FragCoord.xy,time);
     fragColor=color;
 }

@@ -27,6 +27,12 @@ const getTexture = async (gl, url) => {
 
 export const makeVisualizer = async ({ canvas, shader, initialImageUrl }) => {
     const gl = canvas.getContext('webgl2', { antialias: false })
+    const ext = gl.getExtension('GMAN_debug_helper')
+    if (ext) {
+        ext.setConfiguration({
+            failUnsetUniforms: false,
+        })
+    }
     const res = await fetch(`/shaders/${shader}.frag`)
     const fragmentShader = await res.text()
     const initialTexture = await getTexture(gl, initialImageUrl)
