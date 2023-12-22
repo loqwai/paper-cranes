@@ -85,6 +85,10 @@ body.ready::before {
   opacity: 0;
 }
 
+body.ready {
+  background:black;
+}
+
 .container {
   width: 100vw; /* Full width of the viewport */
   height: 100vh; /* Full height of the viewport */
