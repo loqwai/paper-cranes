@@ -2,7 +2,7 @@ import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { makeVisualizer } from './src/Visualizer.js'
 
 const timeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-const events = ['click', 'touchstart', 'keydown']
+const events = ['click', 'touchstart', 'keydown', 'touchmove', 'touchstop']
 
 let ranMain = false
 let startTime = 0
