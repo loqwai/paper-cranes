@@ -98,8 +98,8 @@ body.ready::before {
 
 canvas {
   margin: 0;
-  height: 100vmin;
-  width: 100vmin;
+  height: 100vh;
+  width: 100vw;
   background: transparent;
   opacity: 0;
   transition: opacity 0.5s ease-in-out;

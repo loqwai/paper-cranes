@@ -20,14 +20,14 @@ vec3 rgb2hsl(vec3 color){
     float maxColor=max(max(color.r,color.g),color.b);
     float minColor=min(min(color.r,color.g),color.b);
     float delta=maxColor-minColor;
-    
+
     float h=0.f;
     float s=0.f;
     float l=(maxColor+minColor)/2.f;
-    
+
     if(delta!=0.f){
         s=l<.5f?delta/(maxColor+minColor):delta/(2.f-maxColor-minColor);
-        
+
         if(color.r==maxColor){
             h=(color.g-color.b)/delta+(color.g<color.b?6.f:0.f);
         }else if(color.g==maxColor){
@@ -37,7 +37,7 @@ vec3 rgb2hsl(vec3 color){
         }
         h/=6.f;
     }
-    
+
     return vec3(h,s,l);
 }
 
@@ -61,9 +61,9 @@ vec3 hsl2rgb(vec3 hsl){
     float h=hsl.x;
     float s=hsl.y;
     float l=hsl.z;
-    
+
     float r,g,b;
-    
+
     if(s==0.f){
         r=g=b=l;// achromatic
     }else{
@@ -73,7 +73,7 @@ vec3 hsl2rgb(vec3 hsl){
         g=hue2rgb(p,q,h);
         b=hue2rgb(p,q,h-1.f/3.f);
     }
-    
+
     return vec3(r,g,b);
 }
 
@@ -85,10 +85,10 @@ vec4 applyDistortion(vec2 uv,float time,bool beat){
     // Modify the hue rotation based on various factors
     float hueOffset=sin(uv.x*10.f+uv.y*10.f)*.5f;
     // float hueVariation = sin(time * spectralSpreadZScore) + cos(time * spectralCentroidZScore);
-    
+
     // Beat-reactive hue rotation speed
     float hueRotationSpeed=beat?.5f:.1f;
-    
+
     // Apply distortion
     float waveX=sin(uv.y*20.f+time*energyZScore)*.005f;
     float waveY=cos(uv.x*20.f+time*energyZScore)*.005f;
@@ -98,7 +98,7 @@ vec4 applyDistortion(vec2 uv,float time,bool beat){
     }
     vec2 distortedUv=uv+vec2(waveX,waveY);
     distortedUv=fract(distortedUv);
-    
+
     // Sample the texture with distorted coordinates
     vec4 originalColor=texture(prevFrame,distortedUv);
     float grayPercent=getGrayPercent(originalColor);
@@ -123,14 +123,14 @@ vec4 applyDistortion(vec2 uv,float time,bool beat){
     hslColor.x+=hueOffset+hueRotationSpeed*time;// Rotate the hue
     // if there's a beat, make things more saturated
     hslColor.x=fract(hslColor.x);// Ensure hue stays in the [0, 1] range
-    
+
     vec3 rgbColor=hsl2rgb(hslColor);
     return vec4(rgbColor,1.f);
 }
 
 void mainImage(out vec4 fragColor,in vec2 fragCoord){
     vec2 uv=fragCoord.xy/resolution.xy;
-    
+
     // Apply the beat-reactive distortion and color effect
     fragColor=applyDistortion(uv,time,beat);
 }

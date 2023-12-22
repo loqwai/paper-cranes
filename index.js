@@ -1,4 +1,3 @@
-import * as THREE from 'three'
 import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { makeVisualizer } from './src/Visualizer.js'
 
@@ -9,6 +8,7 @@ let ranMain = false
 let startTime = 0
 const main = async () => {
     if (ranMain) return
+    ranMain = true
     startTime = performance.now()
     const audio = await setupAudio()
 
@@ -22,7 +22,6 @@ const main = async () => {
     updateUI()
 
     requestAnimationFrame(() => animate({ render, audio }))
-    ranMain = true
 }
 
 events.forEach((event) => {
