@@ -10,13 +10,17 @@ const vertexShader = `
 `
 const getTexture = async (gl, url) => {
     return new Promise((resolve) => {
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true) // Flip the texture
         const texture = twgl.createTexture(
             gl,
             {
                 src: url,
                 crossOrigin: 'anonymous',
             },
-            () => resolve(texture),
+            () => {
+                gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false) // Reset the parameter
+                resolve(texture)
+            },
         )
     })
 }
@@ -39,12 +43,7 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl }) => {
 
     let frameNumber = 0
     const render = ({ time, audioFeatures }) => {
-        if (twgl.resizeCanvasToDisplaySize(gl.canvas)) {
-            for (const frameBuffer of frameBuffers) {
-                twgl.resizeFramebufferInfo(gl, frameBuffer)
-            }
-        }
-
+        twgl.resizeCanvasToDisplaySize(gl.canvas)
         const frame = frameBuffers[frameNumber % 2]
         const prevFrame = frameBuffers[(frameNumber + 1) % 2]
 
