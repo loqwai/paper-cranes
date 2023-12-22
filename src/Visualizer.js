@@ -48,7 +48,7 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl }) => {
         const prevFrame = frameBuffers[(frameNumber + 1) % 2]
 
         gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, frame.framebuffer)
-
+        console.log(audioFeatures)
         const uniforms = {
             time,
             prevFrame: frameNumber === 0 ? initialTexture : prevFrame.attachments[0],
