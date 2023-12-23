@@ -52,6 +52,7 @@
 }
 
 body {
+  cursor:pointer;
   min-height: 100vh;
   min-width: 100vw;
   margin: 0;
