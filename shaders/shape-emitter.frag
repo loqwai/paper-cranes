@@ -10,7 +10,7 @@ uniform float spectralCentroid;
 uniform float spectralCentroidZScore;
 uniform float energyZScore;
 uniform float energyNormalized;
-uniform float spectralFluxZScore;
+uniform float spectralFluxMax;
 out vec4 fragColor;
 
 vec4 getLastFrameColor(vec2 uv){
@@ -104,6 +104,21 @@ vec3 palette(in float t)
 void mainImage(out vec4 fragColor,in vec2 fragCoord,float time)
 {
     vec2 uv=(fragCoord*2.-resolution.xy)/resolution.y;
+    // rotate uv coordinates over time
+    float centroidNegative1To1=spectralCentroid*2.-1.;
+    float uvRotation=(centroidNegative1To1/100.)+time/100.;
+    float distanceFromCenter=length(uv);
+    float distanceFromCenterNormalized=distanceFromCenter*2.;
+    // create bands ever 1/8th of the screen
+    uvRotation=mod(uvRotation,TAU/(8.*energyNormalized));
+    // reverse rotation every other band
+    if(mod(floor(distanceFromCenterNormalized),2.)==1.){
+        uvRotation*=-1.;
+    }
+    uv=mat2(cos(uvRotation),-sin(uvRotation),sin(uvRotation),cos(uvRotation))*uv;
+    // alter rotation based off of y-coordinate
+    // if this pixel is far from the center of the image, reverse the rotation
+    
     vec2 uv0=uv;
     vec3 finalColor=vec3(0.);
     for(float i=0.;i<3.;i++){
@@ -112,8 +127,8 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord,float time)
         float d=length(uv)*exp(-length(uv0));
         
         vec3 col=palette(length(uv0)+i*.4+time*pow(spectralCentroid,i));
-        float timeAndEnergy=((5.*time)*energyNormalized)/10.;
-        if(energyZScore>2.)timeAndEnergy*=2.;
+        float timeAndEnergy=((1.*time)+energyNormalized);
+        // if(energyZScore>2.)timeAndEnergy*=2.;
         d=sin(d*8.+timeAndEnergy)/8.;
         
         d=abs(d);
@@ -128,10 +143,20 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord,float time)
         // rotate hue by 90 degrees
         vec3 hsl=rgb2hsl(finalColor);
         hsl.x+=.25;
-        finalColor=hsl2rgb(hsl);
+        vec3 finalColor=hsl2rgb(hsl);
+        fragColor=mix(prevColor,vec4(finalColor,1.),.8);
         return;
     }
-    fragColor=vec4(finalColor,1.)*.1+prevColor*.49;
+    vec4 preFinal=mix(prevColor,vec4(finalColor,1.),.5);
+    // if prefinal is too light, darken it via hsl
+    vec3 hsl=rgb2hsl(preFinal.rgb);
+    if(hsl.z>.3){
+        hsl.z-=.1;
+        //rotate hue by 90 degrees
+        hsl.x+=.25;
+        preFinal.rgb=hsl2rgb(hsl);
+    }
+    fragColor=preFinal;
 }
 
 void main(void){
