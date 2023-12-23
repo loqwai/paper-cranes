@@ -9,17 +9,78 @@ uniform float spectralCentroid;
 uniform float spectralCentroidZScore;
 uniform float energyZScore;
 uniform float energyNormalized;
+uniform float energyMax;
 uniform float spectralFluxMax;
+uniform float spectralFluxNormalized;
 out vec4 fragColor;
 
+// Function to convert RGB to HSL
+vec3 rgb2hsl(vec3 color){
+  float maxColor=max(max(color.r,color.g),color.b);
+  float minColor=min(min(color.r,color.g),color.b);
+  float delta=maxColor-minColor;
+  
+  float h=0.f;
+  float s=0.f;
+  float l=(maxColor+minColor)/2.f;
+  
+  if(delta!=0.f){
+    s=l<.5f?delta/(maxColor+minColor):delta/(2.f-maxColor-minColor);
+    
+    if(color.r==maxColor){
+      h=(color.g-color.b)/delta+(color.g<color.b?6.f:0.f);
+    }else if(color.g==maxColor){
+      h=(color.b-color.r)/delta+2.f;
+    }else{
+      h=(color.r-color.g)/delta+4.f;
+    }
+    h/=6.f;
+  }
+  
+  return vec3(h,s,l);
+}
+
+// Helper function for HSL to RGB conversion
+float hue2rgb(float p,float q,float t){
+  if(t<0.f)
+  t+=1.f;
+  if(t>1.f)
+  t-=1.f;
+  if(t<1.f/6.f)
+  return p+(q-p)*6.f*t;
+  if(t<1.f/2.f)
+  return q;
+  if(t<2.f/3.f)
+  return p+(q-p)*(2.f/3.f-t)*6.f;
+  return p;
+}
+
+// Function to convert HSL to RGB
+vec3 hsl2rgb(vec3 hsl){
+  float h=hsl.x;
+  float s=hsl.y;
+  float l=hsl.z;
+  
+  float r,g,b;
+  
+  if(s==0.f){
+    r=g=b=l;// achromatic
+  }else{
+    float q=l<.5f?l*(1.f+s):l+s-l*s;
+    float p=2.f*l-q;
+    r=hue2rgb(p,q,h+1.f/3.f);
+    g=hue2rgb(p,q,h);
+    b=hue2rgb(p,q,h-1.f/3.f);
+  }
+  
+  return vec3(r,g,b);
+}
 vec4 getLastFrameColor(vec2 uv){
   return texture(prevFrame,uv);
 }
 
 #define S(a,b,t)smoothstep(a,b,t)
 #define NUM_LAYERS 4.
-
-//#define SIMPLE
 
 float N21(vec2 p){
   vec3 a=fract(vec3(p.xyx)*vec3(213.897,653.453,253.098));
@@ -76,7 +137,7 @@ float NetLayer(vec2 st,float n,float t){
   }
   
   float m=0.;
-  float sparkle=0.;
+  float sparkle=energyNormalized;
   
   for(int i=0;i<9;i++){
     m+=line(p[4],p[i],st);
@@ -99,6 +160,7 @@ float NetLayer(vec2 st,float n,float t){
   
   float sPhase=(sin(t+n)+sin(t*.1))*.25+.5;
   sPhase+=pow(sin(t*.1)*.5+.5,50.)*5.;
+  sPhase+=energyMax;
   m+=sparkle*sPhase;//(*.5+.5);
   
   return m;
@@ -107,10 +169,10 @@ float NetLayer(vec2 st,float n,float t){
 void mainImage(out vec4 fragColor,in vec2 fragCoord,float time)
 {
   vec2 uv=(fragCoord*2.-resolution.xy)/resolution.y;
-  vec2 M=resolution.xy/resolution.y;
-  
+  vec2 M=uv*=(1.+(spectralSpreadZScore/100.)*.5);
+  time+=(energyNormalized/10.);
   float t=time*.1;
-  
+  if(beat)t*=1.1;
   float s=sin(t);
   float c=cos(t);
   mat2 rot=mat2(c,-s,s,c);
@@ -126,23 +188,19 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord,float time)
     m+=fade*NetLayer(st*size-M*z,i,time);
   }
   
-  float glow=-uv.y*spectralCentroid;
+  float glow=-uv.y*energyZScore;
   
   vec3 baseCol=vec3(s,cos(t*.4),-sin(t*.24))*.4+.6;
   vec3 col=baseCol*m;
   col+=baseCol*glow;
   
-  #ifdef SIMPLE
-  uv*=10.;
-  col=vec3(1)*NetLayer(uv,0.,time);
-  uv=fract(uv);
-  //if(uv.x>.98 || uv.y>.98) col += 1.;
-  #else
   col*=1.-dot(uv,uv);
   t=mod(time,230.);
   col*=S(0.,20.,t)*S(224.,200.,t);
-  #endif
-  
+  //rotate col hue by spectralFluxNormalized
+  vec3 hsl=rgb2hsl(col);
+  hsl.x+=spectralFluxNormalized;
+  col=hsl2rgb(hsl);
   fragColor=vec4(col,1);
 }
 void main(void){
