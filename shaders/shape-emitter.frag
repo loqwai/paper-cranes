@@ -10,6 +10,7 @@ uniform float spectralCentroid;
 uniform float spectralCentroidZScore;
 uniform float energyZScore;
 uniform float energyNormalized;
+uniform float spectralFluxZScore;
 out vec4 fragColor;
 
 vec4 getLastFrameColor(vec2 uv){
@@ -89,14 +90,17 @@ vec3 palette(in float t)
     
     // vec3 a = vec3(0.138, 0.189, 0.761); vec3 b = vec3(0.448, 0.797, 0.568); vec3 c = vec3(0.591, 1.568, 0.065); vec3 d = vec3(4.347, 2.915, 0.976);
     
-    vec3 a=vec3(0.,spectralCentroid,.500);
+    vec3 a=vec3(0.,.500,.500);
     vec3 b=vec3(2.,.500,.490);
     vec3 c=vec3(2.,2.,.500);
     vec3 d=vec3(0.,.667,.500);
+    vec3 baseColor=a+b*cos(TAU*(c*t+d));
+    // rotate hue by the centroid
+    vec3 hsl=rgb2hsl(baseColor);
+    hsl.y+=spectralCentroid;
+    return hsl2rgb(hsl);
     
-    return a+b*cos(TAU*(c*t+d));
 }
-
 void mainImage(out vec4 fragColor,in vec2 fragCoord,float time)
 {
     vec2 uv=(fragCoord*2.-resolution.xy)/resolution.y;
@@ -107,8 +111,8 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord,float time)
         
         float d=length(uv)*exp(-length(uv0));
         
-        vec3 col=palette(length(uv0)+i*.4+time*pow(.4,i));
-        float timeAndEnergy=time+energyNormalized;
+        vec3 col=palette(length(uv0)+i*.4+time*pow(spectralCentroid,i));
+        float timeAndEnergy=((5.*time)*energyNormalized)/10.;
         if(energyZScore>2.)timeAndEnergy*=2.;
         d=sin(d*8.+timeAndEnergy)/8.;
         
