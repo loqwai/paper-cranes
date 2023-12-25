@@ -37,10 +37,10 @@ vec3 fractal(vec2 uv){
   vec3 col1=col;
   float c1=0.;
   for(int k=0;k<12;k++){
-    float warp_scale=16.;
+    float warp_scale=16.+energyZScore;
+    if(beat)warp_scale*=1.05;
     vec2 warp=
     vec2(sin((t2.x)*warp_scale),cos((t2.y)*warp_scale))
-    //vec2(sin((uv.x)*warp_scale),cos((uv.y)*warp_scale))
     ;
     uv.y-=1./4.;
     
@@ -90,7 +90,7 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord,float time)
   float t1=4.;
   
   vec2 uv=(fragCoord)/resolution.y/t1/2.;
-  uv.xy+=time/t1/12./2.;
+  uv.xy+=time/t1/12.+(spectralCentroid/100.)/2.;
   vec3 col1=fractal(uv);
   fragColor=vec4(col1/2.,1.);
 }
