@@ -7,6 +7,7 @@ uniform bool beat;
 out vec4 fragColor;
 uniform float spectralCentroidNormalized;
 uniform float energyNormalized;
+uniform float spectralFluxNormalized;
 uniform sampler2D prevFrame;
 // Function to convert RGB to HSL
 vec3 rgb2hsl(vec3 color){
@@ -105,7 +106,15 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
   
   // Sample previous frame color
   vec3 prevColor=texture(prevFrame,uv*.5+.5).rgb;
-  
+  // select this pixel on a rolling basis based on frame
+  if(uv.x*100.>mod(time*100.,100.)){
+    prevColor=vec3(spectralCentroidNormalized,energyNormalized,spectralFluxNormalized);
+    // make it brighter and more colorful
+    vec3 hsl=rgb2hsl(prevColor);
+    hsl.z*=2.5+sin(uv.x);
+    hsl.y*=2.5+sin(uv.y);
+    prevColor=hsl2rgb(hsl);
+  }
   // Normalize coordinates to -1.0 to 1.0 range for ripple effect
   vec2 rippleUv=uv*2.-1.;
   if(beat)rippleUv*=2.1;
@@ -120,6 +129,7 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
   
   // Apply ripple effect
   color*=ripple;
+  
   color=mix(prevColor,color,.91);
   
   fragColor=vec4(color,.5);
