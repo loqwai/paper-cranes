@@ -11,6 +11,8 @@ uniform float energyNormalized;
 uniform float spectralFluxNormalized;
 uniform float spectralSpreadMax;
 uniform float spectralSpreadZScore;
+uniform float energyMax;
+uniform float energyMin;
 uniform sampler2D prevFrame;
 uniform int frame;
 // Function to convert RGB to HSL
@@ -104,8 +106,13 @@ vec2 julia(vec2 uv,float time){
 
 // Main image function
 void mainImage(out vec4 fragColor,in vec2 fragCoord,float time){
-  time/=10.;
+  
   vec2 uv=fragCoord.xy/resolution.xy;
+  vec2 uv2=uv-.5;
+  uv2*=mat2(sin(energyMin),sin(energyMax),-sin(energyMin),sin(energyMax));
+  uv2+=.5;
+  uv=uv2;
+  time=time/10.*energyMax;
   
   // Adjusted UV transformations for a more even distribution
   uv=uv+vec2(spectralSpreadMax,spectralSpreadMax)/10.;
@@ -168,8 +175,11 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord,float time){
     // vec3 hsl=rgb2hsl(color);
     // hsl.z*=2.5;
     // color=hsl2rgb(hsl);
-    color=vec3(julia(color.xy,prevColor.b),uv.x);
+    color=vec3(julia(color.xy,uv.y),uv.x);
   }
+  uv=fragCoord.xy/resolution.xy;
+  prevColor=texture(prevFrame,uv).rgb;
+  color=mix(prevColor,color,.5);
   fragColor=vec4(color,.5);
 }
 
