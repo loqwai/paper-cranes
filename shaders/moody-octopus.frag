@@ -13,6 +13,7 @@ uniform float spectralSpreadMax;
 uniform float spectralSpreadZScore;
 uniform float energyMax;
 uniform float energyMin;
+uniform float energyStandardDeviation;
 uniform sampler2D prevFrame;
 uniform int frame;
 // Function to convert RGB to HSL
@@ -108,10 +109,10 @@ vec2 julia(vec2 uv,float time){
 void mainImage(out vec4 fragColor,in vec2 fragCoord,float time){
   
   vec2 uv=fragCoord.xy/resolution.xy;
-  vec2 uv2=uv-.5;
-  uv2*=mat2(sin(energyMin),sin(energyMax),-sin(energyMin),sin(energyMax));
-  uv2+=.5;
-  uv=uv2;
+  //move uv to the central spectroid
+  // uv2*=mat2(sin(energyMin),sin(energyMax),-sin(energyMin),sin(energyMax));
+  // uv2+=.5;
+  // uv=uv2;
   time=time/10.*energyMax;
   
   // Adjusted UV transformations for a more even distribution
@@ -170,16 +171,19 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord,float time){
     hsl.y*=2.5;
     color=hsl2rgb(hsl);
   }
-  // finally, if the color is *still* too dark, we transform the color via the julia set function and hsl
-  if(getGrayPercent(vec4(color,1.))>.5){
-    // vec3 hsl=rgb2hsl(color);
-    // hsl.z*=2.5;
-    // color=hsl2rgb(hsl);
-    color=vec3(julia(color.xy,uv.y),uv.x);
-  }
+  vec3 hsl=rgb2hsl(color);
   uv=fragCoord.xy/resolution.xy;
   prevColor=texture(prevFrame,uv).rgb;
-  color=mix(prevColor,color,.5);
+  vec3 prevHsl=rgb2hsl(prevColor);
+  if(hsl.y<.5){
+    hsl.x=fract((hsl.x+prevHsl.x));
+    hsl.y=1.;
+    hsl.z=(hsl.z+prevHsl.z)/1.3;
+  }
+  color=hsl2rgb(hsl);
+  uv=fragCoord.xy/resolution.xy;
+  prevColor=texture(prevFrame,uv).rgb;
+  color=mix(prevColor,color,.9);
   fragColor=vec4(color,.5);
 }
 
