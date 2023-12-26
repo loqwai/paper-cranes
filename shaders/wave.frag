@@ -6,9 +6,13 @@ uniform float time;
 uniform bool beat;
 out vec4 fragColor;
 uniform float spectralCentroidNormalized;
+uniform float spectralCentroidZScore;
 uniform float energyNormalized;
 uniform float spectralFluxNormalized;
+uniform float spectralSpreadMax;
+uniform float spectralSpreadZScore;
 uniform sampler2D prevFrame;
+uniform int frame;
 // Function to convert RGB to HSL
 vec3 rgb2hsl(vec3 color){
   float maxColor=max(max(color.r,color.g),color.b);
@@ -72,11 +76,13 @@ vec3 hsl2rgb(vec3 hsl){
 }
 
 float getGrayPercent(vec4 color){
-  return(color.r+color.g+color.b)/3.f;
+  vec3 hsl=rgb2hsl(color.rgb);
+  return hsl.y;
 }
 
 // Function to apply Julia set distortion
 vec2 julia(vec2 uv,float time){
+  vec3 prevColor=texture(prevFrame,uv).rgb;
   // Julia set parameters
   float cRe=sin(time)*.7885;
   float cIm=cos(time)*.7885;
@@ -97,19 +103,31 @@ vec2 julia(vec2 uv,float time){
 }
 
 // Main image function
-void mainImage(out vec4 fragColor,in vec2 fragCoord){
+void mainImage(out vec4 fragColor,in vec2 fragCoord,float time){
+  time/=10.;
   vec2 uv=fragCoord.xy/resolution.xy;
-  uv=mat2(cos(time),-sin(time),sin(time),cos(time))*uv;// Rotate UV over time
   
-  // Apply Julia set distortion
+  // Adjusted UV transformations for a more even distribution
+  uv=uv+vec2(spectralSpreadMax,spectralSpreadMax)/10.;
+  uv=uv+vec2(sin(time*2.)*(spectralCentroidNormalized-.5)/10.,
+  cos(time*2.)*(spectralCentroidNormalized-.5)/10.);
+  
+  // Apply Julia set distortion with dynamic parameters
   uv=julia(uv,time);
+  
+  if(beat){
+    uv=julia(uv,time);
+  }
+  if(spectralCentroidZScore>2.5){
+    uv=julia(uv.yx,time);
+  }
   
   // Sample previous frame color
   vec3 prevColor=texture(prevFrame,uv*.5+.5).rgb;
-  // select this pixel on a rolling basis based on frame
+  
+  // Select this pixel based on frame and spectral data
   if(uv.x*100.>mod(time*100.,100.)){
     prevColor=vec3(spectralCentroidNormalized,energyNormalized,spectralFluxNormalized);
-    // make it brighter and more colorful
     vec3 hsl=rgb2hsl(prevColor);
     hsl.z*=2.5+sin(uv.x);
     hsl.y*=2.5+sin(uv.y);
@@ -131,10 +149,30 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
   color*=ripple;
   
   color=mix(prevColor,color,.91);
-  
+  // on even frames, we keep whichever color is more saturated
+  // if(frame%2==0){
+    //   vec3 hsl1=rgb2hsl(color);
+    //   vec3 hsl2=rgb2hsl(prevColor);
+    //   if(hsl1.y>hsl2.y){
+      //     color=prevColor;
+    //   }
+  // }
+  if(spectralCentroidZScore>2.5){
+    // dial the saturation up to 11
+    vec3 hsl=rgb2hsl(color);
+    hsl.y*=2.5;
+    color=hsl2rgb(hsl);
+  }
+  // finally, if the color is *still* too dark, we transform the color via the julia set function and hsl
+  if(getGrayPercent(vec4(color,1.))>.5){
+    // vec3 hsl=rgb2hsl(color);
+    // hsl.z*=2.5;
+    // color=hsl2rgb(hsl);
+    color=vec3(julia(color.xy,prevColor.b),uv.x);
+  }
   fragColor=vec4(color,.5);
 }
 
 void main(void){
-  mainImage(fragColor,gl_FragCoord.xy);
+  mainImage(fragColor,gl_FragCoord.xy,time);
 }
