@@ -8,6 +8,12 @@ let ranMain = false
 let startTime = 0
 const main = async () => {
     if (ranMain) return
+    window.cranes = window.cranes || {}
+    window.cranes.overwrittenAudioFeatures = window.cranes.overwrittenAudioFeatures || {}
+    window.cranes.freezeAudioFeatures = () => {
+        window.cranes.overwrittenAudioFeatures = { ...window.cranes.measuredAudioFeatures }
+        return window.cranes.overwrittenAudioFeatures
+    }
     startTime = performance.now()
     const audio = await setupAudio()
 
@@ -45,7 +51,11 @@ const updateUI = () => {
 }
 
 const animate = ({ render, audio }) => {
-    const audioFeatures = audio.getFeatures()
+    const measuredAudioFeatures = audio.getFeatures()
+    const { overwrittenAudioFeatures } = window.cranes
+    window.cranes.measuredAudioFeatures = measuredAudioFeatures
+
+    const audioFeatures = { ...measuredAudioFeatures, ...overwrittenAudioFeatures }
     render({ time: (performance.now() - startTime) / 1000, audioFeatures })
     requestAnimationFrame(() => animate({ render, audio }))
 }
