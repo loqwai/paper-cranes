@@ -147,13 +147,13 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord,float time)
         fragColor=mix(prevColor,vec4(finalColor,1.),.8);
         return;
     }
-    vec4 preFinal=mix(prevColor,vec4(finalColor,1.),.1);
+    vec4 preFinal=mix(prevColor,vec4(finalColor,1.),.5);
     // if prefinal is too light, darken it via hsl
     vec3 hsl=rgb2hsl(preFinal.rgb);
-    if(hsl.z<.3){
-        hsl.z+=.3;
+    if(hsl.z>.3){
+        hsl.z-=.1;
         //rotate hue by 90 degrees
-        hsl.x-=.25;
+        hsl.x+=.25;
         preFinal.rgb=hsl2rgb(hsl);
     }
     fragColor=preFinal;
