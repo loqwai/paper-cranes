@@ -68,3 +68,5 @@ const animate = ({ render, audio }) => {
     render({ time: (performance.now() - startTime) / 1000, audioFeatures })
     requestAnimationFrame(() => animate({ render, audio }))
 }
+
+main()
