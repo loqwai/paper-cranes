@@ -89,8 +89,8 @@ float getGrayPercent(vec4 color){
 vec2 julia(vec2 uv,float time){
   vec3 prevColor=texture(prevFrame,uv).rgb;
   // Julia set parameters
-  float cRe=sin(time)*.7885;
-  float cIm=cos(time)*.7885;
+  float cRe=sin(time);
+  float cIm=cos(time);
   
   // Apply the Julia set formula
   int maxIter=64;
@@ -112,23 +112,6 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord,float time){
   vec2 uv=fragCoord.xy/resolution.xy;
   vec3 color=vec3(0.);
   vec3 prevColor=rgb2hsl(texture(prevFrame,uv*.5+.5).rgb);
-  // uv2*=mat2(sin(energyMin),sin(energyMax),-sin(energyMin),sin(energyMax));
-  // uv2+=.5;
-  // uv=uv2;
-  
-  // Adjusted UV transformations for a more even distribution
-  
-  // // Apply Julia set distortion with dynamic parameters
-  // uv=julia(uv,time);
-  
-  // if(beat){
-    //   uv=julia(uv,time);
-  // }
-  
-  // if(spectralCentroidZScore>2.5){
-    //   uv=julia(uv.yx,time);
-  // }
-  
   // Normalize coordinates to -1.0 to 1.0 range for ripple effect
   vec2 rippleUv=(uv*2.-1.)*(10.-(energyZScore*2.));
   // if(beat)rippleUv*=2.1;
@@ -138,12 +121,13 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord,float time){
   float ripple=sin(distanceToCenter+time);
   
   // Generate psychedelic color
+  vec2 juliaUv=julia(uv,time);
   float hue=mod(time*300.+distanceToCenter*60.,360.);
   color.x=hue/360.;
   
   // Apply ripple effect
-  color.y=.1;
-  color.z=ripple;
+  color.y=energyNormalized*2.;
+  color.z=spectralCentroidNormalized+.1;
   
   // on even frames, we keep whichever color is more saturated
   // if(frame%2==0){
@@ -159,7 +143,7 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord,float time){
     //   hsl.y*=2.5;
     //   color=hsl2rgb(hsl);
   // }
-  
+  color=mix(color,prevColor,.1);
   fragColor=vec4(hsl2rgb(color),1.);
 }
 
