@@ -1,3 +1,12 @@
+#version 300 es
+precision highp float;
+
+uniform float time;// time equivalent
+uniform float energyNormalized;// Normalized energy
+uniform float spectralCentroidNormalized;// Normalized spectral centroid
+uniform sampler2D prevFrame;// Texture of the previous frame
+uniform vec2 resolution;// Screen resolution
+out vec4 fragColor;
 // Fixed and optimized version of sillsm's shader (https://www.shadertoy.com/view/XtyGzh)
 
 // Copyright Max Sills 2016, licensed under the MIT license.
@@ -71,15 +80,15 @@ float map(vec2 pos)
       mat3 mx;
       if(path==0)
       {
-        mx=matRotate(.75+.25*sin(iTime-1.))*matTranslate(0.,.4*l/lenf);
+        mx=matRotate(.75+.25*sin(time-1.))*matTranslate(0.,.4*l/lenf);
       }
       else if(path==1)
       {
-        mx=matRotate(-.6+.21*sin(iTime))*matTranslate(0.,.6*l/lenf);
+        mx=matRotate(-.6+.21*sin(time))*matTranslate(0.,.6*l/lenf);
       }
       else
       {
-        mx=matRotate(.23*sin(iTime+1.))*matTranslate(0.,1.*l/lenf);
+        mx=matRotate(.23*sin(time+1.))*matTranslate(0.,1.*l/lenf);
       }
       pt_n=(mx*vec3(pt_n,1)).xy;
       
@@ -101,12 +110,12 @@ float map(vec2 pos)
   return d;
 }
 
-void mainImage(out vec4 fragColor,in vec2 fragCoord)
+vec4 mainImage(in vec2 fragCoord)
 {
   // coordinate system
-  vec2 uv=(-iResolution.xy+2.*fragCoord.xy)/iResolution.y;
-  float px=2./iResolution.y;
-  
+  vec2 uv=(fragCoord-.5*resolution.xy)/resolution.y;
+  float px=2./resolution.y;
+  vec4 color=vec4(0.);
   // frame in screen
   uv=uv*4.+vec2(0.,3.5);
   px=px*4.;
@@ -124,17 +133,22 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord)
   #if 1
   vec2 der=vec2(dFdx(d),dFdy(d))/px;
   #else
-  float eps=.1/iResolution.y;
+  float eps=.1/resolution.y;
   vec2 der=vec2(map(uv+vec2(eps,0.))-d,map(uv+vec2(0.,eps))-d)/eps;
   #endif
   vec3 colc=vec3(.5+.5*der.x,.5+.5*der.y,0.)*clamp(abs(d)*8.+.2,0.,1.);
   
   // final color
-  float t=fract(.2+iTime/11.);
+  float t=fract(.2+time/11.);
   
   vec3 col=mix(colc,cola,smoothstep(0.,.05,t));
   col=mix(col,colb,smoothstep(.30,.35,t));
   col=mix(col,colc,smoothstep(.60,.65,t));
   
-  fragColor=vec4(col,1.);
+  color=vec4(col,1.);
+  return color;
+}
+
+void main(void){
+  fragColor=mainImage(gl_FragCoord.xy);
 }
