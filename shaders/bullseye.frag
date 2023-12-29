@@ -85,22 +85,18 @@ float getGrayPercent(vec4 color){
   return hsl.y;
 }
 
-// Function to apply Julia set distortion
-vec2 julia(vec2 uv,float time){
-  vec3 prevColor=texture(prevFrame,uv).rgb;
-  // Julia set parameters
-  float cRe=sin(time);
-  float cIm=cos(time);
+// Enhanced Julia set distortion
+vec2 enhancedJulia(vec2 uv,float time,float spectralCentroid){
+  float cRe=sin(time*spectralCentroid);
+  float cIm=cos(time*spectralCentroid);
   
-  // Apply the Julia set formula
-  int maxIter=64;
+  int maxIter=100;// Adjusted for complexity
   for(int i=0;i<maxIter;i++){
     float x=uv.x*uv.x-uv.y*uv.y+cRe;
     float y=2.*uv.x*uv.y+cIm;
     uv.x=x;
     uv.y=y;
     
-    // Break if the point escapes to infinity
     if(length(uv)>2.)break;
   }
   
@@ -110,41 +106,23 @@ vec2 julia(vec2 uv,float time){
 // Main image function
 void mainImage(out vec4 fragColor,in vec2 fragCoord,float time){
   vec2 uv=fragCoord.xy/resolution.xy;
-  vec3 color=vec3(0.);
-  vec3 prevColor=rgb2hsl(texture(prevFrame,uv*.5+.5).rgb);
-  // Normalize coordinates to -1.0 to 1.0 range for ripple effect
-  vec2 rippleUv=(uv*2.-1.)*(10.-(energyZScore*2.));
-  // if(beat)rippleUv*=2.1;
+  vec3 color=vec3(0.);//hsl
+  vec2 centeredUv=uv*2.-1.;
   
-  // Calculate ripple effect
-  float distanceToCenter=length(rippleUv);
-  float ripple=sin(distanceToCenter+time);
+  // Apply enhanced Julia set distortion
+  vec2 juliaUv=enhancedJulia(centeredUv,time,spectralCentroidNormalized);
   
-  // Generate psychedelic color
-  vec2 juliaUv=julia(uv,time);
-  float hue=mod(time*300.+distanceToCenter*60.,360.);
-  color.x=hue/360.;
+  // Get color from the previous frame
+  vec4 prevColor=texture(prevFrame,juliaUv);
   
-  // Apply ripple effect
-  color.y=energyNormalized*2.;
-  color.z=spectralCentroidNormalized+.1;
+  // Calculate dynamic color based on audio features
+  float hue=.7+spectralCentroidNormalized*.3;
+  color=hsl2rgb(vec3(hue,.5,.5));
   
-  // on even frames, we keep whichever color is more saturated
-  // if(frame%2==0){
-    //   vec3 hsl1=rgb2hsl(color);
-    //   vec3 hsl2=rgb2hsl(prevColor);
-    //   if(hsl1.y>hsl2.y){
-      //     color=prevColor;
-    //   }
-  // }
-  // if(spectralCentroidZScore>2.5){
-    //   // dial the saturation up to 11
-    //   vec3 hsl=rgb2hsl(color);
-    //   hsl.y*=2.5;
-    //   color=hsl2rgb(hsl);
-  // }
-  color=mix(color,prevColor,.1);
-  fragColor=vec4(hsl2rgb(color),1.);
+  // Mix with the previous frame's color for smooth transitions
+  color=mix(prevColor.rgb,color,.1);// Adjust mixing factor as needed
+  color=normalize(color);
+  fragColor=vec4(color,1.);
 }
 
 void main(void){
