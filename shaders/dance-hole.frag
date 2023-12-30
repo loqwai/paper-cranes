@@ -1,17 +1,39 @@
 #version 300 es
 precision highp float;
 // Assuming these uniforms are passed to the shader
-uniform float time;                      // iTime equivalent
-uniform float energyNormalized;          // Normalized energy
-uniform float spectralCentroidNormalized;// Normalized spectral centroid
+uniform float time;                      // iTime equivalent        // Normalized energy
+
 uniform sampler2D prevFrame;             // Texture of the previous frame
 uniform vec2 resolution;                 // iResolution equivalent
+
+uniform float spectralCentroidNormalized;
+uniform float spectralCentroidZScore;
+uniform float spectralCentroid;
+uniform float spectralSkewMean;
+uniform float spectralCrest;
+uniform float energyNormalized;
+uniform float spectralFluxNormalized;
+uniform float spectralFluxMax;
+uniform float spectralSpreadMax;
+uniform float spectralSpreadZScore;
+uniform float energyMax;
+uniform float energyMin;
+uniform float energyStandardDeviation;
+uniform float energyMean;
+uniform float energyZScore;
+uniform float spectralEntropyMin;
+uniform float spectralEntropyMax;
+uniform float spectralRoughness;
+uniform float spectralRoughnessNormalized;
+uniform bool beat;
+
 out vec4 fragColor;
 
 #define l 120
 
 void mainImage(out vec4 FragColor, vec2 FragCoord) {
   vec2 v = (FragCoord.xy - resolution.xy / 2.) / min(resolution.y, resolution.x) * 30.;
+
   vec2 vv = v;
   float ft = time + 360.1;
   float tm = ft * 0.1;
@@ -25,9 +47,9 @@ void mainImage(out vec4 FragColor, vec2 FragCoord) {
   float R = 0.0;
   float RR = 0.0;
   float RRR = 0.0;
-  float a = (1. - mspt.x) * 0.5;
-  float C = cos(tm2 * 0.03 + a * 0.01) * 1.1;
-  float S = sin(tm2 * 0.033 + a * 0.23) * 1.1;
+  float a = (1. - mspt.x) * (energyZScore/10. + 0.5);
+  float C = cos(tm2 * 0.03 + a * 0.01) * (spectralCentroidZScore/10. + 0.1);
+  float S = sin(tm2 * 0.033 + a * 0.23) * spectralFluxNormalized;
   float C2 = cos(tm2 * 0.024 + a * 0.23) * 3.1;
   float S2 = sin(tm2 * 0.03 + a * 0.01) * 3.3;
   vec2 xa = vec2(C, -S);
@@ -82,8 +104,9 @@ void mainImage(out vec4 FragColor, vec2 FragCoord) {
   vec4 currentColor = vec4(ccc, cc, c, 1.0);
 
     // Adjust blending factor based on energyNormalized
-  float blendFactor = mix(0.5, 0.9, energyNormalized);
-  FragColor = mix(currentColor, prevColor, blendFactor);
+  float blendFactor = mix(0.5, 0.9, energyNormalized)/5.;
+  if(beat) blendFactor *=10.;
+  FragColor = mix(prevColor, currentColor, blendFactor);
 }
 void main(void){
   mainImage(fragColor,gl_FragCoord.xy);
