@@ -1,0 +1,5 @@
+I'm working on a music visualization project extracts audio features from ambient sound - so far energy, beat, and spectral properties such as 'spectralCentroid' and 'spectralFlux'. I then do statistics on these features over time, so I have access to not only the immediate value of the audio features, but also the mean, min, max, and variance of the historical values of these features. I also calculate the z-score of the immediate value of each feature, and also the "normalized" value of each feature, which is a value from 0-1 normalized by the min and max of each feature.
+
+These variables are then injected into a glsl shader, which then has access to them as uniforms. For example, a shader would have access to 'energy' 'energyMin' 'energyMax' ''energyZScore". I have access to the spectral features and their statistics as uniforms in the shader as well
+
+ChatGPT
