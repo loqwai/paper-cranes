@@ -37,7 +37,7 @@ function calculateStats(value) {
         normalized: queue.length && max !== min ? (value - min) / (max - min) : 0,
         mean,
         standardDeviation: Math.sqrt(variance),
-        zScore: variance ? (value - mean) / Math.sqrt(variance) : 0,
+        zScore: (variance ? (value - mean) / Math.sqrt(variance) : 0) / 2.5,
         min: min,
         max: max,
     }
