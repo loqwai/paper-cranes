@@ -63,7 +63,7 @@ export class AudioProcessor {
             if (!spectralFlux) return false
             const { stats } = rawFeatures.SpectralFlux
             const { zScore } = stats
-            return zScore > 1.8
+            return zScore > 0.95
         }
 
         this.start = start
