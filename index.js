@@ -32,7 +32,6 @@ const main = async () => {
 
     updateUI()
     requestAnimationFrame(() => animate({ render, audio }))
-    window.cranes.loadAudioFeatures()
     ranMain = true
 }
 
