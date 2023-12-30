@@ -1,52 +1,65 @@
-let historySize = 500, // Define history size
-    queue = [],
-    sum = 0,
-    sumOfSquares = 0,
-    min = Infinity,
-    max = -Infinity
+let historySize = 500 // Define history size
+let queue = []
+let sum = 0
+let sumOfSquares = 0
+let minQueue = []
+let maxQueue = []
+
+function updateMinMaxQueues(value) {
+    while (minQueue.length && minQueue[minQueue.length - 1] > value) {
+        minQueue.pop()
+    }
+    while (maxQueue.length && maxQueue[maxQueue.length - 1] < value) {
+        maxQueue.pop()
+    }
+    minQueue.push(value)
+    maxQueue.push(value)
+}
+
+function removeOldFromMinMaxQueues(oldValue) {
+    if (minQueue[0] === oldValue) {
+        minQueue.shift()
+    }
+    if (maxQueue[0] === oldValue) {
+        maxQueue.shift()
+    }
+}
 
 function calculateStats(value) {
     if (typeof value !== 'number') throw new Error('Input must be a number')
 
-    // Add new value to the queue
+    updateMinMaxQueues(value)
+
     queue.push(value)
     sum += value
     sumOfSquares += value * value
 
-    // Update min and max
-    min = Math.min(min, value)
-    max = Math.max(max, value)
-
-    // Remove old value if queue exceeds history size
     if (queue.length > historySize) {
         let removed = queue.shift()
         sum -= removed
         sumOfSquares -= removed * removed
-
-        // Recalculate min and max if necessary
-        if (removed === min || removed === max) {
-            min = queue.length ? Math.min(...queue) : Infinity
-            max = queue.length ? Math.max(...queue) : -Infinity
-        }
+        removeOldFromMinMaxQueues(removed)
     }
 
     let mean = sum / queue.length
     let variance = sumOfSquares / queue.length - mean * mean
+    let min = minQueue.length ? minQueue[0] : Infinity
+    let max = maxQueue.length ? maxQueue[0] : -Infinity
 
     return {
         normalized: queue.length && max !== min ? (value - min) / (max - min) : 0,
         mean,
         standardDeviation: Math.sqrt(variance),
-        zScore: (variance ? (value - mean) / Math.sqrt(variance) : 0)/2.5,
-        min: min,
-        max: max,
+        zScore: (variance ? (value - mean) / Math.sqrt(variance) : 0) / 3,
+        min,
+        max,
     }
 }
 
 self.addEventListener('message', ({ data: e }) => {
     if (e.type === 'fftData') {
-        let fftData = e.data.fft // Extract FFT data from message
-        let computed = calculateSpectralFlux(fftData) // Process FFT data
+        let fftData = e.data.fft
+        let computed = calculateSpectralFlux(fftData)
         if (computed === null) return
         self.postMessage({ type: 'computedValue', value: computed, stats: calculateStats(computed) })
     }
@@ -55,12 +68,10 @@ self.addEventListener('message', ({ data: e }) => {
     }
 })
 
-// calculations specific to the analyzer go here
-
-let previousSignal = null
+let previousSignal = new Float32Array() // Initialize with zeros
 function calculateSpectralFlux(currentSignal) {
-    if (!previousSignal) {
-        previousSignal = currentSignal
+    if (!previousSignal.length) {
+        previousSignal = new Float32Array(currentSignal.length)
         return null
     }
 
@@ -69,9 +80,6 @@ function calculateSpectralFlux(currentSignal) {
         const diff = Math.abs(currentSignal[i]) - Math.abs(previousSignal[i])
         sf += (diff + Math.abs(diff)) / 2
     }
-
-    // Update the previous signal for the next call
     previousSignal = currentSignal
-
     return sf
 }
