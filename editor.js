@@ -1,9 +1,6 @@
 import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { makeVisualizer } from './src/Visualizer.js'
 
-const timeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-const events = ['click', 'touchstart', 'keydown', 'touchmove', 'touchstop']
-
 let ranMain = false
 let startTime = 0
 const main = async () => {
@@ -21,7 +18,7 @@ const main = async () => {
         window.cranes.overwrittenAudioFeatures = JSON.parse(localStorage.getItem('overwrittenAudioFeatures'))
     }
     startTime = performance.now()
-    const audio = await setupAudio()
+    // const audio = await setupAudio()
 
     const params = new URLSearchParams(window.location.search)
     const shader = params.get('shader') ?? 'prev-frame-check'
@@ -29,31 +26,15 @@ const main = async () => {
 
     const canvas = document.getElementById('visualizer')
     const render = await makeVisualizer({ canvas, shader, initialImageUrl })
-
-    updateUI()
+    const audio = {
+        getFeatures: () => {
+            return window.cranes.overwrittenAudioFeatures
+        },
+    }
     requestAnimationFrame(() => animate({ render, audio }))
+    window.cranes.loadAudioFeatures()
     ranMain = true
 }
-
-events.forEach((event) => {
-    document.addEventListener(event, main, { once: true })
-})
-
-const setupAudio = async () => {
-    const audioContext = new AudioContext()
-    await audioContext.resume()
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-    const sourceNode = audioContext.createMediaStreamSource(stream)
-    const audioProcessor = new AudioProcessor(audioContext, sourceNode)
-    await audioProcessor.start()
-    return audioProcessor
-}
-
-const updateUI = () => {
-    const body = document.querySelector('body')
-    body.classList.add('ready')
-}
-
 const animate = ({ render, audio }) => {
     const measuredAudioFeatures = audio.getFeatures()
     const { overwrittenAudioFeatures } = window.cranes
@@ -63,3 +44,5 @@ const animate = ({ render, audio }) => {
     render({ time: (performance.now() - startTime) / 1000, audioFeatures })
     requestAnimationFrame(() => animate({ render, audio }))
 }
+
+main()

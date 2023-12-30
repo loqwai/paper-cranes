@@ -168,7 +168,7 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord,float time){
   if(spectralCentroidZScore>2.5){
     // dial the saturation up to 11
     vec3 hsl=rgb2hsl(color);
-    hsl.y*=2.5;
+    // hsl.y*=2.5;
     color=hsl2rgb(hsl);
   }
   vec3 hsl=rgb2hsl(color);
