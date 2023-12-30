@@ -7,8 +7,11 @@ uniform bool beat;
 out vec4 fragColor;
 uniform float spectralCentroidNormalized;
 uniform float spectralCentroidZScore;
+uniform float spectralCentroid;
+uniform float spectralCrest;
 uniform float energyNormalized;
 uniform float spectralFluxNormalized;
+uniform float spectralFluxMax;
 uniform float spectralSpreadMax;
 uniform float spectralSpreadZScore;
 uniform float energyMax;
@@ -17,20 +20,21 @@ uniform float energyStandardDeviation;
 uniform float energyMean;
 uniform float energyZScore;
 uniform sampler2D prevFrame;
+uniform float spectralRoughnessNormalized;
 uniform int frame;
 // Function to convert RGB to HSL
 vec3 rgb2hsl(vec3 color){
   float maxColor=max(max(color.r,color.g),color.b);
   float minColor=min(min(color.r,color.g),color.b);
   float delta=maxColor-minColor;
-  
+
   float h=0.f;
   float s=0.f;
   float l=(maxColor+minColor)/2.f;
-  
+
   if(delta!=0.f){
     s=l<.5f?delta/(maxColor+minColor):delta/(2.f-maxColor-minColor);
-    
+
     if(color.r==maxColor){
       h=(color.g-color.b)/delta+(color.g<color.b?6.f:0.f);
     }else if(color.g==maxColor){
@@ -40,7 +44,7 @@ vec3 rgb2hsl(vec3 color){
     }
     h/=6.f;
   }
-  
+
   return vec3(h,s,l);
 }
 
@@ -64,9 +68,9 @@ vec3 hsl2rgb(vec3 hsl){
   float h=hsl.x;
   float s=hsl.y;
   float l=hsl.z;
-  
+
   float r,g,b;
-  
+
   if(s==0.f){
     r=g=b=l;// achromatic
   }else{
@@ -76,7 +80,7 @@ vec3 hsl2rgb(vec3 hsl){
     g=hue2rgb(p,q,h);
     b=hue2rgb(p,q,h-1.f/3.f);
   }
-  
+
   return vec3(r,g,b);
 }
 
@@ -86,45 +90,67 @@ float getGrayPercent(vec4 color){
 }
 
 // Enhanced Julia set distortion
-vec2 enhancedJulia(vec2 uv,float time,float spectralCentroid){
-  float cRe=sin(time*spectralCentroid);
-  float cIm=cos(time*spectralCentroid);
-  
+vec2 enhancedJulia(vec2 uv,float time,float spectralFluxMax){
+  float cRe=sin(time);
+  float cIm=cos(time);
+
   int maxIter=100;// Adjusted for complexity
   for(int i=0;i<maxIter;i++){
     float x=uv.x*uv.x-uv.y*uv.y+cRe;
     float y=2.*uv.x*uv.y+cIm;
     uv.x=x;
     uv.y=y;
-    
+
     if(length(uv)>2.)break;
   }
-  
+
   return uv;
 }
 
+float drawCircle(vec2 uv, vec2 center, float radius) {
+    // Calculate the distance from the current fragment to the center
+    float distanceFromCenter = distance(uv, center);
+
+    // Check if the distance is less than the radius
+    if (distanceFromCenter < radius) {
+        return distanceFromCenter / radius; // Inside the circle
+    } else {
+        return 0.0; // Outside the circle
+    }
+}
+
 // Main image function
-void mainImage(out vec4 fragColor,in vec2 fragCoord,float time){
+vec4 mainImage(in vec2 fragCoord,float time){
   vec2 uv=fragCoord.xy/resolution.xy;
+  vec2 rotatedUV = (uv - vec2(0.5)) * mat2(cos(time+energyMean), -sin(time+energyMean), sin(time+energyMean), cos(time+energyMean)) + vec2(0.5);
+
+  uv = rotatedUV;
+
   vec3 color=vec3(0.);//hsl
-  vec2 centeredUv=uv*2.-1.;
-  
-  // Apply enhanced Julia set distortion
-  vec2 juliaUv=enhancedJulia(centeredUv,time,spectralCentroidNormalized);
-  
-  // Get color from the previous frame
-  vec4 prevColor=texture(prevFrame,juliaUv);
-  
+  vec3 prevColor = rgb2hsl(texture(prevFrame,uv).rgb);
   // Calculate dynamic color based on audio features
-  float hue=.7+spectralCentroidNormalized*.3;
-  color=hsl2rgb(vec3(hue,.5,.5));
-  
+  float distanceFromCircle = drawCircle(uv,vec2(spectralRoughnessNormalized-0.25, spectralCentroidZScore+0.25),tanh(energyZScore)/10.);
+  if(distanceFromCircle > 0.){
+    color.x =sin(time);
+    color.y = spectralCentroid;
+    color.z = 1.-distanceFromCircle;
+    if(beat){
+      color.x = 1.;
+    }
+  }
+  else {
+    vec3 distortedPrev = rgb2hsl(texture(prevFrame,uv.yx*0.99).rgb);
+    vec2 uvj = enhancedJulia(uv*0.99,time,spectralFluxNormalized);
+    distortedPrev.x += (uvj.x/100.);
+    distortedPrev.y += (uvj.y/100.);
+    return vec4(hsl2rgb(distortedPrev),1.);
+  }
   // Mix with the previous frame's color for smooth transitions
-  color=mix(prevColor.rgb,color,.1);// Adjust mixing factor as needed
-  color=normalize(color);
-  fragColor=vec4(color,1.);
+  // color=mix(prevColor.rgb,color,.51);// Adjust mixing factor as needed
+  // color=normalize(color);
+  return vec4(hsl2rgb(color),1.);
 }
 
 void main(void){
-  mainImage(fragColor,gl_FragCoord.xy,time);
+  fragColor = mainImage(gl_FragCoord.xy,time);
 }
