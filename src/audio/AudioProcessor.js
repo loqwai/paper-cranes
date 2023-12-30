@@ -24,6 +24,8 @@ export class AudioProcessor {
                 'Energy',
                 'SpectralEntropy',
                 'SpectralCrest',
+                'SpectralSkew',
+                // 'SpectralFlatness',
             ]) {
                 const worker = new Worker(`/src/audio/analyzers/${workerName}.js?timestamp=${timestamp}`)
                 worker.onmessage = (event) => {
