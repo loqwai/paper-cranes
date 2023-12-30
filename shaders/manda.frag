@@ -104,21 +104,28 @@ vec3 hsl2rgb(vec3 hsl){
     hsl.z *= lightnessFactor; // Adjust lightness
     return hsl2rgb(hsl);
 }
-
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = (fragCoord * 2.0 - resolution.xy) / resolution.y;
     vec2 uv0 = uv;
+
+    // Audio-driven parameters for rotation, speed, and complexity
+    float rotationFactor = spectralCentroidZScore; // Example rotation based on spectral centroid
+    float speedFactor = energyNormalized/10.;          // Example speed based on energy
+    float complexity = 4.0 + spectralFluxNormalized * 3.0; // Complexity based on spectral flux
+
     vec3 finalColor = vec3(0.0);
 
-    for (float i = 0.0; i < 4.0; i++) {
+    for (float i = 0.0; i < complexity; i++) {
         uv = fract(uv * 1.5) - 0.5;
+       // rotate uv around center
+        uv *= mat2(cos(rotationFactor), sin(rotationFactor), -sin(rotationFactor), cos(rotationFactor));
+
 
         float d = length(uv) * exp(-length(uv0));
 
-        // Integrate more audio features into the color palette
-        vec3 col = palette(length(uv0) + i * .4 + time * .4, spectralCentroidZScore, 1.0 + spectralFluxNormalized, 1.0 + energyZScore);
+        vec3 col = palette(length(uv0) + i * .4 + time * speedFactor*0.9, spectralCentroidZScore, 1.0 + spectralFluxNormalized, 1.0 + energyZScore);
 
-        d = sin(d * 8. + time * (energyZScore/4.)*2.) / 8.;
+        d = sin(d * 8. + time * speedFactor) / 8.; // Apply speed factor
         d = abs(d);
 
         d = pow(0.01 / d, 1.2);
