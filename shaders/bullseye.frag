@@ -8,6 +8,7 @@ out vec4 fragColor;
 uniform float spectralCentroidNormalized;
 uniform float spectralCentroidZScore;
 uniform float spectralCentroid;
+uniform float spectralSkewMean;
 uniform float spectralCrest;
 uniform float energyNormalized;
 uniform float spectralFluxNormalized;
@@ -19,6 +20,8 @@ uniform float energyMin;
 uniform float energyStandardDeviation;
 uniform float energyMean;
 uniform float energyZScore;
+uniform float spectralEntropyMin;
+uniform float spectralEntropyMax;
 uniform sampler2D prevFrame;
 uniform float spectralRoughnessNormalized;
 uniform int frame;
@@ -90,9 +93,9 @@ float getGrayPercent(vec4 color){
 }
 
 // Enhanced Julia set distortion
-vec2 enhancedJulia(vec2 uv,float time,float spectralFluxMax){
-  float cRe=sin(time);
-  float cIm=cos(time);
+vec2 enhancedJulia(vec2 uv,float time,float s){
+  float cRe=sin(time)*s;
+  float cIm=cos(time)*s;
 
   int maxIter=100;// Adjusted for complexity
   for(int i=0;i<maxIter;i++){
@@ -129,7 +132,11 @@ vec4 mainImage(in vec2 fragCoord,float time){
   vec3 color=vec3(0.);//hsl
   vec3 prevColor = rgb2hsl(texture(prevFrame,uv).rgb);
   // Calculate dynamic color based on audio features
-  float distanceFromCircle = drawCircle(uv,vec2(spectralRoughnessNormalized-0.25, spectralCentroidZScore+0.25),tanh(energyZScore)/10.);
+  vec2 circleCenter = vec2(spectralRoughnessNormalized-0.25, spectralCentroidZScore+0.25);
+  if(beat) {
+    circleCenter = vec2(spectralEntropyMin, spectralEntropyMax);
+  }
+  float distanceFromCircle = drawCircle(uv,circleCenter,tanh(energyZScore)/10.);
   if(distanceFromCircle > 0.){
     color.x =sin(time);
     color.y = spectralCentroid;
@@ -140,9 +147,10 @@ vec4 mainImage(in vec2 fragCoord,float time){
   }
   else {
     vec3 distortedPrev = rgb2hsl(texture(prevFrame,uv.yx*0.99).rgb);
-    vec2 uvj = enhancedJulia(uv*0.99,time,spectralFluxNormalized);
-    distortedPrev.x += (uvj.x/100.);
-    distortedPrev.y += (uvj.y/100.);
+    vec2 uvj = enhancedJulia(uv*0.99,time,spectralSkewMean);
+    distortedPrev.x += (uvj.x/1000.);
+    distortedPrev.y += beat ? 0.1 : 0.;
+    distortedPrev.z *= beat ? 1.1: 0.99;
     return vec4(hsl2rgb(distortedPrev),1.);
   }
   // Mix with the previous frame's color for smooth transitions
