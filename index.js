@@ -21,7 +21,7 @@ const main = async () => {
         window.cranes.overwrittenAudioFeatures = JSON.parse(localStorage.getItem('overwrittenAudioFeatures'))
     }
     startTime = performance.now()
-    // const audio = await setupAudio()
+    const audio = await setupAudio()
 
     const params = new URLSearchParams(window.location.search)
     const shader = params.get('shader') ?? 'prev-frame-check'
@@ -31,9 +31,6 @@ const main = async () => {
     const render = await makeVisualizer({ canvas, shader, initialImageUrl })
 
     updateUI()
-    const audio = {
-        getFeatures: () => window.cranes.overwrittenAudioFeatures,
-    }
     requestAnimationFrame(() => animate({ render, audio }))
     window.cranes.loadAudioFeatures()
     ranMain = true
@@ -50,7 +47,6 @@ const setupAudio = async () => {
     const sourceNode = audioContext.createMediaStreamSource(stream)
     const audioProcessor = new AudioProcessor(audioContext, sourceNode)
     await audioProcessor.start()
-    await timeout(100)
     return audioProcessor
 }
 
@@ -68,5 +64,3 @@ const animate = ({ render, audio }) => {
     render({ time: (performance.now() - startTime) / 1000, audioFeatures })
     requestAnimationFrame(() => animate({ render, audio }))
 }
-
-main()
