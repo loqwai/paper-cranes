@@ -14,7 +14,17 @@ export class AudioProcessor {
 
         const start = async () => {
             const timestamp = Date.now()
-            for (const workerName of ['SpectralCentroid', 'SpectralFlux', 'SpectralSpread', 'SpectralRolloff', 'SpectralRoughness', 'Energy']) {
+            for (const workerName of [
+                'SpectralCentroid',
+                'SpectralFlux',
+                'SpectralSpread',
+                'SpectralRolloff',
+                'SpectralRoughness',
+                'SpectralKurtosis',
+                'Energy',
+                'SpectralEntropy',
+                'SpectralCrest',
+            ]) {
                 const worker = new Worker(`/src/audio/analyzers/${workerName}.js?timestamp=${timestamp}`)
                 worker.onmessage = (event) => {
                     if (event.data.type === 'computedValue') {
