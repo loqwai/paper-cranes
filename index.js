@@ -1,12 +1,26 @@
 import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { makeVisualizer } from './src/Visualizer.js'
 // import './index.css'
+
 const timeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const events = ['click', 'touchstart', 'keydown', 'touchmove', 'touchstop']
 
 let ranMain = false
 let startTime = 0
 const params = new URLSearchParams(window.location.search)
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./src/service-worker.js').then(
+            (registration) => {
+                console.log('ServiceWorker registration successful with scope: ', registration.scope)
+            },
+            (err) => {
+                console.log('ServiceWorker registration failed: ', err)
+            },
+        )
+    })
+}
 
 const interceptFetchAndCacheEverything = () => {
     console.log('setting up fetch interceptor')

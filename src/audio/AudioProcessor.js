@@ -27,7 +27,7 @@ export class AudioProcessor {
                 'SpectralSkew',
                 // 'SpectralFlatness',
             ]) {
-                const worker = new Worker(`/src/audio/analyzers/${workerName}.js?timestamp=${timestamp}`)
+                const worker = new Worker(`/src/audio/analyzers/${workerName}.js`)
                 worker.onmessage = (event) => {
                     if (event.data.type === 'computedValue') {
                         rawFeatures[workerName] = event.data
