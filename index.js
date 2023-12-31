@@ -8,30 +8,18 @@ let ranMain = false
 let startTime = 0
 const params = new URLSearchParams(window.location.search)
 
-const interceptFetchAndCacheEverything = () => {
-    console.log('setting up fetch interceptor')
-    const originalFetch = window.fetch
-    window.fetch = async (url, options) => {
-        console.log('look at me, I am the fetch now')
-        //if the query parameter 'debug' is set, don't cache
-
-        if (params.has('debug')) {
-            return originalFetch(url, options)
-        }
-        const key = `cranes-${JSON.stringify({ url, options })}`
-        const cached = localStorage.getItem(key)
-        if (cached) {
-            console.log(`cache hit for ${url}`)
-            return new Response(cached)
-        }
-        const response = await originalFetch(url, options)
-        const responseClone = response.clone()
-        const text = await responseClone.text()
-        localStorage.setItem(key, text)
-        return response
-    }
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register(new URL('/service-worker.js', import.meta.url)).then(
+            (registration) => {
+                console.log('ServiceWorker registration successful with scope: ', registration.scope)
+            },
+            (err) => {
+                console.log('ServiceWorker registration failed: ', err)
+            },
+        )
+    })
 }
-interceptFetchAndCacheEverything()
 const main = async () => {
     if (ranMain) return
     window.cranes = window.cranes || {}
