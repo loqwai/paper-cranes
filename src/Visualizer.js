@@ -1,4 +1,4 @@
-import * as twgl from 'twgl'
+import * as twgl from 'twgl.js'
 
 // Vertex shader
 const vertexShader = `
@@ -8,6 +8,7 @@ const vertexShader = `
         gl_Position = position;
     }
 `
+console.log({ twgl })
 const getTexture = async (gl, url) => {
     return new Promise((resolve) => {
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true) // Flip the texture
@@ -37,6 +38,7 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl }) => {
     const fragmentShader = await res.text()
     const initialTexture = await getTexture(gl, initialImageUrl)
 
+    console.log({ fragmentShader, initialTexture, vertexShader })
     const programInfo = twgl.createProgramInfo(gl, [vertexShader, fragmentShader])
     const frameBuffers = [twgl.createFramebufferInfo(gl), twgl.createFramebufferInfo(gl)]
 
@@ -62,8 +64,14 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl }) => {
             ...audioFeatures,
         }
 
+        const nonNullOrUndefinedOrNanUniforms = Object.fromEntries(
+            Object.entries(uniforms).filter(([, value]) => {
+                return value !== null && value !== undefined && !Number.isNaN(value)
+            }),
+        )
+
         twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo)
-        twgl.setUniforms(programInfo, uniforms)
+        twgl.setUniforms(programInfo, nonNullOrUndefinedOrNanUniforms)
         twgl.drawBufferInfo(gl, bufferInfo)
 
         gl.bindFramebuffer(gl.READ_FRAMEBUFFER, frame.framebuffer)
