@@ -21,7 +21,7 @@ const interceptFetchAndCacheEverything = () => {
         const key = `cranes-${JSON.stringify({ url, options })}`
         const cached = localStorage.getItem(key)
         if (cached) {
-            console.log('cache hit')
+            console.log(`cache hit for ${url}`)
             return new Response(cached)
         }
         const response = await originalFetch(url, options)

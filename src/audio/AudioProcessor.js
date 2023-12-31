@@ -27,14 +27,15 @@ export class AudioProcessor {
                 'SpectralSkew',
                 // 'SpectralFlatness',
             ]) {
-                const workerModule = await import(`./analyzers/${workerName}.js`)
-                const worker = new Worker(workerModule.default)
-                worker.onmessage = (event) => {
-                    if (event.data.type === 'computedValue') {
-                        rawFeatures[workerName] = event.data
+                import(`./analyzers/${workerName}.js`).then((workerModule) => {
+                    const worker = new Worker(workerModule.default)
+                    worker.onmessage = (event) => {
+                        if (event.data.type === 'computedValue') {
+                            rawFeatures[workerName] = event.data
+                        }
                     }
-                }
-                workers[workerName] = worker
+                    workers[workerName] = worker
+                })
             }
             requestAnimationFrame(requestFeatures)
         }

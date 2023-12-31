@@ -47,7 +47,7 @@ module.exports = {
                     {
                         loader: 'file-loader',
                         options: {
-                            name: '[name].js',
+                            name: '[contenthash]/[name].js',
                             outputPath: 'audio/analyzers',
                         },
                     },
