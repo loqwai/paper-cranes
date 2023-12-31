@@ -27,7 +27,8 @@ export class AudioProcessor {
                 'SpectralSkew',
                 // 'SpectralFlatness',
             ]) {
-                const worker = new Worker(`/src/audio/analyzers/${workerName}.js?timestamp=${timestamp}`)
+                const workerModule = await import(`./analyzers/${workerName}.js`)
+                const worker = new Worker(workerModule.default)
                 worker.onmessage = (event) => {
                     if (event.data.type === 'computedValue') {
                         rawFeatures[workerName] = event.data
@@ -35,7 +36,6 @@ export class AudioProcessor {
                 }
                 workers[workerName] = worker
             }
-            await timeout(500)
             requestAnimationFrame(requestFeatures)
         }
 

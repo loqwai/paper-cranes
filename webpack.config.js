@@ -43,10 +43,15 @@ module.exports = {
             },
             {
                 test: /src\/audio\/analyzers\/.+\.js$/, // Regex to match JS files in the specific directory
-                use: {
-                    loader: 'worker-loader',
-                    options: { filename: '[name].js' },
-                },
+                use: [
+                    {
+                        loader: 'file-loader',
+                        options: {
+                            name: '[name].js',
+                            outputPath: 'audio/analyzers',
+                        },
+                    },
+                ],
             },
         ],
     },
