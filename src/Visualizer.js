@@ -1,4 +1,13 @@
-import * as twgl from 'twgl.js'
+import {
+    createTexture,
+    createFramebufferInfo,
+    createProgramInfo,
+    createBufferInfoFromArrays,
+    resizeCanvasToDisplaySize,
+    setBuffersAndAttributes,
+    setUniforms,
+    drawBufferInfo,
+} from 'twgl.js'
 
 // Vertex shader
 const vertexShader = `
@@ -8,11 +17,10 @@ const vertexShader = `
         gl_Position = position;
     }
 `
-console.log({ twgl })
 const getTexture = async (gl, url) => {
     return new Promise((resolve) => {
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true) // Flip the texture
-        const texture = twgl.createTexture(
+        const texture = createTexture(
             gl,
             {
                 src: url,
@@ -39,19 +47,19 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl }) => {
     const initialTexture = await getTexture(gl, initialImageUrl)
 
     console.log({ fragmentShader, initialTexture, vertexShader })
-    const programInfo = twgl.createProgramInfo(gl, [vertexShader, fragmentShader])
-    const frameBuffers = [twgl.createFramebufferInfo(gl), twgl.createFramebufferInfo(gl)]
+    const programInfo = createProgramInfo(gl, [vertexShader, fragmentShader])
+    const frameBuffers = [createFramebufferInfo(gl), createFramebufferInfo(gl)]
 
     const arrays = {
         position: [-1, -1, 0, 1, -1, 0, -1, 1, 0, -1, 1, 0, 1, -1, 0, 1, 1, 0],
     }
-    const bufferInfo = twgl.createBufferInfoFromArrays(gl, arrays)
+    const bufferInfo = createBufferInfoFromArrays(gl, arrays)
 
     gl.useProgram(programInfo.program)
 
     let frameNumber = 0
     const render = ({ time, audioFeatures }) => {
-        twgl.resizeCanvasToDisplaySize(gl.canvas)
+        resizeCanvasToDisplaySize(gl.canvas)
         const frame = frameBuffers[frameNumber % 2]
         const prevFrame = frameBuffers[(frameNumber + 1) % 2]
 
@@ -70,9 +78,9 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl }) => {
             }),
         )
 
-        twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo)
-        twgl.setUniforms(programInfo, nonNullOrUndefinedOrNanUniforms)
-        twgl.drawBufferInfo(gl, bufferInfo)
+        setBuffersAndAttributes(gl, programInfo, bufferInfo)
+        setUniforms(programInfo, nonNullOrUndefinedOrNanUniforms)
+        drawBufferInfo(gl, bufferInfo)
 
         gl.bindFramebuffer(gl.READ_FRAMEBUFFER, frame.framebuffer)
 
