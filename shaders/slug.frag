@@ -23,6 +23,7 @@ uniform float energyZScore;
 uniform float spectralEntropyMin;
 uniform float spectralEntropyMax;
 uniform float spectralRoughness;
+
 uniform sampler2D prevFrame;
 uniform float spectralRoughnessNormalized;
 uniform int frame;
@@ -159,7 +160,26 @@ vec4 mainImage(in vec2 fragCoord,float time){
   }
   float juliaStrength = spectralRoughness/6000.;
   vec2 distortedUV = enhancedJulia(uv,time,spectralFluxNormalized);
-
+  // draw triangles if it sounds like someone's whistling
+  if(spectralFluxNormalized > 0.5) {
+    float distanceFromCircle = drawCircle(uv,vec2(0.5,0.5),0.5);
+    if(distanceFromCircle > 0.){
+      color.x =sin(time);
+      color.y = spectralCentroid;
+      color.z = 1.-tanh(distanceFromCircle);
+      if(beat){
+        color.x = 1.;
+      }
+    }
+    else {
+      vec3 distortedPrev = rgb2hsl(texture(prevFrame,uv.yx*0.99).rgb);
+      vec2 uvj = enhancedJulia(uv*0.99,time,spectralSkewMean);
+      distortedPrev.x += (uvj.x/1000.);
+      distortedPrev.y += beat ? 0.1 : 0.;
+      distortedPrev.z *= beat ? 1.1: 0.99;
+      return vec4(hsl2rgb(distortedPrev),1.);
+    }
+  }
   vec3 distortedPrev = texture(prevFrame,distortedUV).rgb;
   vec3 rgbColor = hsl2rgb(color);
   return vec4(mix(rgbColor, distortedPrev, juliaStrength), 1.);

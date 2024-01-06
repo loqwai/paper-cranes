@@ -7,6 +7,16 @@ const ImageMinimizerPlugin = require('image-minimizer-webpack-plugin')
 
 module.exports = {
     mode: 'production',
+
+    // Your other webpack configurations go here
+    devServer: {
+        static: {
+            directory: path.join(__dirname, 'dist'), // Path to your built files
+        },
+        port: 6969, // Choose any port you prefer
+        hot: false, // Enable hot module replacement
+    },
+
     entry: {
         app: './index.js',
         'service-worker': './service-worker.js',
@@ -18,6 +28,10 @@ module.exports = {
     },
     module: {
         rules: [
+            {
+                test: /\.css$/,
+                use: [MiniCssExtractPlugin.loader, 'css-loader'],
+            },
             {
                 test: /\.(png|jpe?g|gif|svg)$/i,
                 use: [
@@ -35,10 +49,6 @@ module.exports = {
                         },
                     },
                 ],
-            },
-            {
-                test: /\.css$/,
-                use: [MiniCssExtractPlugin.loader, 'css-loader'],
             },
             {
                 test: /\.html$/,
@@ -70,6 +80,7 @@ module.exports = {
             patterns: [
                 { from: 'images', to: 'images' },
                 { from: 'shaders', to: 'shaders' },
+                { from: 'favicon.ico', to: 'favicon.ico' },
             ],
         }),
     ],
