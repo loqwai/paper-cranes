@@ -81,6 +81,7 @@ module.exports = {
                 { from: 'images', to: 'images' },
                 { from: 'shaders', to: 'shaders' },
                 { from: 'favicon.ico', to: 'favicon.ico' },
+                { from: 'index.css', to: 'index.css' },
             ],
         }),
     ],
