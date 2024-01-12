@@ -2,7 +2,7 @@
 precision mediump float;
 // @include "colors-and-uniforms.include"
 out vec4 fragColor;
-
+#define PI 3.1415926535897932384626433832795
 vec2 rotateUV(vec2 uv,float angle,vec2 pivot){
   // Translate UV coordinates to pivot
   uv-=pivot;
@@ -44,7 +44,7 @@ vec3 generateBeam(vec3 color1,vec3 color2,vec3 color3,vec2 uv,float time,float o
   
   // Twist effect
   float twistFrequency=3.+6.*centroidEffect;
-  float twistAmplitude=.1;
+  float twistAmplitude=.1+spectralRolloffZScore;
   float yCoord=uv.y;
   float twist=sin(yCoord*twistFrequency+time+offset)*twistAmplitude;
   float twist2=sin(yCoord*twistFrequency+time+offset+3.1415)*twistAmplitude;
@@ -87,6 +87,13 @@ void main(){
   vec3 bubblegumHairColor=vec3(.988235f,.278431f,.756863f);// Pink hair
   vec3 bubblegumBodyColor=vec3(.992157f,.745098f,.996078f);// Light pink skin
   vec3 bubblegumLegsColor=vec3(.803922f,.286275f,.898039f);// Pink boots
+  
+  float twistAmount=spectralFluxNormalized*.1;// Twist beams based on spectral flux
+  vec2 pivot=vec2(.5,.5);
+  if(beat){
+    uv=rotateUV(uv,PI/16.,pivot);// Quick rotation on beat
+  }
+  uv.x+=sin(uv.y*10.+time)*twistAmount;
   
   // Generate beams
   vec3 beam1=generateBeam(marcyHairColor,marcyBodyColor,marcyLegsColor,uv,time,0.,spectralCentroidZScore);
