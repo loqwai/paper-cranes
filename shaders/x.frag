@@ -77,9 +77,8 @@ mat2 rot2D(float angle)
   return mat2(c,-s,s,c);
 }
 
-// Custom gradient - https://iquilezles.org/articles/palettes/
 vec3 palette(float t){
-  float t2=time*.05;
+  float t2=time*.05+energy;
   t2+=230.;// Time offset
   vec3 vector=vec3(
     clamp(smoothstep(.2,.8,.8+.5*sin(.6*t2)),.3,.7),
@@ -114,17 +113,23 @@ float map(vec3 p)
   
   return oct;
 }
-
+vec2 getWarpedUV(vec2 uv){
+  // alter the uv by spectralFluxZScore
+  uv.x+=spectralFluxZScore*.1;
+  uv.y+=spectralCrestZScore*.1;
+  return fract(uv);
+}
 void main(){
   vec2 uv=(gl_FragCoord.xy*2.-resolution.xy)/resolution.y;
-  
+  // rotate the uv by time
+  uv*=rot2D(time*.1)*spectralCrestNormalized;
   // Define ray origin and direction
   vec3 ro=vec3(0.,0.,-5.);
   vec3 rd=normalize(vec3(uv/(5.),1.));
   vec3 col=vec3(0.);
   
-  float t=0.;
-  for(int i=0;i<130;i++){
+  float t=spectralRolloffZScore;
+  for(int i=0;i<int(energy*5.*(energyZScore+2.5))+100;i++){
     vec3 p=ro+rd*t;
     float d=map(p);
     t+=d;
@@ -133,7 +138,12 @@ void main(){
   }
   
   col=palette(t*.01);
+  vec3 hsl=rgb2hsl(col);
+  hsl.z+=energyMean/10.;
+  hsl.x+=spectralCrestZScore/100.;
+  if(beat)hsl.x+=.01;
+  vec4 prevColor=getLastFrameColor(getWarpedUV(uv));
   
-  fragColor=vec4(col,1.);
+  fragColor=mix(prevColor,vec4(hsl2rgb(hsl),1.),beat?1.:smoothstep(.1,.9,energyMean));
 }
 
