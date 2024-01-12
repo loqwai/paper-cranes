@@ -21,6 +21,7 @@
     "twgl.js": "^4.24.0"
   },
   "devDependencies": {
+    "concurrently": "^8.2.2",
     "copy-webpack-plugin": "^11.0.0",
     "css-loader": "^6.8.1",
     "eslint": "^8.56.0",
