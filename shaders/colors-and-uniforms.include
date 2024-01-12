@@ -96,3 +96,15 @@ vec3 hsl2rgb(vec3 hsl){
 float getGrayPercent(vec3 color){
   return(color.r+color.g+color.b)/3.f;
 }
+
+vec3 hslMix(vec3 color1,vec3 color2,float m){
+  vec3 hsl1=rgb2hsl(color1);
+  vec3 hsl2=rgb2hsl(color2);
+  // rotate color1 hue towards color2 hue by mix amount
+  hsl1.x+=(hsl2.x-hsl1.x)*m;
+  // mix saturation and lightness
+  hsl1.y+=(hsl2.y-hsl1.y)*m;
+  // hsl1.z += (hsl2.z - hsl1.z) * m;
+  
+  return hsl2rgb(hsl1);
+}
