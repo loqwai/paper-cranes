@@ -107,10 +107,10 @@ float map(vec3 p)
   q.z+=time*.8;//smootherstep(0.,1.,sin(time));
   
   q.xy=fract(vec2(q.x,q.y))-.5;
-  q.z=mod(q.z,.3)-.125;
+  q.z=mod(q.z,spectralRoughnessNormalized)-.125;
   
-  float oct=sdEllipsoid(q,vec3(fovMult(time*.1,.6,.01)*.3));
-  
+  float oct=sdEllipsoid(q,vec3(fovMult(sin(time)*energyNormalized,spectralKurtosisNormalized,.01)*.3));
+  oct+=sdOctahedron(q,fovMult(sin(time)*energyZScore,spectralKurtosisNormalized,.01)*.3);
   return oct;
 }
 
@@ -132,7 +132,7 @@ void main(){
   vec3 col=vec3(0.);
   
   float t=0.;
-  for(int i=0;i<int(energy*5.*(energyZScore+2.5))+100;i++){
+  for(int i=0;i<int(spectralRoughness/500.*(energyZScore+2.5))+100;i++){
     vec3 p=ro+rd*t;
     float d=map(p);
     t+=d;
