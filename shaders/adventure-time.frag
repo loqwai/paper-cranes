@@ -13,6 +13,26 @@ vec2 rotateUV(vec2 uv,float angle,vec2 pivot){
   // Translate UV coordinates back
   return rotatedUV+pivot;
 }
+
+vec3 grassColor=vec3(.13,.55,.13);// Rich green color for the grass
+vec3 skyColor=vec3(.53,.81,.92);// Bright blue color for the sky
+
+// Function to mix two colors based on a gradient factor
+vec3 mixColors(vec3 color1,vec3 color2,float mixFactor){
+  return mix(color1,color2,mixFactor);
+}
+
+vec3 gradientBackground(vec2 uv){
+  vec3 grassColor=vec3(.13,.55,.13);// Rich green color for the grass
+  vec3 skyColor=vec3(.53,.81,.92);// Bright blue color for the sky
+  
+  // Adjust gradient factor for 75% sky and 25% grass
+  // The transition point is at 25% from the bottom
+  float transitionPoint=.25;
+  float gradientFactor=smoothstep(0.,transitionPoint,uv.y);
+  
+  return mix(grassColor,skyColor,gradientFactor);
+}
 vec3 generateBeam(vec3 color1,vec3 color2,vec3 color3,vec2 uv,float time,float offset,float centroidEffect){
   // Transformations to UV coordinates
   float horizontalMovement=sin(time*.5)*.5;
@@ -51,6 +71,9 @@ vec3 generateBeam(vec3 color1,vec3 color2,vec3 color3,vec2 uv,float time,float o
 void main(){
   vec2 uv=(gl_FragCoord.xy*2.-resolution.xy)/resolution.y;
   uv.x*=resolution.x/resolution.y;
+  // Calculate the background gradient
+  vec3 backgroundColor=gradientBackground(uv);
+  
   uv.y=(uv.y+1.)*.5;
   
   // Get last frame color and mix it with the beam color
@@ -72,7 +95,7 @@ void main(){
   // vec3 beam3=generateBeam(color3,uv,time,1.57,spectralCentroidZScore);
   
   // Blend the beams
-  vec3 finalBeam=(beam1+beam2)/2.;
-  
-  fragColor=vec4(finalBeam,1.);
+  vec3 characters=(beam1+beam2)/2.;
+  vec3 finalColor=mix(backgroundColor,characters,length(characters));
+  fragColor=vec4(finalColor,1.);
 }
