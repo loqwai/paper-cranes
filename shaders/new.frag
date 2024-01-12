@@ -3,41 +3,137 @@ precision highp float;
 // hi
 // @include "colors-and-uniforms.include"
 out vec4 fragColor;
-void main(){
-  vec2 uv=gl_FragCoord.xy/resolution.xy;
-  
-  // Get color from the previous frame
-  vec4 lastFrameColor=getLastFrameColor(uv);
-  
-  // Simple warping effect
-  float warpAmount=.01;// Control the intensity of the warp
-  vec2 warp=warpAmount*vec2(sin(lastFrameColor.r*10.),cos(lastFrameColor.g*10.));
-  vec2 warpedUV=uv+warp;
-  
-  // Ensure warped coordinates wrap around the edges
-  warpedUV=fract(warpedUV);
-  
-  // Sample color again with the warped coordinates
-  vec4 warpedColor=getLastFrameColor(warpedUV);
-  
-  // Convert RGB to HSL
-  vec3 hslColor=rgb2hsl(warpedColor.rgb);
-  
-  // Spectral-based color transformations
-  hslColor.x+=sin(time*.1+spectralCentroid)*.5;
-  hslColor.y*=1.+spectralSpread*.5;
-  hslColor.z+=spectralFlux*.2;
-  hslColor.z=clamp(hslColor.z,0.,1.);
-  
-  // Convert back to RGB
-  vec3 rgbColor=hsl2rgb(hslColor);
-  
-  // Mix with spectralRolloff and spectralEntropy influenced color
-  vec3 rolloffColor=vec3(spectralRolloff,spectralEntropy,.5);
-  rgbColor=mix(rgbColor,rolloffColor,.5);
-  
-  // Apply energy
-  rgbColor*=energy;
-  // Output the final color
-  fragColor=vec4(hslMix(warpedColor.rgb,rgbColor,.02),1.);
+
+// Shpaes distance func
+float sdSphere(vec3 p,float s)
+{
+  return length(p)-s;
 }
+float sdTorus(vec3 p,vec2 t)
+{
+  vec2 q=vec2(length(p.xz)-t.x,p.y);
+  return length(q)-t.y;
+}
+float sdOctahedron(vec3 p,float s)
+{
+  p=abs(p);
+  float m=p.x+p.y+p.z-s;
+  vec3 q;
+  if(3.*p.x<m)q=p.xyz;
+  else if(3.*p.y<m)q=p.yzx;
+  else if(3.*p.z<m)q=p.zxy;
+  else return m*.57735027;
+  
+  float k=clamp(.5*(q.z-q.y+s),0.,s);
+  return length(vec3(q.x,q.y-s+k,q.z-k));
+}
+
+float sdPyramid(vec3 p,float h)
+{
+  float m2=h*h+.25;
+  
+  p.xz=abs(p.xz);
+  p.xz=(p.z>p.x)?p.zx:p.xz;
+  p.xz-=.5;
+  
+  vec3 q=vec3(p.z,h*p.y-.5*p.x,h*p.x+.5*p.y);
+  
+  float s=max(-q.x,0.);
+  float t=clamp((q.y-.5*p.z)/(m2+.25),0.,1.);
+  
+  float a=m2*(q.x+s)*(q.x+s)+q.y*q.y;
+  float b=m2*(q.x+.5*t)*(q.x+.5*t)+(q.y-m2*t)*(q.y-m2*t);
+  
+  float d2=min(q.y,-q.x*m2-q.y*.5)>0.?0.:min(a,b);
+  
+  return sqrt((d2+q.z*q.z)/m2)*sign(max(q.z,-p.y));
+}
+
+float sdEllipsoid(vec3 p,vec3 r)
+{
+  float k0=length(p/r);
+  float k1=length(p/(r*r));
+  return k0*(k0-1.)/k1;
+}
+
+//Utils
+
+float smin(float a,float b,float k)
+{
+  float h=max(k-abs(a-b),0.)/k;
+  return min(a,b)-h*h*h*k*(1./6.);
+}
+
+vec3 rot3D(vec3 p,vec3 axis,float angle)
+{
+  return mix(dot(axis,p)*axis,p,cos(angle))+cross(axis,p)*sin(angle);
+}
+
+mat2 rot2D(float angle)
+{
+  float s=sin(angle);
+  float c=cos(angle);
+  
+  return mat2(c,-s,s,c);
+}
+
+// Custom gradient - https://iquilezles.org/articles/palettes/
+vec3 palette(float t){
+  float t2=time*.05;
+  t2+=230.;// Time offset
+  vec3 vector=vec3(
+    clamp(smoothstep(.2,.8,.8+.5*sin(.6*t2)),.3,.7),
+    clamp(smoothstep(.2,.8,.5+.5*cos(.8*t2+2.)),.5,.6),
+    clamp(smoothstep(.2,.8,.5+.5*sin(1.5*t2+4.)),.2,.4)
+  );
+  
+  return.5+.5*cos(6.28318*(t+vector));
+}
+
+float movementCurve(float x){
+  return-2./(1.+exp(-10.*(.5*x-.5)))+1.;
+}
+
+float PI=3.1416;
+float fovMult(float x,float a,float d)
+{
+  return a+d+sin(PI*x-sqrt(PI))*a;
+}
+
+//Render
+float map(vec3 p)
+{
+  vec3 q=p;
+  
+  q.z+=time*.8;//smootherstep(0.,1.,sin(time));
+  
+  q.xy=fract(vec2(q.x,q.y))-.5;
+  q.z=mod(q.z,.3)-.125;
+  
+  float oct=sdEllipsoid(q,vec3(fovMult(time*.1,.6,.01)*.3));
+  
+  return oct;
+}
+
+void main(){
+  vec2 uv=(gl_FragCoord.xy*2.-resolution.xy)/resolution.y;
+  
+  // Define ray origin and direction
+  vec3 ro=vec3(0.,0.,-5.);
+  vec3 rd=normalize(vec3(uv/(5.),1.));
+  vec3 col=vec3(0.);
+  
+  float t=0.;
+  for(int i=0;i<130;i++){
+    vec3 p=ro+rd*t;
+    float d=map(p);
+    t+=d;
+    
+    if(t>=10000.||d<=.003)break;
+  }
+  
+  col=palette(t*.01);
+  
+  fragColor=vec4(col,1.);
+}
+

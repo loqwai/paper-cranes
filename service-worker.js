@@ -12,7 +12,7 @@ self.addEventListener('install', (event) => {
     const url = new URL(event.request.url)
 
     // Check if the root URL has the 'nocache=true' query parameter
-    if (url.origin + url.pathname === self.location.origin + '/' && url.searchParams.get('nocache') === 'true') {
+    if (url && url.origin + url.pathname === self.location.origin + '/' && url.searchParams.get('nocache') === 'true') {
         // Bypass cache and go to network
         event.respondWith(fetch(event.request))
         return
