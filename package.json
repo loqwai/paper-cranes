@@ -4,9 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "npm run build && webpack serve --mode development",
+    "start": "npx http-server -c -1 -p 6969 ./dist/",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "ls && webpack --mode=production",
+    "build:webpack": "ls && webpack --mode=production",
+    "build:shader": "npx webpack-glsl-minify $f --ext=\"\" --output sourceOnly --includesOnly -o dist",
+    "build": "concurrently \"npm run build:webpack\" \"npm run build:shaders\"",
+    "build:shaders": "rm dist/shaders/*; for f in ./shaders/*; do npm run build:shader $f & done; wait",
+    "dev": "concurrently \"npm run start\" \"npm run watch:build\"",
+    "watch:build": "fswatch -o --exclude '\\.git' --exclude 'dist/' . | xargs -n1 -I{} npm run build",
     "format": "eslint --fix ."
   },
   "author": "",

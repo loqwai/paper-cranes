@@ -1,4 +1,4 @@
-const CACHE_NAME = 'v1'
+const CACHE_NAME = 'v2'
 const urlsToCache = [
     'index.html',
     'index.css',
@@ -8,6 +8,10 @@ const urlsToCache = [
 console.log({ urlsToCache })
 
 self.addEventListener('install', (event) => {
+    // Ignore non-GET requests and Google Analytics
+    if (event.request.method !== 'GET' || event.request.url.includes('google')) {
+        return fetch(event.request)
+    }
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             return cache.addAll(urlsToCache).catch((error) => {
@@ -26,11 +30,11 @@ self.addEventListener('fetch', (event) => {
                 caches.open(CACHE_NAME).then((cache) => {
                     cache.put(event.request, networkResponse.clone())
                 })
-                return networkResponse
+                return networkResponse.clone()
             })
 
             // Return the cached response immediately, if available, while the fetch continues in the background
-            return cachedResponse || fetchPromise
+            return cachedResponse?.clone() || fetchPromise
         }),
     )
 })
