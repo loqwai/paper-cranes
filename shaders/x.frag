@@ -116,20 +116,22 @@ float map(vec3 p)
 
 vec2 getWarpedUV(vec2 uv){
   // Warping the UV coordinates based on spectral flux
-  uv.x+=spectralFluxZScore*.1;
-  uv.y+=spectralCrestZScore*.1;
+  if(energyZScore>2.){
+    uv.x+=sin(time*2.)*energyZScore*2.;
+    uv.y+=cos(time*2.)*energyZScore*2.;
+  }
   return fract(uv);
 }
 
 void main(){
   vec2 uv=(gl_FragCoord.xy*2.-resolution.xy)/resolution.y;
-  uv*=rot2D(time*.1*spectralCrestNormalized);
+  uv*=rot2D(time/10.);
   
   vec3 ro=vec3(0.,0.,-5.);
   vec3 rd=normalize(vec3(uv/5.,1.));
   vec3 col=vec3(0.);
   
-  float t=spectralRolloffZScore;
+  float t=0.;
   for(int i=0;i<int(energy*5.*(energyZScore+2.5))+100;i++){
     vec3 p=ro+rd*t;
     float d=map(p);
@@ -145,5 +147,5 @@ void main(){
   if(beat)hsl.x+=.01;
   
   vec4 prevColor=getLastFrameColor(getWarpedUV(uv));
-  fragColor=mix(prevColor,vec4(hsl2rgb(hsl),1.),beat?1.:smoothstep(.1,.9,energyMean));
+  fragColor=mix(prevColor,vec4(hsl2rgb(hsl),1.),beat?1.:.8);
 }
