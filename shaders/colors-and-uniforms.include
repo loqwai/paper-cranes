@@ -1,4 +1,4 @@
-// Assuming these uniforms are passed to the shader
+// included
 uniform float time;// iTime equivalent        // Normalized energy
 
 uniform sampler2D prevFrame;// Texture of the previous frame
