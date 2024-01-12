@@ -67,7 +67,6 @@ export class AudioProcessor {
                 }
             }
             this.features['beat'] = isBeat()
-            // console.log(this.features)
             return this.features
         }
 

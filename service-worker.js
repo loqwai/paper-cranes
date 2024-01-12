@@ -8,6 +8,15 @@ const urlsToCache = [
 console.log({ urlsToCache })
 
 self.addEventListener('install', (event) => {
+    // Parse the URL of the request
+    const url = new URL(event.request.url)
+
+    // Check if the root URL has the 'nocache=true' query parameter
+    if (url.origin + url.pathname === self.location.origin + '/' && url.searchParams.get('nocache') === 'true') {
+        // Bypass cache and go to network
+        event.respondWith(fetch(event.request))
+        return
+    }
     // Ignore non-GET requests and Google Analytics
     if (event.request.method !== 'GET' || event.request.url.includes('google')) {
         return fetch(event.request)
