@@ -1,8 +1,8 @@
 export const shaderWrapper = (shader) => {
-    if (shader.includes('#version 300')) {
+    if (shader.includes('#version')) {
         return shader
     }
-    if (shader.includes('mainImage(')) {
+    if (shader.includes('mainImage')) {
         return `
 #version 300 es
 precision highp float;
