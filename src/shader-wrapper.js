@@ -84,6 +84,9 @@ uniform float spectralFluxZScore;
 uniform float spectralFluxMin;
 uniform float spectralFluxMax;
 
+uniform float iTime;
+uniform vec2 iResolution;
+
 vec4 getLastFrameColor(vec2 uv){
   return texture(prevFrame,uv);
 }
