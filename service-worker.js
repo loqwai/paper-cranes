@@ -14,7 +14,7 @@ self.addEventListener('fetch', (event) => {
                 caches.open(CACHE_NAME).then((cache) => {
                     cache.put(event.request, networkResponse.clone())
                 })
-                return networkResponse
+                return networkResponse.clone()
             })
 
             // Return the cached response immediately, if available, while updating the cache in the background
