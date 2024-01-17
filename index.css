@@ -64,6 +64,7 @@ body {
   color: #e6e6e6;
   font-family: 'Space-Age', sans-serif;
   backdrop-filter: blur(100px);
+  user-select: none;
 }
 
 body::before {
