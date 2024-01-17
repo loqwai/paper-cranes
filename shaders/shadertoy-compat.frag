@@ -35,10 +35,7 @@ mat3 lookat(vec3 dir) {
 
 float hash12(vec2 p)
 {
-	p*=1000.;
-	vec3 p3  = fract(vec3(p.xyx) * .1031);
-    p3 += dot(p3, p3.yzx + 33.33);
-    return fract((p3.x + p3.y) * p3.z);
+	return fract(spectralEntropy*dot(p,vec2(127.1,311.7)));
 }
 
 float de(vec3 p) {
@@ -78,9 +75,9 @@ vec3 march(vec3 from, vec3 dir) {
     vec3 p=from,col=vec3(0.);
     float d,td=0.;
     vec3 g=vec3(0.);
-    for (int i=0; i<200; i++) {
+    for (int i=0; i<int(spectralRoughnessMean)+10; i++) {
         d=de(p);
-        if (d<.001||td>200.) break;
+        if (d<.001||td>spectralRoughnessMean+10.) break;
         p+=dir*d;
         td+=d;
         g+=.1/(.1+d)*hitbol*abs(normalize(point));
@@ -97,7 +94,7 @@ vec3 march(vec3 from, vec3 dir) {
     td=0.;
     for (int i=0; i<200; i++) {
         d=de(p);
-        if (d<.001||td>200.) break;
+        if (d<.001||td>spectralRoughnessMean+10.) break;
         p+=dir*d;
         td+=d;
         g+=.1/(.1+d)*abs(normalize(point));
@@ -128,7 +125,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     uv.x*=iResolution.x/iResolution.y;
     float t=iTime*2.;
     vec3 from=path(t);
-    if (mod(iTime-10.,20.)>10.) {
+    if (mod(iTime-10.,spectralRoughnessMean)>10.) {
         from=path(floor(t/20.)*20.+10.);
         from.x+=2.;
     }
@@ -141,5 +138,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     dir=lookat(dd)*dir;
     vec3 col = march(from, dir);
 	col*=vec3(1.,.9,.8);
+    vec3 hsl = rgb2hsl(col);
+    hsl.x += fract(energyMean);
+    hsl.y += fract(energyZScore/2.);
+    if(beat) hsl.z+=0.1;
+    col = hsl2rgb(hsl);
     fragColor = vec4(col,1.0);
 }
