@@ -1,21 +1,4 @@
-const CACHE_NAME = 'v4'
-
-self.addEventListener('install', (event) => {
-    // Clear all old caches during installation
-    event.waitUntil(
-        caches
-            .keys()
-            .then((cacheNames) => {
-                return Promise.all(
-                    cacheNames.map((cacheName) => {
-                        console.log(`Deleting cache: ${cacheName}`)
-                        return caches.delete(cacheName)
-                    }),
-                )
-            })
-            .then(() => self.skipWaiting()), // Activate new service worker immediately
-    )
-})
+const CACHE_NAME = `cache__${WEBPACK_CACHE_NAME}`
 
 self.addEventListener('activate', (event) => {
     // Ensure the updated service worker takes control immediately
@@ -23,6 +6,7 @@ self.addEventListener('activate', (event) => {
 })
 
 self.addEventListener('fetch', (event) => {
+    console.log('cache name', CACHE_NAME)
     event.respondWith(
         caches.match(event.request).then((cachedResponse) => {
             const fetchPromise = fetch(event.request).then((networkResponse) => {
