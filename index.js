@@ -1,13 +1,13 @@
 import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { makeVisualizer } from './src/Visualizer.js'
 import './index.css'
-const timeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const events = ['click', 'touchstart', 'keydown', 'touchmove', 'touchstop']
 
 let ranMain = false
 let startTime = 0
 const params = new URLSearchParams(window.location.search)
-
+// check if we have microphone access. If so, just run main immediately
+navigator.mediaDevices.getUserMedia({ audio: true }).then(() => main())
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register(new URL('/service-worker.js', import.meta.url)).then(

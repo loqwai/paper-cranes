@@ -1,52 +1,53 @@
 <!doctype html>
 <html lang="en">
-    <head>
-        <link rel="stylesheet" href="index.css" />
-        <style type="text/css">
-            h1 {
-                font-size: 10vmin;
-                font-family: sans-serif;
-                text-align: center;
-                color: #fff;
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                padding: 5vh;
-            }
 
-            small {
-                position: fixed;
-                top: 0;
-                left: 0;
-            }
-        </style>
-        <!-- <script src="https://greggman.github.io/webgl-lint/webgl-lint.js"></script> -->
-        <script type="importmap">
+<head>
+    <link rel="stylesheet" href="index.css" />
+    <style type="text/css">
+        h1 {
+            font-size: 10vmin;
+            font-family: sans-serif;
+            text-align: center;
+            color: #fff;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 5vh;
+        }
+
+        small {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+    </style>
+    <script type="importmap">
             {
                 "imports": {
                     "twgl.js": "https://cdnjs.cloudflare.com/ajax/libs/twgl.js/4.19.5/twgl-full.module.min.js"
                 }
             }
         </script>
-    </head>
+</head>
 
-    <body>
-        <h1>Click anywhere to start visualization</h1>
-        <div id="container">
-            <canvas id="visualizer" width="1920" height="1920"></canvas>
-        </div>
-        <script type="module" src="./index.js"></script>
-        <!-- Google tag (gtag.js) -->
-        <script async src="https://www.googletagmanager.com/gtag/js?id=G-V2CY1C6W63"></script>
-        <script>
-            window.dataLayer = window.dataLayer || []
-            function gtag() {
-                dataLayer.push(arguments)
-            }
-            gtag('js', new Date())
+<body>
+    <h1>Click anywhere to start visualization</h1>
+    <div id="container">
+        <canvas id="visualizer" width="1920" height="1920"></canvas>
+    </div>
+    <script type="module" src="./index.js"></script>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-V2CY1C6W63"></script>
+    <script>
+        window.dataLayer = window.dataLayer || []
+        function gtag() {
+            dataLayer.push(arguments)
+        }
+        gtag('js', new Date())
 
-            gtag('config', 'G-V2CY1C6W63')
-        </script>
-    </body>
+        gtag('config', 'G-V2CY1C6W63')
+    </script>
+</body>
+
 </html>

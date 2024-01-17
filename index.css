@@ -82,7 +82,7 @@ body::before {
 
 body.ready::before {
   filter: blur(0px); /* Adjust this value to control the blur intensity */
-  transition: all 0.5s ease-in-out;
+  transition: all 0.01s ease-in-out;
   opacity: 0;
 }
 
@@ -107,7 +107,7 @@ canvas {
   width: 100vmin;
   background: transparent;
   opacity: 0;
-  transition: opacity 0.5s ease-in-out;
+  transition: opacity 0.01s ease-in-out;
 }
 
 .ready canvas {
@@ -116,7 +116,7 @@ canvas {
 
 .ready h1 {
   opacity: 0;
-  transition: opacity 0.5s ease-in-out;
+  transition: opacity 0.01s ease-in-out;
 }
 
 .container h1 {
