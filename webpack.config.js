@@ -4,6 +4,7 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 const TerserPlugin = require('terser-webpack-plugin')
 const CopyWebpackPlugin = require('copy-webpack-plugin')
 const ImageMinimizerPlugin = require('image-minimizer-webpack-plugin')
+const { DefinePlugin } = require('webpack')
 
 module.exports = {
     mode: 'production',
@@ -83,6 +84,9 @@ module.exports = {
                 { from: 'favicon.ico', to: 'favicon.ico' },
                 { from: 'index.css', to: 'index.css' },
             ],
+        }),
+        new DefinePlugin({
+            WEBPACK_CACHE_NAME: JSON.stringify(new Date().toISOString()),
         }),
     ],
     optimization: {
