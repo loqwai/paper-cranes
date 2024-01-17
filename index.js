@@ -58,7 +58,8 @@ const setupAudio = async () => {
     await audioContext.resume()
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     const sourceNode = audioContext.createMediaStreamSource(stream)
-    const audioProcessor = new AudioProcessor(audioContext, sourceNode)
+    const historySize = parseInt(params.get('history-size') ?? '500')
+    const audioProcessor = new AudioProcessor(audioContext, sourceNode, historySize)
     await audioProcessor.start()
     return audioProcessor
 }

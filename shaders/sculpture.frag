@@ -124,7 +124,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     direction = normalize(direction);
     vec3 hsl = march(camera,direction)	;
-    hsl.x = fract(hsl.x + spectralCentroidMean);
+    hsl.x = fract(hsl.x + (spectralCentroidMean * 4.));
+    hsl.y = energyMean * 4.;
+    hsl.y = clamp(hsl.y,0.0,0.98);
 	fragColor = vec4(hsl2rgb(hsl),1.0);
 
 }

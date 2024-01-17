@@ -1,7 +1,7 @@
 import { applyHanningWindow } from './applyHanningWindow.js'
 const timeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 export class AudioProcessor {
-    constructor(audioContext, sourceNode, fftSize = 2048) {
+    constructor(audioContext, sourceNode, historySize, fftSize = 2048) {
         this.features = {}
 
         const fftAnalyzer = audioContext.createAnalyser()
@@ -29,6 +29,7 @@ export class AudioProcessor {
             ]) {
                 import(`./analyzers/${workerName}.js`).then((workerModule) => {
                     const worker = new Worker(workerModule.default)
+                    worker.postMessage({ type: 'config', config: { historySize } })
                     worker.onmessage = (event) => {
                         if (event.data.type === 'computedValue') {
                             rawFeatures[workerName] = event.data
