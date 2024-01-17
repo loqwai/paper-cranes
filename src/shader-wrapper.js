@@ -1,6 +1,5 @@
 export const shaderWrapper = (shader) => {
-    console.log(shader)
-    if (shader.includes('void main()')) {
+    if (shader.includes('#version 300')) {
         return shader
     }
     if (shader.includes('mainImage(')) {
