@@ -1,7 +1,7 @@
 float bailout = 8.0;
 float power = 8.0;
+int maxRaySteps =  60;
 float minimumStepDistance = 0.001;
-int iterations = 8;
 int maxIters = 8;
 float eps = 0.00001;
 float zoom = 2.0;
@@ -13,7 +13,6 @@ vec3 light = vec3(0.0,0.0,5.0);
 float atan3(in float y, in float x) {
     return x == 0.0 ? sign(y)*(spectralSpreadMean) : atan(y, x);
 }
-
 
 vec3 toRectangular(in vec3 sph) {
     return vec3(sph.x*sin(sph.z)*cos(sph.y),
@@ -28,6 +27,7 @@ vec3 toSpherical(in vec3 rec) {
 }
 
 float escape(in vec3 position) {
+    int iterations = int(spectralRoughnessMean/10.0);
 	vec3 z = position;
     float r = 0.0;
     float theta,phi,zr;
@@ -53,6 +53,7 @@ float DE(in vec3 position) {
     float dr = 1.0;
     float r = 0.0;
     float theta,phi,zr;
+    int iterations = int(spectralRoughnessMean/10.0);
     for(int i=0;i<iterations;i++) {
     	r = length(z);
         if(r>bailout) break;
@@ -82,7 +83,6 @@ float phong(in vec3 position) {
 }
 
 vec3 march(in vec3 from, in vec3 direction) {
-    int maxRaySteps =  int(spectralKurtosisMean*10.);
 	float totalDistance = 0.0;
     float dist;
     vec3 position;
@@ -93,18 +93,17 @@ vec3 march(in vec3 from, in vec3 direction) {
                         from.z + (direction.z*totalDistance));
         dist=DE(position);
         totalDistance+=dist;
-        if(totalDistance>spectralSpreadMean*20.) return vec3(0,0,0);
+        if(totalDistance>25.0) return vec3(0,0,0);
         if(dist<minimumStepDistance) break;
 	}
-    return vec3(sin(escape(position)+spectralCentroidMean),
-        		spectralCentroidMean,
-        		spectralRolloffNormalized*(1.0-float(steps)/float(maxRaySteps)) + 0.3*phong(position) );
+    return vec3(0.5+sin(escape(position)),
+        		0.6,
+        		0.7*(1.0-float(steps)/float(maxRaySteps)) + 0.3*phong(position) );
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    vec3 fakeCoord = fragCoord;
-    power = (spectralRoughnessMean/100.)-spectralEntropyMean*spectralEntropyMean + energyMean ;
+    power = 6.0-4.0*cos(spectralRoughnessMean/1000.0) ;
     /*camera = vec3(2.0*cos(iTime*0.05),
                   2.0*sin(iTime*0.05),
                   -2.0);*/
@@ -124,10 +123,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec3 direction = (sideVector*dx) + (topVector*dy) + viewVector;
 
     direction = normalize(direction);
-    vec3 hsv = march(camera,direction)	;
-    hsv.x = fract(hsv.x + spectralCentroidMean*3.);
-    hsv.y = fract(energyMean*5.);
-    if(hsv.z > 0.8) hsv.z = 0.7;
-	fragColor = vec4(hsl2rgb(hsv),1.0);
+    vec3 hsl = march(camera,direction)	;
+    hsl.x = fract(hsl.x + spectralCentroidMean);
+	fragColor = vec4(hsl2rgb(hsl),1.0);
 
 }
