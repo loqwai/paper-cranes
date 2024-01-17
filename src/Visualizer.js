@@ -9,6 +9,7 @@ import {
     drawBufferInfo,
 } from 'twgl.js'
 
+import { shaderWrapper } from './shader-wrapper'
 // Vertex shader
 const vertexShader = `
     #version 300 es
@@ -43,7 +44,7 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl }) => {
         })
     }
     const res = await fetch(`/shaders/${shader}.frag`)
-    const fragmentShader = await res.text()
+    const fragmentShader = shaderWrapper(await res.text())
     const initialTexture = await getTexture(gl, initialImageUrl)
 
     console.log({ fragmentShader, initialTexture, vertexShader })

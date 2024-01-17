@@ -1,8 +1,14 @@
-export const shaderWrapper = (shader) =>
-    ```
+export const shaderWrapper = (shader) => {
+    console.log(shader)
+    if (shader.includes('void main()')) {
+        return shader
+    }
+    if (shader.includes('mainImage(')) {
+        return `
 #version 300 es
+precision highp float;
 // Included colors and uniforms!
-
+out vec4 fragColor;
 uniform float time;
 
 uniform sampler2D prevFrame;// Texture of the previous frame
@@ -163,11 +169,11 @@ vec3 hslMix(vec3 color1,vec3 color2,float m){
 
 ${shader}
 
-float iTime = time;
-vec2 iResolution = resolution;
-
 void main(void){
-  vec2 uv=fragCoord.xy/resolution.xy;
-  fragColor = mainImage(uv,time);
+  mainImage(fragColor, gl_FragCoord.xy);
 }
-```
+`
+    }
+    throw new Error('Shader must have a mainImage function')
+}
+export default shaderWrapper
