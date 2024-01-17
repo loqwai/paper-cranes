@@ -8,12 +8,13 @@ mat2 rot(float a) {
 }
 
 vec3 path(float t) {
-    return vec3(sin(t*.3+cos(t*.2)*.5)*4.,cos(t*.2)*3.,t);
+    return vec3(sin(t*.3+cos(t*.2)*.5+spectralSpreadNormalized)*4.,cos(t*.2)*3.,t);
 }
 
 float hexagon( in vec2 p, in float r )
 {
-    const vec3 k = vec3(-0.866025404,0.5,0.577350269);
+    float mut= ((spectralFluxZScore+2.5)/20.);
+    vec3 k = vec3(-0.866025404+mut,0.5+mut,0.577350269+mut);
     p = abs(p);
     p -= 2.0*min(dot(k.xy,p),0.0)*k.xy;
     p -= vec2(clamp(p.x, -k.z*r, k.z*r), r);
@@ -21,8 +22,9 @@ float hexagon( in vec2 p, in float r )
 }
 
 float hex(vec2 p) {
-    p.x *= 0.57735*2.0;
-	p.y+=mod(floor(p.x),2.0)*0.5;
+    p.x *= 0.57735*2.0+(spectralSkewZScore/5.);
+    if(beat) p.x += 0.5;
+	p.y+=mod(floor(p.x),2.0)*spectralCrestNormalized;
 	p=abs((mod(p,1.0)-0.5));
 	return abs(max(p.x*1.5 + p.y, p.y*2.0) - 1.0);
 }
@@ -35,7 +37,8 @@ mat3 lookat(vec3 dir) {
 
 float hash12(vec2 p)
 {
-	return fract(spectralEntropyMean*dot(p,vec2(127.1,311.7)));
+    float h = spectralEntropyMean*dot(p,vec2(spectralFlux,spectralKurtosis));
+	return fract(h);
 }
 
 float de(vec3 p) {
