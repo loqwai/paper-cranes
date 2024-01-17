@@ -66,7 +66,7 @@ vec3 generateBeam(vec3 color1,vec3 color2,vec3 color3,vec2 uv,float time,float o
 
 void mainImage(out vec4 fragColor, vec2 fragCoord) {
   // Calculate the background gradient
- vec2 uv=(2.*fragCoord-resolution.xy)/resolution.y;
+  vec2 uv=(2.*fragCoord-resolution.xy)/resolution.y;
   vec3 backgroundColor=gradientBackground(uv);
 
   // Get last frame color and mix it with the beam color
