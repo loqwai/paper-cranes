@@ -35,7 +35,7 @@ mat3 lookat(vec3 dir) {
 
 float hash12(vec2 p)
 {
-	return fract(spectralEntropy*dot(p,vec2(127.1,311.7)));
+	return fract(spectralEntropyMean*dot(p,vec2(127.1,311.7)));
 }
 
 float de(vec3 p) {
@@ -139,9 +139,13 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec3 col = march(from, dir);
 	col*=vec3(1.,.9,.8);
     vec3 hsl = rgb2hsl(col);
-    hsl.x += fract(energyMean);
+    hsl.x = spectralCentroid;
     hsl.y += fract(energyZScore/2.);
-    if(beat) hsl.z+=0.1;
+    hsl.y /=4.;
+    if(energyZScore > 2.) {
+        // if the color is pretty white already, make it blue
+       hsl.y = 1.;
+    }
     col = hsl2rgb(hsl);
     fragColor = vec4(col,1.0);
 }
