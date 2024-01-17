@@ -8,19 +8,25 @@ const urlsToCache = [
 console.log({ urlsToCache })
 
 self.addEventListener('install', (event) => {
-    // Parse the URL of the request
-    const url = new URL(event.request.url)
+    // Clear old caches during installation of the new service worker
+    event.waitUntil(
+        caches
+            .keys()
+            .then((cacheNames) => {
+                return Promise.all(
+                    cacheNames.map((cacheName) => {
+                        // You might choose to only delete caches that are not current
+                        if (cacheName !== CACHE_NAME) {
+                            console.log(`Deleting cache: ${cacheName}`)
+                            return caches.delete(cacheName)
+                        }
+                    }),
+                )
+            })
+            .then(() => self.skipWaiting()), // Activate the new service worker without waiting
+    )
 
-    // Check if the root URL has the 'nocache=true' query parameter
-    if (url && url.origin + url.pathname === self.location.origin + '/' && url.searchParams.get('nocache') === 'true') {
-        // Bypass cache and go to network
-        event.respondWith(fetch(event.request))
-        return
-    }
-    // Ignore non-GET requests and Google Analytics
-    if (event.request.method !== 'GET' || event.request.url.includes('google')) {
-        return fetch(event.request)
-    }
+    // Cache new assets
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             return cache.addAll(urlsToCache).catch((error) => {
@@ -29,6 +35,11 @@ self.addEventListener('install', (event) => {
             })
         }),
     )
+})
+
+self.addEventListener('activate', (event) => {
+    // Ensure the updated service worker takes control immediately
+    event.waitUntil(self.clients.claim())
 })
 
 self.addEventListener('fetch', (event) => {
