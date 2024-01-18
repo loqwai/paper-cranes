@@ -1,7 +1,9 @@
 
+
 float sun(vec2 uv, float battery)
 {
  	float val = smoothstep(0.3, 0.29, length(uv));
+    val *=1.1;
  	float bloom = smoothstep(0.7, 0.0, length(uv));
     float cut = 3.0 * sin((uv.y + iTime * 0.2 * (battery/10.)) * 100.0)
 				+ clamp(uv.y * 14.0 + 1.0, -6.0, 6.0);
@@ -98,13 +100,13 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
             vec2 fujiUV = uv;
 
             // Sun
-            sunUV += vec2(0.75, 0.2);
+            sunUV += vec2(energyMean, spectralCentroidMean);
             //uv.y -= 1.1 - 0.51;
-            col = vec3(0.4627, spectralCentroid, 0.0);
+             col = vec3(0.9843, 1.0, 0.0078);
             float sunVal = sun(sunUV, battery);
 
             col = mix(col, vec3(1.0, 0.4, 0.1), sunUV.y * 2.0 + 0.2);
-            col = mix(vec3(0.0, 0.0, 0.0), col, sunVal);
+            col = mix(vec3(0.749, 0.0314, 0.0314), col, sunVal);
 
             // fuji
             float fujiVal = sdTrapezoid( uv  + vec2(-0.75+sunUV.y * 0.0, 0.5), 1.75 + pow(uv.y * uv.y, 2.1), 0.2, 0.5);
