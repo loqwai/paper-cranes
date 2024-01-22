@@ -83,6 +83,7 @@ module.exports = {
                 { from: 'shaders', to: 'shaders' },
                 { from: 'favicon.ico', to: 'favicon.ico' },
                 { from: 'index.css', to: 'index.css' },
+                { from: './src/utils', to: 'utils' },
             ],
         }),
         new DefinePlugin({
