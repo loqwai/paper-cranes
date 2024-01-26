@@ -6,7 +6,7 @@
   "scripts": {
     "start": "npx http-server -c -1 -p 6969 ./dist/",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "ls && webpack --mode=production",
+    "build": "node ./esbuild.js",
     "dev": "npm run build && concurrently \"npm run start\" \"npm run watch:build\"",
     "watch:build": "nodemon --watch 'src/**/*' --watch 'shaders/**/*' --exec 'npm run build'",
     "format": "eslint --fix ."
@@ -21,6 +21,10 @@
     "concurrently": "^8.2.2",
     "copy-webpack-plugin": "^11.0.0",
     "css-loader": "^6.8.1",
+    "esbuild": "^0.19.12",
+    "esbuild-plugin-copy": "^2.1.1",
+    "esbuild-plugin-css-modules": "^0.3.0",
+    "esbuild-plugin-html": "^1.0.0",
     "eslint": "^8.56.0",
     "eslint-plugin-prettier": "^5.0.1",
     "file-loader": "^6.2.0",
@@ -30,6 +34,7 @@
     "image-webpack-loader": "^8.1.0",
     "live-server": "^1.1.0",
     "mini-css-extract-plugin": "^2.7.6",
+    "ncp": "^2.0.0",
     "nodemon": "^3.0.3",
     "prettier": "^3.1.1",
     "style-loader": "^3.3.3",
