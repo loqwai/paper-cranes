@@ -8,7 +8,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "ls && webpack --mode=production",
     "dev": "npm run build && concurrently \"npm run start\" \"npm run watch:build\"",
-    "watch:build": "fswatch -o --exclude '\\.git' --exclude 'dist/' . | xargs -n1 -I{} npm run build",
+    "watch:build": "nodemon --watch 'src/**/*' --watch 'shaders/**/*' --exec 'npm run build'",
     "format": "eslint --fix ."
   },
   "author": "",
@@ -30,6 +30,7 @@
     "image-webpack-loader": "^8.1.0",
     "live-server": "^1.1.0",
     "mini-css-extract-plugin": "^2.7.6",
+    "nodemon": "^3.0.3",
     "prettier": "^3.1.1",
     "style-loader": "^3.3.3",
     "terser-webpack-plugin": "^5.3.10",
