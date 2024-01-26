@@ -12,11 +12,15 @@ esbuild.build({
   sourcemap: true,
   outdir: path.join(__dirname, 'dist'),
   treeShaking: true, // The essence of your quest
-}).then(() => {
-  ncp('index.html', 'dist/')
-  ncp('index.css', 'dist/')
-  ncp('favicon.ico', 'dist/favicon.ico')
-  ncp('shaders', 'dist/shaders')
-  ncp('./src/audio/analyzers', 'dist/analyzers')
-  ncp('./src/utils', './dist/utils')
+}).then(async () => {
+  await new Promise((next) => {
+    let i = 0;
+    const done = () => { if (++i == 6) next() }
+    ncp('index.html', 'dist/index.html', done)
+    ncp('index.css', 'dist/index.css'), done
+    ncp('favicon.ico', 'dist/favicon.ico', done)
+    ncp('shaders', 'dist/shaders', done)
+    ncp('./src/audio/analyzers', 'dist/analyzers', done)
+    ncp('./src/utils', './dist/utils', done)
+  });
 }).catch(console.error)
