@@ -93,7 +93,7 @@ uniform float spectralFluxMedian;
 uniform float spectralFluxZScore;
 uniform float spectralFluxMin;
 uniform float spectralFluxMax;
-
+uniform int frame;
 uniform float iTime;
 uniform vec2 iResolution;
 
