@@ -11,17 +11,8 @@ vec4 setupMask(vec2 uv){
 
 void mainImage(out vec4 fragColor,in vec2 fragCoord){
   vec2 uv=fragCoord.xy/resolution.xy;
-  float pivot=time/10000.+spectralCentroidZScore;
   
-  // Translate UV to the center
-  uv-=.5;
-  
-  // Rotate around the center
-  uv*=mat2(cos(pivot),-sin(pivot),sin(pivot),cos(pivot));
-  
-  // Translate back
-  uv+=.5;
-  if(frame%100==0){
+  if(frame==0){
     fragColor=setupMask(uv);
     return;
   }
@@ -37,7 +28,7 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
     
     return;
   }
-  pivot=time/10000.+energyZScore;
+  float pivot=time/10000.+energyZScore;
   
   // Translate UV to the center
   uv-=.5;

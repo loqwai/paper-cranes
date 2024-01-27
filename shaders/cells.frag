@@ -4,71 +4,69 @@ struct Cell{
 };
 
 // Function to calculate cell position and size
-Cell getCell(vec2 uv,int gridDimension,int subdivisions){
+Cell getCell(vec2 uv,int columns,int rows){
   Cell cell;
   
   // Calculate the size of each cell
-  float cellSize=1./float(gridDimension);
+  cell.size=1./float(columns);
   
   // Determine the cell's position in the grid
-  vec2 gridPos=floor(uv*float(gridDimension))/float(gridDimension);
-  
-  // If subdivisions are required
-  if(subdivisions>1){
-    // Calculate the size of each sub-cell
-    float subCellSize=cellSize/float(subdivisions);
-    
-    // Adjust UV coordinates for the sub-grid
-    vec2 subGridUV=fract(uv*float(gridDimension))*float(subdivisions);
-    
-    // Determine the position of the sub-cell
-    vec2 subGridPos=floor(subGridUV)/float(subdivisions);
-    
-    // Set the cell's properties to match the sub-cell
-    cell.startPos=gridPos+subGridPos*cellSize;
-    cell.size=subCellSize;
-  }else{
-    // Set the cell's properties for the base case
-    cell.startPos=gridPos;
-    cell.size=cellSize;
-  }
+  vec2 gridPos=floor(uv*vec2(float(columns),float(rows)))/vec2(float(columns),float(rows));
+  cell.startPos=gridPos;
   
   return cell;
 }
 
+float normalizeZScore(float value){
+  // Normalize the value to a range of 0-1
+  float normalizedValue=value/2.5;
+  // Clamp the value to the range of 0-1
+  normalizedValue=clamp(normalizedValue,0.,1.);
+  return normalizedValue;
+}
 void mainImage(out vec4 fragColor,in vec2 fragCoord){
   // Normalize coordinates
   vec2 uv=fragCoord.xy/iResolution.xy;
   
-  // Main grid dimensions
-  int mainGridDimension=2;// 2x2 grid
+  // Grid dimensions
+  int columns=2;
+  int rows=5;
   
-  // Define a color for demonstration
-  vec3 color=vec3(0.);
+  // Calculate the cell based on UV coordinates
+  Cell cell=getCell(uv,columns,rows);
   
-  // Main grid cell
-  Cell mainCell=getCell(uv,mainGridDimension,1);
+  // Determine the index of the cell
+  int index=int(cell.startPos.y*float(rows))+int(cell.startPos.x*float(columns));
   
-  // Recursive subdivision in some cells
-  if(mainCell.startPos.x<.5&&mainCell.startPos.y<.5){
-    // Subdivide the top-left cell into a smaller 3x3 grid
-    Cell subCell=getCell(uv,mainGridDimension*3,3);
+  // Array of audio feature values
+  float audioFeatures[10]=float[](
+    spectralCentroidZScore,
+    spectralFluxZScore,
+    spectralSpreadZScore,
+    spectralRolloffZScore,
+    spectralRoughnessZScore,
+    spectralKurtosisZScore,
+    energyZScore,
+    spectralEntropyZScore,
+    spectralCrestZScore,
+    spectralSkewZScore
+  );
+  
+  // Ensure index is within bounds
+  if(index>=0&&index<10){
+    // Adjust brightness based on the audio feature value
+    float brightness=normalizeZScore(audioFeatures[index]);
+    vec3 color=vec3(brightness);
+    vec3 hsl=rgb2hsl(color);
+    hsl.x=float(index)/float(rows+columns);
+    hsl.y=1.;
+    hsl.z=clamp(hsl.z,0.,.9);
+    color=hsl2rgb(hsl);
+    // Set the color of the fragment
+    fragColor=vec4(color,1.);
     
-    // Color assignment for the sub-grid
-    if(mod(subCell.startPos.x+subCell.startPos.y,subCell.size*2.)<subCell.size){
-      color=vec3(1.,0.,0.);// Red
-    }else{
-      color=vec3(0.,0.,1.);// Blue
-    }
   }else{
-    // Color assignment for the main grid
-    if(mod(mainCell.startPos.x+mainCell.startPos.y,mainCell.size*2.)<mainCell.size){
-      color=vec3(0.,1.,0.);// Green
-    }else{
-      color=vec3(1.,1.,0.);// Yellow
-    }
+    // Default color for areas outside the cells
+    fragColor=vec4(0.,0.,0.,1.);
   }
-  
-  // Output color
-  fragColor=vec4(color,1.);
 }
