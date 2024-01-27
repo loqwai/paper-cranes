@@ -34,9 +34,11 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
   
   // Calculate the cell based on UV coordinates
   Cell cell=getCell(uv,columns,rows);
+  int row=int(cell.startPos.y*float(rows));
+  int column=int(cell.startPos.x*float(columns));
   
-  // Determine the index of the cell
-  int index=int(cell.startPos.y*float(rows))+int(cell.startPos.x*float(columns));
+  // Calculate the index of the cell
+  int index=row*columns+column;
   
   // Array of audio feature values
   float audioFeatures[10]=float[](
@@ -52,15 +54,14 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
     spectralSkewZScore
   );
   
-  // Ensure index is within bounds
   if(index>=0&&index<10){
     // Adjust brightness based on the audio feature value
     float brightness=normalizeZScore(audioFeatures[index]);
     vec3 color=vec3(brightness);
     vec3 hsl=rgb2hsl(color);
-    hsl.x=float(index)/float(rows+columns);
-    hsl.y=1.;
-    hsl.z=clamp(hsl.z,0.,.9);
+    hsl.x=float(index)/float(columns*rows);
+    hsl.y=.5;
+    hsl.z=clamp(hsl.z,.05,.95);
     color=hsl2rgb(hsl);
     // Set the color of the fragment
     fragColor=vec4(color,1.);
