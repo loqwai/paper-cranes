@@ -8,7 +8,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "node ./esbuild.js",
     "dev": "npm run build && concurrently \"npm run start\" \"npm run watch:build\"",
-    "watch:build": "nodemon --watch 'src/**/*' --watch 'shaders/**/*' --exec 'npm run build'",
+    "watch:build": "nodemon --watch 'src/**/*' --watch './*.js' --watch 'shaders/**/*' --exec echo building && npm run build",
     "format": "eslint --fix ."
   },
   "author": "",

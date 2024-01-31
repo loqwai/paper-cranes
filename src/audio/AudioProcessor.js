@@ -27,6 +27,8 @@ export class AudioProcessor {
                 'SpectralSkew',
                 // 'SpectralFlatness',
             ]) {
+                const workerUrl = new URL(`src/audio/analyzers/${workerName}.js`, import.meta.url)
+                console.log('workerUrl', workerUrl)
                 import(`./analyzers/${workerName}.js`).then((workerModule) => {
                     const worker = new Worker(workerModule.default)
                     worker.postMessage({ type: 'config', config: { historySize } })

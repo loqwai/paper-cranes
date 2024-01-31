@@ -1,4 +1,4 @@
-importScripts('../../../utils/calculateStats.js') // I have to put it here because I'm using webpack
+import { calculateStats } from '../../utils/calculateStats' // I have to put it here because I'm using webpack
 
 let lastFFtSize = 0
 let maxSpread = 0

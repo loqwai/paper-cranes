@@ -1,5 +1,3 @@
-const CACHE_NAME = `cache__${WEBPACK_CACHE_NAME}`
-
 self.addEventListener('activate', (event) => {
     // Ensure the updated service worker takes control immediately
     event.waitUntil(self.clients.claim())
