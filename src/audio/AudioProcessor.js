@@ -27,16 +27,21 @@ export class AudioProcessor {
                 'SpectralSkew',
                 // 'SpectralFlatness',
             ]) {
-                const workerUrl = new URL(`src/audio/analyzers/${workerName}.js`, import.meta.url)
-                console.log('workerUrl', workerUrl)
-                import(`./analyzers/${workerName}.js`).then((workerModule) => {
-                    const worker = new Worker(workerModule.default)
-                    worker.postMessage({ type: 'config', config: { historySize } })
+                const workerUrl = new URL(`src/audio/analyzers/${workerName}.js`, import.meta.url).href
+                fetch(workerUrl).then(async (response) => {
+                    const code = await response.text()
+
+                    const blob = new Blob([code], { type: 'application/javascript' })
+                    const worker = new Worker(URL.createObjectURL(blob))
                     worker.onmessage = (event) => {
                         if (event.data.type === 'computedValue') {
                             rawFeatures[workerName] = event.data
                         }
                     }
+                    worker.onerror = (event) => {
+                        console.error(`Error in worker ${workerName}:`, event)
+                    }
+                    worker.postMessage({ type: 'config', config: { historySize } })
                     workers[workerName] = worker
                 })
             }

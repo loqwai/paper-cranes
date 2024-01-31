@@ -1,4 +1,6 @@
-import { calculateStats } from '../../utils/calculateStats' // I have to put it here because I'm using webpack
+import { makeCalculateStats } from '../../utils/calculateStats'
+
+const calculateStats = makeCalculateStats()
 
 self.addEventListener('message', ({ data: e }) => {
     if (e.type === 'fftData') {
