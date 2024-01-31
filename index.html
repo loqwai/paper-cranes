@@ -2,39 +2,10 @@
 <html lang="en">
     <head>
         <link rel="stylesheet" href="index.css" />
-        <style type="text/css">
-            h1 {
-                font-size: 10vmin;
-                font-family: sans-serif;
-                text-align: center;
-                color: #fff;
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                padding: 5vh;
-            }
-
-            small {
-                position: fixed;
-                top: 0;
-                left: 0;
-            }
-        </style>
-        <script type="importmap">
-            {
-                "imports": {
-                    "twgl.js": "https://cdnjs.cloudflare.com/ajax/libs/twgl.js/4.19.5/twgl-full.module.min.js"
-                }
-            }
-        </script>
     </head>
 
     <body class="ready">
-        <h1>Click anywhere to start visualization</h1>
-        <div id="container">
-            <canvas id="visualizer" width="1920" height="1920"></canvas>
-        </div>
+        <canvas id="visualizer" width="1920" height="1920"></canvas>
         <script type="module" src="./index.js"></script>
         <!-- Google tag (gtag.js) -->
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-V2CY1C6W63"></script>
