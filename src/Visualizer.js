@@ -35,17 +35,20 @@ const getTexture = async (gl, url) => {
     })
 }
 
-export const makeVisualizer = async ({ canvas, shader, initialImageUrl }) => {
+export const makeVisualizer = async ({ canvas, shader, initialImageUrl, fullscreen }) => {
     const gl = canvas.getContext('webgl2', { antialias: false })
     // get the window width and height
-    const width = window.innerWidth
-    const height = window.innerHeight
-    // set the canvas width and height to the window width and height
-    canvas.width = width
-    canvas.height = height
-    // set the viewport to match
-    gl.viewport(0, 0, width, height)
 
+    if (fullscreen) {
+        const width = window.innerWidth
+        const height = window.innerHeight
+        // set the canvas width and height to the window width and height
+        canvas.width = width
+        canvas.height = height
+        // set the viewport to match
+        gl.viewport(0, 0, width, height)
+        canvas.classList.add('fullscreen')
+    }
     const ext = gl.getExtension('GMAN_debug_helper')
     if (ext) {
         ext.setConfiguration({

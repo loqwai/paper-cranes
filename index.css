@@ -104,11 +104,16 @@ body.ready {
 
 canvas {
   margin: 0;
-  height: 100vh;
-  width: 100vw;
+  height: 100vmin;
+  width: 100vmin;
   background: transparent;
   opacity: 0;
   transition: opacity 0.01s ease-in-out;
+}
+
+canvas.fullscreen {
+  height: 100vh;
+  width: 100vw;
 }
 
 .ready canvas {

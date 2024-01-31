@@ -46,9 +46,10 @@ const main = async () => {
     const params = new URLSearchParams(window.location.search)
     const shader = params.get('shader') ?? 'sculpture'
     const initialImageUrl = params.get('image') ?? 'images/placeholder-image.png'
+    const fullscreen = (params.get('fullscreen') ?? false) === 'true'
 
     const canvas = document.getElementById('visualizer')
-    const render = await makeVisualizer({ canvas, shader, initialImageUrl })
+    const render = await makeVisualizer({ canvas, shader, initialImageUrl, fullscreen })
 
     updateUI()
     requestAnimationFrame(() => animate({ render, audio }))
