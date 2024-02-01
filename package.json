@@ -7,8 +7,8 @@
     "start": "npx http-server -c -1 -p 6969 ./dist/",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "node ./esbuild.js",
-    "dev": "npm run build && concurrently \"npm run start\" \"npm run watch:build\"",
-    "watch:build": "nodemon --watch './index.html' --watch './index.css' --watch './index.js' --watch './package.json' --watch 'images/**/*' --watch 'src/**/**/*' --watch 'shaders/*' --exec \"echo building && npm run build && ls dist/\"",
+    "dev": "npm run build && concurrently \"npm run start\" \"npm run build:watch\"",
+    "build:watch": "nodemon --ignore node_modules/ --ignore dist/ --ext '*' --watch . --exec \"echo building && npm run build && ls dist/\"",
     "format": "eslint --fix ."
   },
   "author": "",
