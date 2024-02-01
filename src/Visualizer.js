@@ -84,6 +84,10 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl, fullscre
             frame: frameNumber,
             iResolution: [frame.width, frame.height],
             iTime: time,
+            iChannel0: initialTexture,
+            iChannel1: initialTexture,
+            iChannel2: initialTexture,
+            iChannel3: initialTexture,
             ...audioFeatures,
         }
 

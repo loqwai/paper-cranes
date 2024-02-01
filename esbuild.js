@@ -24,17 +24,13 @@ esbuild
             CACHE_NAME: `"cache_${Date.now()}"`,
         },
     })
-    .then(async () => {
-        return await new Promise((next) => {
-            let i = 0
-            const done = () => {
-                if (++i == 7) next()
-            }
-            ncp('index.html', 'dist/index.html', done)
-            ncp('index.css', 'dist/index.css', done)
-            ncp('favicon.ico', 'dist/favicon.ico', done)
-            ncp('shaders', 'dist/shaders', done)
-            ncp('images', 'dist/images', done)
-        })
+    .then(() => {
+        return Promise.all([
+            ncp('index.html', 'dist/index.html'),
+            ncp('index.css', 'dist/index.css'),
+            ncp('favicon.ico', 'dist/favicon.ico'),
+            ncp('shaders', 'dist/shaders'),
+            ncp('images', 'dist/images'),
+        ])
     })
     .catch(console.error)
