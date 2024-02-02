@@ -52,7 +52,7 @@ vec3[5]getPalette(vec2 uv){
     vec3(0.,0.,1.),
     vec3(0.,1.,0.),
     vec3(1.,0.,0.),
-    vec3(.0314,0.,1.)
+    fract(vec3(spectralEntropyMean,energyMean,spectralCentroidMean))
   );
   return palette;
 }
