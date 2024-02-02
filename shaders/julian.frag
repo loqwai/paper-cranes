@@ -7,7 +7,7 @@ vec2 swirl(vec2 p){
   
   float angle=atan(p.y,p.x);
   float radius=length(p);
-  angle+=swirlIntensity*sin(radius*10.+time);
+  angle+=swirlIntensity*sin(radius*spectralCrestMax+time);
   return radius*vec2(cos(angle),sin(angle));
 }
 
@@ -50,8 +50,8 @@ float drip(vec2 p){
   // Drip effect (using spectralFluxNormalized for speed and spectralSkewNormalized for length)
   float dripSpeed=spectralFluxNormalized*.5+.1;
   float dripLength=spectralSkewNormalized*.8+.2;
-  float dripIntensity=1.5;// Keep this fixed for now
-  vec2 d=p-vec2(.5);
+  float dripIntensity=(9.5*energyZScore);// Keep this fixed for now
+  vec2 d=p-vec2(spectralKurtosisNormalized);
   return sin(length(d)*dripSpeed+time)*dripIntensity*smoothstep(0.,dripLength,length(d));
 }
 
@@ -59,18 +59,21 @@ vec3[5]getPalette(vec2 uv){
   // Example palette
   // Color palette
   vec3 palette[5]=vec3[5](
-    fract(vec3(spectralEntropyMedian,spectralRolloffMedian,spectralFluxMedian)),
-    vec3(0.,0.,1.),
-    vec3(0.,1.,0.),
-    vec3(1.,0.,0.),
-    fract(vec3(spectralEntropyMean,energyMean,spectralCentroidMean))
-    // vec3(0.,0.,1.)
+    rgb2hsl(vec3(.251,.0235,.2745)),
+    rgb2hsl(vec3(0.,0.,1.)),
+    rgb2hsl(vec3(.6784,.0039,.9686)),
+    rgb2hsl(vec3(1.,0.,.8314)),
+    rgb2hsl(vec3(.0196,.0039,.1804))
   );
   return palette;
 }
 
 void mainImage(out vec4 fragColor,in vec2 fragCoord){
   vec2 uv=fragCoord.xy/resolution.xy;
+  uv-=.5;
+  // rotate
+  uv*=mat2(cos(time),sin(time),-sin(time),cos(time));
+  uv+=.5;
   vec3 palette[5]=getPalette(uv);
   vec2 f=julia(uv);// Calculate Julia set first
   f*=julia(uv.yx-vec2(spectralEntropyMean));// then the second one
@@ -90,41 +93,32 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
   
   // Map music features to color
   vec3 color=vec3(0.);
-  color=palette[frame%5];
-  color.r=spectralCentroidNormalized;// Example mapping
-  color.g=spectralRolloffNormalized;// Example mapping
-  color.b=energyNormalized;// Example mapping
+  color=palette[2];
   
   // Adjust color based on drip and fractal
   color=mix(color,vec3(m.x,w.y,d),offset.x);
   color=mix(color,hsl2rgb(vec3(color.r,color.g+offset.y,color.b)),offset.y);
   
-  vec3 last=getLastFrameColor(uv).rgb;
-  // color=mix(color,last,energyZScore);
-  // if the color is too close to black, compute a mandelbrot and use that as the color instead
-  // if(dot(color,color)<.05||dot(color,color)>1.5){
-    //   vec2 p=uv*2.-1.;
-    //   p.x*=resolution.x/resolution.y;
-    //   vec2 z=mandelbrot(p);
-    //   color=vec3(z.x*spectralCentroidMedian,z.y*spectralRolloffMedian,spectralFluxMedian);
-  // }
-  // if it's still too close to black, use the last frame's color
-  // if(dot(color,color)<.25){
-    //   vec3 hsl=rgb2hsl(last);
-    //   hsl.x=fract(hsl.x+.01);
-    //   color=hsl2rgb(hsl);
-    //   // color=last;
-  // }
-  vec3 hsl=rgb2hsl(color);
-  // vec3 hslLast=rgb2hsl(last);
-  // hsl.x=fract(hsl.x+hslLast.x*.1);
-  // hsl.y=clamp(hsl.y+hslLast.y*.1,0.,1.);
-  hsl.y=0.;
-  color=hsl2rgb(hsl);
-  // if(hsl.y<.1){
-    //   color=palette[frame+1%5];
-  // }
+  vec3 last=getLastFrameColor(uv*d).rgb;
   
-  color=fract(color);
-  fragColor=vec4(mix(color,last,.3),1.);
+  vec3 hsl=rgb2hsl(fract(color));
+  vec3 closestPalette=vec3(1000.);
+  for(int i=0;i<5;i++){
+    vec3 currentPaletteColor=palette[i];
+    if(abs(hsl.x-currentPaletteColor.x)<abs(hsl.x-closestPalette.x)){
+      closestPalette=currentPaletteColor;
+    }
+  }
+  vec3 hslLast=rgb2hsl(last);
+  hsl.x=(hsl.x+closestPalette.x)/2.;
+  if(last.y>.2||last.z>.2){
+    hsl.y=(hsl.y+hslLast.y)/2.;
+    hsl.z=(hsl.z+hslLast.z)/2.;
+  }
+  hsl.y=closestPalette.y;
+  hsl.z=closestPalette.z;
+  
+  color=fract(hsl2rgb(hsl));
+  fragColor=vec4(color,1.);
+  // fragColor=vec4(color,1.);
 }
