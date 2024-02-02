@@ -9,7 +9,7 @@ import {
     drawBufferInfo,
 } from 'twgl.js'
 
-import { shaderWrapper } from './shader-wrapper'
+import { shaderWrapper } from './shader-transformers/shader-wrapper'
 // Vertex shader
 const vertexShader = `
     #version 300 es
