@@ -106,6 +106,15 @@ uniform sampler2D iChannel3;
 vec4 getLastFrameColor(vec2 uv){
   return texture(prevFrame,uv);
 }
+struct Stats {
+  float current;
+  float zScore;
+  float standardDeviation;
+  float median;
+  float mean;
+  float min;
+  float max;
+};
 
 // Function to convert RGB to HSL
 vec3 rgb2hsl(vec3 color){
@@ -188,7 +197,8 @@ vec3 hslMix(vec3 color1,vec3 color2,float m){
 ${shader}
 
 void main(void){
-  mainImage(fragColor, gl_FragCoord.xy);
+  Stats energyStats = Stats(energy, energyZScore, energyStandardDeviation, energyMedian, energyMean, energyMin, energyMax);
+  mainImage(fragColor, gl_FragCoord.xy, energyStats);
 }
 `
     }
