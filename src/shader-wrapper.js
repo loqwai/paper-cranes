@@ -108,6 +108,7 @@ vec4 getLastFrameColor(vec2 uv){
 }
 struct Stats {
   float current;
+  float normalized
   float zScore;
   float standardDeviation;
   float median;
