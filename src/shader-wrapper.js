@@ -192,6 +192,6 @@ void main(void){
 }
 `
     }
-    throw new Error('Shader must have a mainImage function')
+    throw new Error('Shader must have a mainImage function. It looks like this: \n void mainImage(out vec4 fragColor,in vec2 fragCoord){')
 }
 export default shaderWrapper
