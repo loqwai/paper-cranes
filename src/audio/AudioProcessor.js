@@ -13,7 +13,6 @@ export class AudioProcessor {
         const workers = {}
 
         const start = async () => {
-            const timestamp = Date.now()
             for (const workerName of [
                 'SpectralCentroid',
                 'SpectralFlux',
@@ -64,6 +63,7 @@ export class AudioProcessor {
         }
 
         const getFeatures = () => {
+            console.log({ rawFeatures })
             // for each feature in raw features
             for (const feature in rawFeatures) {
                 // the key in features is the same as the key in rawFeatures, except the first letter is lowercased
@@ -76,6 +76,10 @@ export class AudioProcessor {
             }
             this.features['beat'] = isBeat()
             return this.features
+        }
+
+        const getFeatureStructs = () => {
+            return rawFeatures
         }
 
         const isBeat = () => {

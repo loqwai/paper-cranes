@@ -115,6 +115,7 @@ struct Stats {
   float min;
   float max;
 };
+// const Stats energyStats = Stats(energy, energyZScore, energyStandardDeviation, energyMedian, energyMean, energyMin, energyMax);
 
 // Function to convert RGB to HSL
 vec3 rgb2hsl(vec3 color){
@@ -197,8 +198,7 @@ vec3 hslMix(vec3 color1,vec3 color2,float m){
 ${shader}
 
 void main(void){
-  Stats energyStats = Stats(energy, energyZScore, energyStandardDeviation, energyMedian, energyMean, energyMin, energyMax);
-  mainImage(fragColor, gl_FragCoord.xy, energyStats);
+  mainImage(fragColor, gl_FragCoord.xy);
 }
 `
     }
