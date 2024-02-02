@@ -1,37 +1,7 @@
-#version 300 es
-precision highp float;
-// Assuming these uniforms are passed to the shader
-uniform float time;// iTime equivalent        // Normalized energy
 
-uniform sampler2D prevFrame;// Texture of the previous frame
-uniform vec2 resolution;// iResolution equivalent
-
-uniform float spectralCentroidNormalized;
-uniform float spectralCentroidZScore;
-uniform float spectralCentroid;
-uniform float spectralSkewMean;
-uniform float spectralCrest;
-uniform float energyNormalized;
-uniform float spectralFluxNormalized;
-uniform float spectralFluxMax;
-uniform float spectralSpreadMax;
-uniform float spectralSpreadZScore;
-uniform float energyMax;
-uniform float energyMin;
-uniform float energyStandardDeviation;
-uniform float energyMean;
-uniform float energyZScore;
-uniform float spectralEntropyMin;
-uniform float spectralEntropyMax;
-uniform float spectralRoughness;
-uniform float spectralRoughnessNormalized;
-uniform bool beat;
-
-out vec4 fragColor;
-
-#define l 120
 
 void mainImage(out vec4 FragColor,vec2 FragCoord){
+  int l=int(spectralFlux);
   vec2 v=(FragCoord.xy-resolution.xy/2.)/min(resolution.y,resolution.x)*30.;
   
   vec2 vv=v;
@@ -108,7 +78,3 @@ void mainImage(out vec4 FragColor,vec2 FragCoord){
   if(beat)blendFactor*=10.;
   FragColor=mix(prevColor,currentColor,blendFactor);
 }
-void main(void){
-  mainImage(fragColor,gl_FragCoord.xy);
-}
-
