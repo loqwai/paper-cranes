@@ -1,12 +1,32 @@
-export const shaderWrapper = (shader) => {
-    if (shader.includes('#version')) {
-        return shader
+const rgb2hsl = () => `
+// Function to convert RGB to HSL
+vec3 rgb2hsl(vec3 color){
+  float maxColor=max(max(color.r,color.g),color.b);
+  float minColor=min(min(color.r,color.g),color.b);
+  float delta=maxColor-minColor;
+
+  float h=0.f;
+  float s=0.f;
+  float l=(maxColor+minColor)/2.f;
+
+  if(delta!=0.f){
+    s=l<.5f?delta/(maxColor+minColor):delta/(2.f-maxColor-minColor);
+
+    if(color.r==maxColor){
+      h=(color.g-color.b)/delta+(color.g<color.b?6.f:0.f);
+    }else if(color.g==maxColor){
+      h=(color.b-color.r)/delta+2.f;
+    }else{
+      h=(color.r-color.g)/delta+4.f;
     }
-    if (shader.includes('mainImage')) {
-        return `
-#version 300 es
-precision highp float;
-// Included colors and uniforms!
+    h/=6.f;
+  }
+
+  return vec3(h,s,l);
+}
+`
+
+const uniforms = () => `
 out vec4 fragColor;
 uniform float time;
 
@@ -94,21 +114,34 @@ uniform float spectralFluxZScore;
 uniform float spectralFluxMin;
 uniform float spectralFluxMax;
 uniform int frame;
-uniform float iTime;
-uniform vec2 iResolution;
-
+`
+const shaderToyCompatibilityUniforms = () => `
 uniform vec4 iMouse;
 uniform sampler2D iChannel0;
 uniform sampler2D iChannel1;
 uniform sampler2D iChannel2;
 uniform sampler2D iChannel3;
+`
+export const shaderWrapper = (shader) => {
+    if (shader.includes('#version')) {
+        return shader
+    }
+    if (shader.includes('mainImage')) {
+        return `
+#version 300 es
+precision highp float;
+// Included colors and uniforms!
+${uniforms()}
+${shaderToyCompatibilityUniforms()}
+${rgb2hsl()}
+
 
 vec4 getLastFrameColor(vec2 uv){
   return texture(prevFrame,uv);
 }
 struct Stats {
   float current;
-  float normalized
+  float normalized;
   float zScore;
   float standardDeviation;
   float median;
@@ -118,31 +151,6 @@ struct Stats {
 };
 // const Stats energyStats = Stats(energy, energyZScore, energyStandardDeviation, energyMedian, energyMean, energyMin, energyMax);
 
-// Function to convert RGB to HSL
-vec3 rgb2hsl(vec3 color){
-  float maxColor=max(max(color.r,color.g),color.b);
-  float minColor=min(min(color.r,color.g),color.b);
-  float delta=maxColor-minColor;
-
-  float h=0.f;
-  float s=0.f;
-  float l=(maxColor+minColor)/2.f;
-
-  if(delta!=0.f){
-    s=l<.5f?delta/(maxColor+minColor):delta/(2.f-maxColor-minColor);
-
-    if(color.r==maxColor){
-      h=(color.g-color.b)/delta+(color.g<color.b?6.f:0.f);
-    }else if(color.g==maxColor){
-      h=(color.b-color.r)/delta+2.f;
-    }else{
-      h=(color.r-color.g)/delta+4.f;
-    }
-    h/=6.f;
-  }
-
-  return vec3(h,s,l);
-}
 
 // Helper function for HSL to RGB conversion
 float hue2rgb(float p,float q,float t){

@@ -57,6 +57,7 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl, fullscre
     }
     const res = await fetch(`/shaders/${shader}.frag`)
     const fragmentShader = shaderWrapper(await res.text())
+    console.log({ fragmentShader })
     const initialTexture = await getTexture(gl, initialImageUrl)
 
     console.log({ fragmentShader, initialTexture, vertexShader })
