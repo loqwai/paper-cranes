@@ -1,7 +1,7 @@
 
 
 void mainImage(out vec4 FragColor,vec2 FragCoord){
-  int l=int(spectralFlux);
+  int l=int(spectralFlux/100.);
   vec2 v=(FragCoord.xy-resolution.xy/2.)/min(resolution.y,resolution.x)*30.;
   
   vec2 vv=v;
@@ -10,23 +10,23 @@ void mainImage(out vec4 FragColor,vec2 FragCoord){
   float tm2=ft*.3;
   
   // Modify the harmonics with spectralCentroidNormalized
-  float spectralHarmonic=spectralCentroidNormalized*.5;
+  float spectralHarmonic=spectralCentroidNormalized*.5+10.;
   
-  vec2 mspt=(vec2(sin(tm)+cos(tm*.2)+sin(tm*.5)+cos(tm*-.4)+sin(tm*1.3),cos(tm)+sin(tm*.1)+cos(tm*.8)+sin(tm*-1.1)+cos(tm*1.5))+1.+spectralHarmonic)*.35;
+  vec2 mspt=(vec2(sin(tm)+cos(tm)+spectralRolloffMedian+sin(tm*spectralCentroidMedian)+cos(tm*-spectralEntropyMedian)+sin(tm*spectralSpreadMedian),cos(tm)+sin(tm*.1)+cos(tm*spectralRoughnessMedian)+sin(tm*-spectralCrestMedian)+cos(tm*spectralSkewMedian))+1.+spectralHarmonic)*energyStandardDeviation;
   
   float R=0.;
   float RR=0.;
   float RRR=0.;
-  float a=(1.-mspt.x)*(energyZScore/10.+.5);
-  float C=cos(tm2*.03+a*.01)*(spectralCentroidZScore/10.+.1);
-  float S=sin(tm2*.033+a*.23)*spectralFluxNormalized;
+  float a=(1.-mspt.x)*(energyMedian/10.+.5);
+  float C=cos(tm2*.03+a*.01)*(spectralCentroidMedian/10.+.1);
+  float S=sin(tm2*spectralSkewMedian+a*.23)*spectralFluxMedian;
   float C2=cos(tm2*.024+a*.23)*3.1;
   float S2=sin(tm2*.03+a*.01)*3.3;
   vec2 xa=vec2(C,-S);
   vec2 ya=vec2(S,C);
   vec2 xa2=vec2(C2,-S2);
   vec2 ya2=vec2(S2,C2);
-  vec2 shift=vec2(.033,.14);
+  vec2 shift=vec2(spectralSkewMedian,.14);
   vec2 shift2=vec2(-.023,-.22);
   float Z=.4+mspt.y*.3;
   float m=.99+sin(time*.03)*.003;
@@ -74,7 +74,9 @@ void mainImage(out vec4 FragColor,vec2 FragCoord){
   vec4 currentColor=vec4(ccc,cc,c,1.);
   
   // Adjust blending factor based on energyNormalized
-  float blendFactor=mix(.5,.9,energyNormalized)/5.;
+  float blendFactor=mix(.5,.9,energyMedian)/5.;
   if(beat)blendFactor*=10.;
+  // if the color is too close to black, discard.
+  if(currentColor.r+currentColor.g+currentColor.b<.001)discard;
   FragColor=mix(prevColor,currentColor,blendFactor);
 }
