@@ -20,13 +20,13 @@ vec2 wave(vec2 p){
 
 // Fractal function
 vec2 julia(vec2 p){
-  float fractalIterations=8.;
+  float fractalIterations=spectralRoughnessZScore+8.;
   float fractalScale=1.5;
   // Mandelbrot or other fractal pattern
-  // Example:
+  //distance from the center of the screen
   vec2 z=vec2(0.);
   for(int i=0;i<int(fractalIterations);i++){
-    z=vec2(z.x*z.x-z.y*z.y,2.*z.x*z.y)+p;
+    z=vec2(z.x*z.x-z.y*z.y,spectralSpreadZScore*z.x*z.y)+p;
     if(dot(z,z)>4.)break;
   }
   return z;
@@ -35,10 +35,10 @@ vec2 plasma(vec2 p){
   vec2 z=vec2(0.);
   float iterations=0.;
   
-  for(int i=0;i<100;i++){// Adjust the maximum iterations
+  for(int i=0;i<int(spectralFluxMedian)+50;i++){// Adjust the maximum iterations
     z=vec2(z.x*z.x-z.y*z.y,2.*z.x*z.y)+p;
     iterations+=1.-smoothstep(0.,.01,dot(z,z));// Accumulate iterations smoothly
-    if(dot(z,z)>4.)break;
+    if(dot(z,z)>spectralSpreadMedian)break;
   }
   
   // Map iterations to a smooth color gradient using a sine function
@@ -59,11 +59,12 @@ vec3[5]getPalette(vec2 uv){
   // Example palette
   // Color palette
   vec3 palette[5]=vec3[5](
-    vec3(0.,0.,0.),
+    fract(vec3(spectralEntropyMedian,spectralRolloffMedian,spectralFluxMedian)),
     vec3(0.,0.,1.),
     vec3(0.,1.,0.),
     vec3(1.,0.,0.),
     fract(vec3(spectralEntropyMean,energyMean,spectralCentroidMean))
+    // vec3(0.,0.,1.)
   );
   return palette;
 }
@@ -71,20 +72,22 @@ vec3[5]getPalette(vec2 uv){
 void mainImage(out vec4 fragColor,in vec2 fragCoord){
   vec2 uv=fragCoord.xy/resolution.xy;
   vec3 palette[5]=getPalette(uv);
-  // rotate uv over time:
-  uv-=.5;
-  float pivot=time;
-  //roate differently based on where on the screen the current pixel is.
-  pivot+=uv.x*2.;
-  pivot+=uv.y*2.;
-  uv*=mat2(cos(pivot),-sin(pivot),sin(pivot),cos(pivot));
-  uv+=.5;
+  vec2 f=julia(uv);// Calculate Julia set first
+  f*=julia(uv.yx);// then the second one
+  f*=julia(-uv.xy);// then the third one
+  f*=julia(-uv.yx);// then the fourth one
+  f=fract(f);
+  // roate the uv around the center for plasma
   
-  // Combine fractal and drip effects
-  vec2 f=julia(uv);// Calculate fractal first for smoother distortion
-  vec2 w=swirl(wave(f));
+  uv-=spectralCentroidMedian;
+  uv*=mat2(cos(time),sin(time),-sin(time),cos(time));
+  vec2 m=plasma(uv);// Calculate plasma set
+  
+  vec2 mixFactor=vec2(.1);// Blend based on horizontal position
+  vec2 w=mix(f,m,mixFactor.x);// Blend Julia and Mandelbrot
+  w=swirl(wave(w));// Apply swirl and wave effects
   float d=drip(w);
-  vec2 offset=w*spectralKurtosisNormalized+vec2(d,d);
+  vec2 offset=w*spectralKurtosisNormalized+vec2(d,d)+sin(time);
   
   // Map music features to color
   vec3 color=vec3(0.);
@@ -94,26 +97,32 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
   color.b=energyNormalized;// Example mapping
   
   // Adjust color based on drip and fractal
-  color=mix(color,rgb2hsl(color),offset.x);
+  color=mix(color,vec3(m.x,w.y,d),offset.x);
   color=mix(color,hsl2rgb(vec3(color.r,color.g+offset.y,color.b)),offset.y);
   
-  // Apply color palette
-  color=mix(palette[0],palette[4],color.r);
   vec3 last=getLastFrameColor(uv).rgb;
-  color=mix(color,last,.5);
+  color=mix(color,last,energyZScore);
   // if the color is too close to black, compute a mandelbrot and use that as the color instead
-  if(dot(color,color)<.15){
-    vec2 p=uv*2.-1.;
-    p.x*=resolution.x/resolution.y;
-    vec2 z=plasma(p);
-    color=vec3(z.x*spectralCentroidMedian,z.y*spectralRolloffMedian,spectralFluxMedian);
-  }
+  // if(dot(color,color)<.05||dot(color,color)>1.5){
+    //   vec2 p=uv*2.-1.;
+    //   p.x*=resolution.x/resolution.y;
+    //   vec2 z=plasma(p);
+    //   color=vec3(z.x*spectralCentroidMedian,z.y*spectralRolloffMedian,spectralFluxMedian);
+  // }
   // if it's still too close to black, use the last frame's color
-  if(dot(color,color)<.5){
-    vec3 hsl=rgb2hsl(last);
-    hsl.x=mod(hsl.x+energy,1.);
-    color=hsl2rgb(hsl);
-    // color=last;
+  // if(dot(color,color)<.25){
+    //   vec3 hsl=rgb2hsl(last);
+    //   hsl.x=fract(hsl.x+.01);
+    //   color=hsl2rgb(hsl);
+    //   // color=last;
+  // }
+  vec3 hsl=rgb2hsl(color);
+  vec3 hslLast=rgb2hsl(last);
+  hsl.x=fract(hsl.x+hslLast.x*.1);
+  hsl.y=clamp(hsl.y+hslLast.y*.1,0.,1.);
+  color=hsl2rgb(hsl);
+  if(hsl.y<.1){
+    color=palette[frame+1%5];
   }
-  fragColor=vec4(color,1.);
+  fragColor=vec4(mix(color,last,.3),1.);
 }
