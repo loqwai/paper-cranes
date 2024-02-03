@@ -6,12 +6,11 @@
   "scripts": {
     "start": "npx live-server --port=6969 ./dist/",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "node ./esbuild.js",
+    "build": "node ./esbuild.js & npm run build:shaders",
     "dev": "npm run build && concurrently \"npm run start\" \"npm run build:watch\"",
     "build:watch": "nodemon --ignore node_modules/ --ignore dist/ --ext '*' --watch . --exec \"npm run build\"",
     "format": "eslint --fix .",
-    "build:shaders": "for shader in shaders/*; do echo glslify ./$shader -o ./dist/shaders/$(basename $shader); done",
-    "build:shader": "glslify ./shaders/adventure-time.frag -o ./dist/shaders/adventure-time.frag"
+    "build:shaders": "mkdir -p dist/shaders; for shader in shaders/*.frag; do glslify ./$shader -o ./dist/shaders/$(basename $shader) & done;"
   },
   "author": "",
   "license": "UNLICENSED",
@@ -19,7 +18,6 @@
     "twgl.js": "^4.24.0"
   },
   "devDependencies": {
-    "glslify": "^7.1.1",
     "concurrently": "^8.2.2",
     "esbuild": "^0.19.12",
     "esbuild-plugin-copy": "^2.1.1",
@@ -27,6 +25,8 @@
     "esbuild-plugin-html": "^1.0.0",
     "eslint": "^8.56.0",
     "eslint-plugin-prettier": "^5.0.1",
+    "glsl-hsl2rgb": "^1.1.0",
+    "glslify": "^7.1.1",
     "live-server": "^1.1.0",
     "mini-css-extract-plugin": "^2.7.6",
     "ncp": "^2.0.0",

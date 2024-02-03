@@ -4,7 +4,7 @@
 // Swirl function
 vec2 swirl(vec2 p){
   float swirlIntensity=spectralSpreadNormalized*.5;
-  
+
   float angle=atan(p.y,p.x);
   float radius=length(p);
   angle+=swirlIntensity*sin(radius*10.+time);
@@ -34,13 +34,13 @@ vec2 julia(vec2 p){
 vec2 plasma(vec2 p){
   vec2 z=vec2(0.);
   float iterations=0.;
-  
+
   for(int i=0;i<int(spectralFluxMedian)+50;i++){// Adjust the maximum iterations
     z=vec2(z.x*z.x-z.y*z.y,2.*z.x*z.y)+p;
     iterations+=1.-smoothstep(0.,.01,dot(z,z));// Accumulate iterations smoothly
     if(dot(z,z)>spectralSpreadMedian)break;
   }
-  
+
   // Map iterations to a smooth color gradient using a sine function
   return sin(iterations*3.14159)*vec2(.5)+vec2(.5);
 }
@@ -78,28 +78,28 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
   f*=julia(-uv.yx);// then the fourth one
   f=fract(f);
   // roate the uv around the center for plasma
-  
+
   uv-=spectralCentroidMedian;
   uv*=mat2(cos(time),sin(time),-sin(time),cos(time));
   vec2 m=plasma(uv);// Calculate plasma set
-  
+
   vec2 mixFactor=vec2(.1);// Blend based on horizontal position
   vec2 w=mix(f,m,mixFactor.x);// Blend Julia and Mandelbrot
   w=swirl(wave(w));// Apply swirl and wave effects
   float d=drip(w);
   vec2 offset=w*spectralKurtosisNormalized+vec2(d,d)+sin(time);
-  
+
   // Map music features to color
   vec3 color=vec3(0.);
   color=palette[frame%5];
   color.r=spectralCentroidNormalized;// Example mapping
   color.g=spectralRolloffNormalized;// Example mapping
   color.b=energyNormalized;// Example mapping
-  
+
   // Adjust color based on drip and fractal
   color=mix(color,vec3(m.x,w.y,d),offset.x);
   color=mix(color,hsl2rgb(vec3(color.r,color.g+offset.y,color.b)),offset.y);
-  
+
   vec3 last=getLastFrameColor(uv).rgb;
   color=mix(color,last,energyZScore);
   // if the color is too close to black, compute a mandelbrot and use that as the color instead
