@@ -14,7 +14,7 @@ export const AudioFeatures = [
 ]
 
 const DEFAULT_FEATURE_VALUE = 0.00001
-export const getFlatAudioFeatures = (audioFeatures, rawFeatures) => {
+export const getFlatAudioFeatures = (audioFeatures = AudioFeatures, rawFeatures = {}) => {
     const features = {}
     for (const feature of audioFeatures) {
         // the key in features is the same as the key in rawFeatures, except the first letter is lowercased

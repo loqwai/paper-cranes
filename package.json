@@ -10,7 +10,15 @@
     "dev": "npm run build && concurrently \"npm run start\" \"npm run build:watch\"",
     "build:watch": "nodemon --ignore node_modules/ --ignore dist/ --ext '*' --watch . --exec \"npm run build\"",
     "format": "eslint --fix .",
-    "build:shaders": "mkdir -p dist/shaders; for shader in shaders/*.frag; do glslify ./$shader -o ./dist/shaders/$(basename $shader) & done;"
+    "build:shaders": "mkdir -p dist/shaders; for shader in shaders/*.frag; do glslify -t 'glslify-import' ./$shader -o ./dist/shaders/$(basename $shader) & done;",
+    "build:shaders:test": "glslify -t 'glslify-import' ./shaders/beat-trip.frag -o ./dist/shaders/beat-trip.frag"
+  },
+  "glslify": {
+    "transform": [
+      [
+        "glslify-import"
+      ]
+    ]
   },
   "author": "",
   "license": "UNLICENSED",
@@ -27,6 +35,7 @@
     "eslint-plugin-prettier": "^5.0.1",
     "glsl-hsl2rgb": "^1.1.0",
     "glslify": "^7.1.1",
+    "glslify-import": "^3.1.0",
     "live-server": "^1.1.0",
     "mini-css-extract-plugin": "^2.7.6",
     "ncp": "^2.0.0",
