@@ -8,41 +8,29 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "node ./esbuild.js",
     "dev": "npm run build && concurrently \"npm run start\" \"npm run build:watch\"",
-    "build:watch": "nodemon --ignore node_modules/ --ignore dist/ --ext '*' --watch . --exec \"echo building && npm run build && ls dist/\"",
-    "format": "eslint --fix ."
+    "build:watch": "nodemon --ignore node_modules/ --ignore dist/ --ext '*' --watch . --exec \"npm run build\"",
+    "format": "eslint --fix .",
+    "build:shaders": "for shader in shaders/*; do echo glslify ./$shader -o ./dist/shaders/$(basename $shader); done",
+    "build:shader": "glslify ./shaders/adventure-time.frag -o ./dist/shaders/adventure-time.frag"
   },
   "author": "",
   "license": "UNLICENSED",
   "dependencies": {
-    "three": "^0.159.0",
     "twgl.js": "^4.24.0"
   },
   "devDependencies": {
+    "glslify": "^7.1.1",
     "concurrently": "^8.2.2",
-    "copy-webpack-plugin": "^11.0.0",
-    "css-loader": "^6.8.1",
     "esbuild": "^0.19.12",
     "esbuild-plugin-copy": "^2.1.1",
     "esbuild-plugin-css-modules": "^0.3.0",
     "esbuild-plugin-html": "^1.0.0",
     "eslint": "^8.56.0",
     "eslint-plugin-prettier": "^5.0.1",
-    "file-loader": "^6.2.0",
-    "html-loader": "^4.2.0",
-    "html-webpack-plugin": "^5.6.0",
-    "image-minimizer-webpack-plugin": "^3.8.3",
-    "image-webpack-loader": "^8.1.0",
     "live-server": "^1.1.0",
     "mini-css-extract-plugin": "^2.7.6",
     "ncp": "^2.0.0",
     "nodemon": "^3.0.3",
-    "prettier": "^3.1.1",
-    "style-loader": "^3.3.3",
-    "terser-webpack-plugin": "^5.3.10",
-    "webpack": "^5.89.0",
-    "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^4.15.1",
-    "webpack-glsl-minify": "^1.5.0",
-    "worker-loader": "^3.0.8"
+    "prettier": "^3.1.1"
   }
 }
