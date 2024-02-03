@@ -28,7 +28,7 @@ export const shaderWrapper = (shader) => {
         return generatePaperCranesShader(shader)
     }
     const firstLine = shader.split('\n')[0]
-    if (firstLine.includes('#version 300 es')) {
+    if (firstLine.includes('#version')) {
         return shader
     }
     if (shader.includes('mainImage')) {

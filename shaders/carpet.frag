@@ -30,8 +30,8 @@ uniform float spectralRoughnessNormalized;
 uniform bool beat;
 out vec4 fragColor;
 // ... [existing functions like triangle_wave, transform, etc.] ...
-#pragma glslify: hsl2rgb = require(glsl-hsl2rgb)
-#pragma glslify: rgb2hsl = require(rgb2hsl)
+#pragma glslify: hsl2rgb = require(./includes/color/hsl2rgb)
+#pragma glslify: rgb2hsl = require(./includes/color/rgb2hsl)
 
 vec2 triangle_wave(vec2 a){
   vec2 a2=
