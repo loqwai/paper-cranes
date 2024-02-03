@@ -1,4 +1,3 @@
-#pragma glslify: import(./includes/audio-uniforms.frag)
 #pragma glslify: hsl2rgb = require(./includes/color/hsl2rgb)
 #pragma glslify: rgb2hsl = require(./includes/color/rgb2hsl)
 // "GENERATORS REDUX" by Kali
