@@ -11,9 +11,11 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
 		z+=.07 + spectralCentroid;
 		l=length(p);
 		uv+=p/l*(sin(z)+1.)*abs(sin(l*8.-spectralRolloffNormalized-z-z));
-		c[i]=(.01 + ((energyZScore)/400.))/length(mod(uv,1.)-.5);
+		c[i]=(.01 + ((energyZScore)/100.))/length(mod(uv,1.)-.5);
 	}
-	fragColor=vec4(c/l,time);
+	vec3 hsl = rgb2hsl(vec3(c/l));
+	hsl.x = fract(hsl.x + spectralCentroidMean);
+	fragColor=vec4(hsl2rgb(hsl),time);
 }
 void main() {
   mainImage(fragColor, gl_FragCoord.xy);
