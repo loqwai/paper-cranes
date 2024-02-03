@@ -1,3 +1,8 @@
+#version 300 es
+precision highp float;
+
+#pragma glslify: import(./includes/basics.frag)
+#pragma glslify: import(./includes/audio-uniforms.frag)
 #pragma glslify: hsl2rgb = require(glsl-hsl2rgb)
 #pragma glslify: rgb2hsl = require(./includes/rgb2hsl)
 
@@ -57,4 +62,8 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
 
     // Apply the beat-reactive distortion and color effect
     fragColor=applyDistortion(uv,time,beat);
+}
+
+void main(void){
+    mainImage(fragColor, gl_FragCoord.xy);
 }
