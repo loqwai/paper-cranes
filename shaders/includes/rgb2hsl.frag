@@ -1,4 +1,5 @@
 #pragma glslify: export(rgb2hsl)
+
 vec3 rgb2hsl(vec3 color){
   float maxColor=max(max(color.r,color.g),color.b);
   float minColor=min(min(color.r,color.g),color.b);
