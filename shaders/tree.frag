@@ -1,5 +1,10 @@
+#pragma glslify: import(./includes/audio-uniforms.frag)
+#pragma glslify: hsl2rgb = require(./includes/color/hsl2rgb)
+#pragma glslify: rgb2hsl = require(./includes/color/rgb2hsl)
+#pragma glslify: import(./includes/previous-frame.frag)
+
 #define kDepth 3
-#define kBranches 3
+#define kBranches 5
 #define kMaxDepth 2187 // This is used, so it stays
 
 mat3 matRotate(float angle) {
@@ -21,7 +26,7 @@ float sdBranch(vec2 p, float w1, float w2, float l) {
 float map(vec2 pos) {
     const float len = 3.2;
     const float wid = 0.3;
-    const float lenf = 0.6;
+    const float lenf = 0.9;
     const float widf = 0.4;
 
     float d = sdBranch(pos, wid, wid * widf, len);
