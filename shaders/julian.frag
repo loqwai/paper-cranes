@@ -1,6 +1,3 @@
-
-// Swirl and wave parameters
-
 // Swirl function
 vec2 swirl(vec2 p){
   float swirlIntensity=spectralSpreadNormalized*.5;
