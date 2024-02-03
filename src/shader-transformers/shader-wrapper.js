@@ -1,26 +1,22 @@
-import { StatTypes } from '../utils/calculateStats'
 import { AudioFeatures, getFlatAudioFeatures } from '../audio/AudioProcessor'
-
-const generatePaperCranesShader = (shader) => {
-    console.log('entering paperCranes renderer')
-    throw new Error('Not implemented')
-}
 
 export const shaderWrapper = (shader) => {
     if (shader.includes('#pragma paper-cranes: generate-audio-features')) {
         console.log('entering paperCranes renderer')
         return generatePaperCranesShader(shader)
     }
-    const firstLine = shader.split('\n')[0]
+    const [firstLine, ...lines] = shader.split('\n')
     if (firstLine.includes('#version')) {
-        return shader
+        lines.unshift('#define PAPER_CRANES 1')
+        lines.unshift(firstLine)
+        return lines.join('\n')
     }
     if (shader.includes('mainImage')) {
         return /* glsl */ `
 #version 300 es
 precision highp float;
 // This is automatically added by paper-cranes
-
+#define PAPER_CRANES 1
 out vec4 fragColor;
 ${shaderToyCompatibilityUniforms()}
 ${shader}
