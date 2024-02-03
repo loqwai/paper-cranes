@@ -19,6 +19,7 @@ precision highp float;
 #define PAPER_CRANES 1
 out vec4 fragColor;
 ${shaderToyCompatibilityUniforms()}
+${getAudioUniforms()}
 ${shader}
 
 void main(void){

@@ -55,7 +55,12 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl, fullscre
             failUnsetUniforms: false,
         })
     }
-    const res = await fetch(`/shaders/${shader}.frag`)
+    let shaderUrl = shader
+    //if the url is not a full url, then it's a relative url
+    if (!shaderUrl.includes('http')) {
+        shaderUrl = `/shaders/${shader}.frag`
+    }
+    const res = await fetch(shaderUrl)
     const fragmentShader = shaderWrapper(await res.text())
     const initialTexture = await getTexture(gl, initialImageUrl)
 
