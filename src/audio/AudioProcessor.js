@@ -12,15 +12,18 @@ export const AudioFeatures = [
     'SpectralCrest',
     'SpectralSkew',
 ]
-export const workerNamesToUniforms = (audioFeatures, rawFeatures) => {
+export const getFlatAudioFeatures = (audioFeatures, rawFeatures) => {
+    const features = {}
     for (const feature in audioFeatures) {
         // the key in features is the same as the key in rawFeatures, except the first letter is lowercased
         const featureKey = feature.charAt(0).toLowerCase() + feature.slice(1)
+        if (!rawFeatures[feature]) continue
         for (const propertyKey in rawFeatures[feature].stats) {
             // the key in features is the same as the key in rawFeatures, except the first letter is lowercased
             this.features[`${featureKey}${propertyKey.charAt(0).toUpperCase() + propertyKey.slice(1)}`] = rawFeatures[feature].stats[propertyKey]
         }
     }
+    return features
 }
 
 export class AudioProcessor {
@@ -74,24 +77,12 @@ export class AudioProcessor {
         }
 
         const getFeatures = () => {
-            console.log({ rawFeatures })
-            // for each feature in raw features
-            for (const feature in rawFeatures) {
-                // the key in features is the same as the key in rawFeatures, except the first letter is lowercased
-                const featureKey = feature.charAt(0).toLowerCase() + feature.slice(1)
-                this.features[featureKey] = rawFeatures[feature].value
-                for (const propertyKey in rawFeatures[feature].stats) {
-                    // the key in features is the same as the key in rawFeatures, except the first letter is lowercased
-                    this.features[`${featureKey}${propertyKey.charAt(0).toUpperCase() + propertyKey.slice(1)}`] = rawFeatures[feature].stats[propertyKey]
-                }
-            }
-            this.features['beat'] = isBeat()
-            return this.features
+            const features = getFlatAudioFeatures(AudioFeatures, rawFeatures)
+            features['beat'] = isBeat()
+            return features
         }
 
-        const getFeatureStructs = () => {
-            return rawFeatures
-        }
+        const getFeatureStructs = () => {}
 
         const isBeat = () => {
             const spectralFlux = rawFeatures.SpectralFlux

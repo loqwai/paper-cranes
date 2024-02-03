@@ -164,11 +164,12 @@ export function makeCalculateStats(historySize = 500) {
         let median = calculateMedian()
 
         return {
-            normalized: queue.length && max !== min ? (value - min) / (max - min) : 0,
-            mean,
-            median,
-            standardDeviation: Math.sqrt(variance),
+            current: value,
             zScore: (variance ? (value - mean) / Math.sqrt(variance) : 0) / 3,
+            normalized: queue.length && max !== min ? (value - min) / (max - min) : 0,
+            standardDeviation: Math.sqrt(variance),
+            median,
+            mean,
             min,
             max,
         }
