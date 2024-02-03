@@ -1,3 +1,5 @@
+#pragma glslify: import(./includes/full)
+
 float plasma(vec2 uv,float time){
   float value=0.;
   value+=sin((uv.x+time)*10.);
