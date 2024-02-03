@@ -1,6 +1,3 @@
-#version 300 es
-precision highp float;
-
 #pragma glslify: import(./includes/full.frag)
 
 
