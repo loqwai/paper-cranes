@@ -91,8 +91,6 @@ export class AudioProcessor {
             return features
         }
 
-        const getFeatureStructs = () => { }
-
         const isBeat = () => {
             const spectralFlux = rawFeatures.SpectralFlux
             if (!spectralFlux) return false
