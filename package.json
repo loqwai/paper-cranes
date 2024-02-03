@@ -11,7 +11,7 @@
     "build:watch": "nodemon --ignore node_modules/ --ignore dist/ --ext '*' --watch . --exec \"npm run build\"",
     "format": "eslint --fix .",
     "build:shaders": "mkdir -p dist/shaders; for shader in shaders/*.frag; do glslify -t 'glslify-import' ./$shader -o ./dist/shaders/$(basename $shader) & done;",
-    "build:shaders:test": "glslify -t 'glslify-import' ./shaders/beat-trip.frag -o ./dist/shaders/beat-trip.frag"
+    "build:shaders:test": "glslify -t 'glslify-import' ./shaders/adventure-time.frag -o ./dist/shaders/adventure-time.frag"
   },
   "glslify": {
     "transform": [

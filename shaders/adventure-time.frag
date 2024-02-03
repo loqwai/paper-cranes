@@ -1,5 +1,9 @@
 #define PI 3.1415926535897932384626433832795
 
+#pragma glslify: import(./includes/basics.frag)
+#pragma glslify: hsl2rgb = require(./includes/hsl2rgb)
+#pragma glslify: rgb2hsl = require(./includes/rgb2hsl)
+
 vec2 rotateUV(vec2 uv,float angle,vec2 pivot){
   // Translate UV coordinates to pivot
   uv-=pivot;
