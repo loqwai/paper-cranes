@@ -1,5 +1,28 @@
 import { applyHanningWindow } from './applyHanningWindow.js'
-const timeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+export const AudioFeatures = [
+    'SpectralCentroid',
+    'SpectralFlux',
+    'SpectralSpread',
+    'SpectralRolloff',
+    'SpectralRoughness',
+    'SpectralKurtosis',
+    'Energy',
+    'SpectralEntropy',
+    'SpectralCrest',
+    'SpectralSkew',
+]
+export const workerNamesToUniforms = (audioFeatures, rawFeatures) => {
+    for (const feature in audioFeatures) {
+        // the key in features is the same as the key in rawFeatures, except the first letter is lowercased
+        const featureKey = feature.charAt(0).toLowerCase() + feature.slice(1)
+        for (const propertyKey in rawFeatures[feature].stats) {
+            // the key in features is the same as the key in rawFeatures, except the first letter is lowercased
+            this.features[`${featureKey}${propertyKey.charAt(0).toUpperCase() + propertyKey.slice(1)}`] = rawFeatures[feature].stats[propertyKey]
+        }
+    }
+}
+
 export class AudioProcessor {
     constructor(audioContext, sourceNode, historySize, fftSize = 2048) {
         this.features = {}
@@ -13,19 +36,7 @@ export class AudioProcessor {
         const workers = {}
 
         const start = async () => {
-            for (const workerName of [
-                'SpectralCentroid',
-                'SpectralFlux',
-                'SpectralSpread',
-                'SpectralRolloff',
-                'SpectralRoughness',
-                'SpectralKurtosis',
-                'Energy',
-                'SpectralEntropy',
-                'SpectralCrest',
-                'SpectralSkew',
-                // 'SpectralFlatness',
-            ]) {
+            for (const workerName of AudioFeatures) {
                 const workerUrl = new URL(`src/audio/analyzers/${workerName}.js`, import.meta.url).href
                 fetch(workerUrl).then(async (response) => {
                     const code = await response.text()

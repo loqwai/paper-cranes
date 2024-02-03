@@ -1,3 +1,4 @@
+import { statTypes } from '../utils/calculateStats'
 const rgb2hsl = () => `
 // Function to convert RGB to HSL
 vec3 rgb2hsl(vec3 color){
