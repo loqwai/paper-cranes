@@ -1,3 +1,5 @@
+#pragma glslify: import(./includes/full.frag)
+#pragma glslify: import(./includes/shadertoy-compat.frag)
 
 
 float sun(vec2 uv, float battery)
@@ -162,3 +164,4 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
 
 }
+#pragma glslify: import(./includes/shadertoy-compat-main.frag)

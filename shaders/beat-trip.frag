@@ -1,10 +1,5 @@
-#version 300 es
-precision highp float;
+#pragma glslify: import(./includes/full.frag)
 
-#pragma glslify: import(./includes/basics.frag)
-#pragma glslify: import(./includes/audio-uniforms.frag)
-#pragma glslify: hsl2rgb =  require(./includes/color/hsl2rgb)
-#pragma glslify: rgb2hsl = require(./includes/color/rgb2hsl)
 
 float getGrayPercent(vec4 color){
     return(color.r+color.g+color.b)/3.f;

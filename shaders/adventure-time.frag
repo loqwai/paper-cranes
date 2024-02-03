@@ -1,14 +1,7 @@
-#version 300 es
-precision highp float;
+#pragma glslify: import(./includes/full.frag)
 
-#define PI 3.1415926535897932384626433832795
-
-#pragma glslify: import(./includes/basics.frag)
-#pragma glslify: import(./includes/audio-uniforms.frag)
-#pragma glslify: hsl2rgb =  require(./includes/color/hsl2rgb)
-#pragma glslify: rgb2hsl = require(./includes/color/rgb2hsl)
 #pragma glslify: import(./includes/shadertoy-compat)
-
+#define PI 3.1415926535897932384626433832795
 
 vec2 rotateUV(vec2 uv,float angle,vec2 pivot){
   // Translate UV coordinates to pivot
