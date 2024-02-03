@@ -1,6 +1,7 @@
-#pragma glslify: hsl2rgb = require(glsl-hsl2rgb)
+
 #pragma glslify: rgb2hsl = require(./includes/color/rgb2hsl)
-#pragma glslify: getLastFrameColor = require(./includes/get-last-frame-color)
+#pragma glslify: hsl2rgb = require(./includes/color/hsl2rgb)
+
 
 // Fractal parameters
 float iterations=8.;
