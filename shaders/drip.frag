@@ -1,8 +1,5 @@
-
+#pragma glslify: import(./includes/full.frag)
 // Swirl and wave parameters
-#pragma glslify: hsl2rgb = require(glsl-hsl2rgb)
-#pragma glslify: rgb2hsl = require(./includes/color/rgb2hsl)
-#pragma glslify: getLastFrameColor = require(./includes/get-last-frame-color)
 // Swirl function
 vec2 swirl(vec2 p){
   float swirlIntensity=spectralSpreadNormalized*.5;
@@ -57,7 +54,7 @@ float drip(vec2 p){
   return sin(length(d)*dripSpeed+time)*dripIntensity*smoothstep(0.,dripLength,length(d));
 }
 
-vec3[5]getPalette(vec2 uv){
+vec3[5] getPalette(vec2 uv){
   // Example palette
   // Color palette
   vec3 palette[5]=vec3[5](
@@ -128,3 +125,4 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
   }
   fragColor=vec4(mix(color,last,.3),1.);
 }
+#pragma glslify: import(./includes/shadertoy-compat-main)
