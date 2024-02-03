@@ -1,7 +1,7 @@
 
 // Swirl and wave parameters
 #pragma glslify: hsl2rgb = require(glsl-hsl2rgb)
-#pragma glslify: rgb2hsl = require(./includes/rgb2hsl)
+#pragma glslify: rgb2hsl = require(./includes/color/rgb2hsl)
 #pragma glslify: getLastFrameColor = require(./includes/get-last-frame-color)
 // Swirl function
 vec2 swirl(vec2 p){
