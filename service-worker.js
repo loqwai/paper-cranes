@@ -13,7 +13,7 @@ self.addEventListener('fetch', (event) => {
 
     setTimeout(() => {
         controller.abort()
-    }, 500 / ++timesFailed) // Abort fetch after 100ms
+    }, 1500 / ++timesFailed) // Abort fetch after 100ms
 
     event.respondWith(
         fetchPromise
