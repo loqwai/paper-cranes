@@ -1,3 +1,6 @@
+#pragma glslify: import(./includes/full.frag)
+#pragma glslify: import(./includes/shadertoy-compat.frag)
+
 //#define VAPORWAVE
 //#define AA 2
 //#define stereo
@@ -250,3 +253,4 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     fragColor/=float(AA*AA);
     #endif
 }
+#pragma glslify: import(./includes/shadertoy-compat-main.frag)
