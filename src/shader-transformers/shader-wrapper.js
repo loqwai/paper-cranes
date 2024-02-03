@@ -11,7 +11,14 @@ const getAudioUniforms = () => {
     for (const f in getFlatAudioFeatures()) {
         uniforms.push(`uniform float ${f};`)
     }
+
+    for (const f of AudioFeatures) {
+        const firstLower = f.charAt(0).toLowerCase() + f.slice(1)
+        uniforms.push(`uniform float ${firstLower};`)
+    }
+
     uniforms.push('uniform bool beat;') // yeah, this needs to go somewhere else
+
     return uniforms.join('\n')
 }
 
@@ -28,7 +35,17 @@ export const shaderWrapper = (shader) => {
         return /* glsl */ `
 #version 300 es
 precision highp float;
-// Included colors and uniforms!
+// This is automatically added by paper-cranes
+
+out vec4 fragColor;
+
+uniform float time;
+uniform vec2 resolution;// iResolution equivalent
+uniform sampler2D prevFrame;// Texture of the previous frame
+
+uniform int frame;
+
+
 ${getAudioUniforms()}
 ${shaderToyCompatibilityUniforms()}
 
@@ -44,6 +61,8 @@ mainImage(fragColor, gl_FragCoord.xy);
 
 const shaderToyCompatibilityUniforms = () => /* glsl */ `
 uniform vec4 iMouse;
+uniform float iTime;
+uniform vec2 iResolution;
 uniform sampler2D iChannel0;
 uniform sampler2D iChannel1;
 uniform sampler2D iChannel2;
