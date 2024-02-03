@@ -1,3 +1,6 @@
+#pragma glslify: hsl2rgb = require(glsl-hsl2rgb)
+#pragma glslify: rgb2hsl = require(rgb2hsl)
+
 float getGrayPercent(vec4 color){
     return(color.r+color.g+color.b)/3.f;
 }
