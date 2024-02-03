@@ -1,19 +1,27 @@
 import { StatTypes } from '../utils/calculateStats'
-import { AudioFeatures } from '../audio/AudioProcessor'
+import { AudioFeatures, getFlatAudioFeatures } from '../audio/AudioProcessor'
 
 const generatePaperCranesShader = (shader) => {
     console.log('entering paperCranes renderer')
     throw new Error('Not implemented')
 }
 
+const getAudioUniforms = () => {
+    const uniforms = []
+    for (const f in getFlatAudioFeatures()) {
+        uniforms.push(`uniform float ${f};`)
+    }
+    uniforms.push('uniform bool beat;') // yeah, this needs to go somewhere else
+    return uniforms.join('\n')
+}
+console.log('uniforms would be:\n', getAudioUniforms())
 export const shaderWrapper = (shader) => {
     const firstLine = shader.split('\n')[0]
-    console.log({ firstLine })
+    if (shader.includes('#pragma paper-cranes: generate-audio-features')) {
+        return generatePaperCranesShader(shader)
+    }
     if (firstLine.includes('#version 300 es')) {
         return shader
-    }
-    if (firstLine.includes('#paper-cranes')) {
-        return generatePaperCranesShader(shader)
     }
     if (shader.includes('mainImage')) {
         return /* glsl */ `
