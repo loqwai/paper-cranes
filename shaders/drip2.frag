@@ -1,7 +1,4 @@
-
-#pragma glslify: rgb2hsl = require(./includes/color/rgb2hsl)
-#pragma glslify: hsl2rgb = require(./includes/color/hsl2rgb)
-
+#pragma glslify: import(./includes/full.frag)
 
 // Fractal parameters
 float iterations=8.;
@@ -71,3 +68,5 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
   // Set fragment color
   fragColor=vec4(color,1.);
 }
+
+#pragma glslify: import(./includes/shadertoy-compat-main)

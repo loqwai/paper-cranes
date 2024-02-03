@@ -125,4 +125,5 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
   }
   fragColor=vec4(mix(color,last,.3),1.);
 }
+
 #pragma glslify: import(./includes/shadertoy-compat-main)
