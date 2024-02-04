@@ -122,9 +122,6 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord)
 
     vec2 UV=fragCoord.xy/resolution.xy;
     float T=time*2.;
-    if(beat) {
-        T*=1.05;
-    }
 
     float t=T*.2;
     vec3 plasma = generatePlasma(uv, time);
@@ -133,7 +130,7 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord)
     float maxBlur=mix(3.,6.,rainAmount);
     float minBlur=2.;
 
-    float zoom=-.7;
+    float zoom=-.7 * (sin(time/1000.)*100.);
     uv*=.7+zoom*.3;
 
     UV=(UV-.5)*(.9+zoom*.1)+.5;
