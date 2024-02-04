@@ -1,10 +1,6 @@
 import { AudioFeatures, getFlatAudioFeatures } from '../audio/AudioProcessor'
 
 export const shaderWrapper = (shader) => {
-    if (shader.includes('#pragma paper-cranes: generate-audio-features')) {
-        console.log('entering paperCranes renderer')
-        return generatePaperCranesShader(shader)
-    }
     const [firstLine, ...lines] = shader.split('\n')
     if (firstLine.includes('#version')) {
         lines.unshift('#define PAPER_CRANES 1')

@@ -5,8 +5,8 @@
 vec3 generatePlasma(vec2 uv, float time) {
     // High-frequency noise for detailed plasma balls
     vec2 noise = vec2(
-        sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453,
-        sin(dot(uv, vec2(11.1375, 17.857))) * 23421.631
+        sin(dot(uv, vec2(12.9898, 78.233))) * spectralFluxMedian,
+        sin(dot(uv, vec2(11.1375, 17.857))) * spectralRoughnessMedian
     );
 
     // Combine multiple noise frequencies for variation
@@ -157,7 +157,7 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord)
     // Darken areas not occupied by rain more than those that are
     float darkeningFactor = mix(1.0, 0.98, 1.0 - (presenceOfRain/10.)); // Adjust the 0.98 to control darkening
     // plasma *= darkeningFactor;
-    col = hslmix(col, plasma, 0.01); // Add plasma effect
+    col = hslmix(col, plasma, energy); // Add plasma effect
     col = rgb2hsl(col);
     col.y = clamp(col.y, 0.2, 0.8);
     col.z = clamp(col.z, 0.2 ,0.4);

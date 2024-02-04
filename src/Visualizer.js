@@ -64,7 +64,7 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl, fullscre
     const fragmentShader = shaderWrapper(await res.text())
     const initialTexture = await getTexture(gl, initialImageUrl)
 
-    console.log({ fragmentShader, initialTexture, vertexShader })
+    console.log(cranes)
     const programInfo = createProgramInfo(gl, [vertexShader, fragmentShader])
     const frameBuffers = [createFramebufferInfo(gl), createFramebufferInfo(gl)]
 
