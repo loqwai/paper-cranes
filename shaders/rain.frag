@@ -1,6 +1,20 @@
 #pragma glslify:import(./includes/full.frag)
 #define S(a,b,t)smoothstep(a,b,t)
 
+
+// Plasma Generation Function
+vec3 generatePlasma(vec2 uv, float time) {
+    // Time-dependent plasma calculations
+    float plasma = sin(uv.x * cos(time * 0.2) * 10.0) + cos(uv.y * cos(time * 0.15) * 10.0);
+    plasma += sin(length(uv + vec2(sin(time * 0.1), cos(time * 0.2))) * 10.0);
+    plasma *= 0.5;
+
+    // Color modulation based on plasma value
+    vec3 col = 0.5 + 0.5 * cos(time + plasma * vec3(0.5, 0.4, 0.3));
+
+    return col;
+}
+
 vec3 N13(float p){
     //  from DAVE HOSKINS
     vec3 p3=fract(vec3(p)*vec3(.1031,.11369,.13787));
@@ -97,9 +111,10 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord)
     vec2 UV=fragCoord.xy/resolution.xy;
     float T=time*2.;
 
-    float t=T*.2;
 
-    float rainAmount=sin(T*.05)*.3+.7;
+    float t=T*.2;
+    vec3 plasma = generatePlasma(uv, time);
+    float rainAmount=sin(T*.05)*.3+spectralFluxMedian;
 
     float maxBlur=mix(3.,6.,rainAmount);
     float minBlur=2.;
@@ -125,6 +140,12 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord)
     float focus=mix(maxBlur-c.y,minBlur,S(.1,.2,c.x));
     vec3 col=textureLod(prevFrame,UV+n,focus).rgb;
 
-    fragColor=vec4(col,1.);
+    float presenceOfRain = cx; // Rain intensity from Drops function
+
+    // Darken areas not occupied by rain more than those that are
+    float darkeningFactor = mix(1.0, 0.98, 1.0 - (presenceOfRain/100000.)); // Adjust the 0.98 to control darkening
+    col *= darkeningFactor;
+    col = mix(col, plasma, 0.5); // Add plasma effect
+    fragColor=vec4(col,1.)*.99;
 }
 #pragma glslify:import(./includes/shadertoy-compat-main)
