@@ -2,18 +2,29 @@
 #define S(a,b,t)smoothstep(a,b,t)
 
 
-// Plasma Generation Function
 vec3 generatePlasma(vec2 uv, float time) {
-    // Time-dependent plasma calculations
-    float plasma = sin(uv.x * cos(time * 0.2) * 10.0) + cos(uv.y * cos(time * 0.15) * 10.0);
-    plasma += sin(length(uv + vec2(sin(time * 0.1), cos(time * 0.2))) * 10.0);
+    // High-frequency noise for detailed plasma balls
+    vec2 noise = vec2(
+        sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453,
+        sin(dot(uv, vec2(11.1375, 17.857))) * 23421.631
+    );
+
+    // Combine multiple noise frequencies for variation
+    float plasma = sin(uv.x * cos(time * 0.2) * 10.0 + noise.x) +
+                   cos(uv.y * cos(time * 0.15) * 10.0 + noise.y);
+    plasma += sin(length(uv + vec2(sin(time * 0.1), cos(time * 0.2))) * 10.0 + noise.y);
     plasma *= 0.5;
 
-    // Color modulation based on plasma value
-    vec3 col = 0.5 + 0.5 * cos(time + plasma * vec3(0.5, 0.4, 0.3));
+    // Color modulation with HSL clamping for rain-like colors
+    vec3 col = rgb2hsl(0.5 + 0.5 * cos(time + plasma * vec3(0.5, 0.4, 0.3)));
+    col.x = clamp(col.x, 0.5, 0.75); // Constrain hue to a rain-like range
+    // col.y = clamp(col.y, 0.3, 0.8); // Adjust saturation as desired
+    // col.z = clamp(col.z, 0.3, 0.5); // Adjust lightness as desired
+    col = hsl2rgb(col);
 
     return col;
 }
+
 
 vec3 N13(float p){
     //  from DAVE HOSKINS
@@ -139,14 +150,14 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord)
 
     float focus=mix(maxBlur-c.y,minBlur,S(.1,.2,c.x));
     vec3 col=textureLod(prevFrame,UV+n,focus).rgb;
+    col = hslmix(col, vec3(c,.5), 0.1); // Add rain effect
 
     float presenceOfRain = cx; // Rain intensity from Drops function
 
     // Darken areas not occupied by rain more than those that are
-    float darkeningFactor = mix(1.0, 0.98, 1.0 - (presenceOfRain/100.)); // Adjust the 0.98 to control darkening
-    col *= darkeningFactor;
-    plasma = clamp(plasma, 0.1, 0.3);
-    col = hslmix(col, plasma, 0.1); // Add plasma effect
+    float darkeningFactor = mix(1.0, 0.98, 1.0 - (presenceOfRain/10.)); // Adjust the 0.98 to control darkening
+    // plasma *= darkeningFactor;
+    col = hslmix(col, plasma, 0.01); // Add plasma effect
     col = rgb2hsl(col);
     col.y = clamp(col.y, 0.2, 0.8);
     col.z = clamp(col.z, 0.2 ,0.4);
