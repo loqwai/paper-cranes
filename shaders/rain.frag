@@ -121,7 +121,7 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord)
 
     float story=0.;
 
-    float zoom=-cos(T*.2);
+    float zoom=-.7;
     uv*=.7+zoom*.3;
 
     UV=(UV-.5)*(.9+zoom*.1)+.5;
@@ -143,9 +143,15 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord)
     float presenceOfRain = cx; // Rain intensity from Drops function
 
     // Darken areas not occupied by rain more than those that are
-    float darkeningFactor = mix(1.0, 0.98, 1.0 - (presenceOfRain/100000.)); // Adjust the 0.98 to control darkening
+    float darkeningFactor = mix(1.0, 0.98, 1.0 - (presenceOfRain/100.)); // Adjust the 0.98 to control darkening
     col *= darkeningFactor;
-    col = mix(col, plasma, 0.5); // Add plasma effect
-    fragColor=vec4(col,1.)*.99;
+    plasma = clamp(plasma, 0.1, 0.3);
+    col = hslmix(col, plasma, 0.1); // Add plasma effect
+    col = rgb2hsl(col);
+    col.y = clamp(col.y, 0.2, 0.8);
+    col.z = clamp(col.z, 0.2 ,0.4);
+    col = hsl2rgb(col);
+
+    fragColor=vec4(col,1.);
 }
 #pragma glslify:import(./includes/shadertoy-compat-main)
