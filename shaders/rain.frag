@@ -150,7 +150,7 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord)
 
     float focus=mix(maxBlur-c.y,minBlur,S(.1,.2,c.x));
     vec3 col=textureLod(prevFrame,UV+n,focus).rgb;
-    col = hslmix(col, vec3(c,.5), 0.1); // Add rain effect
+    col = hslmix(col, vec3(c,.5), 0.001); // Add rain effect
 
     float presenceOfRain = cx; // Rain intensity from Drops function
 
