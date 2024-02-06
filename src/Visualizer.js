@@ -88,6 +88,7 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl, fullscre
             resolution: [frame.width, frame.height],
             frame: frameNumber,
             iResolution: [frame.width, frame.height, 0],
+            iMouse: [46, 19, 208, 0],
             iTime: time,
             iChannel0: initialTexture,
             iChannel1: initialTexture,
