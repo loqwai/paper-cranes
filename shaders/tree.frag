@@ -1,5 +1,10 @@
+#pragma glslify: import(./includes/audio-uniforms.frag)
+#pragma glslify: hsl2rgb = require(./includes/color/hsl2rgb)
+#pragma glslify: rgb2hsl = require(./includes/color/rgb2hsl)
+#pragma glslify: import(./includes/previous-frame.frag)
+
 #define kDepth 3
-#define kBranches 3
+#define kBranches 5
 #define kMaxDepth 2187 // This is used, so it stays
 
 mat3 matRotate(float angle) {
@@ -21,7 +26,7 @@ float sdBranch(vec2 p, float w1, float w2, float l) {
 float map(vec2 pos) {
     const float len = 3.2;
     const float wid = 0.3;
-    const float lenf = 0.6;
+    const float lenf = 0.9;
     const float widf = 0.4;
 
     float d = sdBranch(pos, wid, wid * widf, len);
@@ -66,16 +71,9 @@ float map(vec2 pos) {
 
     return d;
 }
+
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = (-iResolution.xy + 2.0 * fragCoord.xy) / iResolution.y;
-
-    // Drippy effect:
-    uv.y += 0.2 * sin(4.0 * uv.x + iTime) + 0.1 * sin(8.0 * uv.x + iTime * 2.0);
-
-    // Spinning effect:
-    uv = fract(mat2(cos(iTime), -sin(iTime), sin(iTime), cos(iTime)) * uv);
-
-    float d = map(uv);
 
     vec2 rotatedUv = fract(mat2(cos(iTime), -sin(iTime), sin(iTime), cos(iTime)) * uv);
 
@@ -84,22 +82,23 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     uv = uv * 4.0 + vec2(0.0, 3.5);
     px = px * 4.0;
 
+    float d = map(uv);
+    uv.y = sin(iTime/100. + uv.y + energyZScore);
     vec3 last = getLastFrameColor(rotatedUv).rgb;
     vec3 color = vec3(smoothstep(0.0, 2.0 * px, d));
 
     if (color.r + color.g + color.b > 0.9) {
         fragColor = vec4(rgb2hsl(last), 1.);
+        // discard;
         return;
     }
-
-    if (color == last) {
-        color = rgb2hsl(color);
-        color.z += 0.1;
-        color.x = spectralEntropyNormalized;
-        color.z = energy;
-        color = hsl2rgb(color);
+    if(color == last){
+         color = rgb2hsl(color);
+         color.z += 0.1;
+         color.x = spectralEntropyNormalized;
+         color.z = energy;
+         color = hsl2rgb(color);
     }
-
     color = mix(last, color, .1);
     color = rgb2hsl(color);
     color.x = spectralCentroid;

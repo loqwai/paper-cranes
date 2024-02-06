@@ -1,3 +1,6 @@
+#pragma glslify: import(./includes/full.frag)
+
+
 float getGrayPercent(vec4 color){
     return(color.r+color.g+color.b)/3.f;
 }
@@ -54,4 +57,8 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
 
     // Apply the beat-reactive distortion and color effect
     fragColor=applyDistortion(uv,time,beat);
+}
+
+void main(void){
+    mainImage(fragColor, gl_FragCoord.xy);
 }

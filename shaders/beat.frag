@@ -1,16 +1,11 @@
-#version 300 es
-precision highp float;
+#ifndef PAPER_CRANES
+    float beat = 0.0;
+#endif
 
-uniform bool beat;
-
-uniform vec2 resolution;
-uniform float time;
-out vec4 fragColor;
-
-void mainImage(out vec4 color,vec2 resolution,in vec2 fragCoord){
+void mainImage(out vec4 color,in vec2 fragCoord){
+    vec2 resolution=iResolution.xy;
     // Adjusted coordinates to center the circle
     vec2 uv=(vec2(fragCoord.x,resolution.y-fragCoord.y)/resolution.xy-.5)*2.;
-
     float radius=beat?.4:.2;// Larger radius when there's a beat
 
     // Calculate the distance from the center
@@ -23,10 +18,4 @@ void mainImage(out vec4 color,vec2 resolution,in vec2 fragCoord){
         return;
     }
     color=vec4(0.,0.,0.,0.);// Transparent
-}
-
-void main(void){
-    vec4 color=vec4(0.,0.,0.,1.);
-    mainImage(color,resolution,gl_FragCoord.xy);
-    fragColor=color;
 }

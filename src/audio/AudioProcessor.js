@@ -1,5 +1,40 @@
+import { StatTypes } from '../utils/calculateStats.js'
 import { applyHanningWindow } from './applyHanningWindow.js'
-const timeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+export const AudioFeatures = [
+    'SpectralCentroid',
+    'SpectralFlux',
+    'SpectralSpread',
+    'SpectralRolloff',
+    'SpectralRoughness',
+    'SpectralKurtosis',
+    'Energy',
+    'SpectralEntropy',
+    'SpectralCrest',
+    'SpectralSkew',
+]
+
+const DEFAULT_FEATURE_VALUE = 0.00001
+export const getFlatAudioFeatures = (audioFeatures = AudioFeatures, rawFeatures = {}) => {
+    const features = {}
+    for (const feature of audioFeatures) {
+        // the key in features is the same as the key in rawFeatures, except the first letter is lowercased
+        const featureKey = feature.charAt(0).toLowerCase() + feature.slice(1)
+
+        for (const propertyKey of StatTypes) {
+            // the key in features is the same as the key in rawFeatures, except the first letter is lowercased
+            // NOTICE: In a desperate effort to avoid divisions by zero, I am adding a teeny tiny offset from zero here.
+            // Fun fact: This is the same hack I made for the first time in my professional career, where I did this to avoid
+            // division-by-zero on flight management systems when Airbus A320s would fly over the north pole.
+            // It was a bad idea. I hope they deleted that code.
+            // Anyway, here we go again! It doesn't seem to be helping things.
+            const key = `${featureKey}${propertyKey.charAt(0).toUpperCase() + propertyKey.slice(1)}`
+            features[key] = rawFeatures[feature]?.stats[propertyKey]
+            if (features[key] === 0) features[key] = DEFAULT_FEATURE_VALUE
+        }
+    }
+    return features
+}
+
 export class AudioProcessor {
     constructor(audioContext, sourceNode, historySize, fftSize = 2048) {
         this.features = {}
@@ -13,20 +48,7 @@ export class AudioProcessor {
         const workers = {}
 
         const start = async () => {
-            const timestamp = Date.now()
-            for (const workerName of [
-                'SpectralCentroid',
-                'SpectralFlux',
-                'SpectralSpread',
-                'SpectralRolloff',
-                'SpectralRoughness',
-                'SpectralKurtosis',
-                'Energy',
-                'SpectralEntropy',
-                'SpectralCrest',
-                'SpectralSkew',
-                // 'SpectralFlatness',
-            ]) {
+            for (const workerName of AudioFeatures) {
                 const workerUrl = new URL(`src/audio/analyzers/${workerName}.js`, import.meta.url).href
                 fetch(workerUrl).then(async (response) => {
                     const code = await response.text()
@@ -64,18 +86,9 @@ export class AudioProcessor {
         }
 
         const getFeatures = () => {
-            // for each feature in raw features
-            for (const feature in rawFeatures) {
-                // the key in features is the same as the key in rawFeatures, except the first letter is lowercased
-                const featureKey = feature.charAt(0).toLowerCase() + feature.slice(1)
-                this.features[featureKey] = rawFeatures[feature].value
-                for (const propertyKey in rawFeatures[feature].stats) {
-                    // the key in features is the same as the key in rawFeatures, except the first letter is lowercased
-                    this.features[`${featureKey}${propertyKey.charAt(0).toUpperCase() + propertyKey.slice(1)}`] = rawFeatures[feature].stats[propertyKey]
-                }
-            }
-            this.features['beat'] = isBeat()
-            return this.features
+            const features = getFlatAudioFeatures(AudioFeatures, rawFeatures)
+            features['beat'] = isBeat()
+            return features
         }
 
         const isBeat = () => {

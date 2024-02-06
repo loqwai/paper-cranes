@@ -9,7 +9,7 @@ import {
     drawBufferInfo,
 } from 'twgl.js'
 
-import { shaderWrapper } from './shader-wrapper'
+import { shaderWrapper } from './shader-transformers/shader-wrapper'
 // Vertex shader
 const vertexShader = `
     #version 300 es
@@ -55,11 +55,16 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl, fullscre
             failUnsetUniforms: false,
         })
     }
-    const res = await fetch(`/shaders/${shader}.frag`)
+    let shaderUrl = shader
+    //if the url is not a full url, then it's a relative url
+    if (!shaderUrl.includes('http')) {
+        shaderUrl = `/shaders/${shader}.frag`
+    }
+    const res = await fetch(shaderUrl)
     const fragmentShader = shaderWrapper(await res.text())
     const initialTexture = await getTexture(gl, initialImageUrl)
 
-    console.log({ fragmentShader, initialTexture, vertexShader })
+    console.log(cranes)
     const programInfo = createProgramInfo(gl, [vertexShader, fragmentShader])
     const frameBuffers = [createFramebufferInfo(gl), createFramebufferInfo(gl)]
 

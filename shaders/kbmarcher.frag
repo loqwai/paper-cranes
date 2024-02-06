@@ -1,3 +1,6 @@
+#pragma glslify: hsl2rgb = require(./includes/color/hsl2rgb)
+#pragma glslify: rgb2hsl = require(./includes/color/rgb2hsl)
+
 #define SS(a,b,c) smoothstep(a-b,a+b,c)
 #define gyr(p) dot(sin(p.xyz),cos(p.zxy))
 #define T iTime

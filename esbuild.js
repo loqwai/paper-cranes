@@ -17,7 +17,7 @@ esbuild
         format: 'esm',
         bundle: true,
         minify: true,
-        sourcemap: true,
+        sourcemap: false,
         outdir: path.join(__dirname, 'dist'),
         treeShaking: true, // The essence of your quest,
         define: {
@@ -25,12 +25,6 @@ esbuild
         },
     })
     .then(() => {
-        return Promise.all([
-            ncp('index.html', 'dist/index.html'),
-            ncp('index.css', 'dist/index.css'),
-            ncp('favicon.ico', 'dist/favicon.ico'),
-            ncp('shaders', 'dist/shaders'),
-            ncp('images', 'dist/images'),
-        ])
+        return Promise.all([ncp('index.html', 'dist/index.html'), ncp('index.css', 'dist/index.css'), ncp('favicon.ico', 'dist/favicon.ico'), ncp('images', 'dist/images')])
     })
     .catch(console.error)

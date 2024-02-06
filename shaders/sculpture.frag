@@ -1,3 +1,6 @@
+#pragma glslify: import(./includes/full.frag)
+#pragma glslify: import(./includes/shadertoy-compat)
+
 float bailout=8.;
 float power=8.;
 int maxRaySteps=60;
@@ -35,7 +38,7 @@ float escape(in vec3 position){
     for(i=0;i<iterations;i++){
         r=length(z);
         if(r>bailout)break;
-        
+
         theta=power*atan3(sqrt(z.x*z.x+z.y*z.y),z.z);
         phi=power*atan3(z.y,z.x);
         zr=pow(r,power);
@@ -45,7 +48,7 @@ float escape(in vec3 position){
     }
     //return float(i) + log(log(r*r))/log(2.0) - log(log(dot(z,z)))/log(2.0);
     return float(i);
-    
+
 }
 
 float DE(in vec3 position){
@@ -57,7 +60,7 @@ float DE(in vec3 position){
     for(int i=0;i<iterations;i++){
         r=length(z);
         if(r>bailout)break;
-        
+
         theta=power*atan3(sqrt(z.x*z.x+z.y*z.y),z.z);
         phi=power*atan3(z.y,z.x);
         zr=pow(r,power);
@@ -79,7 +82,7 @@ float phong(in vec3 position){
     vec3 k=(position-light)+(camera-light);
     vec3 h=k/length(k);
     return dot(h,normalOf(position));
-    
+
 }
 
 vec3 march(in vec3 from,in vec3 direction){
@@ -130,3 +133,4 @@ hsl.y=clamp(hsl.y,0.,.98);
 fragColor=vec4(hsl2rgb(hsl),1.);
 
 }
+#pragma glslify: import(./includes/shadertoy-compat-main)

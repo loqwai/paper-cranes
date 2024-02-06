@@ -1,154 +1,130 @@
-int hexid;
-vec3 hpos, point, pt;
-float tcol, bcol, hitbol, hexpos, fparam=0.;
+// Created by genis sole - 2018
+// License Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International.
 
-mat2 rot(float a) {
-    float s=sin(a),c=cos(a);
-    return mat2(c,s,-s,c);
-}
+// Visuals are based on the GRIS game's pause menu by Nomada Studio (https://nomada.studio)
 
-vec3 path(float t) {
-    return vec3(sin(t*.3+cos(t*.2)*.5+spectralSpreadNormalized)*4.,cos(t*.2)*3.,t);
-}
+const float pi = 3.14159;
 
-float hexagon( in vec2 p, in float r )
+float point(vec2 uv, float e, float w, float r)
 {
-    float mut= ((spectralFluxZScore+2.5)/20.);
-    vec3 k = vec3(-0.866025404+mut,0.5+mut,0.577350269+mut);
-    p = abs(p);
-    p -= 2.0*min(dot(k.xy,p),0.0)*k.xy;
-    p -= vec2(clamp(p.x, -k.z*r, k.z*r), r);
-    return length(p)*sign(p.y);
+	return 1.0 - smoothstep(w, w+e, length(uv) - r);
 }
 
-float hex(vec2 p) {
-    p.x *= 0.57735*2.0+(spectralSkewZScore/5.);
-    if(beat) p.x += 0.5;
-	p.y+=mod(floor(p.x),2.0)*spectralCrestNormalized;
-	p=abs((mod(p,1.0)-0.5));
-	return abs(max(p.x*1.5 + p.y, p.y*2.0) - 1.0);
-}
-
-mat3 lookat(vec3 dir) {
-    vec3 up=vec3(0.,1.,0.);
-    vec3 rt=normalize(cross(dir,up));
-    return mat3(rt, cross(rt,dir), dir);
-}
-
-float hash12(vec2 p)
+float circle(vec2 uv, float e, float w, float r)
 {
-    float h = spectralEntropyMean*dot(p,vec2(spectralFlux,spectralKurtosis));
-	return fract(h);
+	return 1.0 - smoothstep(w, w+e, abs(length(uv) - r));
 }
 
-float de(vec3 p) {
-    pt=vec3(p.xy-path(p.z).xy,p.z);
-    float h=abs(hexagon(pt.xy,3.+fparam));
-    hexpos=hex(pt.yz);
-    tcol=smoothstep(.0,.15,hexpos);
-    h-=tcol*.1;
-    vec3 pp=p-hpos;
-    pp=lookat(point)*pp;
-    pp.y-=abs(sin(iTime))*3.+(fparam-(2.-fparam));
-    pp.yz*=rot(-iTime);
-    float bola=length(pp)-1.;
-    bcol=smoothstep(0.,.5,hex(pp.xy*3.));
-    bola-=bcol*.1;
-    vec3 pr=p;
-    pr.z=mod(p.z,6.)-3.;
-    float d=min(h,bola);
-    if (d==bola) {
-        tcol=1.;
-        hitbol=1.;
-    }
-    else {
-        hitbol=0.;
-        bcol=1.;
-    }
-    return d*.5;
+float dotted_circle(vec2 uv, float e, float w, float r, float p)
+{
+    float t = (atan(uv.y, uv.x) / pi) * 0.5 + 0.5;
+
+    float s = floor(290.0*2.0*pi*r);
+    t = (floor(t*s) + 0.5) / s;
+
+    t = (t*2.0 - 1.0) * pi;
+
+    return point(uv - vec2(cos(t), sin(t))*r, e, w, p);
 }
 
-vec3 normal(vec3 p) {
-    vec2 e=vec2(0.,.005);
-    return normalize(vec3(de(p+e.yxx),de(p+e.xyx),de(p+e.xxy))-de(p));
+float dotted_line(vec2 uv, float e, float w, float p, vec2 a, vec2 b)
+{
+	b -= a;
+    uv -= a;
+
+    vec2 l = normalize(b);
+    uv = uv * mat2(l, vec2(-l.y, l.x));
+
+    return point(vec2((fract(uv.x*290.0) - 0.5) / 290., uv.y), e, w, p);
 }
 
-vec3 march(vec3 from, vec3 dir) {
-    vec3 odir=dir;
-    vec3 p=from,col=vec3(0.);
-    float d,td=0.;
-    vec3 g=vec3(0.);
-    for (int i=0; i<int(spectralRoughnessMean)+10; i++) {
-        d=de(p);
-        if (d<.001||td>spectralRoughnessMean+10.) break;
-        p+=dir*d;
-        td+=d;
-        g+=.1/(.1+d)*hitbol*abs(normalize(point));
-    }
-    float hp=hexpos*(1.-hitbol);
-    p-=dir*.01;
-    vec3 n=normal(p);
-    if (d<.001) {
-        col=pow(max(0.,dot(-dir,n)),2.)*vec3(.6,.7,.8)*tcol*bcol;
-    }
-    col+=float(hexid);
-    vec3 pr=pt;
-    dir=reflect(dir,n);
-    td=0.;
-    for (int i=0; i<200; i++) {
-        d=de(p);
-        if (d<.001||td>spectralRoughnessMean+10.) break;
-        p+=dir*d;
-        td+=d;
-        g+=.1/(.1+d)*abs(normalize(point));
-    }
-    float zz=p.z;
-    if (d<.001) {
-        vec3 refcol=pow(max(0.,dot(-odir,n)),2.)*vec3(.6,.7,.8)*tcol*bcol;
-        p=pr;
-        p=abs(.5-fract(p*.1));
-        float m=100.;
-        for (int i=0; i<10; i++) {
-            p=abs(p)/dot(p,p)-.8;
-            m=min(m,length(p));
-        }
-        col=mix(col,refcol,m)-m*.3;
-        col+=step(.3,hp)*step(.9,fract(pr.z*.05+iTime*.5+hp*.1))*.7;
-        col+=step(.3,hexpos)*step(.9,fract(zz*.05+iTime+hexpos*.1))*.3;
-    }
-    col+=g*.03;
-	col.rb*=rot(odir.y*.5);
-	return col;
+float rings(vec2 uv, float e, float w, float r, float s, float c)
+{
+    float l = length(uv);
+
+    return 1.0 - min(max(
+        max(step(l, r), step(r + s*(c-1.0), l)),
+            smoothstep(w, w+e, abs((fract((l-(s*0.5))/s - fract(r/s)) - 0.5) * s))),
+        smoothstep(w, w+e, abs(l - r)) * smoothstep(w, w+e, abs(l - (r + (s*(c - 1.0))))));
 }
 
+float rings2(vec2 uv, float e, float w, float r, float s)
+{
+    float l = length(uv);
+
+    return 1.0 - smoothstep(w, w+e, abs(l - r))
+        * smoothstep(w, w+e, abs(l - (r + s)));
+}
+
+mat2 rot(float t)
+{
+    float s = sin(t);
+    float c = cos(t);
+	return mat2(c, s, -s, c);
+}
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    vec2 uv = fragCoord/iResolution.xy-.5;
-    uv.x*=iResolution.x/iResolution.y;
-    float t=iTime*2.;
-    vec3 from=path(t);
-    if (mod(iTime-10.,spectralRoughnessMean)>10.) {
-        from=path(floor(t/20.)*20.+10.);
-        from.x+=2.;
-    }
-    hpos=path(t+3.);
-    vec3 adv=path(t+2.);
-    vec3 dir=normalize(vec3(uv,.7));
-    vec3 dd=normalize(adv-from);
-    point=normalize(adv-hpos);
-    point.xz*=rot(sin(iTime)*.2);
-    dir=lookat(dd)*dir;
-    vec3 col = march(from, dir);
-	col*=vec3(1.,.9,.8);
-    vec3 hsl = rgb2hsl(col);
-    hsl.x = spectralCentroid;
-    hsl.y += fract(energyZScore/2.);
-    hsl.y /=4.;
-    if(energyZScore > 2.) {
-        // if the color is pretty white already, make it blue
-       hsl.y = 1.;
-    }
-    col = hsl2rgb(hsl);
-    fragColor = vec4(col,1.0);
+	float e = 1.0/iResolution.x;
+    vec2 uv = (fragCoord - iResolution.xy*0.5) * e;
+
+    e = 1.5*e;
+
+    const vec2 line_p = vec2(0.0, 0.19);
+    float c = dotted_line(abs(uv), e, 0.0001, 0.0, line_p, line_p.yx);
+    vec2 ruv = inversesqrt(2.0) * vec2(uv.x + uv.y, uv.x - uv.y);
+    c += dotted_line(abs(ruv), e, 0.0002, 0.0, line_p, line_p.yx);
+
+    c += dotted_circle(uv * rot(iTime*0.4), e, 0.0, 0.01375, 0.0001);
+    c += dotted_circle(uv * rot(-iTime*0.3), e, 0.0, 0.03125, 0.0001);
+    c += dotted_circle(uv * rot(iTime*0.1), e, 0.0, 0.09625, 0.0001);
+    c += dotted_circle(rot(iTime*0.1)*uv, e, 0.0, 0.37, 0.0001);
+    c *= 0.3;
+
+    c += rings2(uv, e, 0.0, 0.008125, 0.0025);
+    c += rings2(uv, e, 0.0, 0.02187, 0.05875);
+    c += rings2(uv, e, 0.0, 0.10125, 0.06125);
+    c += rings2(uv, e, 0.0, 0.439375, 0.03125);
+
+    c += rings2(uv, e, 0.0005, 0.075, 0.040625);
+    c += circle(uv, e, 0.0005, 0.339375);
+
+    c += rings2(uv, e, 0.001, 0.026875, 0.163125);
+    c += circle(uv, e, 0.001, 0.448125);
+
+    vec2 p1 = rot(iTime*pi*0.028)*uv - vec2(0.115625, 0.0);
+    c += point(p1, e, 0.0, 0.004375);
+    c += circle(p1, e, 0.0, 0.004375*2.0);
+
+    vec2 p2 = rot(iTime*pi*0.067 + 0.5)*uv - vec2(0.1625, 0.0);
+    c += point(p2, e, 0.0, 0.0015625);
+    c += rings2(p2, e, 0.0, 0.004375, 0.001875);
+
+    float cp = texelFetch(iChannel0, ivec2(0), 0).x * pi * 0.5;
+    vec2 p3 = uv - vec2(sin(cp), cos(cp)) * 0.19;
+    c += point(p3, e, 0.0, 0.005);
+    c += rings(p3, e, 0.0, 0.005*2.0, 0.002375, 4.0);
+    c += 0.3*dotted_circle(rot(iTime)*p3, e, 0.0, 0.0195, 0.0001);
+
+    vec2 p4 = rot(iTime*pi*0.028 + pi*1.2)*uv - vec2(0.339375, 0.0);
+    c += point(p4, e, 0.0, 0.00875);
+    c += rings2(p4, e, 0.0, 0.011875, 0.001875);
+    c += circle(p4, e, 0.0, 0.021875);
+    c += point(rot(iTime*pi*0.143) * p4 - vec2(0.021875, 0.0), e , 0.0, 0.003125);
+
+    vec2 p5 = rot(iTime*pi*0.00833 + pi*1.3)*uv - vec2(0.448125, 0.0);
+    c += point(p5, e, 0.0, 0.0028125);
+    c += rings2(p5, e, 0.0, 0.00875, 0.003125);
+    c += 0.3*dotted_circle(rot(iTime)*p5, e, 0.0, 0.015, 0.0001);
+
+    vec2 p6 = rot(iTime*pi*0.011)*uv - vec2(0.439375 + 0.03125, 0.0);
+    c += point(p6, e, 0.0, 0.005);
+    c += 0.3*dotted_circle(rot(iTime)*p6, e, 0.0, 0.0078125, 0.0001);
+    c += circle(p6, e, 0.0, 0.0175);
+    vec2 sp6 = rot(iTime*pi*0.27)*p6 - vec2(0.0175, 0.0);
+    c += point(sp6, e , 0.0, 0.0009375);
+    c += circle(sp6, e, 0.0, 0.004375);
+
+    fragColor = vec4(vec3(pow(0.8*clamp(c, 0.0, 1.0), 0.4545)), 1.0);
+
 }

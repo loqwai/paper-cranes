@@ -1,4 +1,8 @@
+#pragma glslify: import(./includes/full.frag)
+
+#pragma glslify: import(./includes/shadertoy-compat)
 #define PI 3.1415926535897932384626433832795
+
 vec2 rotateUV(vec2 uv,float angle,vec2 pivot){
   // Translate UV coordinates to pivot
   uv-=pivot;
@@ -100,3 +104,5 @@ void mainImage(out vec4 fragColor, vec2 fragCoord) {
   fragColor =  vec4(finalColor,1.);
   return;
 }
+
+#pragma glslify: import(./includes/shadertoy-compat-main)
