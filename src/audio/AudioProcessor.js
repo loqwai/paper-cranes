@@ -31,6 +31,7 @@ export const getFlatAudioFeatures = (audioFeatures = AudioFeatures, rawFeatures 
             features[key] = rawFeatures[feature]?.stats[propertyKey]
             if (features[key] === 0) features[key] = DEFAULT_FEATURE_VALUE
         }
+        features[featureKey] = rawFeatures[feature]?.stats?.current
     }
     return features
 }
