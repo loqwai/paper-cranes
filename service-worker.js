@@ -7,9 +7,11 @@ self.addEventListener('fetch', (event) => {
         fetch(event.request)
             .then((networkResponse) => {
                 // Cache the new response for future use
-                caches.open(CACHE_NAME).then((cache) => {
-                    cache.put(event.request, networkResponse.clone())
-                })
+                if (event.request.method === 'GET' && networkResponse.ok) {
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(event.request, networkResponse.clone())
+                    })
+                }
                 return networkResponse
             })
             .catch(() => {
