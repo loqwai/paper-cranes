@@ -87,7 +87,7 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl, fullscre
             prevFrame: frameNumber === 0 ? initialTexture : prevFrame.attachments[0],
             resolution: [frame.width, frame.height],
             frame: frameNumber,
-            iResolution: [frame.width, frame.height],
+            iResolution: [frame.width, frame.height, 0],
             iTime: time,
             iChannel0: initialTexture,
             iChannel1: initialTexture,
