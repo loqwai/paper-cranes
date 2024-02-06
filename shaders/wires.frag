@@ -16,8 +16,8 @@
     d = length(vec2(length(q.xy += .5)-.5, q.z)) - (iMouse.w/400.),  \
     q.yx *= r(round((atan(q.y,q.x)-T) * iMouse.y) / iMouse.y + T), \
     q.x -= .5,                                           \
-    O += (sin(t+T)*.1+.1)*(1.+cos(t+T*.5+vec4(0,iMouse.z,2,0))) \
-         / (.5 + pow(length(q)*(200.-iMouse.x), 1.3))            , d ) // return d
+    O += (sin(t+T)*.1+.1)*(1.+cos(t+T*.5+vec4(0,spectralCentroidMedian*20.,2,0))) \
+         / (.5 + pow(length(q)*(200.-((energyZScore+2.5)*50.)), 1.3))            , d ) // return d
 
 void mainImage(out vec4 O, vec2 F) {
     vec3  p, q,    R = iResolution;
