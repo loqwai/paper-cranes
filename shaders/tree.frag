@@ -66,9 +66,16 @@ float map(vec2 pos) {
 
     return d;
 }
-
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = (-iResolution.xy + 2.0 * fragCoord.xy) / iResolution.y;
+
+    // Drippy effect:
+    uv.y += 0.2 * sin(4.0 * uv.x + iTime) + 0.1 * sin(8.0 * uv.x + iTime * 2.0);
+
+    // Spinning effect:
+    uv = fract(mat2(cos(iTime), -sin(iTime), sin(iTime), cos(iTime)) * uv);
+
+    float d = map(uv);
 
     vec2 rotatedUv = fract(mat2(cos(iTime), -sin(iTime), sin(iTime), cos(iTime)) * uv);
 
@@ -77,23 +84,22 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     uv = uv * 4.0 + vec2(0.0, 3.5);
     px = px * 4.0;
 
-    float d = map(uv);
-    uv.y = sin(iTime/100. + uv.y + energyZScore);
     vec3 last = getLastFrameColor(rotatedUv).rgb;
     vec3 color = vec3(smoothstep(0.0, 2.0 * px, d));
 
     if (color.r + color.g + color.b > 0.9) {
         fragColor = vec4(rgb2hsl(last), 1.);
-        // discard;
         return;
     }
-    if(color == last){
-         color = rgb2hsl(color);
-         color.z += 0.1;
-         color.x = spectralEntropyNormalized;
-         color.z = energy;
-         color = hsl2rgb(color);
+
+    if (color == last) {
+        color = rgb2hsl(color);
+        color.z += 0.1;
+        color.x = spectralEntropyNormalized;
+        color.z = energy;
+        color = hsl2rgb(color);
     }
+
     color = mix(last, color, .1);
     color = rgb2hsl(color);
     color.x = spectralCentroid;
