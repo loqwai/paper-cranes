@@ -15,7 +15,7 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
   vec3 finalColor=vec3(0.);
   float sc=map(spectralCentroidNormalized,0.,20.,-1.,1.);
   for(float i=0.;i<3.;i++){
-    vec3 col=palette(length(uv+sc)+time+i*4.);
+    vec3 col=palette(length(uv*sc)+time+i*4.);
     uv=fract(uv*5.*sc)-.5;
     float d=length(uv);
     
