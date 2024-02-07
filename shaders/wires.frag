@@ -9,11 +9,11 @@
 
    This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License (https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)
 */
-
+uniform float knob_1;
 #define r(a) mat2(cos(a + vec4(0,33,11,0)))
 
 #define s(p) ( q = p,                                    \
-    d = length(vec2(length(q.xy += .5)-.5, q.z)) - (iMouse.w/400.),  \
+    d = length(vec2(length(q.xy += .5)-.5, q.z)) - knob_1,  \
     q.yx *= r(round((atan(q.y,q.x)-T) * iMouse.y) / iMouse.y + T), \
     q.x -= .5,                                           \
     O += (sin(t+T)*.1+.1)*(1.+cos(t+T*.5+vec4(0,spectralCentroidMedian*20.,2,0))) \
