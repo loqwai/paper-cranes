@@ -3,7 +3,7 @@ const path = require('path')
 const ncp = require('ncp').ncp
 const fs = require('fs')
 // Define your entry points
-const entryPoints = ['index.js', 'service-worker.js']
+const entryPoints = ['index.js', 'edit.js', 'service-worker.js']
 // add all files in src/ as entry points
 fs.readdirSync('./src', { recursive: true }).forEach((file) => {
     if (file.endsWith('.js')) {

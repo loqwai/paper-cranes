@@ -1,0 +1,10 @@
+form {
+  color:white;
+}
+
+form label {
+  display: flex;
+}
+form label input {
+  flex: 1;
+}
