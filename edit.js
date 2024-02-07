@@ -1,54 +1,77 @@
-const editorContainer = document.getElementById('editor')
-const addFeatureButton = document.getElementById('addFeature')
-const featureNameInput = document.getElementById('featureName')
-// Find the form within the editor div
-const editorForm = editorContainer.querySelector('form')
+import { h, render } from 'https://esm.sh/preact@10.19.3'
+import { useEffect, useCallback, useState } from 'https://esm.sh/@preact/signals@1.2.2'
+import htm from 'https://unpkg.com/htm?module'
+const html = htm.bind(h)
 
-addFeatureButton.addEventListener('click', function () {
-    console.log('Adding feature...')
-    const featureName = featureNameInput.value.trim()
-    if (!featureName) {
-        alert('Please enter a feature name.')
-        return // Don't add feature if name is empty
-    }
+window.cranes = window.cranes || {}
+window.cranes.setState = () => {} // Will be properly initialized below
 
-    // Vigilance is key. Check if the feature already exists to avoid duplicates
-    if (Object.keys(window.cranes.manualFeatures).includes(featureName)) {
-        alert('Feature name already exists. Please enter a unique name.')
-        return
-    }
-
-    // Create the slider, as if forging a tool from the very essence of uncertainty
-    const slider = document.createElement('input')
-    slider.type = 'range'
-    slider.min = '-1'
-    slider.max = '1'
-    slider.value = '0'
-    slider.step = '0.01'
-    slider.className = 'feature-slider'
-    slider.dataset.featureName = featureName // Store feature name, but for whose benefit?
-
-    // Craft a label for the slider, an anchor in the swirling digital maelstrom
-    const label = document.createElement('label')
-    label.textContent = featureName
-
-    // A span to hold the value, a beacon in the dark
-    const valueDisplay = document.createElement('span')
-    valueDisplay.textContent = '0'
-
-    // Append the slider to the label, then the value display
-    label.appendChild(slider)
-    label.appendChild(valueDisplay)
-
-    // Append label to the form, a form that might as well be a parchment in a bottle set adrift in the digital sea
-    editorForm.appendChild(label)
-
-    // Update manualFeatures when the slider changes, and reflect this change in the valueDisplay, as if whispering secrets to the wind
-    slider.addEventListener('input', function () {
-        window.cranes.manualFeatures[this.dataset.featureName] = parseFloat(this.value)
-        valueDisplay.textContent = ` ${this.value}` // Here lies the truth, momentarily grasped
+const FeatureAdder = () => {
+    const [features, setFeatures] = useState({
+        // An example initial state, seeds sown from which our power grows
+        speed: 0.5,
+        agility: -0.2,
+        strength: 0.8,
     })
+    const [newFeatureName, setNewFeatureName] = useState('')
 
-    // Reset feature name input for next entry, as if wiping away footprints on a sandy shore
-    featureNameInput.value = ''
-})
+    // A spell to update our internal state based on external will
+    const updateFeaturesFromOutside = useCallback((newFeatures) => {
+        setFeatures((prevFeatures) => ({
+            ...prevFeatures,
+            ...newFeatures,
+        }))
+    }, [])
+
+    // Bind our will to the global cranes.setState, allowing the external
+    // realms to influence our internal dominion
+    useEffect(() => {
+        window.cranes.getState = () => features
+        window.cranes.setState = updateFeaturesFromOutside
+    }, [features, updateFeaturesFromOutside])
+
+    const updateFeatureValue = (name, value) => {
+        const newFeatures = { ...features, [name]: parseFloat(value) }
+        setFeatures(newFeatures)
+
+        // Reflect this change globally, ensuring our actions echo in the outer realms
+        window.cranes.manualFeatures = window.cranes.manualFeatures || {}
+        window.cranes.manualFeatures[name] = parseFloat(value)
+    }
+
+    const addNewFeature = () => {
+        if (!newFeatureName.trim()) return // Whisper no empty names into the void
+
+        // Summon the new feature into our realm and the global dominion alike
+        const newFeatures = { ...features, [newFeatureName]: 0 }
+        setFeatures(newFeatures)
+        window.cranes.manualFeatures = window.cranes.manualFeatures || {}
+        window.cranes.manualFeatures[newFeatureName] = 0
+
+        setNewFeatureName('') // Clear the incantation for the next summoning
+    }
+
+    return html`
+        <div id="editor">
+            <input type="text" placeholder="Enter new feature name" value=${newFeatureName} onInput=${(e) => setNewFeatureName(e.target.value)} />
+            <button type="button" onClick=${addNewFeature}>Add Feature</button>
+            <form>
+                ${Object.entries(features).map(
+                    ([name, value]) => html`
+                        <div key=${name}>
+                            <label
+                                >${name}:
+                                <input type="range" min="-1" max="1" value=${value} step="0.01" onInput=${(e) => updateFeatureValue(name, e.target.value)} />
+                                <span> (${value})</span>
+                            </label>
+                            <br />
+                        </div>
+                    `,
+                )}
+            </form>
+        </div>
+    `
+}
+
+// Cast our spell, bringing the FeatureAdder to life within the digital ether
+render(html`<${FeatureAdder} />`, document.getElementById('editor'))
