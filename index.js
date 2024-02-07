@@ -44,7 +44,7 @@ const main = async () => {
     const audio = await setupAudio()
 
     const params = new URLSearchParams(window.location.search)
-    const shader = params.get('shader') ?? 'sculpture'
+    const shader = params.get('shader') ?? 'warp-emitter'
     const initialImageUrl = params.get('image') ?? 'images/placeholder-image.png'
     const fullscreen = (params.get('fullscreen') ?? false) === 'true'
 
