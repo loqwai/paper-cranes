@@ -25,6 +25,13 @@ esbuild
         },
     })
     .then(() => {
-        return Promise.all([ncp('index.html', 'dist/index.html'), ncp('index.css', 'dist/index.css'), ncp('favicon.ico', 'dist/favicon.ico'), ncp('images', 'dist/images')])
+        return Promise.all([
+            ncp('index.html', 'dist/index.html'),
+            ncp('index.css', 'dist/index.css'),
+            ncp('edit.html', 'dist/edit.html'),
+            ncp('edit.css', 'dist/edit.css'),
+            ncp('favicon.ico', 'dist/favicon.ico'),
+            ncp('images', 'dist/images'),
+        ])
     })
     .catch(console.error)
