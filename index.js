@@ -30,16 +30,30 @@ const main = async () => {
     if (ranMain) return
     window.cranes = window.cranes || {}
     window.cranes.overwrittenAudioFeatures = window.cranes.overwrittenAudioFeatures || {}
+
     window.cranes.freezeAudioFeatures = () => {
         window.cranes.overwrittenAudioFeatures = { ...window.cranes.measuredAudioFeatures }
         return window.cranes.overwrittenAudioFeatures
     }
+
     window.cranes.saveAudioFeatures = () => {
         localStorage.setItem('overwrittenAudioFeatures', JSON.stringify(window.cranes.overwrittenAudioFeatures))
     }
+
     window.cranes.loadAudioFeatures = () => {
         window.cranes.overwrittenAudioFeatures = JSON.parse(localStorage.getItem('overwrittenAudioFeatures'))
     }
+
+    window.cranes.saveManualFeatures = (name) => {
+        localStorage.setItem(`manual-features-${name}`, JSON.stringify(window.cranes.manualFeatures))
+    }
+
+    window.cranes.loadManualFeatures = (name) => {
+        window.cranes.manualFeatures = JSON.parse(localStorage.getItem(`manual-features-${name}`))
+    }
+
+    window.cranes.manualFeatures = {}
+    window.c = cranes
     startTime = performance.now()
     const audio = await setupAudio()
 
@@ -78,10 +92,9 @@ const updateUI = () => {
 
 const animate = ({ render, audio }) => {
     const measuredAudioFeatures = audio.getFeatures()
-    const { overwrittenAudioFeatures } = window.cranes
+    const { overwrittenAudioFeatures, manualFeatures = {} } = window.cranes
     window.cranes.measuredAudioFeatures = measuredAudioFeatures
-
-    const audioFeatures = { ...measuredAudioFeatures, ...overwrittenAudioFeatures }
-    render({ time: (performance.now() - startTime) / 1000, audioFeatures })
+    const features = { ...measuredAudioFeatures, ...overwrittenAudioFeatures, ...manualFeatures }
+    render({ time: (performance.now() - startTime) / 1000, features })
     requestAnimationFrame(() => animate({ render, audio }))
 }

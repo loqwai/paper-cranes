@@ -76,7 +76,7 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl, fullscre
     gl.useProgram(programInfo.program)
 
     let frameNumber = 0
-    const render = ({ time, audioFeatures }) => {
+    const render = ({ time, features }) => {
         resizeCanvasToDisplaySize(gl.canvas)
         const frame = frameBuffers[frameNumber % 2]
         const prevFrame = frameBuffers[(frameNumber + 1) % 2]
@@ -85,6 +85,7 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl, fullscre
         const uniforms = {
             time,
             prevFrame: frameNumber === 0 ? initialTexture : prevFrame.attachments[0],
+            initialFrame: initialTexture,
             resolution: [frame.width, frame.height],
             frame: frameNumber,
             iResolution: [frame.width, frame.height, 0],
@@ -94,7 +95,7 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl, fullscre
             iChannel1: initialTexture,
             iChannel2: initialTexture,
             iChannel3: initialTexture,
-            ...audioFeatures,
+            ...features,
         }
 
         const nonNullOrUndefinedOrNanUniforms = Object.fromEntries(
