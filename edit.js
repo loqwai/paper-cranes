@@ -4,7 +4,7 @@ import { html } from 'htm/preact'
 
 window.cranes = window.cranes || {}
 window.cranes.setState = () => {} // Will be properly initialized below
-
+const SAVE_FILE_NAME = 'cranes-manual-features'
 // get an array of slider names from the 'slider' query parameter
 const sliderNames = new URLSearchParams(window.location.search).getAll('slider')
 
@@ -73,11 +73,25 @@ const FeatureAdder = () => {
         const newSliderRanges = { ...sliderRanges, [name]: { min: parseFloat(min), max: parseFloat(max) } }
         setSliderRanges(newSliderRanges)
     }
+    const saveFeatures = () => {
+        localStorage.setItem(SAVE_FILE_NAME, JSON.stringify(features))
+    }
+    const loadFeatures = () => {
+        const savedFeatures = JSON.parse(localStorage.getItem(SAVE_FILE_NAME))
+        if (savedFeatures) {
+            setFeatures(savedFeatures)
+        }
+        for (const [name, value] of Object.entries(savedFeatures)) {
+            window.cranes.manualFeatures[name] = value
+        }
+    }
 
     return html`
         <div id="editor">
-            <input type="text" placeholder="Enter new feature name" value=${newFeatureName} onInput=${(e) => setNewFeatureName(e.target.value)} />
-            <button type="button" onClick=${addNewFeature}>Add Feature</button>
+            <div className="new-feature">
+                <input type="text" placeholder="Enter new feature name" value=${newFeatureName} onInput=${(e) => setNewFeatureName(e.target.value)} />
+                <button type="button" onClick=${addNewFeature}>Add Feature</button>
+            </div>
             <form>
                 ${Object.entries(features).map(
                     ([name, value]) => html`
@@ -99,6 +113,10 @@ const FeatureAdder = () => {
                     `,
                 )}
             </form>
+            <div className="save-load">
+                <button type="button" onClick=${saveFeatures}>Save</button>
+                <button type="button" onClick=${loadFeatures}>Load</button>
+            </div>
         </div>
     `
 }
