@@ -116,7 +116,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 
         float voronoiValue2 = voronoiNoise(uv * scaleFactor * 1.5 + 5.0 + currentTime, 0.2) * 1.1;
         voronoiValue2 = pow(voronoiValue2, 5.0);
-        light += pow(voronoiValue1 * (0.5 * voronoiValue2), 1.5);
+        light += pow(voronoiValue1 * (0.5 * voronoiValue2), 1.5)*map(energyZScore,-2.,2.,-.13,.13);
 
         scaleFactor *= 2.0;
         attenuationFactor *= 0.6;
