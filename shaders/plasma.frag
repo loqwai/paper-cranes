@@ -1,10 +1,11 @@
 #pragma glslify: import(./includes/full)
 uniform float knob_1;
 uniform float knob_2;
+uniform float knob_3;
 float plasma(vec2 uv,float time){
   float value=0.;
-  value+=sin((uv.x+time)*10.);
-  value+=sin((uv.y+time)*10.);
+  value+=sin((uv.x+time)*10.) * (spectralCentroidZScore+0.2);
+  value+=sin((uv.y+time)*10.) * spectralCentroidMean;
   value/=2.;
   return value;
 }
@@ -16,6 +17,9 @@ float getRipple(vec2 uv,vec2 center,float time){
 void main(){
   vec2 uv=(gl_FragCoord.xy-.5*resolution.xy)/resolution.y;
   uv.x*=resolution.x/resolution.y;// Aspect ratio correction
+  uv -0.5;
+  uv *= 1.5;
+  uv += 0.5;
 
   // Generate plasma pattern
   float plasmaValue=plasma(uv,time);
@@ -35,7 +39,7 @@ void main(){
 
   // Blend plasma with ripples and previous frame
   //knob2 = -.13-.35
-  float sc = map(sin(time*spectralCentroid), 0., 1., -.20,.25);
+  float sc = map(sin(knob_3), 0., 1., -.20,.25);
   vec3 finalColor=mix(rippleColor,prevColor,sc);
 
   // Convert final color to RGB
