@@ -9,7 +9,7 @@
 
    This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License (https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)
 */
-uniform float knob_2;
+uniform float knob_1;
 #define r(a) mat2(cos(a + vec4(0,33,11,0)))
 
 //knob_1 should be from 0-.23
@@ -23,7 +23,7 @@ uniform float knob_2;
 
 void mainImage(out vec4 O, vec2 F) {
     vec3  p, q,    R = iResolution;
-    float i, t, d, T = iTime;
+    float i, t, d, T = time;
 
     for (O *= i, F += F - R.xy; i++ < 28.;          // raymarch for 28 iterations
 

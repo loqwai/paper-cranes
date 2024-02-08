@@ -1,18 +1,12 @@
-import { h, render } from 'https://esm.sh/preact@10.19.3'
-import { useEffect, useCallback, useState } from 'https://esm.sh/@preact/signals@1.2.2'
-import htm from 'https://unpkg.com/htm?module'
-const html = htm.bind(h)
+import { render } from 'preact'
+import { useState, useCallback, useEffect } from 'preact/hooks'
+import { html } from 'htm/preact'
 
 window.cranes = window.cranes || {}
 window.cranes.setState = () => {} // Will be properly initialized below
 
 const FeatureAdder = () => {
-    const [features, setFeatures] = useState({
-        // An example initial state, seeds sown from which our power grows
-        speed: 0.5,
-        agility: -0.2,
-        strength: 0.8,
-    })
+    const [features, setFeatures] = useState({})
     const [newFeatureName, setNewFeatureName] = useState('')
 
     // A spell to update our internal state based on external will
