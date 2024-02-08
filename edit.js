@@ -43,7 +43,7 @@ const FeatureAdder = () => {
         setFeatures(newFeatures)
         setSliderRanges(newSliderRanges)
         window.cranes.manualFeatures = window.cranes.manualFeatures || {}
-        window.cranes.manualFeatures[newFeatureName] = 0
+        window.cranes.manualFeatures[newFeatureName] = undefined
 
         setNewFeatureName('') // Clear the incantation for the next summoning
     }
@@ -65,9 +65,9 @@ const FeatureAdder = () => {
                             <input type="number" value=${sliderRanges[name]?.min ?? -1} onInput=${(e) => updateSliderRange(name, e.target.value, sliderRanges[name]?.max ?? 1)} />
                             <input
                                 type="range"
-                                min=${sliderRanges[name]?.min ?? -1}
-                                max=${sliderRanges[name]?.max ?? 1}
-                                value=${value}
+                                min=${sliderRanges[name]?.min ?? -3}
+                                max=${sliderRanges[name]?.max ?? 3}
+                                value=${value ?? 1}
                                 step="0.01"
                                 onInput=${(e) => updateFeatureValue(name, e.target.value)}
                             />
