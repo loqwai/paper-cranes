@@ -3,7 +3,8 @@
 const float PI = 3.14159265358979323844;
 const float INFINITY_VALUE = 1e6;
 
-uniform float intensity;
+uniform float knob_1;
+uniform float knob_2;
 
 bool rayIntersectsBox(vec3 origin, vec3 direction, vec3 minBounds, vec3 maxBounds, out float intersectionDistance)
 {
@@ -110,7 +111,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 
     for (int i = 0; i < 3; ++i) {
         float voronoiValue1 = voronoiNoise(uv * scaleFactor + 1.0 + currentTime * 0.2, 0.1);
-        voronoiValue1 = pow(voronoiValue1, 2.0);
+        voronoiValue1 = pow(voronoiValue1, 2.0)*spectralRoughnessNormalized;
         value += attenuationFactor * randomNoise(voronoiValue1 * 5.5 + 0.1);
 
         float voronoiValue2 = voronoiNoise(uv * scaleFactor * 1.5 + 5.0 + currentTime, 0.2) * 1.1;
