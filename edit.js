@@ -27,7 +27,7 @@ const FeatureAdder = () => {
 
         // Initialize the sliders with the given names
         const newFeatures = sliderNames.reduce((acc, name) => {
-            acc[name] = 0
+            acc[name] = 1
             return acc
         }, {})
         setFeatures(newFeatures)
