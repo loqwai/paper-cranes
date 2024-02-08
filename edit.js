@@ -8,6 +8,7 @@ window.cranes.setState = () => {} // Will be properly initialized below
 const FeatureAdder = () => {
     const [features, setFeatures] = useState({})
     const [newFeatureName, setNewFeatureName] = useState('')
+    const [sliderRanges, setSliderRanges] = useState({})
 
     // A spell to update our internal state based on external will
     const updateFeaturesFromOutside = useCallback((newFeatures) => {
@@ -38,11 +39,18 @@ const FeatureAdder = () => {
 
         // Summon the new feature into our realm and the global dominion alike
         const newFeatures = { ...features, [newFeatureName]: 0 }
+        const newSliderRanges = { ...sliderRanges, [newFeatureName]: { min: -1, max: 1 } }
         setFeatures(newFeatures)
+        setSliderRanges(newSliderRanges)
         window.cranes.manualFeatures = window.cranes.manualFeatures || {}
         window.cranes.manualFeatures[newFeatureName] = 0
 
         setNewFeatureName('') // Clear the incantation for the next summoning
+    }
+
+    const updateSliderRange = (name, min, max) => {
+        const newSliderRanges = { ...sliderRanges, [name]: { min: parseFloat(min), max: parseFloat(max) } }
+        setSliderRanges(newSliderRanges)
     }
 
     return html`
@@ -52,12 +60,19 @@ const FeatureAdder = () => {
             <form>
                 ${Object.entries(features).map(
                     ([name, value]) => html`
-                        <div key=${name}>
-                            <label
-                                >${name}:
-                                <input type="range" min="-1" max="1" value=${value} step="0.01" onInput=${(e) => updateFeatureValue(name, e.target.value)} />
-                                <span> (${value})</span>
-                            </label>
+                        <div className="edit-feature" key=${name}>
+                            <label>${name}:</label>
+                            <input type="number" value=${sliderRanges[name]?.min ?? -1} onInput=${(e) => updateSliderRange(name, e.target.value, sliderRanges[name]?.max ?? 1)} />
+                            <input
+                                type="range"
+                                min=${sliderRanges[name]?.min ?? -1}
+                                max=${sliderRanges[name]?.max ?? 1}
+                                value=${value}
+                                step="0.01"
+                                onInput=${(e) => updateFeatureValue(name, e.target.value)}
+                            />
+                            <span> (${value})</span>
+                            <input type="number" value=${sliderRanges[name]?.max ?? 1} onInput=${(e) => updateSliderRange(name, sliderRanges[name]?.min ?? -1, e.target.value)} />
                             <br />
                         </div>
                     `,

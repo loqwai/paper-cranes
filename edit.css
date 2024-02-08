@@ -10,10 +10,22 @@ form label input {
 }
 
 #editor {
+  flex:1;
   padding: 1rem;
     border-radius: 10px;
 }
 
+.edit-feature {
+  display:flex;
+}
+
+.edit-feature input {
+  width: 3em;
+}
+
+.edit-feature input[type="range"]{
+  flex:1;
+}
 
 :root {
   --foreground-rgb: 0, 0, 0;
