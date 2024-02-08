@@ -5,6 +5,9 @@ import { html } from 'htm/preact'
 window.cranes = window.cranes || {}
 window.cranes.setState = () => {} // Will be properly initialized below
 
+// get an array of slider names from the 'slider' query parameter
+const sliderNames = new URLSearchParams(window.location.search).getAll('slider')
+
 const FeatureAdder = () => {
     const [features, setFeatures] = useState({})
     const [newFeatureName, setNewFeatureName] = useState('')
@@ -17,6 +20,24 @@ const FeatureAdder = () => {
             ...newFeatures,
         }))
     }, [])
+
+    useEffect(() => {
+        // If there are no sliders, we're done here
+        if (sliderNames.length === 0) return
+
+        // Initialize the sliders with the given names
+        const newFeatures = sliderNames.reduce((acc, name) => {
+            acc[name] = 0
+            return acc
+        }, {})
+        setFeatures(newFeatures)
+        setSliderRanges(
+            sliderNames.reduce((acc, name) => {
+                acc[name] = { min: -3, max: 3 }
+                return acc
+            }, {}),
+        )
+    }, [sliderNames])
 
     // Bind our will to the global cranes.setState, allowing the external
     // realms to influence our internal dominion
