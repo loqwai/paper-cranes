@@ -51,7 +51,7 @@ void main(){
 
   vec3 finalColor=mix(rippleColor,prevColor,.2);
   vec3 hsl = rgb2hsl(finalColor);
-  if(hsl.z < knob_2){
+  if(hsl.z < 0.51){
    finalColor = prevColor/knob_1;
   }
   // Convert final color to RGB
