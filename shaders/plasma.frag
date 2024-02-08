@@ -12,7 +12,8 @@ float plasma(vec2 uv,float time){
 // Function to get the ripple effect based on distance from the plasma center
 float getRipple(vec2 uv,vec2 center,float time){
   float dist=length(uv-center);
-  return sin(time*5.+dist*20.)*exp(-dist*3.);
+  float a = map(energyZScore,-2.5,2.5,2.5,35.);
+  return sin(time*5.+dist*a)*exp(-dist*3.);
 }
 void main(){
   vec2 uv=(gl_FragCoord.xy-.5*resolution.xy)/resolution.y;
@@ -31,7 +32,9 @@ void main(){
   // Get previous frame color in HSL
   vec3 prevColor=texture(prevFrame,uv*sin(knob_1)).rgb;
   prevColor=rgb2hsl(prevColor);
-  prevColor.x+=.01;// Change hue of previous frame
+  //-0.57 to 0.31
+  float rc = map(spectralRoughnessNormalized, 0., 1., -0.57, 0.31);
+  prevColor.x+=rc;// Change hue of previous frame
   prevColor = hsl2rgb(prevColor);
 
   // Calculate ripple effect
