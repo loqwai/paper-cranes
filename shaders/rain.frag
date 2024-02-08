@@ -118,21 +118,22 @@ vec2 Drops(vec2 uv,float t,float l0,float l1,float l2){
 
 void mainImage(out vec4 fragColor,in vec2 fragCoord)
 {
+    float scaledTime = time + 100.;
     vec2 uv=(fragCoord.xy-.5*resolution.xy)/resolution.y;
-    uv.x += cos((time*spectralCentroidMedian)/1000.)/1000.;
-    uv.y += atan((time*energyMedian)/1000.)/1000.;
+    uv.x += cos((scaledTime*spectralCentroidMedian)/1000.)/1000.;
+    uv.y += atan((scaledTime*energyMedian)/1000.)/1000.;
     // uv = sin(uv);
     vec2 UV=fragCoord.xy/resolution.xy;
-    float T=time*2.;
+    float T=scaledTime*2.;
 
     float t=T*.2;
-    vec3 plasma = generatePlasma(uv, time);
+    vec3 plasma = generatePlasma(uv, scaledTime);
     float rainAmount=sin(T*.05)*.3+spectralFluxMedian*(3.+energyZScore);
 
     float maxBlur=mix(3.,6.,rainAmount);
     float minBlur=3.-spectralRolloffZScore;
 
-    float zoom=-.7 * (sin((time+energyMedian)/100.)*10.)-0.5;
+    float zoom=-.7 * (sin((scaledTime+energyMedian)/100.)*10.)-0.5;
     uv*=.7+zoom*.3;
 
     UV=(UV-.5)*(.9+zoom*.1)+.5;
