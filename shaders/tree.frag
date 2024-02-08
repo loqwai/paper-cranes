@@ -1,7 +1,5 @@
-#pragma glslify: import(./includes/audio-uniforms.frag)
-#pragma glslify: hsl2rgb = require(./includes/color/hsl2rgb)
-#pragma glslify: rgb2hsl = require(./includes/color/rgb2hsl)
-#pragma glslify: import(./includes/previous-frame.frag)
+#pragma glslify: import(./includes/full.frag)
+#pragma glslify: import(./includes/shadertoy-compat)
 
 #define kDepth 3
 #define kBranches 5
@@ -106,3 +104,4 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     color.z = spectralFluxNormalized;
     fragColor = vec4(hsl2rgb(color), 1.);
 }
+#pragma glslify:import(./includes/shadertoy-compat-main)

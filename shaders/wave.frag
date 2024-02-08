@@ -12,7 +12,7 @@ void mainImage(out vec4 O, vec2 F) {
     float i, t, d, k = iTime/8.;
 
     for (O *= i; i < 35.; i++) {
-        vec3 R = vec3(iResolution, 1.),
+        vec3 R = iResolution,
              p = t * normalize(vec3(F+F-R.xy, R.y));
 
         p.z  -= spectralRoughnessZScore + 3.;

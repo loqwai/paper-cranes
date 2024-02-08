@@ -31,7 +31,7 @@ void main(){
   vec3 rippleColor=hsl2rgb(vec3(hslColor.x,hslColor.y,hslColor.z+getRipple(uv,vec2(.5,.5),time)));
 
   // Blend plasma with ripples and previous frame
-  vec3 finalColor=mix(rippleColor,prevColorHSL,.5);
+  vec3 finalColor=mix(rippleColor,prevColorHSL,.005);
 
   // Convert final color to RGB
   fragColor=vec4(hsl2rgb(finalColor),1.);
