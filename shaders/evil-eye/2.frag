@@ -1,4 +1,4 @@
-#pragma glslify: import(./includes/full)
+#pragma glslify: import(../includes/full)
 uniform float knob_1;
 uniform float knob_2;
 uniform float knob_3;
@@ -16,21 +16,28 @@ float getRipple(vec2 uv,vec2 center,float time){
   return sin(time*5.+dist*a)*exp(-dist*3.);
 }
 void main(){
+  float scaledTime = time / 10.;
   vec2 uv=(gl_FragCoord.xy-.5*resolution.xy)/resolution.y;
   uv.x*=resolution.x/resolution.y;// Aspect ratio correction
   uv -0.5;
-  uv *= 1.5;
+  uv *= 1.5 + (energy/5.);
+
+  // rotate uv around the center by time
+  uv = mat2(cos(scaledTime), -sin(scaledTime), sin(scaledTime), cos(scaledTime)) * uv;
+
   uv += 0.5;
+  uv = fract(uv);
+  // rotate by time
 
   // Generate plasma pattern
-  float plasmaValue=plasma(uv,time);
+  float plasmaValue=plasma(uv,scaledTime);
   vec3 color=vec3(plasmaValue,1.-plasmaValue,.5);// Example HSL color for plasma
 
   // Convert plasma color to HSL
   vec3 hslColor=rgb2hsl(color);
 
   // Get previous frame color in HSL
-  vec3 prevColor=texture(prevFrame,uv*sin(knob_1)).rgb;
+  vec3 prevColor=texture(prevFrame,uv).rgb;
   prevColor=rgb2hsl(prevColor);
   //-0.57 to 0.31
   float rc = map(spectralRoughnessNormalized, 0., 1., -0.57, 0.31);
@@ -38,13 +45,15 @@ void main(){
   prevColor = hsl2rgb(prevColor);
 
   // Calculate ripple effect
-  vec3 rippleColor=hsl2rgb(vec3(hslColor.x,hslColor.y,hslColor.z+getRipple(uv,vec2(.5,.5),time)));
+  vec3 rippleColor=hsl2rgb(vec3(hslColor.x,hslColor.y,hslColor.z+getRipple(uv,vec2(.5,.5),scaledTime)));
 
   // Blend plasma with ripples and previous frame
-  //knob2 = -.13-.35
-  float sc = map(sin(knob_3), 0., 1., -.20,.25);
-  vec3 finalColor=mix(rippleColor,prevColor,sc);
 
+  vec3 finalColor=mix(rippleColor,prevColor,.2);
+  vec3 hsl = rgb2hsl(finalColor);
+  if(hsl.z < 0.51){
+   finalColor = prevColor/knob_1;
+  }
   // Convert final color to RGB
   fragColor=vec4(hsl2rgb(finalColor),1.);
 }
