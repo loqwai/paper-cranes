@@ -53,6 +53,7 @@ void main(){
   vec3 hsl = rgb2hsl(finalColor);
   if(hsl.z < spectralKurtosisNormalized){
     hsl.y = fract(hsl.y + 0.1);
+    hsl.z = fract(hsl.z - 0.1);
 
   }
   if(hsl.y < spectralFluxNormalized){

@@ -8,9 +8,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "node ./esbuild.js & npm run build:shaders",
     "dev": "npm run build && concurrently \"npm run start\" \"npm run build:watch\"",
-    "build:watch": "chokidar '**/*.*' -i 'node_modules/*' -i 'dist/*' --debounce 1000 -c 'npm run build'",
+    "build:watch": "chokidar '**/*.*' -i 'node_modules/*' -i 'dist/*' -c 'npm run build'",
     "format": "eslint --fix .",
-    "build:shaders": "find shaders/ -type f -name *.frag | while IFS= read -r shader; do mkdir -p dist/$(dirname \"$shader\") && glslify -t glslify-import \"$shader\" -o dist/${shader}; done"
+    "build:shaders": "find shaders/ -type f -name *.frag | while IFS= read -r shader; do mkdir -p dist/$(dirname \"$shader\") && glslify \"$shader\" -o dist/${shader}; done"
   },
   "glslify": {
     "transform": [
