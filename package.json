@@ -4,11 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "npx live-server --no-browser -q --port=6969 ./dist/",
+    "start": "npx live-server --wait=250 --no-browser -q --port=6969 ./dist/",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "node ./esbuild.js & npm run build:shaders",
     "dev": "npm run build && concurrently \"npm run start\" \"npm run build:watch\"",
-    "build:watch": "nodemon --ignore node_modules/ --ignore dist/ --ext '*' --watch . --exec \"npm run build\"",
+    "build:watch": "chokidar '**/*.*' -i 'node_modules/*' -i 'dist/*' --debounce 1000 -c 'npm run build'",
     "format": "eslint --fix .",
     "build:shaders": "find shaders/ -type f -name *.frag | while IFS= read -r shader; do mkdir -p dist/$(dirname \"$shader\") && glslify -t glslify-import \"$shader\" -o dist/${shader}; done"
   },
@@ -29,6 +29,7 @@
     "twgl.js": "^4.24.0"
   },
   "devDependencies": {
+    "chokidar-cli": "^3.0.0",
     "concurrently": "^8.2.2",
     "esbuild": "^0.19.12",
     "esbuild-plugin-copy": "^2.1.1",
@@ -42,7 +43,6 @@
     "live-server": "^1.1.0",
     "mini-css-extract-plugin": "^2.7.6",
     "ncp": "^2.0.0",
-    "nodemon": "^3.0.3",
     "prettier": "^3.1.1"
   }
 }

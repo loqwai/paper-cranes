@@ -52,11 +52,11 @@ void main(){
   vec3 finalColor=mix(rippleColor,prevColor,.2);
   vec3 hsl = rgb2hsl(finalColor);
   if(hsl.z < spectralKurtosisNormalized){
-    hsl.y = fract(hsl.y + knob_1);
+    hsl.y = fract(hsl.y + 0.1);
 
   }
   if(hsl.y < spectralFluxNormalized){
-    hsl.z = fract(hsl.z + knob_2);
+    hsl.z = fract(hsl.z + 0.1);
   }
    finalColor = hsl2rgb(hsl);
   // Convert final color to RGB
