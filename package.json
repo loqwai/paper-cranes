@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "npx live-server -q --port=6969 ./dist/",
+    "start": "npx live-server --no-browser -q --port=6969 ./dist/",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "node ./esbuild.js & npm run build:shaders",
     "dev": "npm run build && concurrently \"npm run start\" \"npm run build:watch\"",

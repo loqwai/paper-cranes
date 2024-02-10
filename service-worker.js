@@ -9,7 +9,11 @@ self.addEventListener('fetch', (event) => {
                 // Cache the new response for future use
                 if (event.request.method === 'GET' && networkResponse.ok) {
                     caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(event.request, networkResponse.clone())
+                        try {
+                            cache.put(event.request, networkResponse.clone())
+                        } catch (e) {
+                            // don't worry about it
+                        }
                     })
                 }
                 return networkResponse
