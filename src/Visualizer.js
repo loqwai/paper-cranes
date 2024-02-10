@@ -38,7 +38,7 @@ const getTexture = async (gl, url) => {
 export const makeVisualizer = async ({ canvas, shader, initialImageUrl, fullscreen }) => {
     const gl = canvas.getContext('webgl2', { antialias: false })
     // get the window width and height
-
+    let wrappedShader = shaderWrapper(shader)
     if (fullscreen) {
         const width = window.innerWidth
         const height = window.innerHeight
@@ -55,19 +55,11 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl, fullscre
             failUnsetUniforms: false,
         })
     }
-    let shaderUrl = shader
-    //if the url is not a full url, then it's a relative url
-    if (!shaderUrl.includes('http')) {
-        shaderUrl = `/shaders/${shader}.frag`
-    }
-    const res = await fetch(shaderUrl)
-    const fragmentShader = shaderWrapper(await res.text())
     const initialTexture = await getTexture(gl, initialImageUrl)
 
     console.log(cranes)
-    const programInfo = createProgramInfo(gl, [vertexShader, fragmentShader])
+    const programInfo = createProgramInfo(gl, [vertexShader, wrappedShader])
     const frameBuffers = [createFramebufferInfo(gl), createFramebufferInfo(gl)]
-
     const arrays = {
         position: [-1, -1, 0, 1, -1, 0, -1, 1, 0, -1, 1, 0, 1, -1, 0, 1, 1, 0],
     }
@@ -76,7 +68,17 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl, fullscre
     gl.useProgram(programInfo.program)
 
     let frameNumber = 0
-    const render = ({ time, features }) => {
+    const render = ({ time, features, shader: newShader }) => {
+        console.log('rendering')
+        if (newShader !== shader) {
+            console.log('new shader')
+            wrappedShader = shaderWrapper(newShader)
+            shader = newShader
+            const newProgramInfo = createProgramInfo(gl, [vertexShader, wrappedShader])
+            gl.useProgram(newProgramInfo.program)
+            console.log('new shader')
+            programInfo.program = newProgramInfo.program
+        }
         resizeCanvasToDisplaySize(gl.canvas)
         const frame = frameBuffers[frameNumber % 2]
         const prevFrame = frameBuffers[(frameNumber + 1) % 2]

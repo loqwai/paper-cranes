@@ -41,6 +41,15 @@ form label input {
 .save-load button {
     max-width: 4em;
 }
+#monaco-editor {
+    flex: 1;
+    padding: 3px;
+    border-radius: 10px;
+    min-width: 700px;
+    min-height: 500px;
+    display: flex;
+    flex-direction: column;
+}
 :root {
     --foreground-rgb: 0, 0, 0;
     --background-start-rgb: 214, 219, 220;

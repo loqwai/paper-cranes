@@ -58,15 +58,16 @@ const main = async () => {
     const audio = await setupAudio()
 
     const params = new URLSearchParams(window.location.search)
-    const shader = params.get('shader') ?? 'warp-emitter'
+
+    const shaderUrl = params.get('shader') ?? 'warp-emitter'
+    const shader = await getShader(shaderUrl)
     const initialImageUrl = params.get('image') ?? 'images/placeholder-image.png'
     const fullscreen = (params.get('fullscreen') ?? false) === 'true'
 
     const canvas = document.getElementById('visualizer')
     const render = await makeVisualizer({ canvas, shader, initialImageUrl, fullscreen })
-
     updateUI()
-    requestAnimationFrame(() => animate({ render, audio }))
+    requestAnimationFrame(() => animate({ render, audio, shader }))
     ranMain = true
 }
 
@@ -85,16 +86,26 @@ const setupAudio = async () => {
     return audioProcessor
 }
 
+const getShader = async (url) => {
+    //if the url is not a full url, then it's a relative url
+    if (!url.includes('http')) {
+        url = `/shaders/${url}.frag`
+    }
+    const res = await fetch(url)
+    const fragmentShader = await res.text()
+    return fragmentShader
+}
+
 const updateUI = () => {
     const body = document.querySelector('body')
     body.classList.add('ready')
 }
 
-const animate = ({ render, audio }) => {
+const animate = ({ render, audio, shader }) => {
     const measuredAudioFeatures = audio.getFeatures()
     const { overwrittenAudioFeatures, manualFeatures = {} } = window.cranes
     window.cranes.measuredAudioFeatures = measuredAudioFeatures
     const features = { ...measuredAudioFeatures, ...overwrittenAudioFeatures, ...manualFeatures }
-    render({ time: (performance.now() - startTime) / 1000, features })
-    requestAnimationFrame(() => animate({ render, audio }))
+    render({ time: (performance.now() - startTime) / 1000, features, shader })
+    requestAnimationFrame(() => animate({ render, audio, shader }))
 }
