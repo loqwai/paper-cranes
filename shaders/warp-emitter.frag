@@ -17,6 +17,3 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
 	hsl.x = fract(hsl.x + spectralCentroidMean);
 	fragColor=vec4(hsl2rgb(hsl),time);
 }
-void main() {
-  mainImage(fragColor, gl_FragCoord.xy);
-}
