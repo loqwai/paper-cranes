@@ -56,7 +56,10 @@ const FeatureAdder = () => {
     }
 
     const addNewFeature = () => {
-        if (!newFeatureName.trim()) return // Whisper no empty names into the void
+        if (!newFeatureName.trim()) {
+            alert('Feature name cannot be empty')
+            return
+        }
 
         // Summon the new feature into our realm and the global dominion alike
         const newFeatures = { ...features, [newFeatureName]: 1 }
@@ -117,15 +120,15 @@ const FeatureAdder = () => {
                                 onInput=${(e) => updateFeatureValue(name, e.target.value)}
                             />
                             <span> (${value})</span>
-                            <input type="number" value=${sliderRanges[name].value || 1} onInput=${(e) => updateSliderRange(name, sliderRanges[name]?.min ?? -1, e.target.value)} />
+                            <input type="number" value=${sliderRanges[name]?.value || 1} onInput=${(e) => updateSliderRange(name, sliderRanges[name]?.min ?? -1, e.target.value)} />
                             <br />
                         </div>
                     `,
                 )}
             </form>
             <div className="save-load">
-                <button type="button" onClick=${saveFeatures}>Save</button>
-                <button type="button" onClick=${loadFeatures}>Load</button>
+                <button type="button" onClick=${saveFeatures}>Save Sliders</button>
+                <button type="button" onClick=${loadFeatures}>Load Sliders</button>
                 <button type="button" onClick=${saveCode}>Save Code</button>
             </div>
         </div>
