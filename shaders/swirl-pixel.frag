@@ -1,5 +1,3 @@
-
-
 vec2 getRipple(vec2 uv){
     // Calculate the ripple effect, a subtle message hidden within
     float r = 0.0;
@@ -34,7 +32,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     vec3 c = vec3(0.0);
     c.x = spectralCentroidMedian;
     c.y = spectralRoughnessNormalized;
-    c.z = map(energyZScore, -3., 3., 0.0, 1.0);
+    c.z = mapValue(energyZScore, -3., 3., 0.0, 1.0);
 		// c *= vec3(sdfBox(uv, vec2(0.5)), 1.0);
 
     if(c.z > l.z) {
@@ -69,7 +67,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
 
 		c += rgb2hsl(getLastFrameColor(uv + vec2(0.0, 0.01)).rgb)/2.;
 
-		c /= map(spectralCentroidZScore,-3.,3.,1.3,2.1);
+		c /= mapValue(spectralCentroidZScore,-3.,3.,1.3,2.1);
 		c.x+= uv.x/1000.;
 		c.y+= uv.y/1000.;
 		    // Emit the final color, the light in the darkness
