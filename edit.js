@@ -100,18 +100,6 @@ const FeatureAdder = () => {
         const newSliderRanges = { ...sliderRanges, [name]: { min: parseFloat(min), max: parseFloat(max) } }
         setSliderRanges(newSliderRanges)
     }
-    const saveFeatures = () => {
-        localStorage.setItem(SAVE_FILE_NAME, JSON.stringify(features))
-    }
-    const loadFeatures = () => {
-        const savedFeatures = JSON.parse(localStorage.getItem(SAVE_FILE_NAME))
-        if (savedFeatures) {
-            setFeatures(savedFeatures)
-        }
-        for (const [name, value] of Object.entries(savedFeatures)) {
-            window.cranes.manualFeatures[name] = value
-        }
-    }
 
     return html`
         <div id="editor">
@@ -141,9 +129,7 @@ const FeatureAdder = () => {
                 )}
             </form>
             <div className="save-load">
-                <button type="button" onClick=${saveFeatures}>Save Sliders</button>
-                <button type="button" onClick=${loadFeatures}>Load Sliders</button>
-                <button type="button" onClick=${saveCode}>Save Code</button>
+                <button type="button" onClick=${saveCode}>Save</button>
                 <button type="button" onClick=${clearCode}>Reset</button>
             </div>
         </div>
