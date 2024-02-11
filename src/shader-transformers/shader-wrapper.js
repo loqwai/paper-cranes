@@ -64,7 +64,7 @@ vec4 lastColor(vec2 uv){
     return getLastFrameColor(uv);
 }
 
-float map(float val, float inMin, float inMax, float outMin, float outMax) {
+float mapValue(float val, float inMin, float inMax, float outMin, float outMax) {
     float normalized =  outMin + (outMax - outMin) * (val - inMin) / (inMax - inMin);
     return clamp(normalized, outMin, outMax);
 }
