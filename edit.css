@@ -13,7 +13,6 @@ form label input {
     flex: 1;
     padding: 3px;
     border-radius: 10px;
-    max-width: 400px;
     display: flex;
     flex-direction: column;
 }
@@ -44,9 +43,8 @@ form label input {
 #monaco-editor {
     flex: 1;
     padding: 3px;
-    border-radius: 10px;
-    min-width: 700px;
-    min-height: 500px;
+    width: 50vw;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
 }
@@ -54,7 +52,6 @@ form label input {
     display: flex;
     flex-direction: column;
     flex: 1;
-    max-width: 700px;
     background-color: #333;
     color: white;
 }
@@ -147,42 +144,7 @@ body.ready::before {
     opacity: 0;
 }
 
-.container {
-    width: 100vw; /* Full width of the viewport */
-    height: 100vh; /* Full height of the viewport */
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    text-transform: uppercase;
-}
-
 canvas {
-    margin: 0;
-    height: 100vmin;
-    width: 100vmin;
-    background: transparent;
-    opacity: 0;
-    transition: opacity 0.01s ease-in-out;
-}
-
-.ready canvas {
-    opacity: 1;
-}
-
-.ready h1 {
-    opacity: 0;
-    transition: opacity 0.01s ease-in-out;
-}
-
-.container h1 {
-    margin: 0;
-    font-size: calc(10vw + 10vh); /* Dynamic font size based on viewport size */
-    line-height: 1;
-    white-space: nowrap; /* Prevents text from wrapping */
-}
-
-.container.please h1 {
-    font-size: calc(100vw / 34); /* Dynamic font size based on viewport size */
+    height: 50vmin;
+    width: 50vmin;
 }
