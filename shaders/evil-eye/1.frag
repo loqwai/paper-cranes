@@ -12,7 +12,7 @@ float plasma(vec2 uv,float time){
 // Function to get the ripple effect based on distance from the plasma center
 float getRipple(vec2 uv,vec2 center,float time){
   float dist=length(uv-center);
-  float a = map(energyZScore,-2.5,2.5,2.5,35.);
+  float a = mapValue(energyZScore,-2.5,2.5,2.5,35.);
   return sin(time*5.+dist*a)*exp(-dist*3.);
 }
  void mainImage(out vec4 fragColor,in vec2 fragCoord){
@@ -33,7 +33,7 @@ float getRipple(vec2 uv,vec2 center,float time){
   vec3 prevColor=texture(prevFrame,uv*sin(knob_1)).rgb;
   prevColor=rgb2hsl(prevColor);
   //-0.57 to 0.31
-  float rc = map(spectralRoughnessNormalized, 0., 1., -0.57, 0.31);
+  float rc = mapValue(spectralRoughnessNormalized, 0., 1., -0.57, 0.31);
   prevColor.x+=rc;// Change hue of previous frame
   prevColor = hsl2rgb(prevColor);
 
@@ -42,7 +42,7 @@ float getRipple(vec2 uv,vec2 center,float time){
 
   // Blend plasma with ripples and previous frame
   //knob2 = -.13-.35
-  float sc = map(sin(knob_3), 0., 1., -.20,.25);
+  float sc = mapValue(sin(knob_3), 0., 1., -.20,.25);
   vec3 finalColor=mix(rippleColor,prevColor,sc);
 
   // Convert final color to RGB
