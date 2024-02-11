@@ -59,8 +59,22 @@ const main = async () => {
 
     const params = new URLSearchParams(window.location.search)
 
-    const shaderUrl = params.get('shader') ?? 'warp-emitter'
-    const shader = await getShader(shaderUrl)
+    const shaderUrl = params.get('shader')
+    let shader
+
+    if (shaderUrl) {
+        shader = await getShader(shaderUrl)
+    }
+
+    if (!shader) {
+        shader = localStorage.getItem('shader')
+    }
+
+    if (!shader) {
+        shader = await getShader('warp-emitter')
+    }
+
+    window.shader = shader
     const initialImageUrl = params.get('image') ?? 'images/placeholder-image.png'
     const fullscreen = (params.get('fullscreen') ?? false) === 'true'
 
@@ -102,6 +116,7 @@ const updateUI = () => {
 }
 
 const animate = ({ render, audio, shader }) => {
+    shader = window?.shader ?? shader
     const measuredAudioFeatures = audio.getFeatures()
     const { overwrittenAudioFeatures, manualFeatures = {} } = window.cranes
     window.cranes.measuredAudioFeatures = measuredAudioFeatures

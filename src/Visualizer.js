@@ -57,7 +57,6 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl, fullscre
     }
     const initialTexture = await getTexture(gl, initialImageUrl)
 
-    console.log(cranes)
     const programInfo = createProgramInfo(gl, [vertexShader, wrappedShader])
     const frameBuffers = [createFramebufferInfo(gl), createFramebufferInfo(gl)]
     const arrays = {
@@ -69,7 +68,6 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl, fullscre
 
     let frameNumber = 0
     const render = ({ time, features, shader: newShader }) => {
-        console.log('rendering')
         if (newShader !== shader) {
             console.log('new shader')
             wrappedShader = shaderWrapper(newShader)

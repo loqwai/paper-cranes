@@ -69,6 +69,16 @@ const FeatureAdder = () => {
         setNewFeatureName('') // Clear the incantation for the next summoning
     }
 
+    const saveCode = () => {
+        if (window.editor) {
+            window.shader = window.editor.getValue()
+            localStorage.setItem('shader', window.shader)
+            // remove the shader from the URL
+            window.history.pushState({}, document.title, window.location.pathname)
+
+            window.location.reload()
+        }
+    }
     const updateSliderRange = (name, min, max) => {
         const newSliderRanges = { ...sliderRanges, [name]: { min: parseFloat(min), max: parseFloat(max) } }
         setSliderRanges(newSliderRanges)
@@ -116,6 +126,7 @@ const FeatureAdder = () => {
             <div className="save-load">
                 <button type="button" onClick=${saveFeatures}>Save</button>
                 <button type="button" onClick=${loadFeatures}>Load</button>
+                <button type="button" onClick=${saveCode}>Save Code</button>
             </div>
         </div>
     `

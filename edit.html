@@ -42,6 +42,7 @@
             }
 
             export const keywords = [
+                'spectralCentroid',
                 'const',
                 'uniform',
                 'break',
@@ -308,14 +309,21 @@
             monaco.languages.register({ id: 'glsl' })
             monaco.languages.setMonarchTokensProvider('glsl', language)
 
-            monaco.editor.create(document.querySelector('#monaco-editor'), {
-                value: `#version 300 es
-precision highp float;
+            const editor = monaco.editor.create(document.querySelector('#monaco-editor'), {
+                value: `void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
+    // Normalized pixel coordinates (from 0 to 1)
+    vec2 uv = fragCoord/iResolution.xy;
 
-// Uniforms for audio features
-uniform float time;`,
+    // Time varying pixel color
+    vec3 col = 0.5 + 0.5*cos(iTime+uv.xyx+vec3(0,2,4));
+
+    // Output to screen
+    fragColor = vec4(col,1.0);
+}`,
                 language: 'glsl',
             })
+            window.editor = editor
         </script>
     </body>
 </html>
