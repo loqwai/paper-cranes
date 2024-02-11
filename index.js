@@ -71,7 +71,7 @@ const main = async () => {
     }
 
     if (!shader) {
-        shader = await getShader('warp-emitter')
+        shader = await getShader('default')
     }
 
     window.shader = shader
