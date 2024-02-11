@@ -12,10 +12,10 @@ float plasma(vec2 uv,float time){
 // Function to get the ripple effect based on distance from the plasma center
 float getRipple(vec2 uv,vec2 center,float time){
   float dist=length(uv-center);
-  float a = map(energyZScore,-2.5,2.5,2.5,35.);
+  float a = mapValue(energyZScore,-2.5,2.5,2.5,35.);
   return sin(time*5.+dist*a)*exp(-dist*3.);
 }
-void main(){
+void mainImage(out vec4 fragColor,in vec2 fragCoord){
   float scaledTime = time / 10.;
   vec2 uv=(gl_FragCoord.xy-.5*resolution.xy)/resolution.y;
   uv.x*=resolution.x/resolution.y;// Aspect ratio correction
@@ -40,7 +40,7 @@ void main(){
   vec3 prevColor=texture(prevFrame,uv).rgb;
   prevColor=rgb2hsl(prevColor);
   //-0.57 to 0.31
-  float rc = map(spectralRoughnessNormalized, 0., 1., -0.57, 0.31);
+  float rc = mapValue(spectralRoughnessNormalized, 0., 1., -0.57, 0.31);
   prevColor.x+=rc;// Change hue of previous frame
   prevColor = hsl2rgb(prevColor);
 
