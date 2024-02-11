@@ -59,8 +59,8 @@ const FeatureAdder = () => {
         if (!newFeatureName.trim()) return // Whisper no empty names into the void
 
         // Summon the new feature into our realm and the global dominion alike
-        const newFeatures = { ...features, [newFeatureName]: 0 }
-        const newSliderRanges = { ...sliderRanges, [newFeatureName]: { min: -1, max: 1 } }
+        const newFeatures = { ...features, [newFeatureName]: 1 }
+        const newSliderRanges = { ...sliderRanges, [newFeatureName]: { min: -3, max: 3, value: 1 } }
         setFeatures(newFeatures)
         setSliderRanges(newSliderRanges)
         window.cranes.manualFeatures = window.cranes.manualFeatures || {}
@@ -107,7 +107,7 @@ const FeatureAdder = () => {
                     ([name, value]) => html`
                         <div className="edit-feature" key=${name}>
                             <label>${name}:</label>
-                            <input type="number" value=${sliderRanges[name]?.min ?? -1} onInput=${(e) => updateSliderRange(name, e.target.value, sliderRanges[name]?.max ?? 1)} />
+                            <input type="number" value=${sliderRanges[name]?.min ?? -3} onInput=${(e) => updateSliderRange(name, e.target.value, sliderRanges[name]?.max ?? 3)} />
                             <input
                                 type="range"
                                 min=${sliderRanges[name]?.min ?? -3}
@@ -117,7 +117,7 @@ const FeatureAdder = () => {
                                 onInput=${(e) => updateFeatureValue(name, e.target.value)}
                             />
                             <span> (${value})</span>
-                            <input type="number" value=${sliderRanges[name]?.max ?? 1} onInput=${(e) => updateSliderRange(name, sliderRanges[name]?.min ?? -1, e.target.value)} />
+                            <input type="number" value=${sliderRanges[name].value || 1} onInput=${(e) => updateSliderRange(name, sliderRanges[name]?.min ?? -1, e.target.value)} />
                             <br />
                         </div>
                     `,

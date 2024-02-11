@@ -19,7 +19,7 @@ form label input {
 }
 .new-feature {
     display: flex;
-    justify-content: end;
+    justify-content: start;
 }
 .edit-feature {
     display: flex;
@@ -36,7 +36,7 @@ form label input {
     margin-top: 0.5em;
     display: flex;
     flex-direction: row;
-    justify-content: end;
+    justify-content: start;
 }
 .save-load button {
     max-width: 4em;
@@ -49,6 +49,16 @@ form label input {
     min-height: 500px;
     display: flex;
     flex-direction: column;
+}
+#editor-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: 10px;
+    border-radius: 10px;
+    max-width: 700px;
+    background-color: #333;
+    color: white;
 }
 :root {
     --foreground-rgb: 0, 0, 0;
