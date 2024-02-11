@@ -1,4 +1,4 @@
-#pragma glslify: import(./includes/full.frag)
+
 
 // Fractal parameters
 float iterations=8.;
@@ -69,4 +69,4 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
   fragColor=vec4(color,1.);
 }
 
-#pragma glslify: import(./includes/shadertoy-compat-main)
+

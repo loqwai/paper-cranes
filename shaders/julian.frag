@@ -1,4 +1,4 @@
-#pragma glslify: import(./includes/full.frag)
+
 // Swirl function
 vec2 swirl(vec2 p){
   float swirlIntensity=spectralSpreadNormalized*.5;
@@ -120,4 +120,4 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
   fragColor=vec4(color,1.);
   // fragColor=vec4(color,1.);
 }
-#pragma glslify: import(./includes/shadertoy-compat-main.frag)
+

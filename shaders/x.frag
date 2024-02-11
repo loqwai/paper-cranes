@@ -1,4 +1,4 @@
-#pragma glslify: import(./includes/full.frag)
+
 
 float sdSphere(vec3 p,float s)
 {
@@ -145,4 +145,4 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
   fragColor=mix(prevColor,vec4(hsl2rgb(hsl),1.),beat?1.:.8);
 }
 
-#pragma glslify: import(./includes/shadertoy-compat-main)
+

@@ -1,4 +1,4 @@
-#pragma glslify: map=require(./includes/map)
+// #pragma glslify: map=require(./includes/map)
 
 const float PI = 3.14159265358979323844;
 const float INFINITY_VALUE = 1e6;

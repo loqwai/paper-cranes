@@ -1,4 +1,4 @@
-#pragma glslify: import(../includes/full)
+// #pragma glslify: import(../includes/full)
 uniform float knob_1;
 uniform float knob_2;
 uniform float knob_3;
@@ -15,7 +15,7 @@ float getRipple(vec2 uv,vec2 center,float time){
   float a = map(energyZScore,-2.5,2.5,2.5,35.);
   return sin(time*5.+dist*a)*exp(-dist*3.);
 }
-void main(){
+ void mainImage(out vec4 fragColor,in vec2 fragCoord){
   vec2 uv=(gl_FragCoord.xy-.5*resolution.xy)/resolution.y;
   uv.x*=resolution.x/resolution.y;// Aspect ratio correction
   uv -0.5;

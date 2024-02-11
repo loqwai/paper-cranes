@@ -1,4 +1,4 @@
-#pragma glslify: import(./includes/full.frag)
+
 // Swirl and wave parameters
 // Swirl function
 vec2 swirl(vec2 p){
@@ -126,4 +126,4 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
   fragColor=vec4(mix(color,last,.3),1.);
 }
 
-#pragma glslify: import(./includes/shadertoy-compat-main)
+

@@ -1,5 +1,5 @@
-#pragma glslify: import(./includes/full.frag)
-#pragma glslify: import(./includes/shadertoy-compat)
+
+// #pragma glslify: import(./includes/shadertoy-compat)
 // Fork of "Flowing Wires [471 chars]" by kishimisu. https://shadertoy.com/view/DsBczR
 // 2024-02-06 07:15:17
 
@@ -35,4 +35,4 @@ void mainImage(out vec4 O, vec2 F) {
                      s( -p.zxy            ))
     );
 }
-#pragma glslify:import(./includes/shadertoy-compat-main)
+// #pragma glslify:import(./includes/shadertoy-compat-main)

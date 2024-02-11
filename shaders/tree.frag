@@ -1,5 +1,5 @@
-#pragma glslify: import(./includes/full.frag)
-#pragma glslify: import(./includes/shadertoy-compat)
+
+// #pragma glslify: import(./includes/shadertoy-compat)
 
 #define kDepth 3
 #define kBranches 5
@@ -104,4 +104,4 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     color.z = spectralFluxNormalized;
     fragColor = vec4(hsl2rgb(color), 1.);
 }
-#pragma glslify:import(./includes/shadertoy-compat-main)
+// #pragma glslify:import(./includes/shadertoy-compat-main)

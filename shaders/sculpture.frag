@@ -1,5 +1,5 @@
-#pragma glslify: import(./includes/full.frag)
-#pragma glslify: import(./includes/shadertoy-compat)
+
+// #pragma glslify: import(./includes/shadertoy-compat)
 
 float bailout=8.;
 float power=8.;
@@ -133,4 +133,4 @@ hsl.y=clamp(hsl.y,0.,.98);
 fragColor=vec4(hsl2rgb(hsl),1.);
 
 }
-#pragma glslify: import(./includes/shadertoy-compat-main)
+

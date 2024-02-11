@@ -1,5 +1,4 @@
-#pragma glslify: import(./includes/full.frag)
-#pragma glslify: import(./includes/shadertoy-compat.frag)
+
 
 vec2 getRipple(vec2 uv){
     // Calculate the ripple effect, a subtle message hidden within
@@ -76,4 +75,4 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
 		    // Emit the final color, the light in the darkness
     fragColor = vec4(c, 1.0);
 }
-#pragma glslify: import(./includes/shadertoy-compat-main.frag)
+

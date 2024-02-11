@@ -1,4 +1,4 @@
-#pragma glslify: import(./includes/full.frag)
+
 void mainImage(out vec4 FragColor,vec2 FragCoord){
   int l=int(spectralFlux/100.);
   vec2 v=(FragCoord.xy-resolution.xy/2.)/min(resolution.y,resolution.x)*30.;
@@ -79,4 +79,4 @@ void mainImage(out vec4 FragColor,vec2 FragCoord){
   // if(currentColor.r+currentColor.g+currentColor.b<.001)discard;
   FragColor=currentColor;
 }
-#pragma glslify: import(./includes/shadertoy-compat-main)
+

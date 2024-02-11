@@ -1,5 +1,5 @@
-#pragma glslify: import(./includes/full.frag)
-#pragma glslify: import(./includes/shadertoy-compat)
+
+// #pragma glslify: import(./includes/shadertoy-compat)
 /* "Wired" by @kishimisu (2024)
 
    I wonder what it's powering...
@@ -33,4 +33,4 @@ void mainImage(out vec4 O, vec2 F) {
 
     O *= vec4(hsl2rgb(hslBg), 1.);
 }
-#pragma glslify:import(./includes/shadertoy-compat-main)
+// #pragma glslify:import(./includes/shadertoy-compat-main)

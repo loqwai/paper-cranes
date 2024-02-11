@@ -1,4 +1,4 @@
-#pragma glslify: import(./includes/full.frag)
+
 
 vec3 palette(float t,float hueShift,float saturationFactor,float lightnessFactor){
   vec3 a=vec3(.5,.5,.5);
@@ -43,4 +43,4 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
 
   fragColor=normalize(vec4(finalColor,1.));
 }
-#pragma glslify: import(./includes/shadertoy-compat-main)
+

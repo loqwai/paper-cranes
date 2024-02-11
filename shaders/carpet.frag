@@ -1,4 +1,4 @@
-#pragma glslify: import(./includes/full.frag)
+
 
 vec2 triangle_wave(vec2 a){
   vec2 a2=
@@ -100,4 +100,4 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
   // rgb = mix(prev.rgb, rgb, 0.1);
   fragColor=vec4(rgb/2.,1.);
 }
-#pragma glslify: import(./includes/shadertoy-compat-main)
+

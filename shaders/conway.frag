@@ -1,4 +1,4 @@
-#pragma glslify:import(./includes/full.frag)
+
 
 vec2 centerUv(vec2 res,vec2 coord){
     // step 1: normalize the coord to 0-1

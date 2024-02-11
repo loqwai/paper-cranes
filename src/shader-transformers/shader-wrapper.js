@@ -64,6 +64,13 @@ vec4 lastColor(vec2 uv){
     return getLastFrameColor(uv);
 }
 
+#pragma glslify: export(map)
+float map(float val, float inMin, float inMax, float outMin, float outMax) {
+    float normalized =  outMin + (outMax - outMin) * (val - inMin) / (inMax - inMin);
+    return clamp(normalized, outMin, outMax);
+}
+
+
 float hue2rgb(float f1, float f2, float hue) {
     if (hue < 0.0)
         hue += 1.0;

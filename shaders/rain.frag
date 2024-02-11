@@ -1,4 +1,4 @@
-#pragma glslify:import(./includes/full.frag)
+
 #define S(a,b,t)smoothstep(a,b,t)
 
 
@@ -166,4 +166,4 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord)
 
     fragColor=vec4(col,1.);
 }
-#pragma glslify:import(./includes/shadertoy-compat-main)
+// #pragma glslify:import(./includes/shadertoy-compat-main)
