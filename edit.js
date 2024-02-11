@@ -9,9 +9,15 @@ const SAVE_FILE_NAME = 'cranes-manual-features'
 const sliderNames = new URLSearchParams(window.location.search).getAll('slider')
 
 const FeatureAdder = () => {
-    const [features, setFeatures] = useState({
-        knob_1: { min: -3, max: 3, value: 1 },
-    })
+    const [features, setFeatures] = useState(
+        localStorage.getItem(SAVE_FILE_NAME)
+            ? JSON.parse(localStorage.getItem(SAVE_FILE_NAME))
+            : {
+                  knob_1: {
+                      knob_1: { min: -3, max: 3, value: 1 },
+                  },
+              },
+    )
     const [newFeatureName, setNewFeatureName] = useState('')
     const [sliderRanges, setSliderRanges] = useState({})
 
@@ -78,6 +84,7 @@ const FeatureAdder = () => {
         if (window.editor) {
             window.shader = window.editor.getValue()
             localStorage.setItem('shader', window.shader)
+            localStorage.setItem(SAVE_FILE_NAME, JSON.stringify(features))
             // remove the shader from the URL
             window.history.pushState({}, document.title, window.location.pathname)
 
