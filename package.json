@@ -4,13 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "npx live-server --wait=250 --no-browser -q --port=6969 ./dist/",
+    "start": "npx live-server --wait=50 --no-browser -q --port=6969 ./dist/",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "node ./esbuild.js & npm run build:shaders",
+    "build": "node ./esbuild.js",
     "dev": "npm run build && concurrently \"npm run start\" \"npm run build:watch\"",
     "build:watch": "chokidar '**/*.*' -i 'node_modules/*' -i 'dist/*' -c 'npm run build'",
-    "format": "eslint --fix .",
-    "build:shaders": "find shaders/ -type f -name *.frag | while IFS= read -r shader; do mkdir -p dist/$(dirname \"$shader\") && glslify \"$shader\" -o dist/${shader}; done"
+    "format": "eslint --fix ."
   },
   "glslify": {
     "transform": [
@@ -37,9 +36,6 @@
     "esbuild-plugin-html": "^1.0.0",
     "eslint": "^8.56.0",
     "eslint-plugin-prettier": "^5.0.1",
-    "glsl-hsl2rgb": "^1.1.0",
-    "glslify": "^7.1.1",
-    "glslify-import": "^3.1.0",
     "live-server": "^1.1.0",
     "mini-css-extract-plugin": "^2.7.6",
     "ncp": "^2.0.0",

@@ -32,6 +32,7 @@ esbuild
             ncp('edit.css', 'dist/edit.css'),
             ncp('favicon.ico', 'dist/favicon.ico'),
             ncp('images', 'dist/images'),
+            ncp('shaders', 'dist/shaders'),
         ])
     })
     .catch(console.error)
