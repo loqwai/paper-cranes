@@ -13,7 +13,7 @@ form label input {
     flex: 1;
     padding: 3px;
     border-radius: 10px;
-    max-width: 700px;
+    max-width: 400px;
     display: flex;
     flex-direction: column;
 }

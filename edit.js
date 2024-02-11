@@ -9,7 +9,9 @@ const SAVE_FILE_NAME = 'cranes-manual-features'
 const sliderNames = new URLSearchParams(window.location.search).getAll('slider')
 
 const FeatureAdder = () => {
-    const [features, setFeatures] = useState({})
+    const [features, setFeatures] = useState({
+        knob_1: { min: -3, max: 3, value: 1 },
+    })
     const [newFeatureName, setNewFeatureName] = useState('')
     const [sliderRanges, setSliderRanges] = useState({})
 
@@ -82,6 +84,11 @@ const FeatureAdder = () => {
             window.location.reload()
         }
     }
+    const clearCode = () => {
+        localStorage.removeItem('shader')
+        localStorage.removeItem(SAVE_FILE_NAME)
+        window.location.reload()
+    }
     const updateSliderRange = (name, min, max) => {
         const newSliderRanges = { ...sliderRanges, [name]: { min: parseFloat(min), max: parseFloat(max) } }
         setSliderRanges(newSliderRanges)
@@ -130,6 +137,7 @@ const FeatureAdder = () => {
                 <button type="button" onClick=${saveFeatures}>Save Sliders</button>
                 <button type="button" onClick=${loadFeatures}>Load Sliders</button>
                 <button type="button" onClick=${saveCode}>Save Code</button>
+                <button type="button" onClick=${clearCode}>Reset</button>
             </div>
         </div>
     `
