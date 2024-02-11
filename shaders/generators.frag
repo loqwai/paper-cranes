@@ -1,4 +1,5 @@
 // "GENERATORS REDUX" by Kali
+
 // Same fractal as "Ancient Temple" + rotations, improved shading
 // (better coloring, AO and  shadows), some lighting effects, and a path for the camera
 // following a liquid metal ball.

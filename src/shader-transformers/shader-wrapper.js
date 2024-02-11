@@ -47,6 +47,12 @@ const getAudioUniforms = () => {
 }
 
 const paperCranes = () => /* glsl */ `
+
+uniform float time;
+uniform vec2 resolution;// iResolution equivalent
+
+uniform int frame;
+
 uniform sampler2D prevFrame;// Texture of the previous frame
 
 vec4 getLastFrameColor(vec2 uv){
