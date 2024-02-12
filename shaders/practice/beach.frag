@@ -8,7 +8,7 @@ float plot(vec2 st, float pct){
 }
 
 vec3 sun(vec2 uv){
-  vec2 sunPos = vec2(-1.63, -0.68+energyZScore);
+  vec2 sunPos = vec2(-1.63, -0.48+(energyZScore/4.));
   float radius = 0.1;
   float dist = length(uv+sunPos);
   if(dist < radius) {
@@ -37,7 +37,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     uv.y + 0.5;
 
     col=water(uv);
-    col += sun(uv);
+    if(col.b == 0.){
+      col += sun(uv);
+    }
     // Output to screen
     col = mix(col, last, knob_1);
     fragColor = vec4(col,1.0);
