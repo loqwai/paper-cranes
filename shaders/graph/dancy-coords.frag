@@ -15,8 +15,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // center plot on y axis
     vec2 uv = fragCoord/iResolution.xy;
     vec3 l = getLastFrameColor(uv.yx).rgb;
-    uv.y -= 1.;
+    uv.y -= .5;
     uv *=2.;
+    // rotate plot over time
+    uv *= mat2(cos(time),-sin(time),sin(time),cos(time));
     uv.y +=1.;
     uv *=10.;
 
