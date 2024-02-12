@@ -15,7 +15,7 @@ uniform float knob_1;
 //knob_1 should be from 0-.23
 
 #define s(p) ( q = p,                                    \
-    d = length(vec2(length(q.xy += .5)-.5, q.z)) - map(energyZScore, -1., 4.5, 0., .23),  \
+    d = length(vec2(length(q.xy += .5)-.5, q.z)) - mapValue(energyZScore, -1., 4.5, 0., .23),  \
     q.yx *= r(round((atan(q.y,q.x)-T) * (1.-spectralRoughnessNormalized)) / (1.-spectralRoughnessNormalized) + T), \
     q.x -= .5,                                           \
     O += (sin(t+T)*.1+.1)*(1.+cos(t+T*.5+vec4(0,spectralCentroidMedian*20.,2,0))) \
