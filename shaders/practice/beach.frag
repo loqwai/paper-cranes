@@ -19,11 +19,8 @@ vec3 sun(vec2 uv){
 
 vec3 water(vec2 uv) {
     uv = uv * 10.;
-    float y = sin(uv.x + time);
-    if(uv.y < y){
-      return vec3(0.,0.,1.);
-    }
-    return vec3(0.0);
+    float y = sin(uv.x + time)*spectralCentroidMedian*1.5;
+    return vec3(0.,0.,step(uv.y,y));
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
@@ -39,8 +36,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     col=water(uv);
     if(col.b == 0.){
       col += sun(uv);
+    } else {
+      col = mix(col, last, 0.99);
     }
     // Output to screen
-    col = mix(col, last, knob_1);
     fragColor = vec4(col,1.0);
 }
