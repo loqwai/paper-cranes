@@ -122,7 +122,7 @@ const FeatureAdder = () => {
                                 onInput=${(e) => updateFeatureValue(name, e.target.value)}
                             />
                             <span> (${value})</span>
-                            <input type="number" value=${sliderRanges[name]?.max || 1} onInput=${(e) => updateSliderRange(name, sliderRanges[name]?.min ?? -1, e.target.value)} />
+                            <input type="number" value=${sliderRanges[name]?.value || 1} onInput=${(e) => updateSliderRange(name, sliderRanges[name]?.min ?? -1, e.target.value)} />
                             <br />
                         </div>
                     `,
