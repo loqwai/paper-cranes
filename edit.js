@@ -65,9 +65,7 @@ const FeatureAdder = () => {
     }
 
     useEffect(() => {
-        const initialFeatures = JSON.parse(
-            localStorage.getItem(SAVE_FEATURES_FILENAME) || '{"knob_1": {"min": -3, "max": 3, "value": 1}, "test2": {"min": -3, "max": 3, "value": 1}}',
-        )
+        const initialFeatures = JSON.parse(localStorage.getItem(SAVE_FEATURES_FILENAME) || '{"knob_1": {"min": -3, "max": 3, "value": 1}}')
         const initialCode = localStorage.getItem(SAVE_CODE_FILENAME)
         if (!initialCode) {
             localStorage.setItem(SAVE_CODE_FILENAME, DEFAULT_SHADER)
