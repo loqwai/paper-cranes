@@ -6,13 +6,25 @@ window.cranes = window.cranes || {}
 window.cranes.setState = () => {} // Will be properly initialized below
 const SAVE_FILE_NAME = 'cranes-manual-features'
 
-const FeatureEditor = ({ name, value, onChange }) => {
-    return html` <div className="edit-feature" key=${name}>
+const FeatureEditor = ({ name, min, max, value, onChange }) => {
+    const handleValueChange = (e) => {
+        onChange({ value: parseFloat(e.target.value) }) // Update only the value
+    }
+
+    const handleMinChange = (e) => {
+        onChange({ min: parseFloat(e.target.value) })
+    }
+
+    const handleMaxChange = (e) => {
+        onChange({ max: parseFloat(e.target.value) })
+    }
+
+    return html`<div className="edit-feature" key=${name}>
         <label>${name}:</label>
-        <input class="min-feature-value" type="number" value=${-3} onChange=${onChange} />
-        <input class="feature-value" type="range" min="${-3}" max=${1} value=${value ?? 1} step="0.01" />
-        <span> (${value.value ?? 1})</span>
-        <input class="max-feature-value" type="number" value=${1} />
+        <input class="min-feature-value" type="number" value=${min} onChange=${handleMinChange} />
+        <input class="feature-value" type="range" min="${min}" max=${max} value=${value} step="0.01" onChange=${handleValueChange} />
+        <span> (${value})</span>
+        <input class="max-feature-value" type="number" value=${max} onChange=${handleMaxChange} />
         <button>x</button>
     </div>`
 }
@@ -29,6 +41,10 @@ const FeatureAdder = () => {
         setNewFeatureName('')
     }
 
+    const updateFeature = (name, newValue) => {
+        setFeatures({ ...features, [name]: { ...features[name], ...newValue } })
+    }
+
     useEffect(() => {
         console.log('features changed', features)
     }, [features])
@@ -43,11 +59,10 @@ const FeatureAdder = () => {
                 <button type="button" onClick=${addNewFeature}>Add Feature</button>
             </div>
             <div id="existing-features-editor">
-                ${Object.entries(features).map(
-                    ([name, { min, max, value }]) => html`
-                        <${FeatureEditor} key=${name} name=${name} min=${min} max=${max} value=${value} onChange=${(newValue) => setFeatures({ ...features, [name]: newValue })} />
-                    `,
-                )}
+            ${Object.entries(features).map(
+                ([name, { min, max, value }]) =>
+                    html`<${FeatureEditor} key=${name} name=${name} min=${min} max=${max} value=${value} onChange=${(newValue) => updateFeature(name, newValue)} />`,
+            )}
             </div>
             <div className="save-load">
                 <button type="button">Save</button>
