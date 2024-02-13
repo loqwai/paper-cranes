@@ -9,12 +9,13 @@ form label input {
     flex: 1;
 }
 
-#editor {
+#feature-editor {
     flex: 1;
     padding: 3px;
     border-radius: 10px;
     display: flex;
     flex-direction: column;
+    min-height: 3em;
 }
 .new-feature {
     display: flex;
