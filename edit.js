@@ -5,7 +5,16 @@ import { html } from 'htm/preact'
 window.cranes = window.cranes || {}
 const SAVE_FEATURES_FILENAME = 'cranes-manual-features'
 const SAVE_CODE_FILENAME = 'cranes-manual-code'
+const DEFAULT_SHADER = `uniform float knob_1;
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
+// Normalized pixel coordinates (from 0 to 1)
+vec2 uv = fragCoord/iResolution.xy;
 
+vec3 col = vec3(1.,knob_1/2.,energy);
+// Output to screen
+fragColor = vec4(col,1.0);
+}`
 const FeatureEditor = ({ name, min, max, value, onChange, onDelete }) => {
     const handleValueChange = (e) => {
         onChange({ min, max, value: parseFloat(e.target.value) }) // Update only the value
@@ -59,6 +68,11 @@ const FeatureAdder = () => {
         const initialFeatures = JSON.parse(
             localStorage.getItem(SAVE_FEATURES_FILENAME) || '{"knob_1": {"min": -3, "max": 3, "value": 1}, "test2": {"min": -3, "max": 3, "value": 1}}',
         )
+        const initialCode = localStorage.getItem(SAVE_CODE_FILENAME)
+        if (!initialCode) {
+            localStorage.setItem(SAVE_CODE_FILENAME, DEFAULT_SHADER)
+            window.location.reload()
+        }
         window.cranes.setFeatures = setFeatures
         setFeatures(initialFeatures)
     }, [])
