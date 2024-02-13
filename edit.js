@@ -50,8 +50,6 @@ const FeatureAdder = () => {
         const initialFeatures = JSON.parse(
             localStorage.getItem(SAVE_FEATURES_FILENAME) || '{"knob_1": {"min": -3, "max": 3, "value": 1}, "test2": {"min": -3, "max": 3, "value": 1}}',
         )
-        window.cranes.manualFeatures = initialFeatures
-        console.log('manual features', initialFeatures)
         setFeatures(initialFeatures)
     }, [])
     const save = () => {
@@ -66,8 +64,8 @@ const FeatureAdder = () => {
     }
 
     useEffect(() => {
-        window.cranes.manualFeatures = features
-        console.log('useEffect', features)
+        // set window.cranes.manualFeatures to just the value of each feature
+        window.cranes.manualFeatures = Object.fromEntries(Object.entries(features).map(([name, { value }]) => [name, value]))
     }, [features])
 
     return html`
