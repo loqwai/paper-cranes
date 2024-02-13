@@ -3,7 +3,6 @@ import { useState, useCallback, useEffect } from 'preact/hooks'
 import { html } from 'htm/preact'
 
 window.cranes = window.cranes || {}
-window.cranes.setState = () => {} // Will be properly initialized below
 const SAVE_FEATURES_FILENAME = 'cranes-manual-features'
 const SAVE_CODE_FILENAME = 'cranes-manual-code'
 
@@ -60,6 +59,7 @@ const FeatureAdder = () => {
         const initialFeatures = JSON.parse(
             localStorage.getItem(SAVE_FEATURES_FILENAME) || '{"knob_1": {"min": -3, "max": 3, "value": 1}, "test2": {"min": -3, "max": 3, "value": 1}}',
         )
+        window.cranes.setFeatures = setFeatures
         setFeatures(initialFeatures)
     }, [])
     const save = () => {
