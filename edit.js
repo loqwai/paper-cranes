@@ -9,15 +9,15 @@ const SAVE_CODE_FILENAME = 'cranes-manual-code'
 
 const FeatureEditor = ({ name, min, max, value, onChange }) => {
     const handleValueChange = (e) => {
-        onChange({ value: parseFloat(e.target.value) }) // Update only the value
+        onChange({ min, max, value: parseFloat(e.target.value) }) // Update only the value
     }
 
     const handleMinChange = (e) => {
-        onChange({ min: parseFloat(e.target.value) })
+        onChange({ min: parseFloat(e.target.value), max, value })
     }
 
     const handleMaxChange = (e) => {
-        onChange({ max: parseFloat(e.target.value) })
+        onChange({ min, max: parseFloat(e.target.value), value })
     }
 
     return html`<div className="edit-feature" key=${name}>
@@ -43,11 +43,16 @@ const FeatureAdder = () => {
     }
 
     const updateFeature = (name, newValue) => {
-        setFeatures({ ...features, [name]: { ...features[name], ...newValue } })
+        setFeatures({ ...features, [name]: newValue })
     }
 
     useEffect(() => {
-        setFeatures(JSON.parse(localStorage.getItem(SAVE_FEATURES_FILENAME) || '{"knob_1": {"min": -3, "max": 3, "value": 1}, "test2": {"min": -3, "max": 3, "value": 1}}'))
+        const initialFeatures = JSON.parse(
+            localStorage.getItem(SAVE_FEATURES_FILENAME) || '{"knob_1": {"min": -3, "max": 3, "value": 1}, "test2": {"min": -3, "max": 3, "value": 1}}',
+        )
+        window.cranes.manualFeatures = initialFeatures
+        console.log('manual features', initialFeatures)
+        setFeatures(initialFeatures)
     }, [])
     const save = () => {
         localStorage.setItem(SAVE_FEATURES_FILENAME, JSON.stringify(features))
@@ -59,6 +64,12 @@ const FeatureAdder = () => {
         localStorage.removeItem(SAVE_CODE_FILENAME)
         window.location.reload()
     }
+
+    useEffect(() => {
+        window.cranes.manualFeatures = features
+        console.log('useEffect', features)
+    }, [features])
+
     return html`
         <${Fragment}>
             <div className="new-feature">

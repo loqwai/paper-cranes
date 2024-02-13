@@ -82,6 +82,7 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl, fullscre
         const prevFrame = frameBuffers[(frameNumber + 1) % 2]
 
         gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, frame.framebuffer)
+
         const uniforms = {
             time,
             prevFrame: frameNumber === 0 ? initialTexture : prevFrame.attachments[0],

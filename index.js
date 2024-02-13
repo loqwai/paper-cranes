@@ -44,15 +44,9 @@ const main = async () => {
         window.cranes.overwrittenAudioFeatures = JSON.parse(localStorage.getItem('overwrittenAudioFeatures'))
     }
 
-    window.cranes.saveManualFeatures = (name) => {
-        localStorage.setItem(`manual-features-${name}`, JSON.stringify(window.cranes.manualFeatures))
-    }
-
     window.cranes.loadManualFeatures = (name) => {
         window.cranes.manualFeatures = JSON.parse(localStorage.getItem(`manual-features-${name}`))
     }
-
-    window.cranes.manualFeatures = {}
     window.c = cranes
     startTime = performance.now()
     const audio = await setupAudio()
@@ -67,7 +61,7 @@ const main = async () => {
     }
 
     if (!shader) {
-        shader = localStorage.getItem('shader')
+        shader = localStorage.getItem('cranes-manual-code')
     }
 
     if (!shader) {
