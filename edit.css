@@ -19,7 +19,7 @@ form label input {
 }
 .edit-feature {
     display:grid;
-    grid-template-columns: 3em 2.5em auto 1.5em 2.5em 1.5em;
+    grid-template-columns: 6em 2.5em auto 1.5em 2.5em 1.5em;
 }
 .new-feature {
     display: grid;
