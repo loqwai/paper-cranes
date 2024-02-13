@@ -21,10 +21,10 @@ const FeatureEditor = ({ name, min, max, value, onChange }) => {
 
     return html`<div className="edit-feature" key=${name}>
         <label>${name}:</label>
-        <input class="min-feature-value" type="number" value=${min} onChange=${handleMinChange} />
-        <input class="feature-value" type="range" min="${min}" max=${max} value=${value} step="0.01" onChange=${handleValueChange} />
+        <input class="min-feature-value" step="0.1" type="number" value=${min} onInput=${handleMinChange} />
+        <input class="feature-value" type="range" min="${min}" max=${max} value=${value} step="0.01" onInput=${handleValueChange} />
         <span> (${value})</span>
-        <input class="max-feature-value" type="number" value=${max} onChange=${handleMaxChange} />
+        <input class="max-feature-value" step="0.1" type="number" value=${max} onInput=${handleMaxChange} />
         <button>x</button>
     </div>`
 }
