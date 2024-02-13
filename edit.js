@@ -22,7 +22,7 @@ const FeatureAdder = () => {
                     ([name, value]) => html`
                         <div className="edit-feature" key=${name}>
                             <label>${name}:</label>
-                            <input class="min-feature-value" type="number" value="${-3}}" />
+                            <input class="min-feature-value" type="number" value=${-3} />
                             <input class="feature-value" type="range" min="${-3}" max=${1} value=${value ?? 1} step="0.01" />
                             <span> (${value ?? 1})</span>
                             <input class="max-feature-value" type="number" value=${1} />
