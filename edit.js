@@ -4,7 +4,8 @@ import { html } from 'htm/preact'
 
 window.cranes = window.cranes || {}
 window.cranes.setState = () => {} // Will be properly initialized below
-const SAVE_FILE_NAME = 'cranes-manual-features'
+const SAVE_FEATURES_FILENAME = 'cranes-manual-features'
+const SAVE_CODE_FILENAME = 'cranes-manual-code'
 
 const FeatureEditor = ({ name, min, max, value, onChange }) => {
     const handleValueChange = (e) => {
@@ -46,12 +47,18 @@ const FeatureAdder = () => {
     }
 
     useEffect(() => {
-        console.log('features changed', features)
-    }, [features])
-
-    useEffect(() => {
-        setFeatures(JSON.parse(localStorage.getItem(SAVE_FILE_NAME) || '{"knob_1": {"min": -3, "max": 3, "value": 1}, "test2": {"min": -3, "max": 3, "value": 1}}'))
+        setFeatures(JSON.parse(localStorage.getItem(SAVE_FEATURES_FILENAME) || '{"knob_1": {"min": -3, "max": 3, "value": 1}, "test2": {"min": -3, "max": 3, "value": 1}}'))
     }, [])
+    const save = () => {
+        localStorage.setItem(SAVE_FEATURES_FILENAME, JSON.stringify(features))
+        localStorage.setItem(SAVE_CODE_FILENAME, editor.getValue())
+        window.location.reload()
+    }
+    const reset = () => {
+        localStorage.removeItem(SAVE_FEATURES_FILENAME)
+        localStorage.removeItem(SAVE_CODE_FILENAME)
+        window.location.reload()
+    }
     return html`
         <${Fragment}>
             <div className="new-feature">
@@ -65,8 +72,8 @@ const FeatureAdder = () => {
             )}
             </div>
             <div className="save-load">
-                <button type="button">Save</button>
-                <button type="button">Reset</button>
+                <button type="button" onClick=${save}>Save</button>
+                <button type="button" onClick=${reset}>Reset</button>
             </div>
         </${Fragment}>
     `
