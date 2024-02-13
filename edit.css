@@ -11,7 +11,7 @@ form label input {
 
 #feature-editor {
     flex: 1;
-    padding: 3px;
+    padding: 1em;
     border-radius: 10px;
     display: flex;
     flex-direction: column;
@@ -22,8 +22,9 @@ form label input {
     grid-template-columns: 3em 2.5em auto 1.5em 2.5em 1.5em;
 }
 .new-feature {
-    display: flex;
-    justify-content: start;
+    display: grid;
+    grid-template-columns: auto 6em;
+    margin-bottom: 0.5em;
 }
 
 .save-load {
