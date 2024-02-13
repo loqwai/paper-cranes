@@ -17,21 +17,15 @@ form label input {
     flex-direction: column;
     min-height: 3em;
 }
+.edit-feature {
+    display:grid;
+    grid-template-columns: 3em 2.5em auto 1.5em 2.5em 1.5em;
+}
 .new-feature {
     display: flex;
     justify-content: start;
 }
-.edit-feature {
-    display: flex;
-}
 
-.edit-feature input {
-    width: 3em;
-}
-
-.edit-feature input[type='range'] {
-    flex: 1;
-}
 .save-load {
     margin-top: 0.5em;
     display: flex;

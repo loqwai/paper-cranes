@@ -9,7 +9,7 @@ const SAVE_FILE_NAME = 'cranes-manual-features'
 const FeatureAdder = () => {
     const [features, setFeatures] = useState({})
     useEffect(() => {
-        setFeatures(JSON.parse(localStorage.getItem(SAVE_FILE_NAME) || '{"test": {"min": -3, "max": 3, "value": 1}}'))
+        setFeatures(JSON.parse(localStorage.getItem(SAVE_FILE_NAME) || '{"test": {"min": -3, "max": 3, "value": 1}, "test2": {"min": -3, "max": 3, "value": 1}}'))
     }, [])
     return html`
         <Fragment>
@@ -17,7 +17,7 @@ const FeatureAdder = () => {
                 <input type="text" placeholder="Enter new feature name" value="test" />
                 <button type="button">Add Feature</button>
             </div>
-            <form>
+            <form id="existing-features-editor">
                 ${Object.entries(features).map(
                     ([name, value]) => html`
                         <div className="edit-feature" key=${name}>
