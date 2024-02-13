@@ -7,7 +7,7 @@ window.cranes.setState = () => {} // Will be properly initialized below
 const SAVE_FEATURES_FILENAME = 'cranes-manual-features'
 const SAVE_CODE_FILENAME = 'cranes-manual-code'
 
-const FeatureEditor = ({ name, min, max, value, onChange }) => {
+const FeatureEditor = ({ name, min, max, value, onChange, onDelete }) => {
     const handleValueChange = (e) => {
         onChange({ min, max, value: parseFloat(e.target.value) }) // Update only the value
     }
@@ -20,13 +20,17 @@ const FeatureEditor = ({ name, min, max, value, onChange }) => {
         onChange({ min, max: parseFloat(e.target.value), value })
     }
 
+    const handleDelete = () => {
+        onDelete(name)
+    }
+
     return html`<div className="edit-feature" key=${name}>
         <label>${name}:</label>
         <input class="min-feature-value" step="0.1" type="number" value=${min} onInput=${handleMinChange} />
         <input class="feature-value" type="range" min="${min}" max=${max} value=${value} step="0.01" onInput=${handleValueChange} />
         <span> (${value})</span>
         <input class="max-feature-value" step="0.1" type="number" value=${max} onInput=${handleMaxChange} />
-        <button>x</button>
+        <button onClick=${handleDelete}>x</button>
     </div>`
 }
 
@@ -44,6 +48,12 @@ const FeatureAdder = () => {
 
     const updateFeature = (name, newValue) => {
         setFeatures({ ...features, [name]: newValue })
+    }
+
+    const deleteFeature = (name) => {
+        const newFeatures = { ...features }
+        delete newFeatures[name]
+        setFeatures(newFeatures)
     }
 
     useEffect(() => {
@@ -77,7 +87,15 @@ const FeatureAdder = () => {
             <div id="existing-features-editor">
             ${Object.entries(features).map(
                 ([name, { min, max, value }]) =>
-                    html`<${FeatureEditor} key=${name} name=${name} min=${min} max=${max} value=${value} onChange=${(newValue) => updateFeature(name, newValue)} />`,
+                    html`<${FeatureEditor}
+                        key=${name}
+                        name=${name}
+                        min=${min}
+                        max=${max}
+                        value=${value}
+                        onChange=${(newValue) => updateFeature(name, newValue)}
+                        onDelete=${deleteFeature}
+                    />`,
             )}
             </div>
             <div className="save-load">

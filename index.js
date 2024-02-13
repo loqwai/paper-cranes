@@ -113,7 +113,6 @@ const animate = ({ render, audio, shader }) => {
     shader = window?.shader ?? shader
     const measuredAudioFeatures = audio.getFeatures()
     const { overwrittenAudioFeatures, manualFeatures = {} } = window.cranes
-    console.log('cranes', manualFeatures)
     window.cranes.measuredAudioFeatures = measuredAudioFeatures
     const features = { ...measuredAudioFeatures, ...overwrittenAudioFeatures, ...manualFeatures }
     render({ time: (performance.now() - startTime) / 1000, features, shader })
