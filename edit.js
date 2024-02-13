@@ -118,5 +118,22 @@ const FeatureAdder = () => {
     `
 }
 
+// check to see if we have a query param for the shader
+const urlParams = new URLSearchParams(window.location.search)
+const shader = urlParams.get('shader')
+// if we do, fetch the code and set it in local storage. Then remove the query param and reload the page
+//if we do, and we don't have anything in localstorage, fetch the code and set it in local storage. Then remove the query param and reload the page
+// then reload the page
+if (shader) {
+    fetch(`shaders/${shader}.frag`)
+        .then((response) => response.text())
+        .then((data) => {
+            localStorage.setItem(SAVE_CODE_FILENAME, data)
+            // remove the query param and reload the page
+            window.location.search = ''
+            const reloadUrl = window.location.href.split('?')[0]
+            window.location.href = reloadUrl
+        })
+}
 // Cast our spell, bringing the FeatureAdder to life within the digital ether
 render(html`<${FeatureAdder} />`, document.getElementById('feature-editor'))
