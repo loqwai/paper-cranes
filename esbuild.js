@@ -17,7 +17,7 @@ esbuild
         format: 'esm',
         bundle: true,
         minify: true,
-        sourcemap: false,
+        sourcemap: process.env.NODE_ENV ? false : true,
         outdir: path.join(__dirname, 'dist'),
         treeShaking: true, // The essence of your quest,
         define: {

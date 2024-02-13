@@ -9,28 +9,24 @@ form label input {
     flex: 1;
 }
 
-#editor {
+#feature-editor {
     flex: 1;
-    padding: 3px;
+    padding: 1em;
     border-radius: 10px;
     display: flex;
     flex-direction: column;
-}
-.new-feature {
-    display: flex;
-    justify-content: start;
+    min-height: 3em;
 }
 .edit-feature {
-    display: flex;
+    display:grid;
+    grid-template-columns: 6em 3.5em auto 3.5em 2.5em 1.5em;
+}
+.new-feature {
+    display: grid;
+    grid-template-columns: auto 6em;
+    margin-bottom: 0.5em;
 }
 
-.edit-feature input {
-    width: 3em;
-}
-
-.edit-feature input[type='range'] {
-    flex: 1;
-}
 .save-load {
     margin-top: 0.5em;
     display: flex;

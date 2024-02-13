@@ -1,140 +1,139 @@
-import { render } from 'preact'
+import { render, Fragment } from 'preact'
 import { useState, useCallback, useEffect } from 'preact/hooks'
 import { html } from 'htm/preact'
 
 window.cranes = window.cranes || {}
-window.cranes.setState = () => {} // Will be properly initialized below
-const SAVE_FILE_NAME = 'cranes-manual-features'
-// get an array of slider names from the 'slider' query parameter
-const sliderNames = new URLSearchParams(window.location.search).getAll('slider')
+const SAVE_FEATURES_FILENAME = 'cranes-manual-features'
+const SAVE_CODE_FILENAME = 'cranes-manual-code'
+const DEFAULT_SHADER = `uniform float knob_1;
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
+    // Normalized pixel coordinates (from 0 to 1)
+    vec2 uv = fragCoord/iResolution.xy;
 
-const FeatureAdder = () => {
-    const [features, setFeatures] = useState(
-        localStorage.getItem(SAVE_FILE_NAME)
-            ? JSON.parse(localStorage.getItem(SAVE_FILE_NAME))
-            : {
-                  knob_1: {
-                      knob_1: { min: -3, max: 3, value: 1 },
-                  },
-              },
-    )
-    const [newFeatureName, setNewFeatureName] = useState('')
-    const [sliderRanges, setSliderRanges] = useState({})
-
-    // A spell to update our internal state based on external will
-    const updateFeaturesFromOutside = useCallback((newFeatures) => {
-        setFeatures((prevFeatures) => ({
-            ...prevFeatures,
-            ...newFeatures,
-        }))
-    }, [])
-
-    useEffect(() => {
-        // If there are no sliders, we're done here
-        if (sliderNames.length === 0) return
-
-        // Initialize the sliders with the given names
-        const newFeatures = sliderNames.reduce((acc, name) => {
-            acc[name] = 1
-            return acc
-        }, {})
-        setFeatures(newFeatures)
-        setSliderRanges(
-            sliderNames.reduce((acc, name) => {
-                acc[name] = { min: -3, max: 3 }
-                return acc
-            }, {}),
-        )
-    }, [sliderNames])
-
-    // Bind our will to the global cranes.setState, allowing the external
-    // realms to influence our internal dominion
-    useEffect(() => {
-        window.cranes.getState = () => features
-        window.cranes.setState = updateFeaturesFromOutside
-    }, [features, updateFeaturesFromOutside])
-
-    const updateFeatureValue = (name, value) => {
-        const newFeatures = { ...features, [name]: parseFloat(value) }
-        setFeatures(newFeatures)
-
-        // Reflect this change globally, ensuring our actions echo in the outer realms
-        window.cranes.manualFeatures = window.cranes.manualFeatures || {}
-        window.cranes.manualFeatures[name] = parseFloat(value)
+    vec3 col = vec3(1.,knob_1/2.,energy);
+    // Output to screen
+    fragColor = vec4(col,1.0);
+}`
+const FeatureEditor = ({ name, min, max, value, onChange, onDelete }) => {
+    const handleValueChange = (e) => {
+        onChange({ min, max, value: parseFloat(e.target.value) }) // Update only the value
     }
 
+    const handleMinChange = (e) => {
+        onChange({ min: parseFloat(e.target.value), max, value })
+    }
+
+    const handleMaxChange = (e) => {
+        onChange({ min, max: parseFloat(e.target.value), value })
+    }
+
+    const handleDelete = () => {
+        onDelete(name)
+    }
+
+    return html`<div className="edit-feature" key=${name}>
+        <label>${name}:</label>
+        <input class="min-feature-value" step="0.1" type="number" value=${min} onInput=${handleMinChange} />
+        <input class="feature-value" type="range" min="${min}" max=${max} value=${value} step="0.01" onInput=${handleValueChange} />
+        <span> (${value})</span>
+        <input class="max-feature-value" step="0.1" type="number" value=${max} onInput=${handleMaxChange} />
+        <button onClick=${handleDelete}>x</button>
+    </div>`
+}
+
+const FeatureAdder = () => {
+    const [features, setFeatures] = useState({})
+    const [newFeatureName, setNewFeatureName] = useState('')
     const addNewFeature = () => {
-        if (!newFeatureName.trim()) {
+        if (!newFeatureName) {
             alert('Feature name cannot be empty')
             return
         }
-
-        // Summon the new feature into our realm and the global dominion alike
-        const newFeatures = { ...features, [newFeatureName]: 1 }
-        const newSliderRanges = { ...sliderRanges, [newFeatureName]: { min: -3, max: 3, value: 1 } }
-        setFeatures(newFeatures)
-        setSliderRanges(newSliderRanges)
-        window.cranes.manualFeatures = window.cranes.manualFeatures || {}
-        window.cranes.manualFeatures[newFeatureName] = undefined
-
-        setNewFeatureName('') // Clear the incantation for the next summoning
+        setFeatures({ ...features, [newFeatureName]: { min: -3, max: 3, value: 1 } })
+        setNewFeatureName('')
     }
 
-    const saveCode = () => {
-        if (window.editor) {
-            window.shader = window.editor.getValue()
-            localStorage.setItem('shader', window.shader)
-            localStorage.setItem(SAVE_FILE_NAME, JSON.stringify(features))
-            // remove the shader from the URL
-            window.history.pushState({}, document.title, window.location.pathname)
+    const updateFeature = (name, newValue) => {
+        setFeatures({ ...features, [name]: newValue })
+    }
 
+    const deleteFeature = (name) => {
+        const newFeatures = { ...features }
+        delete newFeatures[name]
+        setFeatures(newFeatures)
+    }
+
+    useEffect(() => {
+        const initialFeatures = JSON.parse(localStorage.getItem(SAVE_FEATURES_FILENAME) || '{"knob_1": {"min": -3, "max": 3, "value": 1}}')
+        const initialCode = localStorage.getItem(SAVE_CODE_FILENAME)
+        if (!initialCode) {
+            localStorage.setItem(SAVE_CODE_FILENAME, DEFAULT_SHADER)
             window.location.reload()
         }
-    }
-    const clearCode = () => {
-        localStorage.removeItem('shader')
-        localStorage.removeItem(SAVE_FILE_NAME)
+        window.cranes.setFeatures = setFeatures
+        setFeatures(initialFeatures)
+    }, [])
+    const save = () => {
+        localStorage.setItem(SAVE_FEATURES_FILENAME, JSON.stringify(features))
+        localStorage.setItem(SAVE_CODE_FILENAME, editor.getValue())
         window.location.reload()
     }
-    const updateSliderRange = (name, min, max) => {
-        const newSliderRanges = { ...sliderRanges, [name]: { min: parseFloat(min), max: parseFloat(max) } }
-        setSliderRanges(newSliderRanges)
+    const reset = () => {
+        localStorage.removeItem(SAVE_FEATURES_FILENAME)
+        localStorage.removeItem(SAVE_CODE_FILENAME)
+        window.location.reload()
     }
 
+    useEffect(() => {
+        // set window.cranes.manualFeatures to just the value of each feature
+        window.cranes.manualFeatures = Object.fromEntries(Object.entries(features).map(([name, { value }]) => [name, value]))
+    }, [features])
+
     return html`
-        <div id="editor">
+        <${Fragment}>
             <div className="new-feature">
-                <input type="text" placeholder="Enter new feature name" value=${newFeatureName} onInput=${(e) => setNewFeatureName(e.target.value)} />
+                <input type="text" value=${newFeatureName} onChange=${(e) => setNewFeatureName(e.target.value)} placeholder="Enter new feature name" />
                 <button type="button" onClick=${addNewFeature}>Add Feature</button>
             </div>
-            <form>
-                ${Object.entries(features).map(
-                    ([name, value]) => html`
-                        <div className="edit-feature" key=${name}>
-                            <label>${name}:</label>
-                            <input type="number" value=${sliderRanges[name]?.min ?? -3} onInput=${(e) => updateSliderRange(name, e.target.value, sliderRanges[name]?.max ?? 3)} />
-                            <input
-                                type="range"
-                                min=${sliderRanges[name]?.min ?? -3}
-                                max=${sliderRanges[name]?.max ?? 3}
-                                value=${value ?? 1}
-                                step="0.01"
-                                onInput=${(e) => updateFeatureValue(name, e.target.value)}
-                            />
-                            <span> (${value})</span>
-                            <input type="number" value=${sliderRanges[name]?.max ?? 1} onInput=${(e) => updateSliderRange(name, sliderRanges[name]?.min ?? -1, e.target.value)} />
-                            <br />
-                        </div>
-                    `,
-                )}
-            </form>
-            <div className="save-load">
-                <button type="button" onClick=${saveCode}>Save</button>
-                <button type="button" onClick=${clearCode}>Reset</button>
+            <div id="existing-features-editor">
+            ${Object.entries(features).map(
+                ([name, { min, max, value }]) =>
+                    html`<${FeatureEditor}
+                        key=${name}
+                        name=${name}
+                        min=${min}
+                        max=${max}
+                        value=${value}
+                        onChange=${(newValue) => updateFeature(name, newValue)}
+                        onDelete=${deleteFeature}
+                    />`,
+            )}
             </div>
-        </div>
+            <div className="save-load">
+                <button type="button" onClick=${save}>Save</button>
+                <button type="button" onClick=${reset}>Reset</button>
+            </div>
+        </${Fragment}>
     `
 }
 
+// check to see if we have a query param for the shader
+const urlParams = new URLSearchParams(window.location.search)
+const shader = urlParams.get('shader')
+// if we do, fetch the code and set it in local storage. Then remove the query param and reload the page
+//if we do, and we don't have anything in localstorage, fetch the code and set it in local storage. Then remove the query param and reload the page
+// then reload the page
+if (shader) {
+    fetch(`shaders/${shader}.frag`)
+        .then((response) => response.text())
+        .then((data) => {
+            localStorage.setItem(SAVE_CODE_FILENAME, data)
+            // remove the query param and reload the page
+            window.location.search = ''
+            const reloadUrl = window.location.href.split('?')[0]
+            window.location.href = reloadUrl
+        })
+}
 // Cast our spell, bringing the FeatureAdder to life within the digital ether
-render(html`<${FeatureAdder} />`, document.getElementById('editor'))
+render(html`<${FeatureAdder} />`, document.getElementById('feature-editor'))
