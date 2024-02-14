@@ -21,7 +21,7 @@ esbuild
         outdir: path.join(__dirname, 'dist'),
         treeShaking: true, // The essence of your quest,
         define: {
-            CACHE_NAME: `"cache_${Date.now()}"`,
+            CACHE_NAME: `"cranes-cache-v1"`,
         },
     })
     .then(() => {
