@@ -76,7 +76,6 @@ float map(vec3 p){
     //
     // Partial fix to alleviate artifacts after running the program for a while.
     // Thanks to Reyparis and Ollj.
-    float PI = 3.14159265358979;
     p = cos(mod(p*.315*spectralCentroid + sin(mod(p.zxy*.875*spectralCentroid, 2.*PI)), 2.*PI));
 
     float n = length(p); // Spherize. The result is some mutated, spherical blob-like shapes.
