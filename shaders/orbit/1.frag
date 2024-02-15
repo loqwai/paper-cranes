@@ -20,7 +20,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     col *= droplet;
     vec3 hsl = rgb2hsl(col);
     if(hsl.z < 0.3) {
-        
         col = mix(l,col,length(uv)/(30.+sin(iTime)));
     }
     fragColor = vec4(col,1.0);
