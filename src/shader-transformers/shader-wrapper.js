@@ -56,12 +56,23 @@ uniform int frame;
 
 uniform sampler2D prevFrame;// Texture of the previous frame
 
-uniform float random;
-float rnd(vec2 st){
-  //rotate st by time
-    st=vec2(st.x*cos(random)-st.y*sin(random),
-    st.x*sin(random)+st.y*cos(random));
+uniform float iRandom;
+float random(vec2 st){
+    st=vec2(st.x*cos(iRandom)-st.y*sin(iRandom),
+    st.x*sin(iRandom)+st.y*cos(iRandom));
     return fract(sin(dot(st.xy, vec2(12.9898,78.233)))* 11118.5453123);
+}
+
+float random(float x){
+    return random(vec2(x,0.0));
+}
+
+float random(float x, float y){
+    return random(vec2(x,y));
+}
+
+float random() {
+    return random(vec2(0.0));
 }
 
 vec4 getLastFrameColor(vec2 uv){
