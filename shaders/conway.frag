@@ -1,15 +1,4 @@
 
-
-vec2 centerUv(vec2 res,vec2 coord){
-    // step 1: normalize the coord to 0-1
-    vec2 uv=coord.xy/res;
-    // step 2: center the uv
-    uv-=.5;
-    // step 3: scale the uv to -1 to 1
-    uv*=2.;
-    return uv;
-}
-
 vec4 getLastColor(vec2 uv){
     vec2 sampleUv=uv/2.;
     sampleUv+=.5;
@@ -79,10 +68,10 @@ vec4 play(){
 
     return vec4(0.);
 }
-void main(void){
+void mainImage(out vec4 fragColor,in vec2 fragCoord){
     vec2 uv=centerUv(resolution,gl_FragCoord.xy);
     if(frame==0){
-        fragColor=init(uv);
+        fragColor=vec4(rnd(uv));
         return;
     }
 
