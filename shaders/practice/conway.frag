@@ -58,27 +58,27 @@ vec2 truchetPattern(in vec2 _st, in float _index){
     } else if (_index > 0.25) {
         _st = 1.0-vec2(1.0-_st.x,_st.y);
     }
-    return _st;
+    return _st * spectralCentroid;
 }
 
-
+vec4 init(vec2 st){
+    vec2 ipos = floor(st*CELL_SIZE);
+    vec2 fpos = fract(st*CELL_SIZE);
+    vec4 color = vec4(0.0);
+    if (random(ipos) > 0.5) {
+        color = vec4(1.0);
+    }
+    return color;
+}
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec2 st = gl_FragCoord.xy/resolution.xy;
+    vec2 st = fragCoord.xy/resolution.xy;
 
-    st *= 10.; // Scale the coordinate system by 10
-    vec2 ipos = floor(st);  // get the integer coords
-    vec2 fpos = fract(st);  // get the fractional coords
+    st *= CELL_SIZE; // Scale the coordinate system by 10
+    vec3 last = getLastColor(st).rgb;
+    if(frame == 0){
+        fragColor = init(st);
+        return;
+    }
 
-    // Assign a random value based on the integer coord
-    vec2 tile = truchetPattern(fpos, random( ipos ));
-
-    float color = 0.0;
-     color = smoothstep(tile.x-0.3,tile.x,tile.y)-
-            smoothstep(tile.x,tile.x+0.3,tile.y);
-    // Uncomment to see the subdivided grid
-    // color = vec3(fpos,0.0);
-    vec4 l = getLastColor(st);
-    vec4 c = vec4(vec3(color),1.0);
-    c = mix(l,c,0.01);
-    fragColor = c;
+    fragColor = vec4(last, 1.);
 }
