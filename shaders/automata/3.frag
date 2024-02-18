@@ -18,14 +18,15 @@ vec2 mapMusicFeatureToUV(float zScore1, float zScore2) {
 
 vec4 play(vec2 uv) {
     vec2 lastUv = floor(uv * CELL_SIZE) / CELL_SIZE + 0.5 / CELL_SIZE;
-    vec4 last = getLastFrameColor(lastUv);
-
-    //rotate uv over time
-    uv -= 0.5;
+        uv -= 0.5;
     float s = sin(iTime);
     float c = cos(iTime);
     mat2 rotation = mat2(c, -s, s, c);
     uv = rotation * uv + 0.5;
+    vec4 last = getLastFrameColor(lastUv);
+
+    //rotate uv over time
+
     // Modify game rules based on energy
     int underpopulationThreshold = beat ? 1 : 2;
     int overpopulationThreshold = beat ? 4 : 3;
@@ -65,5 +66,5 @@ vec4 play(vec2 uv) {
 }
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord.xy / resolution.xy;
-    fragColor = play(uv);
+    fragColor = play(uv)*0.80;
 }
