@@ -17,12 +17,15 @@ vec2 mapMusicFeatureToUV(float zScore1, float zScore2) {
 }
 
 vec4 play(vec2 uv) {
-    vec2 lastUv = floor(uv * CELL_SIZE) / CELL_SIZE + 0.5 / CELL_SIZE;
-        uv -= 0.5;
+
+    uv -= 0.5;
     float s = sin(iTime);
     float c = cos(iTime);
     mat2 rotation = mat2(c, -s, s, c);
     uv = rotation * uv + 0.5;
+
+    vec2 lastUv = floor(uv * CELL_SIZE) / CELL_SIZE + 0.5 / CELL_SIZE;
+
     vec4 last = getLastFrameColor(lastUv);
 
     //rotate uv over time
@@ -37,11 +40,6 @@ vec4 play(vec2 uv) {
     vec2 aliveUv2 = mapMusicFeatureToUV(spectralKurtosisZScore, spectralRoughnessZScore);
     if (distance(uv, aliveUv1) < 0.01 || distance(uv, aliveUv2) < 0.01) {
         return vec4(0.8157, 0.9608, 0.0, 1.0);
-    }
-
-    vec2 deadUv = mapMusicFeatureToUV(spectralSkewZScore, spectralSpreadZScore);
-    if (distance(uv, deadUv) < 0.01) {
-        return vec4(1.0, 0.0, 1.0, 1.0);
     }
 
     // Game logic remains the same, but thresholds are now dynamic
@@ -66,5 +64,5 @@ vec4 play(vec2 uv) {
 }
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord.xy / resolution.xy;
-    fragColor = play(uv)*0.80;
+    fragColor = play(uv)*0.990;
 }

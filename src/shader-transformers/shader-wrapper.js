@@ -158,6 +158,10 @@ vec3 rgb2hsl(vec3 color){
     return uv;
 }
 
+vec2 centerUv(vec2 coord) {
+    return centerUv(resolution, coord);
+}
+
 vec3 hslmix(vec3 c1, vec3 c2, float t){
     vec3 hsl1 = rgb2hsl(c1);
     vec3 hsl2 = rgb2hsl(c2);
