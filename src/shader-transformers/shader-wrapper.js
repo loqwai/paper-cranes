@@ -16,7 +16,11 @@ precision highp float;
 out vec4 fragColor;
 ${shaderToyCompatibilityUniforms()}
 ${getAudioUniforms()}
+
 ${paperCranes()}
+vec4 getLastFrameColor(vec2 uv){
+    return texture(prevFrame, uv);
+}
 ${shader}
 
 void main(void){
@@ -33,11 +37,26 @@ precision highp float;
 out vec4 fragColor;
 ${shaderToyCompatibilityUniforms()}
 ${getAudioUniforms()}
+
 ${paperCranes()}
+vec4 getLastFrameColor(vec2 uv){
+    // Assuming uv.x was previously multiplied by the aspect ratio, we'll divide it now.
+    float aspectRatio = iResolution.x / iResolution.y;
+    vec2 correctedUV = uv;
+    correctedUV.x /= aspectRatio; // Undo the aspect ratio correction
+    //move the uv to the center
+    correctedUV -= 0.5;
+    // Now, use correctedUV to sample from the previous frame
+    return texture(prevFrame, correctedUV);
+}
 ${shader}
 
 void main(void){
-    fragColor = render(gl_FragCoord.xy/resolution.xy);
+    vec2 resolution = iResolution.xy;
+    vec2 uv = (gl_FragCoord.xy - 0.5 * resolution) / resolution.y;
+    // This is the magic line, the one "they" don't want you to figure out.
+    float aspectRatio = resolution.x / resolution.y;
+    fragColor = render(uv);
 }
 `
     }
@@ -87,14 +106,6 @@ float random(vec2 st){
 
 float staticRandom(vec2 st){
     return random(st, 0.);
-}
-
-vec4 getLastFrameColor(vec2 uv){
-    return texture(prevFrame, uv);
-}
-
-vec4 lastColor(vec2 uv){
-    return getLastFrameColor(uv);
 }
 
 float mapValue(float val, float inMin, float inMax, float outMin, float outMax) {
@@ -172,6 +183,7 @@ vec3 rgb2hsl(vec3 color){
     uv -= 0.5;
     // step 3: scale the uv to -1 to 1
     uv *= 2.0;
+    uv += 0.5;
     return uv;
 }
 

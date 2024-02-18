@@ -7,7 +7,7 @@ bool isAlive(vec4 color) {
 }
 
 vec2 mapMusicFeatureToUV(float zScore1, float zScore2) {
-    return vec2(mapValue(zScore1, -3., 3., 0., 1.), mapValue(zScore2, -3., 3., 0., 1.));
+    return vec2(mapValue(zScore1, -3., 3., -1., 1.), mapValue(zScore2, -3., 3., -1., 1.));
 }
 
 vec4 play(vec2 uv) {
@@ -48,5 +48,12 @@ vec4 play(vec2 uv) {
 }
 
 vec4 render( vec2 uv ) {
-    return play(uv);
+    vec4 color = play(uv);
+        if(uv.x < 0.01 && uv.x > -.01){
+        color.g = 1.;
+    }
+    if(uv.y < 0.01 && uv.y > -.01){
+        color.b = 1.;
+    }
+    return color;
 }

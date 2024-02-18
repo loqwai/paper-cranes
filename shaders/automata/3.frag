@@ -13,16 +13,10 @@ vec4 dynamicCellColor(float c) {
 }
 
 vec2 mapMusicFeatureToUV(float zScore1, float zScore2) {
-    return vec2(mapValue(zScore1, -3., 3., 0., 1.), mapValue(zScore2, -3., 3., 0., 1.));
+    return vec2(mapValue(zScore1, -3., 3., -1., 1.), mapValue(zScore2, -3., 3., -1., 1.));
 }
 
 vec4 play(vec2 uv) {
-
-    uv -= 0.5;
-    float s = sin(iTime);
-    float c = cos(iTime);
-    mat2 rotation = mat2(c, -s, s, c);
-    uv = rotation * uv + 0.5;
 
     vec2 lastUv = floor(uv * CELL_SIZE) / CELL_SIZE + 0.5 / CELL_SIZE;
 
