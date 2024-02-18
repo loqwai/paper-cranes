@@ -62,7 +62,6 @@ vec4 play(vec2 uv) {
         return (aliveCount == reproduction) ? dynamicCellColor(spectralCentroid) : last * (beat ? 0.9 : 0.75);
     }
 }
-void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec2 uv = fragCoord.xy / resolution.xy;
-    fragColor = play(uv)*0.990;
+vec4 render(vec2 uv) {
+    return play(uv)*0.990;
 }

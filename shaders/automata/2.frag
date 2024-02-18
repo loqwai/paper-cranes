@@ -47,7 +47,6 @@ vec4 play(vec2 uv) {
     }
 }
 
-void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec2 uv = fragCoord.xy / resolution.xy;
-    fragColor = play(uv);
+vec4 render( vec2 uv ) {
+    return play(uv);
 }

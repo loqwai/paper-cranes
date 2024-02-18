@@ -24,7 +24,24 @@ void main(void){
 }
 `
     }
-    throw new Error('Shader must have a mainImage function. It looks like this: \n void mainImage(out vec4 fragColor,in vec2 fragCoord){')
+    if (shader.includes('render')) {
+        return /* glsl */ `
+#version 300 es
+precision highp float;
+// This is automatically added by paper-cranes
+#define PAPER_CRANES 1
+out vec4 fragColor;
+${shaderToyCompatibilityUniforms()}
+${getAudioUniforms()}
+${paperCranes()}
+${shader}
+
+void main(void){
+    fragColor = render(gl_FragCoord.xy/resolution.xy);
+}
+`
+    }
+    throw new Error('Shader must have a render function. It looks like this: \n vec4 render(vec2 uv){')
 }
 
 const shaderToyCompatibilityUniforms = () => /* glsl */ `
