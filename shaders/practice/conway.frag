@@ -1,15 +1,11 @@
 #define CELL_SIZE 10.
-vec4 getLastColor(vec2 uv){
-    vec2 sampleUv=uv/2.;
-    sampleUv+=.5;
-    return getLastFrameColor(sampleUv);
-}
 bool isAlive(vec4 color){
     return color.g > 0.75;
 }
-vec4 play(vec4 last) {
-    vec2 uv = gl_FragCoord.xy;
-
+vec4 play(vec2 uv) {
+    //get the last color that's in the center of a cell
+    vec2 lastUv = floor(uv * CELL_SIZE) / CELL_SIZE + 0.5 / CELL_SIZE;
+    vec4 last = getLastFrameColor(lastUv);
     // Count alive neighbors (consider edge cases)
     int aliveCount = 0;
     for (int i = -1; i <= 1; i++) {
@@ -17,15 +13,11 @@ vec4 play(vec4 last) {
             if (i == 0 && j == 0) {
                 continue; // Exclude the center cell
             }
-
-            vec2 offset = vec2(i, j);
-            vec2 neighborUv = uv + offset * CELL_SIZE;
-            neighborUv = fract(neighborUv);
-            vec4 neighborColor = getLastFrameColor(neighborUv);
-            if (isAlive(neighborColor)) {
+            vec2 neighborUv = lastUv + vec2(i, j) / CELL_SIZE;
+            vec4 neighbor = getLastFrameColor(neighborUv);
+            if (isAlive(neighbor)) {
                 aliveCount++;
             }
-            aliveCount++;
         }
     }
 
@@ -64,5 +56,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         fragColor = init(uv);
         return;
     }
-    fragColor = getLastFrameColor(uv);
+    if(frame % 100 != 0){
+        fragColor = getLastFrameColor(uv);
+        return;
+    }
+    fragColor = play(uv);
 }
