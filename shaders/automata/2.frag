@@ -1,16 +1,15 @@
-#define CELL_SIZE 500.
+uniform float cell_size;
+#define CELL_SIZE cell_size
 #define MUSIC_THRESHOLD (beat ? 0.002: 0.001)
-// Simplify the isAlive function to a single line for brevity.
+
 bool isAlive(vec4 color) {
     return color.g > 0.35;
 }
 
-// Simplify the mapping of music features to UV coordinates.
 vec2 mapMusicFeatureToUV(float zScore1, float zScore2) {
-    return vec2(mapValue(zScore1, -2.5, 2.5, 0., 1.), mapValue(zScore2, -2.5, 2.5, 0., 1.));
+    return vec2(mapValue(zScore1, -3., 3., 0., 1.), mapValue(zScore2, -3., 3., 0., 1.));
 }
 
-// Simplify the play function by abstracting repetitive logic.
 vec4 play(vec2 uv) {
     // rotate uv over time
     vec2 rotatedUV = uv;
@@ -18,7 +17,7 @@ vec4 play(vec2 uv) {
     rotatedUV *= mat2(cos(time/100.), -sin(time/100.), sin(time/100.), cos(time/100.));
     rotatedUV += 0.5;
 
-    uv = rotatedUV;
+    // uv = rotatedUV;
     vec2 lastUv = floor(uv * CELL_SIZE) / CELL_SIZE + 0.5 / CELL_SIZE;
     vec4 last = getLastFrameColor(lastUv);
 
