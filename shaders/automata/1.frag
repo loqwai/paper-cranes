@@ -1,4 +1,5 @@
-#define CELL_SIZE 1000.
+uniform float cell_size;
+#define CELL_SIZE cell_size
 // Simplify the isAlive function to a single line for brevity.
 bool isAlive(vec4 color) {
     return color.g > 0.75;

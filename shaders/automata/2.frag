@@ -1,9 +1,9 @@
 uniform float cell_size;
 #define CELL_SIZE cell_size
-#define MUSIC_THRESHOLD (beat ? 0.002: 0.001)
+#define WRAP(value, max) mod(value, max)
 
 bool isAlive(vec4 color) {
-    return color.g > 0.35;
+    return color.g > 0.75;
 }
 
 vec2 mapMusicFeatureToUV(float zScore1, float zScore2) {
@@ -11,44 +11,39 @@ vec2 mapMusicFeatureToUV(float zScore1, float zScore2) {
 }
 
 vec4 play(vec2 uv) {
-    // rotate uv over time
-    vec2 rotatedUV = uv;
-    rotatedUV -= 0.5;
-    rotatedUV *= mat2(cos(time/100.), -sin(time/100.), sin(time/100.), cos(time/100.));
-    rotatedUV += 0.5;
-
-    // uv = rotatedUV;
     vec2 lastUv = floor(uv * CELL_SIZE) / CELL_SIZE + 0.5 / CELL_SIZE;
     vec4 last = getLastFrameColor(lastUv);
 
-    // Check if the cell should be made alive based on music features.
+    // Alive and dead checks remain unchanged
     vec2 aliveUv1 = mapMusicFeatureToUV(spectralCentroidZScore, energyZScore);
     vec2 aliveUv2 = mapMusicFeatureToUV(spectralKurtosisZScore, spectralRoughnessZScore);
-    vec2 aliveUv3 = mapMusicFeatureToUV(spectralSkewZScore, spectralSpreadZScore);
-    if (distance(rotatedUV, aliveUv1) < MUSIC_THRESHOLD || distance(rotatedUV.yx, aliveUv2) < MUSIC_THRESHOLD || distance(rotatedUV, aliveUv3) < MUSIC_THRESHOLD){
-        return vec4(0.8157, 0.9608, 0.0, 1.0); // Alive based on music features.
+    if (distance(uv, aliveUv1) < 0.01 || distance(uv, aliveUv2) < 0.01) {
+        return vec4(0.8157, 0.9608, 0.0, 1.0);
     }
-    // Simplified neighbor count and game rules application.
+
+    vec2 deadUv = mapMusicFeatureToUV(spectralSkewZScore, spectralSpreadZScore);
+    if (distance(uv, deadUv) < 0.01) {
+        return vec4(1.0, 0.0, 1.0, 1.0);
+    }
+
     int aliveCount = 0;
     for (int i = -1; i <= 1; i++) {
         for (int j = -1; j <= 1; j++) {
             if (i == 0 && j == 0) continue;
-            vec2 neighborUv = lastUv + vec2(i, j) / CELL_SIZE;
+            vec2 neighborUv = WRAP(lastUv + vec2(i, j) / CELL_SIZE, 1.0);
             if (isAlive(getLastFrameColor(neighborUv))) {
                 aliveCount++;
             }
         }
     }
 
-    // Simplify game rules with music influence.
+    // Game rules with music influence
     if (isAlive(last)) {
-        if(beat) return  vec4(0.5, 1.0, 0.5, 1.0);
-        if (aliveCount < 2) return vec4(0.0, 0.0471, 0.949, 1.0);
-        else if (aliveCount > 3) return  vec4(0.7647, 0.0431, 0.8157, 1.0);
+        if (aliveCount < (beat ? 1 : 2)) return vec4(0.0, 0.0471, 0.949, 1.0);
+        else if (aliveCount > (beat ? 5 : 3)) return vec4(0.7647, 0.0431, 0.8157, 1.0);
         else return vec4(0.0, 1.0, 0.0, 1.0);
     } else {
-        if(beat && aliveCount > 1) return vec4(0.0, 0.8118, 0.8431, 1.0);
-        return (aliveCount == 3) ? vec4(0.0, 0.8118, 0.2431, 1.0) : last * (beat ? 0.75 : 0.5);
+        return (aliveCount == 3) ? vec4(0.0, 0.8118, 0.2431, 1.0) : last * (beat ? 0.9 : 0.75);
     }
 }
 
