@@ -73,8 +73,7 @@ float staticRandom(vec2 st){
 }
 
 vec4 getLastFrameColor(vec2 uv){
-    vec2 sampleUv = fract(uv);
-    return texture(prevFrame, sampleUv);
+    return texture(prevFrame, uv);
 }
 
 vec4 lastColor(vec2 uv){

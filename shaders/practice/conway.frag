@@ -1,4 +1,3 @@
-#define distortEnable false
 #define CELL_SIZE 10.
 vec4 getLastColor(vec2 uv){
     vec2 sampleUv=uv/2.;
@@ -34,7 +33,7 @@ vec4 play(vec4 last) {
     if (isAlive(last)) {
         if (aliveCount < 2) { // Underpopulation
             return vec4(0.0, 0.0471, 0.949, 1.0);
-        } else if (aliveCount > 3) { // Overpopulation
+        } else if (aliveCount > 5) { // Overpopulation
             return vec4(0.7647, 0.0431, 0.8157, 1.0);
         } else { // Stays alive
             return vec4(0.0, 1.0, 0.0, 1.0);
@@ -49,36 +48,21 @@ vec4 play(vec4 last) {
 }
 
 
-vec2 truchetPattern(in vec2 _st, in float _index){
-    _index = fract(((_index-0.5)*2.0));
-    if (_index > 0.75) {
-        _st = vec2(1.0) - _st;
-    } else if (_index > 0.5) {
-        _st = vec2(1.0-_st.x,_st.y);
-    } else if (_index > 0.25) {
-        _st = 1.0-vec2(1.0-_st.x,_st.y);
-    }
-    return _st * spectralCentroid;
-}
-
 vec4 init(vec2 st){
     vec2 ipos = floor(st*CELL_SIZE);
     vec2 fpos = fract(st*CELL_SIZE);
     vec4 color = vec4(0.0);
-    if (random(ipos) > 0.5) {
+    if (random(ipos) > 0.9) {
         color = vec4(1.0);
     }
     return color;
 }
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec2 st = fragCoord.xy/resolution.xy;
+    vec2 uv = fragCoord.xy/resolution.xy;
 
-    st *= CELL_SIZE; // Scale the coordinate system by 10
-    vec3 last = getLastColor(st).rgb;
-    if(frame == 0){
-        fragColor = init(st);
+    if(frame < 2){
+        fragColor = init(uv);
         return;
     }
-
-    fragColor = vec4(last, 1.);
+    fragColor = getLastFrameColor(uv);
 }
