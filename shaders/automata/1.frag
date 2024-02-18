@@ -46,28 +46,13 @@ vec4 play(vec2 uv) {
         if (aliveCount == 3) { // Reproduction
             return vec4(0.0, 0.8118, 0.2431, 1.0);
         } else { // Stays dead
-            return last*0.5;
+            return last*(beat?0.9:0.75);
         }
     }
 }
 
-
-vec4 init(vec2 st){
-    vec2 ipos = floor(st*CELL_SIZE);
-    vec2 fpos = fract(st*CELL_SIZE);
-    vec4 color = vec4(0.0);
-    if (random(ipos) > 0.98) {
-        color = vec4(1.0);
-    }
-    return color;
-}
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord.xy/resolution.xy;
-
-    if(frame < 2){
-        fragColor = init(uv);
-        return;
-    }
 
     fragColor = play(uv);
 }
