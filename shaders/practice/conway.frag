@@ -1,4 +1,4 @@
-#define CELL_SIZE 10.
+#define CELL_SIZE 100.
 bool isAlive(vec4 color){
     return color.g > 0.75;
 }
@@ -25,7 +25,7 @@ vec4 play(vec2 uv) {
     if (isAlive(last)) {
         if (aliveCount < 2) { // Underpopulation
             return vec4(0.0, 0.0471, 0.949, 1.0);
-        } else if (aliveCount > 5) { // Overpopulation
+        } else if (aliveCount > 3) { // Overpopulation
             return vec4(0.7647, 0.0431, 0.8157, 1.0);
         } else { // Stays alive
             return vec4(0.0, 1.0, 0.0, 1.0);
@@ -56,9 +56,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         fragColor = init(uv);
         return;
     }
-    if(frame % 100 != 0){
-        fragColor = getLastFrameColor(uv);
-        return;
-    }
+
     fragColor = play(uv);
 }
