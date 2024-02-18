@@ -1,4 +1,4 @@
-#define CELL_SIZE 100.
+#define CELL_SIZE 1000.
 bool isAlive(vec4 color){
     return color.g > 0.75;
 }
@@ -34,7 +34,7 @@ vec4 play(vec2 uv) {
         if (aliveCount == 3) { // Reproduction
             return vec4(0.0, 0.8118, 0.2431, 1.0);
         } else { // Stays dead
-            return vec4(1.0, 0.0, 0.0, 1.0);
+            return vec4(0.0, 0.0, 0.0, 1.0);
         }
     }
 }
