@@ -13,17 +13,19 @@ vec4 dynamicCellColor(float c) {
 }
 
 vec2 mapMusicFeatureToUV(float zScore1, float zScore2) {
-    return vec2(mapValue(zScore1, -3., 3., -1., 1.), mapValue(zScore2, -3., 3., -1., 1.));
+    return vec2(mapValue(zScore1, -3., 3., 0., 1.), mapValue(zScore2, -3., 3., 0., 1.));
 }
 
 vec4 play(vec2 uv) {
-
     vec2 lastUv = floor(uv * CELL_SIZE) / CELL_SIZE + 0.5 / CELL_SIZE;
-
     vec4 last = getLastFrameColor(lastUv);
 
     //rotate uv over time
-
+    uv -= 0.5;
+    float s = sin(iTime);
+    float c = cos(iTime);
+    mat2 rotation = mat2(c, -s, s, c);
+    uv = rotation * uv + 0.5;
     // Modify game rules based on energy
     int underpopulationThreshold = beat ? 1 : 2;
     int overpopulationThreshold = beat ? 4 : 3;
@@ -34,6 +36,11 @@ vec4 play(vec2 uv) {
     vec2 aliveUv2 = mapMusicFeatureToUV(spectralKurtosisZScore, spectralRoughnessZScore);
     if (distance(uv, aliveUv1) < 0.01 || distance(uv, aliveUv2) < 0.01) {
         return vec4(0.8157, 0.9608, 0.0, 1.0);
+    }
+
+    vec2 deadUv = mapMusicFeatureToUV(spectralSkewZScore, spectralSpreadZScore);
+    if (distance(uv, deadUv) < 0.01) {
+        return vec4(1.0, 0.0, 1.0, 1.0);
     }
 
     // Game logic remains the same, but thresholds are now dynamic
@@ -56,6 +63,7 @@ vec4 play(vec2 uv) {
         return (aliveCount == reproduction) ? dynamicCellColor(spectralCentroid) : last * (beat ? 0.9 : 0.75);
     }
 }
-vec4 render(vec2 uv) {
-    return play(uv)*0.990;
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 uv = fragCoord.xy / resolution.xy;
+    fragColor = play(uv);
 }

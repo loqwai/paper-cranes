@@ -1,18 +1,19 @@
 uniform float cell_size;
 #define CELL_SIZE cell_size
-// Simplify the isAlive function to a single line for brevity.
+#define WRAP(value, max) mod(value, max) // Ensure values wrap around using modulo
+
 bool isAlive(vec4 color) {
     return color.g > 0.75;
 }
 
-// Simplify the mapping of music features to UV coordinates.
 vec2 mapMusicFeatureToUV(float zScore1, float zScore2) {
     return vec2(mapValue(zScore1, -3., 3., 0., 1.), mapValue(zScore2, -3., 3., 0., 1.));
 }
 
-// Simplify the play function by abstracting repetitive logic.
 vec4 play(vec2 uv) {
-    vec2 lastUv = floor(uv * CELL_SIZE) / CELL_SIZE + 0.5 / CELL_SIZE;
+    vec2 gridUv = uv * resolution.xy / CELL_SIZE;
+    vec2 wrappedGridUv = WRAP(gridUv, resolution.xy / CELL_SIZE); // Wrap grid coordinates
+    vec2 lastUv = floor(wrappedGridUv) / (resolution.xy / CELL_SIZE) + 0.5 / (resolution.xy / CELL_SIZE);
     vec4 last = getLastFrameColor(lastUv);
 
     // Check if the cell should be made alive based on music features.
@@ -27,12 +28,13 @@ vec4 play(vec2 uv) {
         return vec4(1.0, 0.0, 1.0, 1.0); // Dead based on music features.
     }
 
-    // Simplified neighbor count and game rules application.
     int aliveCount = 0;
     for (int i = -1; i <= 1; i++) {
         for (int j = -1; j <= 1; j++) {
             if (i == 0 && j == 0) continue;
-            vec2 neighborUv = lastUv + vec2(i, j) / CELL_SIZE;
+            vec2 neighborGridUv = wrappedGridUv + vec2(i, j);
+            vec2 wrappedNeighborUv = WRAP(neighborGridUv, resolution.xy / CELL_SIZE);
+            vec2 neighborUv = floor(wrappedNeighborUv) / (resolution.xy / CELL_SIZE) + 0.5 / (resolution.xy / CELL_SIZE);
             if (isAlive(getLastFrameColor(neighborUv))) {
                 aliveCount++;
             }
