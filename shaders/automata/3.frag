@@ -3,7 +3,7 @@ uniform float cell_size;
 #define WRAP(value, max) mod(value, max)
 
 bool isAlive(vec4 color) {
-    return color.g > (beat ? 0.01 : 0.75);
+    return color.g > (beat ? 0.01 : 0.5);
 }
 
 vec2 mapMusicFeatureToUV(float zScore1, float zScore2) {
@@ -38,16 +38,17 @@ vec4 play(vec2 uv) {
 
     // Game rules with music influence
     if (isAlive(last)) {
-        if (aliveCount < (beat ? 1 : 2)) return vec4(0.0, 0.0471, 0.949, 1.0);
-        else if (aliveCount > (beat ? 7 : 3)) return vec4(0.7647, 0.0431, 0.8157, 1.0);
-        else return last*.99;
+        if(beat) return last * 1.1;
+        if (aliveCount < 2) return vec4(0.0, 0.0471, 0.949, 1.0);
+        else if (aliveCount > 3) return vec4(0.7647, 0.0431, 0.8157, 1.0);
+        else return last;
     } else {
-        return (aliveCount == 3) ? vec4(0.0, 0.8118, 0.2431, 1.0) : last * (beat ? 0.9 : 0.75);
+        return (aliveCount == 3) ? vec4(0.0, 0.5+spectralCentroid, spectralCentroid, 1.0) : last * (beat ? 0.9 : 0.75);
     }
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord.xy / resolution.xy;
     vec4 last = getLastFrameColor(uv);
-    fragColor = mix(play(uv), last, 0.01);
+    fragColor = mix(play(uv)*(beat? 1.1 : 0.995), last, 0.01);
 }
