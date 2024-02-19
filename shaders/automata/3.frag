@@ -51,5 +51,5 @@ vec4 play(vec2 uv) {
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord.xy / resolution.xy;
     vec4 last = getLastFrameColor(uv);
-    fragColor = mix(play(uv)*(beat? 1.1 : 0.995), last, 0.02);
+    fragColor = mix(play(uv)*(beat? 1.1 : 0.975), last, 0.02);
 }
