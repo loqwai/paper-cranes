@@ -3,13 +3,7 @@ uniform float cell_size;
 #define WRAP(value, max) mod(value, max)
 
 bool isAlive(vec4 color) {
-    // Adjust alive threshold based on spectralRoughnessZScore
-    return color.g > 0.75 + 0.05 * spectralRoughnessZScore;
-}
-// Dynamic cell color based on spectralCentroid
-vec4 dynamicCellColor(float c) {
-    float normalizedCentroid = (c - spectralCentroidMin) / (spectralCentroidMax - spectralCentroidMin);
-    return vec4(normalizedCentroid, 0.9608, 1.0 - normalizedCentroid, 1.0);
+    return color.g > (beat ? 0.01 : 0.75);
 }
 
 vec2 mapMusicFeatureToUV(float zScore1, float zScore2) {
@@ -17,53 +11,43 @@ vec2 mapMusicFeatureToUV(float zScore1, float zScore2) {
 }
 
 vec4 play(vec2 uv) {
+    // Adjust uv to wrap around the screen edges correctly
+    uv = WRAP(uv, 1.0); // Ensure UV coordinates wrap around the screen edges
     vec2 lastUv = floor(uv * CELL_SIZE) / CELL_SIZE + 0.5 / CELL_SIZE;
     vec4 last = getLastFrameColor(lastUv);
 
-    //rotate uv over time
-    uv -= 0.5;
-    float s = sin(iTime);
-    float c = cos(iTime);
-    mat2 rotation = mat2(c, -s, s, c);
-    uv = rotation * uv + 0.5;
-    // Modify game rules based on energy
-    int underpopulationThreshold = beat ? 1 : 2;
-    int overpopulationThreshold = beat ? 4 : 3;
-    int reproduction = beat ? 2 : 3;
     // Alive and dead checks remain unchanged
-
     vec2 aliveUv1 = mapMusicFeatureToUV(spectralCentroidZScore, energyZScore);
     vec2 aliveUv2 = mapMusicFeatureToUV(spectralKurtosisZScore, spectralRoughnessZScore);
-    if (distance(uv, aliveUv1) < 0.01 || distance(uv, aliveUv2) < 0.01) {
-        return vec4(0.8157, 0.9608, 0.0, 1.0);
+    vec2 aliveUv3 = mapMusicFeatureToUV(spectralSpreadZScore, spectralSkewZScore);
+    if ( distance(uv, aliveUv1) < 0.005 || distance(uv, aliveUv2) < 0.005 || distance(uv, aliveUv3) < 0.005) {
+        return mix(last, vec4(0.8157, 0.9608, 0.0, 1.0), mapValue(energyZScore, -2.5, 2.5, 0., 1.));
     }
 
-    vec2 deadUv = mapMusicFeatureToUV(spectralSkewZScore, spectralSpreadZScore);
-    if (distance(uv, deadUv) < 0.01) {
-        return vec4(1.0, 0.0, 1.0, 1.0);
-    }
-
-    // Game logic remains the same, but thresholds are now dynamic
     int aliveCount = 0;
     for (int i = -1; i <= 1; i++) {
         for (int j = -1; j <= 1; j++) {
             if (i == 0 && j == 0) continue;
-            vec2 neighborUv = WRAP(lastUv + vec2(i, j) / CELL_SIZE, 1.0);
+            vec2 neighborUv = lastUv + vec2(i, j) / CELL_SIZE;
+            neighborUv = WRAP(neighborUv, 1.0); // Wrap the neighbor's UV coordinates
             if (isAlive(getLastFrameColor(neighborUv))) {
                 aliveCount++;
             }
         }
     }
 
+    // Game rules with music influence
     if (isAlive(last)) {
-        if (aliveCount < underpopulationThreshold) return dynamicCellColor(spectralCentroid);
-        else if (aliveCount > overpopulationThreshold) return vec4(0.7647, 0.0431, 0.8157, 1.0);
-        else return last; // Keep the cell alive with its current color
+        if (aliveCount < (beat ? 1 : 2)) return vec4(0.0, 0.0471, 0.949, 1.0);
+        else if (aliveCount > (beat ? 7 : 3)) return vec4(0.7647, 0.0431, 0.8157, 1.0);
+        else return last*.99;
     } else {
-        return (aliveCount == reproduction) ? dynamicCellColor(spectralCentroid) : last * (beat ? 0.9 : 0.75);
+        return (aliveCount == 3) ? vec4(0.0, 0.8118, 0.2431, 1.0) : last * (beat ? 0.9 : 0.75);
     }
 }
+
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord.xy / resolution.xy;
-    fragColor = play(uv);
+    vec4 last = getLastFrameColor(uv);
+    fragColor = mix(play(uv), last, 0.01);
 }
