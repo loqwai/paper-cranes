@@ -31,6 +31,7 @@ vec4 play(vec2 uv) {
             vec2 neighborUv = lastUv + vec2(i, j) / CELL_SIZE;
             neighborUv = WRAP(neighborUv, 1.0); // Wrap the neighbor's UV coordinates
             if (isAlive(getLastFrameColor(neighborUv))) {
+                last*=1.01;
                 aliveCount++;
             }
         }
@@ -50,5 +51,5 @@ vec4 play(vec2 uv) {
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord.xy / resolution.xy;
     vec4 last = getLastFrameColor(uv);
-    fragColor = mix(play(uv)*(beat? 1.1 : 0.995), last, 0.01);
+    fragColor = mix(play(uv)*(beat? 1.1 : 0.995), last, 0.02);
 }
