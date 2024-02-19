@@ -19,13 +19,8 @@ vec4 play(vec2 uv) {
     // Alive and dead checks remain unchanged
     vec2 aliveUv1 = mapMusicFeatureToUV(spectralCentroidZScore, energyZScore);
     vec2 aliveUv2 = mapMusicFeatureToUV(spectralKurtosisZScore, spectralRoughnessZScore);
-    if (distance(uv, aliveUv1) < 0.01 || distance(uv, aliveUv2) < 0.01) {
+    if (distance(uv, aliveUv1) < 0.001 || distance(uv, aliveUv2) < 0.001) {
         return vec4(0.8157, 0.9608, 0.0, 1.0);
-    }
-
-    vec2 deadUv = mapMusicFeatureToUV(spectralSkewZScore, spectralSpreadZScore);
-    if (distance(uv, deadUv) < 0.01) {
-        return vec4(1.0, 0.0, 1.0, 1.0);
     }
 
     int aliveCount = 0;
