@@ -1,6 +1,6 @@
 import { makeCalculateStats } from '../../utils/calculateStats'
 
-const calculateStats = makeCalculateStats()
+let calculateStats = makeCalculateStats()
 
 self.addEventListener('message', ({ data: e }) => {
     if (e.type === 'fftData') {
@@ -9,7 +9,7 @@ self.addEventListener('message', ({ data: e }) => {
         self.postMessage({ type: 'computedValue', value: rolloff, stats: calculateStats(rolloff) })
     }
     if (e.type === 'config') {
-        historySize = e.config.historySize
+        calculateStats = makeCalculateStats(e.config.historySize)
     }
 })
 

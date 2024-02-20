@@ -1,6 +1,6 @@
 import { makeCalculateStats } from '../../utils/calculateStats'
 
-const calculateStats = makeCalculateStats()
+let calculateStats = makeCalculateStats()
 
 let lastFFtSize = 0
 let maxSpread = 0
@@ -39,6 +39,6 @@ self.addEventListener('message', ({ data: e }) => {
         self.postMessage({ type: 'computedValue', value: computedRoughness, stats: calculateStats(computedRoughness) })
     }
     if (e.type === 'config') {
-        historySize = e.config.historySize
+        calculateStats = makeCalculateStats(e.config.historySize)
     }
 })
