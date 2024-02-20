@@ -73,18 +73,15 @@ export class AudioProcessor {
         }
 
         const requestFeatures = () => {
+            requestAnimationFrame(requestFeatures)
+
             fftAnalyzer.getByteFrequencyData(fftData)
-            let windowedFftData = applyKaiserWindow(fftData, 3)
-            // if the windowedFftData has a sum of 0, then don't send it to the workers
-            if (windowedFftData.reduce((a, b) => a + b, 0) === 0) {
-                requestAnimationFrame(requestFeatures)
-                return
-            }
+
+            let windowedFftData = applyKaiserWindow(fftData, 10)
+
             for (const worker in workers) {
                 workers[worker].postMessage({ type: 'fftData', data: { fft: windowedFftData } })
             }
-
-            requestAnimationFrame(requestFeatures)
         }
 
         const getFeatures = () => {
