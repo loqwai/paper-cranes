@@ -127,7 +127,7 @@ vec3 direction=(sideVector*dx)+(topVector*dy)+viewVector;
 
 direction=normalize(direction);
 vec3 hsl=march(camera,direction);
-hsl.x=fract(hsl.x+(spectralCentroidMedian*4.));
+hsl.x=fract(hsl.x+(spectralCentroidMedian));
 hsl.y=energyMedian*4.;
 hsl.y=clamp(hsl.y,0.,.98);
 fragColor=vec4(hsl2rgb(hsl),1.);
