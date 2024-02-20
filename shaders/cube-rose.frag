@@ -88,7 +88,6 @@ const vec3 color_red=vec3(0.99,0.2,0.1);
 //#define BUG
 
 #define FDIST 0.7
-#define PI 3.1415926
 #define GROUNDSPACING 0.5
 #define GROUNDGRID 0.05
 #define BOXDIMS vec3(0.75, 0.75, 1.25)
