@@ -36,5 +36,5 @@ function calculateSpectralCentroid(ampSpectrum) {
         1,
         ampSpectrum.map((val, index) => (index === ampSpectrum.length - 1 ? 1 : 0)),
     )
-    return centroid / maxCentroid // Normalize the centroid
+    return (centroid / maxCentroid) * 3 // Normalize the centroid
 }

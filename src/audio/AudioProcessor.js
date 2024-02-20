@@ -1,5 +1,6 @@
 import { StatTypes } from '../utils/calculateStats.js'
 import { applyHanningWindow } from './applyHanningWindow.js'
+import { applyKaiserWindow } from './applyKaiserWindow.js'
 export const AudioFeatures = [
     'SpectralCentroid',
     'SpectralFlux',
@@ -37,7 +38,7 @@ export const getFlatAudioFeatures = (audioFeatures = AudioFeatures, rawFeatures 
 }
 
 export class AudioProcessor {
-    constructor(audioContext, sourceNode, historySize, fftSize = 2048) {
+    constructor(audioContext, sourceNode, historySize, fftSize = 32768) {
         this.features = {}
 
         const fftAnalyzer = audioContext.createAnalyser()
@@ -73,7 +74,7 @@ export class AudioProcessor {
 
         const requestFeatures = () => {
             fftAnalyzer.getByteFrequencyData(fftData)
-            let windowedFftData = applyHanningWindow(fftData)
+            let windowedFftData = applyKaiserWindow(fftData, 3)
             // if the windowedFftData has a sum of 0, then don't send it to the workers
             if (windowedFftData.reduce((a, b) => a + b, 0) === 0) {
                 requestAnimationFrame(requestFeatures)
