@@ -26,5 +26,5 @@ function calculateSpectralFlux(currentSignal) {
         sf += (diff + Math.abs(diff)) / 2
     }
     previousSignal = currentSignal
-    return sf
+    return sf / 30_000
 }
