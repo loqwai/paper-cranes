@@ -16,13 +16,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Plot each feature on the rightmost column with a unique color
     if (uv.x > 0.99) {
         if (abs(fragCoord.y - (spectralCentroid * resolution.y)) < lineWidth) {
-            fragColor = vec4(1.0, 0.0, 0.0, 1.0); // Red for spectralCentroid
-        } else if (abs(fragCoord.y - (spectralKurtosis * resolution.y)) < lineWidth) {
-            fragColor = vec4(0.0, 1.0, 0.0, 1.0); // Green for spectralKurtosis
-        } else if (abs(fragCoord.y - (spectralCrest * resolution.y)) < lineWidth) {
-            fragColor = vec4(0.0, 0.0, 1.0, 1.0); // Blue for spectralCrest
-        } else if (abs(fragCoord.y - (energy * resolution.y)) < lineWidth) {
-            fragColor = vec4(1.0, 1.0, 0.0, 1.0); // Yellow for energy
+            fragColor = vec4(1.0, 0.0, 0.0, 1.0);
+        } else if (abs(fragCoord.y - (spectralCentroidMin * resolution.y)) < lineWidth) {
+            fragColor = vec4(0.0, 1.0, 0.0, 1.0);
+        } else if (abs(fragCoord.y - (spectralCentroidMax * resolution.y)) < lineWidth) {
+            fragColor = vec4(0.0, 0.0, 1.0, 1.0);
+        } else if (abs(fragCoord.y - (spectralCentroidMedian * resolution.y)) < lineWidth) {
+            fragColor = vec4(1.0, 1.0, 0.0, 1.0);
         }
     }
 }
