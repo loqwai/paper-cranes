@@ -11,17 +11,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     }
 
     // Slightly thicker lines for better continuity
-    float lineWidth = 5.0; // Increase this for thicker lines
+    float lineWidth = 10.0; // Increase this for thicker lines
 
     // Plot each feature on the rightmost column with a unique color
     if (uv.x > 0.99) {
         if (abs(fragCoord.y - (spectralCentroid * resolution.y)) < lineWidth) {
             fragColor = vec4(1.0, 0.0, 0.0, 1.0);
-        } else if (abs(fragCoord.y - (spectralCentroidMin * resolution.y)) < lineWidth) {
+        } else if (abs(fragCoord.y - (spectralFlux * resolution.y)) < lineWidth) {
             fragColor = vec4(0.0, 1.0, 0.0, 1.0);
-        } else if (abs(fragCoord.y - (spectralCentroidMax * resolution.y)) < lineWidth) {
+        } else if (abs(fragCoord.y - (spectralEntropy * resolution.y)) < lineWidth) {
             fragColor = vec4(0.0, 0.0, 1.0, 1.0);
-        } else if (abs(fragCoord.y - (spectralCentroidMedian * resolution.y)) < lineWidth) {
+        } else if (abs(fragCoord.y - (spectralKurtosis* resolution.y)) < lineWidth) {
             fragColor = vec4(1.0, 1.0, 0.0, 1.0);
         }
     }
