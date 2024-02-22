@@ -39,7 +39,7 @@ form label input {
 #monaco-editor {
     flex: 1;
     padding: 3px;
-    width: 50vw;
+    min-width: 50vw;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
