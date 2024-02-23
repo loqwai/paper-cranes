@@ -1,3 +1,9 @@
 TODO.md
 
--   Up to glassy-field done
+# Checking
+
+-   Up to rain
+
+## Needs repair
+
+-   moody octopus
