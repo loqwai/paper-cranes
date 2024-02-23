@@ -118,20 +118,20 @@ vec2 Drops(vec2 uv,float t,float l0,float l1,float l2){
 
 void mainImage(out vec4 fragColor,in vec2 fragCoord)
 {
-    float scaledTime = time + 100.;
+    float scaledTime = time+100.;
     vec2 uv=(fragCoord.xy-.5*resolution.xy)/resolution.y;
-    uv.x += cos((scaledTime*spectralCentroidMedian)/1000.)/1000.;
-    uv.y += atan((scaledTime*energyMedian)/1000.)/1000.;
+    uv.x += cos((scaledTime*spectralCentroidMedian)/10.)/10.;
+    uv.y += atan((scaledTime*energyMedian)/10.)/10.;
     // uv = sin(uv);
     vec2 UV=fragCoord.xy/resolution.xy;
     float T=scaledTime*2.;
 
     float t=T*.2;
     vec3 plasma = generatePlasma(uv, scaledTime);
-    float rainAmount=sin(T*.05)*.3+spectralFluxMedian*(6.+energyZScore);
+    float rainAmount=sin(T*.05)*.3+spectralFluxMedian*(3.+energyZScore*3.)+10.;
 
     float maxBlur=mix(3.,6.,rainAmount);
-    float minBlur=1.-spectralRolloffZScore*3.;
+    float minBlur=3.-(spectralRolloffZScore*3.);
 
     float zoom=-.7 * (sin((scaledTime+energyMedian)/100.)*10.)-0.5;
     uv*=.7+zoom*.3;
@@ -158,7 +158,7 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord)
     // Darken areas not occupied by rain more than those that are
     float darkeningFactor = mix(1.0, 0.98, 1.0 - (presenceOfRain/10.)); // Adjust the 0.98 to control darkening
     plasma *= darkeningFactor;
-    col = hslmix(col, plasma, (energyZScore+1.)/80.); // Add plasma effect
+    col = hslmix(col, plasma, (energyZScore*3.+3.)/80.); // Add plasma effect
     col = rgb2hsl(col);
     col.y = clamp(col.y, 0.2, 0.8);
     col.z = clamp(col.z, 0.2 ,0.4);
