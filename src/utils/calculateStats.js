@@ -182,7 +182,7 @@ export function makeCalculateStats(historySize = 500) {
 
         return {
             current: value,
-            zScore: (variance ? (value - mean) / Math.sqrt(variance) : 0) / 3,
+            zScore: (variance ? (value - mean) / Math.sqrt(variance) : 0) / 6,
             normalized: mad, // Using MAD normalization as 'normalized'
             standardDeviation: Math.sqrt(variance),
             median,
