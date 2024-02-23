@@ -1,7 +1,7 @@
 uniform float knob_1;
 uniform float knob_2;
 #define KNOB_3 energyMedian/20.
-#define KNOB_1 (energyZScore/2.)
+#define KNOB_1 (energyZScore)
 #define KNOB_2 knob_2
 #define KNOB_4 knob_1
 /*
