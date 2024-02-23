@@ -30,7 +30,7 @@ vec3 toSpherical(in vec3 rec){
 }
 
 float escape(in vec3 position){
-    int iterations=int(spectralRoughnessMedian/10.);
+    int iterations=int(spectralRoughnessMedian*5.+5.);
     vec3 z=position;
     float r=0.;
     float theta,phi,zr;
