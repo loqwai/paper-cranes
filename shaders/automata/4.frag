@@ -9,7 +9,7 @@ bool isAlive(vec4 color) {
 }
 
 vec2 mapMusicFeatureToUV(float zScore1, float zScore2) {
-    return vec2(mapValue(zScore1, -3., 3., 0., 1.), mapValue(zScore2, -3., 3., 0., 1.));
+    return vec2(mapValue(zScore1, -1., 1., 0., 1.), mapValue(zScore2, -1., 1., 0., 1.));
 }
 
 vec4 play(vec2 uv) {
