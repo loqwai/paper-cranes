@@ -47,8 +47,8 @@ void mainImage(out vec4 FragColor, vec2 FragCoord) {
   float R = 0.0;
   float RR = 0.0;
   float RRR = 0.0;
-  float a = (1. - mspt.x) * (energyZScore/10. + 0.5);
-  float C = cos(tm2 * 0.03 + a * 0.01) * (spectralCentroidZScore/10. + 0.1);
+  float a = (1. - mspt.x) * (energyZScore/3. + 0.5);
+  float C = cos(tm2 * 0.03 + a * 0.01) * (spectralCentroidZScore/3. + 0.1);
   float S = sin(tm2 * 0.033 + a * 0.23) * spectralFluxNormalized;
   float C2 = cos(tm2 * 0.024 + a * 0.23) * 3.1;
   float S2 = sin(tm2 * 0.03 + a * 0.01) * 3.3;

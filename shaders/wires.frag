@@ -15,11 +15,11 @@ uniform float knob_1;
 //knob_1 should be from 0-.23
 
 #define s(p) ( q = p,                                    \
-    d = length(vec2(length(q.xy += .5)-.5, q.z)) - mapValue(energyZScore, -1., 4.5, 0., .23),  \
+    d = length(vec2(length(q.xy += .5)-.5, q.z)) - mapValue(energyZScore, -1., 1., 0., .23),  \
     q.yx *= r(round((atan(q.y,q.x)-T) * (1.-spectralRoughnessNormalized)) / (1.-spectralRoughnessNormalized) + T), \
     q.x -= .5,                                           \
     O += (sin(t+T)*.1+.1)*(1.+cos(t+T*.5+vec4(0,spectralCentroidMedian*20.,2,0))) \
-         / (.5 + pow(length(q)*(200.-((energyZScore+1.5)*50.)), 1.3))            , d ) // return d
+         / (.5 + pow(length(q)*(200.-((energyZScore+2.5)*50.)), 1.3))            , d ) // return d
 
 void mainImage(out vec4 O, vec2 F) {
     vec3  p, q,    R = iResolution;

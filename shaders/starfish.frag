@@ -50,7 +50,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Draw the manypus, modified with audio features
     //
     uv = (fragCoord.xy / resolution.xy) * 2.0 - 1.0;
-    float it = spectralEntropyMean*10.;
+    float it = spectralEntropyMean*30.;
     float c1 = 0.0;
     for(float i = 0.0; i < it; i += 1.0) {
         float i01 = i / it;

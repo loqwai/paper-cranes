@@ -49,7 +49,7 @@ vec3 generateBeam(vec3 color1,vec3 color2,vec3 color3,vec2 uv,float time,float o
 
   // Beam properties
   float beamWidth=.05+(energyNormalized/100.);
-  float edgeSoftness=abs(spectralSpreadZScore/3.)*.1;
+  float edgeSoftness=abs(spectralSpreadZScore)*.1;
   float beam=smoothstep(beamWidth,beamWidth-edgeSoftness,abs(uv.x));
 
   // Determine which color to use based on the y-coordinate

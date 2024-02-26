@@ -34,7 +34,7 @@ bool rayIntersectsBox(vec3 origin, vec3 direction, vec3 minBounds, vec3 maxBound
 
 float randomNoise(float n)
 {
-    return mapValue(spectralKurtosisZScore, -2.0, 2.0, 0.01, 0.3);
+    return mapValue(spectralKurtosisZScore, -1.0, 1.0, 0.01, 0.3);
 }
 
 vec2 randomNoise2D(in vec2 p)
@@ -113,7 +113,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 
         float voronoiValue2 = voronoiNoise(uv * scaleFactor * 1.5 + 5.0 + currentTime, 0.2) * 1.1;
         voronoiValue2 = pow(voronoiValue2, 5.0);
-        light += pow(voronoiValue1 * (0.5 * voronoiValue2), 1.5)*mapValue(energyZScore,-2.,2.,-.13,.13);
+        light += pow(voronoiValue1 * (0.5 * voronoiValue2), 1.5)*mapValue(energyZScore,-1.,1.,-.13,.13);
 
         scaleFactor *= 2.0;
         attenuationFactor *= 0.6;

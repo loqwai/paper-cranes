@@ -126,7 +126,7 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord,float time){
   if(beat){
     uv=julia(uv,time);
   }
-  if(spectralCentroidZScore>2.5){
+  if(spectralCentroidZScore>0.9){
     uv=julia(uv.yx,time);
   }
 
@@ -137,8 +137,8 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord,float time){
   if(uv.x*100.>mod(time*100.,100.)){
     prevColor=vec3(spectralCentroidNormalized,energyNormalized,spectralFluxNormalized);
     vec3 hsl=rgb2hsl(prevColor);
-    hsl.z*=2.5+sin(uv.x);
-    hsl.y*=2.5+sin(uv.y);
+    hsl.z*=0.9+sin(uv.x);
+    hsl.y*=0.9+sin(uv.y);
     prevColor=hsl2rgb(hsl);
   }
   // Normalize coordinates to -1.0 to 1.0 range for ripple effect
@@ -165,10 +165,10 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord,float time){
       //     color=prevColor;
     //   }
   // }
-  if(spectralCentroidZScore>2.5){
+  if(spectralCentroidZScore>0.9){
     // dial the saturation up to 11
     vec3 hsl=rgb2hsl(color);
-    // hsl.y*=2.5;
+    // hsl.y*=0.9;
     color=hsl2rgb(hsl);
   }
   vec3 hsl=rgb2hsl(color);
