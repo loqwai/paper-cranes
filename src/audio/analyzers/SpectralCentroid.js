@@ -6,6 +6,7 @@ self.addEventListener('message', ({ data: e }) => {
     if (e.type === 'fftData') {
         let fftData = e.data.fft // Extract FFT data from message
         let computed = calculateSpectralCentroid(fftData) // Process FFT data
+        computed *= 1.5
         if (computed === null) return
         self.postMessage({ type: 'computedValue', value: computed, stats: calculateStats(computed) })
     }

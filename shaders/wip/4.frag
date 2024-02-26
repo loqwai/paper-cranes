@@ -24,12 +24,13 @@ void mainImage(out vec4 fragColor,vec2 fragCoord){
     init(fragColor,uv);
     return;
   }
-  //rotate uv over time
-  uv -= .5;
-  uv *= mat2(cos(time),-sin(time),sin(time),cos(time));
-  uv += .5;
 
   vec4 last = getLastFrameColor(uv);
+  if(step(spectralCentroid-0.01,uv.x) * step(uv.x,spectralCentroid+0.01) > 0.0){
+    fragColor = mix(last, vec4(1.0,0.0,0.0,last.a),0.5);
+    return;
+  }
+
   vec3 all = unpackColor(last.a);
   vec3 hsl = rgb2hsl(all);
   hsl.x = fract(hsl.x + spectralCentroid);
@@ -37,5 +38,5 @@ void mainImage(out vec4 fragColor,vec2 fragCoord){
 
 
   all = hsl2rgb(hsl);
-  fragColor = vec4(all,last.a);
+  fragColor =vec4(all,last.a);
 }
