@@ -24,6 +24,11 @@ void mainImage(out vec4 fragColor,vec2 fragCoord){
     init(fragColor,uv);
     return;
   }
+  //rotate uv over time
+  uv -= .5;
+  uv *= mat2(cos(time),-sin(time),sin(time),cos(time));
+  uv += .5;
+
   vec4 last = getLastFrameColor(uv);
   vec3 all = unpackColor(last.a);
   vec3 hsl = rgb2hsl(all);

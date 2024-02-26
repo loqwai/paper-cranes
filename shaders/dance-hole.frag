@@ -1,5 +1,5 @@
 #version 300 es
-precision highp float;
+precision mediump float;
 // Assuming these uniforms are passed to the shader
 uniform float time;                      // iTime equivalent        // Normalized energy
 
