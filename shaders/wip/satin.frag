@@ -17,7 +17,17 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     hsl.x = fract(hsl.x+spectralCentroid);
     hsl.y = fract(hsl.y + (spectralKurtosisMedian/14.));
     hsl.z = fract(hsl.z - energyMedian);
+    // if hsl is too gray, make it black
+    if (hsl.y < spectralCentroid) {
+        vec3 hsl = vec3(0.);
+        // get the average color of the pixels around this one last frame.
+        for(float i = 0.0; i < 80.0; i++) {
+            hsl += rgb2hsl(getLastFrameColor(uv + vec2(cos(i+spectralRoughness), sin(i+spectralRoughness))).rgb);
+        }
+        hsl /= 8.0;
+        hsl.z = 0.5;
+    }
     col = hsl2rgb(hsl);
-    col = mix(getLastFrameColor(uv.yx).rgb*0.9, col, 0.9);
+    col = mix(getLastFrameColor(uv).rgb*0.9, col, 0.9);
     fragColor = vec4(col,1.0);
 }

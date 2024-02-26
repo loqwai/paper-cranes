@@ -27,13 +27,21 @@ void mainImage(out vec4 fragColor,vec2 fragCoord){
 
   vec4 last = getLastFrameColor(uv);
   if(step(spectralCentroid-0.01,uv.x) * step(uv.x,spectralCentroid+0.01) > 0.0){
-    fragColor = mix(last, vec4(1.0,0.0,0.0,last.a),0.5);
+
+    fragColor = getLastFrameColor(uv.yx);
     return;
   }
+
+  if(step(spectralCentroidZScore-0.01,uv.x) * step(uv.x,spectralCentroidZScore+0.01) > 0.0){
+    fragColor = getLastFrameColor(uv.yx);
+    return;
+  }
+
   if(step(spectralRoughness-0.01,uv.y) * step(uv.y,spectralRoughness+0.01) > 0.0){
-    fragColor = mix(last, vec4(0.0,1.0,0.0,last.a),0.5);
+      fragColor = getLastFrameColor(uv.yx);
     return;
   }
+
 
   vec3 all = unpackColor(last.a);
   vec3 hsl = rgb2hsl(all);
