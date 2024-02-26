@@ -1,4 +1,4 @@
-#define NUM_LAYERS 10.
+#define NUM_LAYERS 3.
 
 uniform float knob_1;
 

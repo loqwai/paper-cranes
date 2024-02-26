@@ -21,7 +21,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     if (hsl.y < abs(energyMedian)) {
         vec3 hsl = vec3(0.);
         // get the average color of the pixels around this one last frame.
-        for(float i = 0.0; i < spectralSpread*5.+10.; i++) {
+        for(float i = 0.0; i < 10.; i++) {
             hsl += rgb2hsl(getLastFrameColor(uv + vec2(cos(i+spectralRoughness), sin(i+spectralRoughness))).rgb);
         }
         hsl /= 8.0;
@@ -31,7 +31,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     if (hsl.y < 0.3) {
         // rotate the hue slightly
         hsl.x = fract(hsl.x + spectralFluxMedian);
-        hsl.y = 0.5;
+        hsl.y += 0.5;
     }
     col = hsl2rgb(hsl);
     // col = mix(getLastFrameColor(uv).rgb*0.9, col, 0.3);
