@@ -1,8 +1,7 @@
 import { build } from 'esbuild'
 import { join } from 'path'
 import { readdirSync } from 'fs'
-import * as ncp from 'ncp'
-
+import ncp from 'ncp'
 const entryPoints = ['index.js', 'edit.js', 'service-worker.js']
 readdirSync('./src', { recursive: true }).forEach((file) => {
     if (file.endsWith('.js')) {
