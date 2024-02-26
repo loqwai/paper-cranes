@@ -1,8 +1,9 @@
 {
-  "name": "paper-cranes",
-  "version": "1.0.0",
+  "name": "paper-cranes-audio",
+  "version": "1.0.2",
   "description": "",
-  "main": "index.js",
+  "type": "module",
+  "main": "dist/src/audio/AudioProcessor.js",
   "scripts": {
     "start": "npx live-server --wait=50 --no-browser -q --port=6969 ./dist/",
     "test": "echo \"Error: no test specified\" && exit 1",
