@@ -2,22 +2,6 @@ import { makeCalculateStats } from '../../utils/calculateStats'
 
 let calculateStats = makeCalculateStats()
 
-let lastFFtSize = 0
-let maxSpread = 0
-
-function mu(i, amplitudeSpect) {
-    let numerator = 0
-    let denominator = 0
-
-    for (let k = 0; k < amplitudeSpect.length; k++) {
-        numerator += Math.pow(k, i) * Math.abs(amplitudeSpect[k])
-        denominator += amplitudeSpect[k]
-    }
-
-    if (denominator === 0) return 0 // Prevent division by zero
-    return numerator / denominator
-}
-
 function calculateSpectralRoughness(fftData) {
     let roughness = 0
 
@@ -36,6 +20,7 @@ self.addEventListener('message', ({ data: e }) => {
 
         // Process FFT data for roughness
         let computedRoughness = calculateSpectralRoughness(fftData)
+        computedRoughness /= 100_000
         self.postMessage({ type: 'computedValue', value: computedRoughness, stats: calculateStats(computedRoughness) })
     }
     if (e.type === 'config') {
