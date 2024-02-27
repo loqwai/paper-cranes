@@ -6,6 +6,17 @@ uniform float knob_3;
 #define amplitude energy*1.5
 #define CENTER vec2(0.5,0.5)
 
+bool isInDrip(vec2 uv) {
+    vec2 center = vec2(0.5, 0.5); // Center of the "drip"
+    float radius = 0.1 + amplitude * 0.05; // Dynamic radius based on amplitude
+
+    // Calculate distance from the center
+    float dist = length(uv - center);
+
+    // Return true if the distance is less than the dynamic radius
+    return dist < radius;
+}
+
 // Function to distort UVs based on a "drip" effect
 vec2 drip(vec2 uv, vec2 center, float time) {
     vec2 toCenter = center - uv;
@@ -34,6 +45,5 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Fetch the color from the previous frame, using distorted UVs
     vec4 color = getLastFrameColor(distortedUv);
-
     fragColor = color;
 }
