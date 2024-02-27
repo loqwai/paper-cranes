@@ -1,13 +1,22 @@
 
+uniform float knob_1;
+uniform float knob_2;
+uniform float knob_3;
 
-// Function to simulate a raindrop effect
+#define amplitude knob_1
+#define CENTER vec2(knob_2, knob_3)
+
+// Function to distort UVs based on a "drip" effect
 vec2 drip(vec2 uv, vec2 center, float time) {
-    vec2 toCenter = center - uv; // Vector from current UV to the center of the drip
-    float distance = length(toCenter); // Distance to the center
-    float wave = sin(distance * 10.0 - time * 5.0); // Sinusoidal wave based on distance and time
-    wave *= exp(-distance * 5.0); // Exponential falloff based on distance
+    vec2 toCenter = center - uv;
+    // Ensure wrapping effect by considering the shortest path in a toroidal topology
+    toCenter = toCenter - round(toCenter);
     
-    return toCenter * wave * 0.02; // Scale the distortion vector
+    float distance = length(toCenter); // Distance to the center, considering wrapping
+    float wave = sin(distance * 10.0 - time * 5.0) * amplitude; // Sinusoidal wave based on distance and time, scaled by amplitude
+    wave *= exp(-distance * 15.0); // Exponential falloff based on distance, sharper to make the effect more localized
+    
+    return toCenter * wave * 0.05; // Scale the distortion vector by a factor for visual effect
 }
 
 // Main function
@@ -18,7 +27,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float time = iTime;
     
     // Center of the drip effect, animated to move across the screen
-    vec2 center = vec2(sin(time) * 0.5 + 0.5, cos(time) * 0.5 + 0.5);
+    vec2 center = CENTER;
     
     // Apply the drip effect to distort UV coordinates
     vec2 distortedUv = uv + drip(uv, center, time);
