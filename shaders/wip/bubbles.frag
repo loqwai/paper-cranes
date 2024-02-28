@@ -1,58 +1,87 @@
-#version 300 es
-precision mediump float;
+#define R iResolution.xy
+#define T (iTime*1.25)
+#define M_PI 3.14159265358979323846264338327950288
+#define TAU (M_PI*2.0)
+#define FUI floatBitsToUint
+#define ZERO min(0, iFrame)
+uniform float knob_1;
+uniform float knob_2;
+uniform float knob_3;
+uniform float knob_4;
+uniform float knob_5;
 
-uniform bool beat;
-uniform vec2 resolution;
-uniform float time;
-uniform sampler2D prevFrame;// Image texture
-uniform float spectralSpreadZScore;
-uniform float spectralCentroid;
-uniform float spectralCentroidZScore;
-uniform float energyZScore;
-uniform float energyNormalized;
-uniform float energyMax;
-uniform float spectralFluxMax;
-out vec4 fragColor;
+#define A 0.5
+#define B spectralCentroid
+#define C knob_1
+#define D knob_2
+mat2 rot(float a) { float s = sin(a); float c = cos(a); return mat2(c, s, -s, c); }
+vec3 aces(vec3 x) { return clamp((x*(2.51*x+0.03))/(x*(2.43*x+0.59)+0.14),0.0,1.0); }
+float luma(vec3 color) { return dot(color, vec3(0.299, 0.587, 0.114)); }
 
-vec4 getLastFrameColor(vec2 uv){
-  return texture(prevFrame,uv);
+float hash(vec2 ip, float seed) {
+  return random(ip, seed);
 }
 
-void mainImage(out vec4 fragColor,in vec2 fragCoord,float time)
-{
-  vec2 uv=(2.*fragCoord-resolution.xy)/resolution.y;
-  
-  // background
-  vec3 color=vec3(.8+.2*uv.y);
-  
-  // bubbles
-  for(int i=0;i<40;i++)
-  {
-    // bubble seeds
-    float pha=sin(float(i)*546.13+energyMax/10.)*.5+.5;
-    float siz=pow(sin(float(i)*651.74+5.)*.5+.5,4.);
-    float pox=sin(float(i)*321.55+4.1)*resolution.x/resolution.y;
-    
-    // bubble size, position and color
-    float rad=.1+.5*siz;
-    vec2 pos=vec2(pox,-1.-rad+(2.+2.*rad)*mod(pha+.1*time*(.2+spectralCentroidZScore*siz),1.));
-    float dis=length(uv-pos);
-    vec3 col=mix(vec3(spectralCentroid,energyNormalized,0.),vec3(.1,.4,.8),.5+.5*sin(float(i)*1.2+1.9));
-    //    col+= 8.0*smoothstep( rad*0.95, rad, dis );
-    
-    // render
-    float f=length(uv-pos)/rad;
-    f=sqrt(clamp(1.-f*f,0.,1.));
-    color-=col.zyx*(1.-smoothstep(rad*.95,rad,dis))*f;
+
+vec3 bubb(vec2 p, float s) {
+    p *= 1.25*A;
+    float t = 40.0;
+    vec2 id = floor(p);
+    float r = hash(id*34.29195, 44.49593 + s);
+    p += vec2(sin(r+(T+10.0*r)), cos(r+(T+10.0*r)))*0.15*r;
+    vec2 lv = fract(p);
+    vec2 alv = abs(lv*2.0-1.0);
+
+
+    for (int i = -1; i < 1; i++) {
+        for (int j = -1; j < 1; j++) {
+            vec2 lat = vec2(i, j);
+            vec2 k = vec2(hash((id+lat), 11.1987 + s), hash(id+lat, 3.1295 + s));
+            vec2 diff = lat + k - lv;
+            float dist = dot(diff, diff);
+            t = min(t, dist + (1.0+4.0*r)*length(alv));
+
+        }
+    }
+
+
+    float f = clamp((t/(1.0+t*t*t*t*t*t*t*t*t*t*t*t*t*t*t*t*t)), 0.0, 1.0);
+
+    float h = hash(13.91*id+4.25, 12.312);
+
+    float red = h;
+    float green = fract(h*10.29184);
+    float blue = fract(h*30.554324);
+
+    vec3 col = vec3(red, green, blue);
+    col = rgb2hsl(col);
+    col.x = fract(col.x + B);
+    col = hsl2rgb(col);
+
+    return col*exp(f*6.-4.);
+}
+
+////////////////////////////////////////////////////////
+
+void mainImage(out vec4 o, in vec2 fc) {
+  vec3 col = vec3(0.0);
+  vec2 uv = (fc-0.5*R.xy)/R.y;
+
+  uv *= 3.3;
+
+  float t = T/60.;
+  uv += 40.0*vec2(cos(t), sin(t));
+
+  float z = 0.0;
+  float itau = 3.0*(1.0/TAU);
+  for (float i = 0.0; i < TAU; i += itau) {
+    col += bubb(uv*rot(i)*(1.0+z), z+i*3.492195);
+    z += 0.04*i;
+
   }
-  
-  // vigneting
-  color*=sqrt(1.5-.5*length(uv));
-  vec3 lastFrameColor=getLastFrameColor(uv).rgb;
-  color=mix(lastFrameColor,color,.06);
-  fragColor=vec4(color,1.);
-}
-
-void main(void){
-  mainImage(fragColor,gl_FragCoord.xy,time);
+  col /= TAU;
+  col += col*luma(col);
+  col = aces(col);
+  col = pow(col, vec3(1.0 / 2.2));
+  o = vec4(col, 1.0);
 }
