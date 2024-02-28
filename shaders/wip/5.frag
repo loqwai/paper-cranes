@@ -5,6 +5,12 @@ To the extent possible under law, the author(s) have dedicated all copyright and
 ^ This means do ANYTHING YOU WANT with this code. Because we are programmers, not lawyers.
 -Otavio Good
 */
+uniform float knob_1;
+uniform float knob_2;
+uniform float knob_3;
+
+#define CENTER vec2(knob_1,knob_2)
+#define amplitude knob_3
 
 // noise functions
 float Hash2d(vec2 uv)
@@ -20,6 +26,31 @@ vec2 noise2dTex2(vec2 uv)
   return vec2(random(uv), random(uv.yx));
 
 }
+
+bool isInDrip(vec2 uv) {
+    vec2 center = CENTER; // Center of the "drip"
+    float radius = 0.1 + amplitude * 0.05; // Dynamic radius based on amplitude
+
+    // Calculate distance from the center
+    float dist = length(uv - center);
+
+    // Return true if the distance is less than the dynamic radius
+    return dist < radius;
+}
+
+// Function to distort UVs based on a "drip" effect
+vec2 drip(vec2 uv, vec2 center) {
+    vec2 toCenter = center - uv;
+    // Ensure wrapping effect by considering the shortest path in a toroidal topology
+    toCenter = toCenter - round(toCenter);
+
+    float distance = length(toCenter); // Distance to the center, considering wrapping
+    float wave = sin(distance * 10.0 - time * 5.0) * amplitude; // Sinusoidal wave based on distance and time, scaled by amplitude
+    wave *= exp(-distance * 15.0); // Exponential falloff based on distance, sharper to make the effect more localized
+
+    return toCenter * wave * 0.05; // Scale the distortion vector by a factor for visual effect
+}
+
 const vec2 zeroOne = vec2(0.0, 1.0);
 float noise2d(vec2 uv)
 {
@@ -59,10 +90,11 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     // center and scale the UV coordinates
 	vec2 uv = fragCoord.xy / iResolution.xy;
+    vec2 originalUv = uv;
+    vec2 distortedUv = drip(uv, CENTER);
     uv -= 0.5;
     uv.x *= iResolution.x / iResolution.y;
     uv *= 0.94;
-
     // do the magic
     vec2 warp = normalize(uv) * (1.0-pow(length(uv), 0.45));
     vec3 finalColor = vec3(Fractal(uv*2.0+1.0),
@@ -78,5 +110,12 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     finalColor += vec3(1.0, 0.3, 0.03)*3.0 * pow(1.0 - abs(circle), 100.0) * aNoise;	// outer circle
     float outer = (1.0 - pow(max(0.0, circle), 0.1)*2.0);
     finalColor += vec3(1.,0.2,0.03)*0.4* max(0.0, outer*(1.0-length(uv)));
-    fragColor = vec4(finalColor, 1.0);
+    if(isInDrip(uv)) {
+        finalColor = rgb2hsl(finalColor);
+        finalColor.x = fract(finalColor.x + 0.5);
+        finalColor = hsl2rgb(finalColor);
+    }
+
+    vec4 prevColor = getLastFrameColor(distortedUv);
+    fragColor = mix(prevColor, vec4(finalColor, 1.0), 0.7);
 }
