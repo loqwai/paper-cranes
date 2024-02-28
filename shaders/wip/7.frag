@@ -1,22 +1,25 @@
+/**
 /*
 by Dom Mandy in 2024
 */
 uniform float knob_1;
 uniform float knob_2;
+uniform float knob_3;
 #define A knob_1
-#define B energy
+#define B knob_2
+#define D knob_3
 // .23 2.
 void mainImage(out vec4 P, vec2 V) {
     vec2 Z = iResolution.xy,
          C = .6 * (Z - V - V).yx / Z.y;
     C.x += .77;
-    V = C;
+    V = C*D;
 
     float v, x, y,
           z = y = x = 9.;
 
-    for (int k; k < 500; k++) {
-        float a = atan(V.y, V.x), 
+    for (int k; k < 50; k++) {
+        float a = atan(V.y, V.x),
         d = dot(V, V) * A;
         float c = dot(V, vec2(a, log(d) / 2.));
         V = exp(-a * V.y) * pow(d, V.x / 2.) * vec2(cos(c), sin(c));
@@ -31,3 +34,4 @@ void mainImage(out vec4 P, vec2 V) {
     z = 1. -  smoothstep(1., -6., log(y)) * smoothstep(1., -6., log(x));
     P = sqrt(z + (z - z * z * z) * cos(atan(Z.y, Z.x) - vec4(0, 2.1, 4.2, 0)));
 }
+**/
