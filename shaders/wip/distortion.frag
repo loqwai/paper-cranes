@@ -3,7 +3,7 @@ uniform float knob_1;
 uniform float knob_2;
 uniform float knob_3;
 
-#define amplitude energy*1.5
+#define amplitude energyZScore
 #define CENTER vec2(0.5,0.5)
 
 bool isInDrip(vec2 uv) {
@@ -18,7 +18,7 @@ bool isInDrip(vec2 uv) {
 }
 
 // Function to distort UVs based on a "drip" effect
-vec2 drip(vec2 uv, vec2 center, float time) {
+vec2 drip(vec2 uv, vec2 center) {
     vec2 toCenter = center - uv;
     // Ensure wrapping effect by considering the shortest path in a toroidal topology
     toCenter = toCenter - round(toCenter);
@@ -41,7 +41,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 center = CENTER;
 
     // Apply the drip effect to distort UV coordinates
-    vec2 distortedUv = uv + drip(uv, center, time);
+    vec2 distortedUv = uv + drip(uv, center);
 
     // Fetch the color from the previous frame, using distorted UVs
     vec4 color = getLastFrameColor(distortedUv);
