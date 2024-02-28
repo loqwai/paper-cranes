@@ -49,11 +49,14 @@ vec3 bubb(vec2 p, float s) {
 
     float h = hash(13.91*id+4.25, 12.312);
 
-    float red = h*B;
-    float green = fract(h*10.29184)*C;
-    float blue = fract(h*30.554324)*D;
+    float red = h;
+    float green = fract(h*10.29184);
+    float blue = fract(h*30.554324);
 
     vec3 col = vec3(red, green, blue);
+    col = rgb2hsl(col);
+    col.x = fract(col.x + B);
+    col = hsl2rgb(col);
 
     return col*exp(f*6.-4.);
 }
@@ -82,4 +85,3 @@ void mainImage(out vec4 o, in vec2 fc) {
   col = pow(col, vec3(1.0 / 2.2));
   o = vec4(col, 1.0);
 }
-i

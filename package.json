@@ -9,7 +9,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "node ./esbuild.js",
     "dev": "npm run build && concurrently \"npm run start\" \"npm run build:watch\"",
-    "build:watch": "chokidar '**/*.*' -i 'node_modules/*' -i 'dist/*' -c 'npm run build'",
+    "build:watch": "chokidar '**/*.*' -i 'node_modules/*' -i 'dist/**/*.*' -c 'npm run build'",
     "format": "eslint --fix ."
   },
   "glslify": {
