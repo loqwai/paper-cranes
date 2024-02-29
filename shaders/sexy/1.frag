@@ -1,19 +1,16 @@
-/**
 /*
 by Dom Mandy in 2024
 */
 uniform float knob_1;
 uniform float knob_2;
-uniform float knob_3;
-#define A knob_1
-#define B knob_2
-#define D knob_3
+#define A mapValue(spectralCentroidZScore, 0.,1.,1.,2.) + 0.1
+#define B energyZScore
 // .23 2.
 void mainImage(out vec4 P, vec2 V) {
     vec2 Z = iResolution.xy,
          C = .6 * (Z - V - V).yx / Z.y;
     C.x += .77;
-    V = C*D;
+    V = C;
 
     float v, x, y,
           z = y = x = 9.;
@@ -34,4 +31,3 @@ void mainImage(out vec4 P, vec2 V) {
     z = 1. -  smoothstep(1., -6., log(y)) * smoothstep(1., -6., log(x));
     P = sqrt(z + (z - z * z * z) * cos(atan(Z.y, Z.x) - vec4(0, 2.1, 4.2, 0)));
 }
-**/
