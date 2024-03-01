@@ -1,4 +1,4 @@
-import { AudioFeatures, getFlatAudioFeatures } from '../audio/AudioProcessor'
+import { getFlatAudioFeatures } from '../audio/AudioProcessor'
 
 export const shaderWrapper = (shader) => {
     const [firstLine, ...lines] = shader.split('\n')
