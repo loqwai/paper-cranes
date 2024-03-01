@@ -130,9 +130,9 @@ if (shader) {
         .then((data) => {
             localStorage.setItem(SAVE_CODE_FILENAME, data)
             // remove the query param and reload the page
-            window.location.search = ''
-            const reloadUrl = window.location.href.split('?')[0]
-            window.location.href = reloadUrl
+            // window.location.search = ''
+            // const reloadUrl = window.location.href.split('?')[0]
+            // window.location.href = reloadUrl
         })
 }
 // Cast our spell, bringing the FeatureAdder to life within the digital ether

@@ -28,39 +28,7 @@ void main(void){
 }
 `
     }
-    if (shader.includes('render')) {
-        return /* glsl */ `
-#version 300 es
-precision mediump float;
-// This is automatically added by paper-cranes
-#define PAPER_CRANES 1
-out vec4 fragColor;
-${shaderToyCompatibilityUniforms()}
-${getAudioUniforms()}
-
-${paperCranes()}
-vec4 getLastFrameColor(vec2 uv){
-    // Assuming uv.x was previously multiplied by the aspect ratio, we'll divide it now.
-    float aspectRatio = iResolution.x / iResolution.y;
-    vec2 correctedUV = uv;
-    correctedUV.x /= aspectRatio; // Undo the aspect ratio correction
-    //move the uv to the center
-    correctedUV -= 0.5;
-    // Now, use correctedUV to sample from the previous frame
-    return texture(prevFrame, correctedUV);
-}
-${shader}
-
-void main(void){
-    vec2 resolution = iResolution.xy;
-    vec2 uv = (gl_FragCoord.xy - 0.5 * resolution) / resolution.y;
-    // This is the magic line, the one "they" don't want you to figure out.
-    float aspectRatio = resolution.x / resolution.y;
-    fragColor = render(uv);
-}
-`
-    }
-    throw new Error('Shader must have a render function. It looks like this: \n vec4 render(vec2 uv){')
+    throw new Error('Shader does not contain mainImage function. It should look like this: void mainImage( out vec4 fragColor, in vec2 fragCoord ) { ... }')
 }
 
 const shaderToyCompatibilityUniforms = () => /* glsl */ `
