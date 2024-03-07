@@ -1,7 +1,7 @@
 // history-size: 50
 uniform float knob_1;
 #define A spectralFluxNormalized * 25. + 1.
-#define B knob_1
+#define B (energyZScore * .05 + 1.)
 vec3 pal(float t) {
     vec3 b = vec3(.45);
     vec3 c = vec3(.35);
@@ -28,7 +28,7 @@ vec3 norm(vec3 p) {
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
     vec2 uv = (fragCoord-.5*iResolution.xy)/iResolution.y;
-    vec3 init = vec3(iTime*.25,1.5,.3);
+    vec3 init = vec3(iTime*.25*B,1.5,.3);
     vec3 cam = normalize(vec3(1., uv ));
 
     vec3 p = init;
