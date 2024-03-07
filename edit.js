@@ -72,6 +72,9 @@ const FeatureAdder = () => {
             window.location.reload()
         }
         window.cranes.setFeatures = setFeatures
+        window.cranes.setFeature = (name, value) => {
+            updateFeature(name, { ...features[name], value })
+        }
         setFeatures(initialFeatures)
     }, [])
     const save = () => {
