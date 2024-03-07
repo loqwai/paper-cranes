@@ -1,7 +1,8 @@
 // history-size: 50
 uniform float knob_1;
-#define A spectralFluxNormalized * 25. + 1.
+#define A 1.66 + spectralRoughnessZScore != 0. ? 1.66 + spectralRoughnessZScore: 0.25
 #define B (energyZScore * .05 + 1.)
+#define C (spectralRoughnessZScore > -.2 ? 1. : -1.)
 vec3 pal(float t) {
     vec3 b = vec3(.45);
     vec3 c = vec3(.35);

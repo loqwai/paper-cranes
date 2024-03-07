@@ -73,7 +73,10 @@ const FeatureAdder = () => {
         }
         window.cranes.setFeatures = setFeatures
         window.cranes.setFeature = (name, value) => {
-            updateFeature(name, { ...features[name], value })
+            setFeatures(currentFeatures => {
+                const newFeature = { ...currentFeatures[name], value };
+                return { ...currentFeatures, [name]: newFeature };
+            });
         }
         setFeatures(initialFeatures)
     }, [])
