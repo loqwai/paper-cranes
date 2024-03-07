@@ -73,10 +73,13 @@ const FeatureAdder = () => {
         }
         window.cranes.setFeatures = setFeatures
         window.cranes.setFeature = (name, value) => {
-            setFeatures(currentFeatures => {
-                const newFeature = { ...currentFeatures[name], value };
-                return { ...currentFeatures, [name]: newFeature };
-            });
+            setFeatures((currentFeatures) => {
+                const newFeature = { ...currentFeatures[name], value }
+                return { ...currentFeatures, [name]: newFeature }
+            })
+            let currentUrl = new URL(window.location)
+            currentUrl.searchParams.set(name, value)
+            window.history.pushState({}, '', currentUrl)
         }
         setFeatures(initialFeatures)
     }, [])

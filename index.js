@@ -71,12 +71,6 @@ const main = async () => {
     window.shader = shader
     const initialImageUrl = params.get('image') ?? 'images/placeholder-image.png'
     const fullscreen = (params.get('fullscreen') ?? false) === 'true'
-    window.cranes.queryParamFeatures = {}
-    // collect the rest of the params
-    for (const [key, value] of params) {
-        window.cranes.queryParamFeatures[key] = value
-    }
-
     const canvas = document.getElementById('visualizer')
     const render = await makeVisualizer({ canvas, shader, initialImageUrl, fullscreen })
     updateUI()
@@ -117,7 +111,14 @@ const updateUI = () => {
 const animate = ({ render, audio, shader }) => {
     shader = window?.shader ?? shader
     const measuredAudioFeatures = audio.getFeatures()
-    const { overwrittenAudioFeatures, queryParamFeatures, manualFeatures = {} } = window.cranes
+    const queryParamFeatures = {}
+    const params = new URLSearchParams(window.location.search)
+    // collect the rest of the params
+    for (const [key, value] of params) {
+        queryParamFeatures[key] = value
+    }
+
+    const { overwrittenAudioFeatures, manualFeatures = {} } = window.cranes
     window.cranes.measuredAudioFeatures = measuredAudioFeatures
     const features = { ...measuredAudioFeatures, ...queryParamFeatures, ...overwrittenAudioFeatures, ...manualFeatures }
     render({ time: (performance.now() - startTime) / 1000, features, shader })

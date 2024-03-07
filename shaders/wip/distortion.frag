@@ -3,9 +3,9 @@ uniform float knob_1;
 uniform float knob_2;
 uniform float knob_3;
 
-#define amplitude energyZScore
+#define amplitude energyZScore*3.
 #define CENTER vec2(0.5,0.5)
-
+#define FREQUENCY knob_1
 bool isInDrip(vec2 uv) {
     vec2 center = vec2(0.5, 0.5); // Center of the "drip"
     float radius = 0.1 + amplitude * 0.05; // Dynamic radius based on amplitude
@@ -24,8 +24,8 @@ vec2 drip(vec2 uv, vec2 center) {
     toCenter = toCenter - round(toCenter);
 
     float distance = length(toCenter); // Distance to the center, considering wrapping
-    float wave = sin(distance * 10.0 - time * 5.0) * amplitude; // Sinusoidal wave based on distance and time, scaled by amplitude
-    wave *= exp(-distance * 15.0); // Exponential falloff based on distance, sharper to make the effect more localized
+    float wave = sin(distance * 10.0 - time * FREQUENCY) * amplitude; // Sinusoidal wave based on distance and time, scaled by amplitude
+    wave *= exp(-distance * 15.); // Exponential falloff based on distance, sharper to make the effect more localized
 
     return toCenter * wave * 0.05; // Scale the distortion vector by a factor for visual effect
 }
