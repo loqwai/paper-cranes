@@ -15,8 +15,8 @@ async function fetchWithControlledRetry(request) {
                 if (cacheResponse) return resolve(cacheResponse)
                 await wait(500)
                 resolve(fetch(request))
-            }, 200),
-        ) // 200ms timeout
+            }, 1000),
+        )
 
         const networkPromise = fetch(request)
             .then(async (response) => {
