@@ -1,12 +1,5 @@
-# Paper Cranes
+# Beadfamous
 
-### Url syntax:
+Welcome to the Beadfamous project! This repo is an open-source project I made to do advanced audio analysis from a microphone in the browser, and drive arbitrary music visualizations with the data. The project can run on mobile phones, and is designed to make it easy to create new visualizations and share them with others.
 
-<url>?shader=<shader name>&image=<first frame image>&slider=<slider name 1>&slider=<slider name 2>...
-example:
-[http://127.0.0.1:6969/edit.html?shader=wires&slider=time&slider=knob_1](http://127.0.0.1:6969/edit.html?shader=wires&slider=time&slider=knob_1)
-
-### Glslify
-
-Shader Components -
-[available glslify modules](https://stack.gl/packages/)
+The other half of the project is a sort of "art project" where you make bead bracelets, and flash the visualizations onto them. This is a fun way to share your visualizations with others, and to make a physical object that represents your music. Scanning the bracelet with a phone will take you to a specific visualization - even when offline!
