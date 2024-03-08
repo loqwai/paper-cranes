@@ -29,3 +29,5 @@ Lucky for you, I'm hosting a hackathon with HeatSync Labs next month, in which w
 To make your own visualizations, you can create a new file in the `shaders/` directory, and then load it by specifying the 'shader' query param in the url. For example, to view the 'my_new_shader' visualization, you would go to [localhost:6969/?shader=my_new_shader](http://localhost:6969/?shader=my_new_shader)
 
 You can copy and paste any of the existing files in the `shaders/` directory to get started. Or ya know, wait until the Hackathon and I'll walk you through it.
+
+If you want to deploy a visualization you made, PR me and I'll add it to the deployed site!
