@@ -19,9 +19,11 @@ vec3 rotateZ(vec3 p, float angle) {
 }
 
 float sceneSDF(vec3 pos, ShapeParams params) {
-    // Adjust for tetrahedron shape and apply rotation
-    pos = rotateZ(pos - params.location, params.rotation * iTime) + params.location;
-    return tetrahedronSDF(pos - params.location) - params.radius;
+    // Apply rotation
+    pos = rotateZ(pos - params.location, params.rotation * iTime);
+    // Apply scale to adjust the shape size - now incorporating the scale parameter
+    pos /= params.scale; // Divide position by scale to enlarge the shape in the SDF
+    return tetrahedronSDF(pos) - params.radius;
 }
 
 vec3 estimateNormal(vec3 p, ShapeParams params) {
@@ -76,8 +78,9 @@ vec3 calculatePhongShading(vec3 normal, vec3 lightDir, vec3 viewDir, vec3 lightC
         // Slow down the orbit speed by using a smaller multiplier for iTime
         params.location = vec3(sin(iTime * 0.1 + timeOffset) * 1.5, cos(iTime * 0.1 + timeOffset) * 1.5, 0.0);
         // Slow down the rotation speed by using a smaller multiplier for iTime
-        params.rotation = iTime * 0.1; // Adjusted rotation speed
-        params.radius = 0.2; // Size of the tetrahedron
+        params.rotation = sin(iTime * 0.1); // Adjusted rotation speed
+        params.scale = 1.0; // Adjust this value to scale the shape
+        params.radius = 0.005; // Adjusted to a more practical default size
         params.materialColor = vec3(sin(float(i) * 1.0472) * 0.5 + 0.5, cos(float(i) * 1.0472) * 0.5 + 0.5, sin(float(i) * 1.0472) * 0.5 + 0.5);
 
         vec3 hitPoint;
