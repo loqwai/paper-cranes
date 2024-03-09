@@ -62,9 +62,7 @@ vec3 calculatePhongShading(vec3 normal, vec3 lightDir, vec3 viewDir, vec3 lightC
     vec3 specular = specularStrength * spec * lightColor;
 
     return ambient + diffuse + specular;
-}
-
-void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+}void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = (fragCoord.xy - 0.5 * iResolution.xy) / iResolution.y;
     vec3 camPos = vec3(0.0, 0.0, 3.0); // Positioned to view the orbiting shapes
     vec3 rayDir = normalize(vec3(uv, -1.0));
@@ -75,8 +73,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     for(int i = 0; i < 3; i++) {
         ShapeParams params;
         float timeOffset = float(i) * 2.0944; // Distribute shapes evenly in orbit
-        params.location = vec3(sin(iTime + timeOffset) * 1.5, cos(iTime + timeOffset) * 1.5, 0.0);
-        params.rotation = iTime;
+        // Slow down the orbit speed by using a smaller multiplier for iTime
+        params.location = vec3(sin(iTime * 0.1 + timeOffset) * 1.5, cos(iTime * 0.1 + timeOffset) * 1.5, 0.0);
+        // Slow down the rotation speed by using a smaller multiplier for iTime
+        params.rotation = iTime * 0.1; // Adjusted rotation speed
         params.radius = 0.2; // Size of the tetrahedron
         params.materialColor = vec3(sin(float(i) * 1.0472) * 0.5 + 0.5, cos(float(i) * 1.0472) * 0.5 + 0.5, sin(float(i) * 1.0472) * 0.5 + 0.5);
 
