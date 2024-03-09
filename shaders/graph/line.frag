@@ -21,7 +21,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             fragColor = vec4(0.0, 1.0, 0.0, 1.0);
         } else if (abs(fragCoord.y - (spectralEntropy * resolution.y)) < lineWidth) {
             fragColor = vec4(0.0, 0.0, 1.0, 1.0);
-        } else if (abs(fragCoord.y - (spectralKurtosis* resolution.y)) < lineWidth) {
+        } else if (abs(fragCoord.y - (spectralRolloff* resolution.y)) < lineWidth) {
             fragColor = vec4(1.0, 1.0, 0.0, 1.0);
         }
     }

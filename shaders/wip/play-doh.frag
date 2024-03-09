@@ -1,4 +1,3 @@
-// history-size: 50
 uniform float knob_1;
 #define A 1.66 + spectralRoughnessZScore != 0. ? 1.66 + spectralRoughnessZScore: 0.25
 #define B (energyZScore * .05 + 1.)
@@ -52,10 +51,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
     col = mix(col, vec3(0.), !hit ? 1. : smoothstep(0.,8.,distance(p,init)));
     col = mix(vec3(0),col, vign+.1);
     col = smoothstep(0.,1.+.3*sin(iTime+p.x*4.+p.z*4.),col);
+
     vec3 hsl = rgb2hsl(col);
     hsl.x = fract(hsl.x + spectralCentroidMedian);
     col = hsl2rgb(hsl);
-    fragColor.xyz = col;
-    fragColor.xyz = sqrt(fragColor.xyz);
-
+    fragColor = vec4(col,1.0);
 }
