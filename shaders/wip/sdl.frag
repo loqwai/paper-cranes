@@ -41,7 +41,7 @@ float marchRay(vec3 ro, vec3 rd, ShapeParams params, out vec3 hitPoint) {
     for (int i = 0; i < 100; i++) {
         vec3 pos = ro + rd * t;
         float dist = sceneSDF(pos, params);
-        if (dist < 0.004) { // Slightly tighter threshold for hit detection
+        if (dist < 0.0004) { // Slightly tighter threshold for hit detection
             hitPoint = pos;
             return t; // Return the distance to the hit point
         }
@@ -79,8 +79,8 @@ vec3 calculatePhongShading(vec3 normal, vec3 lightDir, vec3 viewDir, vec3 lightC
         params.location = vec3(sin(iTime * 0.1 + timeOffset) * 1.5, cos(iTime * 0.1 + timeOffset) * 1.5, 0.0);
         // Slow down the rotation speed by using a smaller multiplier for iTime
         params.rotation = sin(iTime * 0.1); // Adjusted rotation speed
-        params.scale = 1.0; // Adjust this value to scale the shape
-        params.radius = 0.005; // Adjusted to a more practical default size
+        params.scale = 0.9; // Adjust this value to scale the shape
+        params.radius = 0.0005; // Adjusted to a more practical default size
         params.materialColor = vec3(sin(float(i) * 1.0472) * 0.5 + 0.5, cos(float(i) * 1.0472) * 0.5 + 0.5, sin(float(i) * 1.0472) * 0.5 + 0.5);
 
         vec3 hitPoint;
