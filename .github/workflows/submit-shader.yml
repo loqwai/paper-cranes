@@ -1,45 +1,48 @@
-name: Allow Changes in User-Specific shaders/ Directory to Main
+name: Conditional PR Merge with Directory Scope Check
 
 on:
+    pull_request_review:
+        types: [submitted]
     pull_request:
-        branches:
-            - main
-        paths:
-            - 'shaders/*/**'
-        types: [opened, synchronize, reopened]
+        types: [synchronize, reopened]
 
 jobs:
-    auto-approve-and-merge:
-        if: github.base_ref == 'main'
+    directory-scope-check:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout
               uses: actions/checkout@v2
 
-            - name: Check for changes in user-specific directory
-              id: check_changes
-              env:
-                  PR_AUTHOR: ${{ github.event.pull_request.user.login }}
-              run: |
-                  git fetch origin ${{ github.base_ref }}
-                  git diff --name-status origin/main ${{ github.sha }} | grep -E '^\w\s+shaders/'"${PR_AUTHOR}"'/.*' > pr_changes.txt
-                  if [ -s pr_changes.txt ]; then
-                    echo "Changes detected in the user-specific directory, proceeding with auto-approve and merge."
-                    echo "valid_user_directory=true" >> $GITHUB_ENV
-                  else
-                    echo "No changes in the user-specific directory, not proceeding."
-                    echo "valid_user_directory=false" >> $GITHUB_ENV
-                  fi
-
-            - name: Auto approve
-              uses: hmarr/auto-approve-action@v2
-              if: env.valid_user_directory == 'true'
+            - name: Ensure changes are scoped to user's directory
+              id: scope_check
+              uses: actions/github-script@v5
               with:
                   github-token: ${{ secrets.GITHUB_TOKEN }}
+                  script: |
+                      const username = context.payload.pull_request.user.login;
+                      const filesChanged = await github.rest.pulls.listFiles({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        pull_number: context.payload.pull_request.number
+                      });
 
-            - name: Merge PR
+                      const isValidScope = filesChanged.data.every(file => {
+                        return file.filename.startsWith(`shaders/${username}/`);
+                      });
+
+                      if (!isValidScope) {
+                        console.log("PR contains changes outside the user's specific directory.");
+                        return false;
+                      } else {
+                        console.log("All changes are within the user's specific directory.");
+                        return true;
+                      }
+              env:
+                  VALID_SCOPE: ${{ steps.scope_check.outputs.result }}
+
+            - name: Merge PR if only user directory is changed and checks passed
+              if: env.VALID_SCOPE == 'true' && steps.checks_passed.outputs.result == 'true'
               uses: actions/github-script@v5
-              if: env.valid_user_directory == 'true'
               with:
                   github-token: ${{ secrets.GITHUB_TOKEN }}
                   script: |
