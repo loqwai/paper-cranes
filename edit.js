@@ -66,6 +66,7 @@ const FeatureAdder = () => {
         const searchParams = new URLSearchParams(window.location.search)
         const initialFeatures = {}
         searchParams.forEach((value, key) => {
+            if (key === 'shader') return
             const [featureName, paramType] = key.includes('.') ? key.split('.') : [key, 'value']
             if (!initialFeatures[featureName]) initialFeatures[featureName] = { min: -3, max: 3, value: 0 }
             initialFeatures[featureName][paramType] = parseFloat(value)
