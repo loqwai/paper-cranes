@@ -1,12 +1,10 @@
 name: Conditional PR Merge with Directory Scope Check
 
 on:
+    pull_request_review:
+        types: [submitted]
     pull_request:
-        branches:
-            - main
-        paths:
-            - 'shaders/*/**'
-        types: [opened, synchronize, reopened]
+        types: [synchronize, reopened]
 
 jobs:
     directory-scope-check:
@@ -29,7 +27,9 @@ jobs:
                       });
 
                       const isValidScope = filesChanged.data.every(file => {
-                        return file.filename.startsWith(`shaders/${username}/`);
+                        const inUserFolder = file.filename.startsWith(`shaders/${username}/`);
+                        const isFragmentShader = file.filename.endsWith('.frag');
+                        return inUserFolder && isFragmentShader;
                       });
 
                       if (!isValidScope) {
