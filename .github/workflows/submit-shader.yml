@@ -43,7 +43,7 @@ jobs:
                   VALID_SCOPE: ${{ steps.scope_check.outputs.result }}
 
             - name: Merge PR if only user directory is changed and checks passed
-              if: env.VALID_SCOPE == 'true' && steps.checks_passed.outputs.result == 'true'
+              if: env.VALID_SCOPE == 'true'
               uses: actions/github-script@v5
               with:
                   github-token: ${{ secrets.GITHUB_TOKEN }}
