@@ -21,8 +21,8 @@ jobs:
               env:
                   PR_AUTHOR: ${{ github.event.pull_request.user.login }}
               run: |
-                  git fetch --no-tags --prune --depth=fetch-depth 0 origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/*
-                  git diff --name-status origin/${{ github.base_ref }}...${{ github.sha }} | grep -E '^\w\s+shaders/'"${PR_AUTHOR}"'/.*' > pr_changes.txt
+                  git fetch origin ${{ github.base_ref }}
+                  git diff --name-status origin/main ${{ github.sha }} | grep -E '^\w\s+shaders/'"${PR_AUTHOR}"'/.*' > pr_changes.txt
                   if [ -s pr_changes.txt ]; then
                     echo "Changes detected in the user-specific directory, proceeding with auto-approve and merge."
                     echo "valid_user_directory=true" >> $GITHUB_ENV
