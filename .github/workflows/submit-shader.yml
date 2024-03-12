@@ -32,19 +32,16 @@ jobs:
                         return inUserFolder && isFragmentShader;
                       });
 
+                      core.setOutput('valid_scope', isValidScope); // Correct way to set output
                       if (!isValidScope) {
                         console.log("PR contains changes outside the user's specific directory.");
-                        return false;
                       } else {
                         console.log("All changes are within the user's specific directory.");
-                        return true;
                       }
-              env:
-                  VALID_SCOPE: ${{ steps.scope_check.outputs.result }}
 
             - name: Merge PR if only user directory is changed and checks passed
-              if: env.VALID_SCOPE == 'true'
-              uses: actions/github-script@v5
+              if: steps.scope_check.outputs.valid_scope == 'true'
+              uses: actions/github-script@v7.0.1
               with:
                   github-token: ${{ secrets.GITHUB_TOKEN }}
                   script: |
