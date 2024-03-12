@@ -1,20 +1,29 @@
 import { render, Fragment } from 'preact'
 import { useState, useEffect } from 'preact/hooks'
 import { html } from 'htm/preact'
+import debounce from 'debounce' // Ensure this is correctly imported
+
+const updateUrlDebounced = debounce((name, value) => {
+    const currentUrl = new URL(window.location)
+    currentUrl.searchParams.set(name, value)
+    window.history.replaceState({}, '', currentUrl.toString())
+}, 25)
+
 const FeatureEditor = ({ name, min, max, value, onChange, onDelete }) => {
-    const handleValueChange = (e) => onChange({ min, max, value: parseFloat(e.target.value) })
-    const handleCommitChange = () => {
-        // Trigger URL update when the slider is released
-        const currentUrl = new URL(window.location)
-        currentUrl.searchParams.set(name, value)
-        window.history.replaceState({}, '', currentUrl.toString())
+    // Debounce the URL update to prevent excessive history state updates
+
+    const handleValueChange = (e) => {
+        const newValue = parseFloat(e.target.value)
+        onChange({ min, max, value: newValue })
+        // Update URL live with debounced function
+        updateUrlDebounced(name, newValue)
     }
 
     return html`
         <div className="edit-feature" key=${name}>
             <label>${name}:</label>
             <input class="min-feature-value" step="0.1" type="number" value=${min} onInput=${(e) => onChange({ ...value, min: parseFloat(e.target.value) })} />
-            <input class="feature-value" type="range" min=${min} max=${max} value=${value} step="0.01" onInput=${handleValueChange} onChange=${handleCommitChange} />
+            <input class="feature-value" type="range" min=${min} max=${max} value=${value} step="0.01" onInput=${handleValueChange} />
             <span> (${value})</span>
             <input class="max-feature-value" step="0.1" type="number" value=${max} onInput=${(e) => onChange({ ...value, max: parseFloat(e.target.value) })} />
             <button onClick=${onDelete}>x</button>
@@ -38,12 +47,6 @@ const FeatureAdder = () => {
     }, [])
 
     const updateFeature = (name, newValue) => {
-        // Update URL search params
-        const currentUrl = new URL(window.location)
-        const searchParams = new URLSearchParams(window.location.search)
-        searchParams.set(name, newValue.value)
-        window.history.replaceState({}, '', currentUrl.toString())
-
         setFeatures({ ...features, [name]: newValue })
     }
 
@@ -59,17 +62,17 @@ const FeatureAdder = () => {
         const { [name]: _, ...rest } = features
         setFeatures(rest)
 
-        // Update URL search params
-        const searchParams = new URLSearchParams(window.location.search)
-        searchParams.delete(name)
-        window.history.replaceState({}, '', `${window.location.pathname}?${searchParams}`)
+        // Update URL search params immediately upon deletion
+        const currentUrl = new URL(window.location)
+        currentUrl.searchParams.delete(name)
+        window.history.replaceState({}, '', currentUrl.toString())
     }
 
     return html`
         <${Fragment}>
             <div className="new-feature">
-                <input type="text" value=${''} onInput=${(e) => setFeatures(e.target.value)} placeholder="Enter new feature name" />
-                <button onClick=${() => addNewFeature(newFeatureName)}>Add Feature</button>
+                <input type="text" value=${''} onInput=${(e) => addNewFeature(e.target.value)} placeholder="Enter new feature name" />
+                <button onClick=${addNewFeature}>Add Feature</button>
             </div>
             <div id="existing-features-editor">
                 ${Object.entries(features).map(
