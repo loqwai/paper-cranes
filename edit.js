@@ -77,6 +77,10 @@ const FeatureAdder = () => {
         setFeatures((prev) => ({ ...prev, [name]: updatedFeature }))
     }
 
+    window.cranes.updateFeature = (name, value) => {
+        updateFeature(name, { ...features[name], value })
+    }
+
     const addNewFeature = () => {
         if (!newFeatureName.trim()) {
             alert('Feature name cannot be empty')

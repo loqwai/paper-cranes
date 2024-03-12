@@ -26,28 +26,30 @@ if ('serviceWorker' in navigator) {
         )
     })
 }
+window.cranes = window.cranes || {}
+window.cranes.overwrittenAudioFeatures = window.cranes.overwrittenAudioFeatures || {}
+window.cranes.manualFeatures = window.cranes.manualFeatures || {}
+
+window.cranes.freezeAudioFeatures = () => {
+    window.cranes.overwrittenAudioFeatures = { ...window.cranes.measuredAudioFeatures }
+    return window.cranes.overwrittenAudioFeatures
+}
+
+window.cranes.saveAudioFeatures = () => {
+    localStorage.setItem('overwrittenAudioFeatures', JSON.stringify(window.cranes.overwrittenAudioFeatures))
+}
+
+window.cranes.loadAudioFeatures = () => {
+    window.cranes.overwrittenAudioFeatures = JSON.parse(localStorage.getItem('overwrittenAudioFeatures'))
+}
+
+window.cranes.loadManualFeatures = (name) => {
+    window.cranes.manualFeatures = JSON.parse(localStorage.getItem(`manual-features-${name}`))
+}
+
 const main = async () => {
     if (ranMain) return
-    window.cranes = window.cranes || {}
-    window.cranes.overwrittenAudioFeatures = window.cranes.overwrittenAudioFeatures || {}
-    window.cranes.manualFeatures = window.cranes.manualFeatures || {}
 
-    window.cranes.freezeAudioFeatures = () => {
-        window.cranes.overwrittenAudioFeatures = { ...window.cranes.measuredAudioFeatures }
-        return window.cranes.overwrittenAudioFeatures
-    }
-
-    window.cranes.saveAudioFeatures = () => {
-        localStorage.setItem('overwrittenAudioFeatures', JSON.stringify(window.cranes.overwrittenAudioFeatures))
-    }
-
-    window.cranes.loadAudioFeatures = () => {
-        window.cranes.overwrittenAudioFeatures = JSON.parse(localStorage.getItem('overwrittenAudioFeatures'))
-    }
-
-    window.cranes.loadManualFeatures = (name) => {
-        window.cranes.manualFeatures = JSON.parse(localStorage.getItem(`manual-features-${name}`))
-    }
     window.c = cranes
     startTime = performance.now()
     const audio = await setupAudio()
