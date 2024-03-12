@@ -7,15 +7,19 @@
     </head>
 
     <body class="ready">
-        <canvas id="visualizer" width="1920" height="1920"></canvas>
-        <div id="editor-container">
+        <div>
             <div class="sparkly animated" id="feature-editor"></div>
+            <canvas id="visualizer" width="1920" height="1920"></canvas>
+        </div>
+
+        <div id="editor-container">
             <div id="monaco-editor"></div>
         </div>
         <script type="module" src="./index.js"></script>
         <script type="module" src="./edit.js"></script>
         <script type="module">
             import * as monaco from 'https://cdn.jsdelivr.net/npm/monaco-editor@0.46.0/+esm'
+            console.log('hi there')
             const shader = localStorage.getItem('cranes-manual-code') || ''
             const conf = {
                 comments: {
@@ -404,6 +408,11 @@
                 theme: 'vs-dark',
             })
 
+            // on window resize, resize the editor
+            window.addEventListener('resize', () => {
+                console.log('resize')
+                editor.layout()
+            })
             window.editor = editor
         </script>
     </body>

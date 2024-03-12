@@ -86,11 +86,12 @@ const FeatureAdder = () => {
     const save = () => {
         localStorage.setItem(SAVE_FEATURES_FILENAME, JSON.stringify(features))
         localStorage.setItem(SAVE_CODE_FILENAME, editor.getValue())
-        window.location.reload()
+        window.shader = editor.getValue()
     }
     const reset = () => {
         localStorage.removeItem(SAVE_FEATURES_FILENAME)
         localStorage.removeItem(SAVE_CODE_FILENAME)
+        delete window.shader
         window.location.reload()
     }
 
