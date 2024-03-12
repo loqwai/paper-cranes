@@ -1,91 +1,108 @@
 import { render, Fragment } from 'preact'
 import { useState, useEffect } from 'preact/hooks'
 import { html } from 'htm/preact'
-import debounce from 'debounce' // Ensure this is correctly imported
+import debounce from 'debounce'
 
-const updateUrlDebounced = debounce((name, value) => {
+const updateUrl = (params) => {
     const currentUrl = new URL(window.location)
-    currentUrl.searchParams.set(name, value)
+    Object.entries(params).forEach(([paramName, paramValue]) => {
+        if (paramValue !== null && paramValue !== undefined) {
+            currentUrl.searchParams.set(paramName, paramValue)
+        } else {
+            currentUrl.searchParams.delete(paramName)
+        }
+    })
     window.history.replaceState({}, '', currentUrl.toString())
-}, 25)
+}
 
-const FeatureEditor = ({ name, min, max, value, onChange, onDelete }) => {
-    // Debounce the URL update to prevent excessive history state updates
+const updateUrlDebounced = debounce(updateUrl, 50)
 
-    const handleValueChange = (e) => {
-        const newValue = parseFloat(e.target.value)
-        onChange({ min, max, value: newValue })
-        // Update URL live with debounced function
-        updateUrlDebounced(name, newValue)
+const FeatureEditor = ({ name, feature, onChange, onDelete }) => {
+    const handleValueChange = (e) => onChange(name, { ...feature, value: parseFloat(e.target.value) })
+    const handleMinChange = (e) => onChange(name, { ...feature, min: parseFloat(e.target.value) })
+    const handleMaxChange = (e) => onChange(name, { ...feature, max: parseFloat(e.target.value) })
+    const handleCommitValue = () => {
+        delete window.cranes?.manualFeatures[name]
+        updateUrlDebounced({ [name]: feature.value })
     }
+    // Update the URL immediately for live updates
+    useEffect(() => {
+        updateUrlDebounced({
+            [name]: feature.value,
+            [`${name}.min`]: feature.min,
+            [`${name}.max`]: feature.max,
+        })
+        if (window.cranes?.manualFeatures) {
+            window.cranes.manualFeatures[name] = feature.value
+        }
+    }, [feature])
 
     return html`
         <div className="edit-feature" key=${name}>
             <label>${name}:</label>
-            <input class="min-feature-value" step="0.1" type="number" value=${min} onInput=${(e) => onChange({ ...value, min: parseFloat(e.target.value) })} />
-            <input class="feature-value" type="range" min=${min} max=${max} value=${value} step="0.01" onInput=${handleValueChange} />
-            <span> (${value})</span>
-            <input class="max-feature-value" step="0.1" type="number" value=${max} onInput=${(e) => onChange({ ...value, max: parseFloat(e.target.value) })} />
-            <button onClick=${onDelete}>x</button>
+            <input class="min-feature-value" type="number" step="0.1" value=${feature.min} onInput=${handleMinChange} />
+            <input
+                class="feature-value"
+                type="range"
+                min=${feature.min}
+                max=${feature.max}
+                step="0.01"
+                value=${feature.value}
+                onInput=${handleValueChange}
+                onChange=${handleCommitValue}
+            />
+            <span> (${feature.value})</span>
+            <input class="max-feature-value" type="number" step="0.1" value=${feature.max} onInput=${handleMaxChange} />
+            <button onClick=${() => onDelete(name)}>x</button>
         </div>
     `
 }
 
 const FeatureAdder = () => {
     const [features, setFeatures] = useState({})
+    const [newFeatureName, setNewFeatureName] = useState('')
 
-    // Initialize features from URL search params
     useEffect(() => {
         const searchParams = new URLSearchParams(window.location.search)
-        const initialFeatures = Array.from(searchParams.keys()).reduce((acc, key) => {
-            const value = parseFloat(searchParams.get(key)) || 0
-            acc[key] = { min: -3, max: 3, value } // Assuming default min and max
-            return acc
-        }, {})
-
+        const initialFeatures = {}
+        searchParams.forEach((value, key) => {
+            const [featureName, paramType] = key.includes('.') ? key.split('.') : [key, 'value']
+            if (!initialFeatures[featureName]) initialFeatures[featureName] = { min: -3, max: 3, value: 0 }
+            initialFeatures[featureName][paramType] = parseFloat(value)
+        })
         setFeatures(initialFeatures)
     }, [])
 
-    const updateFeature = (name, newValue) => {
-        setFeatures({ ...features, [name]: newValue })
+    const updateFeature = (name, updatedFeature) => {
+        setFeatures((prev) => ({ ...prev, [name]: updatedFeature }))
     }
 
-    const addNewFeature = (name) => {
-        if (!name) {
+    const addNewFeature = () => {
+        if (!newFeatureName.trim()) {
             alert('Feature name cannot be empty')
             return
         }
-        updateFeature(name, { min: -3, max: 3, value: 1 })
+        const newFeature = { value: 1, min: -3, max: 3 }
+        updateFeature(newFeatureName, newFeature)
+        setNewFeatureName('')
     }
 
     const deleteFeature = (name) => {
         const { [name]: _, ...rest } = features
         setFeatures(rest)
-
-        // Update URL search params immediately upon deletion
-        const currentUrl = new URL(window.location)
-        currentUrl.searchParams.delete(name)
-        window.history.replaceState({}, '', currentUrl.toString())
+        updateUrlDebounced({ [name]: null, [`${name}.min`]: null, [`${name}.max`]: null })
+        delete window.cranes?.manualFeatures[name]
     }
 
     return html`
         <${Fragment}>
             <div className="new-feature">
-                <input type="text" value=${''} onInput=${(e) => addNewFeature(e.target.value)} placeholder="Enter new feature name" />
+                <input type="text" value=${newFeatureName} onInput=${(e) => setNewFeatureName(e.target.value)} placeholder="Enter new feature name" />
                 <button onClick=${addNewFeature}>Add Feature</button>
             </div>
             <div id="existing-features-editor">
                 ${Object.entries(features).map(
-                    ([name, { min, max, value }]) =>
-                        html`<${FeatureEditor}
-                            key=${name}
-                            name=${name}
-                            min=${min}
-                            max=${max}
-                            value=${value}
-                            onChange=${(newValue) => updateFeature(name, newValue)}
-                            onDelete=${() => deleteFeature(name)}
-                        />`,
+                    ([name, feature]) => html` <${FeatureEditor} key=${name} name=${name} feature=${feature} onChange=${updateFeature} onDelete=${deleteFeature} />`,
                 )}
             </div>
         </${Fragment}>

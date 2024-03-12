@@ -30,6 +30,7 @@ const main = async () => {
     if (ranMain) return
     window.cranes = window.cranes || {}
     window.cranes.overwrittenAudioFeatures = window.cranes.overwrittenAudioFeatures || {}
+    window.cranes.manualFeatures = window.cranes.manualFeatures || {}
 
     window.cranes.freezeAudioFeatures = () => {
         window.cranes.overwrittenAudioFeatures = { ...window.cranes.measuredAudioFeatures }
@@ -118,7 +119,7 @@ const animate = ({ render, audio, shader }) => {
         queryParamFeatures[key] = value
     }
 
-    const { overwrittenAudioFeatures, manualFeatures = {} } = window.cranes
+    const { overwrittenAudioFeatures, manualFeatures } = window.cranes
     window.cranes.measuredAudioFeatures = measuredAudioFeatures
     const features = { ...measuredAudioFeatures, ...queryParamFeatures, ...overwrittenAudioFeatures, ...manualFeatures }
     render({ time: (performance.now() - startTime) / 1000, features, shader })
