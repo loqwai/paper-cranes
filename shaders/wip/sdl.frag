@@ -37,11 +37,11 @@ vec3 estimateNormal(vec3 p, ShapeParams params) {
 
 float marchRay(vec3 ro, vec3 rd, ShapeParams params, out vec3 hitPoint) {
     float t = 0.01; // Start a bit away from the camera to avoid self-intersection
-    const float maxDist = 20.0; // Increased max distance to accommodate orbiting paths
+    const float maxDist = 120.0; // Increased max distance to accommodate orbiting paths
     for (int i = 0; i < 100; i++) {
         vec3 pos = ro + rd * t;
         float dist = sceneSDF(pos, params);
-        if (dist < 0.00004) { // Slightly tighter threshold for hit detection
+        if (dist < 0.004) { // Slightly tighter threshold for hit detection
             hitPoint = pos;
             return t; // Return the distance to the hit point
         }
@@ -66,7 +66,7 @@ vec3 calculatePhongShading(vec3 normal, vec3 lightDir, vec3 viewDir, vec3 lightC
     return ambient + diffuse + specular;
 }void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = (fragCoord.xy - 0.5 * iResolution.xy) / iResolution.y;
-    vec3 camPos = vec3(0.0, 0.0, 3.0); // Positioned to view the orbiting shapes
+    vec3 camPos = vec3(iTime/4., 0.0, 3.0); // Positioned to view the orbiting shapes
     vec3 rayDir = normalize(vec3(uv, -1.0));
 
     vec4 accumulatedColor = vec4(0.0);
@@ -76,7 +76,7 @@ vec3 calculatePhongShading(vec3 normal, vec3 lightDir, vec3 viewDir, vec3 lightC
         ShapeParams params;
         float timeOffset = float(i) * 2.0944; // Distribute shapes evenly in orbit
         // Slow down the orbit speed by using a smaller multiplier for iTime
-        params.location = vec3(sin(iTime * 0.1 + timeOffset) * 1.5, cos(iTime * 0.1 + timeOffset) * 1.5, 0.0);
+        params.location = vec3(-sin(iTime * 0.1 + timeOffset) * 1.5, cos(iTime * 0.1 + timeOffset) * 1.5, 0.0);
         // Slow down the rotation speed by using a smaller multiplier for iTime
         params.rotation = sin(iTime * 0.1); // Adjusted rotation speed
         params.scale = 0.8; // Adjust this value to scale the shape

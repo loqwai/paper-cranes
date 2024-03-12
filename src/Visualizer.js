@@ -72,10 +72,7 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl, fullscre
             console.log('new shader')
             wrappedShader = shaderWrapper(newShader)
             shader = newShader
-            const newProgramInfo = createProgramInfo(gl, [vertexShader, wrappedShader])
-            gl.useProgram(newProgramInfo.program)
-            console.log('new shader')
-            programInfo.program = newProgramInfo.program
+            programInfo = updateWebGLProgram(gl, vertexShader, wrappedShader) // Update the program
         }
         resizeCanvasToDisplaySize(gl.canvas)
         const frame = frameBuffers[frameNumber % 2]
