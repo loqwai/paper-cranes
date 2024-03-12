@@ -75,6 +75,9 @@ const FeatureAdder = () => {
     }, [])
 
     const updateFeature = (name, updatedFeature) => {
+        // get the previous feature
+        updatedFeature.min = updatedFeature.min ?? -2
+        updatedFeature.max = updatedFeature.max ?? 1
         setFeatures((prev) => ({ ...prev, [name]: updatedFeature }))
     }
 
@@ -95,7 +98,7 @@ const FeatureAdder = () => {
     const deleteFeature = (name) => {
         const { [name]: _, ...rest } = features
         setFeatures(rest)
-        updateUrlDebounced({ [name]: null, [`${name}.min`]: null, [`${name}.max`]: null })
+        updateUrl({ [name]: null, [`${name}.min`]: null, [`${name}.max`]: null })
         delete window.cranes?.manualFeatures[name]
     }
 

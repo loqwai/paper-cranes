@@ -87,7 +87,6 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl, fullscre
     let frameNumber = 0
     const render = ({ time, features, shader: newShader }) => {
         if (newShader !== shader) {
-            console.log('Attempting to update shader')
             wrappedShader = shaderWrapper(newShader)
             shader = newShader
             const newProgramInfo = updateWebGLProgram(gl, vertexShader, wrappedShader) // Update the program with error handling

@@ -18,15 +18,13 @@
             // Unified function to update knob value in URL
             function updateKnobValue(knob, value) {
                 const currentUrl = new URL(window.location)
-                let current = parseFloat(currentUrl.searchParams.get(knob) || 0)
+                let current = parseFloat(currentUrl.searchParams.get(knob) ?? 0)
                 // get the min and max value for the knob from knob_0.min and knob_0.max in the query params
-                const min = parseFloat(currentUrl.searchParams.get(`${knob}.min`) || 0)
-                const max = parseFloat(currentUrl.searchParams.get(`${knob}.max`) || 1)
+                const min = parseFloat(currentUrl.searchParams.get(`${knob}.min`) ?? 0)
+                const max = parseFloat(currentUrl.searchParams.get(`${knob}.max`) ?? 1)
                 // the incoming knob value is between 0 and 127, so we need to scale it to the min and max values
                 current = (value / 127) * (max - min) + min
-                console.log({ min, max, current })
                 window.cranes.updateFeature(knob, current)
-                console.log(`Updated ${knob}: ${current.toFixed(2)}`)
             }
 
             // MIDI Access request
@@ -41,7 +39,6 @@
                             if (command === 176) {
                                 let knobNumber = control - 70 // Assuming control 71 is knob_1
                                 let knob = `knob_${knobNumber}`
-                                console.log({ knob, value })
                                 updateKnobValue(knob, value)
                             }
                         }
