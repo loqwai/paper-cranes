@@ -27,7 +27,9 @@ jobs:
                       });
 
                       const isValidScope = filesChanged.data.every(file => {
-                        return file.filename.startsWith(`shaders/${username}/`);
+                        const inUserFolder = file.filename.startsWith(`shaders/${username}/`);
+                        const isFragmentShader = file.filename.endsWith('.frag');
+                        return inUserFolder && isFragmentShader;
                       });
 
                       if (!isValidScope) {
