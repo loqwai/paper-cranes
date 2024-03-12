@@ -43,5 +43,4 @@ jobs:
               env:
                   GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
                   MERGE_METHOD: 'squash'
-                  MERGE_COMMIT_MESSAGE: 'auto-merge: merge PR #{pullRequest.number}'
-                  MERGE_LABELS: 'auto-merge,!work in progress'
+                  MERGE_COMMIT_MESSAGE: 'Added shader from: #{pullRequest.number}'
