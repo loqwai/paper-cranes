@@ -1,10 +1,12 @@
 name: Conditional PR Merge with Directory Scope Check
 
 on:
-    pull_request_review:
-        types: [submitted]
     pull_request:
-        types: [synchronize, reopened]
+        branches:
+            - main
+        paths:
+            - 'shaders/*/**'
+        types: [opened, synchronize, reopened]
 
 jobs:
     directory-scope-check:
