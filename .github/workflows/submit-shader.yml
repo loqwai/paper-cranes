@@ -1,0 +1,44 @@
+name: Auto Approve and Merge for User-Specific shaders/
+
+on:
+    pull_request:
+        paths:
+            - 'shaders/*/*.frag'
+        types: [opened, synchronize, reopened]
+
+jobs:
+    auto-approve-and-merge:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v2
+
+            - name: Check for .frag file additions in user-specific directory
+              id: check_changes
+              env:
+                  PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+              run: |
+                  git fetch origin ${{ github.base_ref }}
+                  git diff --name-status origin/${{ github.base_ref }}...${{ github.sha }} > pr_changes.txt
+                  if grep -qE '^A\s+shaders/'"${PR_AUTHOR}"'/.*\.frag$' pr_changes.txt; then
+                    echo "File additions in the correct directory, proceeding with auto-approve and merge."
+                    echo "valid_user_directory=true" >> $GITHUB_ENV
+                  else
+                    echo "Changes do not match the required directory structure or are not .frag files, not proceeding."
+                    echo "valid_user_directory=false" >> $GITHUB_ENV
+                  fi
+
+            - name: Auto approve
+              uses: hmarr/auto-approve-action@v2
+              if: env.valid_user_directory == 'true'
+              with:
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Merge PR
+              uses: pascalgn/automerge-action@v0.14.3
+              if: env.valid_user_directory == 'true'
+              env:
+                  GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+                  MERGE_METHOD: 'squash'
+                  MERGE_COMMIT_MESSAGE: 'auto-merge: merge PR #{pullRequest.number}'
+                  MERGE_LABELS: 'auto-merge,!work in progress'
