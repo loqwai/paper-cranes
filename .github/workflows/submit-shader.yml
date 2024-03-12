@@ -38,9 +38,14 @@ jobs:
                   github-token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Merge PR
-              uses: pascalgn/automerge-action@v0.14.3
+              uses: actions/github-script@v5
               if: env.valid_user_directory == 'true'
-              env:
-                  GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
-                  MERGE_METHOD: 'squash'
-                  MERGE_COMMIT_MESSAGE: 'Added shader from: #{pullRequest.number}'
+              with:
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  script: |
+                      github.rest.pulls.merge({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        pull_number: context.payload.pull_request.number,
+                        merge_method: 'squash'
+                      });
