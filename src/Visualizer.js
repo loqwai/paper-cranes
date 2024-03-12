@@ -35,6 +35,24 @@ const getTexture = async (gl, url) => {
     })
 }
 
+// Function to create and update the WebGL program with error handling
+const updateWebGLProgram = (gl, vertexShader, wrappedShader) => {
+    try {
+        const programInfo = createProgramInfo(gl, [vertexShader, wrappedShader])
+        if (!programInfo.program) {
+            throw new Error('Failed to create a program. The shader code might be bad.')
+        }
+        gl.useProgram(programInfo.program)
+        return programInfo
+    } catch (error) {
+        console.error('Error creating WebGL program:', error.message)
+        // Consider fallback actions, like using a default shader program
+        // to ensure the application continues to run, albeit with reduced functionality.
+        // This section can be customized based on specific needs or recovery strategies.
+        return null // Or return a default/previous valid programInfo if available
+    }
+}
+
 export const makeVisualizer = async ({ canvas, shader, initialImageUrl, fullscreen }) => {
     const gl = canvas.getContext('webgl2', { antialias: false })
     // get the window width and height
@@ -57,7 +75,7 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl, fullscre
     }
     const initialTexture = await getTexture(gl, initialImageUrl)
 
-    const programInfo = createProgramInfo(gl, [vertexShader, wrappedShader])
+    let programInfo = createProgramInfo(gl, [vertexShader, wrappedShader])
     const frameBuffers = [createFramebufferInfo(gl), createFramebufferInfo(gl)]
     const arrays = {
         position: [-1, -1, 0, 1, -1, 0, -1, 1, 0, -1, 1, 0, 1, -1, 0, 1, 1, 0],
@@ -69,10 +87,15 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl, fullscre
     let frameNumber = 0
     const render = ({ time, features, shader: newShader }) => {
         if (newShader !== shader) {
-            console.log('new shader')
+            console.log('Attempting to update shader')
             wrappedShader = shaderWrapper(newShader)
             shader = newShader
-            programInfo = updateWebGLProgram(gl, vertexShader, wrappedShader) // Update the program
+            const newProgramInfo = updateWebGLProgram(gl, vertexShader, wrappedShader) // Update the program with error handling
+            if (newProgramInfo) {
+                programInfo = newProgramInfo
+            } else {
+                console.warn('Using previous shader due to error in new shader code.')
+            }
         }
         resizeCanvasToDisplaySize(gl.canvas)
         const frame = frameBuffers[frameNumber % 2]
