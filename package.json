@@ -5,10 +5,11 @@
   "type": "module",
   "main": "dist/src/audio/AudioProcessor.js",
   "scripts": {
-    "start": "npx live-server --wait=50 --no-browser -q --port=6969 ./dist/",
+    "start": "npm run dev",
+    "serve": "npx live-server --wait=50 --no-browser -q --port=6969 ./dist/",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "node ./esbuild.js",
-    "dev": "npm run build && concurrently \"npm run start\" \"npm run build:watch\"",
+    "dev": "npm run build && concurrently \"npm run serve\" \"npm run build:watch\"",
     "build:watch": "chokidar '**/*.*' -i 'node_modules/*' -i 'dist/**/*.*' -c 'npm run build'",
     "format": "eslint --fix ."
   },
