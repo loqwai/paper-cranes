@@ -5,10 +5,10 @@ uniform float knob_2;
 uniform float knob_3;
 uniform float knob_4;
 
-#define A knob_0
-#define B knob_1
-#define C knob_2
-#define D knob_3
+#define A -121.21
+#define B 0.
+#define C 1.
+#define D mapValue(energyZScore, 0., 1., -1.5, -1.3)
 #define E knob_4
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
