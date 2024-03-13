@@ -34,5 +34,17 @@ If you want to deploy a visualization you made, PR me and I'll add it to the dep
 
 ## Deploying your visualization to visuals.beadfamous.com
 
-Beadfamous has no backend. But you can still host your shader there!
-Any pull request that
+Beadfamous has no backend. But you can still host your shader there.
+Any pull request that only touches files under the shaders/<YOUR_GITHUB_USERNAME> will be automatically merged to main and deployed to Beadfamous. If this is your first commit, it will require manual approval. Afterwards, all your shaders will be automatically deployed.
+
+Making a pull request will usually mean you need to fork the repo, make your changes, and then make a pull request from your fork to the main repo. If you're not familiar with this process, here's a [tutorial](https://guides.github.com/activities/forking/).
+
+If you want to quickly make a pull request without cloning the repo down, you can add your shader through the Github UI. Here's a quick guide:
+
+1. Start creating a new file in the `shaders/` directory of the paper-cranes repo [here](https://github.com/loqwai/paper-cranes/new/main/shaders).
+
+This will automatically fork the repo to your account, and create a new file in your fork.
+
+2. After the fork is created, you can add your shader to the project. The shader must be added to `shaders/<YOUR_GITHUB_USERNAME>/`. For example, if your github username is `loqwai`, you would add your shader to `shaders/loqwai/`. You can create the directory by adding a `/` to the end of the path in the file creation dialog.
+
+3. After you've added your shader, you can create a pull request to the main repo. This will automatically trigger a deployment to [visuals.beadfamous.com](https://visuals.beadfamous.com). For example if your shader is file located at `shaders/loqwai/my_new_shader.frag`, the visualization will be available at `visuals.beadfamous.com/?shader=loqwai/my_new_shader`
