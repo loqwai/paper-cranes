@@ -94,7 +94,7 @@ html {
 
 body {
     display: grid;
-    grid-template-columns: 100%;
+    grid-template-columns: 50% 50%;
     grid-template-rows: auto; /* Define two rows, their size determined by the content */
     height: 100vh; /* Ensure the body takes up the full viewport height */
 }
@@ -104,6 +104,10 @@ body {
     grid-row: 1; /* Places it in the first row */
 }
 
+#monaco-editor {
+    grid-column: 2; /* Places it in the second column */
+    grid-row: 1; /* Places it in the first row */
+}
 #visualizer {
     grid-column: 1; /* Also in the first column */
     grid-row: 2; /* But in the second row, under #feature-editor */
