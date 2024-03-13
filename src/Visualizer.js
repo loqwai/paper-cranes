@@ -85,6 +85,7 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl, fullscre
     gl.useProgram(programInfo.program)
 
     let frameNumber = 0
+    let slowFrames = 0
     let lastRender = performance.now()
     const render = ({ time, features, shader: newShader }) => {
         if (newShader !== shader) {
@@ -99,11 +100,18 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl, fullscre
         }
         const renderTime = performance.now()
         // if the render time is less than 60fps, resize to 1/4 resolution. Otherwise, keep the same resolution
-        if (renderTime - lastRender < 1000 / 60) {
-            resizeCanvasToDisplaySize(gl.canvas, 0.5)
+        let resolutionRatio = 1
+        if (renderTime - lastRender > 50) {
+            slowFrames += 10
         } else {
-            resizeCanvasToDisplaySize(gl.canvas, 1)
+            slowFrames = Math.max(0, slowFrames - 1)
         }
+        if (slowFrames > 50) {
+            resolutionRatio = 0.5
+        } else {
+            resolutionRatio = 1
+        }
+        resizeCanvasToDisplaySize(gl.canvas, resolutionRatio)
         lastRender = renderTime
         const frame = frameBuffers[frameNumber % 2]
         const prevFrame = frameBuffers[(frameNumber + 1) % 2]
