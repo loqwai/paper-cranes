@@ -27,6 +27,10 @@ const conf = {
 }
 
 const keywords = [
+    'PI',
+    'mapValue',
+    'resolution',
+    'time',
     'spectralCentroid',
     'energy',
     'spectralRolloff',
@@ -378,6 +382,21 @@ export const language = {
         ],
     },
 }
+
+// Register a completion item provider for GLSL
+monaco.languages.registerCompletionItemProvider('glsl', {
+    provideCompletionItems: () => {
+        const suggestions = keywords.map((keyword) => ({
+            label: keyword,
+            kind: monaco.languages.CompletionItemKind.Keyword,
+            insertText: keyword,
+            range: null, // Specify the range if needed
+        }))
+
+        return { suggestions }
+    },
+})
+
 monaco.languages.register({ id: 'glsl' })
 monaco.languages.setMonarchTokensProvider('glsl', language)
 

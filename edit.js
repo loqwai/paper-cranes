@@ -62,7 +62,7 @@ const FeatureAdder = () => {
     const [features, setFeatures] = useState({})
     const [newFeatureName, setNewFeatureName] = useState('')
 
-    useEffect(() => {
+    useEffect(async () => {
         const searchParams = new URLSearchParams(window.location.search)
         const initialFeatures = {}
         searchParams.forEach((value, key) => {
@@ -73,6 +73,13 @@ const FeatureAdder = () => {
             initialFeatures[featureName][paramType] = parseFloat(value)
         })
         setFeatures(initialFeatures)
+        // if there is no 'shader' query param, set the editor code to the default shader
+        if (!searchParams.has('shader')) {
+            const res = await fetch('/shaders/default.frag')
+            const shader = await res.text()
+            window.editor.setValue(shader)
+            window.editor.layout()
+        }
     }, [])
 
     const updateFeature = (name, updatedFeature) => {
