@@ -112,7 +112,7 @@ const updateUI = () => {
 }
 
 const animate = ({ render, audio, shader }) => {
-    shader = window?.shader ?? shader
+    shader = window.cranes?.shader ?? shader
     const measuredAudioFeatures = audio.getFeatures()
     const queryParamFeatures = {}
     const params = new URLSearchParams(window.location.search)

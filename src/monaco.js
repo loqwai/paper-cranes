@@ -1,4 +1,4 @@
-import * as monaco from 'https://cdn.jsdelivr.net/npm/monaco-editor@0.46.0/+esm'
+import * as monaco from 'https://cdn.jsdelivr.net/npm/monaco-editor@0.47.0/+esm'
 const shader = localStorage.getItem('cranes-manual-code') || ''
 const conf = {
     comments: {
@@ -412,3 +412,33 @@ window.addEventListener('resize', () => {
     editor.layout()
 })
 window.editor = editor
+
+document.querySelector('#save').addEventListener('click', () => {
+    editor.pushUndoStop()
+    window.cranes.shader = editor.getValue()
+    localStorage.setItem('cranes-manual-code', editor.getValue())
+    editor.pushUndoStop()
+})
+
+// save on control or command s
+editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_S, function () {
+    editor.pushUndoStop()
+    window.cranes.shader = editor.getValue()
+    localStorage.setItem('cranes-manual-code', editor.getValue())
+    editor.pushUndoStop()
+})
+
+document.querySelector('#reset').addEventListener('click', () => {
+    localStorage.removeItem('cranes-manual-code')
+    window.location.reload()
+})
+
+editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_Z, function () {
+    editor.trigger('mySource', 'undo', null)
+})
+
+editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KEY_Z, function () {
+    editor.trigger('mySource', 'redo', null)
+})
+
+document.querySelector('#publish').addEventListener('click', () => {})

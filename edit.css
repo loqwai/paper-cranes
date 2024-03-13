@@ -104,11 +104,26 @@ body {
     grid-row: 1; /* Places it in the first row */
 }
 
+#save-and-publish {
+    grid-column:2;
+    grid-row: 1;
+    display: flex;
+}
+#save-and-publish > button {
+    flex: 1;
+    cursor:pointer;
+    margin: 1em;
+
+}
+#save-and-publish > button > a {
+    /* clear the default styles */
+    text-decoration: none;
+    color: inherit;
+}
 #monaco-editor {
     grid-column: 2; /* Places it in the second column */
-    grid-row: 1; /* Places it in the first row */
+    grid-row: 2; /* Places it in the first row */
     /*span 2 rows*/
-    grid-row-end: span 2;
 }
 #visualizer {
     grid-column: 1; /* Also in the first column */
