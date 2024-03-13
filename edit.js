@@ -66,7 +66,8 @@ const FeatureAdder = () => {
         const searchParams = new URLSearchParams(window.location.search)
         const initialFeatures = {}
         searchParams.forEach((value, key) => {
-            if (key === 'shader') return
+            // if the value is not a number, return.
+            if (isNaN(value)) return
             const [featureName, paramType] = key.includes('.') ? key.split('.') : [key, 'value']
             if (!initialFeatures[featureName]) initialFeatures[featureName] = { min: -3, max: 3, value: 0 }
             initialFeatures[featureName][paramType] = parseFloat(value)
@@ -78,6 +79,8 @@ const FeatureAdder = () => {
         // get the previous feature
         updatedFeature.min = updatedFeature.min ?? -2
         updatedFeature.max = updatedFeature.max ?? 1
+        //round the value to the nearest 3 decimal places
+        updatedFeature.value = Math.round(updatedFeature.value * 1000) / 1000
         setFeatures((prev) => ({ ...prev, [name]: updatedFeature }))
     }
 
