@@ -39,24 +39,19 @@ const getTexture = async (gl, url) => {
 const updateWebGLProgram = (gl, vertexShader, wrappedShader) => {
     try {
         const programInfo = createProgramInfo(gl, [vertexShader, wrappedShader])
-        if (!programInfo.program) {
+        if (!programInfo?.program) {
             throw new Error('Failed to create a program. The shader code might be bad.')
         }
         gl.useProgram(programInfo.program)
         return programInfo
     } catch (error) {
         console.error('Error creating WebGL program:', error.message)
-        // Consider fallback actions, like using a default shader program
-        // to ensure the application continues to run, albeit with reduced functionality.
-        // This section can be customized based on specific needs or recovery strategies.
-        return null // Or return a default/previous valid programInfo if available
+        return
     }
 }
 
-export const makeVisualizer = async ({ canvas, shader, initialImageUrl, fullscreen }) => {
+export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) => {
     const gl = canvas.getContext('webgl2', { antialias: false })
-    // get the window width and height
-    let wrappedShader = shaderWrapper(shader)
     if (fullscreen) {
         const width = window.innerWidth
         const height = window.innerHeight
@@ -74,30 +69,31 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl, fullscre
         })
     }
     const initialTexture = await getTexture(gl, initialImageUrl)
-
-    let programInfo = createProgramInfo(gl, [vertexShader, wrappedShader])
     const frameBuffers = [createFramebufferInfo(gl), createFramebufferInfo(gl)]
     const arrays = {
         position: [-1, -1, 0, 1, -1, 0, -1, 1, 0, -1, 1, 0, 1, -1, 0, 1, 1, 0],
     }
     const bufferInfo = createBufferInfoFromArrays(gl, arrays)
 
-    gl.useProgram(programInfo.program)
-
     let frameNumber = 0
     let slowFrames = 0
     let lastRender = performance.now()
+    let programInfo
+    let shader
     const render = ({ time, features, shader: newShader }) => {
         if (newShader !== shader) {
-            wrappedShader = shaderWrapper(newShader)
+            console.log('Shader updated')
+            const wrappedShader = shaderWrapper(newShader)
             shader = newShader
             const newProgramInfo = updateWebGLProgram(gl, vertexShader, wrappedShader) // Update the program with error handling
-            if (newProgramInfo) {
-                programInfo = newProgramInfo
-            } else {
-                console.warn('Using previous shader due to error in new shader code.')
+            console.log('newProgramInfo', newProgramInfo)
+            if (!newProgramInfo) {
+                programInfo = null
+                return
             }
+            programInfo = newProgramInfo
         }
+        if (!programInfo) return
         const renderTime = performance.now()
         // if the render time is less than 60fps, resize to 1/4 resolution. Otherwise, keep the same resolution
         let resolutionRatio = 1

@@ -124,6 +124,10 @@ const animate = ({ render, audio, shader }) => {
     const { overwrittenAudioFeatures, manualFeatures } = window.cranes
     window.cranes.measuredAudioFeatures = measuredAudioFeatures
     const features = { ...measuredAudioFeatures, ...queryParamFeatures, ...overwrittenAudioFeatures, ...manualFeatures }
-    render({ time: (performance.now() - startTime) / 1000, features, shader })
+    try {
+        render({ time: (performance.now() - startTime) / 1000, features, shader })
+    } catch (e) {
+        console.error(e)
+    }
     requestAnimationFrame(() => animate({ render, audio, shader }))
 }
