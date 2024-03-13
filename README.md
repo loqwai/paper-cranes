@@ -31,3 +31,8 @@ To make your own visualizations, you can create a new file in the `shaders/` dir
 You can copy and paste any of the existing files in the `shaders/` directory to get started. Or ya know, wait until the Hackathon and I'll walk you through it.
 
 If you want to deploy a visualization you made, PR me and I'll add it to the deployed site!
+
+## Deploying your visualization to visuals.beadfamous.com
+
+Beadfamous has no backend. But you can still host your shader there!
+Any pull request that
