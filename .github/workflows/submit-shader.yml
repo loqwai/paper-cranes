@@ -3,7 +3,7 @@ name: Conditional PR Merge with Directory Scope Check
 on:
     pull_request_review:
         types: [submitted]
-    pull_request:
+    pull_request_target:
         types: [opened, synchronize, reopened]
 
 jobs:
