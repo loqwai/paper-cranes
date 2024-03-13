@@ -58,12 +58,11 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl, fullscre
     // get the window width and height
     let wrappedShader = shaderWrapper(shader)
     if (fullscreen) {
-        const width = window.innerWidth
-        const height = window.innerHeight
-        // set the canvas width and height to the window width and height
+        const width = window.innerWidth / 2 // Half the width for 1/4 resolution
+        const height = window.innerHeight / 2 // Half the height for 1/4 resolution
         canvas.width = width
         canvas.height = height
-        // set the viewport to match
+        // Adjust viewport for scaled resolution
         gl.viewport(0, 0, width, height)
         canvas.classList.add('fullscreen')
     }
@@ -96,7 +95,7 @@ export const makeVisualizer = async ({ canvas, shader, initialImageUrl, fullscre
                 console.warn('Using previous shader due to error in new shader code.')
             }
         }
-        resizeCanvasToDisplaySize(gl.canvas)
+        resizeCanvasToDisplaySize(gl.canvas, 0.5)
         const frame = frameBuffers[frameNumber % 2]
         const prevFrame = frameBuffers[(frameNumber + 1) % 2]
 
