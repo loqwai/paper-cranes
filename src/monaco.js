@@ -16,6 +16,7 @@ const conf = {
         { open: '(', close: ')' },
         { open: "'", close: "'", notIn: ['string', 'comment'] },
         { open: '"', close: '"', notIn: ['string'] },
+        {open: '/*', close: ' */', notIn: ['string']}
     ],
     surroundingPairs: [
         { open: '{', close: '}' },
@@ -27,6 +28,7 @@ const conf = {
 }
 
 const keywords = [
+    'getLastFrameColor',
     'PI',
     'mapValue',
     'resolution',
@@ -399,7 +401,7 @@ monaco.languages.registerCompletionItemProvider('glsl', {
 
 monaco.languages.register({ id: 'glsl' })
 monaco.languages.setMonarchTokensProvider('glsl', language)
-
+monaco.languages.setLanguageConfiguration('glsl', conf)
 const editor = monaco.editor.create(document.querySelector('#monaco-editor'), {
     value: shader,
     minimap: { enabled: false },
