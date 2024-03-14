@@ -1,60 +1,27 @@
 <!doctype html>
 <html lang="en">
-    <head>
-        <!-- <link rel="stylesheet" href="index.css" /> -->
-        <link rel="stylesheet" href="edit.css" />
-        <title>Paper Cranes - Editor</title>
-    </head>
 
-    <body class="ready">
-        <div class="sparkly animated" id="feature-editor"></div>
-        <canvas id="visualizer" width="1920" height="1920"></canvas>
-        <div id="save-and-publish" class="sparkly animated">
-            <button id="save">Save</button>
-            <button id="publish">
-                <a href="https://github.com/loqwai/paper-cranes/new/main/shaders" target="_blank">Publish</a>
-            </button>
-            <button id="reset">Reset</button>
-        </div>
-        <div id="monaco-editor"></div>
-        <script type="module" src="./src/monaco.js"></script>
-        <script type="module" src="./index.js"></script>
-        <script type="module" src="./edit.js"></script>
-        <script type="module">
-            'use strict'
+<head>
+    <!-- <link rel="stylesheet" href="index.css" /> -->
+    <link rel="stylesheet" href="edit.css" />
+    <title>Paper Cranes - Editor</title>
+</head>
 
-            // Unified function to update knob value in URL
-            function updateKnobValue(knob, value) {
-                const currentUrl = new URL(window.location)
-                let current = parseFloat(currentUrl.searchParams.get(knob) ?? 0)
-                // get the min and max value for the knob from knob_0.min and knob_0.max in the query params
-                const min = parseFloat(currentUrl.searchParams.get(`${knob}.min`) ?? 0)
-                const max = parseFloat(currentUrl.searchParams.get(`${knob}.max`) ?? 1)
-                // the incoming knob value is between 0 and 127, so we need to scale it to the min and max values
-                current = (value / 127) * (max - min) + min
-                window.cranes.updateFeature(knob, current)
-            }
+<body class="ready">
+    <div class="sparkly animated" id="feature-editor"></div>
+    <canvas id="visualizer" width="1920" height="1920"></canvas>
+    <div id="save-and-publish" class="sparkly animated">
+        <button id="save">Save</button>
+        <button id="publish">
+            <a href="https://github.com/loqwai/paper-cranes/new/main/shaders" target="_blank">Publish</a>
+        </button>
+        <button id="reset">Reset</button>
+    </div>
+    <div id="monaco-editor"></div>
+    <script type="module" src="./src/monaco.js"></script>
+    <script type="module" src="./index.js"></script>
+    <script type="module" src="./edit.js"></script>
+    <script type="module" src="./src/midi.js"></script>
+</body>
 
-            // MIDI Access request
-            navigator
-                .requestMIDIAccess()
-                .then((midiAccess) => {
-                    console.log('MIDI ready')
-                    midiAccess.inputs.forEach((input) => {
-                        input.onmidimessage = (message) => {
-                            const [command, control, value] = message.data
-                            // Listen for Control Change messages from knobs
-                            if (command === 176) {
-                                let knobNumber = control - 70 // Assuming control 71 is knob_1
-                                let knob = `knob_${knobNumber}`
-                                updateKnobValue(knob, value)
-                            }
-                        }
-                    })
-                })
-                .catch((error) => {
-                    console.error('MIDI failed to start', error)
-                })
-        </script>
-    </body>
 </html>
