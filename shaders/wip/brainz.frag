@@ -2,9 +2,10 @@
 uniform float knob_0;
 uniform float knob_1;
 uniform float knob_2;
+
 #define MAXDIST 20.
 #define GIFLENGTH 3.570795
-#define A pow(energyZScore+1.,2.)
+#define A pow(energyZScore+1.,(beat?4.:2.))
 #define C (spectralRoughnessZScore/10. + 0.5)
 #define D spectralCentroid/5.
 struct Ray {
