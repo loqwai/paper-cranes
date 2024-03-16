@@ -2,10 +2,10 @@ uniform float knob_0;
 uniform float knob_1;
 uniform float knob_2;
 #define MAXDIST 20.
-#define GIFLENGTH 1.570795
-#define A energyZScore
+#define GIFLENGTH 3.570795
+#define A pow(energyZScore+1.,2.)
 #define C (spectralRoughnessZScore/10. + 0.5)
-#define D knob_2
+#define D spectralCentroid
 struct Ray {
 	vec3 ro;
     vec3 rd;
@@ -142,7 +142,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     uv = uv * 2.0 - 1.0;
     uv.x *= iResolution.x / iResolution.y;
 
-    vec3 camPos = vec3(9., 6.5, 12.);
+    vec3 camPos = vec3(6.,4.5, 6.);
     vec3 camDir = camPos + vec3(-.85, -.5, -1. );
     mat3 cam = camera(camPos, camDir, 0.);
 
@@ -157,7 +157,32 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
 	col = vec4(col.xyz,clamp(1.-col.w/MAXDIST, 0., 1.));
     vec3 hsl = rgb2hsl(col.xyz);
-    hsl.x =D;
-    hsl.y = 0.5;
+    hsl.x = fract(hsl.x+D);
+    if(hsl.z < 0.01){
+        fragColor = vec4(0.);
+        return;
+    }
+    if (hsl.z < 0.1) {
+        hsl.x += fract(hsl.x+0.7);
+        hsl.y += .5;
+        hsl.z +=0.1;
+        fragColor = vec4(hsl2rgb(hsl), 1.0);
+        return;
+    }
+    if (hsl.z < 0.3) {
+        hsl.x += fract(hsl.x-0.3);
+        hsl.y += .5;
+        hsl.z -=0.1;
+        fragColor = vec4(hsl2rgb(hsl), 1.0);
+        return;
+    }
+    if (hsl.z < 0.7) {
+        hsl.x += fract(hsl.x-0.6);
+        hsl.y += .5;
+        hsl.z -=0.1;
+        fragColor = vec4(hsl2rgb(hsl), 1.0);
+        return;
+    }
+    // hsl.y = 0.5;
     fragColor = vec4(hsl2rgb(hsl), 1.0);
 }
