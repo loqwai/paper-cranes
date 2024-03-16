@@ -2,16 +2,26 @@
 <html lang="en">
 
 <head>
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; worker-src 'self' blob: 'unsafe-inline'; style-src 'self'; script-src 'self' 'unsafe-inline' nonce-micro-advantage-fosters-mansion-differently https://www.googletagmanager.com;">
+
+
+
+    <!-- enable SharedMemoryBuffer -->
+    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin">
+    <meta http-equiv="Cross-Origin-Embedder-Policy" content="require-corp">
     <link rel="stylesheet" href="index.css" />
     <title>Paper Cranes</title>
 </head>
 
 <body class="ready">
     <canvas id="visualizer" width="1920" height="1920"></canvas>
-    <script type="module" src="./index.js"></script>
+    <script nonce="micro-advantage-fosters-mansion-differently" t type="module" src="./index.js">
+    </script>
     <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-V2CY1C6W63"></script>
-    <script>
+    <script nonce="micro-advantage-fosters-mansion-differently" async
+        src="https://www.googletagmanager.com/gtag/js?id=G-V2CY1C6W63"></script>
+    <script nonce="micro-advantage-fosters-mansion-differently">
         window.dataLayer = window.dataLayer || []
         function gtag() {
             dataLayer.push(arguments)
@@ -20,7 +30,6 @@
 
         gtag('config', 'G-V2CY1C6W63')
     </script>
-    <script type="module" src="./src/midi.js"></script>
 </body>
 
 </html>

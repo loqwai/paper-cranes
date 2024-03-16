@@ -1,6 +1,7 @@
 import { StatTypes } from '../utils/calculateStats.js'
 import { applyHanningWindow } from './applyHanningWindow.js'
 import { applyKaiserWindow } from './applyKaiserWindow.js'
+
 export const AudioFeatures = [
     'SpectralCentroid',
     'SpectralFlux',
@@ -15,19 +16,13 @@ export const AudioFeatures = [
 ]
 
 const DEFAULT_FEATURE_VALUE = 0.00001
+
 export const getFlatAudioFeatures = (audioFeatures = AudioFeatures, rawFeatures = {}) => {
     const features = {}
     for (const feature of audioFeatures) {
-        // the key in features is the same as the key in rawFeatures, except the first letter is lowercased
         const featureKey = feature.charAt(0).toLowerCase() + feature.slice(1)
 
         for (const propertyKey of StatTypes) {
-            // the key in features is the same as the key in rawFeatures, except the first letter is lowercased
-            // NOTICE: In a desperate effort to avoid divisions by zero, I am adding a teeny tiny offset from zero here.
-            // Fun fact: This is the same hack I made for the first time in my professional career, where I did this to avoid
-            // division-by-zero on flight management systems when Airbus A320s would fly over the north pole.
-            // It was a bad idea. I hope they deleted that code.
-            // Anyway, here we go again! It doesn't seem to be helping things.
             const key = `${featureKey}${propertyKey.charAt(0).toUpperCase() + propertyKey.slice(1)}`
             features[key] = rawFeatures[feature]?.stats[propertyKey]
             if (features[key] === 0) features[key] = DEFAULT_FEATURE_VALUE
@@ -40,7 +35,6 @@ export const getFlatAudioFeatures = (audioFeatures = AudioFeatures, rawFeatures 
 export class AudioProcessor {
     constructor(audioContext, sourceNode, historySize, fftSize = 32768) {
         this.features = {}
-
         const fftAnalyzer = audioContext.createAnalyser()
         fftAnalyzer.fftSize = fftSize
         let fftData = new Uint8Array(fftAnalyzer.frequencyBinCount)
@@ -49,14 +43,20 @@ export class AudioProcessor {
         const rawFeatures = {}
         const workers = {}
 
+        console.log('Constructing AudioProcessor SharedArrayBuffer...')
+        this.sharedArrayBuffer = new SharedArrayBuffer(fftAnalyzer.frequencyBinCount * Uint8Array.BYTES_PER_ELEMENT)
+        console.log('AudioProcessor SharedArrayBuffer constructed')
+        const sharedArrayBuffer = this.sharedArrayBuffer
         const start = async () => {
             for (const workerName of AudioFeatures) {
                 const workerUrl = new URL(`src/audio/analyzers/${workerName}.js`, import.meta.url).href
                 fetch(workerUrl).then(async (response) => {
                     const code = await response.text()
+                    const worker = new Worker(workerUrl)
 
-                    const blob = new Blob([code], { type: 'application/javascript' })
-                    const worker = new Worker(URL.createObjectURL(blob))
+                    // Post sharedArrayBuffer to worker
+                    worker.postMessage({ type: 'sharedArrayBuffer', buffer: sharedArrayBuffer })
+
                     worker.onmessage = (event) => {
                         if (event.data.type === 'computedValue') {
                             rawFeatures[workerName] = event.data
@@ -75,12 +75,15 @@ export class AudioProcessor {
         const requestFeatures = () => {
             requestAnimationFrame(requestFeatures)
 
-            fftAnalyzer.getByteFrequencyData(fftData)
+            fftAnalyzer.getByteFrequencyData(fftData) // Store data in fftData array
 
-            let windowedFftData = applyKaiserWindow(fftData, 10)
+            // Update sharedArrayBuffer with fftData
+            const sharedArray = new Uint8Array(sharedArrayBuffer)
+            const offset = 0 // Set the starting position
+            sharedArray.set(fftData, offset)
 
             for (const worker in workers) {
-                workers[worker].postMessage({ type: 'fftData', data: { fft: windowedFftData } })
+                workers[worker].postMessage({ type: 'compute' }) // Notify workers of new data
             }
         }
 
