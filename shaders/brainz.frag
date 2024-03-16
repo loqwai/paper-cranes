@@ -145,7 +145,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     uv.x *= iResolution.x / iResolution.y;
 
     vec3 camPos = vec3(6.,4.5, 6.);
-    vec3 camDir = camPos + vec3(-.85, -.5, -1. );
+    vec3 camDir = camPos + vec3(-.85, -.6, -1. );
     mat3 cam = camera(camPos, camDir, 0.);
 
     vec3 rayDir = cam * normalize( vec3(uv, 1. + sin(A*4.)*0.05) );
