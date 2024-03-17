@@ -167,7 +167,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     if (hsl.z < 0.1) {
         hsl.x += fract(hsl.x+0.7);
         hsl.y += .5;
-        hsl.z +=0.1;
+        hsl.z +=0.5;
         fragColor = vec4(hsl2rgb(hsl), 1.0);
         return;
     }
