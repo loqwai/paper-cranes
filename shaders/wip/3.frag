@@ -8,9 +8,9 @@ uniform float knob_1;
 
 vec4 render(vec2 uv){
   if(frame % 10 == 0){
-    return vec4(0.);
+    return vec4(random(uv));
   }
-  return vec4(1.);
+  return getLastFrameColor(uv);
 }
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
