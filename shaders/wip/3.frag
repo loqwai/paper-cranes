@@ -1,45 +1,30 @@
-uniform float knob_1;
+// Ether by nimitz 2014 (twitter: @stormoid)
+// https://www.shadertoy.com/view/MsjSW3
+// License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License
+// Contact the author for other licensing options
 
-#define A (energy+1.)
-#define B (energyNormalized+1.)
-#define M energyZScore/10.
-#define C spectralEntropy*1.5
-#define D energyNormalized
-#define CELL_SIZE 100.
-#define WRAP(value, max) mod(value, max)
-#define last getLastFrameColor
-vec4 init(vec2 uv) {
-    float r = random(uv);
-    if(r < 0.001) {
-        return vec4(1.);
-    }
-    return vec4(0.);
+#define t iTime+energy+spectralRoughness
+mat2 m(float a){float c=cos(a), s=sin(a);return mat2(c,-s,s,c);}
+float map(vec3 p){
+    p.xz*= m(t*0.4);p.xy*= m(t*0.3);
+    vec3 q = p*2.+t;
+    return length(p+vec3(sin(t*0.7)))*log(length(p)+1.) + sin(q.x+sin(q.z+sin(q.y)))*0.5 - 1.;
 }
-vec4 render(vec2 uv) {
-    if(frame == 0) {
-        return init(uv);
-    }
-    vec2 lastUv = floor(uv * CELL_SIZE) / CELL_SIZE + 0.5 / CELL_SIZE;
-    vec3 current = last(uv).rgb;
-    if(energyZScore * random(uv) > 0.04) {
-        return vec4(1.);
-    }
-      for (int i = -1; i <= 1; i++) {
-        for (int j = -1; j <= 1; j++) {
-            if (i == 0 && j == 0) continue;
-            vec2 neighborUv = lastUv + vec2(i, j)/100.;
-            neighborUv = WRAP(neighborUv, 1.0); // Wrap the neighbor's UV coordinates
-            if(last(neighborUv).r > min((0.55 + iTime), 0.999)) {
-                return vec4(1.)/2.;
-            }
-        }
-    }
 
-    return vec4(current*0.99, 1.);
-}
-void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec2 uv = fragCoord / iResolution.xy;
-    // fix aspect ratio
-    uv.x *= iResolution.x / iResolution.y;
-    fragColor = render(uv);
+void mainImage( out vec4 fragColor, in vec2 fragCoord ){
+	vec2 p = fragCoord.xy/iResolution.y - vec2(.9,.5);
+    vec3 cl = vec3(0.);
+    float d = 1.5;
+    for(int i=0; i<=5; i++)	{
+		vec3 p = vec3(0,0,5.) + normalize(vec3(p, -1.))*d;
+        float rz = map(p);
+		float f =  clamp((rz - map(p+.1))*0.5, -.1, 1. );
+        vec3 l = vec3(0.1,0.3,.4) + vec3(5., 2.5, 3.)*f;
+        cl = cl*l + smoothstep(2.5, .0, rz)*.7*l;
+		d += min(rz, 1.);
+	}
+    cl= rgb2hsl(cl);
+    cl.x = fract(cl.x + spectralCentroid);
+    cl = hsl2rgb(cl);
+    fragColor = vec4(cl, 1.);
 }
