@@ -6,11 +6,20 @@ uniform float knob_1;
 #define C spectralEntropy*1.5
 #define D energyNormalized
 
+vec4 init(vec2 uv){
+    float r = random(uv);
+    if(r < 0.01){
+        return vec4(1.);
+    }
+    return vec4(0.);
+}
 vec4 render(vec2 uv){
-  if(frame % 10 == 0){
-    return vec4(random(uv));
+  if(frame == 0){
+    return init(uv);
   }
-  return getLastFrameColor(uv);
+  vec4 last =  getLastFrameColor(uv);
+  vec3 current = vec3(0.);
+  return last;
 }
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
