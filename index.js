@@ -8,7 +8,13 @@ let startTime = 0
 const params = new URLSearchParams(window.location.search)
 // check if we have microphone access. If so, just run main immediately
 navigator.mediaDevices
-    .getUserMedia({ audio: true })
+    .getUserMedia({
+        audio: {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false,
+        },
+    })
     .then(() => main())
     .catch(() => {
         const body = document.querySelector('body')
