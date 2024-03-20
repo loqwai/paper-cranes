@@ -88,7 +88,7 @@ float movementCurve(float x){
   return-2./(1.+exp(-10.*(.5*x-.5)))+1.;
 }
 
-float PI=3.1416;
+
 float fovMult(float x,float a,float d)
 {
   return a+d+sin(PI*x-sqrt(PI))*a;

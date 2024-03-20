@@ -76,7 +76,6 @@ const main = async () => {
     const fullscreen = (params.get('fullscreen') ?? false) === 'true'
     const canvas = document.getElementById('visualizer')
     const render = await makeVisualizer({ canvas, shader, initialImageUrl, fullscreen })
-    updateUI()
     requestAnimationFrame(() => animate({ render, audio, shader }))
     ranMain = true
 }
@@ -90,7 +89,7 @@ const setupAudio = async () => {
     await audioContext.resume()
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     const sourceNode = audioContext.createMediaStreamSource(stream)
-    const historySize = parseInt(params.get('history-size') ?? '500')
+    const historySize = parseInt(params.get('history_size') ?? '500')
     const audioProcessor = new AudioProcessor(audioContext, sourceNode, historySize)
     await audioProcessor.start()
     return audioProcessor
@@ -104,11 +103,6 @@ const getShader = async (url) => {
     const res = await fetch(url)
     const fragmentShader = await res.text()
     return fragmentShader
-}
-
-const updateUI = () => {
-    const body = document.querySelector('body')
-    body.classList.add('ready')
 }
 
 const animate = ({ render, audio, shader }) => {
