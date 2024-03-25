@@ -14,6 +14,7 @@ const int MAX_MARCHING_STEPS = 255;
 const float EPSILON = 0.00001;
 #define shininess 10.
 #define JULIA_X 0.355 + (energyZScore/100.)
+#define JULIA_Y mapValue(spectralKurtosisZScore, -1., 1., .25, 0.5)
 #define K0 spectralCentroid + 0.5
 /**
  * Signed distance function for a sphere centered at the origin with radius 1.0;
@@ -36,7 +37,7 @@ float sceneSDF(vec3 samplePoint) {
     const int iterations = 100;
     float bailout = 100.0;
     float power = 2.0;
-    vec3 c = vec3(JULIA_X, 0.355, 0.0); // Julia set parameters
+    vec3 c = vec3(JULIA_X, JULIA_Y, 0.0); // Julia set parameters
 
     vec3 z = samplePoint;
     for (int i = 0; i < iterations; i++) {
