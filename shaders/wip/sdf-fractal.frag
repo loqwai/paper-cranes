@@ -5,13 +5,15 @@
  * - Make one of the lights pulse by having its intensity vary over time
  * - Add a third light to the scene
  */
+ uniform float knob_0;
 #define ray_direction -3.
 const int MAX_MARCHING_STEPS = 255;
 #define MIN_DIST -650.
 #define MAX_DIST 55.
-const float EPSILON = 0.0001;
+const float EPSILON = 0.00001;
 #define shininess 10.
 #define JULIA_X 0.355 + (energyZScore/100.)
+#define K0 spectralCentroid + 0.5
 /**
  * Signed distance function for a sphere centered at the origin with radius 1.0;
  */
@@ -156,17 +158,17 @@ vec3 phongIllumination(vec3 k_a, vec3 k_d, vec3 k_s, float alpha, vec3 p, vec3 e
     const vec3 ambientLight = 0.5 * vec3(1.0, 1.0, 1.0);
     vec3 color = ambientLight * k_a;
 
-    vec3 light1Pos = vec3(4.0 * sin(iTime),
+    vec3 light1Pos = vec3(4.0 * sin(1.1),
                           2.0,
-                          4.0 * cos(iTime));
+                          4.0 * cos(1.1));
     vec3 light1Intensity = vec3(0.4, 0.4, 0.4);
 
     color += phongContribForLight(k_d, k_s, alpha, p, eye,
                                   light1Pos,
                                   light1Intensity);
 
-    vec3 light2Pos = vec3(2.0 * sin(0.37 * iTime),
-                          2.0 * cos(0.37 * iTime),
+    vec3 light2Pos = vec3(2.0 * sin(0.37 * 1.1),
+                          2.0 * cos(0.37 * 1.1),
                           2.0);
     vec3 light2Intensity = vec3(0.4, 0.4, 0.4);
 
@@ -197,20 +199,31 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec3 K_s = vec3(1.0, 1.0, 1.0);
 
     vec3 color = phongIllumination(K_a, K_d, K_s, shininess, p, eye);
+    vec2 uv = fragCoord.xy / iResolution.xy;
+    uv -= 0.5;
+    uv = mat2(cos(K0), -sin(K0), sin(K0), cos(K0)) * uv;
+    uv += 0.5;
+    vec3 last = rgb2hsl(getLastFrameColor(uv).rgb);
+
     color = rgb2hsl(color);
     vec3 normal = -estimateNormal(p.zyx);
+
     color.x = mapValue(fract(color.x + normal.x/2.), 0., 1., 0.5, 1.);
     color.y = fract(color.y + normal.y/2.);
     color.z = fract(color.z + normal.z/2.);
     if(color.y < 0.1){
-      vec2 uv = fragCoord.xy / iResolution.xy;
-      // normalize uv
-      // uv = uv * 2. - 1.;
-      color = rgb2hsl(getLastFrameColor(uv).rgb);
-      color.y += 0.1;
+       uv -= 0.5;
+      uv = mat2(cos(K0), -sin(K0), sin(K0), cos(K0)) * uv;
+      uv += 0.5;
+      last = rgb2hsl(getLastFrameColor(uv).rgb);
+      color = last;
+
+      color.z = color.y;
       // color.z += 0.1;
       color.x = (1. - color.x);
     }
+    //average color with last
+    color = mix(color, last, 0.8);
     color = hsl2rgb(color);
     fragColor = vec4(color, 1.0);
 }
