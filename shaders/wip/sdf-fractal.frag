@@ -10,6 +10,7 @@
 const int MAX_MARCHING_STEPS = 255;
 #define MIN_DIST -650.
 #define MAX_DIST 55.
+#define MIX_FACTOR (1. - spectralRoughness)
 const float EPSILON = 0.00001;
 #define shininess 10.
 #define JULIA_X 0.355 + (energyZScore/100.)
@@ -211,6 +212,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     color.x = mapValue(fract(color.x + normal.x/2.), 0., 1., 0.5, 1.);
     color.y = fract(color.y + normal.y/2.);
     color.z = fract(color.z + normal.z/2.);
+
+    // make the colors more saturated as we reach the center
+    color.y = clamp(color.y + uv.y, 0., 1.);
+    color.z += uv.x/2.;
     if(color.y < 0.1){
        uv -= 0.5;
       uv = mat2(cos(K0), -sin(K0), sin(K0), cos(K0)) * uv;
@@ -223,7 +228,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
       color.x = (1. - color.x);
     }
     //average color with last
-    color = mix(color, last, 0.8);
+    color = mix(color, last, MIX_FACTOR);
+    color.x = fract(color.x + spectralCentroidZScore/100.);
     color = hsl2rgb(color);
     fragColor = vec4(color, 1.0);
 }
