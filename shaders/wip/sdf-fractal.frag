@@ -5,15 +5,12 @@
  * - Make one of the lights pulse by having its intensity vary over time
  * - Add a third light to the scene
  */
-uniform float knob_0;
-uniform float knob_1;
-uniform float knob_2;
-uniform float ray_direction;
+#define ray_direction -3.
 const int MAX_MARCHING_STEPS = 255;
-#define MIN_DIST knob_2
-#define MAX_DIST knob_1
+#define MIN_DIST -650.
+#define MAX_DIST 55.
 const float EPSILON = 0.0001;
-#define shininess knob_0
+#define shininess 10.
 /**
  * Signed distance function for a sphere centered at the origin with radius 1.0;
  */
@@ -188,12 +185,14 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     if (dist > MAX_DIST - EPSILON) {
         // Didn't hit anything
         fragColor = vec4(0.0, 0.0, 0.0, 0.0);
-		return;
+		  return;
     }
 
     // The closest point on the surface to the eyepoint along the view ray
     vec3 p = eye + dist * dir;
-
+    // create bumps based on the mandelbulb
+    vec3 normal = estimateNormal(p);
+    p += 0.1 * normal * sin(10.0 * iTime + 10.0 * p.x);
     vec3 K_a = vec3(0.2, 0.2, 0.2);
     vec3 K_d = vec3(0.7, 0.2, 0.2);
     vec3 K_s = vec3(1.0, 1.0, 1.0);
