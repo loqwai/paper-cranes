@@ -11,6 +11,7 @@ const int MAX_MARCHING_STEPS = 255;
 #define MAX_DIST 55.
 const float EPSILON = 0.0001;
 #define shininess 10.
+#define JULIA_X 0.355 + (energyZScore/100.)
 /**
  * Signed distance function for a sphere centered at the origin with radius 1.0;
  */
@@ -32,7 +33,7 @@ float sceneSDF(vec3 samplePoint) {
     const int iterations = 100;
     float bailout = 100.0;
     float power = 2.0;
-    vec3 c = vec3(0.355, 0.355, 0.0); // Julia set parameters
+    vec3 c = vec3(JULIA_X, 0.355, 0.0); // Julia set parameters
 
     vec3 z = samplePoint;
     for (int i = 0; i < iterations; i++) {
@@ -190,14 +191,26 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     // The closest point on the surface to the eyepoint along the view ray
     vec3 p = eye + dist * dir;
-    // create bumps based on the mandelbulb
-    vec3 normal = estimateNormal(p);
-    p += 0.1 * normal * sin(10.0 * iTime + 10.0 * p.x);
+
     vec3 K_a = vec3(0.2, 0.2, 0.2);
     vec3 K_d = vec3(0.7, 0.2, 0.2);
     vec3 K_s = vec3(1.0, 1.0, 1.0);
 
     vec3 color = phongIllumination(K_a, K_d, K_s, shininess, p, eye);
-
+    color = rgb2hsl(color);
+    vec3 normal = -estimateNormal(p.zyx);
+    color.x = mapValue(fract(color.x + normal.x/2.), 0., 1., 0.5, 1.);
+    color.y = fract(color.y + normal.y/2.);
+    color.z = fract(color.z + normal.z/2.);
+    if(color.y < 0.1){
+      vec2 uv = fragCoord.xy / iResolution.xy;
+      // normalize uv
+      // uv = uv * 2. - 1.;
+      color = rgb2hsl(getLastFrameColor(uv).rgb);
+      color.y += 0.1;
+      // color.z += 0.1;
+      color.x = (1. - color.x);
+    }
+    color = hsl2rgb(color);
     fragColor = vec4(color, 1.0);
 }
