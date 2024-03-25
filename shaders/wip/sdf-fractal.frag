@@ -14,7 +14,7 @@ const int MAX_MARCHING_STEPS = 255;
 const float EPSILON = 0.00001;
 #define shininess 10.
 #define JULIA_X 0.355 + (energyZScore/100.)
-#define JULIA_Y mapValue(spectralKurtosisZScore, -1., 1., .25, 0.5)
+#define JULIA_Y mapValue(spectralKurtosisZScore, -1., 1., .25 , 0.5)
 #define K0 spectralCentroid + 0.5
 /**
  * Signed distance function for a sphere centered at the origin with radius 1.0;
@@ -219,7 +219,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     color.z += uv.x/2.;
     if(color.y < 0.1){
        uv -= 0.5;
-      uv = mat2(cos(K0), -sin(K0), sin(K0), cos(K0)) * uv;
       uv += 0.5;
       last = rgb2hsl(getLastFrameColor(uv).rgb);
       color = last;
@@ -231,6 +230,18 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     //average color with last
     color = mix(color, last, MIX_FACTOR);
     color.x = fract(color.x + spectralCentroidZScore/100.);
+    //if we are within 15% of the center, make it white
+    float distanceFromCenter = length(uv - 0.5);
+    if(distanceFromCenter < 0.05){
+        // get the last color from 20% away from the center, and apply it to the center
+        uv -= 0.5;
+        // find a point 20% away from the center
+        uv *= 1.2;
+        uv += 0.5;
+        last = rgb2hsl(getLastFrameColor(uv).rgb);
+        color.y = last.y;
+        color.x = fract(last.x + 0.01);
+    }
     color = hsl2rgb(color);
     fragColor = vec4(color, 1.0);
 }
