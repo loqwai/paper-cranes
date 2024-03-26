@@ -120,7 +120,7 @@ const keywords = [
     'spectralFluxZScore',
     'spectralFluxMin',
     'spectralFluxMax',
-
+    'random',
     'const',
     'uniform',
     'break',
