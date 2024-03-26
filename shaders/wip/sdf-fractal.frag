@@ -6,7 +6,7 @@
  * - Add a third light to the scene
  */
 uniform float knob_0;
-const int MAX_MARCHING_STEPS = 255;
+const int MAX_MARCHING_STEPS = 5;
 #define MIN_DIST -650.
 #define MAX_DIST 55.
 #define MIX_FACTOR (1. - spectralRoughness)
