@@ -27,7 +27,7 @@
     "debounce": "^2.0.0",
     "htm": "^3.1.1",
     "html": "^1.0.0",
-    "hypnosound": "^1.1.0",
+    "hypnosound": "^1.2.0",
     "preact": "^10.19.3",
     "twgl.js": "^4.24.0"
   },
