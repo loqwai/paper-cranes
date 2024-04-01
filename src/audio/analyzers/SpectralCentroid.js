@@ -4,7 +4,7 @@ let calculateStats = makeCalculateStats()
 
 self.addEventListener('message', ({ data: e }) => {
     if (e.type === 'fftData') {
-        let fft = e.data.fft // Extract FFT data from message
+        const { fft } = e.data // Extract FFT data from message
         const value = spectralCentroid(fft)
         self.postMessage({ type: 'computedValue', value, stats: calculateStats(value) })
     }
