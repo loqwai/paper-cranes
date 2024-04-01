@@ -1,26 +1,14 @@
-import { makeCalculateStats } from '../../utils/calculateStats'
+import { energy, makeCalculateStats } from 'hypnosound'
 
 let calculateStats = makeCalculateStats()
 
 self.addEventListener('message', ({ data: e }) => {
     if (e.type === 'fftData') {
-        let fftData = e.data.fft // Extract FFT data from message
-        let energy = calculateFFTEnergy(fftData) // Compute FFT energy
-        if (energy === 0) return
-        if (energy === null) return
-        self.postMessage({ type: 'computedValue', value: energy, stats: calculateStats(energy) })
+        let fft = e.data.fft // Extract FFT data from message
+        const value = energy(fft)
+        self.postMessage({ type: 'computedValue', value, stats: calculateStats(value) })
     }
     if (e.type === 'config') {
         calculateStats = makeCalculateStats(e.config.historySize)
     }
 })
-
-function calculateFFTEnergy(currentSignal) {
-    let energy = 0
-    for (let i = 0; i < currentSignal.length; i++) {
-        let normalizedValue = currentSignal[i] / currentSignal.length
-        energy += normalizedValue * normalizedValue
-    }
-
-    return energy * 10
-}
