@@ -1,6 +1,4 @@
-import { StatTypes } from '../utils/calculateStats.js'
-import { applyHanningWindow } from './applyHanningWindow.js'
-import { applyKaiserWindow } from './applyKaiserWindow.js'
+import { StatTypes, applyKaiserWindow } from 'hypnosound'
 export const AudioFeatures = [
     'SpectralCentroid',
     'SpectralFlux',
@@ -12,6 +10,7 @@ export const AudioFeatures = [
     'SpectralEntropy',
     'SpectralCrest',
     'SpectralSkew',
+    'PitchClass',
 ]
 
 const DEFAULT_FEATURE_VALUE = 0.00001

@@ -16,7 +16,7 @@ const conf = {
         { open: '(', close: ')' },
         { open: "'", close: "'", notIn: ['string', 'comment'] },
         { open: '"', close: '"', notIn: ['string'] },
-        {open: '/*', close: ' */', notIn: ['string']}
+        { open: '/*', close: ' */', notIn: ['string'] },
     ],
     surroundingPairs: [
         { open: '{', close: '}' },
@@ -99,6 +99,14 @@ const keywords = [
     'spectralSkewZScore',
     'spectralSkewMin',
     'spectralSkewMax',
+    'pitchClass',
+    'pitchClassNormalized',
+    'pitchClassMean',
+    'pitchClassStandardDeviation',
+    'pitchClassMedian',
+    'pitchClassZScore',
+    'pitchClassMin',
+    'pitchClassMax',
     'hslMix',
     'hsl2rgb',
     'rgb2hsl',
