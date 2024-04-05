@@ -83,11 +83,19 @@ const main = async () => {
     const canvas = document.getElementById('visualizer')
     const render = await makeVisualizer({ canvas, shader, initialImageUrl, fullscreen })
     requestAnimationFrame(() => animate({ render, audio, shader }))
+
     ranMain = true
 }
 
 events.forEach((event) => {
     document.addEventListener(event, main, { once: true })
+    document.addEventListener(
+        event,
+        () => {
+            document.documentElement.requestFullscreen()
+        },
+        { once: true },
+    )
 })
 
 const setupAudio = async () => {
