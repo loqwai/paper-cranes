@@ -8,7 +8,7 @@ function updateKnobValue(knob, value) {
     const min = parseFloat(currentUrl.searchParams.get(`${knob}.min`) ?? 0)
     const max = parseFloat(currentUrl.searchParams.get(`${knob}.max`) ?? 1)
     // the incoming knob value is between 0 and 127, so we need to scale it to the min and max values
-    if(!window.cranes.updateFeature) return;
+    if (!window.cranes.updateFeature) return
     current = (value / 127) * (max - min) + min
     window.cranes.updateFeature(knob, current)
 }
@@ -23,7 +23,7 @@ navigator
                 const [command, control, value] = message.data
                 // Listen for Control Change messages from knobs
                 if (command === 176) {
-                    let knobNumber = control - 70 // Assuming control 71 is knob_1
+                    let knobNumber = control
                     let knob = `knob_${knobNumber}`
                     updateKnobValue(knob, value)
                 }

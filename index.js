@@ -1,7 +1,7 @@
 import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { makeVisualizer } from './src/Visualizer.js'
 import './index.css'
-const events = ['click', 'touchstart', 'keydown', 'touchmove', 'touchstop']
+const events = ['touchstart', 'touchmove', 'touchstop']
 
 let ranMain = false
 let startTime = 0
