@@ -72,21 +72,6 @@ const FeatureAdder = () => {
             if (!initialFeatures[featureName]) initialFeatures[featureName] = { min: -3, max: 3, value: 0 }
             initialFeatures[featureName][paramType] = parseFloat(value)
         })
-        setFeatures(initialFeatures)
-        // if there is no 'shader' query param, set the editor code to the default shader
-        if (!searchParams.has('shader')) {
-            // try to get the shader from local storage
-            let shader = localStorage.getItem('cranes-manual-code')
-            // if the shader is not in local storage, fetch it from the server
-            if (!shader) {
-                const res = await fetch('/shaders/default.frag')
-                shader = await res.text()
-            }
-            window.editor.pushUndoStop()
-            window.editor.setValue(shader)
-            window.editor.pushUndoStop()
-            window.editor.layout()
-        }
     }, [])
 
     const updateFeature = (name, updatedFeature) => {
