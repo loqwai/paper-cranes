@@ -86,6 +86,9 @@ const FeatureAdder = () => {
             window.editor.setValue(shader)
             window.editor.pushUndoStop()
             window.editor.layout()
+        } else {
+            // add the no-editor class to body
+            document.body.classList.add('no-editor')
         }
     }, [])
 

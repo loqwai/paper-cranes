@@ -99,6 +99,14 @@ body {
     height: 100vh; /* Ensure the body takes up the full viewport height */
 }
 
+body.no-editor {
+    display:flex;
+    /* reverse the order of the flex items */
+    flex-direction: row-reverse;
+}
+body.no-editor #save-and-publish, body.no-editor #monaco-editor{
+   display: none;
+}
 #feature-editor {
     grid-column: 1; /* Places it in the first column */
     grid-row: 1; /* Places it in the first row */
