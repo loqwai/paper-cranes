@@ -3,10 +3,10 @@ form {
 }
 
 label {
-    display: flex;
     justify-content: center; /* This centers the child elements (including text) horizontally */
     align-items: center; /* This centers the child elements (including text) vertically */
 }
+
 label input {
     flex: 1;
 }
@@ -16,16 +16,28 @@ html {
     font-family: 'Space-Age', sans-serif;
     font-size: 20px;
 }
+#render-container {
+    display:flex;
+    flex-direction: row;
+    width:100%;
+}
 #feature-editor {
     border-radius: 10px;
     box-sizing: border-box;
     padding: 10px;
+    max-width: 45em;
 
 }
 .edit-feature {
-    display: flex;
-    flex-direction: row;
-    margin-bottom: 10px;
+    display: grid;
+    /* 3 columns, the first and last are 1fr, the middle is the rest */
+    grid-template-columns: 6em 4em 4fr 3em 3em 1em;
+}
+.edit-feature > input[type="number"] {
+    width: 3em;
+}
+.edit-feature > input[type="range"] {
+    flex: 1;
 }
 .new-feature {
     margin-bottom: 20px;
@@ -94,8 +106,11 @@ html {
 
 body {
     display: flex;
+    flex-direction: row;
     height:100vh;
     width:100vw;
+    max-width: 100vw;
+    max-height: 100vh;
 }
 body * {
     font-size: 20px;
