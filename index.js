@@ -2,7 +2,10 @@ import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { makeVisualizer } from './src/Visualizer.js'
 import './index.css'
 const events = ['touchstart', 'touchmove', 'touchstop']
-
+// if we're not in edit mode, or are in presentation mode, add click, keydown, and basically every other event
+if (!window.location.pathname.includes('edit') || window.location.search.includes('present')) {
+    events.push('click', 'keydown', 'mousemove', 'mousedown', 'mouseup', 'resize')
+}
 let ranMain = false
 let startTime = 0
 const params = new URLSearchParams(window.location.search)
