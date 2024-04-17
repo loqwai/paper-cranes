@@ -456,7 +456,6 @@ function init() {
     })
 
     document.querySelector('#publish').addEventListener('click', () => {})
-    setFeatures(initialFeatures)
     window.editor.pushUndoStop()
     window.editor.setValue(shader)
     window.editor.pushUndoStop()
