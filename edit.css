@@ -107,6 +107,9 @@ body.no-editor {
 body.no-editor #save-and-publish, body.no-editor #monaco-editor{
    display: none;
 }
+body.present #feature-editor {
+  display:none;
+}
 #feature-editor {
     grid-column: 1; /* Places it in the first column */
     grid-row: 1; /* Places it in the first row */

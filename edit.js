@@ -90,6 +90,10 @@ const FeatureAdder = () => {
             // add the no-editor class to body
             document.body.classList.add('no-editor')
         }
+        // if we have a searchParam of 'present', add the present class to the body
+        if (searchParams.has('present')) {
+            document.body.classList.add('present')
+        }
     }, [])
 
     const updateFeature = (name, updatedFeature) => {
