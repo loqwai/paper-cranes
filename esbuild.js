@@ -30,6 +30,7 @@ build({
             ncp('favicon.ico', 'dist/favicon.ico'),
             ncp('images', 'dist/images'),
             ncp('shaders', 'dist/shaders'),
+            ncp('codeicon.ttf', 'dist/codeicon.ttf'),
         ]),
     )
     .catch(console.error)
