@@ -13,13 +13,6 @@
     "build:watch": "chokidar '**/*.*' -i 'node_modules/*' -i 'dist/**/*.*' -c 'npm run build'",
     "format": "eslint --fix ."
   },
-  "glslify": {
-    "transform": [
-      [
-        "glslify-import"
-      ]
-    ]
-  },
   "author": "",
   "license": "UNLICENSED",
   "dependencies": {
