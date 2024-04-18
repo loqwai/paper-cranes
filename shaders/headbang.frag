@@ -35,11 +35,7 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
 
   // Rotate around the center
   uv*=mat2(cos(pivot),-sin(pivot),sin(pivot),cos(pivot));
-  // if we are too close to the edges, just make it black and return
-  if(abs(uv.x)>0.6||abs(uv.y)>0.6){
-    fragColor=vec4(0.,0.,0.,1.);
-    return;
-  }
+
   // Translate back
   uv+=.5;
 
