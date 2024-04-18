@@ -1,5 +1,5 @@
 #version 300 es
-precision mediump float;
+precision highp float;
 
 uniform float time;
 uniform float spectralCentroidNormalized;
@@ -25,7 +25,7 @@ uniform vec2 resolution;
 uniform bool beat;
 out vec4 fragColor;
 float REPEAT=3.;
-
+#define T sin(time/10.)*10.
 vec3 rgb2hsl(vec3 color){
   float maxColor=max(max(color.r,color.g),color.b);
   float minColor=min(min(color.r,color.g),color.b);
@@ -109,7 +109,7 @@ float box(vec3 pos,float scale){
   pos.y-=3.5;
   pos.xy*=rot(.75);
   if(beat){
-    pos.xy*=rot(time*.4);
+    pos.xy*=rot(T*.4);
   }
   float result=-base;
   return result;
@@ -117,28 +117,28 @@ float box(vec3 pos,float scale){
 
 float box_set(vec3 pos){
   vec3 pos_origin=pos;
-  float dynamicMovement=sin(time*.4+spectralCentroidNormalized)*2.5;
+  float dynamicMovement=sin(T*.4+spectralCentroidNormalized)*2.5;
 
   // Apply audio feature modifications
   pos=pos_origin;
   pos.y+=dynamicMovement;
   pos.xy*=rot(.8+spectralCentroidZScore);// Rotate based on spectralCentroidZScore
-  float box1=box(pos,2.-abs(sin(time*.4))*1.5+energyNormalized);
+  float box1=box(pos,2.-abs(sin(T*.4))*1.5+energyNormalized);
 
   pos=pos_origin;
   pos.y-=dynamicMovement;
   pos.xy*=rot(.8+spectralCentroidZScore);
-  float box2=box(pos,2.-abs(sin(time*.4))*1.5+energyNormalized);
+  float box2=box(pos,2.-abs(sin(T*.4))*1.5+energyNormalized);
 
   pos=pos_origin;
   pos.x+=dynamicMovement;
   pos.xy*=rot(.8+spectralCentroidZScore);
-  float box3=box(pos,2.-abs(sin(time*.4))*1.5+energyNormalized);
+  float box3=box(pos,2.-abs(sin(T*.4))*1.5+energyNormalized);
 
   pos=pos_origin;
   pos.x-=dynamicMovement;
   pos.xy*=rot(.8+spectralCentroidZScore);
-  float box4=box(pos,2.-abs(sin(time*.4))*1.5+energyNormalized);
+  float box4=box(pos,2.-abs(sin(T*.4))*1.5+energyNormalized);
 
   pos=pos_origin;
   pos.xy*=rot(.8+spectralCentroidZScore);
@@ -161,10 +161,10 @@ float map(vec3 pos){
 
 void mainImage(out vec4 fragColor,in vec2 fragCoord){
   vec2 p=(fragCoord.xy*2.-resolution.xy)/min(resolution.x,resolution.y);
-  vec3 ro=vec3(0.,-.2,time*4.);
+  vec3 ro=vec3(0.,-.2,T*4.);
   vec3 ray=normalize(vec3(p,1.5));
-  ray.xy=ray.xy*rot(sin(time*.03)*5.);
-  ray.yz=ray.yz*rot(sin(time*.05)*.2);
+  ray.xy=ray.xy*rot(sin(T*.03)*5.);
+  ray.yz=ray.yz*rot(sin(T*.05)*.2);
   float t=.1;
   vec3 col=vec3(0.);
   float ac=0.;
@@ -181,14 +181,14 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
   }
 
   col=vec3(ac*.02);
-  col+=vec3(0.,.2*abs(sin(time)),.5+sin(time)*.2);
+  col+=vec3(0.,.2*abs(sin(T)),.5+sin(T)*.2);
   if(col.b<.1&&col.r<.1&&col.g<.1){
     discard;
   }
   // rotate the color via hsl when the energy is high
   col=hsl2rgb(vec3(getGrayPercent(vec4(col,1.)),1.,.5));
 
-  fragColor=vec4(col,1.-t*(.02+.02*sin(time)));
+  fragColor=vec4(col,1.-t*(.02+.02*sin(T)));
 }
 
 void main(){
