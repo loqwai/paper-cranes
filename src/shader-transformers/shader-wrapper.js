@@ -21,6 +21,9 @@ ${paperCranes()}
 vec4 getLastFrameColor(vec2 uv){
     return texture(prevFrame, uv);
 }
+vec4 getInitialFrameColor(vec2 uv){
+    return texture(initialFrame, uv);
+}
 ${shader}
 
 void main(void){
@@ -59,6 +62,7 @@ uniform vec2 resolution;// iResolution equivalent
 uniform int frame;
 
 uniform sampler2D prevFrame;// Texture of the previous frame
+uniform sampler2D initialFrame;
 
 uniform float iRandom;
 
