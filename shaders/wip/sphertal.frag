@@ -3,7 +3,7 @@
 
 #define TIME            spectralCentroid*2.
 #define RESOLUTION      iResolution
-http://localhost:6969/edit.html?shader=wip%2Fapollo&knob_14=-0.175&knob_14.min=-6.6&knob_14.max=5.4&knob_15=1.622&knob_15.min=-2&knob_15.max=8&knob_16=1&knob_16.min=-2&knob_16.max=1&knob_5=0.85&knob_5.min=-2&knob_5.max=1&knob_17=-0.63&knob_17.min=-2&knob_17.max=1&knob_22=0.362&knob_22.min=-2&knob_22.max=1
+//http://localhost:6969/edit.html?shader=wip%2Fsphertal&knob_14=-0.175&knob_14.min=-6.6&knob_14.max=5.4&knob_15=1.622&knob_15.min=-2&knob_15.max=8&knob_16=1&knob_16.min=-2&knob_16.max=1&knob_5=0.85&knob_5.min=-2&knob_5.max=1&knob_17=-0.63&knob_17.min=-2&knob_17.max=1&knob_22=0.362&knob_22.min=-2&knob_22.max=1
 #define TAU             (2.0*PI)
 #define L2(x)           dot(x, x)
 #define ROT(a)          mat2(cos(a), sin(a), -sin(a), cos(a))
