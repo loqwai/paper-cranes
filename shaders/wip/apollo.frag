@@ -35,7 +35,7 @@ float weird(vec2 p) {
   float z = 4.0;
   p *= ROT(TIME*0.1);
   float tm = 0.2*TIME;
-  float r = 0.5 * spectralKurtosis;
+  float r = 0.5 * (spectralKurtosisMedian/10.);
   vec4 off = vec4(r*PSIN(tm*sqrt(spectralCrest)), r*PSIN(tm*sqrt(1.5)), r*PSIN(tm*sqrt(2.0)), 0.0);
   vec4 pp = vec4(p.x, p.y, 0.0, 0.0)+off;
   pp.w = 0.125*(1.0-tanh(length(pp.xyz)));
