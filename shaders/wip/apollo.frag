@@ -1,7 +1,7 @@
 // License CC0: Apollian with a twist
 // Playing around with apollian fractal
 
-#define TIME            spectralCentroid*10.
+#define TIME            spectralCentroid*2.
 #define RESOLUTION      iResolution
 
 #define TAU             (2.0*PI)
@@ -16,7 +16,7 @@ vec3 hsv2rgb(vec3 c) {
 }
 
 float apollian(vec4 p, float s) {
-  float scale = 1. + energy*10.;
+  float scale = 1. + energy;
 
   for(int i=0; i<7; ++i) {
     p        = -1.0 + 2.0*fract(0.5*p+0.5);
@@ -35,14 +35,14 @@ float weird(vec2 p) {
   float z = 4.0;
   p *= ROT(TIME*0.1);
   float tm = 0.2*TIME;
-  float r = 0.5;
-  vec4 off = vec4(r*PSIN(tm*sqrt(3.0)), r*PSIN(tm*sqrt(1.5)), r*PSIN(tm*sqrt(2.0)), 0.0);
+  float r = 0.5 * spectralKurtosis;
+  vec4 off = vec4(r*PSIN(tm*sqrt(spectralCrest)), r*PSIN(tm*sqrt(1.5)), r*PSIN(tm*sqrt(2.0)), 0.0);
   vec4 pp = vec4(p.x, p.y, 0.0, 0.0)+off;
   pp.w = 0.125*(1.0-tanh(length(pp.xyz)));
   pp.yz *= ROT(tm);
-  pp.xz *= ROT(tm*sqrt(0.5));
+  pp.xz *= ROT(tm*sqrt(spectralCrest));
   pp /= z;
-  float d = apollian(pp, 1.2);
+  float d = apollian(pp, 1. + (spectralSkew/3.));
   return d*z;
 }
 
@@ -63,7 +63,7 @@ vec3 color(vec2 p) {
 
   float d = df(p);
 
-  float b = -0.125;
+  float b = -0.125 * pitchClassMedian;
   float t = 10.0;
 
   vec3 ro = vec3(0.0, t, 0.0);
@@ -92,7 +92,7 @@ vec3 color(vec2 p) {
   float sd2= df(sp2.xz);
 
   vec3 col  = vec3(0.0);
-  const float ss =15.0;
+  float ss =15.0*spectralCrest;
 
   col       += vec3(1.0, 1.0, 1.0)*(1.0-exp(-ss*(max((sd1+0.0*lw), 0.0))))/bl21;
   col       += vec3(0.5)*(1.0-exp(-ss*(max((sd2+0.0*lw), 0.0))))/bl22;
