@@ -35,14 +35,14 @@ float weird(vec2 p) {
   float z = 4.0;
   p *= ROT(TIME*0.1);
   float tm = 0.2*TIME;
-  float r = 0.5 * (spectralKurtosisMedian/10.);
+  float r = 0. + (spectralKurtosisMedian);
   vec4 off = vec4(r*PSIN(tm*sqrt(spectralCrest)), r*PSIN(tm*sqrt(1.5)), r*PSIN(tm*sqrt(2.0)), 0.0);
   vec4 pp = vec4(p.x, p.y, 0.0, 0.0)+off;
   pp.w = 0.125*(1.0-tanh(length(pp.xyz)));
   pp.yz *= ROT(tm);
   pp.xz *= ROT(tm*sqrt(spectralCrest));
   pp /= z;
-  float d = apollian(pp, 1. + (spectralSkew/3.));
+  float d = apollian(pp, 1. + mapValue(energy,0.,1.,-2.,2.)/3.);
   return d*z;
 }
 
