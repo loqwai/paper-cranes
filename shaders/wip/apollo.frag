@@ -55,11 +55,11 @@ float df(vec2 p) {
 
 vec3 color(vec2 p) {
   float aa   = 2.0/RESOLUTION.y;
-  const float lw = 0.0235;
-  const float lh = 1.25;
+   float lw = 0.0235*spectralRoughness;
+   float lh = 1.25*spectralCrest*2.;
 
-  const vec3 lp1 = vec3(0.5, lh, 0.5);
-  const vec3 lp2 = vec3(-0.5, lh, 0.5);
+   vec3 lp1 = vec3(0.5, lh, 0.5);
+  vec3 lp2 = vec3(-0.5, lh, 0.5);
 
   float d = df(p);
 
