@@ -8,12 +8,15 @@
 #define L2(x)           dot(x, x)
 #define ROT(a)          mat2(cos(a), sin(a), -sin(a), cos(a))
 #define PSIN(x)         (0.5+0.5*sin(x))
+
 uniform float knob_14;
 uniform float knob_15;
 uniform float knob_16;
+uniform float knob_17;
+uniform float knob_5;
 
-#define B knob_15
-#define A knob_14
+#define B mix(0.362,1.2,spectralCrest)
+#define A -0.175
 #define C knob_16
 vec3 hsv2rgb(vec3 c) {
   const vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
@@ -29,7 +32,7 @@ float apollian(vec4 p, float s) {
 
     float r2 = dot(p,p);
 
-    float k  = s/r2;
+    float k  = s/r2 * knob_5;
     p       *= k;
     scale   *= k;
   }
