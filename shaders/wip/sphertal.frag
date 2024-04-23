@@ -1,23 +1,24 @@
 // License CC0: Apollian with a twist
 // Playing around with apollian fractal
 
-#define TIME            spectralCentroid*2.
+
 #define RESOLUTION      iResolution
-//http://localhost:6969/edit.html?shader=wip%2Fsphertal&knob_14=-0.175&knob_14.min=-6.6&knob_14.max=5.4&knob_15=1.622&knob_15.min=-2&knob_15.max=8&knob_16=1&knob_16.min=-2&knob_16.max=1&knob_5=0.85&knob_5.min=-2&knob_5.max=1&knob_17=-0.63&knob_17.min=-2&knob_17.max=1&knob_22=0.362&knob_22.min=-2&knob_22.max=1
+//https://visuals.beadfamous.com/edit?knob_14=0.433&knob_14.min=0&knob_14.max=1&knob_15=0.52&knob_15.min=0&knob_15.max=1&knob_16=2.8&knob_16.min=-2&knob_16.max=2.8&knob_22=-0.512&knob_22.min=-2&knob_22.max=1&knob_4=0.394&knob_4.min=-2&knob_4.max=1&knob_17=-0.063&knob_17.min=-2&knob_17.max=1&knob_18=-1.386&knob_18.min=-2&knob_18.max=1
 #define TAU             (2.0*PI)
 #define L2(x)           dot(x, x)
 #define ROT(a)          mat2(cos(a), sin(a), -sin(a), cos(a))
 #define PSIN(x)         (0.5+0.5*sin(x))
-
 uniform float knob_14;
 uniform float knob_15;
 uniform float knob_16;
 uniform float knob_17;
-uniform float knob_5;
+#define B knob_15
+#define A 15.841
+#define C 1.0
+#define D knob_14
+#define E knob_16
 
-#define B mix(0.362,1.2,spectralCrest)
-#define A -0.175
-#define C knob_16
+#define TIME 0.
 vec3 hsv2rgb(vec3 c) {
   const vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
   vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
@@ -32,7 +33,7 @@ float apollian(vec4 p, float s) {
 
     float r2 = dot(p,p);
 
-    float k  = s/r2 * knob_5;
+    float k  = s/r2;
     p       *= k;
     scale   *= k;
   }
@@ -64,15 +65,15 @@ float df(vec2 p) {
 
 vec3 color(vec2 p) {
   float aa   = 2.0/RESOLUTION.y;
-   float lw = 0.0235*spectralRoughness;
-   float lh = 1.25*spectralCrest*2.;
+   float lw = 0.0235;
+   float lh = 1.25*E*2.;
 
    vec3 lp1 = vec3(0.5, lh, 0.5);
   vec3 lp2 = vec3(-0.5, lh, 0.5);
 
   float d = df(p);
 
-  float b = -0.125 * pitchClassMedian;
+  float b = -0.125 * E;
   float t = 10.0;
 
   vec3 ro = vec3(0.0, t, 0.0);
@@ -101,7 +102,7 @@ vec3 color(vec2 p) {
   float sd2= df(sp2.xz);
 
   vec3 col  = vec3(0.0);
-  float ss =15.0*spectralCrest;
+  float ss =15.0;
 
   col       += vec3(1.0, 1.0, 1.0)*(1.0-exp(-ss*(max((sd1+0.0*lw), 0.0))))/bl21;
   col       += vec3(0.5)*(1.0-exp(-ss*(max((sd2+0.0*lw), 0.0))))/bl22;
