@@ -12,7 +12,7 @@ uniform float knob_14;
 uniform float knob_15;
 uniform float knob_16;
 uniform float knob_17;
-#define B knob_15
+#define B mix(0.68,1.,energyZScore)
 #define A 15.841
 #define C 1.0
 #define D knob_14
