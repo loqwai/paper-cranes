@@ -11,6 +11,9 @@ export const AudioFeatures = [
     'SpectralCrest',
     'SpectralSkew',
     'PitchClass',
+    'Bass',
+    'Mids',
+    'Treble',
 ]
 
 const DEFAULT_FEATURE_VALUE = 0.00001
