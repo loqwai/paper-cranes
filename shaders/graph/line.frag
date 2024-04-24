@@ -15,13 +15,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Plot each feature on the rightmost column with a unique color
     if (uv.x > 0.99) {
-        if (abs(fragCoord.y - (spectralEntropy * resolution.y)) < lineWidth) {
+        if (abs(fragCoord.y - (bass * resolution.y)) < lineWidth) {
             fragColor = vec4(1.0, 0.0, 0.0, 1.0);
-        } else if (abs(fragCoord.y - (spectralCentroid * resolution.y)) < lineWidth) {
+        } else if (abs(fragCoord.y - (treble * resolution.y)) < lineWidth) {
             fragColor = vec4(0.0, 1.0, 0.0, 1.0);
         } else if (abs(fragCoord.y - (pitchClass * resolution.y)) < lineWidth) {
             fragColor = vec4(0.0, 0.0, 1.0, 1.0);
-        } else if (abs(fragCoord.y - (energy* resolution.y)) < lineWidth) {
+        } else if (abs(fragCoord.y - (mids* resolution.y)) < lineWidth) {
             fragColor = vec4(1.0, 1.0, 0.0, 1.0);
         }
     }

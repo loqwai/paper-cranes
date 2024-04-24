@@ -40,7 +40,7 @@ export const getFlatAudioFeatures = (audioFeatures = AudioFeatures, rawFeatures 
 }
 
 export class AudioProcessor {
-    constructor(audioContext, sourceNode, historySize, fftSize = 32768 / 4) {
+    constructor(audioContext, sourceNode, historySize, fftSize = 32768) {
         this.features = {}
         const fftAnalyzer = audioContext.createAnalyser()
         fftAnalyzer.smoothingTimeConstant = 0.95
@@ -79,9 +79,9 @@ export class AudioProcessor {
 
             fftAnalyzer.getByteFrequencyData(fftData)
 
-            const windowedFftData = applyKaiserWindow(fftData)
+            // const windowedFftData = applyKaiserWindow(fftData)
             for (const worker in workers) {
-                workers[worker].postMessage({ type: 'fftData', data: { fft: windowedFftData } })
+                workers[worker].postMessage({ type: 'fftData', data: { fft: fftData } })
             }
         }
 
