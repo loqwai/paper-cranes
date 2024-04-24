@@ -1,5 +1,5 @@
 // License CC0: Apollian with a twist
-// Playing around with apollian fractal
+// Playing around with apollian fractalish
 
 
 #define RESOLUTION      iResolution
