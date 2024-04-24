@@ -15,13 +15,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Plot each feature on the rightmost column with a unique color
     if (uv.x > 0.99) {
-        if (abs(fragCoord.y - (spectralSkewZScore+2.5)/5. * resolution.y) < lineWidth) {
+        if (abs(fragCoord.y - (bassZScore+2.5)/5. * resolution.y) < lineWidth) {
             fragColor = vec4(1.0, 0.0, 0.0, 1.0);
-        } else if (abs(fragCoord.y - (spectralRolloffZScore+2.5)/5. * resolution.y) < lineWidth) {
+        } else if (abs(fragCoord.y - (midsZScore+2.5)/5. * resolution.y) < lineWidth) {
             fragColor = vec4(0.0, 1.0, 0.0, 1.0);
-        } else if (abs(fragCoord.y - (spectralFluxZScore+2.5)/5. * resolution.y) < lineWidth) {
+        } else if (abs(fragCoord.y - (trebleZScore+2.5)/5. * resolution.y) < lineWidth) {
             fragColor = vec4(0.0, 0.0, 1.0, 1.0);
-        } else if (abs(fragCoord.y - (spectralCrestZScore+2.5)/5. * resolution.y) < lineWidth) {
+        } else if (abs(fragCoord.y - (energy+2.5)/5. * resolution.y) < lineWidth) {
             fragColor = vec4(1.0, 1.0, 0.0, 1.0);
         }
     }
