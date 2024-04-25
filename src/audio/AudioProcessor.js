@@ -16,7 +16,6 @@ export const AudioFeatures = [
     'Treble',
 ]
 
-const DEFAULT_FEATURE_VALUE = 0.00001
 export const getFlatAudioFeatures = (audioFeatures = AudioFeatures, rawFeatures = {}) => {
     const features = {}
     for (const feature of audioFeatures) {
@@ -24,15 +23,8 @@ export const getFlatAudioFeatures = (audioFeatures = AudioFeatures, rawFeatures 
         const featureKey = feature.charAt(0).toLowerCase() + feature.slice(1)
 
         for (const propertyKey of StatTypes) {
-            // the key in features is the same as the key in rawFeatures, except the first letter is lowercased
-            // NOTICE: In a desperate effort to avoid divisions by zero, I am adding a teeny tiny offset from zero here.
-            // Fun fact: This is the same hack I made for the first time in my professional career, where I did this to avoid
-            // division-by-zero on flight management systems when Airbus A320s would fly over the north pole.
-            // It was a bad idea. I hope they deleted that code.
-            // Anyway, here we go again! It doesn't seem to be helping things.
             const key = `${featureKey}${propertyKey.charAt(0).toUpperCase() + propertyKey.slice(1)}`
             features[key] = rawFeatures[feature]?.stats[propertyKey]
-            if (features[key] === 0) features[key] = DEFAULT_FEATURE_VALUE
         }
         features[featureKey] = rawFeatures[feature]?.stats?.current
     }
@@ -43,15 +35,18 @@ export class AudioProcessor {
     constructor(audioContext, sourceNode, historySize, fftSize = 32768) {
         this.features = {}
         const fftAnalyzer = audioContext.createAnalyser()
-        fftAnalyzer.smoothingTimeConstant = 0.95
+        fftAnalyzer.smoothingTimeConstant = 0.5
         fftAnalyzer.fftSize = fftSize
         const fftData = new Uint8Array(fftAnalyzer.frequencyBinCount)
-        sourceNode.connect(fftAnalyzer)
-
         const rawFeatures = {}
         const workers = {}
 
         const start = async () => {
+            await audioContext.audioWorklet.addModule('src/window-processor.js') // Path to your processor file
+            const windowNode = new AudioWorkletNode(audioContext, 'window-processor')
+            sourceNode.connect(windowNode)
+            windowNode.connect(fftAnalyzer)
+
             for (const workerName of AudioFeatures) {
                 const workerUrl = new URL(`src/audio/analyzers/${workerName}.js`, import.meta.url).href
                 fetch(workerUrl).then(async (response) => {
