@@ -1,3 +1,4 @@
+#define PI 3.1415926535897932384626433832795
 const vec3 lightDir = vec3(-0.577, 0.577, 0.577);
 const float angle = 90.0;
 const float fov = angle * 0.5 * PI / 180.0;
