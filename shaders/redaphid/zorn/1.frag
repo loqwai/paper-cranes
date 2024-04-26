@@ -9,7 +9,7 @@ uniform float knob_17;
 #define PROBE_3 mix(-1.5,10.,pitchClassMedian)+EPSILON /* color */
 #define PROBE_4 mix(1.,11.,trebleNormalized)+EPSILON
 #define PROBE_5 mix(0.47,0.97,spectralKurtosisNormalized)+EPSILON /* complexity + zoom */
-#define PROBE_6 mix(0.2,0.1,energyNormalized)+EPSILON /*zoom */
+#define PROBE_6 mix(0.4,0.2,energyNormalized)+EPSILON /*zoom */
 
 // Descriptive function to apply periodic transformation and trap calculations
 vec2 applyPeriodicTransformationAndTraps(vec2 position, vec2 multiplier) {
