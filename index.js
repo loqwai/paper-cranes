@@ -86,19 +86,21 @@ const main = async () => {
     ranMain = true
 }
 
-events.forEach((event) => {
-    // get the visualizer
-    const visualizer = document.getElementById('visualizer')
-    visualizer.addEventListener(event, main, { once: true })
-    visualizer.addEventListener(
-        event,
-        () => {
-            document.documentElement.requestFullscreen()
-        },
-        { once: true },
-    )
-})
-
+// if the url contains the string 'edit', don't do this.
+if (!window.location.href.includes('edit')) {
+    events.forEach((event) => {
+        // get the visualizer
+        const visualizer = document.getElementById('visualizer')
+        visualizer.addEventListener(event, main, { once: true })
+        visualizer.addEventListener(
+            event,
+            () => {
+                document.documentElement.requestFullscreen()
+            },
+            { once: true },
+        )
+    })
+}
 const setupAudio = async () => {
     const audioContext = new AudioContext()
     await audioContext.resume()
