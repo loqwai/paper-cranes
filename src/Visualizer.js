@@ -121,9 +121,9 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
             iMouse: [46, 19, 208, 0],
             iTime: time,
             iChannel0: initialTexture,
-            iChannel1: initialTexture,
+            iChannel1: prevFrame.attachments[0],
             iChannel2: initialTexture,
-            iChannel3: initialTexture,
+            iChannel3: prevFrame.attachments[0],
             ...features,
         }
 
