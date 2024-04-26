@@ -11,8 +11,7 @@ export const shaderWrapper = (shader) => {
         return /* glsl */ `
 #version 300 es
 precision mediump float;
-// This is automatically added by paper-cranes
-#define PAPER_CRANES 1
+
 out vec4 fragColor;
 ${shaderToyCompatibilityUniforms()}
 ${getAudioUniforms()}
