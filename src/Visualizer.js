@@ -10,14 +10,16 @@ import {
 } from 'twgl.js'
 
 import { shaderWrapper } from './shader-transformers/shader-wrapper'
-// Vertex shader
+
+// Vertex shader (unchanged)
 const vertexShader = `
     #version 300 es
     in vec4 position;
     void main() {
         gl_Position = position;
     }
-`
+  `
+
 const getTexture = async (gl, url) => {
     return new Promise((resolve) => {
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true) // Flip the texture
@@ -51,7 +53,8 @@ const updateWebGLProgram = (gl, vertexShader, wrappedShader) => {
 }
 
 export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) => {
-    const gl = canvas.getContext('webgl2', { antialias: false })
+    const gl = canvas.getContext('webgl2', { antialias: false }) // Still set antialias to false
+
     if (fullscreen) {
         const width = window.innerWidth
         const height = window.innerHeight
@@ -62,14 +65,31 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         gl.viewport(0, 0, width, height)
         canvas.classList.add('fullscreen')
     }
-    const ext = gl.getExtension('GMAN_debug_helper')
-    if (ext) {
-        ext.setConfiguration({
-            failUnsetUniforms: false,
-        })
-    }
+    const samples = 4
     const initialTexture = await getTexture(gl, initialImageUrl)
-    const frameBuffers = [createFramebufferInfo(gl), createFramebufferInfo(gl)]
+
+    // Create framebuffers with multisampled renderbuffers
+    const frameBuffers = [
+        createFramebufferInfo(gl, {
+            attachments: [
+                {
+                    attachment: gl.COLOR_ATTACHMENT0,
+                    format: gl.RGBA8,
+                    samples,
+                },
+            ],
+        }),
+        createFramebufferInfo(gl, {
+            attachments: [
+                {
+                    attachment: gl.COLOR_ATTACHMENT0,
+                    format: gl.RGBA8,
+                    samples,
+                },
+            ],
+        }),
+    ]
+
     const arrays = {
         position: [-1, -1, 0, 1, -1, 0, -1, 1, 0, -1, 1, 0, 1, -1, 0, 1, 1, 0],
     }
@@ -141,17 +161,35 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
 
         // Bind the default framebuffer (null) as the DRAW framebuffer
         gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null)
+        const resolveFramebuffer = createFramebufferInfo(gl, {
+            width: frame.width,
+            height: frame.height,
+            attachments: [
+                {
+                    attachment: gl.COLOR_ATTACHMENT0,
+                    format: gl.RGBA8,
+                },
+            ],
+        })
+        // Resolve the multisampled buffer to a single-sampled texture
+        gl.bindFramebuffer(gl.READ_FRAMEBUFFER, frame.framebuffer)
+        gl.beginRenderViewport(0, 0, frame.width, frame.height) // Set the rendering viewport for resolving
+        // Assuming you have quad vertex data in a bufferInfo named 'quadBufferInfo'
+        setBuffersAndAttributes(gl, programInfo, bufferInfo) // Bind quad vertex data
+        drawBufferInfo(gl, quadBufferInfo) // Draw the quad
+        gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null)
+        gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null)
 
-        // Blit (copy) the framebuffer to the canvas
+        // Blit (copy) the resolveFramebuffer to the canvas
         gl.blitFramebuffer(
             0,
-            0,
+            0, // Source rectangle (entire resolveFramebuffer)
             frame.width,
-            frame.height, // Source rectangle
+            frame.height,
             0,
-            0,
+            0, // Destination rectangle (entire canvas)
             gl.canvas.width,
-            gl.canvas.height, // Destination rectangle
+            gl.canvas.height,
             gl.COLOR_BUFFER_BIT, // Mask (color buffer only)
             gl.LINEAR, // Filter (linear for smooth scaling)
         )
