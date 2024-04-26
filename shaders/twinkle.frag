@@ -2,7 +2,6 @@
 
 uniform float knob_1;
 #define PI 3.1415926535897932384626433832795
-#define PI 3.1415926535897932384626433832795
 
 #define A (energy+1.)
 #define B (energyNormalized+1.)

@@ -13,7 +13,6 @@ uniform float knob_15;
 uniform float knob_16;
 uniform float knob_17;
 #define PI 3.1415926535897932384626433832795
-#define PI 3.1415926535897932384626433832795
 #define B mix(0.68,1.,energyZScore)
 #define A 15.841
 #define C 1.0
