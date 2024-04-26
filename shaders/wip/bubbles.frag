@@ -9,6 +9,8 @@ uniform float knob_2;
 uniform float knob_3;
 uniform float knob_4;
 uniform float knob_5;
+#define PI 3.1415926535897932384626433832795
+#define PI 3.1415926535897932384626433832795
 
 #define A 0.5
 #define B spectralCentroid

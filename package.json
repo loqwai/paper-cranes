@@ -6,7 +6,7 @@
   "main": "dist/src/audio/AudioProcessor.js",
   "scripts": {
     "start": "npm run dev",
-    "serve": "npx live-server --wait=50 --no-browser -q --port=6969 ./dist/",
+    "serve": "npx live-server --wait=50 -q --port=6969 ./dist/",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "node ./esbuild.js",
     "dev": "npm run build && concurrently \"npm run serve\" \"npm run build:watch\"",

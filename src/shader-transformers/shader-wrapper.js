@@ -35,7 +35,6 @@ void main(void){
 }
 
 const shaderToyCompatibilityUniforms = () => /* glsl */ `
-#define PI 3.1415926535897932384626433832795
 uniform vec4 iMouse;
 uniform float iTime;
 uniform vec3 iResolution;
