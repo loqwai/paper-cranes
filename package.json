@@ -22,7 +22,7 @@
     "html": "^1.0.0",
     "hypnosound": "^1.8.0",
     "preact": "^10.19.3",
-    "twgl.js": "^5.5.4"
+    "twgl-base.js": "^5.5.3"
   },
   "devDependencies": {
     "chokidar-cli": "^3.0.0",

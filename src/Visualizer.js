@@ -7,7 +7,7 @@ import {
     setBuffersAndAttributes,
     setUniforms,
     drawBufferInfo,
-} from 'twgl.js'
+} from 'twgl-base.js'
 
 import { shaderWrapper } from './shader-transformers/shader-wrapper'
 // Vertex shader
