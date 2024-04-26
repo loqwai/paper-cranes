@@ -2,6 +2,8 @@ const float INFINITY_VALUE = 1e6;
 
 uniform float knob_1;
 uniform float knob_2;
+#define PI 3.1415926535897932384626433832795
+#define PI 3.1415926535897932384626433832795
 
 bool rayIntersectsBox(vec3 origin, vec3 direction, vec3 minBounds, vec3 maxBounds, out float intersectionDistance)
 {
