@@ -184,7 +184,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
             }
     }
     // render
-    else if (fragColor.w < 100. || doReset)
+    else if (fragColor.w < 200. || doReset)
     {					 // ^ max AA samples
 
         vec2 fc = fragCoord + hash2(fragCoord + iMouse.xy);
