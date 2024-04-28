@@ -3,11 +3,14 @@ uniform float knob_22;
 uniform float knob_11;
 uniform float knob_21;
 uniform float knob_10;
+uniform float knob_20;
 
-#define PROBE_A knob_22
-#define PROBE_B knob_11
-#define PROBE_C knob_21
-#define PROBE_D knob_10
+#define EPSILON 0.0001
+#define PROBE_A knob_22 + EPSILON
+#define PROBE_B knob_11 + EPSILON
+#define PROBE_C knob_21 + EPSILON
+#define PROBE_D knob_10 + EPSILON
+#define PROBE_E knob_20 + EPSILON
 
 
 #define max_iter 31
@@ -81,24 +84,12 @@ vec3 kali_orbit(in vec3 p)
 vec4 param_preset(in int idx)
 {
     return vec4(PROBE_A,PROBE_B,PROBE_C,31);
-    vec3 p;
-    	 if (idx == 0) p = vec3(1., 1., 1.01);
-    else if (idx == 1) p = vec3(1.);
-	else if (idx == 2) p = vec3(0.39, 1.30, 0.4);
-	else if (idx == 3) p = vec3(0.075, 0.565, .03);
-	else if (idx == 4) p = vec3(.835, .835, .96);
-    else if (idx == 5) p = vec3(.5, .4, 1.578);
-	else if (idx == 6) p = vec3(.4, .5, .8);
-	else if (idx == 7) p = vec3(1., 1., .13);
-	else if (idx == 8) p = vec3(0.11, 0.09, 1.33);
-	else 			   p = vec3(0.45, 0.97, 1.578);
-    return vec4(p, 31);
 }
 
 // used for AA
 vec2 hash2(in vec2 v) { return fract(sin(v*vec2(13.,17.))*(73349.2-v.x+v.y)); }
 
-#define STORE(idx_, val_) { if (int(fragCoord.x) == int(idx_)) fragColor = vec4(val_); }
+#define STORE(idx_, val_) { }
 #define READ(idx_) texture(iChannel0, vec2(float(idx_)+.5,.5)/iResolution.xy, -100.)
 #define ISKEY(idx_) (texture(iChannel1, vec2(float(idx_)+.5,.5)/256., -100.).x > .5)
 
