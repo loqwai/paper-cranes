@@ -80,9 +80,8 @@ vec4 param_preset(in int idx)
 // used for AA
 vec2 hash2(in vec2 v) { return fract(sin(v*vec2(13.,17.))*(73349.2-v.x+v.y)); }
 
-#define STORE(idx_, val_) { }
+
 #define READ(idx_) texture(iChannel0, vec2(float(idx_)+.5,.5)/iResolution.xy, -100.)
-#define ISKEY(idx_) (texture(iChannel1, vec2(float(idx_)+.5,.5)/256., -100.).x > .5)
 
 #define S_POS 0
 #define S_ZOOM 1
@@ -116,8 +115,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	if (iFrame == 0)
     {
     	fragColor = vec4(0.);
-        for (int i=0; i<10; ++i)
-			STORE(S_KALI_PARAM+i, param_preset(i));
 
         pos = vec2(0.);
         zoom = PROBE_E;
@@ -130,13 +127,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // change & store state
     if (fragCoord.y < 1.)
     {
-        // mouse release
-        if (iMouse.z < .5)
-        {
-            curAct = 0;
-        }
-        else // mouse down
-        {
+
             vec2 m = iMouse.xy / iResolution.xy;
 
             // mouse start click?
@@ -182,7 +173,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
                 // start drag
                 if (mouse.z < .5)
                 {
-                    STORE(S_DRAG_START, vec4(pos, 0,0));
                     curAct = A_DRAG;
                 }
                 // continue drag
@@ -192,13 +182,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
                     pos -= delta / zoom * 2.;
                 }
             }
-        }
-        STORE(S_POS, vec4(pos,0,0));
-        STORE(S_ZOOM, zoom);
-        STORE(S_MOUSE, iMouse);
-        STORE(S_KALI_PARAM+curPreset, max(param, vec4(-1.,-1.,-1.,1.)));
-        STORE(S_ACTION, float(curAct));
-        STORE(S_PRESET, float(curPreset));
     }
     // render
     else if (fragColor.w < 100. || doReset)
