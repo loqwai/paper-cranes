@@ -4,6 +4,7 @@ uniform float knob_11;
 uniform float knob_21;
 uniform float knob_10;
 uniform float knob_20;
+uniform float knob_9;
 
 #define EPSILON 0.0001
 #define PROBE_A knob_22 + EPSILON
@@ -11,10 +12,11 @@ uniform float knob_20;
 #define PROBE_C knob_21 + EPSILON
 #define PROBE_D knob_10 + EPSILON
 #define PROBE_E knob_20 + EPSILON
+#define PROBE_F knob_9 + EPSILON
 
 
 #define max_iter 31
-#define num_iter 31
+#define num_iter int(mix(10.,40.,PROBE_F))
 vec3 kali_av(in vec3 p);
 vec3 kali_orbit(in vec3 p);
 
@@ -27,17 +29,6 @@ vec3 fractal_color(in vec2 p)
     vec3 orbit = kali_orbit(p3);
     return mix(av, orbit, PROBE_D);
 }
-
-
-// #ifndef FREE_ITER
-// // number of iterations in the kaliset
-// const int max_iter = 31;
-// #else
-// // number of maximum iters
-// const int max_iter = 99;
-// // number of actual iters
-// 	  int num_iter = 31;
-// #endif
 
 // magic parameter
 vec3 kali_param;
@@ -56,7 +47,7 @@ vec3 kali_av(in vec3 p)
     col /= float(num_iter);
     col *= 4.;
 
-    //col = pow(clamp(col, 0., 1.), vec3(2.));
+    col = pow(clamp(col, 0., 1.), vec3(2.));
 
     return col;
 }
@@ -129,7 +120,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 			STORE(S_KALI_PARAM+i, param_preset(i));
 
         pos = vec2(0.);
-        zoom = 1.;
+        zoom = PROBE_E;
         curAct = 0;
 
         param = param_preset(curPreset);
