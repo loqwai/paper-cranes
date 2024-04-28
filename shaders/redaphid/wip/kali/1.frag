@@ -1,6 +1,12 @@
 
 uniform float knob_22;
+uniform float knob_11;
+uniform float knob_21;
+
 #define PROBE_A knob_22
+#define PROBE_B knob_11
+#define PROBE_C knob_21
+
 
 #define max_iter 31
 #define num_iter 31
@@ -71,7 +77,7 @@ vec3 kali_orbit(in vec3 p)
 
 vec4 param_preset(in int idx)
 {
-    return vec4(PROBE_A,1.39,0.4,31);
+    return vec4(PROBE_A,PROBE_B,PROBE_C,31);
     vec3 p;
     	 if (idx == 0) p = vec3(1., 1., 1.01);
     else if (idx == 1) p = vec3(1.);
