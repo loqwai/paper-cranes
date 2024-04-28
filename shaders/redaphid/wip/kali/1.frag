@@ -1,3 +1,7 @@
+
+uniform float knob_22;
+#define PROBE_A knob_22
+
 #define max_iter 31
 #define num_iter 31
 vec3 kali_av(in vec3 p);
@@ -32,18 +36,16 @@ vec3 kali_av(in vec3 p)
     vec3 col = vec3(0.);
     for (int i=0; i<max_iter; ++i)
     {
-#ifdef FREE_ITER
         if (i >= num_iter) break;
-#endif        
         p = abs(p) / dot(p, p);
         col += exp(-p*20.);
         p -= kali_param;
     }
     col /= float(num_iter);
     col *= 4.;
-    
+
     //col = pow(clamp(col, 0., 1.), vec3(2.));
-    
+
     return col;
 }
 
@@ -53,9 +55,9 @@ vec3 kali_orbit(in vec3 p)
     vec3 d = vec3(1.);
     for (int i=0; i<max_iter; ++i)
     {
-#ifdef FREE_ITER
+
         if (i >= num_iter) break;
-#endif        
+
         p = abs(p) / dot(p, p);
         d = min(d, p);
         //d = min(d, abs(p-.25));
@@ -69,8 +71,9 @@ vec3 kali_orbit(in vec3 p)
 
 vec4 param_preset(in int idx)
 {
+    return vec4(PROBE_A,1.39,0.4,31);
     vec3 p;
-    	 if (idx == 0) p = vec3(1., 1., 1.01);        
+    	 if (idx == 0) p = vec3(1., 1., 1.01);
     else if (idx == 1) p = vec3(1.);
 	else if (idx == 2) p = vec3(0.39, 1.30, 0.4);
 	else if (idx == 3) p = vec3(0.075, 0.565, .03);
@@ -106,18 +109,18 @@ vec2 hash2(in vec2 v) { return fract(sin(v*vec2(13.,17.))*(73349.2-v.x+v.y)); }
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     // previous states
-    
+
     fragColor = texture(iChannel0, fragCoord / iResolution.xy, -100.);
     vec2  pos =    READ(S_POS).xy;
     vec2  ppos =   READ(S_DRAG_START).xy;
-    float zoom =   READ(S_ZOOM).x; 
+    float zoom =   READ(S_ZOOM).x;
     vec4  mouse =  READ(S_MOUSE);
     int   curPreset = int(READ(S_PRESET));
 	vec4  param =  READ(S_KALI_PARAM+curPreset);
     int   curAct = int(READ(S_ACTION).x);
-    
+
     bool doReset = false;
-    
+
     // reset
 	if (iFrame == 0 || ISKEY(82))
     {
@@ -132,8 +135,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         param = param_preset(curPreset);
         doReset = true;
 	}
-		
-    
+
+
     // zoom & determine if we need to reset the color accum.
     if (ISKEY(81))
         zoom *= .97, doReset = true;
@@ -141,7 +144,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         zoom *= 1.03, doReset = true;
     if (iMouse.z > .5)
         doReset = true;
-    
+
     // change & store state
     if (fragCoord.y < 1.)
     {
@@ -153,25 +156,21 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         else // mouse down
         {
             vec2 m = iMouse.xy / iResolution.xy;
-            
+
             // mouse start click?
             if (mouse.z < .5)
             {
                 // parameter sliders
                 if (m.x > .5 && m.y < .1)
                 {
-#ifndef FREE_ITER                    
                     float idx = floor(m.y*30.);
-#else
-                    float idx = floor(m.y*40.);
-#endif                    
                     if (idx >= 3.)
                     	curAct = A_SLIDER+3;
                     else if (idx >= 2.)
                     	curAct = A_SLIDER+2;
                 	else if (idx >= 1.)
                     	curAct = A_SLIDER+1;
-	                else 
+	                else
                     	curAct = A_SLIDER;
                 }
                 // preset
@@ -182,7 +181,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
                     curAct = A_PRESET;
                 }
             }
-            
+
             // drag sliders
 			if (curAct >= A_SLIDER)
     		{
@@ -211,7 +210,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
                     pos -= delta / zoom * 2.;
                 }
             }
-        }    
+        }
         STORE(S_POS, vec4(pos,0,0));
         STORE(S_ZOOM, zoom);
         STORE(S_MOUSE, iMouse);
@@ -222,16 +221,13 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // render
     else if (fragColor.w < 100. || doReset)
     {					 // ^ max AA samples
-        
+
         vec2 fc = fragCoord + hash2(fragCoord + iMouse.xy);
     	vec2 uv = (fc - iResolution.xy*.5) / iResolution.y * 2.;
-    
+
         vec2 p = uv / zoom + pos;
-        
+
         kali_param = param.xyz;
-#ifdef FREE_ITER
-        num_iter = int(param.w);
-#endif        
     	vec3 col = fractal_color(p);
 
         // accum color
