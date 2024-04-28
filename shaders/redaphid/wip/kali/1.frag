@@ -113,7 +113,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     bool doReset = false;
 
     // reset
-	if (iFrame == 0 || ISKEY(82))
+	if (iFrame == 0)
     {
     	fragColor = vec4(0.);
         for (int i=0; i<10; ++i)
@@ -124,7 +124,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         curAct = 0;
 
         param = param_preset(curPreset);
-        doReset = true;
+        // doReset = true;
 	}
 
     // change & store state
@@ -211,12 +211,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
         kali_param = param.xyz;
     	vec3 col = fractal_color(p);
-
-        // accum color
-        if (!doReset)
-    		fragColor += vec4(col, 1.);
-        // reset color
-        else
-            fragColor = vec4(col, 1.);
+        fragColor += vec4(col, 1.);
     }
 }
