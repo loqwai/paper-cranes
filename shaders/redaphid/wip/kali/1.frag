@@ -2,10 +2,12 @@
 uniform float knob_22;
 uniform float knob_11;
 uniform float knob_21;
+uniform float knob_10;
 
 #define PROBE_A knob_22
 #define PROBE_B knob_11
 #define PROBE_C knob_21
+#define PROBE_D knob_10
 
 
 #define max_iter 31
@@ -18,8 +20,9 @@ vec3 kali_orbit(in vec3 p);
 vec3 fractal_color(in vec2 p)
 {
     vec3 p3 = vec3(p, 0.);
-    return kali_av(p3);
-    //return kali_orbit(p3);
+    vec3 av =  kali_av(p3);
+    vec3 orbit = kali_orbit(p3);
+    return mix(av, orbit, PROBE_D);
 }
 
 
@@ -141,15 +144,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         param = param_preset(curPreset);
         doReset = true;
 	}
-
-
-    // zoom & determine if we need to reset the color accum.
-    if (ISKEY(81))
-        zoom *= .97, doReset = true;
-    if (ISKEY(87))
-        zoom *= 1.03, doReset = true;
-    if (iMouse.z > .5)
-        doReset = true;
 
     // change & store state
     if (fragCoord.y < 1.)
