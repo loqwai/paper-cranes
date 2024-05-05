@@ -25,7 +25,6 @@ const getTexture = async (gl, url) => {
 
 // Function to create and update the WebGL program with error handling
 const updateWebGLProgram = (gl, vertexShader, wrappedShader) => {
-    console.log({ vertexShader, wrappedShader })
     try {
         const programInfo = createProgramInfo(gl, [vertexShader, wrappedShader])
         if (!programInfo?.program) {
@@ -92,9 +91,9 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
             console.log('Shader updated')
             // Wrap the new fragment shader with any necessary transformations
             const wrappedFragmentShader = shaderWrapper(newFragmentShader)
-
+            const wrappedVertexShader = shaderWrapper(newVertexShader)
             // Update program with new shaders
-            const newProgramInfo = updateWebGLProgram(gl, newVertexShader, wrappedFragmentShader)
+            const newProgramInfo = updateWebGLProgram(gl, wrappedVertexShader, wrappedFragmentShader)
             console.log('newProgramInfo', newProgramInfo)
 
             if (!newProgramInfo) {
