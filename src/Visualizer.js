@@ -12,22 +12,6 @@ import {
 import { shaderWrapper } from './shader-transformers/shader-wrapper'
 
 const gridSize = 100
-const vertexShader = `
-#version 300 es
-precision mediump float;
-
-uniform float iTime; // Uniform time variable, for animation effects
-uniform int gridSize;
-void main() {
-    int gridWidth = gridSize; // Assume a 100x100 grid
-    float x = float((gl_VertexID % gridWidth) - 50) / 50.0; // Normalize X between -1 and 1
-    float y = float((gl_VertexID / gridWidth) - 50) / 50.0; // Normalize Y between -1 and 1
-    float z = sin(iTime + length(vec2(x, y)) * 10.0) * 0.1; // Z position based on a wave pattern
-
-    gl_Position = vec4(x, y, z, 1.0); // Output position directly to clip space
-}
-
-`
 
 const getTexture = async (gl, url) => {
     return new Promise((resolve) => {
@@ -41,6 +25,7 @@ const getTexture = async (gl, url) => {
 
 // Function to create and update the WebGL program with error handling
 const updateWebGLProgram = (gl, vertexShader, wrappedShader) => {
+    console.log({ vertexShader, wrappedShader })
     try {
         const programInfo = createProgramInfo(gl, [vertexShader, wrappedShader])
         if (!programInfo?.program) {
@@ -99,17 +84,17 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
     let programInfo
     // Assuming the other parts of the code remain the same
 
-    let lastVertexShader = vertexShader // Initial vertex shader
-    let lastFragmentShader = null // Placeholder for initial fragment shader
+    let lastVertexShader = undefined // Initial vertex shader
+    let lastFragmentShader = undefined // Placeholder for initial fragment shader
 
     const render = ({ time, features, vertexShader: newVertexShader, fragmentShader: newFragmentShader }) => {
-        if (newFragmentShader !== lastFragmentShader) {
+        if (newFragmentShader !== lastFragmentShader || newVertexShader !== lastVertexShader) {
             console.log('Shader updated')
             // Wrap the new fragment shader with any necessary transformations
             const wrappedFragmentShader = shaderWrapper(newFragmentShader)
 
             // Update program with new shaders
-            const newProgramInfo = updateWebGLProgram(gl, vertexShader, wrappedFragmentShader)
+            const newProgramInfo = updateWebGLProgram(gl, newVertexShader, wrappedFragmentShader)
             console.log('newProgramInfo', newProgramInfo)
 
             if (!newProgramInfo) {

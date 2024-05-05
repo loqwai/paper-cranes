@@ -76,12 +76,27 @@ const main = async () => {
         fragmentShader = await getShader('default')
     }
 
+    let vertexShader = `
+    #version 300 es
+    precision mediump float;
+
+    uniform float iTime; // Uniform time variable, for animation effects
+    uniform int gridSize;
+    void main() {
+        int gridWidth = gridSize; // Assume a 100x100 grid
+        float x = float((gl_VertexID % gridWidth) - 50) / 50.0; // Normalize X between -1 and 1
+        float y = float((gl_VertexID / gridWidth) - 50) / 50.0; // Normalize Y between -1 and 1
+        float z = sin(iTime + length(vec2(x, y)) * 10.0) * 0.1; // Z position based on a wave pattern
+
+        gl_Position = vec4(x, y, z, 1.0); // Output position directly to clip space
+    }`
+
     window.shader = fragmentShader
     const initialImageUrl = params.get('image') ?? 'images/placeholder-image.png'
     const fullscreen = (params.get('fullscreen') ?? false) === 'true'
     const canvas = document.getElementById('visualizer')
     const render = await makeVisualizer({ canvas, initialImageUrl, fullscreen })
-    requestAnimationFrame(() => animate({ render, audio, fragmentShader }))
+    requestAnimationFrame(() => animate({ render, audio, fragmentShader, vertexShader }))
 
     ranMain = true
 }
@@ -122,8 +137,9 @@ const getShader = async (url) => {
     return fragmentShader
 }
 
-const animate = ({ render, audio, fragmentShader }) => {
+const animate = ({ render, audio, fragmentShader, vertexShader }) => {
     fragmentShader = window.cranes?.shader ?? fragmentShader
+    console.log(vertexShader)
     const measuredAudioFeatures = audio.getFeatures()
     const queryParamFeatures = {}
     const params = new URLSearchParams(window.location.search)
@@ -136,9 +152,9 @@ const animate = ({ render, audio, fragmentShader }) => {
     window.cranes.measuredAudioFeatures = measuredAudioFeatures
     const features = { ...measuredAudioFeatures, ...queryParamFeatures, ...overwrittenAudioFeatures, ...manualFeatures }
     try {
-        render({ time: (performance.now() - startTime) / 1000, features, fragmentShader })
+        render({ time: (performance.now() - startTime) / 1000, features, fragmentShader, vertexShader })
     } catch (e) {
         console.error(e)
     }
-    requestAnimationFrame(() => animate({ render, audio, fragmentShader }))
+    requestAnimationFrame(() => animate({ render, audio, fragmentShader, vertexShader }))
 }
