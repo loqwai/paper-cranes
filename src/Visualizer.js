@@ -24,9 +24,9 @@ const getTexture = async (gl, url) => {
 }
 
 // Function to create and update the WebGL program with error handling
-const updateWebGLProgram = (gl, vertexShader, wrappedShader) => {
+const updateWebGLProgram = (gl, vertexShader, fragmentShader) => {
     try {
-        const programInfo = createProgramInfo(gl, [vertexShader, wrappedShader])
+        const programInfo = createProgramInfo(gl, [vertexShader, fragmentShader])
         if (!programInfo?.program) {
             throw new Error('Failed to create a program. The shader code might be bad.')
         }
