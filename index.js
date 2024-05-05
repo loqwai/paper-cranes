@@ -51,11 +51,21 @@ window.cranes.loadAudioFeatures = () => {
 window.cranes.loadManualFeatures = (name) => {
     window.cranes.manualFeatures = JSON.parse(localStorage.getItem(`manual-features-${name}`))
 }
+const getRelativeOrAbsolute = async (url) => {
+    //if the url is not a full url, then it's a relative url
+    if (!url.includes('http')) {
+        url = `/shaders/${url}`
+    }
+    const res = await fetch(url)
+    const shader = await res.text()
+    return shader
+}
+
 const getFragmentShader = async () => {
     const shaderUrl = params.get('shader')
     let fragmentShader
     if (shaderUrl) {
-        fragmentShader = await getShader(shaderUrl)
+        fragmentShader = await getRelativeOrAbsolute(`${shaderUrl}.frag`)
     }
 
     if (!fragmentShader) {
@@ -63,7 +73,7 @@ const getFragmentShader = async () => {
     }
 
     if (!fragmentShader) {
-        fragmentShader = await getShader('default')
+        fragmentShader = await getRelativeOrAbsolute('default.frag')
     }
     return fragmentShader
 }
@@ -126,16 +136,6 @@ const setupAudio = async () => {
     const audioProcessor = new AudioProcessor(audioContext, sourceNode, historySize)
     await audioProcessor.start()
     return audioProcessor
-}
-
-const getShader = async (url) => {
-    //if the url is not a full url, then it's a relative url
-    if (!url.includes('http')) {
-        url = `/shaders/${url}.frag`
-    }
-    const res = await fetch(url)
-    const fragmentShader = await res.text()
-    return fragmentShader
 }
 
 const animate = ({ render, audio, fragmentShader, vertexShader }) => {
