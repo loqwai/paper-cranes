@@ -1,13 +1,27 @@
-    #version 300 es
-    precision mediump float;
+#version 300 es
+precision mediump float;
 
-    uniform float iTime; // Uniform time variable, for animation effects
-    uniform int gridSize;
-    void main() {
-        int gridWidth = gridSize; // Assume a 100x100 grid
-        float x = float((gl_VertexID % gridWidth) - 50) / 50.0; // Normalize X between -1 and 1
-        float y = float((gl_VertexID / gridWidth) - 50) / 50.0; // Normalize Y between -1 and 1
-        float z = sin(iTime + length(vec2(x, y)) * 10.0) * 0.1; // Z position based on a wave pattern
+uniform float iTime; // Uniform for time-based animation
 
-        gl_Position = vec4(x, y, z, 1.0); // Output position directly to clip space
-    }
+// Inputs
+in vec4 position;
+
+void main() {
+    // Center the coordinates to make (0,0) the center of the canvas
+    vec2 centeredPosition = position.xy - vec2(0.5, 0.5);
+
+    // Compute rotation angle based on time and an inverse relationship to the distance from the center
+    // The closer to the center, the larger the effect
+    float distance = length(centeredPosition);
+    float angle = iTime + (1.0 / (distance + 0.1)); // Adding 0.1 to avoid division by zero
+
+    // Rotation matrix around Z-axis
+    mat2 rotation = mat2(cos(angle), -sin(angle),
+                         sin(angle), cos(angle));
+
+    // Apply rotation to the xy components of position
+    vec2 rotatedPosition = rotation * centeredPosition;
+
+    // Translate position back to original range and set it
+    gl_Position = vec4(rotatedPosition + vec2(0.5, 0.5), position.z, 1.0);
+}

@@ -144,7 +144,6 @@ const setupAudio = async () => {
 
 const animate = ({ render, audio, fragmentShader, vertexShader }) => {
     fragmentShader = window.cranes?.shader ?? fragmentShader
-    console.log(vertexShader)
     const measuredAudioFeatures = audio.getFeatures()
     const queryParamFeatures = {}
     const params = new URLSearchParams(window.location.search)
