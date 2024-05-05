@@ -9,11 +9,11 @@ uniform float knob_19;
 #define EPSILON 0.0001
 
 #define PROBE_A spectralCentroid + EPSILON
-#define PROBE_B mix(0.3,0.46,spectralKurtosis) + EPSILON
-#define PROBE_C  mix(-0.37,0.8,energy) + EPSILON /*knob_21 + EPSILON*/
-#define PROBE_D spectralCrest + EPSILON
-#define PROBE_E bass + EPSILON
-#define PROBE_F mix(0.06,0.25,spectralRoughness)
+#define PROBE_B mix(0.3,0.46,spectralKurtosisMedian) + EPSILON
+#define PROBE_C  mix(0.7,0.8,energyMedian) + EPSILON /*knob_21 + EPSILON*/
+#define PROBE_D spectralCrestMedian + EPSILON
+#define PROBE_E bassMedian + EPSILON
+#define PROBE_F mix(0.16,0.25,spectralRoughness)
 #define PROBE_G knob_19 + EPSILON
 
 

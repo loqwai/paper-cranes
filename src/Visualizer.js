@@ -10,28 +10,38 @@ import {
 } from 'twgl-base.js'
 
 import { shaderWrapper } from './shader-transformers/shader-wrapper'
-// Vertex shader
+
 const vertexShader = `
     #version 300 es
     in vec4 position;
+    uniform float iTime; // Time uniform for animations
+
     void main() {
-        gl_Position = position;
+        float scale = abs(sin(iTime)) * 0.5 + 0.5; // Scale oscillates between 0.5 and 1.0
+        float angle = iTime; // Rotate over time
+        float move = sin(iTime * 2.0); // Move horizontally over time
+
+        // Rotation matrix around the Z axis
+        mat2 rotation = mat2(cos(angle), -sin(angle),
+                             sin(angle),  cos(angle));
+
+        // Apply rotation and scaling
+        vec2 pos = rotation * position.xy * scale;
+
+        // Apply translation
+        pos.x += move;
+
+        gl_Position = vec4(pos, position.z, 1.0);
     }
 `
+
 const getTexture = async (gl, url) => {
     return new Promise((resolve) => {
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true) // Flip the texture
-        const texture = createTexture(
-            gl,
-            {
-                src: url,
-                crossOrigin: 'anonymous',
-            },
-            () => {
-                gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false) // Reset the parameter
-                resolve(texture)
-            },
-        )
+        const texture = createTexture(gl, { src: url, crossOrigin: 'anonymous' }, () => {
+            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false) // Reset the parameter
+            resolve(texture)
+        })
     })
 }
 
@@ -50,52 +60,72 @@ const updateWebGLProgram = (gl, vertexShader, wrappedShader) => {
     }
 }
 
+// Helper function to generate positions for a grid of polygons
+const generateGridPositions = (gridSize) => {
+    const positions = []
+    const step = 2 / gridSize // Divide the canvas into grid sections
+    for (let y = 0; y < gridSize; y++) {
+        for (let x = 0; x < gridSize; x++) {
+            const x1 = -1 + x * step
+            const x2 = x1 + step
+            const y1 = -1 + y * step
+            const y2 = y1 + step
+            // Two triangles per square
+            positions.push(x1, y1, 0, x2, y1, 0, x1, y2, 0, x1, y2, 0, x2, y1, 0, x2, y2, 0)
+        }
+    }
+    return positions
+}
+
 export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) => {
     const gl = canvas.getContext('webgl2', { antialias: false })
     if (fullscreen) {
         const width = window.innerWidth
         const height = window.innerHeight
-        // set the canvas width and height to the window width and height
         canvas.width = width
         canvas.height = height
-        // set the viewport to match
         gl.viewport(0, 0, width, height)
         canvas.classList.add('fullscreen')
     }
-    const ext = gl.getExtension('GMAN_debug_helper')
-    if (ext) {
-        ext.setConfiguration({
-            failUnsetUniforms: false,
-        })
-    }
     const initialTexture = await getTexture(gl, initialImageUrl)
     const frameBuffers = [createFramebufferInfo(gl), createFramebufferInfo(gl)]
-    const arrays = {
-        position: [-1, -1, 0, 1, -1, 0, -1, 1, 0, -1, 1, 0, 1, -1, 0, 1, 1, 0],
-    }
+    const gridPositions = generateGridPositions(100)
+    const arrays = { position: gridPositions }
     const bufferInfo = createBufferInfoFromArrays(gl, arrays)
 
     let frameNumber = 0
     let slowFrames = 0
     let lastRender = performance.now()
     let programInfo
-    let shader
-    const render = ({ time, features, shader: newShader }) => {
-        if (newShader !== shader) {
+    // Assuming the other parts of the code remain the same
+
+    let lastVertexShader = vertexShader // Initial vertex shader
+    let lastFragmentShader = null // Placeholder for initial fragment shader
+
+    const render = ({ time, features, vertexShader: newVertexShader, fragmentShader: newFragmentShader }) => {
+        if (newFragmentShader !== lastFragmentShader) {
             console.log('Shader updated')
-            const wrappedShader = shaderWrapper(newShader)
-            shader = newShader
-            const newProgramInfo = updateWebGLProgram(gl, vertexShader, wrappedShader) // Update the program with error handling
+            // Wrap the new fragment shader with any necessary transformations
+            const wrappedFragmentShader = shaderWrapper(newFragmentShader)
+
+            // Update program with new shaders
+            const newProgramInfo = updateWebGLProgram(gl, vertexShader, wrappedFragmentShader)
             console.log('newProgramInfo', newProgramInfo)
+
             if (!newProgramInfo) {
                 programInfo = null
                 return
             }
+
             programInfo = newProgramInfo
+            lastVertexShader = newVertexShader
+            lastFragmentShader = newFragmentShader
+            shaderUpdated = true
         }
+
         if (!programInfo) return
+
         const renderTime = performance.now()
-        // if the render time is less than 60fps, resize to 1/4 resolution. Otherwise, keep the same resolution
         let resolutionRatio = 1
         if (renderTime - lastRender > 100) {
             slowFrames++
@@ -105,6 +135,7 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         }
         resizeCanvasToDisplaySize(gl.canvas, resolutionRatio)
         lastRender = renderTime
+
         const frame = frameBuffers[frameNumber % 2]
         const prevFrame = frameBuffers[(frameNumber + 1) % 2]
 
@@ -138,23 +169,8 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         drawBufferInfo(gl, bufferInfo)
 
         gl.bindFramebuffer(gl.READ_FRAMEBUFFER, frame.framebuffer)
-
-        // Bind the default framebuffer (null) as the DRAW framebuffer
         gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null)
-
-        // Blit (copy) the framebuffer to the canvas
-        gl.blitFramebuffer(
-            0,
-            0,
-            frame.width,
-            frame.height, // Source rectangle
-            0,
-            0,
-            gl.canvas.width,
-            gl.canvas.height, // Destination rectangle
-            gl.COLOR_BUFFER_BIT, // Mask (color buffer only)
-            gl.LINEAR, // Filter (linear for smooth scaling)
-        )
+        gl.blitFramebuffer(0, 0, frame.width, frame.height, 0, 0, gl.canvas.width, gl.canvas.height, gl.COLOR_BUFFER_BIT, gl.LINEAR)
 
         frameNumber++
     }
