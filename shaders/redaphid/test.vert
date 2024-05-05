@@ -1,27 +1,40 @@
 #version 300 es
 precision mediump float;
 
-uniform float iTime; // Uniform for time-based animation
+uniform float energyZScore; // Additional energy factor influencing the terrain
 
 // Inputs
 in vec4 position;
 
 void main() {
-    // Center the coordinates to make (0,0) the center of the canvas
+    // Center the coordinates around (0,0) for easier manipulation
     vec2 centeredPosition = position.xy - vec2(0.5, 0.5);
 
-    // Compute rotation angle based on time and an inverse relationship to the distance from the center
-    // The closer to the center, the larger the effect
-    float distance = length(centeredPosition);
-    float angle = iTime + (1.0 / (distance + 0.1)); // Adding 0.1 to avoid division by zero
+    // Calculate rotation angle
+    float angle = energyZScore;  // Rotate over time
 
-    // Rotation matrix around Z-axis
-    mat2 rotation = mat2(cos(angle), -sin(angle),
-                         sin(angle), cos(angle));
+    // Create the rotation matrix for Z-axis rotation
+    mat2 rotationMatrix = mat2(cos(angle), -sin(angle),
+                               sin(angle), cos(angle));
 
-    // Apply rotation to the xy components of position
-    vec2 rotatedPosition = rotation * centeredPosition;
+    // Using multiple layers of noise to simulate terrain
+    // Base terrain undulation
+    float baseTerrain = sin(centeredPosition.x * 20.0 + energyZScore) * cos(centeredPosition.y * 20.0 + energyZScore) * 10.05;
+    // Fine details
+    float detailTerrain = sin(centeredPosition.x * 40.0 + energyZScore * 2.0) * cos(centeredPosition.y * 40.0 + energyZScore * 2.0) * 0.025;
 
-    // Translate position back to original range and set it
-    gl_Position = vec4(rotatedPosition + vec2(0.5, 0.5), position.z, 1.0);
+    // Combine the terrain layers
+    float totalDisplacement = baseTerrain + detailTerrain;
+
+    // Apply the energy factor to modulate the height
+    float zDisplacement = totalDisplacement * (1.0 + sin(energyZScore));
+
+    // Adjust z-position to create the bumpy effect
+    float zPosition = position.z + zDisplacement;
+    zPosition += 0.001 * float(gl_VertexID % 100);
+    // Apply rotation to the displaced position
+    vec2 rotatedPosition = rotationMatrix * centeredPosition;
+
+    // Apply final position calculation, re-translate positions back to original range [0,1]
+    gl_Position = vec4(rotatedPosition + vec2(0.5, 0.5), zPosition, 1.0);
 }
