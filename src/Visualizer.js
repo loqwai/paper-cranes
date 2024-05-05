@@ -11,28 +11,22 @@ import {
 
 import { shaderWrapper } from './shader-transformers/shader-wrapper'
 
+const gridSize = 100
 const vertexShader = `
-    #version 300 es
-    in vec4 position;
-    uniform float iTime; // Time uniform for animations
+#version 300 es
+precision mediump float;
 
-    void main() {
-        float scale = abs(sin(iTime)) * 0.5 + 0.5; // Scale oscillates between 0.5 and 1.0
-        float angle = iTime; // Rotate over time
-        float move = sin(iTime * 2.0); // Move horizontally over time
+uniform float iTime; // Uniform time variable, for animation effects
+uniform int gridSize;
+void main() {
+    int gridWidth = gridSize; // Assume a 100x100 grid
+    float x = float((gl_VertexID % gridWidth) - 50) / 50.0; // Normalize X between -1 and 1
+    float y = float((gl_VertexID / gridWidth) - 50) / 50.0; // Normalize Y between -1 and 1
+    float z = sin(iTime + length(vec2(x, y)) * 10.0) * 0.1; // Z position based on a wave pattern
 
-        // Rotation matrix around the Z axis
-        mat2 rotation = mat2(cos(angle), -sin(angle),
-                             sin(angle),  cos(angle));
+    gl_Position = vec4(x, y, z, 1.0); // Output position directly to clip space
+}
 
-        // Apply rotation and scaling
-        vec2 pos = rotation * position.xy * scale;
-
-        // Apply translation
-        pos.x += move;
-
-        gl_Position = vec4(pos, position.z, 1.0);
-    }
 `
 
 const getTexture = async (gl, url) => {
@@ -87,9 +81,15 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         gl.viewport(0, 0, width, height)
         canvas.classList.add('fullscreen')
     }
+    const ext = gl.getExtension('GMAN_debug_helper')
+    if (ext) {
+        ext.setConfiguration({
+            failUnsetUniforms: false,
+        })
+    }
     const initialTexture = await getTexture(gl, initialImageUrl)
     const frameBuffers = [createFramebufferInfo(gl), createFramebufferInfo(gl)]
-    const gridPositions = generateGridPositions(100)
+    const gridPositions = generateGridPositions(gridSize)
     const arrays = { position: gridPositions }
     const bufferInfo = createBufferInfoFromArrays(gl, arrays)
 
@@ -120,7 +120,6 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
             programInfo = newProgramInfo
             lastVertexShader = newVertexShader
             lastFragmentShader = newFragmentShader
-            shaderUpdated = true
         }
 
         if (!programInfo) return
@@ -155,6 +154,7 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
             iChannel1: prevFrame.attachments[0],
             iChannel2: initialTexture,
             iChannel3: prevFrame.attachments[0],
+            gridSize,
             ...features,
         }
 
