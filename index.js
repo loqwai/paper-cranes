@@ -51,19 +51,9 @@ window.cranes.loadAudioFeatures = () => {
 window.cranes.loadManualFeatures = (name) => {
     window.cranes.manualFeatures = JSON.parse(localStorage.getItem(`manual-features-${name}`))
 }
-
-const main = async () => {
-    if (ranMain) return
-
-    window.c = cranes
-    startTime = performance.now()
-    const audio = await setupAudio()
-
-    const params = new URLSearchParams(window.location.search)
-
+const getFragmentShader = async () => {
     const shaderUrl = params.get('shader')
     let fragmentShader
-
     if (shaderUrl) {
         fragmentShader = await getShader(shaderUrl)
     }
@@ -75,6 +65,17 @@ const main = async () => {
     if (!fragmentShader) {
         fragmentShader = await getShader('default')
     }
+    return fragmentShader
+}
+const main = async () => {
+    if (ranMain) return
+
+    window.c = cranes
+    startTime = performance.now()
+    const audio = await setupAudio()
+
+    const params = new URLSearchParams(window.location.search)
+    const fragmentShader = await getFragmentShader()
 
     let vertexShader = `
     #version 300 es
