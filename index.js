@@ -77,6 +77,24 @@ const getFragmentShader = async () => {
     }
     return fragmentShader
 }
+
+const getVertexShader = async () => {
+    const shaderUrl = params.get('vertex_shader')
+    let vertexShader
+    if (shaderUrl) {
+        vertexShader = await getRelativeOrAbsolute(`${shaderUrl}.vert`)
+    }
+
+    if (!vertexShader) {
+        vertexShader = localStorage.getItem('cranes-manual-code')
+    }
+
+    if (!vertexShader) {
+        vertexShader = await getRelativeOrAbsolute('default.vert')
+    }
+    return vertexShader
+}
+
 const main = async () => {
     if (ranMain) return
 
@@ -86,21 +104,7 @@ const main = async () => {
 
     const params = new URLSearchParams(window.location.search)
     const fragmentShader = await getFragmentShader()
-
-    let vertexShader = `
-    #version 300 es
-    precision mediump float;
-
-    uniform float iTime; // Uniform time variable, for animation effects
-    uniform int gridSize;
-    void main() {
-        int gridWidth = gridSize; // Assume a 100x100 grid
-        float x = float((gl_VertexID % gridWidth) - 50) / 50.0; // Normalize X between -1 and 1
-        float y = float((gl_VertexID / gridWidth) - 50) / 50.0; // Normalize Y between -1 and 1
-        float z = sin(iTime + length(vec2(x, y)) * 10.0) * 0.1; // Z position based on a wave pattern
-
-        gl_Position = vec4(x, y, z, 1.0); // Output position directly to clip space
-    }`
+    const vertexShader = await getVertexShader()
 
     window.shader = fragmentShader
     const initialImageUrl = params.get('image') ?? 'images/placeholder-image.png'
