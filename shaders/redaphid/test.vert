@@ -1,30 +1,30 @@
 #version 300 es
 precision mediump float;
 
-uniform float iTime; // Time variable for animation
-uniform vec2 polygonCenter; // Center of the polygon
-
-// Inputs
-in vec4 position; // Assume this is the position in local object space
-
+uniform float spectralCentroid; // Uniform for animation, representing time
+in vec4 position; // Vertex position assumed to be in normalized device coordinates directly
+uniform float energyZScore;
 void main() {
-    // Translate vertex positions to rotate around the polygon center
-    vec2 centeredPosition = position.xy - polygonCenter;
+    // If position.xy is already in clip space [-1, 1], no need to normalize
+    vec2 normalizedPosition = position.xy;
 
-    // Calculate rotation angle based directly on iTime to rotate continuously
-    float angle = iTime;
+    // Hardcoded impact point at the center of the screen in normalized coordinates
+    vec2 impactPoint = vec2(0.0, 0.0);
 
-    // Create the rotation matrix for Z-axis rotation around the polygon's center
-    mat2 rotationMatrix = mat2(cos(angle), -sin(angle),
-                               sin(angle), cos(angle));
+    // Calculate distance from the impact point
+    float distance = length(normalizedPosition - impactPoint);
 
-    // Apply rotation to the centered position
-    vec2 rotatedPosition = rotationMatrix * centeredPosition;
+    // Calculate the ripple effect based on distance and time
+    float waveLength = 10.95; // Adjust this to change the spacing of the ripples
+    float waveHeight = 1.35 - energyZScore; // Adjust this for the amplitude of the ripples
+    float speed = 20.0; // Speed of wave propagation
 
-    // Translate positions back after rotation
-    vec2 finalPosition = rotatedPosition + polygonCenter;
+    // Ripple effect using a sinusoidal function that decays with distance from the impact point
+    float ripple = waveHeight * sin((spectralCentroid * 10. * speed - distance) / waveLength) / (distance + 1.0);
 
-    // Set the final position; here we assume position is directly in clip space for simplicity
-    // You might need to apply a model-view-projection transformation depending on your setup
-    gl_Position = vec4(finalPosition, position.z, 1.0);
+    // Apply the ripple effect to the z-coordinate of the position
+    vec3 newPosition = vec3(position.xy, position.z + ripple);
+
+    // No transformation matrix used, assuming positions are already in clip space
+    gl_Position = vec4(newPosition, 1.0);
 }
