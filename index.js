@@ -32,25 +32,7 @@ if ('serviceWorker' in navigator) {
     })
 }
 window.cranes = window.cranes || {}
-window.cranes.overwrittenAudioFeatures = window.cranes.overwrittenAudioFeatures || {}
-window.cranes.manualFeatures = window.cranes.manualFeatures || {}
 
-window.cranes.freezeAudioFeatures = () => {
-    window.cranes.overwrittenAudioFeatures = { ...window.cranes.measuredAudioFeatures }
-    return window.cranes.overwrittenAudioFeatures
-}
-
-window.cranes.saveAudioFeatures = () => {
-    localStorage.setItem('overwrittenAudioFeatures', JSON.stringify(window.cranes.overwrittenAudioFeatures))
-}
-
-window.cranes.loadAudioFeatures = () => {
-    window.cranes.overwrittenAudioFeatures = JSON.parse(localStorage.getItem('overwrittenAudioFeatures'))
-}
-
-window.cranes.loadManualFeatures = (name) => {
-    window.cranes.manualFeatures = JSON.parse(localStorage.getItem(`manual-features-${name}`))
-}
 const getRelativeOrAbsolute = async (url) => {
     //if the url is not a full url, then it's a relative url
     if (!url.includes('http')) {
@@ -86,7 +68,7 @@ const getVertexShader = async () => {
     }
 
     if (!vertexShader) {
-        vertexShader = localStorage.getItem('cranes-manual-code')
+        vertexShader = localStorage.getItem('cranes-manual-code-vertex')
     }
 
     if (!vertexShader) {
@@ -152,9 +134,8 @@ const animate = ({ render, audio, fragmentShader, vertexShader }) => {
         queryParamFeatures[key] = value
     }
 
-    const { overwrittenAudioFeatures, manualFeatures } = window.cranes
     window.cranes.measuredAudioFeatures = measuredAudioFeatures
-    const features = { ...measuredAudioFeatures, ...queryParamFeatures, ...overwrittenAudioFeatures, ...manualFeatures }
+    const features = { ...measuredAudioFeatures, ...queryParamFeatures }
     try {
         render({ time: (performance.now() - startTime) / 1000, features, fragmentShader, vertexShader })
     } catch (e) {
