@@ -1,34 +1,30 @@
 #version 300 es
 precision mediump float;
 
-uniform float energyZScore; // Additional energy factor influencing the terrain
+uniform float iTime; // Time variable for animation
+uniform vec2 polygonCenter; // Center of the polygon
 
 // Inputs
-in vec4 position;
+in vec4 position; // Assume this is the position in local object space
 
 void main() {
-    // Normalize to [-1, 1] range by multiplying by 2 and subtracting 1
-    vec2 normalizedPosition = position.xy * 2.0 - vec2(1.0, 1.0);
+    // Translate vertex positions to rotate around the polygon center
+    vec2 centeredPosition = position.xy - polygonCenter;
 
-    // Calculate rotation angle based on energyZScore
-    float angle = energyZScore;  // Rotate over time based on the energy level
+    // Calculate rotation angle based directly on iTime to rotate continuously
+    float angle = iTime;
 
-    // Create the rotation matrix for Z-axis rotation
+    // Create the rotation matrix for Z-axis rotation around the polygon's center
     mat2 rotationMatrix = mat2(cos(angle), -sin(angle),
                                sin(angle), cos(angle));
 
-    // Apply rotation to the normalized position
-    vec2 rotatedPosition = rotationMatrix * normalizedPosition;
+    // Apply rotation to the centered position
+    vec2 rotatedPosition = rotationMatrix * centeredPosition;
 
-    // Adjust for the undulation and terrain effects
-    float baseTerrain = sin(rotatedPosition.x * 20.0 + energyZScore) * cos(rotatedPosition.y * 20.0 + energyZScore) * 0.05;
-    float detailTerrain = sin(rotatedPosition.x * 40.0 + energyZScore * 2.0) * cos(rotatedPosition.y * 40.0 + energyZScore * 2.0) * 0.025;
-    float totalDisplacement = baseTerrain + detailTerrain;
-    float zDisplacement = totalDisplacement * (1.0 + sin(energyZScore));
+    // Translate positions back after rotation
+    vec2 finalPosition = rotatedPosition + polygonCenter;
 
-    // Adjust Z-position to create the bumpy effect
-    float zPosition = position.z + zDisplacement;
-
-    // Set the final position, adjust back to [0, 1] range after rotation
-    gl_Position = vec4((rotatedPosition + vec2(1.0, 1.0)) * 0.5, zPosition, 1.0);
+    // Set the final position; here we assume position is directly in clip space for simplicity
+    // You might need to apply a model-view-projection transformation depending on your setup
+    gl_Position = vec4(finalPosition, position.z, 1.0);
 }
