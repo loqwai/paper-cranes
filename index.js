@@ -32,7 +32,7 @@ if ('serviceWorker' in navigator) {
     })
 }
 window.cranes = window.cranes || {}
-
+window.cranes.manualFeatures = window.cranes.manualFeatures || {}
 const getRelativeOrAbsolute = async (url) => {
     //if the url is not a full url, then it's a relative url
     if (!url.includes('http')) {
@@ -134,8 +134,9 @@ const animate = ({ render, audio, fragmentShader, vertexShader }) => {
         queryParamFeatures[key] = value
     }
 
+    const { manualFeatures } = window.cranes
     window.cranes.measuredAudioFeatures = measuredAudioFeatures
-    const features = { ...measuredAudioFeatures, ...queryParamFeatures }
+    const features = { ...measuredAudioFeatures, ...queryParamFeatures, ...manualFeatures }
     try {
         render({ time: (performance.now() - startTime) / 1000, features, fragmentShader, vertexShader })
     } catch (e) {
