@@ -26,7 +26,7 @@
 
 // speed of ROTATION
 #define ROTATION_SPEED 0.8999
-
+#define PI 3.14159265359
 
 // static SHAPE form, default 0.5
 //#define STATIC_SHAPE 0.15
