@@ -19,7 +19,7 @@
 	free to let me know.
 
 */
-
+#define PI 3.14159265359
 #define FAR 50. // Far plane, or maximum distance.
 
 //float objID = 0.; // Object ID
