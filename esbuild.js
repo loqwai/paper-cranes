@@ -1,10 +1,14 @@
 import { build } from 'esbuild'
 import { join, relative } from 'path'
-import { readdir, stat, writeFile } from 'fs/promises'
+import { readdir, stat, mkdir, writeFile } from 'fs/promises'
 import ncp from 'ncp'
 import { promisify } from 'util'
 
 const ncpAsync = promisify(ncp)
+
+async function ensureDistDirectory() {
+    await mkdir('dist', { recursive: true })
+}
 
 async function getShaderFiles(dir) {
     let fileList = []
@@ -39,6 +43,8 @@ async function generateHTML(shaderFiles) {
 }
 
 async function main() {
+    await ensureDistDirectory()
+
     const entryPoints = ['index.js', 'edit.js', 'service-worker.js']
     const srcFiles = await readdir('./src', { withFileTypes: true })
     srcFiles.forEach((file) => {
