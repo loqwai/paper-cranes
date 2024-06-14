@@ -1,4 +1,4 @@
-import { StatTypes, applyKaiserWindow } from 'hypnosound'
+import { StatTypes } from 'hypnosound'
 export const AudioFeatures = [
     'SpectralCentroid',
     'SpectralFlux',
@@ -32,7 +32,7 @@ export const getFlatAudioFeatures = (audioFeatures = AudioFeatures, rawFeatures 
 }
 
 export class AudioProcessor {
-    constructor(audioContext, sourceNode, historySize, fftSize = 32768) {
+    constructor(audioContext, sourceNode, historySize, fftSize = 32768 / 2) {
         this.features = {}
         const fftAnalyzer = audioContext.createAnalyser()
         fftAnalyzer.smoothingTimeConstant = 0.15
