@@ -22,7 +22,7 @@ async function getShaderFiles(dir) {
             const filePath = join(dir, file)
             const stats = await stat(filePath)
             if (stats.isDirectory()) {
-                if (!['private', 'wip', 'knobs', 'utils', 'practice'].includes(file)) {
+                if (!['private', 'knobs', 'utils', 'practice'].includes(file)) {
                     const subDirFiles = await getShaderFiles(filePath)
                     fileList = fileList.concat(subDirFiles)
                 }
