@@ -10,7 +10,7 @@ async function ensureDistDirectory() {
     try {
         await mkdir('dist', { recursive: true })
     } catch (err) {
-        console.error('Error ensuring dist directory:', err)
+        console.error('Error ensuring dist direcory:', err)
     }
 }
 
@@ -66,7 +66,7 @@ async function generateHTML(shaderFiles) {
 async function main() {
     await ensureDistDirectory()
 
-    const entryPoints = ['index.js', 'edit.js', 'service-worker.js']
+    const entryPoints = ['index.js', 'edit.js', 'service-worker.js', 'analyze.js']
     const srcEntryPoints = await getEntryPoints('./src')
     entryPoints.push(...srcEntryPoints)
 
@@ -97,6 +97,8 @@ async function main() {
         ncpAsync('images', 'dist/images'),
         ncpAsync('shaders', 'dist/shaders'),
         ncpAsync('codicon.ttf', 'dist/codicon.ttf'),
+        ncpAsync('analyze.html', 'dist/analyze.html'),
+        ncpAsync('analyze.css', 'dist/analyze.css'),
     ])
 }
 

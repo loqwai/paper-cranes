@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Audio Analysis</title>
+  <link rel="stylesheet" href="analyze.css" />
+</head>
+
+<body>
+  <div class="container">
+    <div class="upload-section">
+      <input type="file" id="audioFile" accept="audio/mp3" />
+      <button id="analyze" disabled>Analyze</button>
+      <button id="download" disabled>Download Results</button>
+    </div>
+    <div class="progress-section">
+      <div id="progress-bar" class="progress-bar">
+        <div id="progress" class="progress"></div>
+      </div>
+      <div id="status">Upload an MP3 file to begin</div>
+    </div>
+  </div>
+  <script type="module" src="./analyze.js"></script>
+</body>
+
+</html>
