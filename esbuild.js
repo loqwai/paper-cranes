@@ -93,6 +93,7 @@ async function main() {
         ncpAsync('index.css', 'dist/index.css'),
         ncpAsync('edit.html', 'dist/edit.html'),
         ncpAsync('edit.css', 'dist/edit.css'),
+        ncpAsync('BarGraph.css', 'dist/BarGraph.css'),
         ncpAsync('favicon.ico', 'dist/favicon.ico'),
         ncpAsync('images', 'dist/images'),
         ncpAsync('shaders', 'dist/shaders'),

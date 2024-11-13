@@ -1,0 +1,63 @@
+.bar-graph {
+    background: #1a1a1a;
+    padding: 1rem;
+    border-radius: 4px;
+    margin: 1rem 0;
+    font-family: monospace;
+}
+
+.bar-row {
+    display: flex;
+    align-items: center;
+    height: 30px;
+    margin: 4px 0;
+}
+
+.negative-space {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+    position: relative;
+}
+
+.positive-space {
+    flex: 1;
+    position: relative;
+}
+
+.feature-name {
+    padding: 0 1rem;
+    color: #fff;
+    width: 180px;
+    text-align: center;
+    font-size: 0.9rem;
+    background: #333;
+    margin: 0 2px;
+    border-radius: 2px;
+}
+
+.bar {
+    position: absolute;
+    height: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.bar.positive {
+    left: 0;
+    background: #4caf50;
+    border-radius: 0 2px 2px 0;
+}
+
+.bar.negative {
+    right: 0;
+    background: #f44336;
+    border-radius: 2px 0 0 2px;
+}
+
+.value {
+    width: 60px;
+    padding-left: 1rem;
+    color: #fff;
+    font-size: 0.9rem;
+}

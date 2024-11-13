@@ -1,7 +1,9 @@
 import { render } from 'preact'
 import { useState, useRef } from 'preact/hooks'
 import { html } from 'htm/preact'
-import { AudioProcessor, getFlatAudioFeatures } from './src/audio/AudioProcessor'
+import { AudioProcessor } from './src/audio/AudioProcessor'
+import { normalizeAnalysisData } from './src/audio/normalizer'
+import BarGraph from './src/components/BarGraph'
 
 const Analyzer = () => {
     const [status, setStatus] = useState('Upload an MP3 file to begin')
@@ -94,18 +96,28 @@ const Analyzer = () => {
         processor.current = null
     }
 
-    const handleDownload = () => {
-        const blob = new Blob([JSON.stringify(analysisResults.current, null, 2)], {
+    const downloadData = (data, filename) => {
+        const blob = new Blob([JSON.stringify(data)], {
             type: 'application/json',
         })
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = 'audio-analysis.json'
+        a.download = filename
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
         URL.revokeObjectURL(url)
+    }
+
+    const handleDownload = () => {
+        downloadData(analysisResults.current, 'audio-analysis.json')
+    }
+
+    const handleDownloadNormalized = () => {
+        const { normalized, ranges } = normalizeAnalysisData(analysisResults.current)
+        downloadData(normalized, 'normalized-analysis.json')
+        downloadData(ranges, 'normalized-analysis-ranges.json')
     }
 
     return html`
@@ -113,7 +125,10 @@ const Analyzer = () => {
             <form class="upload-section">
                 <input type="file" accept="audio/mp3" onChange=${handleFileChange} disabled=${isAnalyzing} />
                 <button type="button" onClick=${handleAnalyze} disabled=${isAnalyzing}>Analyze</button>
-                <button type="button" onClick=${handleDownload} disabled=${!hasResults}>Download Results</button>
+                <div class="download-buttons">
+                    <button type="button" onClick=${handleDownload} disabled=${!hasResults}>Download Results</button>
+                    <button type="button" onClick=${handleDownloadNormalized} disabled=${!hasResults}>Download Normalized</button>
+                </div>
             </form>
             <div class="progress-section">
                 <div class="progress-bar">
@@ -121,12 +136,11 @@ const Analyzer = () => {
                 </div>
                 <div id="status">${status}</div>
             </div>
-            ${currentFeatures &&
-            html`
+            ${currentFeatures && html`
+                <${BarGraph} features=${currentFeatures} />
                 <pre class="analysis-display">
                     ${JSON.stringify(currentFeatures, null, 2)}
-                </pre
-                >
+                </pre>
             `}
         </div>
     `

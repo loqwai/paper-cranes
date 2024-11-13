@@ -2,6 +2,7 @@
 
 import { parseArgs } from 'node:util'
 import fs from 'fs/promises'
+import { normalizeAnalysisData } from '../src/audio/normalizer.js'
 
 const options = {
     input: {
@@ -46,46 +47,8 @@ async function normalizeAnalysis() {
         // Read and parse the input file
         const data = JSON.parse(await fs.readFile(input, 'utf8'))
 
-        // Collect min/max for each property
-        const ranges = {}
-
-        // First pass: find min/max values
-        for (const entry of data) {
-            for (const [key, value] of Object.entries(entry.features)) {
-                if (typeof value !== 'number') continue
-
-                if (!ranges[key]) {
-                    ranges[key] = { min: value, max: value }
-                } else {
-                    ranges[key].min = Math.min(ranges[key].min, value)
-                    ranges[key].max = Math.max(ranges[key].max, value)
-                }
-            }
-        }
-
-        // Second pass: normalize values
-        const normalized = data.map(entry => {
-            const normalizedFeatures = {}
-
-            for (const [key, value] of Object.entries(entry.features)) {
-                if (typeof value !== 'number') {
-                    normalizedFeatures[key] = value
-                    continue
-                }
-
-                const { min, max } = ranges[key]
-                if (min === max) {
-                    normalizedFeatures[key] = 0 // or 1, depending on preference
-                } else {
-                    normalizedFeatures[key] = (value - min) / (max - min)
-                }
-            }
-
-            return {
-                timestamp: entry.timestamp,
-                features: normalizedFeatures
-            }
-        })
+        // Use shared normalizer
+        const { normalized, ranges } = normalizeAnalysisData(data)
 
         // Write the normalized data
         await fs.writeFile(output, JSON.stringify(normalized))
