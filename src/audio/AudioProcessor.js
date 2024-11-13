@@ -49,22 +49,30 @@ export class AudioProcessor {
 
             for (const workerName of AudioFeatures) {
                 const workerUrl = new URL(`src/audio/analyzers/${workerName}.js`, import.meta.url).href
-                fetch(workerUrl).then(async (response) => {
-                    const code = await response.text()
-
-                    const blob = new Blob([code], { type: 'application/javascript' })
-                    const worker = new Worker(URL.createObjectURL(blob))
-                    worker.onmessage = (event) => {
-                        if (event.data.type === 'computedValue') {
-                            rawFeatures[workerName] = event.data
+                fetch(workerUrl)
+                    .then(async (response) => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`)
                         }
-                    }
-                    worker.onerror = (event) => {
-                        console.error(`Error in worker ${workerName}:`, event)
-                    }
-                    worker.postMessage({ type: 'config', config: { historySize } })
-                    workers[workerName] = worker
-                })
+                        return response.text()
+                    })
+                    .then((code) => {
+                        const blob = new Blob([code], { type: 'application/javascript' })
+                        const worker = new Worker(URL.createObjectURL(blob))
+                        worker.onmessage = (event) => {
+                            if (event.data.type === 'computedValue') {
+                                rawFeatures[workerName] = event.data
+                            }
+                        }
+                        worker.onerror = (event) => {
+                            console.error(`Error in worker ${workerName}:`, event)
+                        }
+                        worker.postMessage({ type: 'config', config: { historySize } })
+                        workers[workerName] = worker
+                    })
+                    .catch((error) => {
+                        console.error(`Failed to initialize ${workerName} worker:`, error)
+                    })
             }
             requestAnimationFrame(requestFeatures)
         }
@@ -81,6 +89,9 @@ export class AudioProcessor {
         }
 
         const getFeatures = () => {
+            if (Object.keys(workers).length !== AudioFeatures.length) {
+                return {} // Return empty object if workers aren't ready
+            }
             const features = getFlatAudioFeatures(AudioFeatures, rawFeatures)
             features['beat'] = isBeat()
             return features

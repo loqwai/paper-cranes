@@ -61,3 +61,27 @@
     color: #fff;
     font-size: 0.9rem;
 }
+
+.filter-controls {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    background: #333;
+    border-radius: 4px;
+}
+
+.filter-controls select {
+    padding: 0.5rem;
+    background: #1a1a1a;
+    color: #fff;
+    border: 1px solid #444;
+    border-radius: 2px;
+    font-family: monospace;
+    font-size: 0.9rem;
+}
+
+.filter-controls select:focus {
+    outline: none;
+    border-color: var(--color-nebula-purple);
+}
