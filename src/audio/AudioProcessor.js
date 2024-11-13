@@ -32,10 +32,10 @@ export const getFlatAudioFeatures = (audioFeatures = AudioFeatures, rawFeatures 
 }
 
 export class AudioProcessor {
-    constructor(audioContext, sourceNode, historySize, fftSize = 32768 / 2) {
+    constructor(audioContext, sourceNode, historySize, fftSize = 2048) {
         this.features = {}
         const fftAnalyzer = audioContext.createAnalyser()
-        fftAnalyzer.smoothingTimeConstant = 0.15
+        fftAnalyzer.smoothingTimeConstant = 0.95
         fftAnalyzer.fftSize = fftSize
         const fftData = new Uint8Array(fftAnalyzer.frequencyBinCount)
         const rawFeatures = {}

@@ -1,21 +1,29 @@
 import { makeCalculateStats, spectralFlux } from 'hypnosound'
 
+const WINDOW_SIZE = 5 // Number of samples to average
+let previousValues = []
 let calculateStats = makeCalculateStats()
-let previousSignal = new Float32Array() // Initialize with zeros
 
 self.addEventListener('message', ({ data: e }) => {
     if (e.type === 'fftData') {
         const { fft } = e.data
+        const value = spectralFlux(fft)
 
-        if (!previousSignal.length) {
-            previousSignal = new Float32Array(fft.length)
-            return
+        // Apply moving average
+        previousValues.push(value)
+        if (previousValues.length > WINDOW_SIZE) {
+            previousValues.shift()
         }
+        const smoothedValue = previousValues.reduce((a, b) => a + b, 0) / previousValues.length
 
-        const value = spectralFlux(fft, previousSignal)
-        self.postMessage({ type: 'computedValue', value, stats: calculateStats(value) })
+        self.postMessage({
+            type: 'computedValue',
+            value: smoothedValue,
+            stats: calculateStats(smoothedValue)
+        })
     }
     if (e.type === 'config') {
         calculateStats = makeCalculateStats(e.config.historySize)
+        previousValues = [] // Reset buffer on config change
     }
 })
