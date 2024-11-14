@@ -1,5 +1,5 @@
 export class WorkerRPC {
-    constructor(workerName, historySize, timeout = 50) {
+    constructor(workerName, historySize, timeout = 10) {
         this.workerName = workerName
         this.historySize = historySize
         this.timeout = timeout
@@ -85,12 +85,17 @@ export class WorkerRPC {
         if (this.messagePromise) {
             return this.messagePromise
         }
-
+        const start = performance.now()
+        let end;
         this.messagePromise = Promise.race([
             new Promise((resolve) => {
+                if (end) return
                 this.resolveMessage = resolve
+                end = performance.now()
             }),
             this.createTimeoutPromise().catch(() => {
+                if(end) return
+                console.log(`Worker ${this.workerName} timed out in ${end - start}ms`)
                 this.messagePromise = null
                 this.resolveMessage = null
                 return this.validateMessage(this.lastMessage)

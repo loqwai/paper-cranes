@@ -32,7 +32,7 @@ export const getFlatAudioFeatures = (audioFeatures = AudioFeatures, rawFeatures 
 }
 
 export class AudioProcessor {
-    constructor(audioContext, sourceNode, historySize, fftSize = 4096) {
+    constructor(audioContext, sourceNode, historySize=500,  fftSize = 32768/4) {
         this.audioContext = audioContext
         this.sourceNode = sourceNode
         this.fftSize = fftSize
@@ -47,7 +47,7 @@ export class AudioProcessor {
 
     createAnalyzer = () => {
         const analyzer = this.audioContext.createAnalyser()
-        analyzer.smoothingTimeConstant = 0.8
+        analyzer.smoothingTimeConstant = 0.15
         analyzer.minDecibels = -100
         analyzer.maxDecibels = -30
         analyzer.fftSize = this.fftSize
@@ -62,20 +62,15 @@ export class AudioProcessor {
     }
 
     runWorkerLoop = async (worker) => {
-        while (true) {
-            try {
-                const result = await worker.processData(this.fftData)
-                if (result) {
-                    this.rawFeatures[result.workerName] = result
-                    this.updateCurrentFeatures()
-                }
-            } catch (error) {
-                console.warn(`Error processing data for worker ${worker.workerName}:`, error)
-            }
+        const result = await worker.processData(this.fftData)
+        if (result) {
+            this.rawFeatures[result.workerName] = result
         }
+        requestAnimationFrame(() => this.runWorkerLoop(worker));
     }
 
     updateCurrentFeatures = () => {
+        requestAnimationFrame(this.updateCurrentFeatures)
         this.currentFeatures = getFlatAudioFeatures(AudioFeatures, this.rawFeatures)
         this.currentFeatures.beat = this.isBeat()
     }
@@ -91,11 +86,12 @@ export class AudioProcessor {
         const windowNode = new AudioWorkletNode(this.audioContext, 'window-processor')
         this.sourceNode.connect(windowNode)
         await Promise.all(AudioFeatures.map(this.initializeWorker))
-        this.processFeatures()
+        this.updateCurrentFeatures()
+        this.updateFftData()
     }
 
-    processFeatures = () => {
-        requestAnimationFrame(this.processFeatures)
+    updateFftData = () => {
+        requestAnimationFrame(this.updateFftData)
         this.fftAnalyzer.getByteFrequencyData(this.fftData)
     }
 
