@@ -48,8 +48,8 @@ export class AudioProcessor {
     createAnalyzer = () => {
         const analyzer = this.audioContext.createAnalyser()
         analyzer.smoothingTimeConstant = 0.8
-        analyzer.minDecibels = -120
-        analyzer.maxDecibels = 0
+        analyzer.minDecibels = -100
+        analyzer.maxDecibels = -30
         analyzer.fftSize = this.fftSize
         return analyzer
     }
