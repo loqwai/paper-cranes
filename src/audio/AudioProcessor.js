@@ -40,6 +40,10 @@ export class AudioProcessor {
         const fftData = new Uint8Array(fftAnalyzer.frequencyBinCount)
         const rawFeatures = {}
         const workers = {}
+        let pendingResponses = new Set()
+        let isProcessing = false
+        let currentTimeout = null
+        let tempFeatures = {}
 
         const start = async () => {
             await audioContext.audioWorklet.addModule('src/window-processor.js') // Path to your processor file
@@ -49,30 +53,35 @@ export class AudioProcessor {
 
             for (const workerName of AudioFeatures) {
                 const workerUrl = new URL(`src/audio/analyzers/${workerName}.js`, import.meta.url).href
-                fetch(workerUrl)
-                    .then(async (response) => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`)
-                        }
-                        return response.text()
-                    })
-                    .then((code) => {
-                        const blob = new Blob([code], { type: 'application/javascript' })
-                        const worker = new Worker(URL.createObjectURL(blob))
-                        worker.onmessage = (event) => {
-                            if (event.data.type === 'computedValue') {
-                                rawFeatures[workerName] = event.data
+                try {
+                    const response = await fetch(workerUrl)
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`)
+                    }
+                    const code = await response.text()
+                    const blob = new Blob([code], { type: 'application/javascript' })
+                    const worker = new Worker(URL.createObjectURL(blob))
+                    worker.onmessage = (event) => {
+                        if (event.data.type === 'computedValue') {
+                            tempFeatures[workerName] = event.data
+                            pendingResponses.delete(workerName)
+                            // console.log('pendingResponses', pendingResponses)
+                            if (pendingResponses.size === 0) {
+                                Object.assign(rawFeatures, tempFeatures)
+                                tempFeatures = {}
+                                clearTimeout(currentTimeout)
+                                isProcessing = false
                             }
                         }
-                        worker.onerror = (event) => {
-                            console.error(`Error in worker ${workerName}:`, event)
-                        }
-                        worker.postMessage({ type: 'config', config: { historySize } })
-                        workers[workerName] = worker
-                    })
-                    .catch((error) => {
-                        console.error(`Failed to initialize ${workerName} worker:`, error)
-                    })
+                    }
+                    worker.onerror = (event) => {
+                        console.error(`Error in worker ${workerName}:`, event)
+                    }
+                    worker.postMessage({ type: 'config', config: { historySize } })
+                    workers[workerName] = worker
+                } catch (error) {
+                    console.error(`Failed to initialize ${workerName} worker:`, error)
+                }
             }
             requestAnimationFrame(requestFeatures)
         }
@@ -80,18 +89,27 @@ export class AudioProcessor {
         const requestFeatures = () => {
             requestAnimationFrame(requestFeatures)
 
-            fftAnalyzer.getByteFrequencyData(fftData)
+            if (!isProcessing) {
+                isProcessing = true
+                fftAnalyzer.getByteFrequencyData(fftData)
 
-            // const windowedFftData = applyKaiserWindow(fftData)
-            for (const worker in workers) {
-                workers[worker].postMessage({ type: 'fftData', data: { fft: fftData } })
+                pendingResponses = new Set(Object.keys(workers))
+                tempFeatures = {}
+
+                currentTimeout = setTimeout(() => {
+                    console.warn('Timeout waiting for workers:', Array.from(pendingResponses))
+                    pendingResponses.clear()
+                    tempFeatures = {}
+                    isProcessing = false
+                }, 100)
+
+                for (const worker in workers) {
+                    workers[worker].postMessage({ type: 'fftData', data: { fft: fftData } })
+                }
             }
         }
 
         const getFeatures = () => {
-            if (Object.keys(workers).length !== AudioFeatures.length) {
-                return {} // Return empty object if workers aren't ready
-            }
             const features = getFlatAudioFeatures(AudioFeatures, rawFeatures)
             features['beat'] = isBeat()
             return features
