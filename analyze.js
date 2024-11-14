@@ -54,13 +54,13 @@ const Analyzer = () => {
             const startTime = performance.now()
             const duration = decodedBuffer.duration * 1000 // convert to ms
 
-            await new Promise((resolve) => {
-                const analyze = () => {
+            await new Promise(async (resolve) => {
+                const analyze = async () => {
                     const currentTime = performance.now() - startTime
                     const progress = currentTime / duration
                     setProgress(Math.min(progress * 100, 100))
 
-                    const features = processor.current.getFeatures()
+                    const features = await processor.current.getFeatures()
                     analysisResults.current.push({
                         timestamp: currentTime,
                         features: features,

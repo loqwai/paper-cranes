@@ -124,9 +124,9 @@ const setupAudio = async () => {
     return audioProcessor
 }
 
-const animate = ({ render, audio, fragmentShader, vertexShader }) => {
+const animate = async ({ render, audio, fragmentShader, vertexShader }) => {
     fragmentShader = window.cranes?.shader ?? fragmentShader
-    const measuredAudioFeatures = audio.getFeatures()
+    const measuredAudioFeatures = await audio.getFeatures()
     const queryParamFeatures = {}
     const params = new URLSearchParams(window.location.search)
     // collect the rest of the params
