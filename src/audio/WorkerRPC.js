@@ -1,9 +1,9 @@
 export class WorkerRPC {
-    constructor(workerName, historySize, timeout = 10) {
+    constructor(workerName, historySize, timeout = 50) {
         this.workerName = workerName
         this.historySize = historySize
         this.timeout = timeout
-        this.messagePromise = null
+        this.currentMessageId = 0
         this.resolveMessage = null
         this.lastMessage = this.createDefaultMessage()
     }
@@ -49,16 +49,40 @@ export class WorkerRPC {
             const validatedMessage = this.validateMessage(event.data)
             this.lastMessage = validatedMessage
 
-            if (this.resolveMessage) {
+            if (this.resolveMessage && event.data.id === this.currentMessageId) {
                 this.resolveMessage(validatedMessage)
                 this.resolveMessage = null
-                this.messagePromise = null
             }
         }
     }
 
-    createTimeoutPromise = () => {
-        return new Promise((_, reject) => setTimeout(() => reject(new Error(`Worker ${this.workerName} timed out`)), this.timeout))
+    processData = async (fftData) => {
+        if (this.resolveMessage) {
+            console.log(`${this.workerName} abandoning message after ${performance.now() - this.currentMessageId}ms`)
+            this.resolveMessage()
+        }
+
+        const messageId = (this.currentMessageId = performance.now())
+
+        const messagePromise = Promise.race([
+            new Promise((resolve) => {
+                this.resolveMessage = resolve
+            }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error(`Worker ${this.workerName} timed out`)), this.timeout)).catch(() => {
+                if (this.currentMessageId === messageId) {
+                    this.resolveMessage = null
+                }
+                return this.lastMessage
+            }),
+        ])
+
+        this.worker.postMessage({
+            type: 'fftData',
+            id: messageId,
+            data: { fft: fftData },
+        })
+
+        return messagePromise
     }
 
     initialize = async () => {
@@ -79,31 +103,6 @@ export class WorkerRPC {
             type: 'config',
             config: { historySize: this.historySize },
         })
-    }
-
-    processData = async (fftData) => {
-        if (this.messagePromise) {
-            return this.messagePromise
-        }
-        const start = performance.now()
-        let end;
-        this.messagePromise = Promise.race([
-            new Promise((resolve) => {
-                if (end) return
-                this.resolveMessage = resolve
-                end = performance.now()
-            }),
-            this.createTimeoutPromise().catch(() => {
-                if(end) return
-                console.log(`Worker ${this.workerName} timed out in ${end - start}ms`)
-                this.messagePromise = null
-                this.resolveMessage = null
-                return this.validateMessage(this.lastMessage)
-            }),
-        ])
-
-        this.worker.postMessage({ type: 'fftData', data: { fft: fftData } })
-        return this.messagePromise
     }
 
     handleError = (error) => {

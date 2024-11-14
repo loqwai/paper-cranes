@@ -13,7 +13,7 @@ self.addEventListener('message', ({ data: e }) => {
         }
 
         const value = spectralFlux(fft, previousSignal)
-        self.postMessage({ type: 'computedValue', value, stats: calculateStats(value) })
+        self.postMessage({id: e.id, type: 'computedValue', value, stats: calculateStats(value) })
     }
     if (e.type === 'config') {
         calculateStats = makeCalculateStats(e.config.historySize)

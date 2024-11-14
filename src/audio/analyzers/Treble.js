@@ -6,7 +6,7 @@ self.addEventListener('message', ({ data: e }) => {
     if (e.type === 'fftData') {
         const { fft } = e.data // Extract FFT data from message
         const value = treble(fft)
-        self.postMessage({ type: 'computedValue', value, stats: calculateStats(value) })
+        self.postMessage({id: e.id, type: 'computedValue', value, stats: calculateStats(value) })
     }
     if (e.type === 'config') {
         calculateStats = makeCalculateStats(e.config.historySize)
