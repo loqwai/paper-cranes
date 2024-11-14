@@ -35,8 +35,8 @@ export class AudioProcessor {
     constructor(audioContext, sourceNode, historySize, fftSize = 4096) {
         this.audioContext = audioContext
         this.sourceNode = sourceNode
-        this.historySize = historySize
         this.fftSize = fftSize
+        this.historySize = historySize
         this.fftAnalyzer = this.createAnalyzer()
         this.fftData = new Uint8Array(this.fftAnalyzer.frequencyBinCount)
         this.workers = new Map()
@@ -47,9 +47,9 @@ export class AudioProcessor {
 
     createAnalyzer = () => {
         const analyzer = this.audioContext.createAnalyser()
-        analyzer.smoothingTimeConstant = 0.9
-        analyzer.minDecibels = -100
-        analyzer.maxDecibels = -30
+        analyzer.smoothingTimeConstant = 0.8
+        analyzer.minDecibels = -120
+        analyzer.maxDecibels = 0
         analyzer.fftSize = this.fftSize
         return analyzer
     }
@@ -58,18 +58,24 @@ export class AudioProcessor {
         const worker = new WorkerRPC(name, this.historySize)
         await worker.initialize()
         this.workers.set(name, worker)
+        this.runWorkerLoop(worker)
     }
 
-    processFeatures = async () => {
-        requestAnimationFrame(this.processFeatures)
-        //if there are any resolved promises, skip
-        this.fftAnalyzer.getByteFrequencyData(this.fftData)
-        Array.from(this.workers.values()).map((worker) => {
-            worker.processData(this.fftData).then((result) => {
-                if (result) this.rawFeatures[result.workerName] = result
-            })
-        })
+    runWorkerLoop = async (worker) => {
+        while (true) {
+            try {
+                const result = await worker.processData(this.fftData)
+                if (result) {
+                    this.rawFeatures[result.workerName] = result
+                    this.updateCurrentFeatures()
+                }
+            } catch (error) {
+                console.warn(`Error processing data for worker ${worker.workerName}:`, error)
+            }
+        }
+    }
 
+    updateCurrentFeatures = () => {
         this.currentFeatures = getFlatAudioFeatures(AudioFeatures, this.rawFeatures)
         this.currentFeatures.beat = this.isBeat()
     }
@@ -85,13 +91,18 @@ export class AudioProcessor {
         const windowNode = new AudioWorkletNode(this.audioContext, 'window-processor')
         this.sourceNode.connect(windowNode)
         await Promise.all(AudioFeatures.map(this.initializeWorker))
+        this.processFeatures()
+    }
+
+    processFeatures = () => {
         requestAnimationFrame(this.processFeatures)
+        this.fftAnalyzer.getByteFrequencyData(this.fftData)
     }
 
     getFeatures = () => this.currentFeatures
 
     cleanup = () => {
-        this.workers.forEach((worker) => worker.terminate())
+        this.workers.forEach(worker => worker.terminate())
         this.workers.clear()
     }
 }

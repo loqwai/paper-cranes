@@ -5,6 +5,14 @@ const events = ['touchstart', 'touchmove', 'touchstop', 'click', 'keydown', 'mou
 let ranMain = false
 let startTime = 0
 const params = new URLSearchParams(window.location.search)
+
+const getVisualizerDOMElement = () => {
+    if (!window.visualizer) {
+        window.visualizer = document.getElementById('visualizer')
+    }
+    return window.visualizer
+}
+
 // check if we have microphone access. If so, just run main immediately
 navigator.mediaDevices
     .getUserMedia({
@@ -84,14 +92,13 @@ const main = async () => {
     startTime = performance.now()
     const audio = await setupAudio()
 
-    const params = new URLSearchParams(window.location.search)
     const fragmentShader = await getFragmentShader()
     const vertexShader = await getVertexShader()
 
     window.shader = fragmentShader
     const initialImageUrl = params.get('image') ?? 'images/placeholder-image.png'
     const fullscreen = (params.get('fullscreen') ?? false) === 'true'
-    const canvas = document.getElementById('visualizer')
+    const canvas = getVisualizerDOMElement()
     const render = await makeVisualizer({ canvas, initialImageUrl, fullscreen })
     requestAnimationFrame(() => animate({ render, audio, fragmentShader, vertexShader }))
 
@@ -102,7 +109,7 @@ const main = async () => {
 if (!window.location.href.includes('edit')) {
     events.forEach((event) => {
         // get the visualizer
-        const visualizer = document.getElementById('visualizer')
+        const visualizer = getVisualizerDOMElement()
         visualizer.addEventListener(event, main, { once: true })
         visualizer.addEventListener(
             event,
@@ -128,7 +135,6 @@ const animate = ({ render, audio, fragmentShader, vertexShader }) => {
     fragmentShader = window.cranes?.shader ?? fragmentShader
     const measuredAudioFeatures = audio.getFeatures()
     const queryParamFeatures = {}
-    const params = new URLSearchParams(window.location.search)
 
     for (const [key, value] of params) {
         queryParamFeatures[key] = value
