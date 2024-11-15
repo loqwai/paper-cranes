@@ -10,6 +10,7 @@ const Analyzer = () => {
     const [progress, setProgress] = useState(0)
     const [isAnalyzing, setIsAnalyzing] = useState(false)
     const [hasResults, setHasResults] = useState(false)
+    const [timeInfo, setTimeInfo] = useState({ current: '0:00', start: '0:00', end: '0:00' })
     const analysisResults = useRef([])
     const [currentFeatures, setCurrentFeatures] = useState(null)
 
@@ -22,6 +23,13 @@ const Analyzer = () => {
         const hasFile = e.target.files?.length > 0
         setHasResults(false)
         setStatus(hasFile ? 'Click Analyze to begin' : 'Upload an MP3 file to begin')
+    }
+
+    const formatTime = (ms) => {
+        const totalSeconds = Math.floor(ms / 1000)
+        const minutes = Math.floor(totalSeconds / 60)
+        const seconds = totalSeconds % 60
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`
     }
 
     const handleAnalyze = async (e) => {
@@ -54,11 +62,24 @@ const Analyzer = () => {
             const startTime = performance.now()
             const duration = decodedBuffer.duration * 1000 // convert to ms
 
+            // Set initial time info
+            setTimeInfo({
+                current: '0:00',
+                start: '0:00',
+                end: formatTime(duration)
+            })
+
             await new Promise(async (resolve) => {
                 const analyze = async () => {
                     const currentTime = performance.now() - startTime
                     const progress = currentTime / duration
                     setProgress(Math.min(progress * 100, 100))
+
+                    // Update current time
+                    setTimeInfo(prev => ({
+                        ...prev,
+                        current: formatTime(currentTime)
+                    }))
 
                     const features = await processor.current.getFeatures()
                     analysisResults.current.push({
@@ -131,9 +152,14 @@ const Analyzer = () => {
                 </div>
             </form>
             <div class="progress-section">
-                <div class="progress-bar">
-                    <div class="progress" style=${`width: ${progress}%`} />
+                <div class="progress-bar-container">
+                    <span class="time-label">${timeInfo.start}</span>
+                    <div class="progress-bar">
+                        <div class="progress" style=${`width: ${progress}%`} />
+                    </div>
+                    <span class="time-label">${timeInfo.end}</span>
                 </div>
+                <div class="time-current">${timeInfo.current}</div>
                 <div id="status">${status}</div>
             </div>
             ${currentFeatures && html`

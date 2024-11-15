@@ -46,3 +46,29 @@ button:disabled {
     background: #ccc;
     cursor: not-allowed;
 }
+
+.progress-bar-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.progress-bar {
+    flex-grow: 1;
+}
+
+.time-label {
+    font-family: monospace;
+    font-size: 14px;
+    color: #666;
+    min-width: 45px;
+}
+
+.time-current {
+    font-family: monospace;
+    font-size: 16px;
+    color: #333;
+    text-align: center;
+    margin: 5px 0;
+}
