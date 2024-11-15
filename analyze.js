@@ -12,17 +12,26 @@ const Analyzer = () => {
     const [hasResults, setHasResults] = useState(false)
     const [timeInfo, setTimeInfo] = useState({ current: '0:00', start: '0:00', end: '0:00' })
     const analysisResults = useRef([])
-    const [currentFeatures, setCurrentFeatures] = useState(null)
+    const [currentFeatures, setCurrentFeatures] = useState({
+        ready: 0,
+    })
 
     // Audio processing state
     const audioContext = useRef(null)
     const source = useRef(null)
     const processor = useRef(null)
 
+    const [inputFileName, setInputFileName] = useState('audio')
+
     const handleFileChange = (e) => {
         const hasFile = e.target.files?.length > 0
         setHasResults(false)
         setStatus(hasFile ? 'Click Analyze to begin' : 'Upload an MP3 file to begin')
+
+        if (hasFile) {
+            const fullName = e.target.files[0].name
+            setInputFileName(fullName.substring(0, fullName.lastIndexOf('.')) || fullName)
+        }
     }
 
     const formatTime = (ms) => {
@@ -132,13 +141,13 @@ const Analyzer = () => {
     }
 
     const handleDownload = () => {
-        downloadData(analysisResults.current, 'audio-analysis.json')
+        downloadData(analysisResults.current, `${inputFileName}-analysis.json`)
     }
 
     const handleDownloadNormalized = () => {
         const { normalized, ranges } = normalizeAnalysisData(analysisResults.current)
-        downloadData(normalized, 'normalized-analysis.json')
-        downloadData(ranges, 'normalized-analysis-ranges.json')
+        downloadData(normalized, `${inputFileName}-normalized.json`)
+        downloadData(ranges, `${inputFileName}-normalized-ranges.json`)
     }
 
     return html`
@@ -162,12 +171,10 @@ const Analyzer = () => {
                 <div class="time-current">${timeInfo.current}</div>
                 <div id="status">${status}</div>
             </div>
-            ${currentFeatures && html`
-                <${BarGraph} features=${currentFeatures} />
-                <pre class="analysis-display">
-                    ${JSON.stringify(currentFeatures, null, 2)}
-                </pre>
-            `}
+            <${BarGraph} features=${currentFeatures} />
+            <pre class="analysis-display">
+                ${JSON.stringify(currentFeatures, null, 2)}
+            </pre>
         </div>
     `
 }
