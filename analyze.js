@@ -5,40 +5,52 @@ import { AudioProcessor } from './src/audio/AudioProcessor'
 import { normalizeAnalysisData } from './src/audio/normalizer'
 import BarGraph from './src/components/BarGraph'
 
+const formatTime = (ms) => {
+    const totalSeconds = Math.floor(ms / 1000)
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`
+}
+
 const Analyzer = () => {
+    // UI State
     const [status, setStatus] = useState('Upload an MP3 file to begin')
     const [progress, setProgress] = useState(0)
     const [isAnalyzing, setIsAnalyzing] = useState(false)
     const [hasResults, setHasResults] = useState(false)
-    const [timeInfo, setTimeInfo] = useState({ current: '0:00', start: '0:00', end: '0:00' })
-    const analysisResults = useRef([])
-    const [currentFeatures, setCurrentFeatures] = useState({
-        ready: 0,
+    const [inputFileName, setInputFileName] = useState('audio')
+    const [timeInfo, setTimeInfo] = useState({
+        current: '0:00',
+        start: '0:00',
+        end: '0:00',
     })
+    const [currentFeatures, setCurrentFeatures] = useState({ ready: 0 })
 
-    // Audio processing state
+    // Audio State
+    const analysisResults = useRef([])
     const audioContext = useRef(null)
     const source = useRef(null)
     const processor = useRef(null)
 
-    const [inputFileName, setInputFileName] = useState('audio')
-
     const handleFileChange = (e) => {
-        const hasFile = e.target.files?.length > 0
-        setHasResults(false)
-        setStatus(hasFile ? 'Click Analyze to begin' : 'Upload an MP3 file to begin')
-
-        if (hasFile) {
-            const fullName = e.target.files[0].name
-            setInputFileName(fullName.substring(0, fullName.lastIndexOf('.')) || fullName)
+        const file = e.target.files?.[0]
+        if (!file) {
+            setStatus('Upload an MP3 file to begin')
+            return
         }
+
+        const fullName = file.name
+        setInputFileName(fullName.substring(0, fullName.lastIndexOf('.')) || fullName)
+        setHasResults(false)
+        setStatus('Click Analyze to begin')
     }
 
-    const formatTime = (ms) => {
-        const totalSeconds = Math.floor(ms / 1000)
-        const minutes = Math.floor(totalSeconds / 60)
-        const seconds = totalSeconds % 60
-        return `${minutes}:${seconds.toString().padStart(2, '0')}`
+    const cleanup = () => {
+        source.current?.stop()
+        audioContext.current?.close()
+        source.current = null
+        audioContext.current = null
+        processor.current = null
     }
 
     const handleAnalyze = async (e) => {
@@ -51,7 +63,7 @@ const Analyzer = () => {
         analysisResults.current = []
 
         try {
-            // Setup audio context and nodes
+            // Setup audio processing
             audioContext.current = new AudioContext()
             const file = fileInput.files[0]
             const buffer = await file.arrayBuffer()
@@ -63,39 +75,25 @@ const Analyzer = () => {
             processor.current = new AudioProcessor(audioContext.current, source.current, 500)
             await processor.current.start()
 
-            // Connect source to speakers
+            // Connect and start playback
             source.current.connect(audioContext.current.destination)
-
-            // Start playback and analysis
             source.current.start()
+
             const startTime = performance.now()
-            const duration = decodedBuffer.duration * 1000 // convert to ms
+            const duration = decodedBuffer.duration * 1000
+            setTimeInfo({ current: '0:00', start: '0:00', end: formatTime(duration) })
 
-            // Set initial time info
-            setTimeInfo({
-                current: '0:00',
-                start: '0:00',
-                end: formatTime(duration)
-            })
-
-            await new Promise(async (resolve) => {
+            // Analysis loop - Fixed version
+            await new Promise((resolve) => {
                 const analyze = async () => {
                     const currentTime = performance.now() - startTime
                     const progress = currentTime / duration
-                    setProgress(Math.min(progress * 100, 100))
 
-                    // Update current time
-                    setTimeInfo(prev => ({
-                        ...prev,
-                        current: formatTime(currentTime)
-                    }))
+                    setProgress(Math.min(progress * 100, 100))
+                    setTimeInfo(prev => ({ ...prev, current: formatTime(currentTime) }))
 
                     const features = await processor.current.getFeatures()
-                    analysisResults.current.push({
-                        timestamp: currentTime,
-                        features: features,
-                    })
-
+                    analysisResults.current.push({ timestamp: currentTime, features })
                     setCurrentFeatures(features)
 
                     if (progress >= 1) {
@@ -113,23 +111,14 @@ const Analyzer = () => {
         } catch (error) {
             console.error(error)
             setStatus(`Error: ${error.message}`)
+            cleanup()
         } finally {
             setIsAnalyzing(false)
         }
     }
 
-    const cleanup = () => {
-        source.current?.stop()
-        audioContext.current?.close()
-        source.current = null
-        audioContext.current = null
-        processor.current = null
-    }
-
     const downloadData = (data, filename) => {
-        const blob = new Blob([JSON.stringify(data)], {
-            type: 'application/json',
-        })
+        const blob = new Blob([JSON.stringify(data)], { type: 'application/json' })
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
@@ -160,6 +149,7 @@ const Analyzer = () => {
                     <button type="button" onClick=${handleDownloadNormalized} disabled=${!hasResults}>Download Normalized</button>
                 </div>
             </form>
+
             <div class="progress-section">
                 <div class="progress-bar-container">
                     <span class="time-label">${timeInfo.start}</span>
@@ -171,10 +161,12 @@ const Analyzer = () => {
                 <div class="time-current">${timeInfo.current}</div>
                 <div id="status">${status}</div>
             </div>
+
             <${BarGraph} features=${currentFeatures} />
             <pre class="analysis-display">
                 ${JSON.stringify(currentFeatures, null, 2)}
-            </pre>
+            </pre
+            >
         </div>
     `
 }
