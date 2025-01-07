@@ -86,23 +86,25 @@ const getVertexShader = async () => {
 }
 
 const main = async () => {
-    if (ranMain) return
+    try {
+        if (ranMain) return
+        ranMain = true
+        window.c = cranes
+        startTime = performance.now()
+        const audio = await setupAudio()
 
-    window.c = cranes
-    startTime = performance.now()
-    const audio = await setupAudio()
+        const fragmentShader = await getFragmentShader()
+        const vertexShader = await getVertexShader()
 
-    const fragmentShader = await getFragmentShader()
-    const vertexShader = await getVertexShader()
-
-    window.shader = fragmentShader
-    const initialImageUrl = params.get('image') ?? 'images/placeholder-image.png'
-    const fullscreen = (params.get('fullscreen') ?? false) === 'true'
-    const canvas = getVisualizerDOMElement()
-    const render = await makeVisualizer({ canvas, initialImageUrl, fullscreen })
-    requestAnimationFrame(() => animate({ render, audio, fragmentShader, vertexShader }))
-
-    ranMain = true
+        window.shader = fragmentShader
+        const initialImageUrl = params.get('image') ?? 'images/placeholder-image.png'
+        const fullscreen = (params.get('fullscreen') ?? false) === 'true'
+        const canvas = getVisualizerDOMElement()
+        const render = await makeVisualizer({ canvas, initialImageUrl, fullscreen })
+        requestAnimationFrame(() => animate({ render, audio, fragmentShader, vertexShader }))
+    } catch (e) {
+        console.error(`main error: ${e}`)
+    }
 }
 
 // if the url contains the string 'edit', don't do this.
@@ -114,7 +116,11 @@ if (!window.location.href.includes('edit')) {
         visualizer.addEventListener(
             event,
             () => {
-                document.documentElement.requestFullscreen()
+                try {
+                    document.documentElement.requestFullscreen()
+                } catch (e) {
+                    console.error(`preventing a crash: ${e}`)
+                }
             },
             { once: true },
         )
@@ -132,6 +138,7 @@ const setupAudio = async () => {
 }
 
 const animate = ({ render, audio, fragmentShader, vertexShader }) => {
+    requestAnimationFrame(() => animate({ render, audio, fragmentShader, vertexShader }))
     fragmentShader = window.cranes?.shader ?? fragmentShader
     const measuredAudioFeatures = audio.getFeatures()
     const queryParamFeatures = {}
@@ -149,5 +156,5 @@ const animate = ({ render, audio, fragmentShader, vertexShader }) => {
     } catch (e) {
         console.error(e)
     }
-    requestAnimationFrame(() => animate({ render, audio, fragmentShader, vertexShader }))
+
 }
