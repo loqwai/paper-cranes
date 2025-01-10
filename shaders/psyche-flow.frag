@@ -66,19 +66,19 @@ float map(vec3 p) {
 
 // Color palette function
 vec3 palette(float t) {
-    // More psychedelic color palette
-    vec3 a = vec3(0.5);
-    vec3 b = vec3(0.5);
-    vec3 c = vec3(1.0 + spectralRoughnessNormalized * 0.5);
-    vec3 d = vec3(0.263, 0.416, 0.557) +
-             vec3(spectralCentroidNormalized, energyNormalized, spectralRoughnessNormalized) * 0.4;
+    // More varied psychedelic color palette
+    vec3 a = vec3(0.8, 0.5, 0.4);
+    vec3 b = vec3(0.2, 0.4, 0.2);
+    vec3 c = vec3(2.0, 1.0, 1.0); // Different frequencies for RGB
+    vec3 d = vec3(0.0, 0.33, 0.67) +
+             vec3(spectralCentroidNormalized, energyNormalized, spectralRoughnessNormalized) * 0.2;
 
-    return a + b * cos(6.28318 * (c * t + d));
+    return a + b * cos(PI * 2. * (c * t + d));
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = (fragCoord.xy - 0.5 * resolution.xy) / resolution.y;
-    vec3 ro = vec3(0.0, 0.0, -3.0 - energyNormalized);
+    vec3 ro = vec3(0.0, 0.0, -3.0 - energyNormalized * 0.5); // Reduced energy influence
     vec3 rd = normalize(vec3(uv, 1.2));
 
     float t = 0.0;
@@ -94,38 +94,43 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec3 col = vec3(0.0);
     if(t < 12.0) {
-        // Create more complex color patterns
-        float pulse = sin(time + t * 0.5 + spectralCentroidZScore) * 0.5 + 0.5;
+        // More varied color patterns
+        float pulse = sin(time * 0.5 + t * 0.3) * 0.3 + 0.5; // Reduced pulse intensity
         col = palette(t * 0.1 + pulse);
 
-        // Add depth without losing color
-        col = mix(col, palette(d * 2.0), 0.5);
+        // Blend multiple color layers
+        vec3 col2 = palette(d * 1.5 + time * 0.1);
+        col = mix(col, col2, 0.4);
 
-        // Add interesting patterns based on position
+        // Add patterns with different color phase
         vec3 pos = ro + rd * t;
         float pattern = fractalNoise(pos * 0.5);
-        col = mix(col, palette(pattern + time * 0.1), 0.3);
+        vec3 patternColor = palette(pattern + time * 0.2 + PI * 0.5); // Phase shift for variety
+        col = mix(col, patternColor, 0.3);
 
-        // Add subtle glow
-        col += palette(t * 0.05) * 0.15 / (abs(d) + 0.1);
+        // Controlled glow
+        col += palette(t * 0.05 + PI) * 0.1 / (abs(d) + 0.2); // Reduced glow intensity
     }
 
-    // Color enhancement
+    // More controlled color enhancement
     col = rgb2hsl(col);
-    col.x = fract(col.x + spectralCentroid * 0.2);
-    col.y = clamp(col.y * (1.0 + spectralRoughnessNormalized * 0.3), 0.4, 0.95);
-    col.z = clamp(col.z * (1.0 + energyNormalized * 0.2), 0.2, 0.8);
+
+    // Maintain color variety while preventing oversaturation
+    col.x = fract(col.x + spectralCentroid * 0.15);
+    col.y = clamp(col.y * (0.8 + spectralRoughnessNormalized * 0.2), 0.3, 0.9); // More controlled saturation
+    col.z = clamp(col.z * (0.7 + energyNormalized * 0.15), 0.2, 0.7); // Prevent white-out
 
     if(beat) {
-        col.x = fract(col.x + 0.1);
-        col.y = clamp(col.y * 1.2, 0.0, 1.0);
+        col.x = fract(col.x + 0.2); // Color shift on beat
+        col.y = clamp(col.y * 1.1, 0.0, 0.9); // Less aggressive saturation boost
     }
 
     col = hsl2rgb(col);
 
-    // Smoother frame blending
+    // Gentler frame blending
     vec4 prevColor = getLastFrameColor(fragCoord.xy/resolution.xy);
-    col = mix(prevColor.rgb, col, 0.3 + energyNormalized * 0.2);
+    float blendFactor = 0.2 + energyNormalized * 0.15; // Reduced blend variation
+    col = mix(prevColor.rgb, col, blendFactor);
 
     fragColor = vec4(col, 1.0);
 }
