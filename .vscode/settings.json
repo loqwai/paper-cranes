@@ -37,10 +37,29 @@
         "energyMax": 0,
         "energyMean": 0,
         "energyStandardDeviation": 0,
-        "resolution": [800, 800, 0],
-        "iResolution": [800, 800, 0],
-        "prevFrame": [800, 800, 0]
+        "resolution": [
+            800,
+            800,
+            0
+        ],
+        "iResolution": [
+            800,
+            800,
+            0
+        ],
+        "prevFrame": [
+            800,
+            800,
+            0
+        ]
     },
-
-    "editor.formatOnSave": true
+    "editor.formatOnSave": true,
+    "[glsl]": {
+        "editor.formatOnSave": false,
+        "editor.semanticHighlighting.enabled": true,
+        "editor.diagnostics.enabled": false
+    },
+    "editor.diagnostics.disabled": [
+        "glsl"
+    ]
 }
