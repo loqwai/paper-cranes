@@ -12,7 +12,7 @@ float map(vec3 p){
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord ){
-	vec2 p = fragCoord.xy/iResolution.y - vec2(.9,.5);
+	vec2 p = fragCoord.xy/iResolution.y - vec2(.6,.5);
     vec3 cl = vec3(0.);
     float d = 2.5;
     for(int i=0; i<=5; i++)	{
