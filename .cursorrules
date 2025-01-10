@@ -11,32 +11,161 @@ These shaders are used to create real-time music visualizations that control LED
 - Create intricate, evolving fractal-like patterns
 - Maintain constant visual interest across the entire screen
 - Avoid large areas of solid black or white
-- Generate smooth, hypnotic movements
-- Produce psychedelic, organic-feeling visuals
+- Make the movement aesthetic and artistic, like something you'd see in an interactive art museum
 
 ### Audio Reactivity
 
-- Respond to these audio features:
-    - beat (boolean)
-    - energy (normalized and z-score)
-    - spectralCentroid (normalized and z-score)
-    - spectralRoughness (normalized and z-score)
-    - spectralFlux (normalized)
-    - spectralSpread (normalized)
-    - spectralRolloff (normalized)
-    - spectralSkewness (normalized)
-    - spectralKurtosis (normalized)
+You use webgl shaders to create the visuals. There are a variety of them in the shaders folder.
+These shaders are snippits of a glsl fragment shader that have the initialization and uniform declarations added before rendering.
+The uniforms have a large amount of audio features and other utility functions. After the compilation, the first part of the shader looks like this:
+
+```glsl
+#version 300 es
+precision mediump float;
+out vec4 fragColor;
+uniform vec4 iMouse;
+uniform float iTime;
+uniform vec3 iResolution;
+uniform sampler2D iChannel0;
+uniform sampler2D iChannel1;
+uniform sampler2D iChannel2;
+uniform sampler2D iChannel3;
+uniform int iFrame;
+
+uniform float spectralCentroidNormalized;
+uniform float spectralCentroidMean;
+uniform float spectralCentroidMedian;
+uniform float spectralCentroidStandardDeviation;
+uniform float spectralCentroidZScore;
+uniform float spectralCentroidMin;
+uniform float spectralCentroidMax;
+uniform float spectralCentroid;
+uniform float spectralFluxNormalized;
+uniform float spectralFluxMean;
+uniform float spectralFluxMedian;
+uniform float spectralFluxStandardDeviation;
+uniform float spectralFluxZScore;
+uniform float spectralFluxMin;
+uniform float spectralFluxMax;
+uniform float spectralFlux;
+uniform float spectralSpreadNormalized;
+uniform float spectralSpreadMean;
+uniform float spectralSpreadMedian;
+uniform float spectralSpreadStandardDeviation;
+uniform float spectralSpreadZScore;
+uniform float spectralSpreadMin;
+uniform float spectralSpreadMax;
+uniform float spectralSpread;
+uniform float spectralRolloffNormalized;
+uniform float spectralRolloffMean;
+uniform float spectralRolloffMedian;
+uniform float spectralRolloffStandardDeviation;
+uniform float spectralRolloffZScore;
+uniform float spectralRolloffMin;
+uniform float spectralRolloffMax;
+uniform float spectralRolloff;
+uniform float spectralRoughnessNormalized;
+uniform float spectralRoughnessMean;
+uniform float spectralRoughnessMedian;
+uniform float spectralRoughnessStandardDeviation;
+uniform float spectralRoughnessZScore;
+uniform float spectralRoughnessMin;
+uniform float spectralRoughnessMax;
+uniform float spectralRoughness;
+uniform float spectralKurtosisNormalized;
+uniform float spectralKurtosisMean;
+uniform float spectralKurtosisMedian;
+uniform float spectralKurtosisStandardDeviation;
+uniform float spectralKurtosisZScore;
+uniform float spectralKurtosisMin;
+uniform float spectralKurtosisMax;
+uniform float spectralKurtosis;
+uniform float energyNormalized;
+uniform float energyMean;
+uniform float energyMedian;
+uniform float energyStandardDeviation;
+uniform float energyZScore;
+uniform float energyMin;
+uniform float energyMax;
+uniform float energy;
+uniform float spectralEntropyNormalized;
+uniform float spectralEntropyMean;
+uniform float spectralEntropyMedian;
+uniform float spectralEntropyStandardDeviation;
+uniform float spectralEntropyZScore;
+uniform float spectralEntropyMin;
+uniform float spectralEntropyMax;
+uniform float spectralEntropy;
+uniform float spectralCrestNormalized;
+uniform float spectralCrestMean;
+uniform float spectralCrestMedian;
+uniform float spectralCrestStandardDeviation;
+uniform float spectralCrestZScore;
+uniform float spectralCrestMin;
+uniform float spectralCrestMax;
+uniform float spectralCrest;
+uniform float spectralSkewNormalized;
+uniform float spectralSkewMean;
+uniform float spectralSkewMedian;
+uniform float spectralSkewStandardDeviation;
+uniform float spectralSkewZScore;
+uniform float spectralSkewMin;
+uniform float spectralSkewMax;
+uniform float spectralSkew;
+uniform float pitchClassNormalized;
+uniform float pitchClassMean;
+uniform float pitchClassMedian;
+uniform float pitchClassStandardDeviation;
+uniform float pitchClassZScore;
+uniform float pitchClassMin;
+uniform float pitchClassMax;
+uniform float pitchClass;
+uniform float bassNormalized;
+uniform float bassMean;
+uniform float bassMedian;
+uniform float bassStandardDeviation;
+uniform float bassZScore;
+uniform float bassMin;
+uniform float bassMax;
+uniform float bass;
+uniform float midsNormalized;
+uniform float midsMean;
+uniform float midsMedian;
+uniform float midsStandardDeviation;
+uniform float midsZScore;
+uniform float midsMin;
+uniform float midsMax;
+uniform float mids;
+uniform float trebleNormalized;
+uniform float trebleMean;
+uniform float trebleMedian;
+uniform float trebleStandardDeviation;
+uniform float trebleZScore;
+uniform float trebleMin;
+uniform float trebleMax;
+uniform float treble;
+uniform bool beat;
+```
+
+Respond to some of the audio features in a way that generates beautiful, reactive visuals. Use variables that make sense for the visual.
+Things like z-scores can be helpful for detecting things like 'drops' in the music, which are good opportunities to create a large change.
+For the most part, these uniforms will be between 0 and 1, but z-scores go between -1 and 1.
 
 ### Technical Requirements
 
 - Must use GLSL (OpenGL Shading Language)
-- Should support uniform knob variables for tuning
-- Follow the PROBE pattern for adjustable parameters:
-    ```glsl
-    uniform float knob_1;
-    #define EPSILON 0.0001
-    #define PROBE_A (knob_1 + EPSILON)
-    ```
+  Create `#define` statements to use instead of the raw uniforms, and map them to the uniforms instead.
+  This is so the uniforms for audio analysis can be changed to something else without altering the shader.
+  use the following pattern:
+
+```glsl
+#define PROBE_A (spectralCentroidZScore) /* or other uniform */
+```
+
+increment the letter of the alphabet for each new #define.
+
+then use PROBE_A in the shader when generating the visuals.
+
 - Support frame blending for smooth transitions
 - Use HSL color space for better control over color transitions
 
