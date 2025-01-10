@@ -1,0 +1,104 @@
+# Music Visualization Shader Requirements
+
+## Overview
+
+These shaders are used to create real-time music visualizations that control LED lights through screen scraping. The goal is to create engaging, psychedelic patterns that react meaningfully to music while avoiding too many visual dead zones (solid black or white areas).
+
+## Core Requirements
+
+### Visual Quality
+
+- Create intricate, evolving fractal-like patterns
+- Maintain constant visual interest across the entire screen
+- Avoid large areas of solid black or white
+- Generate smooth, hypnotic movements
+- Produce psychedelic, organic-feeling visuals
+
+### Audio Reactivity
+
+- Respond to these audio features:
+    - beat (boolean)
+    - energy (normalized and z-score)
+    - spectralCentroid (normalized and z-score)
+    - spectralRoughness (normalized and z-score)
+    - spectralFlux (normalized)
+    - spectralSpread (normalized)
+    - spectralRolloff (normalized)
+    - spectralSkewness (normalized)
+    - spectralKurtosis (normalized)
+
+### Technical Requirements
+
+- Must use GLSL (OpenGL Shading Language)
+- Should support uniform knob variables for tuning
+- Follow the PROBE pattern for adjustable parameters:
+    ```glsl
+    uniform float knob_1;
+    #define EPSILON 0.0001
+    #define PROBE_A (knob_1 + EPSILON)
+    ```
+- Support frame blending for smooth transitions
+- Use HSL color space for better control over color transitions
+
+### Color Management
+
+- Colors should be vibrant but controlled
+- Avoid oversaturation that leads to white-out
+- Maintain good contrast for LED visualization
+- Support smooth color transitions
+- React to music in visually pleasing ways
+
+### Performance
+
+- Maintain 60fps on modern hardware
+- Optimize raymarching steps and iterations
+- Balance visual complexity with performance
+
+## Utility Functions Available
+
+- rgb2hsl(vec3 rgb) : Convert RGB to HSL
+- hsl2rgb(vec3 hsl) : Convert HSL to RGB
+- getLastFrameColor(vec2 uv) : Get previous frame's color
+
+## Example Patterns
+
+- Plasma effects
+- Fractal patterns
+- Kaleidoscopic effects
+- Ray-marched 3D forms
+- Wave and ripple patterns
+
+## Best Practices
+
+1. Use audio features to modulate:
+
+    - Movement speed
+    - Color transitions
+    - Pattern scale
+    - Form distortion
+    - Intensity/energy
+
+2. Implement frame blending for smooth transitions
+
+3. Use HSL color space for better control
+
+4. Provide tunable parameters via knobs
+
+5. Test with various music genres
+
+## Anti-Patterns to Avoid
+
+- Large areas of solid color
+- Harsh, jarring transitions
+- Excessive white-out or black areas
+- Non-musical movement
+- Strobe-like effects
+- Uncontrolled parameter ranges
+
+## Testing
+
+- Test with various music genres
+- Verify LED compatibility
+- Check for visual dead zones
+- Ensure smooth animation
+- Validate audio reactivity
