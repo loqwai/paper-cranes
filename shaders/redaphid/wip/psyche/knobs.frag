@@ -1,3 +1,4 @@
+//http://localhost:6969/edit.html?knob_1=1.65&knob_1.min=-3&knob_1.max=3&knob_2=-2.34&knob_2.min=-3&knob_2.max=3&knob_3=0.33&knob_3.min=-3&knob_3.max=3&knob_5=3.56&knob_5.min=-3&knob_5.max=4&knob_4=1.63&knob_4.min=-3&knob_4.max=10&knob_6=1.75&knob_6.min=-3&knob_6.max=3
 #define PI 3.14159265359
 
 uniform float knob_1;  // Base rotation speed
@@ -24,9 +25,9 @@ uniform float knob_6;  // Pattern evolution speed
 #define PATTERN_SPEED (PROBE_F * 0.2)
 
 // Audio defaults
-#define AUDIO_ROT mix(0.1, 0.3, spectralCentroidZScore)
-#define AUDIO_SCALE mix(1.0, 2.0, energyNormalized)
-#define AUDIO_DETAIL mix(3.0, 6.0, spectralRoughnessNormalized)
+#define AUDIO_ROT mix(0.1, 0.3, PROBE_A)
+#define AUDIO_SCALE mix(1., 2.0, PROBE_B)
+#define AUDIO_DETAIL mix(3.0, 6.0, PROBE_C)
 
 #define rot(a) mat2(cos(a), -sin(a), sin(a), cos(a))
 
@@ -46,7 +47,7 @@ float fractalNoise(vec3 p) {
         float v = sin(p.x*freq) * cos(p.y*freq) * sin(p.z*freq + time * PATTERN_SPEED);
         v += cos(p.z*freq) * sin(p.x*freq + AUDIO_ROT);
         noise += v * amp;
-        freq *= 1.8 + spectralRoughnessNormalized * 0.2;
+        freq *= PROBE_D;
         amp *= 0.7;
         vec2 xy = rot(PI/3.0 + time * ROT_SPEED) * p.xy;
         p = vec3(xy.x, xy.y, p.z);
@@ -79,7 +80,7 @@ float map(vec3 p) {
         q *= AUDIO_SCALE;
 
         float current = length(q) * pow(1.3, float(-i));
-        d = smin(d, current, 0.3 + spectralCentroidNormalized * 0.2);
+        d = smin(d, current, PROBE_E);
     }
 
     float detail = fractalNoise(p1 * AUDIO_SCALE);
