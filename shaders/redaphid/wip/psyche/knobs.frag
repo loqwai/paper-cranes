@@ -1,4 +1,5 @@
 //http://localhost:6969/edit.html?knob_1=1.65&knob_1.min=-3&knob_1.max=3&knob_2=-2.34&knob_2.min=-3&knob_2.max=3&knob_3=0.33&knob_3.min=-3&knob_3.max=3&knob_5=3.56&knob_5.min=-3&knob_5.max=4&knob_4=1.63&knob_4.min=-3&knob_4.max=10&knob_6=1.75&knob_6.min=-3&knob_6.max=3
+//http://localhost:6969/edit.html?knob_1=-0.62&knob_1.min=-3&knob_1.max=3&knob_2=-2.34&knob_2.min=-3&knob_2.max=3&knob_3=0.33&knob_3.min=-3&knob_3.max=3&knob_5=3.56&knob_5.min=-3&knob_5.max=4&knob_4=1.63&knob_4.min=-3&knob_4.max=10&knob_6=-0.62&knob_6.min=-1&knob_6.max=1
 #define PI 3.14159265359
 
 uniform float knob_1;  // Base rotation speed
@@ -9,7 +10,7 @@ uniform float knob_5;  // Color blend
 uniform float knob_6;  // Pattern evolution speed
 
 #define EPSILON 0.0001
-#define PROBE_A (knob_1 + EPSILON)
+#define PROBE_A (knob_1 + EPSILON)/ 5. * spectralCrestMean
 #define PROBE_B (knob_2 + EPSILON)
 #define PROBE_C (knob_3 + EPSILON)
 #define PROBE_D (knob_4 + EPSILON)
