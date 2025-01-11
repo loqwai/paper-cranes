@@ -6,13 +6,17 @@
       "type": "extensionHost",
       "request": "launch",
       "args": [
+        "--disable-extensions",
         "--extensionDevelopmentPath=${workspaceFolder}",
-        "./${workspaceFolder}/../shaders/glassy-field.frag"
+        "${workspaceFolder}/../shaders/glassy-field.frag"
       ],
+      "env": {
+        "VSCODE_DEBUG_MODE": "true",
+        "VSCODE_EXTENSIONS": "${workspaceFolder}"
+      },
       "outFiles": [
         "${workspaceFolder}/out/**/*.js"
-      ],
-      "preLaunchTask": "npm: watch"
+      ]
     }
   ]
 }
