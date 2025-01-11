@@ -33,9 +33,9 @@
         }]
     },
     "devDependencies": {
-        "@types/node": "^16.x",
-        "@types/vscode": "^1.60.0",
-        "typescript": "^4.x",
-        "@vscode/vsce": "^2.x"
+        "@types/node": "^22.x",
+        "@types/vscode": "^1.93.1",
+        "typescript": "^5.x",
+        "@vscode/vsce": "^32.x"
     }
 }
