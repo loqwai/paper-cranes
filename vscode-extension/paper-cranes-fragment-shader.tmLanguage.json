@@ -1,26 +1,34 @@
 {
-  "name": "Paper Cranes Fragment Shader",
-  "scopeName": "source.paper-cranes-fragment-shader",
-  "patterns": [
-    {
-      "include": "source.glsl"
-    },
-    {
-      "include": "#paper-cranes-additions"
-    }
-  ],
-  "repository": {
-    "paper-cranes-additions": {
-      "patterns": [
-        {
-          "name": "support.constant.paper-cranes",
-          "match": "\\b(spectralCentroid|spectralCentroidNormalized|spectralFlux|energy|bass|mids|treble|beat)\\b"
-        },
-        {
-          "name": "support.function.paper-cranes",
-          "match": "\\b(rgb2hsl|hsl2rgb|getLastFrameColor|mapValue)\\b"
-        }
-      ]
+    "name": "Paper Cranes Fragment Shader",
+    "scopeName": "source.paper-cranes-fragment-shader",
+    "patterns": [
+      {
+        "include": "source.glsl"
+      },
+      {
+        "include": "#paper-cranes-additions"
+      }
+    ],
+    "repository": {
+      "paper-cranes-additions": {
+        "patterns": [
+          {
+            "name": "support.variable.uniform.paper-cranes",
+            "match": "\\b(spectralCentroid|spectralCentroidNormalized|spectralFlux|energy|bass|mids|treble|beat|spectralRoughness|spectralKurtosis|spectralSpread|spectralRolloff|spectralCrest|spectralSkew|pitchClass|spectralEntropy)\\b"
+          },
+          {
+            "name": "support.variable.uniform.stats.paper-cranes",
+            "match": "\\b(\\w+)(Mean|Median|Min|Max|StandardDeviation|ZScore|Normalized)\\b"
+          },
+          {
+            "name": "support.function.paper-cranes",
+            "match": "\\b(rgb2hsl|hsl2rgb|getLastFrameColor|mapValue)\\b"
+          },
+          {
+            "name": "support.constant.paper-cranes",
+            "match": "\\b(PI|TAU|EPSILON)\\b"
+          }
+        ]
+      }
     }
   }
-}

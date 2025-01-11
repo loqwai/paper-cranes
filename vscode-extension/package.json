@@ -1,6 +1,6 @@
 {
   "name": "paper-cranes-shader-vscode-extension",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "publisher": "hypnodroid",
   "repository": "https://github.com/hypnodroid/paper-cranes",
   "readme": "README.md",
@@ -14,7 +14,8 @@
     "watch": "tsc -watch -p ./",
     "package": "vsce package -o extension.vsix",
     "build": "rm -rf out && npm run compile && npm run package",
-    "install": "code --install-extension extension.vsix"
+    "install": "npm run build && code --install-extension extension.vsix",
+    "debug": "npm run compile && code --extensionDevelopmentPath=${PWD} ../shaders/plasma.frag"
   },
   "engines": {
     "vscode": "^1.93.1"
@@ -25,7 +26,7 @@
   "contributes": {
     "languages": [
       {
-        "id": "hypnodroid.paper-cranes-shader-vscode-extension",
+        "id": "paper-cranes-fragment-shader",
         "aliases": [
           "Paper Cranes Visualization",
           "GLSL",
@@ -49,7 +50,15 @@
           "source.glsl": "glsl"
         }
       }
-    ]
+    ],
+    "configurationDefaults": {
+      "files.associations": {
+        "*.frag": "paper-cranes-fragment-shader",
+        "*.vert": "paper-cranes-fragment-shader",
+        "*.glsl": "paper-cranes-fragment-shader",
+        "*.crane": "paper-cranes-fragment-shader"
+      }
+    }
   },
   "devDependencies": {
     "@types/node": "^22.x",
@@ -61,6 +70,10 @@
     "logo.png",
     "out/**",
     "language-configuration.json",
-    "LICENSE"
+    "LICENSE",
+    "paper-cranes-fragment-shader.tmLanguage.json"
+  ],
+  "extensionDependencies": [
+    "slevesque.shader"
   ]
 }
