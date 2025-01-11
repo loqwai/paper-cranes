@@ -2,10 +2,5 @@
     "parserOptions": {
         "ecmaVersion": 2023,
         "sourceType": "module"
-    },
-    "plugins": ["prettier"],
-
-    "rules": {
-        "prettier/prettier": "warn"
     }
 }

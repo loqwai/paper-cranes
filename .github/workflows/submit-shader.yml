@@ -32,7 +32,7 @@ jobs:
                         return inUserFolder && isFragmentShader;
                       });
 
-                      core.setOutput('valid_scope', isValidScope); // Correct way to set output
+                      core.setOutput('valid_scope', isValidScope.toString());
                       if (!isValidScope) {
                         console.log("PR contains changes outside the user's specific directory.");
                       } else {
