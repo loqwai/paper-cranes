@@ -5,6 +5,14 @@
   "repository": "https://github.com/hypnodroid/paper-cranes",
   "displayName": "Paper Cranes Shader Syntax",
   "description": "Language support for Paper Cranes audio visualization shaders",
+  "main": "./out/extension.js",
+  "scripts": {
+      "vscode:prepublish": "npm run compile",
+      "compile": "tsc -p ./",
+      "watch": "tsc -watch -p ./",
+      "package": "vsce package",
+      "build": "npm run compile && npm run package"
+  },
     "engines": {
         "vscode": "^1.93.1"
     },
@@ -23,15 +31,6 @@
             "scopeName": "source.glsl",
             "path": "./syntaxes/glsl.tmLanguage.json"
         }]
-    },
-
-    "main": "./out/src/extension.js",
-    "scripts": {
-        "vscode:prepublish": "npm run compile",
-        "compile": "tsc -p ./",
-        "watch": "tsc -watch -p ./",
-        "package": "vsce package",
-        "build": "npm run compile && npm run package"
     },
     "devDependencies": {
         "@types/node": "^16.x",
