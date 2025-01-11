@@ -24,24 +24,29 @@
   "contributes": {
     "languages": [
       {
-        "id": "glsl",
+        "id": "hypnodroid.paper-cranes-shader-vscode-extension",
         "aliases": [
+          "Paper Cranes Visualization",
           "GLSL",
           "glsl"
         ],
         "extensions": [
           ".frag",
           ".vert",
-          ".glsl"
+          ".glsl",
+          ".crane"
         ],
         "configuration": "./language-configuration.json"
       }
     ],
     "grammars": [
       {
-        "language": "glsl",
-        "scopeName": "source.glsl",
-        "path": "./syntaxes/glsl.tmLanguage.json"
+        "language": "paper-cranes-fragment-shader",
+        "scopeName": "source.paper-cranes-fragment-shader",
+        "path": "./paper-cranes-fragment-shader.tmLanguage.json",
+        "embeddedLanguages": {
+          "source.glsl": "glsl"
+        }
       }
     ]
   },

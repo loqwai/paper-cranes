@@ -1,0 +1,26 @@
+{
+  "name": "Paper Cranes Fragment Shader",
+  "scopeName": "source.paper-cranes-fragment-shader",
+  "patterns": [
+    {
+      "include": "source.glsl"
+    },
+    {
+      "include": "#paper-cranes-additions"
+    }
+  ],
+  "repository": {
+    "paper-cranes-additions": {
+      "patterns": [
+        {
+          "name": "support.constant.paper-cranes",
+          "match": "\\b(spectralCentroid|spectralCentroidNormalized|spectralFlux|energy|bass|mids|treble|beat)\\b"
+        },
+        {
+          "name": "support.function.paper-cranes",
+          "match": "\\b(rgb2hsl|hsl2rgb|getLastFrameColor|mapValue)\\b"
+        }
+      ]
+    }
+  }
+}
