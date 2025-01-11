@@ -1,15 +1,17 @@
 {
     "compilerOptions": {
-        "module": "commonjs",
-        "target": "ES2020",
+        "module": "ES2022",
+        "target": "ES2022",
         "outDir": "out",
-        "rootDir": "src",
+        "rootDir": ".",
         "sourceMap": true,
         "strict": true,
-        "esModuleInterop": true
+        "esModuleInterop": true,
+        "noImplicitAny": false
     },
     "include": [
-        "src/**/*"
+        "**/*.ts",
+        "**/*.js"
     ],
     "exclude": [
         "node_modules",

@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "publisher": "hypnodroid",
   "repository": "https://github.com/hypnodroid/paper-cranes",
+  "readme": "README.md",
   "displayName": "Paper Cranes Shader Syntax",
   "description": "Language support for Paper Cranes audio visualization shaders",
   "main": "./out/extension.js",
@@ -37,5 +38,11 @@
         "@types/vscode": "^1.93.1",
         "typescript": "^5.x",
         "@vscode/vsce": "^3.x"
-    }
+    },
+    "files": [
+        "README.md",
+        "out/**",
+        "syntaxes/**",
+        "language-configuration.json"
+    ]
 }
