@@ -1,0 +1,73 @@
+{
+  "name": "GLSL",
+  "scopeName": "source.glsl",
+  "patterns": [
+      {
+          "include": "#comments"
+      },
+      {
+          "include": "#keywords"
+      },
+      {
+          "include": "#numbers"
+      },
+      {
+          "include": "#operators"
+      }
+  ],
+  "repository": {
+      "comments": {
+          "patterns": [
+              {
+                  "name": "comment.line.double-slash.glsl",
+                  "match": "//.*$"
+              },
+              {
+                  "name": "comment.block.glsl",
+                  "begin": "/\\*",
+                  "end": "\\*/"
+              }
+          ]
+      },
+      "keywords": {
+          "patterns": [
+              {
+                  "name": "keyword.control.glsl",
+                  "match": "\\b(break|case|continue|default|discard|do|else|for|if|return|switch|while)\\b"
+              },
+              {
+                  "name": "storage.type.glsl",
+                  "match": "\\b(void|bool|int|uint|float|double|vec[234]|dvec[234]|bvec[234]|ivec[234]|uvec[234]|mat[234]|mat[234]x[234]|dmat[234]|dmat[234]x[234]|sampler[123]D|samplerCube|sampler2DRect|sampler[12]DShadow|sampler2DRectShadow|samplerCubeShadow|sampler[12]DArray|sampler2DArrayShadow|samplerBuffer|isampler[123]D|isamplerCube|isampler2DRect|isampler[12]DArray|isamplerBuffer|usampler[123]D|usamplerCube|usampler2DRect|usampler[12]DArray|usamplerBuffer|atomic_uint)\\b"
+              },
+              {
+                  "name": "storage.modifier.glsl",
+                  "match": "\\b(attribute|const|uniform|varying|buffer|shared|coherent|volatile|restrict|readonly|writeonly|layout|centroid|flat|smooth|noperspective|patch|sample|subroutine|in|out|inout|invariant|precise|lowp|mediump|highp)\\b"
+              },
+              {
+                  "name": "support.function.glsl",
+                  "match": "\\b(rgb2hsl|hsl2rgb|getLastFrameColor)\\b"
+              },
+              {
+                  "name": "support.constant.glsl",
+                  "match": "\\b(spectralCentroid|spectralCentroidNormalized|spectralCentroidMean|spectralCentroidMedian|spectralCentroidStandardDeviation|spectralCentroidZScore|spectralCentroidMin|spectralCentroidMax|energy|energyNormalized|energyMean|energyMedian|energyStandardDeviation|energyZScore|energyMin|energyMax|bass|bassNormalized|bassMean|bassMedian|bassStandardDeviation|bassZScore|bassMin|bassMax|mids|midsNormalized|midsMean|midsMedian|midsStandardDeviation|midsZScore|midsMin|midsMax|treble|trebleNormalized|trebleMean|trebleMedian|trebleStandardDeviation|trebleZScore|trebleMin|trebleMax|beat)\\b"
+              }
+          ]
+      },
+      "numbers": {
+          "patterns": [
+              {
+                  "name": "constant.numeric.glsl",
+                  "match": "\\b([0-9]+\\.?[0-9]*([eE][+-]?[0-9]+)?|\\.[0-9]+([eE][+-]?[0-9]+)?)\\b"
+              }
+          ]
+      },
+      "operators": {
+          "patterns": [
+              {
+                  "name": "keyword.operator.glsl",
+                  "match": "\\+|\\-|\\*|\\/|%|\\+\\+|\\-\\-|&&|\\|\\||\\^|&|\\||~|<<|>>|<|<=|>|>=|==|!=|=|\\+=|\\-=|\\*=|\\/=|%=|&=|\\|=|\\^=|<<=|>>="
+              }
+          ]
+      }
+  }
+}
