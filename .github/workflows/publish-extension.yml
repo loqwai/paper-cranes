@@ -1,4 +1,4 @@
-name: Publish npm package
+name: Publish VS Code Extension
 on:
     workflow_dispatch:
     push:
@@ -9,20 +9,24 @@ on:
             - '.github/workflows/'
 
 jobs:
-    build:
-        runs-on: ubuntu-latest
+    publish-extension:
+        runs-on: ubuntu-22.04
         permissions:
             contents: read
             id-token: write
         steps:
             - uses: actions/checkout@v4
-            # Setup .npmrc file to publish to npm
             - uses: actions/setup-node@v4
               with:
-                  node-version: '21.x'
+                  node-version: '22.x'
                   registry-url: 'https://registry.npmjs.org'
-            - run: cd ./packages/comfyui-api-nodes && npm clean-install
-            - run: cd ./packages/comfyui-api-nodes && npm publish --access public
-              env:
-                  # actions/setup-node uses this env variable to set the auth token in the .npmrc file
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+            # Build and publish VS Code extension
+            - name: Install dependencies
+              run: cd ./vscode-extension && npm clean-install
+
+            - name: Build extension
+              run: cd ./vscode-extension && npm run build
+
+            - name: Publish to VS Code Marketplace
+              run: cd ./vscode-extension && npx vsce publish -p ${{ secrets.VSCE_PAT }}

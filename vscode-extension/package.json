@@ -1,18 +1,19 @@
 {
-  "name": "paper-cranes-shader-syntax",
+  "name": "paper-cranes-shader-vscode-extension",
   "version": "1.0.0",
   "publisher": "hypnodroid",
   "repository": "https://github.com/hypnodroid/paper-cranes",
   "readme": "README.md",
   "displayName": "Paper Cranes Shader Syntax",
   "description": "Language support for Paper Cranes audio visualization shaders",
-  "main": "./out/extension.js",
+  "icon": "logo.png",
+  "main": "./out/index.js",
   "scripts": {
       "vscode:prepublish": "npm run compile",
       "compile": "tsc -p ./",
       "watch": "tsc -watch -p ./",
       "package": "vsce package",
-      "build": "npm run compile && npm run package"
+      "build": "rm -rf out && npm run compile && npm run package"
   },
     "engines": {
         "vscode": "^1.93.1"
@@ -40,9 +41,9 @@
         "@vscode/vsce": "^3.x"
     },
     "files": [
-        "README.md",
+        "logo.png",
         "out/**",
-        "syntaxes/**",
-        "language-configuration.json"
+        "language-configuration.json",
+        "LICENSE"
     ]
 }
