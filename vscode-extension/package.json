@@ -13,7 +13,8 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "package": "vsce package -o extension.vsix",
-    "build": "rm -rf out && npm run compile && npm run package"
+    "build": "rm -rf out && npm run compile && npm run package",
+    "install": "code --install-extension extension.vsix"
   },
   "engines": {
     "vscode": "^1.93.1"
