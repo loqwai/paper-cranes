@@ -112,7 +112,7 @@ function init() {
         'pitchClassZScore',
         'pitchClassMin',
         'pitchClassMax',
-        'hslMix',
+        'hslmix',
         'hsl2rgb',
         'rgb2hsl',
         'map',

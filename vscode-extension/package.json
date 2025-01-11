@@ -1,0 +1,35 @@
+{
+  "name": "Paper Cranes",
+  "displayName": "Paper Cranes Shader Syntax",
+  "description": "Syntax highlighting for the GLSL shaders used in Paper Cranes",
+  "version": "1",
+  "engines": {
+      "vscode": "^1.60.0"
+  },
+  "categories": [
+      "Programming Languages",
+      "Visualization"
+  ],
+  "contributes": {
+      "languages": [{
+          "id": "glsl",
+          "aliases": ["GLSL", "glsl"],
+          "extensions": [".frag", ".vert", ".glsl"],
+          "configuration": "./language-configuration.json"
+      }],
+      "grammars": [{
+          "language": "glsl",
+          "scopeName": "source.glsl",
+          "path": "./syntaxes/glsl.tmLanguage.json"
+      }]
+  },
+  "activationEvents": [
+      "onLanguage:glsl"
+  ],
+  "main": "./out/extension.js",
+  "scripts": {
+      "vscode:prepublish": "npm run compile",
+      "compile": "tsc -p ./",
+      "watch": "tsc -watch -p ./"
+  }
+}
