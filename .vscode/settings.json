@@ -1,11 +1,7 @@
 {
-    "[glsl]": {
-        "editor.formatOnSave": false,
-        "editor.semanticHighlighting.enabled": true,
-        "editor.diagnostics.enabled": false
-    },
     "files.associations": {
-        "*.frag": "glsl",
-        "*.vert": "glsl"
+        "*.frag": "paper-cranes-fragment-shader",
+        "*.vert": "paper-cranes-fragment-shader",
+        "*.glsl": "paper-cranes-fragment-shader"
     }
 }

@@ -2,7 +2,7 @@ import * as vscode from 'vscode'
 
 export function activate(context: vscode.ExtensionContext) {
     // Register completions provider
-    const provider = vscode.languages.registerCompletionItemProvider('glsl', {
+    const provider = vscode.languages.registerCompletionItemProvider('paper-cranes-fragment-shader', {
         provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
             const keywords = [
                 // Add all your keywords from monaco.js here
