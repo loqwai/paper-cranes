@@ -12,7 +12,7 @@
       "vscode:prepublish": "npm run compile",
       "compile": "tsc -p ./",
       "watch": "tsc -watch -p ./",
-      "package": "vsce package",
+      "package": "vsce package -o extension.vsix",
       "build": "rm -rf out && npm run compile && npm run package"
   },
     "engines": {
