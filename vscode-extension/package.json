@@ -1,10 +1,12 @@
 {
   "name": "paper-cranes-shader-syntax",
+  "version": "1.0.0",
+  "publisher": "hypnodroid",
+  "repository": "https://github.com/hypnodroid/paper-cranes",
   "displayName": "Paper Cranes Shader Syntax",
   "description": "Language support for Paper Cranes audio visualization shaders",
-  "version": "1.0.0",
     "engines": {
-        "vscode": "^1.60.0"
+        "vscode": "^1.93.1"
     },
     "categories": [
         "Programming Languages"
