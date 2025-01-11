@@ -11,7 +11,11 @@
         "reveal": "always",
         "panel": "new",
         "clear": true,
-        "echo": true
+        "echo": true,
+        "focus": true
+      },
+      "runOptions": {
+        "runOn": "folderOpen"
       },
       "group": {
         "kind": "build",

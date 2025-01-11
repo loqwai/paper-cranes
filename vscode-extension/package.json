@@ -58,7 +58,13 @@
         "*.glsl": "paper-cranes-fragment-shader",
         "*.crane": "paper-cranes-fragment-shader"
       }
-    }
+    },
+    "commands": [
+      {
+        "command": "paper-cranes-fragment-shader.activate",
+        "title": "Activate Paper Cranes Shader"
+      }
+    ]
   },
   "devDependencies": {
     "@types/node": "^22.x",
@@ -75,5 +81,10 @@
   ],
   "extensionDependencies": [
     "slevesque.shader"
+  ],
+  "activationEvents": [
+    "onLanguage:paper-cranes-fragment-shader",
+    "onCommand:paper-cranes-fragment-shader.activate",
+    "onStartupFinished"
   ]
 }

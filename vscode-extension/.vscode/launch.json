@@ -6,7 +6,6 @@
       "type": "extensionHost",
       "request": "launch",
       "args": [
-        "--disable-extensions",
         "--extensionDevelopmentPath=${workspaceFolder}",
         "${workspaceFolder}/../shaders/glassy-field.frag"
       ],
@@ -16,7 +15,8 @@
       },
       "outFiles": [
         "${workspaceFolder}/out/**/*.js"
-      ]
+      ],
+      "preLaunchTask": "npm: watch"
     }
   ]
 }
