@@ -1,6 +1,6 @@
 {
   "name": "paper-cranes-shader-vscode-extension",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "hypnodroid",
   "repository": "https://github.com/hypnodroid/paper-cranes",
   "readme": "README.md",
@@ -9,41 +9,52 @@
   "icon": "logo.png",
   "main": "./out/index.js",
   "scripts": {
-      "vscode:prepublish": "npm run compile",
-      "compile": "tsc -p ./",
-      "watch": "tsc -watch -p ./",
-      "package": "vsce package -o extension.vsix",
-      "build": "rm -rf out && npm run compile && npm run package"
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package -o extension.vsix",
+    "build": "rm -rf out && npm run compile && npm run package"
   },
-    "engines": {
-        "vscode": "^1.93.1"
-    },
-    "categories": [
-        "Programming Languages"
+  "engines": {
+    "vscode": "^1.93.1"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "glsl",
+        "aliases": [
+          "GLSL",
+          "glsl"
+        ],
+        "extensions": [
+          ".frag",
+          ".vert",
+          ".glsl"
+        ],
+        "configuration": "./language-configuration.json"
+      }
     ],
-    "contributes": {
-        "languages": [{
-            "id": "glsl",
-            "aliases": ["GLSL", "glsl"],
-            "extensions": [".frag", ".vert", ".glsl"],
-            "configuration": "./language-configuration.json"
-        }],
-        "grammars": [{
-            "language": "glsl",
-            "scopeName": "source.glsl",
-            "path": "./syntaxes/glsl.tmLanguage.json"
-        }]
-    },
-    "devDependencies": {
-        "@types/node": "^22.x",
-        "@types/vscode": "^1.93.1",
-        "typescript": "^5.x",
-        "@vscode/vsce": "^3.x"
-    },
-    "files": [
-        "logo.png",
-        "out/**",
-        "language-configuration.json",
-        "LICENSE"
+    "grammars": [
+      {
+        "language": "glsl",
+        "scopeName": "source.glsl",
+        "path": "./syntaxes/glsl.tmLanguage.json"
+      }
     ]
+  },
+  "devDependencies": {
+    "@types/node": "^22.x",
+    "@types/vscode": "^1.93.1",
+    "typescript": "^5.x",
+    "@vscode/vsce": "^3.x"
+  },
+  "files": [
+    "logo.png",
+    "out/**",
+    "language-configuration.json",
+    "LICENSE"
+  ]
 }
