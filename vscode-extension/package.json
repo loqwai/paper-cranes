@@ -36,6 +36,6 @@
         "@types/node": "^22.x",
         "@types/vscode": "^1.93.1",
         "typescript": "^5.x",
-        "@vscode/vsce": "^32.x"
+        "@vscode/vsce": "^3.x"
     }
 }
