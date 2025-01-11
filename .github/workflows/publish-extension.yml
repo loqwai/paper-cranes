@@ -1,0 +1,28 @@
+name: Publish npm package
+on:
+    workflow_dispatch:
+    push:
+        branches:
+            - main
+        paths:
+            - 'vscode-extension/package.json'
+            - '.github/workflows/'
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            id-token: write
+        steps:
+            - uses: actions/checkout@v4
+            # Setup .npmrc file to publish to npm
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: '21.x'
+                  registry-url: 'https://registry.npmjs.org'
+            - run: cd ./packages/comfyui-api-nodes && npm clean-install
+            - run: cd ./packages/comfyui-api-nodes && npm publish --access public
+              env:
+                  # actions/setup-node uses this env variable to set the auth token in the .npmrc file
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
