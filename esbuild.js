@@ -10,7 +10,7 @@ async function ensureDistDirectory() {
     try {
         await mkdir('dist', { recursive: true })
     } catch (err) {
-        console.error('Error ensuring dist direcory:', err)
+        console.error('Error ensuring dist directory:', err)
     }
 }
 
@@ -76,7 +76,7 @@ async function main() {
     await generateHTML(shaderFiles)
 
     await build({
-        entryPoints: entryPoints,
+        entryPoints,
         format: 'esm',
         bundle: true,
         minify: true,
@@ -85,8 +85,20 @@ async function main() {
         treeShaking: true,
         define: {
             CACHE_NAME: '"cranes-cache-v1"',
+            'process.env.NODE_ENV': '"production"'
         },
+        loader: {
+            '.ttf': 'file',
+            '.woff': 'file',
+            '.woff2': 'file',
+        }
     })
+
+    // Copy Monaco's files separately
+    await ncpAsync(
+        'node_modules/monaco-editor/min/vs',
+        'dist/vs'
+    )
 
     await Promise.all([
         ncpAsync('index.html', 'dist/index.html'),

@@ -1,4 +1,11 @@
-import * as monaco from 'https://cdn.jsdelivr.net/npm/monaco-editor@0.47.0/+esm'
+import * as monaco from 'monaco-editor'
+
+// Set up Monaco's worker path
+self.MonacoEnvironment = {
+    getWorkerUrl: function(moduleId, label) {
+        return './vs/base/worker/workerMain.js';
+    }
+};
 
 function init() {
     //if we have a shader in the query param, return
@@ -448,6 +455,10 @@ function init() {
         minimap: { enabled: false },
         language: 'glsl',
         theme: 'vs-dark',
+        automaticLayout: true,
+        contextmenu: true,
+        copyWithSyntaxHighlighting: true,
+        quickSuggestions: true,
     })
 
     // on window resize, resize the editor
@@ -476,12 +487,21 @@ function init() {
         window.location.reload()
     })
 
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_Z, function () {
-        editor.trigger('mySource', 'undo', null)
+    // Update the undo/redo commands to work on both Windows and Mac
+    editor.addCommand(monaco.KeyMod.WinCtrl | monaco.KeyCode.KEY_Z, () => {
+        editor.trigger('keyboard', 'undo', null)
     })
 
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KEY_Z, function () {
-        editor.trigger('mySource', 'redo', null)
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_Z, () => {
+        editor.trigger('keyboard', 'undo', null)
+    })
+
+    editor.addCommand(monaco.KeyMod.WinCtrl | monaco.KeyMod.Shift | monaco.KeyCode.KEY_Z, () => {
+        editor.trigger('keyboard', 'redo', null)
+    })
+
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KEY_Z, () => {
+        editor.trigger('keyboard', 'redo', null)
     })
 
     document.querySelector('#publish').addEventListener('click', () => {})

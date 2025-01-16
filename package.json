@@ -21,6 +21,7 @@
     "htm": "^3.1.1",
     "html": "^1.0.0",
     "hypnosound": "^1.8.0",
+    "monaco-editor": "^0.52.2",
     "preact": "^10.25.4",
     "twgl-base.js": "^5.5.3"
   },
@@ -33,7 +34,7 @@
     "esbuild-plugin-css-modules": "^0.3.0",
     "esbuild-plugin-html": "^1.0.0",
     "eslint": "^8.57.1",
-    "live-server": "^1.2.2",
+    "live-server": "^1.2.0",
     "mini-css-extract-plugin": "^2.9.2",
     "ncp": "^2.0.0",
     "prettier": "^3.4.2"
