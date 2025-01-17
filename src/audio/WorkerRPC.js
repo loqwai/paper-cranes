@@ -94,7 +94,7 @@ export class WorkerRPC {
 
         const code = await response.text()
         const blob = new Blob([code], { type: 'application/javascript' })
-        this.worker = new Worker(URL.createObjectURL(blob))
+        this.worker = new Worker(URL.createObjectURL(blob), { type: 'module' })
 
         this.worker.onmessage = this.handleMessage
         this.worker.onerror = this.handleError
