@@ -75,6 +75,7 @@ async function main() {
 
     await generateHTML(shaderFiles)
 
+    // Bundle the main application
     await build({
         entryPoints,
         format: 'esm',
@@ -96,6 +97,18 @@ async function main() {
         assetNames: 'assets/[name]-[hash]',
     })
 
+    // Bundle the worker files separately
+    const workerFiles = await getEntryPoints('./src/audio/analyzers')
+    await build({
+        entryPoints: workerFiles,
+        format: 'iife', // Use IIFE format for workers
+        bundle: true,
+        minify: process.env.NODE_ENV === 'production',
+        sourcemap: true,
+        outdir: join(process.cwd(), 'dist/src/audio/analyzers'),
+        treeShaking: true,
+    })
+
     // Copy Monaco's files separately
     await ncpAsync(
         'node_modules/monaco-editor/min/vs',
@@ -115,12 +128,6 @@ async function main() {
         ncpAsync('analyze.html', 'dist/analyze.html'),
         ncpAsync('analyze.css', 'dist/analyze.css'),
     ])
-
-    // Also copy the analyzer files separately
-    await ncpAsync(
-        'src/audio/analyzers',
-        'dist/src/audio/analyzers'
-    )
 }
 
 main().catch(console.error)
