@@ -75,7 +75,6 @@ async function main() {
 
     await generateHTML(shaderFiles)
 
-    // Main bundle
     await build({
         entryPoints,
         format: 'esm',
@@ -95,19 +94,7 @@ async function main() {
         }
     })
 
-    // Bundle worker files
-    const workerFiles = await getEntryPoints('./src/audio/analyzers')
-    await build({
-        entryPoints: workerFiles,
-        format: 'iife', // Use IIFE format for workers
-        bundle: true,
-        minify: true,
-        sourcemap: !process.env.NODE_ENV,
-        outdir: join(process.cwd(), 'dist/src/audio/analyzers'),
-        treeShaking: true,
-    })
-
-    // Copy static files
+    // Copy Monaco's files separately
     await ncpAsync(
         'node_modules/monaco-editor/min/vs',
         'dist/vs'

@@ -86,7 +86,7 @@ export class WorkerRPC {
     }
 
     initialize = async () => {
-        const workerUrl = new URL(`./src/audio/analyzers/${this.workerName}.js`, import.meta.url)
+        const workerUrl = new URL(`src/audio/analyzers/${this.workerName}.js`, import.meta.url)
         const response = await fetch(workerUrl)
         if (!response.ok) {
             throw new Error(`Failed to fetch ${this.workerName} worker: ${response.statusText}`)
