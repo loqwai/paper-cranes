@@ -80,7 +80,7 @@ async function main() {
         format: 'esm',
         bundle: true,
         minify: true,
-        sourcemap: !process.env.NODE_ENV,
+        sourcemap: true,
         outdir: join(process.cwd(), 'dist'),
         treeShaking: true,
         define: {
