@@ -56,7 +56,7 @@ async function generateHTML(shaderFiles) {
     shaderFiles.forEach((file) => {
         const relativePath = relative('shaders', file)
         const queryParam = relativePath.replace(/\\/g, '/').replace('.frag', '')
-        htmlContent += `<li><a href="/?shader=${queryParam}">${queryParam}</a></li>\n`
+        htmlContent += `<li><a href="/?shader=${queryParam}&fullscreen=true">${queryParam}</a></li>\n`
     })
     htmlContent += '</ul>\n</body>\n</html>'
 
