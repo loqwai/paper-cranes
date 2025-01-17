@@ -84,8 +84,8 @@ async function main() {
         outdir: join(process.cwd(), 'dist'),
         treeShaking: true,
         define: {
-            CACHE_NAME: '"cranes-cache-v1"',
-            'process.env.NODE_ENV': '"production"'
+            CACHE_NAME: '"cranes-cache-v2"',
+            'process.env.NODE_ENV': process.env.NODE_ENV ?? '"development"',
         },
         loader: {
             '.ttf': 'file',
