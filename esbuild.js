@@ -79,19 +79,21 @@ async function main() {
         entryPoints,
         format: 'esm',
         bundle: true,
-        minify: true,
-        sourcemap: !process.env.NODE_ENV,
+        minify: process.env.NODE_ENV === 'production',
+        sourcemap: true,
         outdir: join(process.cwd(), 'dist'),
         treeShaking: true,
         define: {
             CACHE_NAME: '"cranes-cache-v1"',
-            'process.env.NODE_ENV': '"production"'
+            'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development')
         },
         loader: {
             '.ttf': 'file',
             '.woff': 'file',
             '.woff2': 'file',
-        }
+        },
+        publicPath: '/',
+        assetNames: 'assets/[name]-[hash]',
     })
 
     // Copy Monaco's files separately
@@ -113,6 +115,12 @@ async function main() {
         ncpAsync('analyze.html', 'dist/analyze.html'),
         ncpAsync('analyze.css', 'dist/analyze.css'),
     ])
+
+    // Also copy the analyzer files separately
+    await ncpAsync(
+        'src/audio/analyzers',
+        'dist/src/audio/analyzers'
+    )
 }
 
 main().catch(console.error)
