@@ -6,7 +6,7 @@
   "main": "dist/src/audio/AudioProcessor.js",
   "scripts": {
     "start": "npm run dev",
-    "serve": "vite dist --port 6969",
+    "serve": "browser-sync start --server dist --port 6969 --files 'dist/**/*' --no-open",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "node ./esbuild.js",
     "dev": "npm run build && concurrently \"npm run serve\" \"npm run build:watch\"",
@@ -27,6 +27,7 @@
   },
   "devDependencies": {
     "@types/vscode": "^1.96.0",
+    "browser-sync": "^3.0.0",
     "chokidar-cli": "^3.0.0",
     "concurrently": "^9.1.2",
     "esbuild": "^0.20.2",
@@ -34,7 +35,6 @@
     "esbuild-plugin-css-modules": "^0.3.0",
     "esbuild-plugin-html": "^1.0.0",
     "eslint": "^8.57.1",
-    "vite": "^5.1.0",
     "mini-css-extract-plugin": "^2.9.2",
     "ncp": "^2.0.0",
     "prettier": "^3.4.2"

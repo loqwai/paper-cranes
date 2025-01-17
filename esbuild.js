@@ -75,38 +75,23 @@ async function main() {
 
     await generateHTML(shaderFiles)
 
-    // Bundle the main application
     await build({
         entryPoints,
         format: 'esm',
         bundle: true,
-        minify: process.env.NODE_ENV === 'production',
-        sourcemap: true,
+        minify: true,
+        sourcemap: !process.env.NODE_ENV,
         outdir: join(process.cwd(), 'dist'),
         treeShaking: true,
         define: {
             CACHE_NAME: '"cranes-cache-v1"',
-            'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development')
+            'process.env.NODE_ENV': '"production"'
         },
         loader: {
             '.ttf': 'file',
             '.woff': 'file',
             '.woff2': 'file',
-        },
-        publicPath: '/',
-        assetNames: 'assets/[name]-[hash]',
-    })
-
-    // Bundle the worker files separately
-    const workerFiles = await getEntryPoints('./src/audio/analyzers')
-    await build({
-        entryPoints: workerFiles,
-        format: 'iife', // Use IIFE format for workers
-        bundle: true,
-        minify: process.env.NODE_ENV === 'production',
-        sourcemap: true,
-        outdir: join(process.cwd(), 'dist/src/audio/analyzers'),
-        treeShaking: true,
+        }
     })
 
     // Copy Monaco's files separately
