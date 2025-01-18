@@ -1,6 +1,6 @@
-import { build } from 'esbuild'
+import { build, context } from 'esbuild'
 import { join, relative } from 'path'
-import { readdir, stat, mkdir, writeFile } from 'fs/promises'
+import { readdir, stat, mkdir, writeFile, rm } from 'fs/promises'
 import ncp from 'ncp'
 import { promisify } from 'util'
 
@@ -31,23 +31,27 @@ async function getShaderFiles(dir) {
             }
         }),
     )
+    console.log('shader files', fileList.length)
     return fileList
 }
 
-async function getEntryPoints(dir) {
+async function getEntryPoints(...dirs) {
     let entryPoints = []
-    const files = await readdir(dir, { withFileTypes: true })
+    for (const dir of dirs) {
+        const files = await readdir(dir, { withFileTypes: true })
     await Promise.all(
         files.map(async (file) => {
+            console.log('file', file)
             const filePath = join(dir, file.name)
             if (file.isDirectory()) {
                 const subDirEntries = await getEntryPoints(filePath)
                 entryPoints = entryPoints.concat(subDirEntries)
             } else if (file.isFile() && file.name.endsWith('.js')) {
                 entryPoints.push(filePath)
-            }
-        }),
-    )
+                }
+            }),
+            )
+    }
     return entryPoints
 }
 
@@ -66,131 +70,124 @@ async function generateHTML(shaderFiles) {
 async function main() {
     await ensureDistDirectory()
 
-    const entryPoints = ['index.js', 'edit.js', 'service-worker.js', 'analyze.js']
+    const rootEntryPoints = ['index.js', 'edit.js', 'service-worker.js', 'analyze.js']
     const srcEntryPoints = await getEntryPoints('./src')
-    entryPoints.push(...srcEntryPoints)
+    const shaderFiles = await getShaderFiles('shaders')
 
-    const shaderDir = 'shaders'
-    const shaderFiles = await getShaderFiles(shaderDir)
-
-    // Set up development server with live reload
-    if (process.env.NODE_ENV !== 'production') {
-        const browserSync = (await import('browser-sync')).default.create()
-        const chokidar = (await import('chokidar')).default
-
-        // Start BrowserSync server
-        browserSync.init({
-            server: 'dist',
-            files: 'dist/**/*.*',
-            open: true,
-            notify: true,
-            port: 6969,
-        })
-
-        // Watch source files and rebuild on changes
-        const watcher = chokidar.watch([
-            'src/**/*',
-            'shaders/**/*',
-            '*.html',
-            '*.css'
-        ], {
-            ignored: /(^|[\/\\])\..|node_modules|.git/, // Ignore dotfiles and node_modules
-            persistent: true
-        })
-
-        watcher.on('change', async (path) => {
-            console.log(`File ${path} changed. Rebuilding...`)
-            try {
-                // Regenerate HTML if a shader file changed
-                if (path.endsWith('.frag')) {
-                    const updatedShaderFiles = await getShaderFiles(shaderDir)
-                    await generateHTML(updatedShaderFiles)
-                    console.log('Shader list updated')
-
-                    // Copy only the changed shader file
-                    const relativePath = relative(process.cwd(), path)
-                    const destPath = join('dist', relativePath)
-                    await ncpAsync(path, destPath)
-                    console.log(`Copied ${relativePath} to dist`)
-
-                    // Get shader path for URL
-                    const shaderPath = relative('shaders', path)
-                        .replace(/\\/g, '/')
-                        .replace('.frag', '')
-
-                    // Reload with specific shader
-                    browserSync.reload(`/?shader=${shaderPath}`)
-                } else {
-                    browserSync.reload()
-                }
-
-                // Re-run build steps
-                await build({
-                    entryPoints,
-                    format: 'esm',
-                    bundle: true,
-                    minify: true,
-                    sourcemap: true,
-                    outdir: join(process.cwd(), 'dist'),
-                    treeShaking: true,
-                    define: {
-                        CACHE_NAME: '"cranes-cache-v2"',
-                        'process.env.NODE_ENV': process.env.NODE_ENV ?? '"development"',
-                    },
-                    loader: {
-                        '.ttf': 'file',
-                        '.woff': 'file',
-                        '.woff2': 'file',
-                    }
-                })
-
-                console.log('Rebuild complete')
-            } catch (error) {
-                console.error('Build failed:', error)
-            }
-        })
-    }
-
-    await generateHTML(shaderFiles)
-
-    await build({
+    // Add shader files as entrypoints
+    const entryPoints = [...rootEntryPoints, ...srcEntryPoints, ...shaderFiles]
+    const buildOptions = {
         entryPoints,
         format: 'esm',
         bundle: true,
-        minify: true,
+        minify: process.env.NODE_ENV === 'production',
         sourcemap: true,
         outdir: join(process.cwd(), 'dist'),
         treeShaking: true,
         define: {
-            CACHE_NAME: '"cranes-cache-v2"',
+            CACHE_NAME: '"cranes-cache-v3"',
             'process.env.NODE_ENV': process.env.NODE_ENV ?? '"development"',
         },
         loader: {
             '.ttf': 'file',
             '.woff': 'file',
             '.woff2': 'file',
+            '.frag': 'file',
+        },
+        plugins: [{
+            name: 'rebuild-logger',
+            setup(build) {
+                build.onEnd(async result => {
+                    const timestamp = new Date().toLocaleTimeString()
+                    console.log(`[${timestamp}] Build completed with:`)
+                    console.log(`  ${result.errors.length} errors`)
+                    console.log(`  ${result.warnings.length} warnings`)
+
+                    await ncpAsync('shaders', 'dist/shaders')
+                    const updatedShaderFiles = await getShaderFiles('shaders')
+                    await generateHTML(updatedShaderFiles)
+                    console.log('Shader files updated')
+                })
+            }
+        },
+        {
+            name: 'selective-reload',
+            setup(build) {
+                build.onStart(() => {
+                    console.log('Build starting...')
+                })
+                build.onResolve({ filter: /^index\.js$/ }, args => {
+                    return { path: args.path, namespace: 'reload-namespace' }
+                })
+                build.onLoad({ filter: /index\.js$/, namespace: 'reload-namespace' }, () => ({
+                    contents: '(() => new EventSource("/esbuild").onmessage = () => location.reload())();',
+                    loader: 'js'
+                }))
+            }
+        }]
+    }
+    if (process.env.NODE_ENV !== 'production') {
+        const ctx = await context({
+            ...buildOptions,
+            outdir: 'dist',
+            sourcemap: 'linked',
+        })
+
+        // Copy static files first
+        await Promise.all([
+            ncpAsync('index.html', 'dist/index.html'),
+            ncpAsync('index.css', 'dist/index.css'),
+            ncpAsync('edit.html', 'dist/edit.html'),
+            ncpAsync('edit.css', 'dist/edit.css'),
+            ncpAsync('BarGraph.css', 'dist/BarGraph.css'),
+            ncpAsync('favicon.ico', 'dist/favicon.ico'),
+            ncpAsync('images', 'dist/images'),
+            ncpAsync('shaders', 'dist/shaders'),
+            ncpAsync('codicon.ttf', 'dist/codicon.ttf'),
+            ncpAsync('analyze.html', 'dist/analyze.html'),
+            ncpAsync('analyze.css', 'dist/analyze.css'),
+            ncpAsync('node_modules/monaco-editor/min/vs', 'dist/vs'),
+        ])
+
+        // Start watching with explicit paths
+        await ctx.watch()
+
+        const { host, port } = await ctx.serve({
+            servedir: 'dist',
+            port: 6969,
+        })
+
+        console.log(`Development server running at http://${host}:${port}`)
+
+        // Handle graceful shutdown
+        const cleanup = async () => {
+            await ctx.dispose()
+            //remove everything in dist
+            await rm(join(process.cwd(), 'dist'), { recursive: true, force: true })
+            process.exit(0)
         }
-    })
 
-    // Copy Monaco's files separately
-    await ncpAsync(
-        'node_modules/monaco-editor/min/vs',
-        'dist/vs'
-    )
+        process.on('SIGINT', cleanup)
+        process.on('SIGTERM', cleanup)
+    } else {
+        // Production mode: just build once
+        await build(buildOptions)
 
-    await Promise.all([
-        ncpAsync('index.html', 'dist/index.html'),
-        ncpAsync('index.css', 'dist/index.css'),
-        ncpAsync('edit.html', 'dist/edit.html'),
-        ncpAsync('edit.css', 'dist/edit.css'),
-        ncpAsync('BarGraph.css', 'dist/BarGraph.css'),
-        ncpAsync('favicon.ico', 'dist/favicon.ico'),
-        ncpAsync('images', 'dist/images'),
-        ncpAsync('shaders', 'dist/shaders'),
-        ncpAsync('codicon.ttf', 'dist/codicon.ttf'),
-        ncpAsync('analyze.html', 'dist/analyze.html'),
-        ncpAsync('analyze.css', 'dist/analyze.css'),
-    ])
+        // Copy static files
+        await Promise.all([
+            ncpAsync('index.html', 'dist/index.html'),
+            ncpAsync('index.css', 'dist/index.css'),
+            ncpAsync('edit.html', 'dist/edit.html'),
+            ncpAsync('edit.css', 'dist/edit.css'),
+            ncpAsync('BarGraph.css', 'dist/BarGraph.css'),
+            ncpAsync('favicon.ico', 'dist/favicon.ico'),
+            ncpAsync('images', 'dist/images'),
+            ncpAsync('shaders', 'dist/shaders'),
+            ncpAsync('codicon.ttf', 'dist/codicon.ttf'),
+            ncpAsync('analyze.html', 'dist/analyze.html'),
+            ncpAsync('analyze.css', 'dist/analyze.css'),
+        ])
+    }
 }
 
 main().catch(console.error)

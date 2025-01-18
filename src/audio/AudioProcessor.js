@@ -43,6 +43,7 @@ export class AudioProcessor {
         this.rawFeatures = {}
         this.currentFeatures = getFlatAudioFeatures()
         this.currentFeatures.beat = false
+        this.isRunning = false
     }
 
     createAnalyzer = () => {
@@ -70,35 +71,50 @@ export class AudioProcessor {
     }
 
     updateCurrentFeatures = () => {
+        if (!this.isRunning) return
+        if (Object.keys(this.rawFeatures).length > 0) {
+            this.currentFeatures = getFlatAudioFeatures(AudioFeatures, this.rawFeatures)
+            this.currentFeatures.beat = this.isBeat()
+        }
         requestAnimationFrame(this.updateCurrentFeatures)
-        this.currentFeatures = getFlatAudioFeatures(AudioFeatures, this.rawFeatures)
-        this.currentFeatures.beat = this.isBeat()
     }
 
     isBeat = () => {
-        const spectralFlux = this.rawFeatures.SpectralFlux
-        return spectralFlux?.stats.zScore > 0.9 || false
+        const spectralFlux = this.rawFeatures?.SpectralFlux
+        if (!spectralFlux?.stats?.zScore) return false
+        return spectralFlux.stats.zScore > 0.9
     }
 
     start = async () => {
+        if (!this.sourceNode || !this.fftAnalyzer) return
         this.sourceNode.connect(this.fftAnalyzer)
-        await this.audioContext.audioWorklet.addModule('src/window-processor.js')
+        await this.audioContext.audioWorklet.addModule('/src/window-processor.js')
         const windowNode = new AudioWorkletNode(this.audioContext, 'window-processor')
         this.sourceNode.connect(windowNode)
+
+        // Initialize all workers before starting the update loops
         await Promise.all(AudioFeatures.map(this.initializeWorker))
+
+        // Start update loops only after workers are ready
+        this.isRunning = true
         this.updateCurrentFeatures()
         this.updateFftData()
     }
 
     updateFftData = () => {
-        requestAnimationFrame(this.updateFftData)
+        if (!this.isRunning) return
         this.fftAnalyzer.getByteFrequencyData(this.fftData)
+        requestAnimationFrame(this.updateFftData)
     }
 
     getFeatures = () => this.currentFeatures
 
     cleanup = () => {
+        this.isRunning = false
         this.workers.forEach(worker => worker.terminate())
         this.workers.clear()
+        this.rawFeatures = {}
+        this.currentFeatures = getFlatAudioFeatures()
+        this.currentFeatures.beat = false
     }
 }

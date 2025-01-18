@@ -1,7 +1,7 @@
 import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { makeVisualizer } from './src/Visualizer.js'
 import './index.css'
-const events = ['touchstart', 'touchmove', 'touchstop', 'click', 'keydown', 'mousemove', 'mousedown', 'mouseup', 'resize']
+const events = ['touchstart', 'touchmove', 'touchstop', 'keydown', 'mousedown', 'resize']
 let ranMain = false
 let startTime = 0
 const params = new URLSearchParams(window.location.search)
@@ -109,22 +109,19 @@ const main = async () => {
 
 // if the url contains the string 'edit', don't do this.
 if (!window.location.href.includes('edit')) {
-    events.forEach((event) => {
+    for(const event of events) {
         // get the visualizer
+        console.log('registering event', event)
         const visualizer = getVisualizerDOMElement()
         visualizer.addEventListener(event, main, { once: true })
-        visualizer.addEventListener(
-            event,
-            () => {
-                try {
-                    document.documentElement.requestFullscreen()
-                } catch (e) {
-                    console.error(`preventing a crash: ${e}`)
-                }
-            },
-            { once: true },
-        )
-    })
+        visualizer.addEventListener(event, async()=>{
+            try {
+                await document.documentElement.requestFullscreen()
+            } catch (e) {
+                console.error(`requesting fullscreen from event ${event} failed`, e)
+            }
+        }, {once: true})
+    }
 }
 const setupAudio = async () => {
     const audioContext = new AudioContext()
