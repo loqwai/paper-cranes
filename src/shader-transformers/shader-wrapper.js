@@ -146,6 +146,10 @@ vec3 rgb2hsl(vec3 color){
     return vec3(h,s,l);
   }
 
+  vec4 rgb2hsl(vec4 color){
+    return vec4(rgb2hsl(color.rgb), color.a);
+  }
+
   vec2 centerUv(vec2 res, vec2 coord) {
     // step 1: normalize the coord to 0-1
     vec2 uv = coord.xy / res;

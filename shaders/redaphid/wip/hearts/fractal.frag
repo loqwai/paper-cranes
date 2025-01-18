@@ -9,19 +9,20 @@ uniform float knob_70;
 uniform float knob_71;
 uniform float knob_72;
 uniform float knob_73;
+uniform float knob_74;
 // Audio reactive probes
 #define PROBE_A (spectralCentroidZScore)    // For pattern evolution
 #define PROBE_B (energyNormalized)          // For size/intensity
 #define PROBE_C (spectralRoughnessZScore)   // For pattern complexity
-#define PROBE_D (bassZScore)            // For pulsing
+#define PROBE_D (max(bassZScore, spectralCentroidZScore))            // For pulsing
 #define PROBE_E (spectralFluxNormalized)    // For color mixing
 #define PROBE_F (midsNormalized)            // For movement speed
 #define PROBE_G ((knob_70 + 2.1)/2.)
 
 #define SPACING_SCALE (knob_71 + 1.1)
 #define HEART_COUNT (knob_72 + 1.1)
-#define X_OFFSET (knob_73)
-
+#define X_OFFSET (1.3)
+#define COLOR_OFFSET (knob_74)
 // Helper functions
 float dot2(in vec2 v) { return dot(v,v); }
 
@@ -105,7 +106,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv0 = uv;
 
     vec3 finalColor = vec3(0.0);
-    bool showBorder = PROBE_D > 0.6;
+    bool showBorder = PROBE_D > 0.4;
 
     float aspectRatio = iResolution.x / iResolution.y;
     float screenOffset = getScreenOffset(X_OFFSET, aspectRatio);
@@ -156,15 +157,18 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     }
 
     // Scale background effects with HEART_SIZE
-    float bgGlow = length(uv0);
+    float bgGlow = length(uv0 - vec2(screenOffset, 0.0));
     finalColor += vec3(0.1, 0.05, 0.15) * (1.0 - bgGlow) * PROBE_D;
 
     // Add bass-reactive vignette
     if(showBorder) {
-        float vignette = length(uv0);
+        float vignette = length(uv0 - vec2(screenOffset, 0.0));
         float vignetteIntensity = 0.2 * PROBE_D * (0.8 + 0.2 * sin(iTime * 15.0));
         finalColor += getBorderColor() * vignetteIntensity * (1.0 - smoothstep(0.5, 1.5, vignette));
     }
+    finalColor = rgb2hsl(finalColor);
+    finalColor.z = fract(finalColor.z + COLOR_OFFSET);
+    finalColor = hsl2rgb(finalColor);
 
     fragColor = vec4(finalColor, 1.0);
 }
