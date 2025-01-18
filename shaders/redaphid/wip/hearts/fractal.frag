@@ -1,9 +1,10 @@
 //http://localhost:6969/edit.html?shader=redaphid%2Fwip%2Fhearts%2Ffractal&fullscreen=true&knob_70=-1.512&knob_70.min=-2&knob_70.max=-1&knob_71=-0.718&knob_71.min=-2&knob_71.max=0.2&knob_72=2.42&knob_72.min=1&knob_72.max=5.4&knob_73=1.3&knob_73.min=-2&knob_73.max=1.3&knob_74=-0.228&knob_74.min=-2&knob_74.max=1&knob_75=-0.417&knob_75.min=-2&knob_75.max=1&knob_76=0.921&knob_76.min=-2&knob_76.max=1
 #define HEART_SIZE 0.15      // Base size for all hearts
 #define PI 3.14159265359
-#define LINE_COUNT 3.0      // Number of lines
+#define LINE_COUNT 13.0      // Number of lines
 #define MAX_ITER 8          // Mandelbrot iterations
 // #define SPACING_SCALE 1.7   // Controls space between hearts
+#define EPSILON 0.0001
 
 uniform float knob_70;
 uniform float knob_71;
@@ -12,12 +13,12 @@ uniform float knob_73;
 uniform float knob_74;
 // Audio reactive probes
 #define PROBE_A (spectralCentroidZScore)    // For pattern evolution
-#define PROBE_B (energyNormalized)          // For size/intensity
+#define PROBE_B (energyZScore  + EPSILON)          // For size/intensity
 #define PROBE_C (spectralRoughnessZScore)   // For pattern complexity
-#define PROBE_D (max(bassZScore, spectralCentroidZScore))            // For pulsing
+#define PROBE_D (max(bassZScore, spectralCentroidZScore)/2.)            // For pulsing
 #define PROBE_E (spectralFluxNormalized)    // For color mixing
 #define PROBE_F (midsNormalized)            // For movement speed
-#define PROBE_G ((knob_70 + 2.1)/2.)
+#define PROBE_G (max(bassNormalized, energyZScore) + 0.1)
 
 #define SPACING_SCALE (knob_71 + 1.1)
 #define HEART_COUNT (knob_72 + 1.1)
@@ -106,7 +107,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv0 = uv;
 
     vec3 finalColor = vec3(0.0);
-    bool showBorder = PROBE_D > 0.4;
+    bool showBorder = PROBE_D > 0.1;
 
     float aspectRatio = iResolution.x / iResolution.y;
     float screenOffset = getScreenOffset(X_OFFSET, aspectRatio);
@@ -143,8 +144,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
             // Render bass-reactive border
             if(showBorder) {
-                float borderD = sdHeart(heartUV, true, PROBE_G);
-                float vibration = sin(iTime * 30.0 * PROBE_D) * 0.002 * PROBE_D;
+                float borderD = sdHeart(heartUV, true, PROBE_D);
+                float vibration = sin(iTime * 30.0 * PROBE_G) * 0.002 * PROBE_D;
                 borderD += vibration;
 
                 if(abs(borderD) < 0.01) {
@@ -156,21 +157,23 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         }
     }
 
-    // Scale background effects with HEART_SIZE
-    float bgGlow = length(uv0 - vec2(screenOffset, 0.0));
-    finalColor += vec3(0.1, 0.05, 0.15) * (1.0 - bgGlow) * PROBE_D;
+    // // Scale background effects with HEART_SIZE
+    // float bgGlow = length(uv0 - vec2(screenOffset, 0.0));
+    // finalColor += vec3(0.1, 0.05, 0.15) * (1.0 - bgGlow) * PROBE_D;
 
     // Add bass-reactive vignette
-    if(showBorder) {
-        float vignette = length(uv0 - vec2(screenOffset, 0.0));
-        float vignetteIntensity = 0.2 * PROBE_D * (0.8 + 0.2 * sin(iTime * 15.0));
-        finalColor += getBorderColor() * vignetteIntensity * (1.0 - smoothstep(0.5, 1.5, vignette));
-    }
-    finalColor = rgb2hsl(finalColor);
-    if(finalColor.z > 0.3) {
-        finalColor.z = fract(finalColor.z + COLOR_OFFSET);
-    }
-    finalColor = hsl2rgb(finalColor);
+    // if(showBorder) {
+    //     float vignette = length(uv0 - vec2(screenOffset, 0.0));
+    //     float vignetteIntensity = 0.2 * PROBE_D * (0.8 + 0.2 * sin(iTime * 15.0));
+    //     finalColor += getBorderColor() * vignetteIntensity * (1.0 - smoothstep(0.5, 1.5, vignette));
+    // }
+    // finalColor = rgb2hsl(finalColor);
+    // if(finalColor.z > 0.2) {
+    //     finalColor.z = finalColor.z + COLOR_OFFSET;
+    // } else  {
+    //     finalColor =  vec3(0.0);
+    // }
+    // finalColor = hsl2rgb(finalColor);
 
-    fragColor = vec4(finalColor, 1.0);
+    fragColor = fract(vec4(finalColor, 1.0));
 }
