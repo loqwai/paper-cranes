@@ -1,22 +1,23 @@
 #define HEART_SIZE 0.15      // Base size for all hearts
 #define PI 3.14159265359
-#define HEART_COUNT 1.0    // Number of hearts per line
 #define LINE_COUNT 3.0      // Number of lines
 #define MAX_ITER 8          // Mandelbrot iterations
 // #define SPACING_SCALE 1.7   // Controls space between hearts
 
 uniform float knob_70;
 uniform float knob_71;
+uniform float knob_72;
 // Audio reactive probes
 #define PROBE_A (spectralCentroidZScore)    // For pattern evolution
 #define PROBE_B (energyNormalized)          // For size/intensity
 #define PROBE_C (spectralRoughnessZScore)   // For pattern complexity
-#define PROBE_D (bassNormalized)            // For pulsing
+#define PROBE_D (bassZScore)            // For pulsing
 #define PROBE_E (spectralFluxNormalized)    // For color mixing
 #define PROBE_F (midsNormalized)            // For movement speed
 #define PROBE_G ((knob_70 + 2.1)/2.)
 
-#define SPACING_SCALE (knob_71 + 1.1)      // For border intensity
+#define SPACING_SCALE (knob_71 + 1.1)
+#define HEART_COUNT (knob_72 + 1.1)    // For border intensity
 // Helper functions
 float dot2(in vec2 v) { return dot(v,v); }
 
