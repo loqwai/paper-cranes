@@ -114,6 +114,82 @@ float crystalPattern(vec3 p) {
     return mix(basePattern, pow(pattern, 0.9), mix(0.4, 0.7, ENERGY));
 }
 
+// Add ripple functions
+float getGrayPercent(vec3 color) {
+    return (color.r + color.g + color.b) / 3.0;
+}
+
+// Add SDF functions
+float sdCircle(vec2 p, float r) {
+    return length(p) - r;
+}
+
+float sdBox(vec2 p, vec2 b) {
+    vec2 d = abs(p) - b;
+    return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
+}
+
+// Enhanced ripple and swirl generation
+vec3 getRippleColor(vec2 uv, float pattern, float time) {
+    // Create layered swirls
+    vec2 swirl1 = vec2(
+        sin(uv.y * 3.0 + time + pattern * 6.0),
+        cos(uv.x * 3.0 + time * 0.7 + pattern * 6.0)
+    );
+
+    vec2 swirl2 = vec2(
+        sin(uv.x * 2.0 - time * 0.5),
+        cos(uv.y * 2.0 - time * 0.3)
+    );
+
+    // Create depth field using SDFs
+    float depth1 = sdCircle(uv * 2.0 + swirl1 * 0.3, 0.5);
+    float depth2 = sdBox(uv * 2.0 + swirl2 * 0.2, vec2(0.4));
+    float depth = mix(depth1, depth2, pattern);
+
+    // Create wave distortion based on depth
+    float waveX = sin(depth * 8.0 + time * ENERGY * 0.5) * 0.1;
+    float waveY = cos(depth * 8.0 + time * ENERGY * 0.4) * 0.1;
+
+    if(beat) {
+        waveX *= 8.0;
+        waveY *= 8.0;
+    }
+
+    // Create color swirls
+    vec2 distortedUv = uv + vec2(waveX, waveY) * (1.0 + ENERGY);
+    vec3 prevColor = texture(prevFrame, distortedUv).rgb;
+
+    // Generate multiple color layers
+    vec3 color1 = generateColor(BASE_HUE + depth * 0.3, pattern);
+    vec3 color2 = generateColor(BASE_HUE + 0.33 + depth * 0.2, pattern + 0.2);
+    vec3 color3 = generateColor(BASE_HUE + 0.66 + depth * 0.1, pattern + 0.4);
+
+    // Mix colors based on depth and swirls
+    vec3 swirledColor = mix(
+        mix(color1, color2, sin(depth * 4.0 + time) * 0.5 + 0.5),
+        color3,
+        cos(length(swirl1) * 3.0 + time) * 0.5 + 0.5
+    );
+
+    // Add energy-based intensity
+    swirledColor *= 1.0 + ENERGY * sin(depth * 10.0 + time * 2.0) * 0.5;
+
+    // Create ripple mask based on depth
+    float rippleMask = smoothstep(-0.5, 0.5, sin(depth * 8.0 + time));
+
+    // Enhance colors during beats
+    if(beat) {
+        vec3 beatColor = generateColor(BASE_HUE + 0.5, time * 0.1) * 2.0;
+        swirledColor = mix(swirledColor, beatColor, rippleMask * ENERGY);
+        swirledColor *= 1.3;
+    }
+
+    // Create dissipating effect
+    float fadeOut = exp(-abs(depth) * 2.0);
+    return mix(prevColor, swirledColor, fadeOut * 0.9);
+}
+
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord.xy / resolution.xy;
     vec2 centered_uv = (fragCoord - 0.5 * resolution.xy) / resolution.y;
@@ -181,47 +257,75 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Generate rim lighting color
     vec3 rimColor = generateColor(BASE_HUE + 0.3, 0.2) * vec3(1.4, 1.3, 1.2);
 
-    // Combine layers with rim lighting
+    // Get ripple effect
+    vec3 rippleEffect = getRippleColor(uv, pattern, time);
+
+    // Combine base colors with ripple
     vec3 color = mix(
-        bgColor * vec3(0.4, 0.5, 0.7),    // More saturated background
-        fgColor * vec3(1.2, 1.1, 1.0),    // Brighter, warmer foreground
+        bgColor * vec3(0.4, 0.5, 0.7),
+        fgColor * vec3(1.2, 1.1, 1.0),
         foregroundPattern
     );
 
-    // Add plasma glow at edges
-    color += rimColor * rim * 1.2;
+    // Add depth-based color mixing
+    float depth = sdCircle(centered_uv + flow, 0.5);
+    float edgeGlow = smoothstep(0.0, 0.2, abs(depth));
 
-    // Add inner glow
+    // Enhanced ripple application
+    float rippleIntensity = smoothstep(0.1, 0.9, pattern) *
+        (1.0 - pattern) *
+        (1.0 + ENERGY * 3.0) *
+        (1.0 - edgeGlow);
+
+    color = mix(color, rippleEffect, rippleIntensity);
+
+    // Add swirling edge highlights
+    vec3 edgeColor = generateColor(BASE_HUE + 0.5, time * 0.2) * 1.5;
+    color += edgeColor * edgeGlow * ENERGY;
+
+    // Add depth-based shadows
+    color *= 1.0 - smoothstep(0.0, 0.5, depth) * 0.5;
+
+    // More dramatic color bleeding in the rim areas
+    vec2 bleedOffset = grad * (rim + rippleIntensity) * 0.06;
+    vec3 bleedColor = getRippleColor(uv + bleedOffset, pattern, time);
+    color = mix(color, bleedColor, (rim + rippleIntensity) * 0.6);
+
+    // Enhanced beat response with stronger ripples
+    if(beat) {
+        vec3 beatColor = mix(
+            generateColor(BASE_HUE + 0.25, 0.5),
+            rippleEffect * 1.3,  // Brighter ripples during beats
+            0.7  // More ripple influence
+        );
+        color = mix(
+            color,
+            beatColor,
+            (ENERGY * 0.3 * foregroundPattern + rim * 0.4)
+        );
+    }
+
+    // Add temporal color trails
+    vec2 trailUV = uv - flowVec * 0.1;
+    vec3 trailColor = texture(prevFrame, trailUV).rgb;
+    color = mix(color, trailColor, 0.3);
+
+    // Add plasma glow at edges with ripple influence
+    vec3 enhancedRimColor = mix(rimColor, rippleEffect, 0.3);
+    color += enhancedRimColor * rim * 1.2;
+
+    // Add inner glow with ripple
     float innerGlow = (1.0 - rim) * foregroundPattern * ENERGY;
-    color += rimColor * 0.3 * innerGlow;
+    color += mix(rimColor, rippleEffect, 0.4) * 0.3 * innerGlow;
 
     // Add highlights only to foreground elements
     float highlight = pow(foregroundPattern, 2.0) * ENERGY * 0.3;
     vec3 highlightColor = generateColor(BASE_HUE + 0.5, 0.9);
 
-    // Enhance highlights with rim lighting
+    // Enhance highlights with rim lighting and ripples
     color += highlightColor * highlight *
         sin(time * 1.5 + uv.x * 12.0 + uv.y * 10.0) *
         (foregroundPattern + rim * 0.5);
-
-    // Add subtle refraction in the rim areas
-    vec2 refractionOffset = grad * rim * 0.02;
-    vec3 refractedColor = samplePrevious(uv + refractionOffset, flowVec * 0.5);
-    color = mix(color, refractedColor, rim * 0.3);
-
-    // Feedback blend with reduced intensity
-    float feedbackAmt = mix(0.5, 0.7, ENERGY) * (1.0 + FLOW_SPEED * 0.1);
-    color = mix(prevColor, color, feedbackAmt);
-
-    // Enhanced beat response with rim emphasis
-    if(beat) {
-        vec3 beatColor = generateColor(BASE_HUE + 0.25, 0.5);
-        color = mix(
-            color,
-            beatColor,
-            (ENERGY * 0.2 * foregroundPattern + rim * 0.3)
-        );
-    }
 
     // Adjust brightness ranges to account for rim lighting
     float bgMin = 0.1;
