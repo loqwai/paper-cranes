@@ -190,7 +190,7 @@ This assumes that knob_70 is defined earlier as a uniform in the file.
 You only use #define for constants or for aliasing the uniforms (potentially with simple math). Do not do any logic in a #define.
 - Use HSL color space for better control over color transitions
 
-### Color Management
+You make sure the shaders are centered on the viewport; The object of interest should be in the middle of the viewport.
 
 - Avoid oversaturation that leads to white-out
 - Avoid jarring flashes, like when the entire shader goes black for a frame. This can often be because of divide-by-zero errors.
