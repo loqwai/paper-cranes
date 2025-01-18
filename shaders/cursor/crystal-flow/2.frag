@@ -45,10 +45,14 @@ vec2 flowNoise(vec2 uv) {
 
 // Algorithmic palette generation
 vec3 generateColor(float t, float offset) {
-    vec3 a = vec3(0.5, 0.5, 0.5);  // mid point
-    vec3 b = vec3(0.5, 0.5, 0.5);  // amplitude
-    vec3 c = vec3(1.0, 1.0, 1.0);  // frequency
-    vec3 d = vec3(offset, offset + 0.33, offset + 0.67); // phase
+    // More saturated midpoint
+    vec3 a = vec3(0.6, 0.4, 0.5);
+    // Larger amplitude for more color variation
+    vec3 b = vec3(0.8, 0.6, 0.7);
+    // Different frequencies for each channel
+    vec3 c = vec3(0.8, 1.0, 1.2);
+    // Spread out phases more
+    vec3 d = vec3(offset, offset + 0.4, offset + 0.8);
     return a + b * cos(6.28318 * (c * t + d));
 }
 
@@ -155,41 +159,75 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float foregroundPattern = smoothstep(0.4, 0.8, pattern);
     float backgroundPattern = smoothstep(0.0, 0.3, pattern);
 
-    // Combine layers with guaranteed contrast
+    // Calculate rim lighting based on pattern gradient
+    float rim = 0.0;
+    float eps = 0.02;
+    vec2 offset = vec2(eps, 0.0);
+
+    // Sample pattern at nearby points to detect edges
+    float patternRight = crystalPattern(vec3((centered_uv + offset.xy) * 2.0 + flow, time * 0.08));
+    float patternUp = crystalPattern(vec3((centered_uv + offset.yx) * 2.0 + flow, time * 0.08));
+
+    // Calculate gradient for edge detection
+    vec2 grad = vec2(
+        patternRight - pattern,
+        patternUp - pattern
+    ) / eps;
+
+    // Create rim effect based on gradient magnitude
+    rim = smoothstep(0.2, 0.8, length(grad));
+    rim = pow(rim, 1.5) * (1.0 + ENERGY * 2.0);
+
+    // Generate rim lighting color
+    vec3 rimColor = generateColor(BASE_HUE + 0.3, 0.2) * vec3(1.4, 1.3, 1.2);
+
+    // Combine layers with rim lighting
     vec3 color = mix(
-        bgColor * vec3(0.3, 0.4, 0.5), // Darker background
-        fgColor * vec3(0.8, 0.9, 1.0),  // Brighter foreground
+        bgColor * vec3(0.4, 0.5, 0.7),    // More saturated background
+        fgColor * vec3(1.2, 1.1, 1.0),    // Brighter, warmer foreground
         foregroundPattern
     );
 
+    // Add plasma glow at edges
+    color += rimColor * rim * 1.2;
+
+    // Add inner glow
+    float innerGlow = (1.0 - rim) * foregroundPattern * ENERGY;
+    color += rimColor * 0.3 * innerGlow;
+
     // Add highlights only to foreground elements
     float highlight = pow(foregroundPattern, 2.0) * ENERGY * 0.3;
-    vec3 highlightColor = generateColor(BASE_HUE + 0.5, 0.9); // Complementary color
+    vec3 highlightColor = generateColor(BASE_HUE + 0.5, 0.9);
 
-    // Only add highlights to the foreground
+    // Enhance highlights with rim lighting
     color += highlightColor * highlight *
         sin(time * 1.5 + uv.x * 12.0 + uv.y * 10.0) *
-        foregroundPattern;
+        (foregroundPattern + rim * 0.5);
+
+    // Add subtle refraction in the rim areas
+    vec2 refractionOffset = grad * rim * 0.02;
+    vec3 refractedColor = samplePrevious(uv + refractionOffset, flowVec * 0.5);
+    color = mix(color, refractedColor, rim * 0.3);
 
     // Feedback blend with reduced intensity
     float feedbackAmt = mix(0.5, 0.7, ENERGY) * (1.0 + FLOW_SPEED * 0.1);
     color = mix(prevColor, color, feedbackAmt);
 
-    // Beat response using foreground color
+    // Enhanced beat response with rim emphasis
     if(beat) {
         vec3 beatColor = generateColor(BASE_HUE + 0.25, 0.5);
         color = mix(
             color,
             beatColor,
-            ENERGY * 0.2 * foregroundPattern
+            (ENERGY * 0.2 * foregroundPattern + rim * 0.3)
         );
     }
 
-    // Separate brightness ranges for foreground and background
+    // Adjust brightness ranges to account for rim lighting
     float bgMin = 0.1;
-    float bgMax = 0.3;
+    float bgMax = 0.3 + rim * 0.2;
     float fgMin = 0.35;
-    float fgMax = 0.7;
+    float fgMax = 0.7 + rim * 0.3;
 
     // Apply brightness ranges based on pattern
     vec3 finalColor = mix(
