@@ -43,6 +43,15 @@ vec2 flowNoise(vec2 uv) {
     );
 }
 
+// Algorithmic palette generation
+vec3 generateColor(float t, float offset) {
+    vec3 a = vec3(0.5, 0.5, 0.5);  // mid point
+    vec3 b = vec3(0.5, 0.5, 0.5);  // amplitude
+    vec3 c = vec3(1.0, 1.0, 1.0);  // frequency
+    vec3 d = vec3(offset, offset + 0.33, offset + 0.67); // phase
+    return a + b * cos(6.28318 * (c * t + d));
+}
+
 float crystalPattern(vec3 p) {
     // Add flowing displacement to input position
     vec2 flow = flowNoise(p.xy * 0.5) * (0.5 + ENERGY * 0.5);
@@ -124,57 +133,70 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         0.5
     );
 
-    // Coraline-inspired color palette
-    vec3 darkBlue = vec3(0.65, 0.8, 0.25);    // Deep midnight blue
-    vec3 purple = vec3(0.75, 0.7, 0.3);        // Rich purple
-    vec3 teal = vec3(0.45, 0.75, 0.3);         // Dark teal
-    vec3 warmAccent = vec3(0.08, 0.85, 0.4);   // Warm amber accent
+    // Generate distinct palettes for background and foreground
+    vec3 bgBase = generateColor(BASE_HUE, 0.2);
+    vec3 fgBase = generateColor(BASE_HUE, 0.7); // Offset phase for contrast
 
-    // Slow base palette evolution
-    float paletteShift = time * 0.1 + BASE_HUE * 2.0;
+    // Create background with subtle variation
+    vec3 bgColor = mix(
+        generateColor(BASE_HUE, 0.1),
+        generateColor(BASE_HUE + 0.2, 0.3),
+        sin(time * 0.1 - pattern * 2.0) * 0.3 + 0.3
+    );
 
-    // Create dynamic color blends based on pattern and audio
-    vec3 color1 = mix(darkBlue, purple,
-        sin(paletteShift + pattern * 3.0) * 0.5 + 0.5);
-    vec3 color2 = mix(teal, warmAccent,
-        cos(paletteShift * 0.7 + pattern * 2.0) * 0.5 + 0.5);
+    // Create more vibrant foreground
+    vec3 fgColor = mix(
+        generateColor(BASE_HUE + HUE_VARIATION, 0.6),
+        generateColor(BASE_HUE + HUE_VARIATION * 2.0, 0.8),
+        sin(time * 0.2 + pattern * 3.0) * 0.5 + 0.5
+    );
 
-    // Layer-based color mixing
-    float colorMix = smoothstep(0.3, 0.7, pattern);
+    // Ensure foreground pattern stands out
+    float foregroundPattern = smoothstep(0.4, 0.8, pattern);
+    float backgroundPattern = smoothstep(0.0, 0.3, pattern);
+
+    // Combine layers with guaranteed contrast
     vec3 color = mix(
-        hsl2rgb(color1),
-        hsl2rgb(color2),
-        colorMix
+        bgColor * vec3(0.3, 0.4, 0.5), // Darker background
+        fgColor * vec3(0.8, 0.9, 1.0),  // Brighter foreground
+        foregroundPattern
     );
 
-    // Add subtle iridescent highlights
-    float highlight = pow(pattern, 2.0) * ENERGY * 0.4;
-    vec3 highlightColor = vec3(
-        mod(BASE_HUE + 0.5, 1.0),  // Complementary hue
-        0.7,                        // Medium saturation
-        0.8                         // Bright value
-    );
-    color += hsl2rgb(highlightColor) * highlight *
-        sin(time * 1.5 + uv.x * 12.0 + uv.y * 10.0);
+    // Add highlights only to foreground elements
+    float highlight = pow(foregroundPattern, 2.0) * ENERGY * 0.3;
+    vec3 highlightColor = generateColor(BASE_HUE + 0.5, 0.9); // Complementary color
 
-    // Feedback blend
-    float feedbackAmt = mix(0.6, 0.8, ENERGY) * (1.0 + FLOW_SPEED * 0.1);
+    // Only add highlights to the foreground
+    color += highlightColor * highlight *
+        sin(time * 1.5 + uv.x * 12.0 + uv.y * 10.0) *
+        foregroundPattern;
+
+    // Feedback blend with reduced intensity
+    float feedbackAmt = mix(0.5, 0.7, ENERGY) * (1.0 + FLOW_SPEED * 0.1);
     color = mix(prevColor, color, feedbackAmt);
 
-    // Enhanced beat response with palette accent
+    // Beat response using foreground color
     if(beat) {
-        vec3 beatColor = hsl2rgb(warmAccent);
+        vec3 beatColor = generateColor(BASE_HUE + 0.25, 0.5);
         color = mix(
             color,
             beatColor,
-            ENERGY * 0.2
+            ENERGY * 0.2 * foregroundPattern
         );
     }
 
-    // Tighter color range control
-    float minBright = mix(0.1, 0.2, spectralEntropyMedian);
-    float maxBright = mix(0.6, 0.7, 1.0 - COLOR_INTENSITY);
-    color = clamp(color, vec3(minBright), vec3(maxBright));
+    // Separate brightness ranges for foreground and background
+    float bgMin = 0.1;
+    float bgMax = 0.3;
+    float fgMin = 0.35;
+    float fgMax = 0.7;
 
-    fragColor = vec4(color, 1.0);
+    // Apply brightness ranges based on pattern
+    vec3 finalColor = mix(
+        clamp(color, vec3(bgMin), vec3(bgMax)),
+        clamp(color, vec3(fgMin), vec3(fgMax)),
+        foregroundPattern
+    );
+
+    fragColor = vec4(finalColor, 1.0);
 }
