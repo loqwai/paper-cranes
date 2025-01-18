@@ -167,7 +167,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         finalColor += getBorderColor() * vignetteIntensity * (1.0 - smoothstep(0.5, 1.5, vignette));
     }
     finalColor = rgb2hsl(finalColor);
-    finalColor.z = fract(finalColor.z + COLOR_OFFSET);
+    if(finalColor.z > 0.3) {
+        finalColor.z = fract(finalColor.z + COLOR_OFFSET);
+    }
     finalColor = hsl2rgb(finalColor);
 
     fragColor = vec4(finalColor, 1.0);
