@@ -1,10 +1,8 @@
 import { build } from 'esbuild'
-import { context } from 'esbuild'
 import { join, relative } from 'path'
-import { readdir, stat, mkdir, writeFile, rm, rename } from 'fs/promises'
+import { readdir, stat, mkdir, writeFile } from 'fs/promises'
 import ncp from 'ncp'
 import { promisify } from 'util'
-import chokidar from 'chokidar'
 
 const ncpAsync = promisify(ncp)
 
@@ -65,59 +63,6 @@ async function generateHTML(shaderFiles) {
     await writeFile(join('dist', 'shaders.html'), htmlContent)
 }
 
-async function copyWithTemp(src, dest) {
-    const tempDest = `${dest}.tmp`
-    try {
-        // Copy to temp location first
-        await ncpAsync(src, tempDest)
-        // Then quickly swap the files
-        try {
-            await rm(dest, { force: true })
-        } catch (err) {
-            // Ignore if file doesn't exist
-        }
-        await rename(tempDest, dest)
-    } catch (error) {
-        console.error(`Error copying ${src}:`, error)
-        // Clean up temp file if it exists
-        try {
-            await rm(tempDest, { force: true })
-        } catch (err) {}
-    }
-}
-
-async function watchShaders() {
-    const watcher = chokidar.watch('shaders/**/*.{frag,vert}', {
-        ignoreInitial: false,
-        persistent: true,
-        awaitWriteFinish: {
-            stabilityThreshold: 100,
-            pollInterval: 100
-        }
-    });
-
-    // Log all watcher events
-    watcher.on('ready', () => console.log('Initial scan complete. Ready for changes...'));
-    watcher.on('add', path => console.log(`File ${path} has been added`));
-    watcher.on('change', path => console.log(`File ${path} has been changed`));
-    watcher.on('unlink', path => console.log(`File ${path} has been removed`));
-    watcher.on('error', error => console.log(`Watcher error: ${error}`));
-
-    watcher.on('all', async (event, path) => {
-        console.log(`Shader event: ${event} on path: ${path}`);
-        try {
-            const relativePath = relative('shaders', path);
-            const destPath = join('dist/shaders', relativePath);
-            await copyWithTemp(path, destPath);
-            console.log(`Shader copied from ${path} to ${destPath}`);
-        } catch (error) {
-            console.error('Error copying shader:', error);
-        }
-    });
-
-    return watcher;
-}
-
 async function main() {
     await ensureDistDirectory()
 
@@ -127,20 +72,67 @@ async function main() {
 
     const shaderDir = 'shaders'
     const shaderFiles = await getShaderFiles(shaderDir)
+    // Set up development server with live reload
+    if (process.env.NODE_ENV !== 'production') {
+        const browserSync = (await import('browser-sync')).default.create()
+        const chokidar = (await import('chokidar')).default
+
+        // Start BrowserSync server
+        browserSync.init({
+            server: 'dist',
+            files: 'dist/**/*.*', // Watch dist folder for changes
+            open: true,
+            notify: false,
+            port: 6969,
+        })
+
+        // Watch source files and rebuild on changes
+        const watcher = chokidar.watch([
+            'src/**/*',
+            'shaders/**/*',
+            '*.html',
+            '*.css'
+        ], {
+            ignored: /(^|[\/\\])\..|node_modules|.git/, // Ignore dotfiles and node_modules
+            persistent: true
+        })
+
+        watcher.on('change', async (path) => {
+            console.log(`File ${path} changed. Rebuilding...`)
+            try {
+                // Re-run build steps
+                await build({
+                    entryPoints,
+                    format: 'esm',
+                    bundle: true,
+                    minify: true,
+                    sourcemap: true,
+                    outdir: join(process.cwd(), 'dist'),
+                    treeShaking: true,
+                    define: {
+                        CACHE_NAME: '"cranes-cache-v2"',
+                        'process.env.NODE_ENV': process.env.NODE_ENV ?? '"development"',
+                    },
+                    loader: {
+                        '.ttf': 'file',
+                        '.woff': 'file',
+                        '.woff2': 'file',
+                    }
+                })
+                console.log('Rebuild complete')
+            } catch (error) {
+                console.error('Build failed:', error)
+            }
+        })
+    }
 
     await generateHTML(shaderFiles)
 
-    // Set up shader watching if in watch mode
-    let shaderWatcher;
-    if (process.env.NODE_ENV !== 'production') {
-        shaderWatcher = await watchShaders();
-    }
-
-    const ctx = await context({
+    await build({
         entryPoints,
         format: 'esm',
         bundle: true,
-        minify: process.env.NODE_ENV === 'production',
+        minify: true,
         sourcemap: true,
         outdir: join(process.cwd(), 'dist'),
         treeShaking: true,
@@ -155,9 +147,13 @@ async function main() {
         }
     })
 
-    // Initial copy of static files
+    // Copy Monaco's files separately
+    await ncpAsync(
+        'node_modules/monaco-editor/min/vs',
+        'dist/vs'
+    )
+
     await Promise.all([
-        ncpAsync('node_modules/monaco-editor/min/vs', 'dist/vs'),
         ncpAsync('index.html', 'dist/index.html'),
         ncpAsync('index.css', 'dist/index.css'),
         ncpAsync('edit.html', 'dist/edit.html'),
@@ -170,21 +166,6 @@ async function main() {
         ncpAsync('analyze.html', 'dist/analyze.html'),
         ncpAsync('analyze.css', 'dist/analyze.css'),
     ])
-
-    if (process.env.NODE_ENV !== 'production') {
-        await ctx.watch()
-        await ctx.serve({
-            servedir: 'dist',
-            port: 6969,
-            host: 'localhost',
-        })
-        console.log('Development server running on http://localhost:6969')
-        // Keep the process running
-        await new Promise(() => {})
-    } else {
-        await ctx.rebuild()
-        await ctx.dispose()
-    }
 }
 
 main().catch(console.error)

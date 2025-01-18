@@ -9,7 +9,6 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "node ./esbuild.js",
     "dev": "node ./esbuild.js",
-    "build:watch": "node ./esbuild.js",
     "format": "eslint --fix ."
   },
   "author": "hypnodroid",
