@@ -6,11 +6,10 @@
   "main": "dist/src/audio/AudioProcessor.js",
   "scripts": {
     "start": "npm run dev",
-    "serve": "browser-sync start --server dist --port 6969 --files 'dist/**/*' --no-open",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "node ./esbuild.js",
-    "dev": "npm run build && concurrently \"npm run serve\" \"npm run build:watch\"",
-    "build:watch": "chokidar '**/*.*' -i 'node_modules/*' -i 'dist/**/*.*' -c 'npm run build'",
+    "dev": "node ./esbuild.js",
+    "build:watch": "node ./esbuild.js",
     "format": "eslint --fix ."
   },
   "author": "hypnodroid",
@@ -28,8 +27,9 @@
   "devDependencies": {
     "@types/vscode": "^1.96.0",
     "browser-sync": "^3.0.0",
-    "chokidar-cli": "^3.0.0",
+    "chokidar": "^3.5.3",
     "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
     "esbuild": "^0.20.2",
     "esbuild-plugin-copy": "^2.1.1",
     "esbuild-plugin-css-modules": "^0.3.0",
