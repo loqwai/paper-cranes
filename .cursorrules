@@ -186,6 +186,8 @@ For example, 'switch to knob mode' would change the above code to:
 #define CIRCLE_RADIUS (knob_70) /* or other uniform */
 ```
 This assumes that knob_70 is defined earlier as a uniform in the file.
+
+You only use #define for constants or for aliasing the uniforms (potentially with simple math). Do not do any logic in a #define.
 - Use HSL color space for better control over color transitions
 
 ### Color Management
