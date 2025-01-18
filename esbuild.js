@@ -72,6 +72,7 @@ async function main() {
 
     const shaderDir = 'shaders'
     const shaderFiles = await getShaderFiles(shaderDir)
+
     // Set up development server with live reload
     if (process.env.NODE_ENV !== 'production') {
         const browserSync = (await import('browser-sync')).default.create()
@@ -80,9 +81,9 @@ async function main() {
         // Start BrowserSync server
         browserSync.init({
             server: 'dist',
-            files: 'dist/**/*.*', // Watch dist folder for changes
+            files: 'dist/**/*.*',
             open: true,
-            notify: false,
+            notify: true,
             port: 6969,
         })
 
@@ -100,6 +101,29 @@ async function main() {
         watcher.on('change', async (path) => {
             console.log(`File ${path} changed. Rebuilding...`)
             try {
+                // Regenerate HTML if a shader file changed
+                if (path.endsWith('.frag')) {
+                    const updatedShaderFiles = await getShaderFiles(shaderDir)
+                    await generateHTML(updatedShaderFiles)
+                    console.log('Shader list updated')
+
+                    // Copy only the changed shader file
+                    const relativePath = relative(process.cwd(), path)
+                    const destPath = join('dist', relativePath)
+                    await ncpAsync(path, destPath)
+                    console.log(`Copied ${relativePath} to dist`)
+
+                    // Get shader path for URL
+                    const shaderPath = relative('shaders', path)
+                        .replace(/\\/g, '/')
+                        .replace('.frag', '')
+
+                    // Reload with specific shader
+                    browserSync.reload(`/?shader=${shaderPath}`)
+                } else {
+                    browserSync.reload()
+                }
+
                 // Re-run build steps
                 await build({
                     entryPoints,
@@ -119,6 +143,7 @@ async function main() {
                         '.woff2': 'file',
                     }
                 })
+
                 console.log('Rebuild complete')
             } catch (error) {
                 console.error('Build failed:', error)
