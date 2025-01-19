@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { build } from 'esbuild'
 import { join, relative } from 'path'
 import { readdir, stat, mkdir, writeFile } from 'fs/promises'
