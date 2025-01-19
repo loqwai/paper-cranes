@@ -21,8 +21,7 @@ uniform float knob_77;
 #define t (iTime*0.2 + energyZScore*0.1)
 #define PALETTE_DEPTH_INFLUENCE knob_71
 #define PALETTE_POSITION_INFLUENCE knob_77
-#define PALETTE_TIME_SPEED 0.2
-#define SATURATION_BOOST 1.5
+#define SATURATION_BOOST (bassZScore + 1.0)/2.0
 #define MAX_HUE_CHANGE knob_76    // Maximum hue change per frame (0.0 to 1.0)
 
 // Add the mainImage function declaration at the top
