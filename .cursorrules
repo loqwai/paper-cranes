@@ -12,6 +12,11 @@ These shaders are used to create real-time music visualizations that control LED
 - Maintain constant visual interest across the entire screen
 - Avoid large areas of solid black or white
 - Make the movement aesthetic and artistic, like something you'd see in an interactive art museum
+- Must maintain clear foreground/background separation
+- Can use SDF functions for depth and dimensionality
+- Can have clear visual hierarchy with rim lighting or edge effects
+- Can incorporate ripple and wave effects that dissipate naturally.
+  - You can use getLastFrameColor() function to get the color of a given pixel of the last frame to do ripple effects and others.
 
 ### Audio Reactivity
 
@@ -189,13 +194,16 @@ This assumes that knob_70 is defined earlier as a uniform in the file.
 
 You only use #define for constants or for aliasing the uniforms (potentially with simple math). Do not do any logic in a #define.
 - Use HSL color space for better control over color transitions
+- Can use algorithmic color palettes for consistent aesthetics
 
 You make sure the shaders are centered on the viewport; The object of interest should be in the middle of the viewport.
 
 - Avoid oversaturation that leads to white-out
-- Avoid jarring flashes, like when the entire shader goes black for a frame. This can often be because of divide-by-zero errors.
+- Must Avoid jarring flashes, like when the entire shader goes black for a frame. This can often be because of divide-by-zero errors.
 - Support smooth color transitions
-- React to music in visually pleasing ways
+- Must have flowing, organic movement
+- Must react meaningfully to audio features
+- Must use statistical audio features (medians, z-scores) for semantic behavior
 
 ### Performance
 
