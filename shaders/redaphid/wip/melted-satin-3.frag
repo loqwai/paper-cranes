@@ -56,9 +56,9 @@ float map(vec3 p) {
     p.xz *= m(t*0.2);
     p.xy *= m(t*0.15);
 
-    // Add touch influence to the mapping
+    // Add touch influence to the mapping - INVERTED Y
     if(touched) {
-        float touchDist = length(p.xy - vec2(touchX*2.0-1.0, -(touchY*2.0-1.0)));
+        float touchDist = length(p.xy - vec2(touchX*2.0-1.0, touchY*2.0-1.0)); // Removed the negative
         p += vec3(sin(touchDist*10.0 + t)) * 0.1;
     }
 
@@ -114,18 +114,35 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Color manipulation with HSL
     cl = rgb2hsl(cl);
 
-    // Touch interaction
+    // Touch interaction with INVERTED Y
     if(touched) {
-        float touchDist = length(p - vec2(touchX*2.0-1.0, -(touchY*2.0-1.0)));
-        float touchInfluence = smoothstep(0.5, 0.0, touchDist);
+        float touchDist = length(p - vec2(touchX*2.0-1.0, touchY*2.0-1.0));
+        // Reduce touch influence range and intensity
+        float touchInfluence = smoothstep(0.3, 0.0, touchDist); // Reduced from 0.5 to 0.3
+        if(bassZScore > 0.5){
+            touchInfluence *= 1.5; // Reduced from 2.0 to 1.5
+        }
+        touchInfluence = clamp(touchInfluence, 0.0, 0.8); // Added upper limit
+        vec3 hslPrevColor = rgb2hsl(prevColor.rgb);
 
-        cl.x = mix(cl.x, fract(touchX + touchY + t*0.1), touchInfluence * 0.5);
-        cl.y = mix(0.8,cl.y, touchInfluence * 0.3);
-        cl.z = mix(cl.z, 0.6, touchInfluence * 0.2);
+        // Modify how touch affects hue/saturation/lightness
+        cl.x = mix(cl.x, fract(touchX + touchY + t*0.1), touchInfluence * 0.7); // Added scaling factor
+        cl.y = clamp( // Add clamp to prevent saturation blowout
+            mix(sin(hslPrevColor.x + touchInfluence + time*0.01),
+                cl.y,
+                fract(touchInfluence * 0.3)
+            ),
+            0.0, 0.9  // Limit maximum saturation
+        );
+        cl.z = clamp(
+            mix(cl.z, 0.6, fract(touchInfluence * 0.2)),
+            0.1, 0.9  // Ensure lightness stays in reasonable range
+        );
     }
-
-    cl.x = fract(cl.x + spectralCentroid * 0.3);
-    cl.y = clamp(cl.y + spectralRoughnessNormalized * 0.2, 0.0, 1.0);
+    else {
+        cl.x = sin(cl.x + spectralCentroidMedian);
+        cl.y = sin(cl.y + spectralRoughnessNormalized + prevColor.y);
+    }
 
     if(beat) {
         cl.y = clamp(cl.y * 1.2, 0.0, 1.0);
@@ -149,9 +166,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 finalColor = mix(rippleColor.rgb, cl, blendFactor);
     finalColor = rgb2hsl(finalColor);
     vec3 hslPrevColor = rgb2hsl(prevColor.rgb);
-    float hueDiff = abs(hslPrevColor.x - finalColor.x);
-
-    finalColor.x = mix(hslPrevColor.x, finalColor.x, 0.2);
+    float hueDiff = 0.5 - (abs(hslPrevColor.z - finalColor.z)/10.);
+    if(touched) {
+        hueDiff /= 20.0;
+        finalColor.y = sin(finalColor.x + t*0.1);
+    }
     finalColor = hsl2rgb(finalColor);
     // Add subtle motion trail
     finalColor = mix(finalColor, prevColor.rgb, hueDiff);

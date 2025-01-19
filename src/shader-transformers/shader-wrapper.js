@@ -10,7 +10,7 @@ export const shaderWrapper = (shader) => {
     if (shader.includes('mainImage')) {
         return /* glsl */ `
 #version 300 es
-precision mediump float;
+precision highp float;
 
 out vec4 fragColor;
 ${shaderToyCompatibilityUniforms()}
@@ -48,7 +48,9 @@ const getAudioUniforms = () => {
     for (const f in getFlatAudioFeatures()) {
         uniforms.push(`uniform float ${f};`)
     }
-    uniforms.push('uniform bool beat;') // yeah, this needs to go somewhere else
+    uniforms.push('uniform bool beat;')
+    uniforms.sort()
+    console.log({uniforms})// yeah, this needs to go somewhere else
     return uniforms.join('\n')
 }
 
@@ -63,6 +65,10 @@ uniform sampler2D prevFrame;// Texture of the previous frame
 uniform sampler2D initialFrame;
 
 uniform float iRandom;
+
+uniform float touchX;
+uniform float touchY;
+uniform bool touched;
 
 float random(vec2 st, float seed){
     st=vec2(st.x*cos(seed)-st.y*sin(seed),
