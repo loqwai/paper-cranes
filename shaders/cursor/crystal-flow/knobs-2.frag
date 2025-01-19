@@ -12,20 +12,21 @@ uniform float knob_75; // Mandelbrot influence
 uniform float knob_76; // Edge sharpness
 uniform float knob_77; // Color evolution
 
+// First all the #defines
+#define MANUAL_MODE
 #define TIME (time)
 #define MUTATION_RATE (knob_71)
-#define MANUAL_MODE
-#ifdef MANUAL_MODE
-#define WAVE_SPEED (knob_70 * 0.05)                // Slower wave movement
-#define WAVE_SCALE (2.0)          // Scale of the wave patterns
-#define WAVE_COHERENCE (0.5 + knob_72 * 0.5)      // How much waves stay together
-#define FLOW_STRENGTH (knob_73 * 0.15)            // Flow strength
-#define MANDEL_SCALE (1.0 + knob_74 * 2.0)        // Scale of Mandelbrot set
-#define MANDEL_INFLUENCE (knob_75 * 0.3)          // How much Mandelbrot affects shape
-#define EDGE_SHARPNESS (0.1 + knob_76 * 0.4)      // Edge sharpness
-#define COLOR_EVOLUTION (knob_77 * 0.2)           // Color evolution rate
 
-// Required base defines
+// Then all the knob-based defines
+#ifdef MANUAL_MODE
+#define WAVE_SPEED (knob_70 * 0.05)
+#define WAVE_SCALE (2.0)
+#define WAVE_COHERENCE (0.5 + knob_72 * 0.5)
+#define FLOW_STRENGTH (knob_73 * 0.15)
+#define MANDEL_SCALE (1.0 + knob_74 * 2.0)
+#define MANDEL_INFLUENCE (knob_75 * 0.3)
+#define EDGE_SHARPNESS (0.1 + knob_76 * 0.4)
+#define COLOR_EVOLUTION (knob_77 * 0.2)
 #define BASE_HUE (knob_74)
 #define HUE_VARIATION (knob_75)
 #define ENERGY (knob_72)
@@ -45,34 +46,81 @@ uniform float knob_77; // Color evolution
 #define COLOR_BLEND (knob_77)                               // How colors mix together
 #define FRACTAL_INTENSITY (0.2 + knob_75 * 2.0)  // Controls both swirl and tendril intensity
 
-// Rotation matrix helper
+// Then helper functions that don't depend on other functions
 mat2 rotate2D(float angle) {
     float c = cos(angle), s = sin(angle);
     return mat2(c, -s, s, c);
 }
 
-// Sharp edge function
 float edge(float x, float k) {
     return smoothstep(0.0, k, x) * (1.0 - smoothstep(1.0-k, 1.0, x));
 }
 
-// Sample previous frame with displacement
 vec3 samplePrevious(vec2 uv, vec2 offset) {
     vec2 sampleUV = uv + offset;
     return texture(prevFrame, sampleUV).rgb;
 }
 
-// Get flow direction based on pattern
-vec2 getFlowVector(vec2 uv, float pattern) {
-    vec2 flow = vec2(
-        sin(uv.x * 4.0 + time + pattern * 2.0),
-        cos(uv.y * 4.0 + time * 1.2 + pattern * 2.0)
-    );
-    return flow * (0.02 + DISPLACEMENT * 0.03);
+// Then the neighborhood sampling function since others depend on it
+vec4 sampleNeighborhood(vec2 uv, float radius) {
+    vec2 texel = 1.0 / resolution.xy;
+    vec3 sum = vec3(0.0);
+    float weight = 0.0;
+
+    for(float x = -1.0; x <= 1.0; x += 1.0) {
+        for(float y = -1.0; y <= 1.0; y += 1.0) {
+            vec2 offset = vec2(x, y) * texel * radius;
+            vec2 sampleUV = clamp(uv + offset, 0.0, 1.0); // Prevent edge artifacts
+            float w = 1.0 - length(offset) * 2.0;
+            sum += texture(prevFrame, sampleUV).rgb * w;
+            weight += w;
+        }
+    }
+
+    vec3 avg = sum / max(weight, 0.001); // Prevent division by zero
+    return vec4(avg, dot(avg, vec3(0.299, 0.587, 0.114)));
 }
 
-// Update flowNoise for simpler, cleaner waves
+// Then the Julia set function since flowNoise depends on it
+float juliaSet(vec2 z, vec4 neighborhood) {
+    float iter = 0.0;
+    const float MAX_ITER = 12.0;
+
+    // Create evolving Julia set parameters based on time and previous frame
+    float t = time * WAVE_SPEED * 0.1;
+    vec2 c = vec2(
+        0.7885 * cos(t + neighborhood.x * 2.0),
+        0.7885 * sin(t + neighborhood.y * 2.0)
+    );
+
+    // Modify c based on neighborhood colors
+    c += (neighborhood.xy - 0.5) * 0.2;
+
+    // Constrain c to keep the set stable but interesting
+    c *= 0.8;
+
+    for(float i = 0.0; i < MAX_ITER; i++) {
+        z = vec2(
+            z.x * z.x - z.y * z.y,
+            2.0 * z.x * z.y
+        ) + c;
+
+        if(length(z) > 2.0) break;
+        iter++;
+    }
+
+    return iter / MAX_ITER;
+}
+
+// Then flowNoise and other functions that depend on the above
 vec2 flowNoise(vec2 uv) {
+    // Get neighborhood info first
+    vec4 neighborhood = sampleNeighborhood(uv * 0.5 + 0.5, 2.0);
+
+    // Calculate Julia set influence
+    vec2 julia_uv = uv * MANDEL_SCALE;
+    float julia = juliaSet(julia_uv, neighborhood);
+
     // Convert to polar coordinates for radial waves
     vec2 centered = uv;
     float dist = length(centered);
@@ -83,24 +131,40 @@ vec2 flowNoise(vec2 uv) {
 
     // Create single, clean radial wave
     float radialWave = sin(dist * WAVE_SCALE - t) *
-                      exp(-dist * 3.0); // Stronger distance falloff
+                      exp(-dist * 3.0);
 
     // Thicker, smoother waves
     float thickness = 0.7 + WAVE_COHERENCE * 0.3;
-    radialWave = smoothstep(-thickness, thickness, radialWave) * 0.5; // Reduced intensity
+    radialWave = smoothstep(-thickness, thickness, radialWave) * 0.5;
 
-    // Convert back to cartesian coordinates with gentler flow
+    // Convert back to cartesian coordinates
     vec2 wave = vec2(
         cos(angle) * radialWave,
         sin(angle) * radialWave
-    ) * 0.2; // Reduced overall movement
+    ) * 0.2;
 
-    // Very subtle rotation
-    float rotSpeed = t * 0.05;
-    wave *= mat2(cos(rotSpeed), -sin(rotSpeed),
-                 sin(rotSpeed), cos(rotSpeed));
+    // Create Julia-influenced flow direction
+    vec2 juliaFlow = vec2(
+        cos(julia * 6.28 + t),
+        sin(julia * 6.28 + t)
+    ) * (julia - 0.5);
 
-    return wave * FLOW_STRENGTH * 0.2;
+    // Blend original wave with Julia influence
+    float juliaInfluence = MANDEL_INFLUENCE * 0.5;
+    vec2 finalFlow = mix(
+        wave,
+        juliaFlow,
+        juliaInfluence * (1.0 - dist) // Reduce influence at edges
+    );
+
+    // Add subtle rotation that depends on Julia value
+    float rotSpeed = t * 0.05 + julia * 0.2;
+    finalFlow *= mat2(
+        cos(rotSpeed), -sin(rotSpeed),
+        sin(rotSpeed), cos(rotSpeed)
+    );
+
+    return finalFlow * FLOW_STRENGTH * 0.2;
 }
 
 // Algorithmic palette generation
@@ -124,41 +188,6 @@ float tendrilNoise(vec3 p) {
     return f * MANDEL_INFLUENCE;
 }
 
-// Add the new neighborhood sampling function
-vec4 sampleNeighborhood(vec2 uv, float radius) {
-    vec2 texel = 1.0 / resolution.xy;
-    vec3 sum = vec3(0.0);
-    float weight = 0.0;
-
-    for(float x = -1.0; x <= 1.0; x += 1.0) {
-        for(float y = -1.0; y <= 1.0; y += 1.0) {
-            vec2 offset = vec2(x, y) * texel * radius;
-            vec2 sampleUV = clamp(uv + offset, 0.0, 1.0); // Prevent edge artifacts
-            float w = 1.0 - length(offset) * 2.0;
-            sum += texture(prevFrame, sampleUV).rgb * w;
-            weight += w;
-        }
-    }
-
-    vec3 avg = sum / max(weight, 0.001); // Prevent division by zero
-    return vec4(avg, dot(avg, vec3(0.299, 0.587, 0.114)));
-}
-
-// Add Mandelbrot calculation
-float mandelbrot(vec2 c) {
-    vec2 z = vec2(0.0);
-    float iter = 0.0;
-    const float MAX_ITER = 12.0;
-
-    for(float i = 0.0; i < MAX_ITER; i++) {
-        z = vec2(z.x * z.x - z.y * z.y, 2.0 * z.x * z.y) + c;
-        if(length(z) > 2.0) break;
-        iter++;
-    }
-
-    return iter / MAX_ITER;
-}
-
 // Update crystalPattern with Mandelbrot influence
 float crystalPattern(vec3 p) {
     vec2 uv = p.xy * 0.5 + 0.5;
@@ -177,13 +206,12 @@ float crystalPattern(vec3 p) {
     // Base circle
     float circle = length(p.xy) - 0.5;
 
-    // Add Mandelbrot perturbation
-    vec2 mandel_uv = p.xy * MANDEL_SCALE;
-    float mandel = mandelbrot(mandel_uv);
+    // Use Julia set instead of Mandelbrot
+    vec2 julia_uv = p.xy * MANDEL_SCALE;
+    float julia = juliaSet(julia_uv, neighborhood);
 
-    // Perturb circle with Mandelbrot
     float perturbAmount = MANDEL_INFLUENCE * sin(time * WAVE_SPEED);
-    circle += (mandel - 0.5) * perturbAmount;
+    circle += (julia - 0.5) * perturbAmount;
 
     float pattern = smoothstep(0.0, 0.8, abs(circle));
 
@@ -192,12 +220,13 @@ float crystalPattern(vec3 p) {
 
 // Update getWaveColor with Mandelbrot influence
 vec3 getWaveColor(float pattern, float dist) {
-    vec2 mandel_uv = vec2(dist * 2.0 - 1.0) * MANDEL_SCALE;
-    float mandel = mandelbrot(mandel_uv);
+    vec2 julia_uv = vec2(dist * 2.0 - 1.0) * MANDEL_SCALE;
+    vec4 neighborhood = sampleNeighborhood(vec2(dist * 0.5 + 0.5), 2.0);
+    float julia = juliaSet(julia_uv, neighborhood);
 
     vec3 waveHSL = vec3(
-        BASE_HUE + pattern * 0.2 + mandel * MANDEL_INFLUENCE,
-        0.4 + pattern * 0.3 + mandel * MANDEL_INFLUENCE * 0.5,
+        BASE_HUE + pattern * 0.2 + julia * MANDEL_INFLUENCE,
+        0.4 + pattern * 0.3 + julia * MANDEL_INFLUENCE * 0.5,
         0.3 + pattern * 0.3
     );
 
@@ -234,6 +263,14 @@ vec3 getRippleColor(vec2 uv, float pattern, float t) {
 
     float fadeOut = 1.0 - pattern;
     return mix(prevColor, rippleColor, fadeOut * 0.5);
+}
+
+vec2 getFlowVector(vec2 uv, float pattern) {
+    vec2 flow = vec2(
+        sin(uv.x * 4.0 + time + pattern * 2.0),
+        cos(uv.y * 4.0 + time * 1.2 + pattern * 2.0)
+    );
+    return flow * (0.02 + DISPLACEMENT * 0.03);
 }
 
 // Add missing lighting defines
