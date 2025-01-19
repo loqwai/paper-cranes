@@ -125,28 +125,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Maintain good contrast
     cl.z = clamp(cl.z, 0.2, 0.8);
 
-    // Touch interaction with INVERTED Y
-    if(touched) {
-        float touchDist = length(p - vec2(touchX*2.0-1.0, touchY*2.0-1.0));
-        float touchInfluence = smoothstep(0.3, 0.0, touchDist);
-        if(bassZScore > 0.5) touchInfluence *= 1.5;
-        touchInfluence = clamp(touchInfluence, 0.0, 0.8);
-
-        cl.x = mix(cl.x, fract(touchX + touchY + t*0.1), touchInfluence * 0.7);
-        cl.y = clamp(cl.y + touchInfluence * 0.2, 0.3, 0.9);
-    }
-    else {
-        cl.x = fract(cl.x + spectralCentroidMedian);
-        cl.y = clamp(cl.y + spectralRoughnessNormalized * 0.3, 0.3, 0.9);
-    }
-
-    if(beat) {
-        cl.y = clamp(cl.y * 1.2, 0.3, 0.9);
-        cl.z = clamp(cl.z * 1.1, 0.2, 0.8);
-    }
-
-    // Convert back to RGB
-    cl = hsl2rgb(cl);
+    vec3 finalColor = mix(prevColor.rgb, cl, 0.03);
 
     // Calculate ripple based on color difference
     vec2 rippleOffset = getRippleOffset(uv, prevColor, vec4(cl, 1.0));
@@ -155,17 +134,40 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Sample previous frame again with ripple offset
     vec4 rippleColor = texture(prevFrame, finalUV);
 
-    // Stronger blend with previous frame - reduce the blend factor to see more of previous frame
-    float blendFactor = 0.3; // Reduced from 0.8 to show more of previous frame
-    if(beat) blendFactor = 0.5; // More dramatic change on beats
+    // Get ripple direction and sample for spreading
+    vec2 rippleDir = normalize(rippleOffset);
+    float rippleStrength = length(rippleOffset);
+    vec2 spreadUV = uv + rippleDir * (0.1 + rippleStrength * 2.0);
+    vec3 hslPrevColor = rgb2hsl(getLastFrameColor(spreadUV).rgb);
+    vec3 spreadColor = rgb2hsl(texture(prevFrame, fract(spreadUV)).rgb);
 
-    vec3 finalColor = mix(rippleColor.rgb, cl, blendFactor);
+    // Calculate spread factor
+    float colorDiff = abs(hslPrevColor.x - spreadColor.x);
+    float spreadFactor = smoothstep(0.1, 0.4, colorDiff) * rippleStrength;
+    if(beat) spreadFactor *= 1.5;
 
-    // Final color adjustments to ensure vibrancy
+    // Convert to HSL for color operations
     finalColor = rgb2hsl(finalColor);
-    finalColor.y = clamp(finalColor.y + 0.2, 0.3, 0.9); // Boost saturation
-    finalColor.z = clamp(finalColor.z, 0.2, 0.8); // Maintain contrast
-    finalColor = hsl2rgb(finalColor);
 
+    // Apply the spread
+    finalColor.x = mix(finalColor.x, spreadColor.x, spreadFactor * 0.7);
+
+    // Touch interaction with INVERTED Y
+    if(touched) {
+        vec2 touchUV = vec2(touchX, touchY);
+        float touchDist = length(uv - touchUV);
+
+        float touchInfluence = smoothstep(0.05, 0.0, touchDist);
+        if(bassZScore > 0.5) touchInfluence *= 1.5;
+        touchInfluence = clamp(touchInfluence, 0.0, 1.0);
+
+        float touchHue = fract(t * 0.2);
+        finalColor.x = mix(finalColor.x, touchHue, touchInfluence);
+        finalColor.y = mix(finalColor.y, 1.0, touchInfluence);
+        finalColor.z = mix(finalColor.z, 0.7, touchInfluence);
+    }
+
+    // Convert back to RGB for final output
+    finalColor = hsl2rgb(finalColor);
     fragColor = vec4(finalColor, 1.0);
 }
