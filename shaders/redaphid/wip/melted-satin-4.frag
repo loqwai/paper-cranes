@@ -100,30 +100,76 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec3 cl = vec3(0.0);
     float d = 2.5;
+    vec3 normal = vec3(0.0);
+    float occlusion = 0.0;
+
+    // Light position
+    vec3 lightPos = vec3(sin(t)*3.0, 2.0 + cos(t), -2.0);
 
     for(int i=0; i<=5; i++) {
         vec3 p3 = vec3(0.0,0.0,4.0) + normalize(vec3(p, -1.0))*d;
         float rz = map(p3);
-        float f = clamp((rz - map(p3+0.1))*0.5, -0.1, 1.0);
 
-        // Adjusted base colors and multipliers for more vibrant result
-        vec3 l = vec3(0.2,0.4,0.5) +
-                 vec3(2.5 + spectralCentroidNormalized,
-                      2.0 + energyNormalized,
-                      1.5 + spectralRoughnessNormalized) * f;
+        // Calculate normal for Phong shading
+        float eps = 0.01;
+        normal = normalize(vec3(
+            map(p3 + vec3(eps,0,0)) - map(p3 - vec3(eps,0,0)),
+            map(p3 + vec3(0,eps,0)) - map(p3 - vec3(0,eps,0)),
+            map(p3 + vec3(0,0,eps)) - map(p3 - vec3(0,0,eps))
+        ));
 
-        cl = cl*l + smoothstep(2.5, 0.0, rz)*0.7*l;
+        vec3 lightDir = normalize(lightPos - p3);
+        vec3 viewDir = normalize(vec3(0.0, 0.0, 1.0));
+        vec3 reflectDir = reflect(-lightDir, normal);
+
+        // Phong shading components
+        float ambient = 0.2;
+        float diffuse = max(dot(normal, lightDir), 0.0);
+        float specular = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
+
+        // Create a more interesting base color that changes with depth
+        vec3 baseColor = mix(
+            vec3(0.2, 0.4, 0.7),  // Deep blue
+            vec3(0.7, 0.3, 0.2),  // Warm orange
+            sin(d * 0.5 + spectralCentroidNormalized) * 0.5 + 0.5
+        );
+
+        // Add some variation based on normal direction
+        baseColor += vec3(normal.x, normal.y, normal.z) * 0.2;
+
+        // Modulate with audio
+        baseColor = mix(
+            baseColor,
+            vec3(spectralCentroidNormalized,
+                 energyNormalized,
+                 spectralRoughnessNormalized),
+            0.2
+        );
+
+        // Lighting calculation
+        vec3 lighting = vec3(ambient) +
+                       diffuse * vec3(1.0, 0.9, 0.8) +
+                       specular * vec3(0.5);
+
+        // Combine everything
+        vec3 color = baseColor * lighting;
+
+        // Accumulate color with depth
+        float fade = smoothstep(2.5, 0.0, rz);
+        cl += color * fade * 0.3;  // Reduced multiplication factor
+
         d += min(rz, 1.0);
     }
+
+    // Tone mapping to prevent oversaturation
+    cl = cl / (1.0 + cl);
 
     // Color manipulation with HSL
     cl = rgb2hsl(cl);
 
-    // Ensure minimum saturation to avoid gray areas
-    cl.y = clamp(cl.y + 0.3, 0.3, 0.9);
-
-    // Maintain good contrast
-    cl.z = clamp(cl.z, 0.2, 0.8);
+    // Adjust saturation and brightness
+    cl.y = clamp(cl.y, 0.2, 0.8);  // Less saturated
+    cl.z = clamp(cl.z, 0.1, 0.7);  // Darker overall
 
     vec3 finalColor = mix(prevColor.rgb, cl, 0.03);
 
@@ -141,18 +187,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 hslPrevColor = rgb2hsl(getLastFrameColor(spreadUV).rgb);
     vec3 spreadColor = rgb2hsl(texture(prevFrame, fract(spreadUV)).rgb);
 
-    // Calculate spread factor
-    float colorDiff = abs(hslPrevColor.x - spreadColor.x);
-    float spreadFactor = smoothstep(0.1, 0.4, colorDiff) * rippleStrength;
-    if(beat) spreadFactor *= 1.5;
-
     // Convert to HSL for color operations
     finalColor = rgb2hsl(finalColor);
 
-    // Apply the spread
-    finalColor.x = mix(finalColor.x, spreadColor.x, spreadFactor * 0.7);
-
-    // Touch interaction with INVERTED Y
+    // Touch interaction first (so it can spread)
     if(touched) {
         vec2 touchUV = vec2(touchX, touchY);
         float touchDist = length(uv - touchUV);
@@ -166,6 +204,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         finalColor.y = mix(finalColor.y, 1.0, touchInfluence);
         finalColor.z = mix(finalColor.z, 0.7, touchInfluence);
     }
+
+    // Slower, more subtle color spreading
+    float colorDiff = abs(hslPrevColor.x - spreadColor.x);
+    float spreadFactor = smoothstep(0.05, 0.2, colorDiff) * rippleStrength * 0.3;
+    if(beat) spreadFactor *= 1.2;
+
+    // Very gentle spread of hue
+    finalColor.x = mix(finalColor.x, spreadColor.x, spreadFactor * 0.2);
+    // Subtle spread of saturation and lightness
+    finalColor.y = mix(finalColor.y, spreadColor.y, spreadFactor * 0.1);
+    finalColor.z = mix(finalColor.z, spreadColor.z, spreadFactor * 0.05);
 
     // Convert back to RGB for final output
     finalColor = hsl2rgb(finalColor);
