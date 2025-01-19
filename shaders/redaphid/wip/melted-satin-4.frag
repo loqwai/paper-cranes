@@ -177,34 +177,59 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     );
 
     // Make transitions between colors sharper
-    float palettePos = d * 3.0 + t * 0.2 + spectralCentroidNormalized * 2.0;
-    float sharpness = 4.0;
-    palettePos = floor(palettePos * sharpness) / sharpness;  // Create distinct steps
+    float palettePos = d * 2.0 +
+                      sin(p.x * 4.0) * 0.3 +
+                      t * 0.2 +
+                      spectralCentroidNormalized;
+    float sharpness = 8.0;
+    palettePos = floor(palettePos * sharpness) / sharpness;
     int paletteIndex = int(mod(palettePos, 4.0));
     vec3 targetHSL = palette[paletteIndex];
 
-    // More aggressive color mixing
-    cl.x = mix(cl.x, targetHSL.x, 0.95);   // Almost complete hue replacement
-    cl.y = min(cl.y, targetHSL.y);         // Keep highest saturation
-    cl.z = mix(cl.z, targetHSL.z, 0.7);    // Stronger brightness influence
+    // More aggressive color mixing with less blending
+    cl.x = mix(cl.x, targetHSL.x, 0.98);   // Almost no blending of hues
+    cl.y = min(cl.y, targetHSL.y);
+    cl.z = mix(cl.z, targetHSL.z, 0.8);
 
     // Ensure high saturation for neon effect
     cl.y = clamp(cl.y * 1.5 + 0.3, 0.85, 0.98);
 
-    // Sharper contrast
-    float contrast = 2.0;
-    cl.z = 0.5 + (cl.z - 0.5) * contrast;
-    cl.z = clamp(cl.z, 0.15, 0.85);  // Wider range for more contrast
+    // Make darker areas much darker, proportional to saturation
+    float contrast = 2.0;  // Reduced from 3.0
+    float saturationInfluence = cl.y * cl.y * 0.7; // Reduced influence
+
+    // Push more to dark based on saturation, but less aggressively
+    cl.z = pow(cl.z, 1.0 + saturationInfluence * 0.5);
+
+    // Apply contrast with saturation influence
+    float contrastStrength = mix(1.0, contrast, saturationInfluence);
+    cl.z = 0.5 + (cl.z - 0.5) * contrastStrength;
+
+    // Less extreme dark threshold
+    float darkThreshold = mix(0.25, 0.15, saturationInfluence);
+    float brightThreshold = mix(0.6, 0.8, saturationInfluence);
+    cl.z = smoothstep(darkThreshold, brightThreshold, cl.z);
+
+    // Higher minimum brightness
+    float minBrightness = mix(0.25, 0.1, saturationInfluence);
+    float maxBrightness = mix(0.75, 0.9, saturationInfluence);
+    cl.z = clamp(cl.z, minBrightness, maxBrightness);
+
+    // Boost highlights more
+    float highlightBoost = mix(1.2, 1.5, saturationInfluence);
+    cl.z = mix(cl.z, cl.z * highlightBoost, step(0.5, cl.z));
 
     // Reduce position-based variation to keep colors more pure
-    cl.x = fract(cl.x + p.x * 0.1 + p.y * 0.1);  // Reduced from 0.2 to 0.1
+    cl.x = fract(cl.x + p.x * 0.1 + p.y * 0.1);
 
     if(beat) {
         cl.y = 0.65;  // Full saturation on beats
-        cl.z = clamp(cl.z * 1.2, 0.2, 0.8);
+        cl.z = clamp(cl.z * 1.4, 0.05, 0.9);  // More dramatic contrast on beats
+        // brighter on beats
+        cl.z = mix(cl.z, cl.z * 1.3, 0.5);
     }
 
-    vec3 finalColor = mix(prevColor.rgb, hsl2rgb(cl), 0.05);  // Slightly faster color changes
+    vec3 finalColor = mix(prevColor.rgb, hsl2rgb(cl), 0.1);  // Increased from 0.05 for faster changes
 
     // Calculate ripple based on color difference
     vec2 rippleOffset = getRippleOffset(uv, prevColor, vec4(cl, 1.0));
@@ -240,14 +265,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Slower, more subtle color spreading
     float colorDiff = abs(hslPrevColor.x - spreadColor.x);
-    float spreadFactor = smoothstep(0.05, 0.2, 1.0 - colorDiff) * rippleStrength * 0.3 / 2.0;
-    if(beat) spreadFactor *= 1.2;
+    float spreadFactor = smoothstep(0.05, 0.2, 1.0 - colorDiff) * rippleStrength * 0.15;
+    if(beat) spreadFactor *= 1.1;
 
     // Very gentle spread of hue
-    finalColor.x = mix(finalColor.x, spreadColor.x, spreadFactor * 0.2);
-    // Subtle spread of saturation and lightness
-    finalColor.y = mix(finalColor.y, spreadColor.y, spreadFactor);
-    finalColor.z = mix(finalColor.z, spreadColor.z, spreadFactor);
+    finalColor.x = mix(finalColor.x, spreadColor.x, spreadFactor * 0.1);
+    // Reduced spread of saturation and lightness
+    finalColor.y = mix(finalColor.y, spreadColor.y, spreadFactor * 0.5);
+    finalColor.z = mix(finalColor.z, spreadColor.z, spreadFactor * 0.5);
 
     // Convert back to RGB for final output
     finalColor = hsl2rgb(finalColor);
