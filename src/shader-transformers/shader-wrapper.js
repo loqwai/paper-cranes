@@ -167,5 +167,12 @@ vec3 hslmix(vec3 c1, vec3 c2, float t){
     vec3 hsl = mix(hsl1, hsl2, t);
     return hsl2rgb(hsl);
     }
+
+// vec4 hslmix(vec4 c1, vec4 c2, float t){
+//     return vec4(hslmix(c1.rgb, c2.rgb, t), c1.a);
+// }
+// vec2 hslmix(vec2 c1, vec2 c2, float t){
+//     return vec2(hslmix(c1.rgb, c2.rgb, t), c1.a);
+// }
 `
 export default shaderWrapper
