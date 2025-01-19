@@ -46,8 +46,8 @@ vec3 twist(vec3 p) {
     float k = sin(t*0.1) * 0.5 + 1.5;
     float c = cos(k*p.y);
     float s = sin(k*p.y);
-    mat2 m = mat2(c,-s,s,c);
-    vec3 q = vec3(m*p.xz,p.y);
+    mat2 rotm = mat2(c,-s,s,c);  // Renamed to avoid conflict
+    vec3 q = vec3(rotm*p.xz,p.y);
     return q;
 }
 
@@ -56,13 +56,13 @@ float map(vec3 p) {
     p.xz *= m(t*0.2);
     p.xy *= m(t*0.15);
 
-    // Add touch influence to the mapping - INVERTED Y
+    // Add touch influence to the mapping
     if(touched) {
-        float touchDist = length(p.xy - vec2(touchX*2.0-1.0, touchY*2.0-1.0)); // Removed the negative
+        float touchDist = length(p.xy - vec2(touchX*2.0-1.0, touchY*2.0-1.0));
         p += vec3(sin(touchDist*10.0 + t)) * 0.1;
     }
 
-    // Recursive folding
+    // Modified recursive folding for more varied patterns
     float scale = 1.0 + spectralCentroidNormalized * 0.5;
     float d = 1000.0;
     vec3 q = p;
@@ -73,12 +73,16 @@ float map(vec3 p) {
         q.xy *= m(t * 0.1 + float(i) * 0.5);
         q *= scale;
         float current = length(q) * pow(scale, float(-i));
+        // Add some variation to break up uniform areas
+        current += sin(q.x * 3.0 + q.y * 2.0) * 0.1;
         d = min(d, current);
     }
 
     vec3 modP = p*2.0 + vec3(t);
     float wave = sin(modP.x + sin(modP.z + sin(modP.y))) * 0.3;
     wave += sin(modP.y * spectralCentroidNormalized) * 0.1;
+    // Add extra wave detail to break up flat areas
+    wave += cos(modP.z * 3.0) * 0.05;
 
     return d * 0.5 + wave;
 }
@@ -102,10 +106,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float rz = map(p3);
         float f = clamp((rz - map(p3+0.1))*0.5, -0.1, 1.0);
 
-        vec3 l = vec3(0.1,0.3,0.4) +
-                 vec3(3.0 + spectralCentroidNormalized,
+        // Adjusted base colors and multipliers for more vibrant result
+        vec3 l = vec3(0.2,0.4,0.5) +
+                 vec3(2.5 + spectralCentroidNormalized,
                       2.0 + energyNormalized,
-                      2.0 + spectralRoughnessNormalized) * f;
+                      1.5 + spectralRoughnessNormalized) * f;
 
         cl = cl*l + smoothstep(2.5, 0.0, rz)*0.7*l;
         d += min(rz, 1.0);
@@ -114,80 +119,53 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Color manipulation with HSL
     cl = rgb2hsl(cl);
 
+    // Ensure minimum saturation to avoid gray areas
+    cl.y = clamp(cl.y + 0.3, 0.3, 0.9);
+
+    // Maintain good contrast
+    cl.z = clamp(cl.z, 0.2, 0.8);
+
     // Touch interaction with INVERTED Y
     if(touched) {
         float touchDist = length(p - vec2(touchX*2.0-1.0, touchY*2.0-1.0));
-        // Reduce touch influence range and intensity
-        float touchInfluence = smoothstep(0.3, 0.0, touchDist); // Reduced from 0.5 to 0.3
-        if(bassZScore > 0.5){
-            touchInfluence *= 1.5; // Reduced from 2.0 to 1.5
-        }
-        touchInfluence = clamp(touchInfluence, 0.0, 0.8); // Added upper limit
-        vec3 hslPrevColor = rgb2hsl(prevColor.rgb);
+        float touchInfluence = smoothstep(0.3, 0.0, touchDist);
+        if(bassZScore > 0.5) touchInfluence *= 1.5;
+        touchInfluence = clamp(touchInfluence, 0.0, 0.8);
 
-        // Modify how touch affects hue/saturation/lightness
-        cl.x = mix(cl.x, fract(touchX + touchY + t*0.1), touchInfluence * 0.7); // Added scaling factor
-        cl.y = clamp( // Add clamp to prevent saturation blowout
-            mix(sin(hslPrevColor.x + touchInfluence + time*0.01),
-                cl.y,
-                fract(touchInfluence * 0.3)
-            ),
-            0.0, 0.9  // Limit maximum saturation
-        );
-        cl.z = clamp(
-            mix(cl.z, 0.6, fract(touchInfluence * 0.2)),
-            0.1, 0.9  // Ensure lightness stays in reasonable range
-        );
+        cl.x = mix(cl.x, fract(touchX + touchY + t*0.1), touchInfluence * 0.7);
+        cl.y = clamp(cl.y + touchInfluence * 0.2, 0.3, 0.9);
     }
     else {
-        cl.x = sin(cl.x + spectralCentroidMedian);
-        cl.y = sin(cl.y + spectralRoughnessNormalized + prevColor.y);
+        cl.x = fract(cl.x + spectralCentroidMedian);
+        cl.y = clamp(cl.y + spectralRoughnessNormalized * 0.3, 0.3, 0.9);
     }
 
     if(beat) {
-        cl.y = clamp(cl.y * 1.2, 0.0, 1.0);
-        cl.z = clamp(cl.z * 1.1, 0.0, 1.0);
+        cl.y = clamp(cl.y * 1.2, 0.3, 0.9);
+        cl.z = clamp(cl.z * 1.1, 0.2, 0.8);
     }
 
     // Convert back to RGB
     cl = hsl2rgb(cl);
 
     // Calculate ripple based on color difference
-    vec2 rippleOffset = getRippleOffset(uv, prevColor, vec4(cl*energyZScore, 1.0));
+    vec2 rippleOffset = getRippleOffset(uv, prevColor, vec4(cl, 1.0));
     vec2 finalUV = fract(uv + rippleOffset);
 
     // Sample previous frame again with ripple offset
     vec4 rippleColor = texture(prevFrame, finalUV);
 
     // Stronger blend with previous frame - reduce the blend factor to see more of previous frame
-    float blendFactor = 0.1; // Reduced from 0.8 to show more of previous frame
-    if(beat) blendFactor = 0.01; // More dramatic change on beats
+    float blendFactor = 0.3; // Reduced from 0.8 to show more of previous frame
+    if(beat) blendFactor = 0.5; // More dramatic change on beats
+
     vec3 finalColor = mix(rippleColor.rgb, cl, blendFactor);
+
+    // Final color adjustments to ensure vibrancy
     finalColor = rgb2hsl(finalColor);
-    vec3 hslPrevColor = rgb2hsl(prevColor.rgb);
-    float hueDiff = abs(hslPrevColor.z - finalColor.z)/4.;
-    if(touched) {
-        hueDiff /= 20.0;
-        finalColor.y = sin(finalColor.x + t*0.1);
-    }
-    vec3 hslFinalColor = rgb2hsl(finalColor.rgb);
-    hslFinalColor.y =  clamp(hslFinalColor.y + (bassZScore + 1.0) * 0.5, 0.0, 1.0)  ;
-    hslFinalColor.z =  clamp(hslFinalColor.z + energyZScore * 0.5, 0.0, 1.0)  ;
+    finalColor.y = clamp(finalColor.y + 0.2, 0.3, 0.9); // Boost saturation
+    finalColor.z = clamp(finalColor.z, 0.2, 0.8); // Maintain contrast
     finalColor = hsl2rgb(finalColor);
-    finalColor.z = finalColor.z * 0.5;
-    finalColor.y = sin(finalColor.y + (spectralRoughnessNormalized/10.));
-    float colorDiff = abs(hslPrevColor.x - hslFinalColor.x);
-    if(colorDiff > 0.5 && hslPrevColor.z < 0.3) {
-
-        finalColor = mix(hslFinalColor.rgb, hslPrevColor.rgb, colorDiff/100.);
-
-        finalColor.x = fract(finalColor.x + (pitchClass/13.));
-        finalColor.y = fract(finalColor.y + (energyNormalized/3.));
-        fragColor = normalize(vec4(hsl2rgb(finalColor), 1.0));
-        return;
-    }
-    // Add subtle motion trail
-    finalColor = hslmix(finalColor, prevColor.rgb, hueDiff/2.);
 
     fragColor = vec4(finalColor, 1.0);
 }
