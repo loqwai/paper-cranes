@@ -1,4 +1,4 @@
-http://localhost:6969/edit.html?shader=redaphid%2Fwip%2Fmelted-satin-4&fullscreen=true&knob_70=1.45&knob_70.min=0&knob_70.max=3&knob_71=1.45&knob_71.min=0&knob_71.max=3&knob_72=48.44&knob_72.min=0&knob_72.max=100&knob_73=1.22&knob_73.min=0&knob_73.max=3&knob_74=3&knob_74.min=-0.8&knob_74.max=3&knob_75=0.8&knob_75.min=0&knob_75.max=1&knob_76=0.03&knob_76.min=-0.1&knob_76.max=1&knob_77=2.4&knob_77.min=-1&knob_77.max=5.5
+//http://localhost:6969/edit.html?shader=redaphid%2Fwip%2Fmelted-satin-4&fullscreen=true&knob_70=1.45&knob_70.min=0&knob_70.max=3&knob_71=1.45&knob_71.min=0&knob_71.max=3&knob_72=48.44&knob_72.min=0&knob_72.max=100&knob_73=1.22&knob_73.min=0&knob_73.max=3&knob_74=3&knob_74.min=-0.8&knob_74.max=3&knob_75=0.8&knob_75.min=0&knob_75.max=1&knob_76=0.03&knob_76.min=-0.1&knob_76.max=1&knob_77=2.4&knob_77.min=-1&knob_77.max=5.5
 uniform float knob_70;
 uniform float knob_71;
 uniform float knob_72;
@@ -11,16 +11,15 @@ uniform float knob_77;
 // User-controlled parameters
 #define COLOR_CYCLE_SPEED (knob_70 * 0.4)           // Speed of color cycling
 #define COLOR_SHARPNESS (16.0)            // Sharpness of color transitions
-               // How much colors blend together
 #define SATURATION_LEVEL (knob_73 * 0.98)           // Base saturation
-#define CONTRAST_LEVEL (knob_74 * 3.0)              // Overall contrast
-#define DARKNESS_LEVEL (knob_75 * 0.7)              // How dark the dark areas get
+#define CONTRAST_LEVEL (knob_74 * 2.0)              // Overall contrast (reduced from 3.0)
+#define DARKNESS_LEVEL (knob_75 * 0.8)              // How dark the dark areas get
 #define RIPPLE_AMOUNT (knob_72)               // Strength of ripple effect
-#define BEAT_INTENSITY (1.4)                        // How strong beat reactions are
+#define BEAT_INTENSITY (1.2)                        // How strong beat reactions are (reduced from 1.4)
 
 // Fixed constants
 #define t (iTime*0.2 + energyZScore*0.1)
-#define PALETTE_DEPTH_INFLUENCE 2.0
+#define PALETTE_DEPTH_INFLUENCE knob_71
 #define PALETTE_POSITION_INFLUENCE knob_77
 #define PALETTE_TIME_SPEED 0.2
 #define SATURATION_BOOST 1.5
@@ -37,7 +36,7 @@ vec2 getRippleOffset(vec2 uv, vec4 lastFrame, vec4 currentColor) {
     float colorDiff = (diff.r + diff.g + diff.b) / 3.0;
 
     // Create ripple based on color difference, using RIPPLE_AMOUNT
-    float rippleStrength = colorDiff * RIPPLE_AMOUNT * (1.0 + energyZScore);
+    float rippleStrength = colorDiff * RIPPLE_AMOUNT * (1.0 + energyZScore/10.);
     if(beat) rippleStrength *= 2.0;
 
     float angle = atan(uv.y - 0.5, uv.x - 0.5);
@@ -177,7 +176,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
         // Accumulate color with depth
         float fade = smoothstep(2.5, 0.0, rz);
-        cl += color * fade * 0.3;  // Reduced multiplication factor
+        cl += color * fade * 0.2;  // Reduced from 0.3
 
         d += min(rz, 1.0);
     }
@@ -191,10 +190,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Force more distinct hues with HSL palette
     // Format: vec3(hue, saturation, lightness)
     vec3 palette[4] = vec3[4](
-        vec3(fract(0.83 + spectralCentroidZScore/4.0), 0.98, 0.65),  // Electric purple
-        vec3(fract(0.58 + spectralCentroidZScore/4.0), 0.95, 0.60),  // Electric blue
-        vec3(fract(0.95 + spectralCentroidZScore/4.0), 0.98, 0.60),  // Hot pink
-        vec3(fract(0.75 + spectralCentroidZScore/4.0), 0.95, 0.65)   // Deep violet
+        vec3(fract(0.83 + spectralCentroidZScore/4.0), 0.98, 0.55),  // Reduced brightness
+        vec3(fract(0.58 + spectralCentroidZScore/4.0), 0.95, 0.50),  // Reduced brightness
+        vec3(fract(0.95 + spectralCentroidZScore/4.0), 0.98, 0.50),  // Reduced brightness
+        vec3(fract(0.75 + spectralCentroidZScore/4.0), 0.95, 0.55)   // Reduced brightness
     );
 
     // Make transitions between colors sharper
@@ -214,32 +213,20 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     cl.y = min(cl.y, targetHSL.y);
     cl.z = mix(cl.z, targetHSL.z, 0.8);
 
-    // Ensure high saturation for neon effect
-    cl.y = clamp(cl.y * SATURATION_BOOST + 0.3, SATURATION_LEVEL, 0.98);
+    // Ensure high saturation but prevent oversaturation
+    cl.y = clamp(cl.y * SATURATION_BOOST + 0.2, SATURATION_LEVEL, 0.95);  // Reduced max saturation
 
     // Make darker areas much darker
     float contrast = CONTRAST_LEVEL;
     float saturationInfluence = cl.y * cl.y * DARKNESS_LEVEL;
 
-    // Push more to dark based on saturation, but less aggressively
-    cl.z = pow(cl.z, 1.0 + saturationInfluence * 0.5);
-
-    // Apply contrast with saturation influence
-    float contrastStrength = mix(1.0, contrast, saturationInfluence);
-    cl.z = 0.5 + (cl.z - 0.5) * contrastStrength;
-
-    // Less extreme dark threshold
-    float darkThreshold = mix(0.25, 0.15, saturationInfluence);
-    float brightThreshold = mix(0.6, 0.8, saturationInfluence);
-    cl.z = smoothstep(darkThreshold, brightThreshold, cl.z);
-
-    // Higher minimum brightness
-    float minBrightness = mix(0.25, 0.1, saturationInfluence);
-    float maxBrightness = mix(0.75, 0.9, saturationInfluence);
+    // Adjust brightness thresholds
+    float minBrightness = mix(0.15, 0.05, saturationInfluence);  // Reduced from 0.25, 0.1
+    float maxBrightness = mix(0.65, 0.8, saturationInfluence);   // Reduced from 0.75, 0.9
     cl.z = clamp(cl.z, minBrightness, maxBrightness);
 
-    // Boost highlights more
-    float highlightBoost = mix(1.2, 1.5, saturationInfluence);
+    // Reduce highlight boost
+    float highlightBoost = mix(1.1, 1.3, saturationInfluence);  // Reduced from 1.2, 1.5
     cl.z = mix(cl.z, cl.z * highlightBoost, step(0.5, cl.z));
 
     // Reduce position-based variation to keep colors more pure
@@ -247,8 +234,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     if(beat) {
         cl.y = 0.65;
-        cl.z = clamp(cl.z * BEAT_INTENSITY, 0.05, 0.9);
-        cl.z = mix(cl.z, cl.z * 1.3, 0.5);
+        cl.z = clamp(cl.z * BEAT_INTENSITY, 0.05, 0.8);  // Reduced max brightness on beat from 0.9
+        cl.z = mix(cl.z, cl.z * 1.2, 0.5);  // Reduced from 1.3
     }
 
     // Reduce initial frame blending significantly
