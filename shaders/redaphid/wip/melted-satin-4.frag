@@ -129,21 +129,21 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
         // Create a more interesting base color that changes with depth
         vec3 baseColor = mix(
-            vec3(0.2, 0.4, 0.7),  // Deep blue
-            vec3(0.7, 0.3, 0.2),  // Warm orange
-            sin(d * 0.5 + spectralCentroidNormalized) * 0.5 + 0.5
+            vec3(0.1, 0.4, 0.9),  // Vibrant blue
+            vec3(0.9, 0.2, 0.1),  // Bright red
+            sin(d * 0.5 + spectralCentroidNormalized * 2.0)
         );
 
         // Add some variation based on normal direction
-        baseColor += vec3(normal.x, normal.y, normal.z) * 0.2;
+        baseColor += vec3(normal.x, normal.y, normal.z) * 0.3;
 
-        // Modulate with audio
+        // Modulate with audio less to maintain color vibrancy
         baseColor = mix(
             baseColor,
             vec3(spectralCentroidNormalized,
                  energyNormalized,
                  spectralRoughnessNormalized),
-            0.2
+            0.1  // Reduced audio influence
         );
 
         // Lighting calculation
@@ -164,14 +164,47 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Tone mapping to prevent oversaturation
     cl = cl / (1.0 + cl);
 
-    // Color manipulation with HSL
+    // More aggressive color manipulation
     cl = rgb2hsl(cl);
 
-    // Adjust saturation and brightness
-    cl.y = clamp(cl.y, 0.2, 0.8);  // Less saturated
-    cl.z = clamp(cl.z, 0.1, 0.7);  // Darker overall
+    // Force more distinct hues with HSL palette
+    // Format: vec3(hue, saturation, lightness)
+    vec3 palette[4] = vec3[4](
+        vec3(fract(0.83 + spectralCentroidZScore/4.0), 0.98, 0.65),  // Electric purple
+        vec3(fract(0.58 + spectralCentroidZScore/4.0), 0.95, 0.60),  // Electric blue
+        vec3(fract(0.95 + spectralCentroidZScore/4.0), 0.98, 0.60),  // Hot pink
+        vec3(fract(0.75 + spectralCentroidZScore/4.0), 0.95, 0.65)   // Deep violet
+    );
 
-    vec3 finalColor = mix(prevColor.rgb, cl, 0.03);
+    // Make transitions between colors sharper
+    float palettePos = d * 3.0 + t * 0.2 + spectralCentroidNormalized * 2.0;
+    float sharpness = 4.0;
+    palettePos = floor(palettePos * sharpness) / sharpness;  // Create distinct steps
+    int paletteIndex = int(mod(palettePos, 4.0));
+    vec3 targetHSL = palette[paletteIndex];
+
+    // More aggressive color mixing
+    cl.x = mix(cl.x, targetHSL.x, 0.95);   // Almost complete hue replacement
+    cl.y = min(cl.y, targetHSL.y);         // Keep highest saturation
+    cl.z = mix(cl.z, targetHSL.z, 0.7);    // Stronger brightness influence
+
+    // Ensure high saturation for neon effect
+    cl.y = clamp(cl.y * 1.5 + 0.3, 0.85, 0.98);
+
+    // Sharper contrast
+    float contrast = 2.0;
+    cl.z = 0.5 + (cl.z - 0.5) * contrast;
+    cl.z = clamp(cl.z, 0.15, 0.85);  // Wider range for more contrast
+
+    // Reduce position-based variation to keep colors more pure
+    cl.x = fract(cl.x + p.x * 0.1 + p.y * 0.1);  // Reduced from 0.2 to 0.1
+
+    if(beat) {
+        cl.y = 0.65;  // Full saturation on beats
+        cl.z = clamp(cl.z * 1.2, 0.2, 0.8);
+    }
+
+    vec3 finalColor = mix(prevColor.rgb, hsl2rgb(cl), 0.05);  // Slightly faster color changes
 
     // Calculate ripple based on color difference
     vec2 rippleOffset = getRippleOffset(uv, prevColor, vec4(cl, 1.0));
@@ -207,14 +240,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Slower, more subtle color spreading
     float colorDiff = abs(hslPrevColor.x - spreadColor.x);
-    float spreadFactor = smoothstep(0.05, 0.2, colorDiff) * rippleStrength * 0.3;
+    float spreadFactor = smoothstep(0.05, 0.2, 1.0 - colorDiff) * rippleStrength * 0.3 / 2.0;
     if(beat) spreadFactor *= 1.2;
 
     // Very gentle spread of hue
     finalColor.x = mix(finalColor.x, spreadColor.x, spreadFactor * 0.2);
     // Subtle spread of saturation and lightness
-    finalColor.y = mix(finalColor.y, spreadColor.y, spreadFactor * 0.1);
-    finalColor.z = mix(finalColor.z, spreadColor.z, spreadFactor * 0.05);
+    finalColor.y = mix(finalColor.y, spreadColor.y, spreadFactor);
+    finalColor.z = mix(finalColor.z, spreadColor.z, spreadFactor);
 
     // Convert back to RGB for final output
     finalColor = hsl2rgb(finalColor);
