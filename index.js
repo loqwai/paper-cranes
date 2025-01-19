@@ -119,14 +119,12 @@ const main = async () => {
         const fullscreen = (params.get('fullscreen') ?? false) === 'true'
         const canvas = getVisualizerDOMElement()
 
-        // Add touch and mouse event listeners
-        let coords = { x: 0.5, y: 0.5 }  // Default center position
-        let touched = false  // Add touched state
-
+        // Add touch and mouse event listeners// Default center position
+        window.touched = false
+        window.coords = { x: 0.5, y: 0.5 }
         const updateCoords = (e) => {
             window.coords = getNormalizedCoordinates(e, canvas)
             window.touched = true
-            console.log({coords, touched})
         }
 
         canvas.addEventListener('touchmove', updateCoords)
@@ -136,7 +134,7 @@ const main = async () => {
 
         // Reset touched state when touch/click ends
         const resetTouch = () => {
-            touched = false
+            window.touched = false
         }
 
         canvas.addEventListener('touchend', resetTouch)

@@ -123,7 +123,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 finalColor = mix(prevColor.rgb, cl, 0.8);
 
     // Add extra color variation when touched
-    if(touchX > 0.1) {
+    if(touched) {
         vec3 touchColor = hsl2rgb(vec3(fract(touchX + t*0.1), 0.8, 0.6));
         finalColor = mix(finalColor, touchColor, 0.1);
         finalColor = vec3(0.);
