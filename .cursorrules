@@ -204,10 +204,11 @@ You make sure the shaders are centered on the viewport; The object of interest s
 - Must have flowing, organic movement
 - Must react meaningfully to audio features
 - Must use statistical audio features (medians, z-scores) for semantic behavior
+- Can use data about the colors in the previous frame to influence current colors
 
 ### Performance
 
-- Maintain 60fps on modern hardware
+- Maintain 60fps on a Chrome phone browser
 - Optimize raymarching steps and iterations
 - Balance visual complexity with performance
 

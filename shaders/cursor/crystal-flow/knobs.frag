@@ -1,13 +1,30 @@
 //http://localhost:6969/edit.html?shader=cursor%2Fcrystal-flow%2F2&knob_76=-0.346&knob_76.min=-2&knob_76.max=1&knob_70=0.496&knob_70.min=0&knob_70.max=1&knob_71=-1.575&knob_71.min=-2&knob_71.max=1&knob_72=-2&knob_72.min=-2&knob_72.max=1&knob_73=-0.819&knob_73.min=-2&knob_73.max=1&knob_74=-0.937&knob_74.min=-2&knob_74.max=1&knob_75=-1.787&knob_75.min=-2&knob_75.max=2.5&knob_77=-1.693&knob_77.min=-2&knob_77.max=1
 //http://localhost:6969/edit.html?shader=cursor%2Fcrystal-flow%2F2&knob_76=-1.102&knob_76.min=-2&knob_76.max=1&knob_70=0.693&knob_70.min=0&knob_70.max=1&knob_71=-0.016&knob_71.min=-2&knob_71.max=1&knob_72=1&knob_72.min=-2&knob_72.max=1&knob_73=0.339&knob_73.min=-2&knob_73.max=1&knob_74=-0.11&knob_74.min=-2&knob_74.max=1&knob_75=0.078&knob_75.min=0&knob_75.max=0.1&knob_77=-1.693&knob_77.min=-2&knob_77.max=1
-uniform float knob_70; // Base hue shift
-uniform float knob_71; // Color spread
-uniform float knob_72; // Saturation
-uniform float knob_73; // Brightness
-uniform float knob_74; // Ripple speed
-uniform float knob_75; // Swirl intensity
-uniform float knob_76; // Edge glow intensity
-uniform float knob_77; // Color blend factor
+//http://localhost:6969/edit.html?shader=cursor%2Fcrystal-flow%2Fknobs&knob_76=-1.031&knob_76.min=-2&knob_76.max=1&knob_70=0.724&knob_70.min=0&knob_70.max=1&knob_71=7.638&knob_71.min=-2&knob_71.max=10&knob_72=1&knob_72.min=-2&knob_72.max=1&knob_73=-1.22&knob_73.min=-2&knob_73.max=1&knob_74=-1.362&knob_74.min=-2&knob_74.max=1&knob_75=0.082&knob_75.min=0&knob_75.max=0.1&knob_77=-2&knob_77.min=-2&knob_77.max=1
+//http://localhost:6969/edit.html?shader=cursor%2Fcrystal-flow%2Fknobs&knob_76=-0.488&knob_76.min=-2&knob_76.max=1&knob_70=0&knob_70.min=0&knob_70.max=10&knob_71=5.37&knob_71.min=-2&knob_71.max=10&knob_72=1&knob_72.min=-2&knob_72.max=1&knob_73=0.079&knob_73.min=-2&knob_73.max=1&knob_74=0.685&knob_74.min=0&knob_74.max=1&knob_75=0.051&knob_75.min=0&knob_75.max=0.1&knob_77=-2&knob_77.min=-2&knob_77.max=1
+// Modify knob purposes
+uniform float knob_70; // Evolution rate - how much previous frame influences the next
+uniform float knob_71; // Fractal scale
+uniform float knob_72; // Pattern complexity
+uniform float knob_73; // Flow strength
+uniform float knob_74; // Shape morphing speed
+uniform float knob_75; // Tendril detail
+uniform float knob_76; // Edge sharpness
+uniform float knob_77; // Mutation rate - how often pixels randomly change
+
+#define MANUAL_MODE
+#ifdef MANUAL_MODE
+// Evolution controls
+#define EVOLUTION_RATE (0.1 + knob_70 * 0.4)        // How much previous frame affects next
+#define FRACTAL_SCALE (1.0 + knob_71 * 2.0)         // Overall scale of fractal elements
+#define PATTERN_COMPLEXITY (1.0 + knob_72)           // Number of layers/detail
+#define FLOW_STRENGTH (knob_73 * 0.3)               // How much the pattern flows
+#define MORPH_SPEED (knob_74 * 0.2)                 // Speed of shape changes
+#define TENDRIL_DETAIL (0.2 + knob_75 * 0.8)        // Amount of tendril detail
+#define EDGE_SHARPNESS (0.1 + knob_76 * 0.4)        // Sharpness of pattern edges
+#define COLOR_EVOLUTION (knob_77 * 0.3)             // How colors evolve over time
+#define MUTATION_RATE (knob_77 * 0.2)             // How likely pixels are to mutate
+#endif
 
 // Color control defines
 #define BASE_COLOR_1 vec3(knob_70, knob_71, knob_72)        // Primary color control
@@ -94,124 +111,72 @@ vec3 generateColor(float t, float offset) {
 
 // Add this helper function for fractal tendrils
 float tendrilNoise(vec3 p) {
-    float f = 0.0;
-    float amp = 0.5 * FRACTAL_INTENSITY;
-
-    // Reduce to 2 iterations instead of 3
-    for(int i = 0; i < 2; i++) {
-        // Simplified trig calculations
-        float sx = sin(p.x);
-        float sy = sin(p.y);
-        float sz = sin(p.z);
-        f += amp * (sx * sy + sy * sz + sz * sx);
-        p *= 2.0;  // Simpler frequency scaling
-        amp *= 0.5;
-    }
-    return f * FRACTAL_INTENSITY;
+    float f = sin(p.x) * cos(p.y) + sin(p.y) * cos(p.z);
+    p *= 2.0;
+    f += (sin(p.x) * cos(p.y) + sin(p.y) * cos(p.z)) * 0.5;
+    return f * TENDRIL_DETAIL;
 }
 
-// Add this helper function to sample surrounding pixels
+// Add the new neighborhood sampling function
 vec4 sampleNeighborhood(vec2 uv, float radius) {
     vec2 texel = 1.0 / resolution.xy;
     vec3 sum = vec3(0.0);
     float weight = 0.0;
 
-    // Sample in a circle
-    for(float x = -2.0; x <= 2.0; x++) {
-        for(float y = -2.0; y <= 2.0; y++) {
+    // Reduce sample count for better performance
+    for(float x = -1.0; x <= 1.0; x += 1.0) {
+        for(float y = -1.0; y <= 1.0; y += 1.0) {
             vec2 offset = vec2(x, y) * texel * radius;
-            float dist = length(offset);
-            if(dist <= radius * texel.x) {
-                float w = exp(-dist * 8.0);
-                sum += texture(prevFrame, uv + offset).rgb * w;
-                weight += w;
-            }
+            float w = 1.0 - length(offset) * 2.0;
+            sum += texture(prevFrame, uv + offset).rgb * w;
+            weight += w;
         }
     }
 
     vec3 avg = sum / weight;
-    float intensity = (avg.r + avg.g + avg.b) / 3.0;
-    return vec4(avg, intensity);
+    return vec4(avg, dot(avg, vec3(0.299, 0.587, 0.114))); // Optimized intensity calculation
 }
 
-// Modify crystalPattern to use previous frame data
+// Update crystalPattern with the new neighborhood-aware version
 float crystalPattern(vec3 p) {
-    vec2 uv = p.xy * 0.5 + 0.5; // Convert position to UV space
-    vec4 neighborhood = sampleNeighborhood(uv, 4.0);
+    vec2 uv = p.xy * 0.5 + 0.5;
+    vec4 neighborhood = sampleNeighborhood(uv, 2.0); // Reduced radius
 
-    // Use neighborhood color to influence the flow
-    vec2 flow = flowNoise(p.xy * 0.5) * (0.5 + ENERGY * 0.5);
-    flow += (neighborhood.xy - 0.5) * 0.2; // Add color-based flow
-    p.xy += flow * 0.3;
+    // Apply evolution rate to flow
+    vec2 flow = flowNoise(p.xy * 0.5) * FLOW_STRENGTH;
+    flow += (neighborhood.xy - 0.5) * EVOLUTION_RATE;
+    p.xy += flow;
 
-    p *= (1.8 + CRYSTAL_SCALE * 0.2);
+    p *= FRACTAL_SCALE;
     float pattern = 0.0;
-    float basePattern = 0.2;
 
-    // Create evolving base shape influenced by previous frame
-    for(int i = 0; i < 3; i++) {
-        float scale = 1.0 + float(i) * (1.0 + HUE_VARIATION * 0.05);
-        vec3 q = p * scale;
+    // Reduce iterations based on PATTERN_COMPLEXITY
+    int iterations = int(2.0 + PATTERN_COMPLEXITY);
+    iterations = min(iterations, 3); // Cap maximum iterations
 
-        float layerTime = time * (0.1 + float(i) * 0.05);
+    for(int i = 0; i < iterations; i++) {
+        vec3 q = p * (1.0 + float(i) * 0.5);
 
-        // Modify domain warping based on previous frame
-        vec2 warp = vec2(
-            sin(q.x * 0.5 + cos(q.z * 0.8 + layerTime) + q.y),
-            cos(q.y * 0.5 + sin(q.x * 0.8 - layerTime) + q.z)
-        );
-        warp += (neighborhood.xy - 0.5) * (0.5 + FRACTAL_INTENSITY * 0.5);
-        q.xy += warp * (0.3 + FRACTAL_INTENSITY * 0.4);
+        // Simplified time variation
+        float layerTime = time * MORPH_SPEED * (1.0 + float(i) * 0.2);
 
-        // Rotate axes with influence from previous frame
-        float rotAmount = layerTime * FLOW_SPEED * 0.1;
-        rotAmount += (neighborhood.w - 0.5) * 0.2; // Add rotation based on intensity
-        q.xy *= rotate2D(rotAmount);
-        q.yz *= rotate2D(rotAmount * -0.7);
+        // Optimized rotation
+        q.xy *= rotate2D(layerTime);
 
-        // Create organic base shape using SDF operations
-        // Modify shape parameters based on neighborhood
-        float shape1 = length(q.xy) - (0.5 + sin(q.z * 2.0 + layerTime) * 0.2 + neighborhood.w * 0.2);
-        float shape2 = length(q.yz) - (0.4 + cos(q.x * 2.0 - layerTime) * 0.2 + neighborhood.w * 0.15);
-        float shape3 = length(q.xz) - (0.3 + sin(q.y * 2.0 + layerTime * 1.2) * 0.2 + neighborhood.w * 0.1);
+        // Create base shape
+        float shape = length(q.xy) - (0.5 + sin(q.z + layerTime) * 0.2);
+        shape = abs(shape) + tendrilNoise(q);
 
-        // Blend shapes based on previous frame intensity
-        float blend = mix(
-            sin(layerTime * 0.5) * 0.5 + 0.5,
-            neighborhood.w,
-            0.3
-        );
-        float shape = mix(
-            min(shape1, shape2),
-            shape3,
-            blend
-        );
+        // Apply edge sharpness
+        float crystal = smoothstep(EDGE_SHARPNESS, 0.5 + EDGE_SHARPNESS, shape);
 
-        // Add tendril detail influenced by previous frame
-        float tendrilScale = (2.0 + float(i)) * FRACTAL_INTENSITY;
-        tendrilScale *= (1.0 + neighborhood.w * 0.5); // Scale based on intensity
-        float tendrilDetail = tendrilNoise(q * tendrilScale);
+        // Blend with previous frame
+        crystal = mix(crystal, neighborhood.w, EVOLUTION_RATE);
 
-        // Create organic variation influenced by previous frame
-        shape = shape + tendrilDetail * (0.2 + ROUGHNESS * 0.3) * (1.0 + neighborhood.w * 0.4);
-
-        float crystal = smoothstep(0.1, 0.4, abs(shape));
-
-        // Add flowing detail influenced by previous frame
-        crystal *= 1.0 + sin(q.x * 4.0 + q.y * 4.0 + layerTime) * 0.2 * (1.0 + neighborhood.w * 0.3);
-
-        pattern = mix(
-            max(pattern, crystal),
-            pattern + crystal,
-            0.5
-        ) * (1.0 - float(i) * 0.2);
+        pattern = mix(pattern, crystal, 0.5);
     }
 
-    // Blend with previous frame pattern for temporal coherence
-    float prevPattern = neighborhood.w;
-    pattern = mix(pattern, prevPattern, 0.2);
-
-    return mix(basePattern, pattern, ENERGY);
+    return pattern;
 }
 
 // Add ripple functions
@@ -365,6 +330,28 @@ vec3 preventColorFlashing(vec3 newColor, vec3 prevColor) {
     return hsl2rgb(limitedHSL);
 }
 
+// Add mutation function
+vec3 applyRandomMutation(vec2 uv, vec3 currentColor) {
+    // Only mutate some pixels based on random value and mutation rate
+    float shouldMutate = step(random(uv + time * 0.1), MUTATION_RATE);
+
+    if(shouldMutate > 0.0) {
+        // Sample neighborhood for interesting colors
+        vec4 neighborhood = sampleNeighborhood(uv, 2.0);
+
+        // Create a new color by mixing neighborhood colors
+        vec3 mutatedColor = mix(
+            currentColor,
+            neighborhood.rgb,
+            random(uv + time) * 0.5
+        );
+
+        return mutatedColor;
+    }
+
+    return currentColor;
+}
+
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord.xy / resolution.xy;
     vec2 centered_uv = (fragCoord - 0.5 * resolution.xy) / resolution.y;
@@ -470,6 +457,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     color = hsl2rgb(finalColorHSL);
 
     color = preventColorFlashing(color, prevColor);
+
+    // Apply random mutations
+    color = applyRandomMutation(uv, color);
 
     fragColor = vec4(color, 1.0);
 }
