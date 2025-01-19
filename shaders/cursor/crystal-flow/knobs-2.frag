@@ -7,22 +7,30 @@ uniform float knob_70; // Wave speed
 uniform float knob_71; // Wave scale
 uniform float knob_72; // Wave coherence
 uniform float knob_73; // Flow strength
-uniform float knob_74; // Evolution rate
-uniform float knob_75; // Pattern detail
+uniform float knob_74; // Mandelbrot scale
+uniform float knob_75; // Mandelbrot influence
 uniform float knob_76; // Edge sharpness
-uniform float knob_77; // Mutation rate
+uniform float knob_77; // Color evolution
 
+#define TIME (time)
+#define MUTATION_RATE (knob_71)
 #define MANUAL_MODE
 #ifdef MANUAL_MODE
-#define WAVE_SPEED (knob_70 * 0.05)                // Slower wave movement, more controlled range
-#define WAVE_SCALE (1.0 + knob_71 * 2.0)         // Scale of the wave patterns
-#define WAVE_COHERENCE (0.5 + knob_72 * 0.5)     // How much waves stay together
-#define FLOW_STRENGTH (knob_73 * 0.15)           // Reduced flow strength for smoother movement
-#define EVOLUTION_RATE (0.1 + knob_74 * 0.2)     // How much previous frame affects next
-#define PATTERN_DETAIL (0.5 + knob_75 * 0.5)     // Amount of pattern detail
-#define EDGE_SHARPNESS (0.1 + knob_76 * 0.4)     // Sharpness of edges
-#define MUTATION_RATE (knob_77 * 0.1)            // Slower mutation rate
-#define FRACTAL_SCALE (1.0 + WAVE_SCALE * 0.5)   // Scale of fractal elements                // Overall energy level
+#define WAVE_SPEED (knob_70 * 0.05)                // Slower wave movement
+#define WAVE_SCALE (2.0)          // Scale of the wave patterns
+#define WAVE_COHERENCE (0.5 + knob_72 * 0.5)      // How much waves stay together
+#define FLOW_STRENGTH (knob_73 * 0.15)            // Flow strength
+#define MANDEL_SCALE (1.0 + knob_74 * 2.0)        // Scale of Mandelbrot set
+#define MANDEL_INFLUENCE (knob_75 * 0.3)          // How much Mandelbrot affects shape
+#define EDGE_SHARPNESS (0.1 + knob_76 * 0.4)      // Edge sharpness
+#define COLOR_EVOLUTION (knob_77 * 0.2)           // Color evolution rate
+
+// Required base defines
+#define BASE_HUE (knob_74)
+#define HUE_VARIATION (knob_75)
+#define ENERGY (knob_72)
+#define EVOLUTION_RATE (COLOR_EVOLUTION)
+#define DISPLACEMENT (knob_77)
 #endif
 
 // Color control defines
@@ -37,29 +45,6 @@ uniform float knob_77; // Mutation rate
 #define COLOR_BLEND (knob_77)                               // How colors mix together
 #define FRACTAL_INTENSITY (0.2 + knob_75 * 2.0)  // Controls both swirl and tendril intensity
 
-// Original audio defines (keep these)
-#ifndef MANUAL_MODE
-#define FLOW_SPEED (spectralFluxZScore)
-#define CRYSTAL_SCALE (spectralCentroidZScore)
-#define ENERGY (energyNormalized)
-#define ROUGHNESS (spectralRoughnessNormalized)
-#define BASE_HUE (spectralCentroidMedian + knob_70)         // Now influenced by knob_70
-#define HUE_VARIATION (spectralSpreadZScore * knob_71)      // Now influenced by knob_71
-#define COLOR_INTENSITY (spectralKurtosisMedian)
-#define DISPLACEMENT (spectralFluxNormalized)
-#else
-#define FLOW_SPEED (knob_70)
-#define CRYSTAL_SCALE (knob_71)
-#define ENERGY (knob_72)
-#define ROUGHNESS (knob_73)
-#define BASE_HUE (knob_74)
-#define HUE_VARIATION (knob_75)
-#define COLOR_INTENSITY (knob_76)
-#define DISPLACEMENT (knob_77)
-
-#endif
-
-#define TIME (time)
 // Rotation matrix helper
 mat2 rotate2D(float angle) {
     float c = cos(angle), s = sin(angle);
@@ -80,8 +65,8 @@ vec3 samplePrevious(vec2 uv, vec2 offset) {
 // Get flow direction based on pattern
 vec2 getFlowVector(vec2 uv, float pattern) {
     vec2 flow = vec2(
-        sin(uv.x * 4.0 + TIME + pattern * 2.0),
-        cos(uv.y * 4.0 + TIME * 1.2 + pattern * 2.0)
+        sin(uv.x * 4.0 + time + pattern * 2.0),
+        cos(uv.y * 4.0 + time * 1.2 + pattern * 2.0)
     );
     return flow * (0.02 + DISPLACEMENT * 0.03);
 }
@@ -94,7 +79,7 @@ vec2 flowNoise(vec2 uv) {
     float angle = atan(centered.y, centered.x);
 
     // Slower time scale
-    float t = TIME * WAVE_SPEED * 0.1;
+    float t = time * WAVE_SPEED * 0.1;
 
     // Create single, clean radial wave
     float radialWave = sin(dist * WAVE_SCALE - t) *
@@ -136,7 +121,7 @@ float tendrilNoise(vec3 p) {
     float f = sin(p.x) * cos(p.y) + sin(p.y) * cos(p.z);
     p *= 2.0;
     f += (sin(p.x) * cos(p.y) + sin(p.y) * cos(p.z)) * 0.5;
-    return f * PATTERN_DETAIL;
+    return f * MANDEL_INFLUENCE;
 }
 
 // Add the new neighborhood sampling function
@@ -159,40 +144,63 @@ vec4 sampleNeighborhood(vec2 uv, float radius) {
     return vec4(avg, dot(avg, vec3(0.299, 0.587, 0.114)));
 }
 
-// Update crystalPattern for cleaner color transitions
+// Add Mandelbrot calculation
+float mandelbrot(vec2 c) {
+    vec2 z = vec2(0.0);
+    float iter = 0.0;
+    const float MAX_ITER = 12.0;
+
+    for(float i = 0.0; i < MAX_ITER; i++) {
+        z = vec2(z.x * z.x - z.y * z.y, 2.0 * z.x * z.y) + c;
+        if(length(z) > 2.0) break;
+        iter++;
+    }
+
+    return iter / MAX_ITER;
+}
+
+// Update crystalPattern with Mandelbrot influence
 float crystalPattern(vec3 p) {
     vec2 uv = p.xy * 0.5 + 0.5;
     uv = fract(uv);
     vec4 neighborhood = sampleNeighborhood(uv, 2.0);
 
-    // Create centered flow
     vec2 centered = p.xy;
     vec2 flow = flowNoise(centered);
 
-    // Gentler neighborhood influence
     vec2 neighborFlow = (neighborhood.xy - 0.5) * EVOLUTION_RATE * 0.3;
     flow = mix(flow, neighborFlow, WAVE_COHERENCE * 0.3);
 
-    // Tighter bounds on flow
     flow = clamp(flow, -0.3, 0.3);
     p.xy += flow;
 
-    float pattern = length(p.xy) - 0.5;
-    pattern = smoothstep(0.0, 0.8, abs(pattern));
+    // Base circle
+    float circle = length(p.xy) - 0.5;
+
+    // Add Mandelbrot perturbation
+    vec2 mandel_uv = p.xy * MANDEL_SCALE;
+    float mandel = mandelbrot(mandel_uv);
+
+    // Perturb circle with Mandelbrot
+    float perturbAmount = MANDEL_INFLUENCE * sin(time * WAVE_SPEED);
+    circle += (mandel - 0.5) * perturbAmount;
+
+    float pattern = smoothstep(0.0, 0.8, abs(circle));
 
     return pattern;
 }
 
-// Add wave color function
+// Update getWaveColor with Mandelbrot influence
 vec3 getWaveColor(float pattern, float dist) {
-    // Convert pattern to HSL for better control
+    vec2 mandel_uv = vec2(dist * 2.0 - 1.0) * MANDEL_SCALE;
+    float mandel = mandelbrot(mandel_uv);
+
     vec3 waveHSL = vec3(
-        BASE_HUE + pattern * 0.2,           // Slight hue variation
-        0.4 + pattern * 0.3,                // Moderate saturation
-        0.3 + pattern * 0.3                 // Controlled brightness
+        BASE_HUE + pattern * 0.2 + mandel * MANDEL_INFLUENCE,
+        0.4 + pattern * 0.3 + mandel * MANDEL_INFLUENCE * 0.5,
+        0.3 + pattern * 0.3
     );
 
-    // Ensure colors stay in safe range
     waveHSL.y = clamp(waveHSL.y, 0.2, 0.7);
     waveHSL.z = clamp(waveHSL.z, 0.2, 0.6);
 
@@ -229,10 +237,12 @@ vec3 getRippleColor(vec2 uv, float pattern, float t) {
 }
 
 // Add missing lighting defines
+#ifndef LIGHT_POS
 #define LIGHT_POS vec3(2.0, -1.0, 2.0)
 #define AMBIENT 0.2
 #define SPECULAR_POWER 16.0
 #define SPECULAR_INTENSITY 0.8
+#endif
 
 // Fix applyPhongLighting function
 vec3 applyPhongLighting(vec3 baseColor, vec3 normal, vec2 uv) {
@@ -253,10 +263,10 @@ vec3 applyPhongLighting(vec3 baseColor, vec3 normal, vec2 uv) {
 // Add this helper function for Phong shading
 vec3 estimateNormal(vec2 uv, float pattern) {
     float eps = 0.01;
-    float dx = crystalPattern(vec3((uv + vec2(eps, 0.0)) * 2.0, TIME * 0.08)) -
-               crystalPattern(vec3((uv - vec2(eps, 0.0)) * 2.0, TIME * 0.08));
-    float dy = crystalPattern(vec3((uv + vec2(0.0, eps)) * 2.0, TIME * 0.08)) -
-               crystalPattern(vec3((uv - vec2(0.0, eps)) * 2.0, TIME * 0.08));
+    float dx = crystalPattern(vec3((uv + vec2(eps, 0.0)) * 2.0, time * 0.08)) -
+               crystalPattern(vec3((uv - vec2(eps, 0.0)) * 2.0, time * 0.08));
+    float dy = crystalPattern(vec3((uv + vec2(0.0, eps)) * 2.0, time * 0.08)) -
+               crystalPattern(vec3((uv - vec2(0.0, eps)) * 2.0, time * 0.08));
 
     return normalize(vec3(-dx, -dy, 0.2));
 }
