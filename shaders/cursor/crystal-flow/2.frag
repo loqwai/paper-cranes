@@ -1,3 +1,5 @@
+//http://localhost:6969/edit.html?shader=cursor%2Fcrystal-flow%2F2&knob_76=-0.346&knob_76.min=-2&knob_76.max=1&knob_70=0.496&knob_70.min=0&knob_70.max=1&knob_71=-1.575&knob_71.min=-2&knob_71.max=1&knob_72=-2&knob_72.min=-2&knob_72.max=1&knob_73=-0.819&knob_73.min=-2&knob_73.max=1&knob_74=-0.937&knob_74.min=-2&knob_74.max=1&knob_75=-1.787&knob_75.min=-2&knob_75.max=2.5&knob_77=-1.693&knob_77.min=-2&knob_77.max=1
+//http://localhost:6969/edit.html?shader=cursor%2Fcrystal-flow%2F2&knob_76=-1.102&knob_76.min=-2&knob_76.max=1&knob_70=0.693&knob_70.min=0&knob_70.max=1&knob_71=-0.016&knob_71.min=-2&knob_71.max=1&knob_72=1&knob_72.min=-2&knob_72.max=1&knob_73=0.339&knob_73.min=-2&knob_73.max=1&knob_74=-0.11&knob_74.min=-2&knob_74.max=1&knob_75=0.078&knob_75.min=0&knob_75.max=0.1&knob_77=-1.693&knob_77.min=-2&knob_77.max=1
 uniform float knob_70; // Base hue shift
 uniform float knob_71; // Color spread
 uniform float knob_72; // Saturation
@@ -18,8 +20,10 @@ uniform float knob_77; // Color blend factor
 #define SWIRL_INTENSITY (knob_75)                           // Intensity of swirl effect
 #define EDGE_GLOW (knob_76)                                 // Intensity of edge glow
 #define COLOR_BLEND (knob_77)                               // How colors mix together
+#define FRACTAL_INTENSITY (0.2 + knob_75 * 2.0)  // Controls both swirl and tendril intensity
 
 // Original audio defines (keep these)
+#ifndef MANUAL_MODE
 #define FLOW_SPEED (spectralFluxZScore)
 #define CRYSTAL_SCALE (spectralCentroidZScore)
 #define ENERGY (energyNormalized)
@@ -28,6 +32,17 @@ uniform float knob_77; // Color blend factor
 #define HUE_VARIATION (spectralSpreadZScore * knob_71)      // Now influenced by knob_71
 #define COLOR_INTENSITY (spectralKurtosisMedian)
 #define DISPLACEMENT (spectralFluxNormalized)
+#else
+#define FLOW_SPEED (knob_70)
+#define CRYSTAL_SCALE (knob_71)
+#define ENERGY (knob_72)
+#define ROUGHNESS (knob_73)
+#define BASE_HUE (knob_74)
+#define HUE_VARIATION (knob_75)
+#define COLOR_INTENSITY (knob_76)
+#define DISPLACEMENT (knob_77)
+
+#endif
 
 // Rotation matrix helper
 mat2 rotate2D(float angle) {
@@ -77,6 +92,24 @@ vec3 generateColor(float t, float offset) {
     return a + b * cos(6.28318 * (c * t + d));
 }
 
+// Add this helper function for fractal tendrils
+float tendrilNoise(vec3 p) {
+    float f = 0.0;
+    float amp = 0.5 * FRACTAL_INTENSITY;
+
+    // Reduce to 2 iterations instead of 3
+    for(int i = 0; i < 2; i++) {
+        // Simplified trig calculations
+        float sx = sin(p.x);
+        float sy = sin(p.y);
+        float sz = sin(p.z);
+        f += amp * (sx * sy + sy * sz + sz * sx);
+        p *= 2.0;  // Simpler frequency scaling
+        amp *= 0.5;
+    }
+    return f * FRACTAL_INTENSITY;
+}
+
 float crystalPattern(vec3 p) {
     // Add flowing displacement to input position
     vec2 flow = flowNoise(p.xy * 0.5) * (0.5 + ENERGY * 0.5);
@@ -86,53 +119,41 @@ float crystalPattern(vec3 p) {
     float pattern = 0.0;
     float basePattern = 0.2;
 
-    for(int i = 0; i < 4; i++) {
+    // Reduce to 3 iterations instead of 4
+    for(int i = 0; i < 3; i++) {
         float scale = 1.0 + float(i) * (1.0 + HUE_VARIATION * 0.05);
         vec3 q = p * scale;
 
-        // Add independent rotation for each layer
+        // Add time variable for this layer
         float layerTime = time * (0.1 + float(i) * 0.05);
-        vec2 layerFlow = flowNoise(q.xy * 0.3 + float(i)) * 0.5;
-        q.xy += layerFlow * (0.2 + float(i) * 0.1);
 
+        // Optimize rotations - only use necessary ones
         float rotSpeed = FLOW_SPEED * 0.1 * (0.2 + float(i) * 0.05);
         q.xy *= rotate2D(layerTime * rotSpeed);
-        q.yz *= rotate2D(layerTime * rotSpeed * 0.7);
-        q.xz *= rotate2D(layerTime * rotSpeed * 0.5);
 
-        // Add flowing distortion to the pattern
+        // Simplify edge calculations
         float flowOffset = sin(layerTime * 0.5 + length(q.xy) * 2.0) * 0.2;
+        float xEdge = abs(sin(q.x * 1.5 + flowOffset));
+        float yEdge = abs(sin(q.y * 1.5 + flowOffset));
+        float zEdge = abs(sin(q.z * 1.5 + flowOffset));
 
-        float xEdge = abs(sin(q.x * 1.5 + sin(q.z + flowOffset)));
-        float yEdge = abs(sin(q.y * 1.5 + sin(q.x + flowOffset)));
-        float zEdge = abs(sin(q.z * 1.5 + sin(q.y + flowOffset)));
+        float crystal = (xEdge * yEdge + yEdge * zEdge + zEdge * xEdge) * 0.33 / scale;
 
-        float crystal = max(
-            max(xEdge * yEdge, yEdge * zEdge),
-            xEdge * zEdge
-        ) / scale;
+        // Optimize tendril application
+        float tendrilScale = (2.0 + float(i)) * FRACTAL_INTENSITY;
+        float tendrilDetail = tendrilNoise(q * tendrilScale);
 
-        crystal = edge(crystal, 0.15);
+        crystal = smoothstep(0.3, 0.7, crystal + tendrilDetail * FRACTAL_INTENSITY);
 
-        // Add flowing detail
-        vec2 detailFlow = flowNoise(q.xy * 0.8 + float(i)) * 0.3;
-        crystal *= 1.0 + ROUGHNESS * 0.5 * (
-            sin(q.x * 2.0 + q.y * 2.0 + detailFlow.x) *
-            cos(q.y * 2.0 + q.z * 2.0 + detailFlow.y)
-        );
-
-        crystal = smoothstep(0.3, 0.7, crystal);
-
-        // Animate the pattern blending
-        float layerMix = sin(layerTime * 0.3 + float(i)) * 0.5 + 0.5;
+        // Simplified pattern blending
         pattern = mix(
             max(pattern, crystal),
             pattern + crystal,
-            layerMix
+            0.5
         ) * (1.0 - float(i) * 0.2);
     }
 
-    return mix(basePattern, pow(pattern, 0.9), mix(0.4, 0.7, ENERGY));
+    return mix(basePattern, pattern, ENERGY);
 }
 
 // Add ripple functions
@@ -181,16 +202,15 @@ vec3 getRippleColor(vec2 uv, float pattern, float time) {
     vec2 distortedUv = uv + vec2(waveX, waveY) * (1.0 + ENERGY);
     vec3 prevColor = texture(prevFrame, distortedUv).rgb;
 
-    // Generate multiple color layers
+    // Reduce number of color layers
     vec3 color1 = generateColor(BASE_HUE + depth * 0.3, pattern);
-    vec3 color2 = generateColor(BASE_HUE + 0.33 + depth * 0.2, pattern + 0.2);
-    vec3 color3 = generateColor(BASE_HUE + 0.66 + depth * 0.1, pattern + 0.4);
+    vec3 color2 = generateColor(BASE_HUE + 0.5 + depth * 0.2, pattern + 0.2);
 
-    // Mix colors based on depth and swirls
+    // Simpler color mixing
     vec3 swirledColor = mix(
-        mix(color1, color2, sin(depth * 4.0 + time) * 0.5 + 0.5),
-        color3,
-        cos(length(swirl1) * 3.0 + time) * 0.5 + 0.5
+        color1,
+        color2,
+        sin(depth * 4.0 + time) * 0.5 + 0.5
     );
 
     // Add energy-based intensity
