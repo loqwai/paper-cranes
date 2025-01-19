@@ -10,6 +10,24 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord);
 
 mat2 m(float a){float c=cos(a), s=sin(a);return mat2(c,-s,s,c);}
 
+// Add ripple effect based on color difference
+vec2 getRippleOffset(vec2 uv, vec4 lastFrame, vec4 currentColor) {
+    vec3 diff = abs(lastFrame.rgb - currentColor.rgb);
+    float colorDiff = (diff.r + diff.g + diff.b) / 3.0;
+
+    // Create ripple based on color difference
+    float rippleStrength = colorDiff * 0.1 * (1.0 + energyZScore);
+    if(beat) rippleStrength *= 2.0;
+
+    float angle = atan(uv.y - 0.5, uv.x - 0.5);
+    float dist = length(uv - 0.5);
+
+    return vec2(
+        cos(angle + t) * rippleStrength * sin(dist * 10.0 + t),
+        sin(angle + t) * rippleStrength * sin(dist * 10.0 + t)
+    );
+}
+
 // Add distortion function similar to beat-trip
 vec2 getDistortedUV(vec2 uv) {
     float waveX = sin(uv.y*20.0 + t*energyZScore) * 0.005;
@@ -67,10 +85,12 @@ float map(vec3 p) {
 
 // Then implement mainImage with the exact same signature
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec2 p = (fragCoord.xy - 0.5*iResolution.xy)/iResolution.y;
+    // Fix coordinate system - flip x coordinate
+    vec2 p = (vec2(iResolution.x - fragCoord.x, fragCoord.y) - 0.5*iResolution.xy)/iResolution.y;
     vec2 uv = fragCoord.xy/iResolution.xy;
+    uv.x = 1.0 - uv.x; // Flip x coordinate for UV too
 
-    // Get color from previous frame with distortion
+    // Get previous frame with distortion
     vec2 distortedUV = getDistortedUV(uv);
     vec4 prevColor = texture(prevFrame, fract(distortedUV));
 
@@ -99,13 +119,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float touchDist = length(p - vec2(touchX*2.0-1.0, -(touchY*2.0-1.0)));
         float touchInfluence = smoothstep(0.5, 0.0, touchDist);
 
-        // Add touch-based color variation
         cl.x = mix(cl.x, fract(touchX + touchY + t*0.1), touchInfluence * 0.5);
-        cl.y = mix(cl.y, 0.8, touchInfluence * 0.3);
+        cl.y = mix(0.8,cl.y, touchInfluence * 0.3);
         cl.z = mix(cl.z, 0.6, touchInfluence * 0.2);
-        cl.x = 1.0;
-        cl.y = 0.0;
-        cl.z = 0.0;
     }
 
     cl.x = fract(cl.x + spectralCentroid * 0.3);
@@ -119,17 +135,26 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Convert back to RGB
     cl = hsl2rgb(cl);
 
-    // Blend with previous frame
-    vec3 finalColor = mix(prevColor.rgb, cl, 0.8);
+    // Calculate ripple based on color difference
+    vec2 rippleOffset = getRippleOffset(uv, prevColor, vec4(cl, 1.0));
+    vec2 finalUV = fract(uv + rippleOffset);
 
-    // Add extra color variation when touched
-    if(touched) {
-        vec3 touchColor = hsl2rgb(vec3(fract(touchX + t*0.1), 0.8, 0.6));
-        finalColor = mix(finalColor, touchColor, 0.1);
-        finalColor = vec3(0.);
-    } else {
-        finalColor = vec3(1.);
-    }
+    // Sample previous frame again with ripple offset
+    vec4 rippleColor = texture(prevFrame, finalUV);
+
+    // Stronger blend with previous frame - reduce the blend factor to see more of previous frame
+    float blendFactor = 0.3; // Reduced from 0.8 to show more of previous frame
+    if(beat) blendFactor = 0.5; // More dramatic change on beats
+
+    vec3 finalColor = mix(rippleColor.rgb, cl, blendFactor);
+    finalColor = rgb2hsl(finalColor);
+    vec3 hslPrevColor = rgb2hsl(prevColor.rgb);
+    float hueDiff = abs(hslPrevColor.x - finalColor.x);
+
+    finalColor.x = mix(hslPrevColor.x, finalColor.x, 0.2);
+    finalColor = hsl2rgb(finalColor);
+    // Add subtle motion trail
+    finalColor = mix(finalColor, prevColor.rgb, hueDiff);
 
     fragColor = vec4(finalColor, 1.0);
 }
