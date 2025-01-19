@@ -48,7 +48,9 @@ const getAudioUniforms = () => {
     for (const f in getFlatAudioFeatures()) {
         uniforms.push(`uniform float ${f};`)
     }
-    uniforms.push('uniform bool beat;') // yeah, this needs to go somewhere else
+    uniforms.push('uniform bool beat;')
+    uniforms.sort()
+    console.log({uniforms})// yeah, this needs to go somewhere else
     return uniforms.join('\n')
 }
 
@@ -63,6 +65,10 @@ uniform sampler2D prevFrame;// Texture of the previous frame
 uniform sampler2D initialFrame;
 
 uniform float iRandom;
+
+uniform float touchX;
+uniform float touchY;
+uniform bool touched;
 
 float random(vec2 st, float seed){
     st=vec2(st.x*cos(seed)-st.y*sin(seed),
@@ -167,12 +173,5 @@ vec3 hslmix(vec3 c1, vec3 c2, float t){
     vec3 hsl = mix(hsl1, hsl2, t);
     return hsl2rgb(hsl);
     }
-
-// vec4 hslmix(vec4 c1, vec4 c2, float t){
-//     return vec4(hslmix(c1.rgb, c2.rgb, t), c1.a);
-// }
-// vec2 hslmix(vec2 c1, vec2 c2, float t){
-//     return vec2(hslmix(c1.rgb, c2.rgb, t), c1.a);
-// }
 `
 export default shaderWrapper

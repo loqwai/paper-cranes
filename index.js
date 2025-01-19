@@ -1,7 +1,7 @@
 import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { makeVisualizer } from './src/Visualizer.js'
 import './index.css'
-const events = ['touchstart', 'touchmove', 'touchstop', 'click', 'keydown', 'mousemove', 'mousedown', 'mouseup', 'resize']
+const events = ['touchstart', 'touchmove', 'touchstop', 'keydown', 'mousedown', 'resize']
 let ranMain = false
 let startTime = 0
 const params = new URLSearchParams(window.location.search)
@@ -11,6 +11,24 @@ const getVisualizerDOMElement = () => {
         window.visualizer = document.getElementById('visualizer')
     }
     return window.visualizer
+}
+
+// Add this new function to handle touch/mouse coordinates
+const getNormalizedCoordinates = (event, element) => {
+    let x, y
+    if (event.touches) {
+        x = event.touches[0].clientX
+        y = event.touches[0].clientY
+    } else {
+        x = event.clientX
+        y = event.clientY
+    }
+
+    const rect = element.getBoundingClientRect()
+    return {
+        x: (x - rect.left) / rect.width,
+        y: 1.0 - (y - rect.top) / rect.height  // Flip Y coordinate for WebGL
+    }
 }
 
 // check if we have microphone access. If so, just run main immediately
@@ -100,6 +118,31 @@ const main = async () => {
         const initialImageUrl = params.get('image') ?? 'images/placeholder-image.png'
         const fullscreen = (params.get('fullscreen') ?? false) === 'true'
         const canvas = getVisualizerDOMElement()
+
+        // Add touch and mouse event listeners
+        let coords = { x: 0.5, y: 0.5 }  // Default center position
+        let touched = false  // Add touched state
+
+        const updateCoords = (e) => {
+            window.coords = getNormalizedCoordinates(e, canvas)
+            window.touched = true
+            console.log({coords, touched})
+        }
+
+        canvas.addEventListener('touchmove', updateCoords)
+        canvas.addEventListener('touchstart', updateCoords)
+
+        canvas.addEventListener('mousemove', updateCoords)
+
+        // Reset touched state when touch/click ends
+        const resetTouch = () => {
+            touched = false
+        }
+
+        canvas.addEventListener('touchend', resetTouch)
+        canvas.addEventListener('mouseup', resetTouch)
+        canvas.addEventListener('mouseleave', resetTouch)
+
         const render = await makeVisualizer({ canvas, initialImageUrl, fullscreen })
         requestAnimationFrame(() => animate({ render, audio, fragmentShader, vertexShader }))
     } catch (e) {
@@ -109,22 +152,19 @@ const main = async () => {
 
 // if the url contains the string 'edit', don't do this.
 if (!window.location.href.includes('edit')) {
-    events.forEach((event) => {
+    for(const event of events) {
         // get the visualizer
+        console.log('registering event', event)
         const visualizer = getVisualizerDOMElement()
         visualizer.addEventListener(event, main, { once: true })
-        visualizer.addEventListener(
-            event,
-            () => {
-                try {
-                    document.documentElement.requestFullscreen()
-                } catch (e) {
-                    console.error(`preventing a crash: ${e}`)
-                }
-            },
-            { once: true },
-        )
-    })
+        visualizer.addEventListener(event, async()=>{
+            try {
+                await document.documentElement.requestFullscreen()
+            } catch (e) {
+                console.error(`requesting fullscreen from event ${event} failed`, e)
+            }
+        }, {once: true})
+    }
 }
 const setupAudio = async () => {
     const audioContext = new AudioContext()
@@ -149,12 +189,18 @@ const animate = ({ render, audio, fragmentShader, vertexShader }) => {
 
     const { manualFeatures } = window.cranes
     window.cranes.measuredAudioFeatures = measuredAudioFeatures
-    const features = { ...measuredAudioFeatures, ...queryParamFeatures, ...manualFeatures }
+    const features = {
+        ...measuredAudioFeatures,
+        ...queryParamFeatures,
+        ...manualFeatures,
+        touchX: window.coords?.x ?? 0.5,
+        touchY: window.coords?.y ?? 0.5,
+        touched: window.touched ?? false  // Add touched state to features
+    }
 
     try {
         render({ time: (performance.now() - startTime) / 1000, features, fragmentShader, vertexShader })
     } catch (e) {
         console.error(e)
     }
-
 }
