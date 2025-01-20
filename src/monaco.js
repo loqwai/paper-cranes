@@ -27,10 +27,6 @@ function init(monaco) {
         automaticLayout: true,
     });
 
-    // Make editor globally available immediately
-    window.cranes = window.cranes || {};
-    window.cranes.editor = editor;
-
     // Watch for shader errors
     let errorDecorations = [];
     setInterval(() => {
