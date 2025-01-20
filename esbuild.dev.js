@@ -8,50 +8,35 @@
 
 import { context } from 'esbuild'
 import { join, relative } from 'path'
-import { readdir, stat, mkdir, writeFile, readFile } from 'fs/promises'
+import { readdir, stat, mkdir, writeFile } from 'fs/promises'
 import ncp from 'ncp'
 import { promisify } from 'util'
 
 const ncpAsync = promisify(ncp)
 
-const copyShaders = {
-    name: 'copy-to-dist',
-    setup(build) {
-        // Watch shader files
-        build.onLoad({ filter: /\.frag$/ }, async (args) => {
-            console.log('Loading shader:', args.path)
-            const contents = await readFile(args.path, 'utf8')
-            return {
-                contents,
-                loader: 'copy'
-            }
-        })
-    }
-}
-
 async function ensureDistDirectory() {
     await mkdir('dist', { recursive: true })
 }
 
-async function getShaderFiles(dir) {
-    let fileList = []
-    const files = await readdir(dir)
-    await Promise.all(
-        files.map(async (file) => {
-            const filePath = join(dir, file)
-            const stats = await stat(filePath)
-            if (stats.isDirectory()) {
-                if (!['private', 'knobs', 'utils', 'practice'].includes(file)) {
-                    const subDirFiles = await getShaderFiles(filePath)
-                    fileList = fileList.concat(subDirFiles)
-                }
-            } else if (file.endsWith('.frag')) {
-                fileList.push(filePath)
-            }
-        }),
-    )
-    return fileList
-}
+// async function getShaderFiles(dir) {
+//     let fileList = []
+//     const files = await readdir(dir)
+//     await Promise.all(
+//         files.map(async (file) => {
+//             const filePath = join(dir, file)
+//             const stats = await stat(filePath)
+//             if (stats.isDirectory()) {
+//                 if (!['private', 'knobs', 'utils', 'practice'].includes(file)) {
+//                     const subDirFiles = await getShaderFiles(filePath)
+//                     fileList = fileList.concat(subDirFiles)
+//                 }
+//             } else if (file.endsWith('.frag')) {
+//                 fileList.push(filePath)
+//             }
+//         }),
+//     )
+//     return fileList
+// }
 
 async function getEntryPoints(dir) {
     let entryPoints = []
@@ -85,17 +70,16 @@ async function generateHTML(shaderFiles) {
 async function main() {
     await ensureDistDirectory()
 
-    const entryPoints = ['index.js', 'edit.js', 'service-worker.js', 'analyze.js']
+    const entryPoints = [
+        'index.js',
+        'edit.js',
+        'service-worker.js',
+        'analyze.js',
+        'shaders/**/*.frag'  // Add glob pattern for shaders
+    ]
     const srcEntryPoints = await getEntryPoints('./src')
     entryPoints.push(...srcEntryPoints)
 
-    const shaderDir = 'shaders'
-    const shaderFiles = await getShaderFiles(shaderDir)
-    entryPoints.push(...shaderFiles)
-
-    await generateHTML(shaderFiles)
-
-    // Create build context for watching
     const ctx = await context({
         entryPoints,
         format: 'esm',
@@ -112,22 +96,17 @@ async function main() {
             '.ttf': 'file',
             '.woff': 'file',
             '.woff2': 'file',
-            '.frag': 'copy',
-            '.html': 'copy'
-        },
-        plugins: [copyShaders]
+            '.frag': 'copy'
+        }
     })
 
-    // Watch all files including shaders
     await ctx.watch()
 
-    // Add custom middleware to handle shader requests
-await ctx.serve({
-    servedir: 'dist',
-    port: 6969
-})
+    await ctx.serve({
+        servedir: 'dist',
+        port: 6969
+    })
 
-    // Copy Monaco's files separately
     await ncpAsync(
         'node_modules/monaco-editor/min/vs',
         'dist/vs'
