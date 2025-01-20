@@ -50,29 +50,23 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         if(abs(spectralCrestZScore) > 0.95) highZScores++;
         if(abs(spectralKurtosisZScore) > 0.95) highZScores++;
         if(abs(spectralEntropyZScore) > 0.95) highZScores++;
-        if(abs(spectralEntropyZScore) > 0.95) highZScores++;
+        if(abs(spectralFluxZScore) > 0.95) highZScores++;
         if(abs(pitchClassZScore) > 0.95) highZScores++;
         if(abs(spectralRolloffZScore) > 0.95) highZScores++;
 
-        vec3 hsl = rgb2hsl(lineColor.rgb);
-        if(beat) {
-             hsl.x = fract(hsl.x + 0.5);
-        }
+
         if(highZScores < 2) {
-            lineColor.rgb = hsl2rgb(hsl);
             fragColor = mix(fragColor, lineColor, lineColor.a);
             return;
         }
 
+        vec3 hsl = rgb2hsl(lineColor.rgb);
         for(int i = 0; i < highZScores; i++){
-            hsl.x += 0.1;
-            hsl.y += 0.1;
-            hsl.y = clamp(hsl.y, 0., 1.);
-            hsl.z += 0.01;
+            hsl.z += (1. / float(ULTRA_DROP_COUNT*ULTRA_DROP_COUNT));
             hsl.z = clamp(hsl.z, 0., 1.);
 
         }
-         lineColor.rgb = fract(hsl2rgb(hsl));
+         lineColor.rgb = hsl2rgb(fract(hsl));
 
         if( highZScores == ULTRA_DROP_COUNT) {
            lineColor.r = 0.8;
