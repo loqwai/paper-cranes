@@ -61,13 +61,6 @@ export class WorkerRPC {
         if (fftData.length === 0) {
             return this.lastMessage
         }
-        const sum = fftData.reduce((acc, val) => acc + val, 0)
-        if (sum === 0) {
-            console.error(`${this.workerName} fftData is empty`)
-            console.log(`fft was this large: ${fftData.length}`)
-            // throw new Error(`${this.workerName} fftData is empty`)
-            return this.lastMessage || this.createDefaultMessage()
-        }
 
         if (this.resolveMessage) {
             console.log(`${this.workerName} abandoning message after ${performance.now() - this.currentMessageId}ms`)

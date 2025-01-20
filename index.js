@@ -37,11 +37,11 @@ navigator.mediaDevices
         audio: {
             echoCancellation: false,
             noiseSuppression: false,
-            autoGainControl: false,
+            autoGainControl: true,
             voiceIsolation: false,
             latency: 0,
             sampleRate: 44100,
-            channelCount: 1,
+            channelCount: 2,
         },
     })
     .then(() => main())

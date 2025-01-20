@@ -32,7 +32,7 @@ export const getFlatAudioFeatures = (audioFeatures = AudioFeatures, rawFeatures 
 }
 
 export class AudioProcessor {
-    constructor(audioContext, sourceNode, historySize=500,  fftSize = 32768/2) {
+    constructor(audioContext, sourceNode, historySize=500,  fftSize = 8192) {
         this.audioContext = audioContext
         this.sourceNode = sourceNode
         this.fftSize = fftSize
@@ -43,13 +43,15 @@ export class AudioProcessor {
         this.rawFeatures = {}
         this.currentFeatures = getFlatAudioFeatures()
         this.currentFeatures.beat = false
+        this.windowNode = null  // Track the window node
+        this.isProcessing = false  // Track if we're already processing
     }
 
     createAnalyzer = () => {
         const analyzer = this.audioContext.createAnalyser()
-        analyzer.smoothingTimeConstant = 0.25
-        analyzer.minDecibels = -100
-        analyzer.maxDecibels = -30
+        analyzer.smoothingTimeConstant = 0.7
+
+        analyzer.fftSize = this.fftSize
         return analyzer
     }
 
@@ -84,37 +86,78 @@ export class AudioProcessor {
     }
 
     start = async () => {
-        // Ensure audio context is running
-        if (this.audioContext.state !== 'running') {
-            await this.audioContext.resume()
+        try {
+            this.isProcessing = false
+
+            // Ensure audio context is running
+            if (this.audioContext.state !== 'running') {
+                await this.audioContext.resume()
+            }
+
+            // Clean up existing connections
+            this.cleanup()
+
+            // Load window processor
+            await this.audioContext.audioWorklet.addModule('src/window-processor.js')
+            this.windowNode = new AudioWorkletNode(this.audioContext, 'window-processor', {
+                processorOptions: {
+                    numberOfInputs: 1,
+                    numberOfOutputs: 1,
+                    channelCount: 2
+                }
+            })
+
+            // Connect audio chain
+            this.sourceNode.connect(this.windowNode)
+            this.windowNode.connect(this.fftAnalyzer)
+
+            // Debug audio levels
+            console.log('Audio setup:', {
+                contextState: this.audioContext.state,
+                sourceOutputs: this.sourceNode.numberOfOutputs,
+                analyzerMinDecibels: this.fftAnalyzer.minDecibels,
+                analyzerMaxDecibels: this.fftAnalyzer.maxDecibels
+            })
+
+            // Initialize workers
+            await Promise.all(AudioFeatures.map(this.initializeWorker))
+
+            this.isProcessing = true
+            this.updateCurrentFeatures()
+            this.updateFftData()
+        } catch (error) {
+            console.error('Error starting audio processor:', error)
+            this.cleanup()
         }
-
-        // Connect nodes in sequence
-        this.sourceNode.disconnect()
-        this.fftAnalyzer.disconnect()
-
-        // Connect source -> analyzer
-        this.sourceNode.connect(this.fftAnalyzer)
-
-        // Load and connect window processor
-        await this.audioContext.audioWorklet.addModule('src/window-processor.js')
-        const windowNode = new AudioWorkletNode(this.audioContext, 'window-processor')
-        this.sourceNode.connect(windowNode)
-
-        // Initialize workers
-        await Promise.all(AudioFeatures.map(this.initializeWorker))
-
-        // Wait for audio pipeline to stabilize
-        await new Promise(resolve => setTimeout(resolve, 500))
-
-        // Start update loops
-        this.updateCurrentFeatures()
-        this.updateFftData()
     }
 
     updateFftData = () => {
-        if (this.audioContext.state === 'running') {
-            this.fftAnalyzer.getByteFrequencyData(this.fftData)
+        if (!this.isProcessing) return  // Stop if we're not supposed to be processing
+
+        try {
+            if (this.audioContext.state === 'running') {
+                this.fftAnalyzer.getByteFrequencyData(this.fftData)
+                const sum = this.fftData.reduce((acc, val) => acc + val, 0)
+
+                if (sum === 0) {
+                    console.log('sum is 0')
+                    // Only log every 60 frames to avoid console spam
+                    if (this.audioContext.currentTime % 60 === 0) {
+                        console.warn('No audio data detected. Checking connections...')
+                    }
+
+                    // Attempt recovery
+                    this.sourceNode.disconnect()
+                    this.windowNode.disconnect()
+                    this.sourceNode.connect(this.windowNode)
+                    this.windowNode.connect(this.fftAnalyzer)
+                }
+            } else {
+                console.warn('Audio context not running, attempting to resume...')
+                this.audioContext.resume()
+            }
+        } catch (error) {
+            console.error('Error in updateFftData:', error)
         }
         requestAnimationFrame(this.updateFftData)
     }
@@ -122,6 +165,14 @@ export class AudioProcessor {
     getFeatures = () => this.currentFeatures
 
     cleanup = () => {
+        this.isProcessing = false
+
+        // Clean up audio nodes
+        if (this.sourceNode) this.sourceNode.disconnect()
+        if (this.windowNode) this.windowNode.disconnect()
+        if (this.fftAnalyzer) this.fftAnalyzer.disconnect()
+
+        // Clean up workers
         this.workers.forEach(worker => worker.terminate())
         this.workers.clear()
     }
