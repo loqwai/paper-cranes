@@ -7,7 +7,7 @@ import { readdir, stat, mkdir, rm } from 'fs/promises'
 async function ensureDistDirectory() {
     // remove current dist dir
     try{
-    await rm('dist', {recursive: true})
+        await rm('dist', {recursive: true})
     } catch(e){}
     await mkdir('dist', { recursive: true })
 }
@@ -43,31 +43,44 @@ async function main() {
 
     const baseDir = './src'
     const shaderDir = './shaders'
-    const dynamicFiles = await findFiles(baseDir, ['.js', '.css', '.html', '.ttf', '.png', '.svg'])
+    const imgDir = './images'
 
-    // Specifically find shaders in the shaders folder
-    const shaderFiles = await findFiles(shaderDir, ['.frag'])
-    const rootEntrypoints = [
+    // Find all JS files to bundle
+    const jsFiles = await findFiles(baseDir, ['.js'])
+
+    // Find other assets to copy
+    const otherFiles = await findFiles(baseDir, ['.css', '.html', '.ttf', '.png', '.svg'])
+    const shaderFiles = await findFiles(shaderDir, ['.frag', '.vert'])
+    const imgFiles = await findFiles(imgDir, ['.png', '.jpg', '.jpeg'])
+
+    // Files that should be bundled (all JavaScript)
+    const bundleEntrypoints = [
         'index.js',
-
-        'service-worker.js',
-
         'analyze.js',
+        'edit.js',
+        'service-worker.js',
+        ...jsFiles,
+    ]
+
+    // Files that should just be copied/processed (everything else)
+    const copyEntrypoints = [
         'analyze.css',
         'analyze.html',
-
-
-        'edit.js',
         'edit.css',
         'edit.html',
-
+        'index.css',
+        'index.html',
+        'BarGraph.css',
         'favicon.ico',
+        ...otherFiles,
+        ...shaderFiles,
+        ...imgFiles,
     ]
+
     const sharedOptions = {
         format: 'esm',
         minify: true,
         sourcemap: true,
-        treeShaking: true,
         define: {
             CACHE_NAME: '"cranes-cache-v2"',
             'process.env.NODE_ENV': process.env.NODE_ENV ?? '"development"',
@@ -76,36 +89,44 @@ async function main() {
             '.ttf': 'file',
             '.woff': 'file',
             '.woff2': 'file',
-            '.html': 'file',
-            '.png': 'file',
+            '.html': 'copy',
+            '.png': 'copy',
             '.svg': 'file',
-            '.frag': 'file',
-            '.ico': 'file', // Treat shaders as plain text
+            '.frag': 'copy',
+            '.vert': 'copy',
+            '.ico': 'file',
+            '.jpeg': 'copy',
+            '.jpg': 'copy',
+            '.png': 'copy',
         }
     }
 
-    const individualFileOptions = {
+    const copyOptions = {
         ...sharedOptions,
-        entryPoints: [...dynamicFiles, ...shaderFiles,], // Include shaders and other files
+        entryPoints: copyEntrypoints,
         outdir: join(process.cwd(), 'dist'),
-        bundle: false, // Process files individually
+        outbase: '.',
+        bundle: false,
+        format: undefined,
     }
 
     const bundleOptions = {
         ...sharedOptions,
-        entryPoints: rootEntrypoints, // Bundle main entry points
-        outdir: join(process.cwd(), 'dist/bundle'),
+        entryPoints: bundleEntrypoints,
+        outdir: join(process.cwd(), 'dist'),
+        outbase: '.',
         bundle: true,
+        treeShaking: true,
     }
 
     const isDevelopment = process.env.NODE_ENV !== 'production'
 
     if (isDevelopment) {
         // Development: Watch and serve
-        const ctxIndividual = await context(individualFileOptions)
+        const ctxCopy = await context(copyOptions)
         const ctxBundle = await context(bundleOptions)
 
-        await ctxIndividual.watch()
+        await ctxCopy.watch()
         await ctxBundle.watch()
 
         await ctxBundle.serve({
@@ -114,11 +135,12 @@ async function main() {
         })
         return
     }
-        // Production: Build both configurations
-        await Promise.all([
-            build(individualFileOptions),
-            build(bundleOptions),
-        ])
+
+    // Production: Build both configurations
+    await Promise.all([
+        build(copyOptions),
+        build(bundleOptions),
+    ])
 }
 
 main().catch(console.error)
