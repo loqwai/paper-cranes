@@ -1,8 +1,8 @@
-uniform float knob_70;
 #define LINE_WIDTH 20.0
 #define SMOOTH_WIDTH 14.0
-#define ULTRA_DROP_COUNT 4
+#define ULTRA_DROP_COUNT 5
 #define PROBE_A 0.3
+
 float smoothLine(vec2 fragCoord, float value ) {
     float d = abs(fragCoord.y - ((value+0.5) * resolution.y));
     return smoothstep(LINE_WIDTH + SMOOTH_WIDTH, LINE_WIDTH - SMOOTH_WIDTH, d);
@@ -13,7 +13,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Background - Shift everything to the left
     if (uv.x < 0.99) {
         vec2 prevUV = uv;
-        prevUV.x += 1.0 / resolution.x;
+        prevUV.x += 0.99 / resolution.x;
 
         // Apply a slight horizontal blur for smoother transitions
         vec4 color1 = getLastFrameColor(prevUV);
@@ -28,26 +28,31 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         vec4 lineColor = vec4(0.0);
 
         // Get both current and previous frame values for interpolation
-        vec2 prevUV = vec2(uv.x - 1.0/resolution.x, uv.y);
+        vec2 prevUV = vec2(uv.x/resolution.x, uv.y);
         vec4 prevColor = getLastFrameColor(prevUV);
 
         // Blend current and previous values for smoother transitions
         float spectralCrestSmooth = mix(prevColor.r, spectralCrestZScore, PROBE_A);
         float spectralKurtosisSmooth = mix(prevColor.g, spectralKurtosisZScore, PROBE_A);
         float pitchClassSmooth = mix(prevColor.b, pitchClass, PROBE_A);
+        float spectralFluxSmooth = mix(prevColor.b, spectralFluxZScore, PROBE_A);
         float spectralEntropySmooth = mix(prevColor.y, spectralEntropyZScore, PROBE_A);
+        float spectralRolloffSmooth = mix(prevColor.y, spectralRolloffZScore, PROBE_A);
 
         lineColor += vec4(1.0, 0.0, 0.0, 1.0) * smoothLine(fragCoord, spectralCrestSmooth);
         lineColor += vec4(0.0, 1.0, 0.0, 1.0) * smoothLine(fragCoord, spectralKurtosisSmooth);
         lineColor += vec4(0.0, 0.0, 1.0, 1.0) * smoothLine(fragCoord, pitchClassSmooth);
+        lineColor += vec4(0.3, 0.4, 1.0, 1.0) * smoothLine(fragCoord, spectralFluxSmooth);
         lineColor += vec4(1.0, 1.0, 0.0, 1.0) * smoothLine(fragCoord, spectralEntropySmooth);
+        lineColor += vec4(0.2, 0.7, 0.7, 1.0) * smoothLine(fragCoord, spectralRolloffSmooth);
 
         int highZScores = 0;
         if(abs(spectralCrestZScore) > 0.95) highZScores++;
         if(abs(spectralKurtosisZScore) > 0.95) highZScores++;
         if(abs(spectralEntropyZScore) > 0.95) highZScores++;
-        if(abs(spectralCentroidZScore) > 0.95) highZScores++;
+        if(abs(spectralEntropyZScore) > 0.95) highZScores++;
         if(abs(pitchClassZScore) > 0.95) highZScores++;
+        if(abs(spectralRolloffZScore) > 0.95) highZScores++;
 
         vec3 hsl = rgb2hsl(lineColor.rgb);
         if(beat) {
