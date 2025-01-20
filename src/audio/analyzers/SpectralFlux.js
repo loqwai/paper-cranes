@@ -1,21 +1,23 @@
 import { makeCalculateStats, spectralFlux } from 'hypnosound'
 
-let calculateStats = makeCalculateStats()
-let previousSignal = new Float32Array() // Initialize with zeros
+let state = {
+    calculateStats: makeCalculateStats(),
+    previousSignal: new Float32Array(),
+}
 
 self.addEventListener('message', ({ data: e }) => {
     if (e.type === 'fftData') {
         const { fft } = e.data
 
-        if (!previousSignal.length) {
-            previousSignal = new Float32Array(fft.length)
+        if (!state.previousSignal.length) {
+            state.previousSignal = new Float32Array(fft.length)
             return
         }
 
-        const value = spectralFlux(fft, previousSignal)
-        self.postMessage({id: e.id, type: 'computedValue', value, stats: calculateStats(value) })
+        const value = spectralFlux(fft, state.previousSignal)
+        self.postMessage({id: e.id, type: 'computedValue', value, stats: state.calculateStats(value) })
     }
     if (e.type === 'config') {
-        calculateStats = makeCalculateStats(e.config.historySize)
+        state.calculateStats = makeCalculateStats(e.config.historySize)
     }
 })

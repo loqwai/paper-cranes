@@ -85,6 +85,16 @@ export class WorkerRPC {
         return messagePromise
     }
 
+    setHistorySize = (historySize) => {
+        if(this.historySize !== historySize) {
+            this.historySize = historySize
+            this.worker.postMessage({
+                type: 'config',
+                config: { historySize: this.historySize },
+            })
+        }
+    }
+
     initialize = async () => {
         const workerUrl = new URL(`./src/audio/analyzers/${this.workerName}.js`, import.meta.url)
         const response = await fetch(workerUrl)

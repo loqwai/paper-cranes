@@ -63,7 +63,7 @@ export class AudioProcessor {
     }
 
     runWorkerLoop = async (worker) => {
-
+        worker.setHistorySize(this.historySize);
         const result = await worker.processData(this.fftData)
         if(!result) {
             noResultCount++;
@@ -82,6 +82,7 @@ export class AudioProcessor {
     updateCurrentFeatures = () => {
         requestAnimationFrame(this.updateCurrentFeatures)
         this.currentFeatures = getFlatAudioFeatures(AudioFeatures, this.rawFeatures)
+        this.historySize = window.cranes?.manualFeatures?.history_size ?? this.historySize;
         this.currentFeatures.beat = this.isBeat()
     }
 
