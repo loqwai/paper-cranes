@@ -17,7 +17,6 @@ function updateKnobValue(knob, value) {
 navigator
     .requestMIDIAccess()
     .then((midiAccess) => {
-        console.log('MIDI ready')
         midiAccess.inputs.forEach((input) => {
             input.onmidimessage = (message) => {
                 const [command, control, value] = message.data

@@ -50,7 +50,7 @@ const getAudioUniforms = () => {
     }
     uniforms.push('uniform bool beat;')
     uniforms.sort()
-    console.log({uniforms})// yeah, this needs to go somewhere else
+
     return uniforms.join('\n')
 }
 
