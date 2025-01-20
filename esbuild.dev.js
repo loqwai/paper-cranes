@@ -1,99 +1,72 @@
 #!/usr/bin/env node
-/**
- * @typedef {import('esbuild').Plugin} Plugin
- * @typedef {import('esbuild').BuildOptions} BuildOptions
- * @typedef {import('esbuild').BuildResult} BuildResult
- * @typedef {import('esbuild').BuildContext} BuildContext
- */
 
-import { context } from 'esbuild'
-import { join, relative } from 'path'
-import { readdir, stat, mkdir, writeFile } from 'fs/promises'
-import ncp from 'ncp'
-import { promisify } from 'util'
-
-const ncpAsync = promisify(ncp)
+import { context, build } from 'esbuild'
+import { join } from 'path'
+import { readdir, stat, mkdir, rm } from 'fs/promises'
 
 async function ensureDistDirectory() {
+    // remove current dist dir
+    try{
+    await rm('dist', {recursive: true})
+    } catch(e){}
     await mkdir('dist', { recursive: true })
 }
 
-// async function getShaderFiles(dir) {
-//     let fileList = []
-//     const files = await readdir(dir)
-//     await Promise.all(
-//         files.map(async (file) => {
-//             const filePath = join(dir, file)
-//             const stats = await stat(filePath)
-//             if (stats.isDirectory()) {
-//                 if (!['private', 'knobs', 'utils', 'practice'].includes(file)) {
-//                     const subDirFiles = await getShaderFiles(filePath)
-//                     fileList = fileList.concat(subDirFiles)
-//                 }
-//             } else if (file.endsWith('.frag')) {
-//                 fileList.push(filePath)
-//             }
-//         }),
-//     )
-//     return fileList
-// }
-
-async function getEntryPoints(dir) {
-    let entryPoints = []
+/**
+ * Recursively find all files with the specified extensions in a directory.
+ * @param {string} dir - The directory to search in.
+ * @param {string[]} extensions - The file extensions to include.
+ * @returns {Promise<string[]>} - List of file paths.
+ */
+async function findFiles(dir, extensions = ['.js', '.css', '.html']) {
+    let fileList = []
     const files = await readdir(dir, { withFileTypes: true })
+
     await Promise.all(
         files.map(async (file) => {
             const filePath = join(dir, file.name)
-            if (file.isDirectory()) {
-                const subDirEntries = await getEntryPoints(filePath)
-                entryPoints = entryPoints.concat(subDirEntries)
-            } else if (file.isFile() && file.name.endsWith('.js')) {
-                entryPoints.push(filePath)
+            const fileStat = await stat(filePath)
+
+            if (fileStat.isDirectory()) {
+                const subDirFiles = await findFiles(filePath, extensions)
+                fileList = fileList.concat(subDirFiles)
+            } else if (fileStat.isFile() && extensions.some((ext) => file.name.endsWith(ext))) {
+                fileList.push(filePath)
             }
         }),
     )
-    return entryPoints
-}
-
-async function generateHTML(shaderFiles) {
-    let htmlContent = '<!DOCTYPE html>\n<html>\n<head>\n<title>Shaders</title>\n</head>\n<body>\n<ul>\n'
-    shaderFiles.forEach((file) => {
-        const relativePath = relative('shaders', file)
-        const queryParam = relativePath.replace(/\\/g, '/').replace('.frag', '')
-        htmlContent += `<li><a href="/?shader=${queryParam}&fullscreen=true">${queryParam}</a></li>\n`
-    })
-    htmlContent += '</ul>\n</body>\n</html>'
-
-    await writeFile(join('dist', 'shaders.html'), htmlContent)
+    return fileList
 }
 
 async function main() {
     await ensureDistDirectory()
 
-    const entryPoints = [
+    const baseDir = './src'
+    const shaderDir = './shaders'
+    const dynamicFiles = await findFiles(baseDir, ['.js', '.css', '.html', '.ttf', '.png', '.svg'])
+
+    // Specifically find shaders in the shaders folder
+    const shaderFiles = await findFiles(shaderDir, ['.frag'])
+    const rootEntrypoints = [
         'index.js',
-        'edit.js',
+
         'service-worker.js',
+
         'analyze.js',
-        'shaders/**/*.frag',
-        '*.css',
-        'favicon.ico',
-        'images/**/*',
-        'codicon.ttf',
-        '*.html',
-        '*.ttf',
+        'analyze.css',
+        'analyze.html',
+
+
+        'edit.js',
+        'edit.css',
+        'edit.html',
+
         'favicon.ico',
     ]
-    const srcEntryPoints = await getEntryPoints('./src')
-    entryPoints.push(...srcEntryPoints)
-
-    const ctx = await context({
-        entryPoints,
+    const sharedOptions = {
         format: 'esm',
-        bundle: true,
-        minify: false,
+        minify: true,
         sourcemap: true,
-        outdir: join(process.cwd(), 'dist'),
         treeShaking: true,
         define: {
             CACHE_NAME: '"cranes-cache-v2"',
@@ -103,45 +76,49 @@ async function main() {
             '.ttf': 'file',
             '.woff': 'file',
             '.woff2': 'file',
-            '.frag': 'copy',
-            '.html': 'copy',
-            '.ico': 'copy',
-            '.png': 'copy',
-            '.svg': 'copy',
-            '.jpg': 'copy',
-            '.jpeg': 'copy',
-            '.gif': 'copy',
-            '.bmp': 'copy',
-            '.tiff': 'copy',
-            '.ico': 'copy',
+            '.html': 'file',
+            '.png': 'file',
+            '.svg': 'file',
+            '.frag': 'file',
+            '.ico': 'file', // Treat shaders as plain text
         }
-    })
+    }
 
-    await ctx.watch()
+    const individualFileOptions = {
+        ...sharedOptions,
+        entryPoints: [...dynamicFiles, ...shaderFiles,], // Include shaders and other files
+        outdir: join(process.cwd(), 'dist'),
+        bundle: false, // Process files individually
+    }
 
-    await ctx.serve({
-        servedir: 'dist',
-        port: 6969
-    })
+    const bundleOptions = {
+        ...sharedOptions,
+        entryPoints: rootEntrypoints, // Bundle main entry points
+        outdir: join(process.cwd(), 'dist/bundle'),
+        bundle: true,
+    }
 
-    await ncpAsync(
-        'node_modules/monaco-editor/min/vs',
-        'dist/vs'
-    )
+    const isDevelopment = process.env.NODE_ENV !== 'production'
 
-    await Promise.all([
-        ncpAsync('index.html', 'dist/index.html'),
-        ncpAsync('index.css', 'dist/index.css'),
-        ncpAsync('edit.html', 'dist/edit.html'),
-        ncpAsync('edit.css', 'dist/edit.css'),
-        ncpAsync('BarGraph.css', 'dist/BarGraph.css'),
-        ncpAsync('favicon.ico', 'dist/favicon.ico'),
-        ncpAsync('images', 'dist/images'),
-        ncpAsync('shaders', 'dist/shaders'),
-        ncpAsync('codicon.ttf', 'dist/codicon.ttf'),
-        ncpAsync('analyze.html', 'dist/analyze.html'),
-        ncpAsync('analyze.css', 'dist/analyze.css'),
-    ])
+    if (isDevelopment) {
+        // Development: Watch and serve
+        const ctxIndividual = await context(individualFileOptions)
+        const ctxBundle = await context(bundleOptions)
+
+        await ctxIndividual.watch()
+        await ctxBundle.watch()
+
+        await ctxBundle.serve({
+            servedir: 'dist',
+            port: 6969,
+        })
+        return
+    }
+        // Production: Build both configurations
+        await Promise.all([
+            build(individualFileOptions),
+            build(bundleOptions),
+        ])
 }
 
 main().catch(console.error)
