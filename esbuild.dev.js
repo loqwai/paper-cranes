@@ -1,10 +1,16 @@
 #!/usr/bin/env node
+/**
+ * @typedef {import('esbuild').Plugin} Plugin
+ * @typedef {import('esbuild').BuildOptions} BuildOptions
+ * @typedef {import('esbuild').BuildResult} BuildResult
+ * @typedef {import('esbuild').BuildContext} BuildContext
+ */
+
 import { context } from 'esbuild'
 import { join, relative } from 'path'
 import { readdir, stat, mkdir, writeFile, readFile } from 'fs/promises'
 import ncp from 'ncp'
 import { promisify } from 'util'
-import chokidar from 'chokidar'
 
 const ncpAsync = promisify(ncp)
 
@@ -24,11 +30,7 @@ const copyShaders = {
 }
 
 async function ensureDistDirectory() {
-    try {
-        await mkdir('dist', { recursive: true })
-    } catch (err) {
-        console.error('Error ensuring dist directory:', err)
-    }
+    await mkdir('dist', { recursive: true })
 }
 
 async function getShaderFiles(dir) {
@@ -109,32 +111,74 @@ async function main() {
             '.ttf': 'file',
             '.woff': 'file',
             '.woff2': 'file',
-            '.frag': 'text'
+            '.frag': 'copy',
+            '.html': 'copy'
         },
         plugins: [copyShaders]
     })
 
-    // Watch the shaders directory
-    await ctx.watch({
-    })
+    // Watch all files including shaders
+    await ctx.watch()
 
     // Add custom middleware to handle shader requests
-    await ctx.serve({
-        servedir: 'dist',
-        port: 6969,
-        onRequest: async (args) => {
-            if (args.path.endsWith('.frag')) {
-                console.log('Shader requested:', args.path)
-                const shaderPath = join(process.cwd(), args.path)
+await ctx.serve({
+    servedir: 'dist',
+    port: 6969,
+    onRequest: async (args) => {
+        if (args.path === '/' || args.path.endsWith('.html')) {
+            console.log('HTML requested:', args.path)
+            const htmlPath = args.path === '/' ? 'index.html' : args.path.slice(1)
+            const fullPath = join(process.cwd(), 'dist', htmlPath)
+            console.log('Reading from:', fullPath)
+            try {
+                const contents = await readFile(fullPath, 'utf8')
+                const injectedScript = `
+                    <script>
+                        console.log('Reload script loaded');
+                        new EventSource('/esbuild').addEventListener('change', (event) => {
+                            const currentShader = new URLSearchParams(window.location.search).get('shader')
+                            if (currentShader && event.data.includes('.frag')) {
+                                window.location.reload()
+                            }
+                        });
+                    </script>
+                `
+                const updatedContents = contents.replace('</head>', `${injectedScript}</head>`)
+                console.log('Updated contents:', updatedContents)
+                return new Response(updatedContents, {
+                    headers: {
+                        'Content-Type': 'text/html; charset=utf-8',
+                        'Cache-Control': 'no-store',
+                    },
+                    body: contents,
+                })
+            } catch (error) {
+                console.error('Error processing HTML:', error)
+                return new Response('Not Found', { status: 404 })
+            }
+        }
+
+        // Handle shader files dynamically
+        if (args.path.endsWith('.frag')) {
+            console.log('Shader requested:', args.path)
+            const shaderPath = join(process.cwd(), args.path)
+            try {
                 const content = await readFile(shaderPath, 'utf8')
                 return new Response(content, {
                     headers: {
                         'Content-Type': 'text/plain',
                     },
                 })
+            } catch (error) {
+                console.error('Error processing shader file:', error)
+                return new Response('Not Found', { status: 404 })
             }
         }
-    })
+
+        // Fallback to esbuild's default handler for other files
+        return undefined
+    },
+})
 
     // Copy Monaco's files separately
     await ncpAsync(
@@ -155,15 +199,6 @@ async function main() {
         ncpAsync('analyze.html', 'dist/analyze.html'),
         ncpAsync('analyze.css', 'dist/analyze.css'),
     ])
-
-    // Watch shaders directory separately
-    chokidar.watch('shaders/**/*.frag').on('all', (event, path) => {
-        console.log(`Shader ${event}:`, path)
-        // Copy changed shader to dist
-        const relativePath = relative(process.cwd(), path)
-        const destPath = join('dist', relativePath)
-        ncpAsync(path, destPath).catch(console.error)
-    })
 }
 
 main().catch(console.error)
