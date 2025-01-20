@@ -38,6 +38,7 @@ navigator.mediaDevices
             echoCancellation: false,
             noiseSuppression: false,
             autoGainControl: false,
+            voiceIsolation: false,
         },
     })
     .then(() => main())

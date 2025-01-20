@@ -125,7 +125,6 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
             iTime: time,
             iFrame: frameNumber,
             time,
-            iTime: time,
             prevFrame: frameNumber === 0 ? initialTexture : prevFrame.attachments[0],
             initialFrame: initialTexture,
             resolution: [frame.width, frame.height],
