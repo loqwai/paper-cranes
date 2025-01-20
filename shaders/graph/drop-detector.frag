@@ -2,7 +2,8 @@
 #define SMOOTH_WIDTH 14.0
 #define ULTRA_DROP_COUNT 5
 #define PROBE_A 0.3
-
+uniform float knob_70;
+#define PROBE_B 0.95
 float smoothLine(vec2 fragCoord, float value ) {
     float d = abs(fragCoord.y - ((value+0.5) * resolution.y));
     return smoothstep(LINE_WIDTH + SMOOTH_WIDTH, LINE_WIDTH - SMOOTH_WIDTH, d);
@@ -34,7 +35,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         // Blend current and previous values for smoother transitions
         float spectralCrestSmooth = mix(prevColor.r, spectralCrestZScore, PROBE_A);
         float spectralKurtosisSmooth = mix(prevColor.g, spectralKurtosisZScore, PROBE_A);
-        float pitchClassSmooth = mix(prevColor.b, pitchClass, PROBE_A);
+        float pitchClassSmooth = mix(prevColor.b, energyNormalized, PROBE_A);
         float spectralFluxSmooth = mix(prevColor.b, spectralFluxZScore, PROBE_A);
         float spectralEntropySmooth = mix(prevColor.y, spectralEntropyZScore, PROBE_A);
         float spectralRolloffSmooth = mix(prevColor.y, spectralRolloffZScore, PROBE_A);
@@ -47,12 +48,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         lineColor += vec4(0.2, 0.7, 0.7, 1.0) * smoothLine(fragCoord, spectralRolloffSmooth);
 
         int highZScores = 0;
-        if(abs(spectralCrestZScore) > 0.95) highZScores++;
-        if(abs(spectralKurtosisZScore) > 0.95) highZScores++;
-        if(abs(spectralEntropyZScore) > 0.95) highZScores++;
-        if(abs(spectralFluxZScore) > 0.95) highZScores++;
-        if(abs(pitchClassZScore) > 0.95) highZScores++;
-        if(abs(spectralRolloffZScore) > 0.95) highZScores++;
+        if(abs(spectralCrestZScore) > PROBE_B) highZScores++;
+        if(abs(spectralKurtosisZScore) > PROBE_B) highZScores++;
+        if(abs(spectralEntropyZScore) > PROBE_B) highZScores++;
+        if(abs(spectralFluxZScore) > PROBE_B) highZScores++;
+        if(abs(pitchClassZScore) > PROBE_B) highZScores++;
+        if(abs(spectralRolloffZScore) > PROBE_B) highZScores++;
 
 
         if(highZScores < 2) {
@@ -62,7 +63,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
         vec3 hsl = rgb2hsl(lineColor.rgb);
         for(int i = 0; i < highZScores; i++){
-            hsl.z += (1. / float(ULTRA_DROP_COUNT*ULTRA_DROP_COUNT));
+            hsl.z += (1. / float(ULTRA_DROP_COUNT*2));
             hsl.z = clamp(hsl.z, 0., 1.);
 
         }
