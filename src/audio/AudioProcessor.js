@@ -18,6 +18,7 @@ export const AudioFeatures = [
     'Treble',
 ]
 
+let noResultCount = 0;
 export const getFlatAudioFeatures = (audioFeatures = AudioFeatures, rawFeatures = {}) => {
     const features = {}
     for (const feature of audioFeatures) {
@@ -47,7 +48,7 @@ export class AudioProcessor {
 
     createAnalyzer = () => {
         const analyzer = this.audioContext.createAnalyser()
-        analyzer.smoothingTimeConstant = 0.3
+        analyzer.smoothingTimeConstant = 0.99
         analyzer.minDecibels = -100
         analyzer.maxDecibels = -30
         analyzer.fftSize = this.fftSize
@@ -62,11 +63,20 @@ export class AudioProcessor {
     }
 
     runWorkerLoop = async (worker) => {
+        requestAnimationFrame(() => this.runWorkerLoop(worker));
         const result = await worker.processData(this.fftData)
+        if(!result) {
+            noResultCount++;
+            console.error(`worker returned no result`)
+            if(noResultCount > 150) {
+                window.location.reload();
+            }
+            return;
+        }
+
         if (result) {
             this.rawFeatures[result.workerName] = result
         }
-        requestAnimationFrame(() => this.runWorkerLoop(worker));
     }
 
     updateCurrentFeatures = () => {
