@@ -93,14 +93,14 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
             const wrappedFragmentShader = shaderWrapper(newFragmentShader)
             const wrappedVertexShader = shaderWrapper(newVertexShader)
             // Update program with new shaders
-            const newProgramInfo = updateWebGLProgram(gl, wrappedVertexShader, wrappedFragmentShader)
-            console.log('newProgramInfo', newProgramInfo)
-
-            if (!newProgramInfo) {
-                programInfo = null
-                return
+            const newProgramInfo = createProgramInfo(gl, [wrappedVertexShader, wrappedFragmentShader])
+            if (!newProgramInfo?.program) {
+                programInfo = null;
+                lastVertexShader = newVertexShader;  // Update these so we don't keep trying with bad shaders
+                lastFragmentShader = newFragmentShader;
+                return;
             }
-
+            gl.useProgram(newProgramInfo.program)
             programInfo = newProgramInfo
             lastVertexShader = newVertexShader
             lastFragmentShader = newFragmentShader

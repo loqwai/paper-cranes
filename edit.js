@@ -73,23 +73,7 @@ const FeatureAdder = () => {
             initialFeatures[featureName][paramType] = parseFloat(value)
         })
         setFeatures(initialFeatures)
-        // if there is no 'shader' query param, set the editor code to the default shader
-        if (!searchParams.has('shader')) {
-            // try to get the shader from local storage
-            let shader = localStorage.getItem('cranes-manual-code')
-            // if the shader is not in local storage, fetch it from the server
-            if (!shader) {
-                const res = await fetch('/shaders/default.frag')
-                shader = await res.text()
-            }
-            window.editor.pushUndoStop()
-            window.editor.setValue(shader)
-            window.editor.pushUndoStop()
-            window.editor.layout()
-        } else {
-            // add the no-editor class to body
-            document.body.classList.add('no-editor')
-        }
+
         // if we have a searchParam of 'present', add the present class to the body
         if (searchParams.has('present')) {
             document.body.classList.add('present')

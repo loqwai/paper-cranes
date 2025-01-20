@@ -4,6 +4,8 @@
 <head>
     <link rel="stylesheet" data-name="vs/editor/editor.main" href="./vs/editor/editor.main.css" />
     <link rel="stylesheet" href="edit.css" />
+    <link rel="stylesheet" data-name="vs/editor/editor.main"
+        href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/editor/editor.main.min.css">
     <title>Paper Cranes - Editor</title>
 </head>
 
@@ -22,6 +24,10 @@
     <script type="module" src="./index.js"></script>
     <script type="module" src="./edit.js"></script>
     <script type="module" src="./src/midi.js"></script>
+    <script>var require = { paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs' } };</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/loader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/editor/editor.main.nls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/editor/editor.main.js"></script>
 </body>
 
 </html>

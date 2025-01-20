@@ -1,17 +1,36 @@
-import * as monaco from 'monaco-editor'
+// import * as monaco from 'monaco-editor'
 
+// require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs' }});
 // Set up Monaco's worker path
-self.MonacoEnvironment = {
-    getWorkerUrl: function(moduleId, label) {
-        return './vs/base/worker/workerMain.js';
+window.MonacoEnvironment = {
+    getWorkerUrl: function(workerId, label) {
+        return `data:text/javascript;charset=utf-8,${encodeURIComponent(`
+            self.MonacoEnvironment = {
+                baseUrl: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/'
+            };
+            importScripts('https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/base/worker/workerMain.js');`
+        )}`;
     }
-};
+}
 
-function init() {
+function init(monaco) {
     //if we have a shader in the query param, return
     // if (new URLSearchParams(window.location.search).get('shader')) return
     console.log('no shader in query param')
-    const shader = localStorage.getItem('cranes-manual-code') || ''
+
+    // Create the editor instance
+    const editor = monaco.editor.create(document.getElementById('monaco-editor'), {
+        value: '',
+        language: 'glsl',
+        theme: 'vs-dark',
+        minimap: { enabled: true },
+        automaticLayout: true,
+    });
+
+    // Make editor globally available immediately
+    window.cranes = window.cranes || {};
+    window.cranes.editor = editor;
+
     const conf = {
         comments: {
             lineComment: '//',
@@ -450,22 +469,30 @@ function init() {
     monaco.languages.register({ id: 'glsl' })
     monaco.languages.setMonarchTokensProvider('glsl', language)
     monaco.languages.setLanguageConfiguration('glsl', conf)
-    const editor = monaco.editor.create(document.querySelector('#monaco-editor'), {
-        value: shader,
-        minimap: { enabled: false },
-        language: 'glsl',
-        theme: 'vs-dark',
-        automaticLayout: true,
-        contextmenu: true,
-        copyWithSyntaxHighlighting: true,
-        quickSuggestions: true,
-    })
-
     // on window resize, resize the editor
     window.addEventListener('resize', () => {
         editor.layout()
     })
-    window.editor = editor
+
+    // Initialize editor content
+    const searchParams = new URLSearchParams(window.location.search);
+    if (!searchParams.has('shader')) {
+        (async () => {
+            // try to get the shader from local storage
+            let shader = localStorage.getItem('cranes-manual-code')
+            // if the shader is not in local storage, fetch it from the server
+            if (!shader) {
+                const res = await fetch('/shaders/default.frag')
+                shader = await res.text()
+            }
+            editor.pushUndoStop();
+            editor.setValue(shader);
+            editor.pushUndoStop();
+            editor.layout();
+        })();
+    } else {
+        document.body.classList.add('no-editor')
+    }
 
     document.querySelector('#save').addEventListener('click', () => {
         editor.pushUndoStop()
@@ -475,35 +502,58 @@ function init() {
     })
 
     // save on control or command s
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_S, function () {
-        editor.pushUndoStop()
-        window.cranes.shader = editor.getValue()
-        localStorage.setItem('cranes-manual-code', editor.getValue())
-        editor.pushUndoStop()
-    })
+    editor.addAction({
+        id: 'save',
+        label: 'Save',
+        keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_S],
+        run: function() {
+            editor.pushUndoStop();
+            window.cranes.shader = editor.getValue();
+            localStorage.setItem('cranes-manual-code', editor.getValue());
+            editor.pushUndoStop();
+        }
+    });
 
     document.querySelector('#reset').addEventListener('click', () => {
-        localStorage.removeItem('cranes-manual-code')
-        window.location.reload()
-    })
+        localStorage.removeItem('cranes-manual-code');
+        window.location.reload();
+    });
 
     // Update the undo/redo commands to work on both Windows and Mac
-    editor.addCommand(monaco.KeyMod.WinCtrl | monaco.KeyCode.KEY_Z, () => {
-        editor.trigger('keyboard', 'undo', null)
-    })
+    editor.addAction({
+        id: 'undo-win',
+        label: 'Undo (Windows)',
+        keybindings: [monaco.KeyMod.WinCtrl | monaco.KeyCode.KEY_Z],
+        run: () => editor.trigger('keyboard', 'undo', null)
+    });
 
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_Z, () => {
-        editor.trigger('keyboard', 'undo', null)
-    })
+    editor.addAction({
+        id: 'undo-mac',
+        label: 'Undo (Mac)',
+        keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_Z],
+        run: () => editor.trigger('keyboard', 'undo', null)
+    });
 
-    editor.addCommand(monaco.KeyMod.WinCtrl | monaco.KeyMod.Shift | monaco.KeyCode.KEY_Z, () => {
-        editor.trigger('keyboard', 'redo', null)
-    })
+    editor.addAction({
+        id: 'redo-win',
+        label: 'Redo (Windows)',
+        keybindings: [monaco.KeyMod.WinCtrl | monaco.KeyMod.Shift | monaco.KeyCode.KEY_Z],
+        run: () => editor.trigger('keyboard', 'redo', null)
+    });
 
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KEY_Z, () => {
-        editor.trigger('keyboard', 'redo', null)
-    })
+    editor.addAction({
+        id: 'redo-mac',
+        label: 'Redo (Mac)',
+        keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KEY_Z],
+        run: () => editor.trigger('keyboard', 'redo', null)
+    });
 
-    document.querySelector('#publish').addEventListener('click', () => {})
+    document.querySelector('#publish').addEventListener('click', () => {});
 }
-init()
+
+// Wait for Monaco to be loaded from CDN
+window.addEventListener('load', () => {
+    if (window.monaco) {
+        init(window.monaco);
+    }
+});
