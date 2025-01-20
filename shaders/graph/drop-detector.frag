@@ -49,22 +49,30 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         if(abs(spectralCentroidZScore) > 0.95) highZScores++;
         if(abs(pitchClassZScore) > 0.95) highZScores++;
 
+        vec3 hsl = rgb2hsl(lineColor.rgb);
+        if(beat) {
+             hsl.x = fract(hsl.x + 0.5);
+        }
         if(highZScores < 2) {
+            lineColor.rgb = hsl2rgb(hsl);
             fragColor = mix(fragColor, lineColor, lineColor.a);
             return;
         }
 
-        vec3 hsl = rgb2hsl(lineColor.rgb);
-        hsl.x = fract(hsl.x + 0.5);
         for(int i = 0; i < highZScores; i++){
-            hsl.z += 0.2;
+            hsl.x += 0.1;
+            hsl.y += 0.1;
+            hsl.y = clamp(hsl.y, 0., 1.);
+            hsl.z += 0.01;
+            hsl.z = clamp(hsl.z, 0., 1.);
+
         }
-         lineColor.rgb = hsl2rgb(fract(hsl));
+         lineColor.rgb = fract(hsl2rgb(hsl));
 
         if( highZScores == ULTRA_DROP_COUNT) {
-           lineColor.r = 0.5;
-           lineColor.b = 0.5;
-           lineColor.g = 0.1;
+           lineColor.r = 0.8;
+           lineColor.b = 0.75;
+           lineColor.g = 0.21;
         }
          fragColor =vec4(lineColor.rgb, 1.);
     }

@@ -63,20 +63,20 @@ export class AudioProcessor {
     }
 
     runWorkerLoop = async (worker) => {
-        requestAnimationFrame(() => this.runWorkerLoop(worker));
+
         const result = await worker.processData(this.fftData)
         if(!result) {
             noResultCount++;
             console.error(`worker returned no result`)
             if(noResultCount > 150) {
+                noResultCount = -Infinity;
                 window.location.reload();
             }
+            requestAnimationFrame(() => this.runWorkerLoop(worker));
             return;
         }
-
-        if (result) {
-            this.rawFeatures[result.workerName] = result
-        }
+        this.rawFeatures[result.workerName] = result
+        requestAnimationFrame(() => this.runWorkerLoop(worker));
     }
 
     updateCurrentFeatures = () => {
