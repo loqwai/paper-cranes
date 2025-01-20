@@ -61,8 +61,11 @@ if ('serviceWorker' in navigator) {
         )
     })
 }
-window.cranes = window.cranes || {}
-window.cranes.manualFeatures = window.cranes.manualFeatures || {}
+
+window.cranes = {
+    manualFeatures: {}
+}
+
 const getRelativeOrAbsolute = async (url) => {
     //if the url is not a full url, then it's a relative url
     if (!url.includes('http')) {

@@ -22,7 +22,6 @@ const FeatureEditor = ({ name, feature, onChange, onDelete }) => {
     const handleMinChange = (e) => onChange(name, { ...feature, min: parseFloat(e.target.value) })
     const handleMaxChange = (e) => onChange(name, { ...feature, max: parseFloat(e.target.value) })
     const handleCommitValue = () => {
-        delete window.cranes?.manualFeatures[name]
         updateUrlDebounced({ [name]: feature.value })
     }
     // Update the URL immediately for live updates
@@ -32,9 +31,7 @@ const FeatureEditor = ({ name, feature, onChange, onDelete }) => {
             [`${name}.min`]: feature.min,
             [`${name}.max`]: feature.max,
         })
-        if (window.cranes?.manualFeatures) {
-            window.cranes.manualFeatures[name] = feature.value
-        }
+        window.cranes.manualFeatures[name] = feature.value
     }, [feature])
 
     return html`
