@@ -75,7 +75,14 @@ async function main() {
         'edit.js',
         'service-worker.js',
         'analyze.js',
-        'shaders/**/*.frag'  // Add glob pattern for shaders
+        'shaders/**/*.frag',
+        '*.css',
+        'favicon.ico',
+        'images/**/*',
+        'codicon.ttf',
+        '*.html',
+        '*.ttf',
+        'favicon.ico',
     ]
     const srcEntryPoints = await getEntryPoints('./src')
     entryPoints.push(...srcEntryPoints)
@@ -96,7 +103,17 @@ async function main() {
             '.ttf': 'file',
             '.woff': 'file',
             '.woff2': 'file',
-            '.frag': 'copy'
+            '.frag': 'copy',
+            '.html': 'copy',
+            '.ico': 'copy',
+            '.png': 'copy',
+            '.svg': 'copy',
+            '.jpg': 'copy',
+            '.jpeg': 'copy',
+            '.gif': 'copy',
+            '.bmp': 'copy',
+            '.tiff': 'copy',
+            '.ico': 'copy',
         }
     })
 
