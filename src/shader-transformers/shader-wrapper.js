@@ -8,8 +8,7 @@ export const shaderWrapper = (shader) => {
         return lines.join('\n')
     }
     if (shader.includes('mainImage')) {
-        return /* glsl */ `
-#version 300 es
+        return /* glsl */ `#version 300 es
 precision highp float;
 
 out vec4 fragColor;
@@ -23,6 +22,7 @@ vec4 getLastFrameColor(vec2 uv){
 vec4 getInitialFrameColor(vec2 uv){
     return texture(initialFrame, uv);
 }
+// 31CF3F64-9176-4686-9E52-E3CFEC21FE72
 ${shader}
 
 void main(void){

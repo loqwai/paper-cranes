@@ -15,44 +15,49 @@ const gridSize = 100
 
 const getTexture = async (gl, url) => {
     return new Promise((resolve) => {
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true) // Flip the texture
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
         const texture = createTexture(gl, { src: url, crossOrigin: 'anonymous' }, () => {
-            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false) // Reset the parameter
+            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false)
             resolve(texture)
         })
     })
 }
 
-// Function to create and update the WebGL program with error handling
-const updateWebGLProgram = (gl, vertexShader, fragmentShader) => {
-    try {
-        const programInfo = createProgramInfo(gl, [vertexShader, fragmentShader])
-        if (!programInfo?.program) {
-            throw new Error('Failed to create a program. The shader code might be bad.')
-        }
-        gl.useProgram(programInfo.program)
-        return programInfo
-    } catch (error) {
-        console.error('Error creating WebGL program:', error.message)
-        return
-    }
-}
-
-// Helper function to generate positions for a grid of polygons
 const generateGridPositions = (gridSize) => {
     const positions = []
-    const step = 2 / gridSize // Divide the canvas into grid sections
+    const step = 2 / gridSize
     for (let y = 0; y < gridSize; y++) {
         for (let x = 0; x < gridSize; x++) {
             const x1 = -1 + x * step
             const x2 = x1 + step
             const y1 = -1 + y * step
             const y2 = y1 + step
-            // Two triangles per square
             positions.push(x1, y1, 0, x2, y1, 0, x1, y2, 0, x1, y2, 0, x2, y1, 0, x2, y2, 0)
         }
     }
     return positions
+}
+
+const handleShaderError = (gl, wrappedFragmentShader, newFragmentShader) => {
+    const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fragmentShader, wrappedFragmentShader);
+    gl.compileShader(fragmentShader);
+    const error = gl.getShaderInfoLog(fragmentShader);
+    gl.deleteShader(fragmentShader);
+
+    // Find the line with our marker
+    const wrappedLines = wrappedFragmentShader.split('\n');
+    const headerLines = wrappedLines.findIndex(line => line.includes('31CF3F64-9176-4686-9E52-E3CFEC21FE72'));
+
+    if (error.match(/ERROR: \d+:(\d+):/)) {
+        error.replace(/ERROR: \d+:(\d+):/, (match, line) =>{
+            const lineNumber = parseInt(line) - headerLines - 1;
+            window.cranes.error = { lineNumber, message: `ERROR: 0:${lineNumber}:` };
+    });
+        console.error(window.cranes.error, error);
+    } else {
+        window.cranes.error = {lineNumber:0, message: `there was something wrong with ur shader`}
+    }
 }
 
 export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) => {
@@ -65,42 +70,34 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         gl.viewport(0, 0, width, height)
         canvas.classList.add('fullscreen')
     }
-    const ext = gl.getExtension('GMAN_debug_helper')
-    if (ext) {
-        ext.setConfiguration({
-            failUnsetUniforms: false,
-        })
-    }
+
     const initialTexture = await getTexture(gl, initialImageUrl)
     const frameBuffers = [createFramebufferInfo(gl), createFramebufferInfo(gl)]
-    const gridPositions = generateGridPositions(gridSize)
-    const arrays = { position: gridPositions }
-    const bufferInfo = createBufferInfoFromArrays(gl, arrays)
+    const bufferInfo = createBufferInfoFromArrays(gl, { position: generateGridPositions(gridSize) })
 
     let frameNumber = 0
     let slowFrames = 0
     let lastRender = performance.now()
     let programInfo
-    // Assuming the other parts of the code remain the same
-
-    let lastVertexShader = undefined // Initial vertex shader
-    let lastFragmentShader = undefined // Placeholder for initial fragment shader
+    let lastVertexShader, lastFragmentShader
 
     const render = ({ time, features, vertexShader: newVertexShader, fragmentShader: newFragmentShader }) => {
         if (newFragmentShader !== lastFragmentShader || newVertexShader !== lastVertexShader) {
             console.log('Shader updated')
-            // Wrap the new fragment shader with any necessary transformations
             const wrappedFragmentShader = shaderWrapper(newFragmentShader)
             const wrappedVertexShader = shaderWrapper(newVertexShader)
-            // Update program with new shaders
+
             const newProgramInfo = createProgramInfo(gl, [wrappedVertexShader, wrappedFragmentShader])
             if (!newProgramInfo?.program) {
+                handleShaderError(gl, wrappedFragmentShader, newFragmentShader);
                 programInfo = null;
-                lastVertexShader = newVertexShader;  // Update these so we don't keep trying with bad shaders
+                lastVertexShader = newVertexShader;
                 lastFragmentShader = newFragmentShader;
                 return;
             }
+
             gl.useProgram(newProgramInfo.program)
+            window.cranes.error = null;
             programInfo = newProgramInfo
             lastVertexShader = newVertexShader
             lastFragmentShader = newFragmentShader
@@ -125,7 +122,10 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, frame.framebuffer)
 
         const uniforms = {
+            iTime: time,
+            iFrame: frameNumber,
             time,
+            iTime: time,
             prevFrame: frameNumber === 0 ? initialTexture : prevFrame.attachments[0],
             initialFrame: initialTexture,
             resolution: [frame.width, frame.height],
@@ -133,7 +133,6 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
             iRandom: Math.random(),
             iResolution: [frame.width, frame.height, 0],
             iMouse: [46, 19, 208, 0],
-            iTime: time,
             iChannel0: initialTexture,
             iChannel1: prevFrame.attachments[0],
             iChannel2: initialTexture,
@@ -143,9 +142,7 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         }
 
         const nonNullOrUndefinedOrNanUniforms = Object.fromEntries(
-            Object.entries(uniforms).filter(([, value]) => {
-                return value !== null && value !== undefined && !Number.isNaN(value)
-            }),
+            Object.entries(uniforms).filter(([, value]) => value !== null && value !== undefined && !Number.isNaN(value))
         )
 
         setBuffersAndAttributes(gl, programInfo, bufferInfo)

@@ -31,6 +31,29 @@ function init(monaco) {
     window.cranes = window.cranes || {};
     window.cranes.editor = editor;
 
+    // Watch for shader errors
+    let errorDecorations = [];
+    setInterval(() => {
+        monaco.editor.setModelMarkers(editor.getModel(), 'glsl', []);
+        const error = window.cranes.error;
+        if(!error) return
+
+            let {lineNumber, message} = error
+            if(!lineNumber) {
+                lineNumber = 0
+                message = error
+            }
+            const markers = [{
+                severity: monaco.MarkerSeverity.Error,
+                message: message,
+                startLineNumber: lineNumber,
+                startColumn: 1,
+                endLineNumber: lineNumber,
+                endColumn: 1000
+            }];
+            monaco.editor.setModelMarkers(editor.getModel(), 'glsl', markers);
+    }, 100);
+
     const conf = {
         comments: {
             lineComment: '//',
