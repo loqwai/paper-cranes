@@ -6,11 +6,9 @@
   "main": "dist/src/audio/AudioProcessor.js",
   "scripts": {
     "start": "npm run dev",
-    "serve": "browser-sync start --server dist --port 6969 --files 'dist/**/*' --no-open",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "./esbuild.js",
-    "dev": "./esbuild.js --watch --serve 6969",
-    "build:watch": "chokidar '**/*.*' -i 'node_modules/*' -i 'dist/**/*.*' -c 'npm run build'",
+    "dev": "./esbuild.dev.js",
     "format": "eslint --fix ."
   },
   "author": "hypnodroid",
