@@ -5,10 +5,10 @@
   "type": "module",
   "main": "dist/src/audio/AudioProcessor.js",
   "scripts": {
-    "start": "npm run dev",
+    "start": "dev",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "./esbuild.js",
-    "dev": "./esbuild.dev.js",
+    "dev": "./esbuild.js",
     "format": "eslint --fix ."
   },
   "author": "hypnodroid",
