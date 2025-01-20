@@ -39,6 +39,9 @@ navigator.mediaDevices
             noiseSuppression: false,
             autoGainControl: false,
             voiceIsolation: false,
+            latency: 0,
+            sampleRate: 44100,
+            channelCount: 1,
         },
     })
     .then(() => main())
