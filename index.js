@@ -6,8 +6,6 @@ let ranMain = false
 let startTime = 0
 const params = new URLSearchParams(window.location.search)
 
-new EventSource('/esbuild').addEventListener('change', () => location.reload());
-
 const getVisualizerDOMElement = () => {
     if (!window.visualizer) {
         window.visualizer = document.getElementById('visualizer')
@@ -203,4 +201,8 @@ const animate = ({ render, audio, fragmentShader, vertexShader }) => {
     } catch (e) {
         console.error(e)
     }
+}
+
+if(process.env.LIVE_RELOAD) {
+    new EventSource('/esbuild').addEventListener('change', () => location.reload());
 }

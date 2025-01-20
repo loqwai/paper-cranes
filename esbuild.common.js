@@ -36,6 +36,7 @@ export function createBuildOptions(isDev = false) {
         define: {
             CACHE_NAME: '"cranes-cache-v2"',
             'process.env.NODE_ENV': isDev ? '"development"' : '"production"',
+            'process.env.LIVE_RELOAD': isDev ? 'true' : 'false',
         },
         loader: {
             '.ttf': 'copy',
