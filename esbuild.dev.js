@@ -62,8 +62,8 @@ async function main() {
         ...jsFiles,
     ]
 
-    // Files that should just be copied/processed (everything else)
-    const copyEntrypoints = [
+    // Files that should be watched and copied
+    const watchAndCopyEntrypoints = [
         'analyze.css',
         'analyze.html',
         'edit.css',
@@ -73,7 +73,7 @@ async function main() {
         'BarGraph.css',
         'favicon.ico',
         ...otherFiles,
-        ...shaderFiles,
+        ...shaderFiles,  // Include shaders in both configs for watching
         ...imgFiles,
     ]
 
@@ -103,7 +103,7 @@ async function main() {
 
     const copyOptions = {
         ...sharedOptions,
-        entryPoints: copyEntrypoints,
+        entryPoints: watchAndCopyEntrypoints,  // Renamed for clarity
         outdir: join(process.cwd(), 'dist'),
         outbase: '.',
         bundle: false,
@@ -112,7 +112,7 @@ async function main() {
 
     const bundleOptions = {
         ...sharedOptions,
-        entryPoints: bundleEntrypoints,
+        entryPoints: [...bundleEntrypoints, ...shaderFiles],  // Add shaders here too
         outdir: join(process.cwd(), 'dist'),
         outbase: '.',
         bundle: true,
@@ -143,4 +143,4 @@ async function main() {
     ])
 }
 
-main().catch(console.error)
+main()
