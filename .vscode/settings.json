@@ -1,6 +1,6 @@
 {
     "files.associations": {
-        "*.frag": "paper-cranes-fragment-shader",
+        "*.frag": "glsl",
         "*.vert": "paper-cranes-fragment-shader",
         "*.glsl": "paper-cranes-fragment-shader"
     }
