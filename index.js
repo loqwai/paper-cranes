@@ -175,7 +175,17 @@ if (!window.location.href.includes('edit')) {
 const setupAudio = async () => {
     const audioContext = new AudioContext()
     await audioContext.resume()
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    const stream = await navigator.mediaDevices.getUserMedia({
+         audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: true,
+        voiceIsolation: false,
+        latency: 0,
+        sampleRate: 44100,
+        sampleSize: 16,
+        channelCount: 2,
+    }, })
     const sourceNode = audioContext.createMediaStreamSource(stream)
     const historySize = parseInt(params.get('history_size') ?? '500')
     const audioProcessor = new AudioProcessor(audioContext, sourceNode, historySize)
