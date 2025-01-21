@@ -41,6 +41,7 @@ navigator.mediaDevices
             voiceIsolation: false,
             latency: 0,
             sampleRate: 44100,
+            sampleSize: 16,
             channelCount: 2,
         },
     })

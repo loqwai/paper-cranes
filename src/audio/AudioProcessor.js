@@ -71,6 +71,7 @@ export class AudioProcessor {
             if(noResultCount > 150) {
                 noResultCount = -Infinity;
                 window.location.reload();
+                return;
             }
             requestAnimationFrame(() => this.runWorkerLoop(worker));
             return;
