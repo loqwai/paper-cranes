@@ -49,8 +49,8 @@ export class AudioProcessor {
     createAnalyzer = () => {
         const analyzer = this.audioContext.createAnalyser()
         analyzer.smoothingTimeConstant = 0.99
-        // analyzer.minDecibels = -100
-        // analyzer.maxDecibels = -30
+        analyzer.minDecibels = -100
+        analyzer.maxDecibels = -30
         analyzer.fftSize = this.fftSize
         return analyzer
     }
@@ -93,11 +93,15 @@ export class AudioProcessor {
     }
 
     start = async () => {
-        this.sourceNode.connect(this.fftAnalyzer)
         await this.audioContext.audioWorklet.addModule('src/window-processor.js')
         const windowNode = new AudioWorkletNode(this.audioContext, 'window-processor')
+
         this.sourceNode.connect(windowNode)
+        windowNode.connect(this.fftAnalyzer)
+
         await Promise.all(AudioFeatures.map(this.initializeWorker))
+        // await new Promise(resolve => setTimeout(resolve, 100))
+
         this.updateCurrentFeatures()
         this.updateFftData()
     }

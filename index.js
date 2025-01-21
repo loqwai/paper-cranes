@@ -36,13 +36,13 @@ navigator.mediaDevices
     .getUserMedia({
         audio: {
             echoCancellation: false,
-            noiseSuppression: false,
+            noiseSuppression: true,
             autoGainControl: true,
             voiceIsolation: false,
             latency: 0,
             sampleRate: 44100,
             sampleSize: 16,
-            channelCount: 2,
+            channelCount: 1,
         },
     })
     .then(() => main())
@@ -184,7 +184,7 @@ const setupAudio = async () => {
         latency: 0,
         sampleRate: 44100,
         sampleSize: 16,
-        channelCount: 2,
+        channelCount: 1,
     }, })
     const sourceNode = audioContext.createMediaStreamSource(stream)
     const historySize = parseInt(params.get('history_size') ?? '500')
