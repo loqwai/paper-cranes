@@ -1,13 +1,16 @@
 import { makeCalculateStats, spectralRoughness } from 'hypnosound'
 
-let calculateStats = makeCalculateStats()
+let state = {
+    calculateStats: makeCalculateStats()
+}
+
 self.addEventListener('message', ({ data: e }) => {
     if (e.type === 'fftData') {
         const { fft } = e.data // Extract FFT data from message
-        const value = spectralRoughness(fft) // Compute spectral roughness
-        self.postMessage({id: e.id, type: 'computedValue', value, stats: calculateStats(value) })
+        const value = spectralRoughness(fft)
+        self.postMessage({id: e.id, type: 'computedValue', value, stats: state.calculateStats(value) })
     }
     if (e.type === 'config') {
-        calculateStats = makeCalculateStats(e.config.historySize)
+        state.calculateStats = makeCalculateStats(e.historySize)
     }
 })

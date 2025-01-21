@@ -18,6 +18,9 @@ self.addEventListener('message', ({ data: e }) => {
         self.postMessage({id: e.id, type: 'computedValue', value, stats: state.calculateStats(value) })
     }
     if (e.type === 'config') {
-        state.calculateStats = makeCalculateStats(e.config.historySize)
+        console.log('SpectralFlux worker received config:', e)
+        const historySize = e.config?.historySize ?? 500
+        console.log('Using history size:', historySize)
+        state.calculateStats = makeCalculateStats(historySize)
     }
 })

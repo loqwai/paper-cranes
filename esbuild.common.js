@@ -1,5 +1,19 @@
 import { join } from 'path'
 import { readdir, stat, mkdir, rm } from 'fs/promises'
+import { writeFile } from 'fs/promises'
+import { relative } from 'path'
+
+
+ const shaderHtmlFromFiles = async (shaderFiles) => {
+    let htmlContent = '<!DOCTYPE html>\n<html>\n<head>\n<title>Shaders</title>\n</head>\n<body>\n<ul>\n'
+    shaderFiles.forEach((file) => {
+        const relativePath = relative('shaders', file)
+        const queryParam = relativePath.replace(/\\/g, '/').replace('.frag', '')
+        htmlContent += `<li><a href="/?shader=${queryParam}&fullscreen=true">${queryParam}</a></li>\n`
+    })
+    htmlContent += '</ul>\n</body>\n</html>'
+    await writeFile(join('dist', 'shaders.html'), htmlContent)
+}
 
 export async function ensureDistDirectory() {
     try{
@@ -63,6 +77,8 @@ export function createBuildOptions(isDev = false) {
         const otherFiles = await findFiles(baseDir, ['.css', '.html', '.ttf', '.png', '.svg'])
         const shaderFiles = await findFiles(shaderDir, ['.frag', '.vert'])
         const imgFiles = await findFiles(imgDir, ['.png', '.jpg', '.jpeg'])
+
+        await shaderHtmlFromFiles(shaderFiles)
 
         const bundleEntrypoints = [
             'index.js',

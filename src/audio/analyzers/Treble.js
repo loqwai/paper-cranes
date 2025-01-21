@@ -1,14 +1,21 @@
 import { treble, makeCalculateStats } from 'hypnosound'
 
-let calculateStats = makeCalculateStats()
+let state = {
+    calculateStats: makeCalculateStats()
+}
 
 self.addEventListener('message', ({ data: e }) => {
     if (e.type === 'fftData') {
         const { fft } = e.data // Extract FFT data from message
         const value = treble(fft)
-        self.postMessage({id: e.id, type: 'computedValue', value, stats: calculateStats(value) })
+        self.postMessage({
+            id: e.id,
+            type: 'computedValue',
+            value,
+            stats: state.calculateStats(value)
+        })
     }
     if (e.type === 'config') {
-        calculateStats = makeCalculateStats(e.config.historySize)
+        state.calculateStats = makeCalculateStats(e.historySize)
     }
 })
