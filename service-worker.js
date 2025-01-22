@@ -1,13 +1,20 @@
 const wait = async (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
+self.skipWaiting()
 self.addEventListener('install', function (event) {
     // Perform install steps
+})
+
+self.addEventListener('activate', function (event) {
+    // Perform activate steps
+    self.clients.claim()
 })
 
 async function fetchWithControlledRetry(request) {
     const cache = await caches.open(CACHE_NAME)
 
     async function attemptFetch() {
+        console.log('attemptFetch', request.url)
         let cacheResponse = await caches.match(request)
 
         const timeoutPromise = new Promise((resolve) =>
@@ -17,6 +24,10 @@ async function fetchWithControlledRetry(request) {
                 resolve(fetch(request))
             }, 1000),
         )
+        // Skip caching for esbuild live reload endpoint
+        if (request.url.includes('/esbuild')) {
+            return fetch(request)
+        }
 
         const networkPromise = fetch(request)
             .then(async (response) => {
@@ -43,7 +54,7 @@ async function fetchWithControlledRetry(request) {
 
 self.addEventListener('fetch', function (event) {
     // Guard clauses for GET requests, excluding 'edit' in URL, and ensuring same-origin
-    if (event.request.method !== 'GET' || event.request.url.includes('edit') || new URL(event.request.url).origin !== location.origin) {
+    if (event.request.method !== 'GET' || event.request.url.includes('edit')) {
         return
     }
 

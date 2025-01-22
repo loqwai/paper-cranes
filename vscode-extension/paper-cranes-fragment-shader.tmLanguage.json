@@ -7,6 +7,9 @@
       },
       {
         "include": "#paper-cranes-additions"
+      },
+      {
+        "include": "#broken-blocks"
       }
     ],
     "repository": {
@@ -27,6 +30,40 @@
           {
             "name": "support.constant.paper-cranes",
             "match": "\\b(PI|TAU|EPSILON)\\b"
+          }
+        ]
+      },
+      "broken-blocks": {
+        "patterns": [
+          {
+            "name": "invalid.illegal.curly.paper-cranes",
+            "begin": "{(?![^{]*})",
+            "end": "(?<!{)[^}]*$",
+            "patterns": [
+              {
+                "include": "$self"
+              }
+            ]
+          },
+          {
+            "name": "invalid.illegal.paren.paper-cranes",
+            "begin": "\\((?![^(]*\\))",
+            "end": "(?<!\\()[^)]*$",
+            "patterns": [
+              {
+                "include": "$self"
+              }
+            ]
+          },
+          {
+            "name": "invalid.illegal.bracket.paper-cranes",
+            "begin": "\\[(?![^\\[]*\\])",
+            "end": "(?<!\\[)[^\\]]*$",
+            "patterns": [
+              {
+                "include": "$self"
+              }
+            ]
           }
         ]
       }

@@ -36,13 +36,12 @@ navigator.mediaDevices
     .getUserMedia({
         audio: {
             echoCancellation: false,
-            noiseSuppression: true,
-            autoGainControl: true,
+            noiseSuppression: false,
+            autoGainControl: false,
             voiceIsolation: false,
             latency: 0,
             sampleRate: 44100,
             sampleSize: 16,
-            channelCount: 1,
         },
     })
     .then(() => main())
@@ -50,7 +49,9 @@ navigator.mediaDevices
         const body = document.querySelector('body')
         body.classList.remove('ready')
     })
+
 if ('serviceWorker' in navigator) {
+
     window.addEventListener('load', () => {
         navigator.serviceWorker.register(new URL('/service-worker.js', import.meta.url)).then(
             (registration) => {
@@ -175,17 +176,18 @@ if (!window.location.href.includes('edit')) {
 const setupAudio = async () => {
     const audioContext = new AudioContext()
     await audioContext.resume()
-    const stream = await navigator.mediaDevices.getUserMedia({
-         audio: {
+    const audioOptions = {
         echoCancellation: false,
         noiseSuppression: false,
-        autoGainControl: true,
+        autoGainControl: false,
         voiceIsolation: false,
         latency: 0,
         sampleRate: 44100,
-        sampleSize: 16,
+
         channelCount: 1,
-    }, })
+    }
+    console.log('audioOptions', audioOptions)
+    const stream = await navigator.mediaDevices.getUserMedia({audio: audioOptions, })
     const sourceNode = audioContext.createMediaStreamSource(stream)
     const historySize = parseInt(params.get('history_size') ?? '500')
     const audioProcessor = new AudioProcessor(audioContext, sourceNode, historySize)
