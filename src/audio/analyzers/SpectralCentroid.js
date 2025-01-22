@@ -11,6 +11,6 @@ self.addEventListener('message', ({ data: e }) => {
         self.postMessage({id: e.id, type: 'computedValue', value, stats: state.calculateStats(value) })
     }
     if (e.type === 'config') {
-        state.calculateStats = makeCalculateStats(e.historySize)
+        state.calculateStats = makeCalculateStats(e.config.historySize)
     }
 })

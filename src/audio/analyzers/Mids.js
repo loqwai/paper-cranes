@@ -16,6 +16,6 @@ self.addEventListener('message', ({ data: e }) => {
         })
     }
     if (e.type === 'config') {
-        state.calculateStats = makeCalculateStats(e.historySize)
+        state.calculateStats = makeCalculateStats(e.config.historySize)
     }
 })
