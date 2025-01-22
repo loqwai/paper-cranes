@@ -35,10 +35,10 @@ const audioConfig = {
     noiseSuppression: params.get('noiseSuppression') === 'true',
     autoGainControl: params.get('autoGainControl') === 'true',
     voiceIsolation: params.get('voiceIsolation') === 'true',
-    latency: params.get('latency') ?? 0,
-    sampleRate: params.get('sampleRate') ?? 44100,
-    sampleSize: params.get('sampleSize') ?? 16,
-    channelCount: params.get('channelCount') ?? 2,
+    latency: params.get('latency') ? parseFloat(params.get('latency')) : 0,
+    sampleRate: params.get('sampleRate') ? parseInt(params.get('sampleRate')) : 44100,
+    sampleSize: params.get('sampleSize') ? parseInt(params.get('sampleSize')) : 16,
+    channelCount: params.get('channelCount') ? parseInt(params.get('channelCount')) : 2,
 }
 // check if we have microphone access. If so, just run main immediately
 navigator.mediaDevices
