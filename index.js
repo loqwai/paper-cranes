@@ -33,7 +33,7 @@ const getNormalizedCoordinates = (event, element) => {
 const audioConfig = {
     echoCancellation: params.get('echoCancellation') === 'true',
     noiseSuppression: params.get('noiseSuppression') === 'true',
-    autoGainControl: params.get('autoGainControl') === 'true',
+    autoGainControl: params.get('autoGainControl') !== 'false', // true by default
     voiceIsolation: params.get('voiceIsolation') === 'true',
     latency: params.get('latency') ? parseFloat(params.get('latency')) : 0,
     sampleRate: params.get('sampleRate') ? parseInt(params.get('sampleRate')) : 44100,
