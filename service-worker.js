@@ -1,50 +1,63 @@
 const wait = async (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
-self.skipWaiting()
-self.addEventListener('install', function (event) {
-    // Perform install steps
+self.addEventListener('install', (event) => {
+    // Immediately activate the new service worker
+    event.waitUntil(self.skipWaiting())
 })
 
-self.addEventListener('activate', function (event) {
-    // Perform activate steps
-    self.clients.claim()
+self.addEventListener('activate', async(event) => {
+    event.waitUntil(
+        // Clear all old caches when a new service worker activates
+        caches.keys().then(keys => Promise.all(
+            keys.map(key => caches.delete(key))
+        )).then(() => {
+            self.clients.claim()
+        })
+    )
 })
 
 async function fetchWithControlledRetry(request) {
     const cache = await caches.open(CACHE_NAME)
 
+    // Implement stale-while-revalidate strategy for most resources
     async function attemptFetch() {
-        console.log('attemptFetch', request.url)
-        let cacheResponse = await caches.match(request)
-
-        const timeoutPromise = new Promise((resolve) =>
-            setTimeout(async () => {
-                if (cacheResponse) return resolve(cacheResponse)
-                await wait(500)
-                resolve(fetch(request))
-            }, 1000),
-        )
         // Skip caching for esbuild live reload endpoint
         if (request.url.includes('/esbuild')) {
             return fetch(request)
         }
 
+        // Check cache first
+        const cached = await caches.match(request)
+
+        // Start network fetch immediately
         const networkPromise = fetch(request)
             .then(async (response) => {
                 if (response.ok) {
-                    await cache.put(request, response.clone()) // Cache the successful response
+                    // Cache successful responses in the background
+                    cache.put(request, response.clone())
                     return response
                 }
                 throw new Error('Network response was not ok')
             })
             .catch(async (error) => {
-                // In case of network error (including being offline), return cached response if available
-                if (cacheResponse) {
-                    return cacheResponse
-                }
-                wait(500) // Wait 500ms before retrying
+                const cached = await caches.match(request) // maybe cache was updated.
+                if (cached) return cached
+                await wait(500)
                 return fetch(request)
             })
+
+        // Return cached response immediately if available
+        if (cached) {
+            return cached
+        }
+
+        // If no cache, wait for network with timeout
+        const timeoutPromise = new Promise((resolve) =>
+            setTimeout(async () => {
+                await wait(500)
+                resolve(fetch(request))
+            }, 5000)
+        )
 
         return Promise.race([networkPromise, timeoutPromise])
     }
@@ -52,8 +65,7 @@ async function fetchWithControlledRetry(request) {
     return attemptFetch()
 }
 
-self.addEventListener('fetch', function (event) {
-    // Guard clauses for GET requests, excluding 'edit' in URL, and ensuring same-origin
+self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET' || event.request.url.includes('edit')) {
         return
     }
