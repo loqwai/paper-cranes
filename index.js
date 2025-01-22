@@ -30,19 +30,20 @@ const getNormalizedCoordinates = (event, element) => {
         y: 1.0 - (y - rect.top) / rect.height  // Flip Y coordinate for WebGL
     }
 }
-
+const audioConfig = {
+    echoCancellation: params.get('echoCancellation') === 'true',
+    noiseSuppression: params.get('noiseSuppression') === 'true',
+    autoGainControl: params.get('autoGainControl') === 'true',
+    voiceIsolation: params.get('voiceIsolation') === 'true',
+    latency: params.get('latency') ?? 0,
+    sampleRate: params.get('sampleRate') ?? 44100,
+    sampleSize: params.get('sampleSize') ?? 16,
+    channelCount: params.get('channelCount') ?? 2,
+}
 // check if we have microphone access. If so, just run main immediately
 navigator.mediaDevices
     .getUserMedia({
-        audio: {
-            echoCancellation: false,
-            noiseSuppression: false,
-            autoGainControl: false,
-            voiceIsolation: false,
-            latency: 0,
-            sampleRate: 44100,
-            sampleSize: 16,
-        },
+        audio: audioConfig,
     })
     .then(() => main())
     .catch(() => {
@@ -55,10 +56,10 @@ if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register(new URL('/service-worker.js', import.meta.url)).then(
             (registration) => {
-                console.log('ServiceWorker registration successful with scope: ', registration.scope)
+                console.log(`ServiceWorker:enabled. Cache: ${CACHE_NAME}`)
             },
             (err) => {
-                console.log('ServiceWorker registration failed: ', err)
+                console.log(`ServiceWorker:could not register. Cache: ${CACHE_NAME}`)
             },
         )
     })
@@ -160,8 +161,6 @@ const main = async () => {
 // if the url contains the string 'edit', don't do this.
 if (!window.location.href.includes('edit')) {
     for(const event of events) {
-        // get the visualizer
-        console.log('registering event', event)
         const visualizer = getVisualizerDOMElement()
         visualizer.addEventListener(event, main, { once: true })
         visualizer.addEventListener(event, async()=>{
@@ -176,18 +175,8 @@ if (!window.location.href.includes('edit')) {
 const setupAudio = async () => {
     const audioContext = new AudioContext()
     await audioContext.resume()
-    const audioOptions = {
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false,
-        voiceIsolation: false,
-        latency: 0,
-        sampleRate: 44100,
-
-        channelCount: 1,
-    }
-    console.log('audioOptions', audioOptions)
-    const stream = await navigator.mediaDevices.getUserMedia({audio: audioOptions, })
+    console.log('audioConfig', audioConfig)
+    const stream = await navigator.mediaDevices.getUserMedia({audio: audioConfig, })
     const sourceNode = audioContext.createMediaStreamSource(stream)
     const historySize = parseInt(params.get('history_size') ?? '500')
     const audioProcessor = new AudioProcessor(audioContext, sourceNode, historySize)
