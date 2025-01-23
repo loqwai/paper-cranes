@@ -8,9 +8,9 @@ uniform float knob_14; // Solo control: 0 = show all, 1-6 for individual lines
 
 // Decorrelate a z-score from energy influence
 float decorrelateFromEnergy(float zScore, float correlation) {
-    return zScore;
+    return zScore - (energyZScore * correlation);
 }
-
+#define SOLO_KNOB knob_14
 // Core feature definitions - define the relationship between colors and values once
 #define BLUE_FEATURE spectralCrestZScore
 #define GREEN_FEATURE spectralKurtosisZScore
@@ -53,12 +53,12 @@ float decorrelateFromEnergy(float zScore, float correlation) {
 #define GRAYISH_GREEN_FEATURE spectralRolloffZScore
 
 // Use knobs for correlation control
-#define BLUE_VALUE smoothValue(BLUE_FEATURE,uv)
-#define GREEN_VALUE smoothValue(GREEN_FEATURE,uv)
-#define RED_VALUE smoothValue(RED_FEATURE,uv)
-#define TEAL_VALUE smoothValue(TEAL_FEATURE,uv)
-#define YELLOW_VALUE smoothValue(YELLOW_FEATURE,uv)
-#define GRAYISH_GREEN_VALUE smoothValue(GRAYISH_GREEN_FEATURE,uv)
+#define BLUE_VALUE smoothValue(decorrelateFromEnergy(BLUE_FEATURE, BLUE_KNOB), uv)
+#define GREEN_VALUE smoothValue(decorrelateFromEnergy(GREEN_FEATURE, GREEN_KNOB), uv)
+#define RED_VALUE smoothValue(RED_FEATURE, uv)
+#define TEAL_VALUE smoothValue(decorrelateFromEnergy(TEAL_FEATURE, TEAL_KNOB), uv)
+#define YELLOW_VALUE smoothValue(decorrelateFromEnergy(YELLOW_FEATURE, YELLOW_KNOB), uv)
+#define GRAYISH_GREEN_VALUE smoothValue(decorrelateFromEnergy(GRAYISH_GREEN_FEATURE, GRAYISH_GREEN_KNOB), uv)
 
 float drawLine(vec2 fragCoord, float value) {
     // Convert to UV space first (0 to 1)
@@ -111,12 +111,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float grayishGreen = drawLine(fragCoord, GRAYISH_GREEN_VALUE);
 
     // Add lines with distinct colors, only if their knob is non-zero
-    lineColor += RED_COLOR * redLine;
-    lineColor += GREEN_COLOR * greenLine;
-    lineColor += BLUE_COLOR * blueLine;
-    lineColor += TEAL_COLOR * tealLine;
-    lineColor += YELLOW_COLOR * yellowLine;
-    lineColor += GRAYISH_GREEN_COLOR * grayishGreen;
+    lineColor += RED_COLOR * redLine * step(0.001, RED_KNOB);
+    lineColor += GREEN_COLOR * greenLine * step(0.001, GREEN_KNOB);
+    lineColor += BLUE_COLOR * blueLine * step(0.001, BLUE_KNOB);
+    lineColor += TEAL_COLOR * tealLine * step(0.001, TEAL_KNOB);
+    lineColor += YELLOW_COLOR * yellowLine * step(0.001, YELLOW_KNOB);
+    lineColor += GRAYISH_GREEN_COLOR * grayishGreen * step(0.001, GRAYISH_GREEN_KNOB);
 
     // Drop detection using the original (unsmoothed) values for responsiveness
     int highZScores = 0;
