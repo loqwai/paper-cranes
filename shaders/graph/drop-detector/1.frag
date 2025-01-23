@@ -1,3 +1,30 @@
+uniform float knob_71;
+uniform float knob_72;
+uniform float knob_73;
+uniform float knob_74;
+uniform float knob_75;
+uniform float knob_76;
+// Decorrelate a z-score from energy influence
+float decorrelateFromEnergy(float zScore, float correlation) {
+    return zScore - (energyZScore * correlation);
+}
+
+// Core feature definitions - define the relationship between colors and values once
+#define RED_FEATURE spectralCrestZScore
+#define GREEN_FEATURE spectralKurtosisZScore
+#define BLUE_FEATURE energyZScore
+#define TEAL_FEATURE spectralFluxZScore
+#define YELLOW_FEATURE spectralEntropyZScore
+#define GRAYISH_GREEN_FEATURE spectralRolloffZScore
+
+// Color definitions for consistent use
+#define RED_COLOR vec4(1.0, 0.0, 0.0, 1.0)
+#define GREEN_COLOR vec4(0.0, 1.0, 0.0, 1.0)
+#define BLUE_COLOR vec4(0.0, 0.0, 1.0, 1.0)
+#define TEAL_COLOR vec4(0.3, 0.4, 1.0, 1.0)
+#define YELLOW_COLOR vec4(1.0, 1.0, 0.0, 1.0)
+#define GRAYISH_GREEN_COLOR vec4(0.4, 0.5, 0.4, 1.0)
+
 #define LINE_WIDTH 0.5
 #define SMOOTH_WIDTH 0.25
 #define ULTRA_DROP_COUNT 5
@@ -7,12 +34,13 @@
 #define VERTICAL_OFFSET 0.5  // Back to 0.5 (middle of screen)
 #define SCALE 0.25  // Scale factor for visibility (using 25% of screen height each direction)
 
-#define RED_VALUE spectralCrestZScore
-#define GREEN_VALUE spectralKurtosisZScore
-#define BLUE_VALUE energyNormalized
-#define TEAL_VALUE spectralFluxZScore
-#define YELLOW_VALUE spectralEntropyZScore
-#define GRAYISH_GREEN_VALUE spectralRolloffZScore
+// Use knobs for correlation control
+#define RED_VALUE decorrelateFromEnergy(smoothValue(RED_FEATURE, uv), knob_71)
+#define GREEN_VALUE decorrelateFromEnergy(smoothValue(GREEN_FEATURE, uv), knob_72)
+#define BLUE_VALUE decorrelateFromEnergy(smoothValue(BLUE_FEATURE, uv), knob_73)
+#define TEAL_VALUE decorrelateFromEnergy(smoothValue(TEAL_FEATURE, uv), knob_74)
+#define YELLOW_VALUE decorrelateFromEnergy(smoothValue(YELLOW_FEATURE, uv), knob_75)
+#define GRAYISH_GREEN_VALUE decorrelateFromEnergy(smoothValue(GRAYISH_GREEN_FEATURE, uv), knob_76)
 
 float drawLine(vec2 fragCoord, float value) {
     // Convert to UV space first (0 to 1)
@@ -53,39 +81,33 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Draw lines
     vec4 lineColor = vec4(0.0);
 
-    // Smooth the values
-    float redSmooth = smoothValue(RED_VALUE, uv);
-    float greenSmooth = smoothValue(GREEN_VALUE, uv);
-    float blueSmooth = smoothValue(BLUE_VALUE, uv);
-    float tealSmooth = smoothValue(TEAL_VALUE, uv);
-    float yellowSmooth = smoothValue(YELLOW_VALUE, uv);
-    float grayishGreenSmooth = smoothValue(GRAYISH_GREEN_VALUE, uv);
+    // Smooth the value
 
     // Calculate smoothed lines
-    float redLine = drawLine(fragCoord, redSmooth);
-    float greenLine = drawLine(fragCoord, greenSmooth);
-    float blueLine = drawLine(fragCoord, blueSmooth);
+    float redLine = drawLine(fragCoord, RED_VALUE);
+    float greenLine = drawLine(fragCoord, GREEN_VALUE);
+    float blueLine = drawLine(fragCoord, BLUE_VALUE);
 
-    float tealLine = drawLine(fragCoord, tealSmooth);
-    float yellowLine = drawLine(fragCoord, yellowSmooth);
-    float grayishGreen = drawLine(fragCoord, grayishGreenSmooth);
+    float tealLine = drawLine(fragCoord, TEAL_VALUE);
+    float yellowLine = drawLine(fragCoord, YELLOW_VALUE);
+    float grayishGreen = drawLine(fragCoord, GRAYISH_GREEN_VALUE);
 
     // Add lines with distinct colors
-    lineColor += vec4(1.0, 0.0, 0.0, 1.0) * redLine;
-    lineColor += vec4(0.0, 1.0, 0.0, 1.0) * greenLine;
-    lineColor += vec4(0.0, 0.0, 1.0, 1.0) * blueLine;
-    lineColor += vec4(0.3, 0.4, 1.0, 1.0) * tealLine;
-    lineColor += vec4(1.0, 1.0, 0.0, 1.0) * yellowLine;
-    lineColor += vec4(0.4, 0.5, 0.4, 1.0) * grayishGreen;
+    lineColor += RED_COLOR * redLine;
+    lineColor += GREEN_COLOR * greenLine;
+    lineColor += BLUE_COLOR * blueLine;
+    lineColor += TEAL_COLOR * tealLine;
+    lineColor += YELLOW_COLOR * yellowLine;
+    lineColor += GRAYISH_GREEN_COLOR * grayishGreen;
 
     // Drop detection using the original (unsmoothed) values for responsiveness
     int highZScores = 0;
-    if(abs(spectralCrestZScore) > PROBE_B) highZScores++;
-    if(abs(spectralKurtosisZScore) > PROBE_B) highZScores++;
-    if(abs(spectralEntropyZScore) > PROBE_B) highZScores++;
-    if(abs(spectralFluxZScore) > PROBE_B) highZScores++;
+    if(abs(RED_FEATURE) > PROBE_B) highZScores++;
+    if(abs(GREEN_FEATURE) > PROBE_B) highZScores++;
+    if(abs(YELLOW_FEATURE) > PROBE_B) highZScores++;
+    if(abs(TEAL_FEATURE) > PROBE_B) highZScores++;
     if(abs(pitchClassZScore) > PROBE_B) highZScores++;
-    if(abs(spectralRolloffZScore) > PROBE_B) highZScores++;
+    if(abs(GRAYISH_GREEN_FEATURE) > PROBE_B) highZScores++;
 
     // Normal rendering
     if(highZScores < 2) {
