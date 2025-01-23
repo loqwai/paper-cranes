@@ -3,7 +3,7 @@
 // Track current values and type for each knob
 const knobStates = {}
 const relativeKnobs = new Set()
-const KNOB_SENSITIVITY = 0.1// Adjust this to change rotation sensitivity
+const BASE_SENSITIVITY = 0.01 // Base sensitivity that will be scaled by range
 
 // Unified function to update knob value in URL
 function updateKnobValue(knob, value) {
@@ -22,8 +22,12 @@ function updateKnobValue(knob, value) {
         // For relative encoders
         if (!knobStates[knob]) knobStates[knob] = current
 
+        // Scale sensitivity by the range of the knob
+        const range = Math.abs(max - min)
+        const scaledSensitivity = BASE_SENSITIVITY * range
+
         // Convert relative values: 1 for CW, 127 for CCW
-        const delta = value === 1 ? KNOB_SENSITIVITY : value === 127 ? -KNOB_SENSITIVITY : 0
+        const delta = value === 1 ? scaledSensitivity : value === 127 ? -scaledSensitivity : 0
         knobStates[knob] = Math.max(min, Math.min(max, knobStates[knob] + delta))
         current = knobStates[knob]
     } else {
