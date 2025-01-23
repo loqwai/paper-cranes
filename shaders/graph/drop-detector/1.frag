@@ -4,7 +4,15 @@ uniform float knob_73;
 uniform float knob_74;
 uniform float knob_75;
 uniform float knob_76;
-uniform float knob_14; // Solo control: 0 = show all, 1-6 for individual lines
+
+#define LINE_WIDTH 0.5
+#define SMOOTH_WIDTH 0.25
+#define ULTRA_DROP_COUNT 5
+#define PROBE_A 0.3
+#define PROBE_B 0.95
+#define SMOOTHING_FACTOR 0.151  // Lower = smoother, but more latency
+#define VERTICAL_OFFSET 0.5  // Back to 0.5 (middle of screen)
+#define SCALE 0.25  // Scale factor for visibility (using 25% of screen height each direction)
 
 // Decorrelate a z-score from energy influence
 float decorrelateFromEnergy(float zScore, float correlation) {
@@ -12,7 +20,7 @@ float decorrelateFromEnergy(float zScore, float correlation) {
 }
 
 // Core feature definitions - define the relationship between colors and values once
-#define BLUE_FEATURE spectralCrestZScore
+#define BLUE_FEATURE bassZScore
 #define GREEN_FEATURE spectralKurtosisZScore
 #define RED_FEATURE energyZScore
 #define TEAL_FEATURE spectralFluxZScore
@@ -27,14 +35,6 @@ float decorrelateFromEnergy(float zScore, float correlation) {
 #define YELLOW_COLOR vec4(1.0, 1.0, 0.0, 1.0)
 #define GRAYISH_GREEN_COLOR vec4(0.4, 0.5, 0.4, 1.0)
 
-#define LINE_WIDTH 0.5
-#define SMOOTH_WIDTH 0.25
-#define ULTRA_DROP_COUNT 5
-#define PROBE_A 0.3
-#define PROBE_B 0.95
-#define SMOOTHING_FACTOR 0.151  // Lower = smoother, but more latency
-#define VERTICAL_OFFSET 0.5  // Back to 0.5 (middle of screen)
-#define SCALE 0.25  // Scale factor for visibility (using 25% of screen height each direction)
 
 // Use knobs for correlation control and visibility
 #define RED_KNOB knob_71
@@ -44,21 +44,26 @@ float decorrelateFromEnergy(float zScore, float correlation) {
 #define YELLOW_KNOB knob_75
 #define GRAYISH_GREEN_KNOB knob_76
 
-// Core feature definitions - define the relationship between colors and values once
-#define BLUE_FEATURE spectralCrestZScore
-#define GREEN_FEATURE spectralKurtosisZScore
-#define RED_FEATURE energyZScore
-#define TEAL_FEATURE spectralFluxZScore
-#define YELLOW_FEATURE spectralEntropyZScore
-#define GRAYISH_GREEN_FEATURE spectralRolloffZScore
+
+// Smooth value transitions between frames
+float smoothValue(float currentValue, vec2 uv) {
+    vec2 prevUV = vec2(uv.x + 1.0/resolution.x, uv.y);
+    vec4 prevColor = getLastFrameColor(prevUV);
+
+    // Convert UV position back to value space
+    float prevValue = (VERTICAL_OFFSET - prevUV.y) / SCALE;
+
+    return mix(prevValue, currentValue, SMOOTHING_FACTOR);
+}
+
 
 // Use knobs for correlation control
-#define BLUE_VALUE smoothValue(decorrelateFromEnergy(BLUE_FEATURE, BLUE_KNOB), uv)
-#define GREEN_VALUE smoothValue(decorrelateFromEnergy(GREEN_FEATURE, GREEN_KNOB), uv)
+#define BLUE_VALUE smoothValue(BLUE_FEATURE, uv)
+#define GREEN_VALUE smoothValue(GREEN_FEATURE, uv)
 #define RED_VALUE smoothValue(RED_FEATURE, uv)
-#define TEAL_VALUE smoothValue(decorrelateFromEnergy(TEAL_FEATURE, TEAL_KNOB), uv)
-#define YELLOW_VALUE smoothValue(decorrelateFromEnergy(YELLOW_FEATURE, YELLOW_KNOB), uv)
-#define GRAYISH_GREEN_VALUE smoothValue(decorrelateFromEnergy(GRAYISH_GREEN_FEATURE, GRAYISH_GREEN_KNOB), uv)
+#define TEAL_VALUE smoothValue(TEAL_FEATURE, uv)
+#define YELLOW_VALUE smoothValue(YELLOW_FEATURE, uv)
+#define GRAYISH_GREEN_VALUE smoothValue(GRAYISH_GREEN_FEATURE, uv)
 
 float drawLine(vec2 fragCoord, float value) {
     // Convert to UV space first (0 to 1)
@@ -72,16 +77,6 @@ float drawLine(vec2 fragCoord, float value) {
     return smoothstep(LINE_WIDTH + SMOOTH_WIDTH, LINE_WIDTH - SMOOTH_WIDTH, d);
 }
 
-// Smooth value transitions between frames
-float smoothValue(float currentValue, vec2 uv) {
-    vec2 prevUV = vec2(uv.x + 1.0/resolution.x, uv.y);
-    vec4 prevColor = getLastFrameColor(prevUV);
-
-    // Convert UV position back to value space
-    float prevValue = (VERTICAL_OFFSET - prevUV.y) / SCALE;
-
-    return mix(prevValue, currentValue, SMOOTHING_FACTOR);
-}
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord.xy / resolution.xy;
