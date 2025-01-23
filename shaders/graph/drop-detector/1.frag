@@ -53,12 +53,12 @@ float decorrelateFromEnergy(float zScore, float correlation) {
 #define GRAYISH_GREEN_FEATURE spectralRolloffZScore
 
 // Use knobs for correlation control
-#define BLUE_VALUE smoothValue(BLUE_FEATURE,uv)
-#define GREEN_VALUE smoothValue(GREEN_FEATURE,uv)
-#define RED_VALUE smoothValue(RED_FEATURE,uv)
-#define TEAL_VALUE smoothValue(TEAL_FEATURE,uv)
-#define YELLOW_VALUE smoothValue(YELLOW_FEATURE,uv)
-#define GRAYISH_GREEN_VALUE smoothValue(GRAYISH_GREEN_FEATURE,uv)
+#define BLUE_VALUE smoothValue(decorrelateFromEnergy(BLUE_FEATURE, BLUE_KNOB), uv)
+#define GREEN_VALUE smoothValue(decorrelateFromEnergy(GREEN_FEATURE, GREEN_KNOB), uv)
+#define RED_VALUE smoothValue(RED_FEATURE, uv)
+#define TEAL_VALUE smoothValue(decorrelateFromEnergy(TEAL_FEATURE, TEAL_KNOB), uv)
+#define YELLOW_VALUE smoothValue(decorrelateFromEnergy(YELLOW_FEATURE, YELLOW_KNOB), uv)
+#define GRAYISH_GREEN_VALUE smoothValue(decorrelateFromEnergy(GRAYISH_GREEN_FEATURE, GRAYISH_GREEN_KNOB), uv)
 
 float drawLine(vec2 fragCoord, float value) {
     // Convert to UV space first (0 to 1)
