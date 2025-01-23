@@ -4,15 +4,17 @@ uniform float knob_73;
 uniform float knob_74;
 uniform float knob_75;
 uniform float knob_76;
+uniform float knob_14; // Solo control: 0 = show all, 1-6 for individual lines
+
 // Decorrelate a z-score from energy influence
 float decorrelateFromEnergy(float zScore, float correlation) {
     return zScore - (energyZScore * correlation);
 }
-
+#define SOLO_KNOB knob_14
 // Core feature definitions - define the relationship between colors and values once
-#define RED_FEATURE spectralCrestZScore
+#define BLUE_FEATURE spectralCrestZScore
 #define GREEN_FEATURE spectralKurtosisZScore
-#define BLUE_FEATURE energyZScore
+#define RED_FEATURE energyZScore
 #define TEAL_FEATURE spectralFluxZScore
 #define YELLOW_FEATURE spectralEntropyZScore
 #define GRAYISH_GREEN_FEATURE spectralRolloffZScore
@@ -35,12 +37,18 @@ float decorrelateFromEnergy(float zScore, float correlation) {
 #define SCALE 0.25  // Scale factor for visibility (using 25% of screen height each direction)
 
 // Use knobs for correlation control
-#define RED_VALUE decorrelateFromEnergy(smoothValue(RED_FEATURE, uv), knob_71)
-#define GREEN_VALUE decorrelateFromEnergy(smoothValue(GREEN_FEATURE, uv), knob_72)
-#define BLUE_VALUE decorrelateFromEnergy(smoothValue(BLUE_FEATURE, uv), knob_73)
-#define TEAL_VALUE decorrelateFromEnergy(smoothValue(TEAL_FEATURE, uv), knob_74)
-#define YELLOW_VALUE decorrelateFromEnergy(smoothValue(YELLOW_FEATURE, uv), knob_75)
-#define GRAYISH_GREEN_VALUE decorrelateFromEnergy(smoothValue(GRAYISH_GREEN_FEATURE, uv), knob_76)
+#define BLUE_VALUE smoothValue(decorrelateFromEnergy(BLUE_FEATURE, knob_71), uv)
+#define GREEN_VALUE smoothValue(decorrelateFromEnergy(GREEN_FEATURE, knob_72), uv)
+#define RED_VALUE smoothValue(RED_FEATURE, uv)
+#define TEAL_VALUE smoothValue(decorrelateFromEnergy(TEAL_FEATURE, knob_74), uv)
+#define YELLOW_VALUE smoothValue(decorrelateFromEnergy(YELLOW_FEATURE, knob_75), uv)
+#define GRAYISH_GREEN_VALUE smoothValue(decorrelateFromEnergy(GRAYISH_GREEN_FEATURE, knob_76), uv)
+
+// Line selection helper
+float getSoloMask(float lineIndex) {
+    float selectedLine = floor(SOLO_KNOB * 6.0 + 0.5); // Round to nearest integer
+    return selectedLine == 0.0 || selectedLine == lineIndex ? 1.0 : 0.0;
+}
 
 float drawLine(vec2 fragCoord, float value) {
     // Convert to UV space first (0 to 1)
@@ -92,13 +100,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float yellowLine = drawLine(fragCoord, YELLOW_VALUE);
     float grayishGreen = drawLine(fragCoord, GRAYISH_GREEN_VALUE);
 
-    // Add lines with distinct colors
-    lineColor += RED_COLOR * redLine;
-    lineColor += GREEN_COLOR * greenLine;
-    lineColor += BLUE_COLOR * blueLine;
-    lineColor += TEAL_COLOR * tealLine;
-    lineColor += YELLOW_COLOR * yellowLine;
-    lineColor += GRAYISH_GREEN_COLOR * grayishGreen;
+    // Add lines with distinct colors, respecting solo
+    lineColor += RED_COLOR * redLine * getSoloMask(1.0);
+    lineColor += GREEN_COLOR * greenLine * getSoloMask(2.0);
+    lineColor += BLUE_COLOR * blueLine * getSoloMask(3.0);
+    lineColor += TEAL_COLOR * tealLine * getSoloMask(4.0);
+    lineColor += YELLOW_COLOR * yellowLine * getSoloMask(5.0);
+    lineColor += GRAYISH_GREEN_COLOR * grayishGreen * getSoloMask(6.0);
 
     // Drop detection using the original (unsmoothed) values for responsiveness
     int highZScores = 0;
