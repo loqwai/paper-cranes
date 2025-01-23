@@ -4,7 +4,7 @@ uniform float knob_72;
 uniform float knob_73;
 
 #define PROBE_A knob_71
-#define PROBE_B knob_72
+#define PROBE_B spectralKurtosisMedian/spectralKurtosisMax / 10.
 #define PROBE_C knob_73
 #define t (iTime*0.2 + energyZScore*0.1)
 
@@ -18,8 +18,8 @@ vec2 getRippleOffset(vec2 uv, vec4 lastFrame, vec4 currentColor) {
     vec3 lastHsl = rgb2hsl(lastFrame.rgb);
     vec3 currentHsl = rgb2hsl(currentColor.rgb);
 
-    vec3 diff = abs(lastFrame.rgb - currentColor.rgb);
-    float colorDiff = (diff.r);
+    vec3 diff = abs(lastHsl.rgb - currentHsl.rgb);
+    float colorDiff = (diff.x);
 
     // Create ripple based on color difference
     float rippleStrength = colorDiff * 0.1 * (1.0 + energyZScore);
@@ -39,7 +39,7 @@ vec2 getDistortedUV(vec2 uv) {
     float waveX = sin(uv.y*20.0 + t*energyZScore) * 0.005;
     float waveY = cos(uv.x*20.0 + t*bassZScore) * 0.005;
 
-    if(beat) {
+    if(beat || touched) {
         waveX *= 2.0;
         waveY *= 2.0;
     }
@@ -157,8 +157,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec3 hslPrevColor = rgb2hsl(prevColor.rgb);
     float hueDiff = abs(hslPrevColor.x - finalColor.x);
-
+    float lightnessDiff = finalColor.z - hslPrevColor.z;
+    if(lightnessDiff > abs(spectralKurtosisZScore / 4.)) {
+        finalColor.x = fract(lightnessDiff + finalColor.x);
+    }
     if( hslPrevColor.z > finalColor.z && fract(random(uv)) > 0.9) {
+        vec3 p = finalColor;
+        finalColor = hslPrevColor;
+        hslPrevColor = p;
         finalColor.x = fract(hslPrevColor.x + hueDiff);
         // finalColor
     }
