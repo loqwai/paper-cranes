@@ -124,7 +124,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     if(abs(GREEN_FEATURE) > PROBE_B) highZScores++;
     if(abs(YELLOW_FEATURE) > PROBE_B) highZScores++;
     if(abs(TEAL_FEATURE) > PROBE_B) highZScores++;
-    if(abs(pitchClassZScore) > PROBE_B) highZScores++;
     if(abs(GRAYISH_GREEN_FEATURE) > PROBE_B) highZScores++;
 
     // Normal rendering
