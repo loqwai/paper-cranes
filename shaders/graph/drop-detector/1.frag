@@ -7,6 +7,13 @@
 #define VERTICAL_OFFSET 0.5  // Back to 0.5 (middle of screen)
 #define SCALE 0.25  // Scale factor for visibility (using 25% of screen height each direction)
 
+#define RED_VALUE spectralCrestZScore
+#define GREEN_VALUE spectralKurtosisZScore
+#define BLUE_VALUE energyNormalized
+#define TEAL_VALUE spectralFluxZScore
+#define YELLOW_VALUE spectralEntropyZScore
+#define GRAYISH_GREEN_VALUE spectralRolloffZScore
+
 float drawLine(vec2 fragCoord, float value) {
     // Convert to UV space first (0 to 1)
     vec2 uv = fragCoord.xy / resolution.xy;
@@ -47,28 +54,29 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec4 lineColor = vec4(0.0);
 
     // Smooth the values
-    float spectralCrestSmooth = smoothValue(spectralCrestZScore, uv);
-    float spectralKurtosisSmooth = smoothValue(spectralKurtosisZScore, uv);
-    float energySmooth = smoothValue(energyNormalized, uv);
-    float spectralFluxSmooth = smoothValue(spectralFluxZScore, uv);
-    float spectralEntropySmooth = smoothValue(spectralEntropyZScore, uv);
-    float spectralRolloffSmooth = smoothValue(spectralRolloffZScore, uv);
+    float redSmooth = smoothValue(RED_VALUE, uv);
+    float greenSmooth = smoothValue(GREEN_VALUE, uv);
+    float blueSmooth = smoothValue(BLUE_VALUE, uv);
+    float tealSmooth = smoothValue(TEAL_VALUE, uv);
+    float yellowSmooth = smoothValue(YELLOW_VALUE, uv);
+    float grayishGreenSmooth = smoothValue(GRAYISH_GREEN_VALUE, uv);
 
     // Calculate smoothed lines
-    float spectralCrestLine = drawLine(fragCoord, spectralCrestSmooth);
-    float spectralKurtosisLine = drawLine(fragCoord, spectralKurtosisSmooth);
-    float pitchClassLine = drawLine(fragCoord, energySmooth);
-    float spectralFluxLine = drawLine(fragCoord, spectralFluxSmooth);
-    float spectralEntropyLine = drawLine(fragCoord, spectralEntropySmooth);
-    float spectralRolloffLine = drawLine(fragCoord, spectralRolloffSmooth);
+    float redLine = drawLine(fragCoord, redSmooth);
+    float greenLine = drawLine(fragCoord, greenSmooth);
+    float blueLine = drawLine(fragCoord, blueSmooth);
+
+    float tealLine = drawLine(fragCoord, tealSmooth);
+    float yellowLine = drawLine(fragCoord, yellowSmooth);
+    float grayishGreen = drawLine(fragCoord, grayishGreenSmooth);
 
     // Add lines with distinct colors
-    lineColor += vec4(1.0, 0.0, 0.0, 1.0) * spectralCrestLine;
-    lineColor += vec4(0.0, 1.0, 0.0, 1.0) * spectralKurtosisLine;
-    lineColor += vec4(0.0, 0.0, 1.0, 1.0) * pitchClassLine;
-    lineColor += vec4(0.3, 0.4, 1.0, 1.0) * spectralFluxLine;
-    lineColor += vec4(1.0, 1.0, 0.0, 1.0) * spectralEntropyLine;
-    lineColor += vec4(0.2, 0.7, 0.7, 1.0) * spectralRolloffLine;
+    lineColor += vec4(1.0, 0.0, 0.0, 1.0) * redLine;
+    lineColor += vec4(0.0, 1.0, 0.0, 1.0) * greenLine;
+    lineColor += vec4(0.0, 0.0, 1.0, 1.0) * blueLine;
+    lineColor += vec4(0.3, 0.4, 1.0, 1.0) * tealLine;
+    lineColor += vec4(1.0, 1.0, 0.0, 1.0) * yellowLine;
+    lineColor += vec4(0.4, 0.5, 0.4, 1.0) * grayishGreen;
 
     // Drop detection using the original (unsmoothed) values for responsiveness
     int highZScores = 0;
