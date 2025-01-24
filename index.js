@@ -51,7 +51,7 @@ const getAudioStream = async (config) => {
         audio: {
             ...config,
             // Only specify deviceId if we have multiple audio inputs
-            ...(audioInputs.length > 1 ? { deviceId: { exact: 'default' } } : {})
+            ...(audioInputs.length > 1 ? { deviceId: { exact: audioInputs[0].deviceId } } : {})
         }
     };
 
@@ -167,20 +167,48 @@ const animate = ({ render, audio, fragmentShader, vertexShader }) => {
     }
 };
 
-// Initialize
-if (!window.location.href.includes('edit')) {
-    for (const event of events) {
-        const visualizer = getVisualizerDOMElement();
-        visualizer.addEventListener(event, initializeAudio, { once: true });
-        visualizer.addEventListener(event, async () => {
-            try {
-                await document.documentElement.requestFullscreen();
-            } catch (e) {
-                console.error(`Fullscreen request failed on ${event}:`, e);
+// Combine initialization into a single function
+const initializeApp = async () => {
+    if (ranMain) return;
+    // get the default audio input
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const audioInputs = devices.filter(device => device.kind === 'audioinput');
+    const defaultAudioInput = audioInputs[0].deviceId
+    console.log('defaultAudioInput', audioInputs[0]);
+    try {
+        // Get microphone access first
+        await navigator.mediaDevices.getUserMedia({
+            audio: {
+                ...audioConfig,
+                ...(audioInputs.length > 1 ? { deviceId: { exact: defaultAudioInput } } : {})
             }
-        }, { once: true });
+        });
+
+        // If successful, run main
+        await main();
+
+        // Add click handlers for fullscreen
+        if (!window.location.href.includes('edit')) {
+            const visualizer = getVisualizerDOMElement();
+            for (const event of events) {
+                visualizer.addEventListener(event, async () => {
+                    try {
+                        await document.documentElement.requestFullscreen();
+                    } catch (e) {
+                        console.error(`requesting fullscreen from event ${event} failed`, e);
+                    }
+                }, { once: true });
+            }
+        }
+    } catch (err) {
+        console.error('Failed to initialize:', err);
+        const body = document.querySelector('body');
+        body.classList.remove('ready');
     }
-}
+};
+
+// Start initialization immediately
+initializeApp();
 
 if ('serviceWorker' in navigator) {
 
