@@ -22,7 +22,7 @@ async function fetchWithControlledRetry(request) {
     // Implement stale-while-revalidate strategy for most resources
     async function attemptFetch() {
         // Skip caching for esbuild live reload endpoint
-        if (request.url.includes('/esbuild')) {
+        if (request.url.includes('esbuild')) {
             return fetch(request)
         }
 
