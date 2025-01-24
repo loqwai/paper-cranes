@@ -1,11 +1,8 @@
-//http://localhost:6969/edit.html?knob_71=0.41&knob_71.min=0&knob_71.max=1&knob_72=0.31&knob_72.min=0&knob_72.max=1&knob_15=-0.94&knob_15.min=-2&knob_15.max=1&energyNormalized=2.79&energyNormalized.min=-3&energyNormalized.max=3&spectralCentroidNormalized=0.62&spectralCentroidNormalized.min=0&spectralCentroidNormalized.max=1&knob_74=-1.97&knob_74.min=-2&knob_74.max=1&knob_75=1&knob_75.min=-2&knob_75.max=1&knob_73=0.13&knob_73.min=-2&knob_73.max=1
 uniform float knob_71;
-uniform float knob_72;
-uniform float knob_73;
 
-#define PROBE_A knob_71
+#define PROBE_A 0.13
 #define PROBE_B spectralKurtosisMedian/spectralKurtosisMax / 10.
-#define PROBE_C knob_73
+#define PROBE_C 0.04
 #define t (iTime*0.2 + energyZScore*0.1)
 
 // Add the mainImage function declaration at the top
