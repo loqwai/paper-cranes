@@ -41,16 +41,146 @@ const audioConfig = {
     sampleSize: params.get('sampleSize') ? parseInt(params.get('sampleSize')) : 16,
     channelCount: params.get('channelCount') ? parseInt(params.get('channelCount')) : 2,
 }
-// check if we have microphone access. If so, just run main immediately
-navigator.mediaDevices
-    .getUserMedia({
-        audio: audioConfig,
-    })
-    .then(() => main())
-    .catch(() => {
-        const body = document.querySelector('body')
-        body.classList.remove('ready')
-    })
+
+// Factor out common audio setup logic
+const getAudioStream = async (config) => {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const audioInputs = devices.filter(device => device.kind === 'audioinput');
+
+    const constraints = {
+        audio: {
+            ...config,
+            // Only specify deviceId if we have multiple audio inputs
+            ...(audioInputs.length > 1 ? { deviceId: { exact: 'default' } } : {})
+        }
+    };
+
+    return navigator.mediaDevices.getUserMedia(constraints);
+};
+
+// Factor out coordinate handling
+const coordsHandler = {
+    coords: { x: 0.5, y: 0.5 },
+    touched: false,
+
+    updateCoords(event, element) {
+        this.coords = getNormalizedCoordinates(event, element);
+        this.touched = true;
+    },
+
+    reset() {
+        this.touched = false;
+    }
+};
+
+// Factor out canvas event handling
+const setupCanvasEvents = (canvas) => {
+    const updateCoords = (e) => coordsHandler.updateCoords(e, canvas);
+    const resetTouch = () => coordsHandler.reset();
+
+    canvas.addEventListener('touchmove', updateCoords);
+    canvas.addEventListener('touchstart', updateCoords);
+    canvas.addEventListener('mousemove', updateCoords);
+    canvas.addEventListener('touchend', resetTouch);
+    canvas.addEventListener('mouseup', resetTouch);
+    canvas.addEventListener('mouseleave', resetTouch);
+};
+
+// Check microphone access and initialize
+const initializeAudio = async () => {
+    try {
+        await getAudioStream(audioConfig);
+        main();
+    } catch (err) {
+        document.querySelector('body').classList.remove('ready');
+        console.error('Audio initialization failed:', err);
+    }
+};
+
+const setupAudio = async () => {
+    const audioContext = new AudioContext();
+    await audioContext.resume();
+
+    const stream = await getAudioStream(audioConfig);
+    const sourceNode = audioContext.createMediaStreamSource(stream);
+    const historySize = parseInt(params.get('history_size') ?? '500');
+    const audioProcessor = new AudioProcessor(audioContext, sourceNode, historySize);
+    await audioProcessor.start();
+
+    return audioProcessor;
+};
+
+const main = async () => {
+    try {
+        if (ranMain) return;
+        ranMain = true;
+
+        window.c = cranes;
+        startTime = performance.now();
+        const audio = await setupAudio();
+
+        const [fragmentShader, vertexShader] = await Promise.all([
+            getFragmentShader(),
+            getVertexShader()
+        ]);
+
+        window.shader = fragmentShader;
+        const canvas = getVisualizerDOMElement();
+        setupCanvasEvents(canvas);
+
+        const visualizerConfig = {
+            canvas,
+            initialImageUrl: params.get('image') ?? 'images/placeholder-image.png',
+            fullscreen: (params.get('fullscreen') ?? false) === 'true'
+        };
+
+        const render = await makeVisualizer(visualizerConfig);
+        requestAnimationFrame(() => animate({ render, audio, fragmentShader, vertexShader }));
+    } catch (e) {
+        console.error('Main initialization error:', e);
+    }
+};
+
+const animate = ({ render, audio, fragmentShader, vertexShader }) => {
+    requestAnimationFrame(() => animate({ render, audio, fragmentShader, vertexShader }));
+
+    const features = {
+        ...audio.getFeatures(),
+        ...Object.fromEntries(params),
+        ...window.cranes.manualFeatures,
+        touchX: coordsHandler.coords.x,
+        touchY: coordsHandler.coords.y,
+        touched: coordsHandler.touched
+    };
+
+    window.cranes.measuredAudioFeatures = features;
+
+    try {
+        render({
+            time: (performance.now() - startTime) / 1000,
+            features,
+            fragmentShader: window.cranes?.shader ?? fragmentShader,
+            vertexShader
+        });
+    } catch (e) {
+        console.error('Render error:', e);
+    }
+};
+
+// Initialize
+if (!window.location.href.includes('edit')) {
+    for (const event of events) {
+        const visualizer = getVisualizerDOMElement();
+        visualizer.addEventListener(event, initializeAudio, { once: true });
+        visualizer.addEventListener(event, async () => {
+            try {
+                await document.documentElement.requestFullscreen();
+            } catch (e) {
+                console.error(`Fullscreen request failed on ${event}:`, e);
+            }
+        }, { once: true });
+    }
+}
 
 if ('serviceWorker' in navigator) {
 
@@ -112,105 +242,6 @@ const getVertexShader = async () => {
         vertexShader = await getRelativeOrAbsolute('default.vert')
     }
     return vertexShader
-}
-
-const main = async () => {
-    try {
-        if (ranMain) return
-        ranMain = true
-        window.c = cranes
-        startTime = performance.now()
-        const audio = await setupAudio()
-
-        const fragmentShader = await getFragmentShader()
-        const vertexShader = await getVertexShader()
-
-        window.shader = fragmentShader
-        const initialImageUrl = params.get('image') ?? 'images/placeholder-image.png'
-        const fullscreen = (params.get('fullscreen') ?? false) === 'true'
-        const canvas = getVisualizerDOMElement()
-
-        // Add touch and mouse event listeners// Default center position
-        window.touched = false
-        window.coords = { x: 0.5, y: 0.5 }
-        const updateCoords = (e) => {
-            window.coords = getNormalizedCoordinates(e, canvas)
-            window.touched = true
-        }
-
-        canvas.addEventListener('touchmove', updateCoords)
-        canvas.addEventListener('touchstart', updateCoords)
-
-        canvas.addEventListener('mousemove', updateCoords)
-
-        // Reset touched state when touch/click ends
-        const resetTouch = () => {
-            window.touched = false
-        }
-
-        canvas.addEventListener('touchend', resetTouch)
-        canvas.addEventListener('mouseup', resetTouch)
-        canvas.addEventListener('mouseleave', resetTouch)
-
-        const render = await makeVisualizer({ canvas, initialImageUrl, fullscreen })
-        requestAnimationFrame(() => animate({ render, audio, fragmentShader, vertexShader }))
-    } catch (e) {
-        console.error(`main error: ${e}`)
-    }
-}
-
-// if the url contains the string 'edit', don't do this.
-if (!window.location.href.includes('edit')) {
-    for(const event of events) {
-        const visualizer = getVisualizerDOMElement()
-        visualizer.addEventListener(event, main, { once: true })
-        visualizer.addEventListener(event, async()=>{
-            try {
-                await document.documentElement.requestFullscreen()
-            } catch (e) {
-                console.error(`requesting fullscreen from event ${event} failed`, e)
-            }
-        }, {once: true})
-    }
-}
-const setupAudio = async () => {
-    const audioContext = new AudioContext()
-    await audioContext.resume()
-    console.log('audioConfig', audioConfig)
-    const stream = await navigator.mediaDevices.getUserMedia({audio: audioConfig, })
-    const sourceNode = audioContext.createMediaStreamSource(stream)
-    const historySize = parseInt(params.get('history_size') ?? '500')
-    const audioProcessor = new AudioProcessor(audioContext, sourceNode, historySize)
-    await audioProcessor.start()
-    return audioProcessor
-}
-
-const animate = ({ render, audio, fragmentShader, vertexShader }) => {
-    requestAnimationFrame(() => animate({ render, audio, fragmentShader, vertexShader }))
-    fragmentShader = window.cranes?.shader ?? fragmentShader
-    const measuredAudioFeatures = audio.getFeatures()
-    const queryParamFeatures = {}
-
-    for (const [key, value] of params) {
-        queryParamFeatures[key] = value
-    }
-
-    const { manualFeatures } = window.cranes
-    window.cranes.measuredAudioFeatures = measuredAudioFeatures
-    const features = {
-        ...measuredAudioFeatures,
-        ...queryParamFeatures,
-        ...manualFeatures,
-        touchX: window.coords?.x ?? 0.5,
-        touchY: window.coords?.y ?? 0.5,
-        touched: window.touched ?? false  // Add touched state to features
-    }
-
-    try {
-        render({ time: (performance.now() - startTime) / 1000, features, fragmentShader, vertexShader })
-    } catch (e) {
-        console.error(e)
-    }
 }
 
 if(process.env.LIVE_RELOAD) {
