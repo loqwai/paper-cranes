@@ -32,19 +32,30 @@ const getNormalizedCoordinates = (event, element) => {
     }
 }
 const audioConfig = {
-    echoCancellation: params.get('echoCancellation') === 'true',
-    noiseSuppression: params.get('noiseSuppression') === 'true',
-    autoGainControl: params.get('autoGainControl') !== 'false', // true by default
-    voiceIsolation: params.get('voiceIsolation') === 'true',
+    echoCancellation: false,
+    noiseSuppression: false,
+    autoGainControl: false,
     latency: params.get('latency') ? parseFloat(params.get('latency')) : 0,
     sampleRate: params.get('sampleRate') ? parseInt(params.get('sampleRate')) : 44100,
     sampleSize: params.get('sampleSize') ? parseInt(params.get('sampleSize')) : 16,
-    channelCount: params.get('channelCount') ? parseInt(params.get('channelCount')) : 2,
+    channelCount: params.get('channelCount') ? parseInt(params.get('channelCount')) : 2
 }
+
+// Override with URL parameters if specified
+if (params.get('echoCancellation') === 'true') audioConfig.echoCancellation = true;
+if (params.get('noiseSuppression') === 'true') audioConfig.noiseSuppression = true;
+if (params.get('autoGainControl') === 'true') audioConfig.autoGainControl = true;
+if (params.get('voiceIsolation') === 'true') audioConfig.voiceIsolation = true;
+
 // check if we have microphone access. If so, just run main immediately
 navigator.mediaDevices
     .getUserMedia({
-        audio: audioConfig,
+        audio: {
+            // Only request basic audio access for permission check
+            echoCancellation: true,  // Use system defaults for permission check
+            noiseSuppression: true,
+            autoGainControl: true
+        }
     })
     .then(() => main())
     .catch(() => {
@@ -174,15 +185,120 @@ if (!window.location.href.includes('edit')) {
     }
 }
 const setupAudio = async () => {
-    const audioContext = new AudioContext()
-    await audioContext.resume()
-    console.log('audioConfig', audioConfig)
-    const stream = await navigator.mediaDevices.getUserMedia({audio: audioConfig, })
-    const sourceNode = audioContext.createMediaStreamSource(stream)
-    const historySize = parseInt(params.get('history_size') ?? '500')
-    const audioProcessor = new AudioProcessor(audioContext, sourceNode, historySize)
-    await audioProcessor.start()
-    return audioProcessor
+    try {
+        const audioContext = new AudioContext({
+            latencyHint: 'interactive',
+            sampleRate: 44100
+        })
+        await audioContext.resume()
+
+        // Get list of audio devices
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const audioDevices = devices.filter(device => device.kind === 'audioinput');
+
+        console.log('Available audio devices:', audioDevices.map(d => ({
+            label: d.label,
+            id: d.deviceId
+        })));
+
+        // Function to get microphone stream with device selection
+        const getMicrophoneStream = async (retries = 3) => {
+            // Log available devices but don't force selection
+            const preferredDevices = audioDevices.filter(d =>
+                !d.label.toLowerCase().includes('virtual') &&
+                !d.label.toLowerCase().includes('blackhole')
+            );
+
+            console.log('Available microphones:', preferredDevices.map(d => d.label));
+
+            // If we have preferred devices, use the first one
+            const constraints = preferredDevices.length > 0 ? {
+                audio: {
+                    deviceId: { exact: preferredDevices[0].deviceId },
+                    echoCancellation: false,
+                    noiseSuppression: false,
+                    autoGainControl: false
+                }
+            } : {
+                audio: {
+                    echoCancellation: false,
+                    noiseSuppression: false,
+                    autoGainControl: false
+                }
+            };
+
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    const track = stream.getAudioTracks()[0];
+                    console.log('Using microphone:', {
+                        label: track.label,
+                        enabled: track.enabled,
+                        muted: track.muted,
+                        readyState: track.readyState,
+                        settings: track.getSettings()
+                    });
+
+                    return stream;
+                } catch (error) {
+                    console.warn(`Attempt ${i + 1} failed:`, error);
+                    if (i === retries - 1) throw error;
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            }
+        };
+
+        const stream = await getMicrophoneStream();
+        const sourceNode = audioContext.createMediaStreamSource(stream);
+
+        // Test audio with longer timeout and volume monitoring
+        const testNode = audioContext.createScriptProcessor(1024, 1, 1);
+        let maxVolume = 0;
+        let samplesProcessed = 0;
+
+        await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                console.warn('Audio test results:', {
+                    maxVolume,
+                    samplesProcessed,
+                    avgVolume: maxVolume / samplesProcessed
+                });
+                // Don't reject, just warn
+                resolve();
+            }, 3000);
+
+            testNode.onaudioprocess = (e) => {
+                const input = e.inputBuffer.getChannelData(0);
+                const sum = input.reduce((a,b) => a + Math.abs(b), 0);
+                maxVolume = Math.max(maxVolume, sum);
+                samplesProcessed++;
+
+                if (sum > 0) {
+                    console.log('Received audio data:', {
+                        sum,
+                        maxVolume,
+                        samplesProcessed,
+                        sampleRate: audioContext.sampleRate
+                    });
+                }
+            };
+
+            sourceNode.connect(testNode);
+            testNode.connect(audioContext.destination);
+        });
+
+        // Clean up test node
+        sourceNode.disconnect(testNode);
+        testNode.disconnect();
+
+        const historySize = parseInt(params.get('history_size') ?? '500')
+        const audioProcessor = new AudioProcessor(audioContext, sourceNode, historySize)
+        await audioProcessor.start()
+        return audioProcessor
+    } catch (error) {
+        console.error('Audio setup failed:', error);
+        throw error;
+    }
 }
 
 const animate = ({ render, audio, fragmentShader, vertexShader }) => {

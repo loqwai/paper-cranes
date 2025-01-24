@@ -79,6 +79,7 @@ export class WorkerRPC {
         this.worker.postMessage({
             type: 'fftData',
             id: messageId,
+            workerName: this.workerName,
             data: { fft: fftData },
         })
 
