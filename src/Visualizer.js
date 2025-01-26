@@ -11,7 +11,15 @@ import {
 
 import { shaderWrapper } from './shader-transformers/shader-wrapper'
 
-const gridSize = 100
+// Simple full-screen quad
+const positions = [
+    -1, -1, 0,
+    1, -1, 0,
+    -1, 1, 0,
+    -1, 1, 0,
+    1, -1, 0,
+    1, 1, 0,
+]
 
 const getTexture = async (gl, url) => {
     return new Promise((resolve) => {
@@ -21,21 +29,6 @@ const getTexture = async (gl, url) => {
             resolve(texture)
         })
     })
-}
-
-const generateGridPositions = (gridSize) => {
-    const positions = []
-    const step = 2 / gridSize
-    for (let y = 0; y < gridSize; y++) {
-        for (let x = 0; x < gridSize; x++) {
-            const x1 = -1 + x * step
-            const x2 = x1 + step
-            const y1 = -1 + y * step
-            const y2 = y1 + step
-            positions.push(x1, y1, 0, x2, y1, 0, x1, y2, 0, x1, y2, 0, x2, y1, 0, x2, y2, 0)
-        }
-    }
-    return positions
 }
 
 const handleShaderError = (gl, wrappedFragmentShader, newFragmentShader) => {
@@ -60,11 +53,32 @@ const handleShaderError = (gl, wrappedFragmentShader, newFragmentShader) => {
     }
 }
 
+const calculateResolutionRatio = (frameTime, renderTimes, lastResolutionRatio) => {
+    renderTimes.push(frameTime)
+    if (renderTimes.length > 20) renderTimes.shift()
+    if(renderTimes.length < 20) return lastResolutionRatio
+
+    // Calculate average frame time over last 20 frames
+    const avgFrameTime = renderTimes.reduce((a, b) => a + b) / renderTimes.length
+
+    // Target 60fps (16.67ms per frame)
+    let resolutionRatio = lastResolutionRatio
+    if (avgFrameTime > 50) return Math.max(0.25, lastResolutionRatio - 0.25)
+    if (avgFrameTime < 20 && lastResolutionRatio < 1) return Math.min(1, lastResolutionRatio + 0.1)
+    return lastResolutionRatio
+}
 
 const askForWakeLock = async () => {
     if(!navigator.wakeLock) return
     return navigator.wakeLock.request('screen')
 }
+
+// Default vertex shader for full-screen quad
+const defaultVertexShader = `#version 300 es
+in vec4 position;
+void main() {
+    gl_Position = position;
+}`
 
 export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) => {
     await askForWakeLock().catch(e => console.log("Couldn't ask for a screen wake lock"));
@@ -72,12 +86,11 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
     const gl = canvas.getContext('webgl2', {
         antialias: false,
         powerPreference: 'high-performance',
-        desynchronized: true,  // Reduce latency
-        // Request highest possible refresh rate
+        desynchronized: true,
         attributes: {
-            alpha: false,  // Optimize by disabling alpha if not needed
-            depth: false,  // Disable depth buffer if not needed
-            stencil: false,  // Disable stencil buffer if not needed
+            alpha: false,
+            depth: false,
+            stencil: false,
             preserveDrawingBuffer: false,
             pixelRatio: 1
         }
@@ -94,25 +107,24 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
 
     const initialTexture = await getTexture(gl, initialImageUrl)
     const frameBuffers = [createFramebufferInfo(gl), createFramebufferInfo(gl)]
-    const bufferInfo = createBufferInfoFromArrays(gl, { position: generateGridPositions(gridSize) })
+    const bufferInfo = createBufferInfoFromArrays(gl, { position: positions })
 
     let frameNumber = 0
-    let slowFrames = 0
     let lastRender = performance.now()
     let programInfo
-    let lastVertexShader, lastFragmentShader
+    let lastFragmentShader
+    let renderTimes = []
+    let lastResolutionRatio = 1
 
-    const render = ({ time, features, vertexShader: newVertexShader, fragmentShader: newFragmentShader }) => {
-        if (newFragmentShader !== lastFragmentShader || newVertexShader !== lastVertexShader) {
+    const render = ({ time, features, fragmentShader: newFragmentShader }) => {
+        if (newFragmentShader !== lastFragmentShader) {
             console.log('Shader updated')
             const wrappedFragmentShader = shaderWrapper(newFragmentShader)
-            const wrappedVertexShader = shaderWrapper(newVertexShader)
 
-            const newProgramInfo = createProgramInfo(gl, [wrappedVertexShader, wrappedFragmentShader])
+            const newProgramInfo = createProgramInfo(gl, [defaultVertexShader, wrappedFragmentShader])
             if (!newProgramInfo?.program) {
                 handleShaderError(gl, wrappedFragmentShader, newFragmentShader);
                 programInfo = null;
-                lastVertexShader = newVertexShader;
                 lastFragmentShader = newFragmentShader;
                 return;
             }
@@ -120,22 +132,24 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
             gl.useProgram(newProgramInfo.program)
             window.cranes.error = null;
             programInfo = newProgramInfo
-            lastVertexShader = newVertexShader
             lastFragmentShader = newFragmentShader
         }
 
         if (!programInfo) return
 
-        const renderTime = performance.now()
-        let resolutionRatio = 1
-        if (renderTime - lastRender > 100) {
-            slowFrames++
+        const currentTime = performance.now()
+        const frameTime = currentTime - lastRender
+
+        const  resolutionRatio = calculateResolutionRatio(frameTime, renderTimes, lastResolutionRatio)
+
+        if (resolutionRatio !== lastResolutionRatio) {
+            console.log(`Adjusting resolution ratio to ${resolutionRatio.toFixed(2)}`)
+            resizeCanvasToDisplaySize(gl.canvas, resolutionRatio)
+            lastResolutionRatio = resolutionRatio
+            renderTimes = []
         }
-        if (slowFrames > 30) {
-            resolutionRatio = 0.5
-        }
-        resizeCanvasToDisplaySize(gl.canvas, resolutionRatio)
-        lastRender = renderTime
+
+        lastRender = currentTime
 
         const frame = frameBuffers[frameNumber % 2]
         const prevFrame = frameBuffers[(frameNumber + 1) % 2]
@@ -157,7 +171,6 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
             iChannel1: prevFrame.attachments[0],
             iChannel2: initialTexture,
             iChannel3: prevFrame.attachments[0],
-            gridSize,
             ...features,
         }
 
