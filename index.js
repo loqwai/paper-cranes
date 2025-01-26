@@ -1,7 +1,7 @@
 import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { makeVisualizer } from './src/Visualizer.js'
-console.log(`paper cranes version ${CACHE_NAME}`);
 import './index.css'
+
 const events = ['touchstart', 'touchmove', 'touchstop', 'keydown', 'mousedown', 'resize']
 let ranMain = false
 let startTime = 0
@@ -174,7 +174,7 @@ const initializeApp = async () => {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const audioInputs = devices.filter(device => device.kind === 'audioinput');
     const defaultAudioInput = audioInputs[0].deviceId
-    console.log('defaultAudioInput', audioInputs[0]);
+
     try {
         // Get microphone access first
         await navigator.mediaDevices.getUserMedia({
@@ -275,3 +275,4 @@ const getVertexShader = async () => {
 if(process.env.LIVE_RELOAD) {
     new EventSource('/esbuild').addEventListener('change', () => location.reload());
 }
+console.log(`paper cranes version ${CACHE_NAME}`);

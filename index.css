@@ -6,7 +6,7 @@ body {
   overflow: hidden; /* Prevents scrolling */
   display: flex;
   justify-content: center;
-  align-items: center;;
+  align-items: center;
   user-select: none;
   background-color: #000000;
 }
@@ -14,6 +14,11 @@ canvas {
   margin: 0;
   height: 100vmin;
   width: 100vmin;
+  image-rendering: high-quality;
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  webkit-forced-dark-mode: on;
 }
 
 canvas.fullscreen {

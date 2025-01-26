@@ -60,8 +60,29 @@ const handleShaderError = (gl, wrappedFragmentShader, newFragmentShader) => {
     }
 }
 
+
+const askForWakeLock = async () => {
+    if(!navigator.wakeLock) return
+    return navigator.wakeLock.request('screen')
+}
+
 export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) => {
-    const gl = canvas.getContext('webgl2', { antialias: false })
+    await askForWakeLock().catch(e => console.log("Couldn't ask for a screen wake lock"));
+
+    const gl = canvas.getContext('webgl2', {
+        antialias: false,
+        powerPreference: 'high-performance',
+        desynchronized: true,  // Reduce latency
+        // Request highest possible refresh rate
+        attributes: {
+            alpha: false,  // Optimize by disabling alpha if not needed
+            depth: false,  // Disable depth buffer if not needed
+            stencil: false,  // Disable stencil buffer if not needed
+            preserveDrawingBuffer: false,
+            pixelRatio: 1
+        }
+    })
+
     if (fullscreen) {
         const width = window.innerWidth
         const height = window.innerHeight
@@ -131,7 +152,7 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
             frame: frameNumber,
             iRandom: Math.random(),
             iResolution: [frame.width, frame.height, 0],
-            iMouse: [46, 19, 208, 0],
+            iMouse: [features.touchX, features.touchY, features.touched ? 1: 0, 0],
             iChannel0: initialTexture,
             iChannel1: prevFrame.attachments[0],
             iChannel2: initialTexture,
