@@ -51,7 +51,7 @@ float crystal(vec3 p) {
 
     // Add surface detail based on roughness variance
     float detail = sin(c.x*10.0 + c.y*8.0 + c.z*6.0) * EDGE_DETAIL * 0.1;
-    return d * 0.3 + detail;
+    return d * 0.3 + detail * bassZScore;
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
