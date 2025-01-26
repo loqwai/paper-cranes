@@ -45,7 +45,7 @@ const handleShaderError = (gl, wrappedFragmentShader, newFragmentShader) => {
     if (error.match(/ERROR: \d+:(\d+):/)) {
         error.replace(/ERROR: \d+:(\d+):/, (match, line) =>{
             const lineNumber = parseInt(line) - headerLines - 1;
-            window.cranes.error = { lineNumber, message: `ERROR: 0:${lineNumber}:` };
+            window.cranes.error = { lineNumber, message: `ERROR: 0:${lineNumber}: ${error.message}` };
     });
         console.error(window.cranes.error, error);
     } else {
@@ -61,9 +61,7 @@ const calculateResolutionRatio = (frameTime, renderTimes, lastResolutionRatio) =
     // Calculate average frame time over last 20 frames
     const avgFrameTime = renderTimes.reduce((a, b) => a + b) / renderTimes.length
 
-    // Target 60fps (16.67ms per frame)
-    let resolutionRatio = lastResolutionRatio
-    if (avgFrameTime > 50) return Math.max(0.25, lastResolutionRatio - 0.25)
+    if (avgFrameTime > 50) return Math.max(0.5, lastResolutionRatio - 0.5)
     if (avgFrameTime < 20 && lastResolutionRatio < 1) return Math.min(1, lastResolutionRatio + 0.1)
     return lastResolutionRatio
 }
