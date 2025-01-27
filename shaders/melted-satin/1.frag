@@ -3,7 +3,7 @@ uniform float knob_71;
 #define PROBE_A 0.13
 #define PROBE_B spectralKurtosisMedian/spectralKurtosisMax / 10.
 #define PROBE_C 0.04
-#define t (iTime*0.2 + energyZScore*0.1)
+#define t (time*0.2 + bassZScore*knob_71)
 
 // Add the mainImage function declaration at the top
 void mainImage(out vec4 fragColor, in vec2 fragCoord);
