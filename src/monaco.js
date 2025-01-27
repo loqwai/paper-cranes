@@ -495,11 +495,13 @@ function init(monaco) {
 
     // Initialize editor content
     const searchParams = new URLSearchParams(window.location.search);
-    if (!searchParams.has('shader')) {
         (async () => {
-            // try to get the shader from local storage
-            let shader = localStorage.getItem('cranes-manual-code')
-            // if the shader is not in local storage, fetch it from the server
+            let shader = localStorage.getItem('cranes-manual-code');
+            if(searchParams.has('shader')){
+                const res = await fetch(`/shaders/${searchParams.get('shader')}.frag`)
+                shader = await res.text()
+            }
+
             if (!shader) {
                 const res = await fetch('/shaders/default.frag')
                 shader = await res.text()
@@ -509,9 +511,6 @@ function init(monaco) {
             editor.pushUndoStop();
             editor.layout();
         })();
-    } else {
-        document.body.classList.add('no-editor')
-    }
 
     document.querySelector('#save').addEventListener('click', () => {
         editor.pushUndoStop()
