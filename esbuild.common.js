@@ -6,10 +6,10 @@ import { relative } from 'path'
 
  const shaderHtmlFromFiles = async (shaderFiles) => {
     let htmlContent = '<!DOCTYPE html>\n<html>\n<head>\n<title>Shaders</title>\n</head>\n<body>\n<ul>\n'
-    shaderFiles.forEach((file) => {
+    shaderFiles.sort().forEach((file) => {
         const relativePath = relative('shaders', file)
         const queryParam = relativePath.replace(/\\/g, '/').replace('.frag', '')
-        htmlContent += `<li><a href="/?shader=${queryParam}&fullscreen=true">${queryParam}</a></li>\n`
+        htmlContent += `<li><a href="/?shader=${queryParam}">${queryParam}</a></li>\n`
     })
     htmlContent += '</ul>\n</body>\n</html>'
     await writeFile(join('dist', 'shaders.html'), htmlContent)
