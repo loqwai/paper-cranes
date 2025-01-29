@@ -1,5 +1,5 @@
 import { render, Fragment } from 'preact'
-import { useState, useEffect } from 'preact/hooks'
+import { useState, useEffect, useRef } from 'preact/hooks'
 import { html } from 'htm/preact'
 import debounce from 'debounce'
 
@@ -18,13 +18,16 @@ const updateUrl = (params) => {
 const updateUrlDebounced = debounce(updateUrl, 50)
 
 const FeatureEditor = ({ name, feature, onChange, onDelete }) => {
+    const [showSettings, setShowSettings] = useState(false)
+    const settingsRef = useRef(null)
+
     const handleValueChange = (e) => onChange(name, { ...feature, value: parseFloat(e.target.value) })
     const handleMinChange = (e) => onChange(name, { ...feature, min: parseFloat(e.target.value) })
     const handleMaxChange = (e) => onChange(name, { ...feature, max: parseFloat(e.target.value) })
     const handleCommitValue = () => {
         updateUrlDebounced({ [name]: feature.value })
     }
-    // Update the URL immediately for live updates
+
     useEffect(() => {
         updateUrlDebounced({
             [name]: feature.value,
@@ -37,22 +40,51 @@ const FeatureEditor = ({ name, feature, onChange, onDelete }) => {
     return html`
         <div className="edit-feature" key=${name}>
             <label>
-                <button onClick=${() => onDelete(name)}>×</button>
-                ${name}:
+                <button onClick=${() => onDelete(name)} class="delete-button">×</button>
+                ${name}
             </label>
-            <input class="min-feature-value" type="number" step="0.1" value=${feature.min} onInput=${handleMinChange} />
-            <input
-                class="feature-value"
-                type="range"
-                min=${feature.min}
-                max=${feature.max}
-                step="0.01"
-                value=${feature.value}
-                onInput=${handleValueChange}
-                onChange=${handleCommitValue}
-            />
-            <input class="max-feature-value" type="number" step="0.1" value=${feature.max} onInput=${handleMaxChange} />
-            <span class="value-display">${feature.value}</span>
+            <div class="slider-container">
+                <input
+                    class="feature-value"
+                    type="range"
+                    min=${feature.min}
+                    max=${feature.max}
+                    step="0.01"
+                    value=${feature.value}
+                    onInput=${handleValueChange}
+                    onChange=${handleCommitValue}
+                />
+                <button
+                    class="settings-button ${showSettings ? 'active' : ''}"
+                    onClick=${() => setShowSettings(!showSettings)}
+                    title="Adjust min/max values"
+                >
+                    <span style="transform: rotate(90deg)">⚡</span>
+                </button>
+                ${showSettings && html`
+                    <div class="settings-popover" ref=${settingsRef}>
+                        <div class="setting-row">
+                            <label>Min:</label>
+                            <input
+                                type="number"
+                                step="0.1"
+                                value=${feature.min}
+                                onInput=${handleMinChange}
+                            />
+                        </div>
+                        <div class="setting-row">
+                            <label>Max:</label>
+                            <input
+                                type="number"
+                                step="0.1"
+                                value=${feature.max}
+                                onInput=${handleMaxChange}
+                            />
+                        </div>
+                    </div>
+                `}
+            </div>
+            <span class="value-display">${feature.value.toFixed(2)}</span>
         </div>
     `
 }
