@@ -49,6 +49,22 @@ uniform float knob_10;
 #define COLOR_SATURATION knob_21
 #define COLOR_BRIGHTNESS_SCALE knob_18
 
+// Color palette control
+#define BASE_HUE 0.75 // Start in purple range
+#define HUE_RANGE 0.3 // Allow variation within pleasing range
+#define BASE_COLORS vec3(0.75, 0.83, 0.92) // Purple, Blue, Cyan base points
+
+vec3 getAestheticHue(float input) {
+    // Map input to one of three complementary color points
+    float t = fract(input * 3.0);
+    float hue = mix(
+        mix(BASE_COLORS.x, BASE_COLORS.y, smoothstep(0.0, 0.5, t)),
+        BASE_COLORS.z,
+        smoothstep(0.5, 1.0, t)
+    );
+    return vec3(hue, COLOR_SATURATION, COLOR_BRIGHTNESS_SCALE);
+}
+
 // Ripple structure
 struct Ripple {
     vec2 center;
@@ -124,11 +140,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec4 offsetColor = getLastFrameColor(texUV + flowOffset);
     vec3 offsetHSL = rgb2hsl(offsetColor.rgb);
 
-    vec3 newColorHSL = vec3(
-        fract(offsetHSL.x + interference * 0.2 + COLOR_SHIFT),
-        COLOR_SATURATION,
-        brightness * COLOR_BRIGHTNESS_SCALE
+    vec3 newColorHSL = getAestheticHue(
+        fract(offsetHSL.x + interference * 0.2 + COLOR_SHIFT)
     );
+    newColorHSL.z *= brightness;
 
     if(BEAT) {
         vec2 beatPos = vec2(
@@ -136,17 +151,20 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             sin(WAVE_SPEED * PI) * 0.3
         );
         float beatRipple = createRipple(uv, Ripple(beatPos, TIME, 2.0));
-        newColorHSL.x = fract(newColorHSL.x + beatRipple * 0.2);
-        newColorHSL.z = min(1.0, newColorHSL.z + beatRipple * BEAT_INTENSITY);
+        vec3 beatColor = getAestheticHue(fract(newColorHSL.x + beatRipple * 0.2));
+        newColorHSL = mix(newColorHSL, beatColor, beatRipple * BEAT_INTENSITY);
     }
 
     float blendFactor = 0.15;
     vec3 blendedHSL;
 
     if(brightness > 0.1) {
+        vec3 targetColor = getAestheticHue(
+            fract(mix(prevHSL.x, newColorHSL.x, blendFactor))
+        );
         blendedHSL = vec3(
-            fract(mix(prevHSL.x, newColorHSL.x, blendFactor)),
-            COLOR_SATURATION,
+            targetColor.x,
+            targetColor.y,
             mix(prevHSL.z * COLOR_PERSISTENCE, newColorHSL.z, blendFactor)
         );
     } else {
