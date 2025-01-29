@@ -55,6 +55,18 @@ const FeatureEditor = ({ name, feature, onChange, onDelete }) => {
     `
 }
 
+// Add drawer toggle functionality
+const setupDrawer = () => {
+    const drawerToggle = document.querySelector('.drawer-toggle')
+    const featureEditor = document.getElementById('feature-editor')
+
+    drawerToggle.addEventListener('click', () => {
+        featureEditor.classList.toggle('open')
+        // Update toggle button text
+        drawerToggle.textContent = featureEditor.classList.contains('open') ? '×' : '⚙️'
+    })
+}
+
 const FeatureAdder = () => {
     const [features, setFeatures] = useState({})
     const [newFeatureName, setNewFeatureName] = useState('')
@@ -75,6 +87,8 @@ const FeatureAdder = () => {
         if (searchParams.has('present')) {
             document.body.classList.add('present')
         }
+
+        setupDrawer()
     }, [])
 
     const updateFeature = (name, updatedFeature) => {

@@ -1,153 +1,158 @@
-form {
-    color: white;
-}
-
-label {
-    display: flex;
-    justify-content: center; /* This centers the child elements (including text) horizontally */
-    align-items: center; /* This centers the child elements (including text) vertically */
-}
-label input {
-    flex: 1;
-}
-
-html {
-    background-color: black;
-    font-family: "Space-Age", sans-serif;
-}
-#feature-editor {
-    border-radius: 10px;
-    box-sizing: border-box;
-    padding: 1em;
-}
-.edit-feature {
-    display: grid;
-    grid-template-columns: 6em 6em auto 6em 2.5em 1.5em;
-    height: 2em;
-}
-.new-feature {
-    display: grid;
-    grid-template-columns: auto 6em;
-    margin-bottom: 0.5em;
-}
-
-.save-load {
-    margin-top: 0.5em;
-    display: flex;
-    flex-direction: row;
-    justify-content: start;
-}
-:root {
-    --foreground-rgb: 0, 0, 0;
-    --background-start-rgb: 214, 219, 220;
-    --background-end-rgb: 255, 255, 255;
-    /* Cosmic Color Scheme */
-    --color-space-black: #000000;
-    --color-nebula-purple: #a365f2;
-    --color-asteroid-pink: #e16ce6;
-    --color-galaxy-blue: #a398f4;
-    --color-comet-tail: #e099e6;
-    --color-starlight-blue: #6195f9;
-    --color-deep-sky: #2198fb;
-    --color-twilight-purple: #6566f4;
-    --color-alien-green: #a22bec;
-    --color-rocket-metal: #2065f5;
-    --color-lunar-white: #e6e6e6;
-
-    --radius: 0.5rem;
-}
-
-/* Sparkly Class */
-.sparkly {
-    background: linear-gradient(
-        270deg,
-        var(--color-nebula-purple),
-        var(--color-asteroid-pink),
-        var(--color-comet-tail),
-        var(--color-galaxy-blue),
-        var(--color-starlight-blue),
-        var(--color-deep-sky),
-        var(--color-twilight-purple),
-        var(--color-alien-green),
-        var(--color-rocket-metal),
-        var(--color-nebula-purple)
-    );
-    background-size: 800% 800%;
-    color: var(--color-lunar-white);
-}
-.sparkly.animated {
-    animation: sparkle 8s linear infinite;
-}
-
-/* Sparkly Animation */
-@keyframes sparkle {
-    0%,
-    100% {
-        background-position: 0% 50%;
-    }
-    50% {
-        background-position: 100% 50%;
-    }
-}
-
+/* Base styles */
 body {
-    display: grid;
-    grid-template-columns: 50% 50%;
-    grid-template-rows: auto; /* Define two rows, their size determined by the content */
-    height: 100vh; /* Ensure the body takes up the full viewport height */
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  overflow: hidden;
+  background-color: black;
+  font-family: "Space-Age", sans-serif;
+  color: white;
 }
 
-body.no-editor {
-    display: flex;
-    /* reverse the order of the flex items */
-    flex-direction: row-reverse;
-}
-body.no-editor #save-and-publish,
-body.no-editor #monaco-editor {
-    display: none;
-}
-body.present #feature-editor {
-    display: none;
-}
-#feature-editor {
-    grid-column: 1; /* Places it in the first column */
-    grid-row: 1; /* Places it in the first row */
-}
-
-#save-and-publish {
-    grid-column: 2;
-    grid-row: 1;
-    display: flex;
-}
-#save-and-publish > button {
-    flex: 1;
-    cursor: pointer;
-    margin: 1em;
-}
-#save-and-publish > button > a {
-    /* clear the default styles */
-    text-decoration: none;
-    color: inherit;
-}
-#monaco-editor {
-    grid-column: 2;
-    grid-row: 2;
-    min-height: 500px;
-    height: calc(100vh - 100px);
-    width: 100%;
-    /* Add these to ensure proper rendering */
-    position: relative;
-    overflow: hidden;
-}
+/* Main layout */
 #visualizer {
-    grid-column: 1; /* Also in the first column */
-    grid-row: 2; /* But in the second row, under #feature-editor */
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 50vw;
+  height: 100vh;
 }
 
-/* Optional adjustments for a better layout */
-#feature-editor,
-#visualizer,
 #monaco-editor {
-    width: 100%; /* Ensures full utilization of their grid cell's width */
-    height: 100%; /* For #monaco-editor to fully expand vertically, depending on your design needs */
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 50vw;
+  height: 100vh;
+}
+
+/* Feature editor drawer */
+#feature-editor {
+  position: fixed;
+  top: 0;
+  right: -240px; /* Start hidden, narrower width */
+  width: 240px;
+  height: auto;
+  max-height: 80vh;
+  background: rgba(0, 0, 0, 0.85);
+  transition: right 0.3s ease;
+  z-index: 1000;
+  overflow-y: auto;
+  padding: 8px;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.5);
+  font-size: 0.85em;
+  border-radius: 0 0 0 8px;
+}
+
+#feature-editor.open {
+  right: 0;
+}
+
+/* Toggle button */
+.drawer-toggle {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  z-index: 1001;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1em;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  padding: 0;
+}
+
+.drawer-toggle:hover {
+  opacity: 1;
+}
+
+/* Feature controls */
+.edit-feature {
+  display: grid;
+  grid-template-columns: 3.5em 2.5em auto 2.5em 1.5em 1.2em;
+  gap: 2px;
+  margin-bottom: 2px;
+  align-items: center;
+  height: 1.4em;
+}
+
+.feature-value {
+  height: 14px;
+}
+
+.min-feature-value,
+.max-feature-value {
+  width: 100%;
+  height: 14px;
+  padding: 1px;
+  font-size: 0.8em;
+}
+
+/* New feature input */
+.new-feature {
+  display: grid;
+  grid-template-columns: auto 3em;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.new-feature input {
+  height: 18px;
+  font-size: 0.85em;
+}
+
+/* Save/publish buttons */
+#save-and-publish {
+  position: fixed;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 999;
+}
+
+#save-and-publish > button {
+  padding: 4px 8px;
+  font-size: 0.85em;
+  cursor: pointer;
+}
+
+#save-and-publish > button > a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Visibility states */
+body.no-editor #save-and-publish,
+body.no-editor #monaco-editor,
+body.present #feature-editor {
+  display: none;
+}
+
+/* Sparkly effect */
+.sparkly {
+  background: linear-gradient(270deg, var(--color-nebula-purple), var(--color-asteroid-pink), var(--color-galaxy-blue));
+  background-size: 200% 200%;
+  color: var(--color-lunar-white);
+}
+
+.sparkly.animated {
+  animation: sparkle 4s linear infinite;
+}
+
+@keyframes sparkle {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
 }
