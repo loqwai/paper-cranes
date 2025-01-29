@@ -1,134 +1,151 @@
-// Define audio reactive parameters
+// Audio reactive parameters
 #define WAVE_SPEED (spectralFluxZScore * 0.2)
 #define PATTERN_SCALE (1.0 + spectralCentroidZScore * 0.2)
-#define MAX_RIPPLES 12 // More ripples for better coverage
-#define PERSISTENCE 0.98
-#define PI 3.14159265359
+#define RIPPLE_CHAOS (spectralCentroidZScore * 0.25)          // How randomly ripples are placed
+#define RIPPLE_SPREAD (0.6 + spectralSpreadZScore * 0.2)      // How far from center ripples appear
+#define RIPPLE_STRENGTH (1.0 + spectralFluxZScore * 0.5)      // How strong ripples are
+#define COLOR_SHIFT (spectralCentroidNormalized * 0.1)        // Base color shift
+#define BEAT_INTENSITY (spectralFluxNormalized)               // Beat response strength
 
-// Structure to store ripple information
+// Knob controls
+uniform float knob_14;
+uniform float knob_15;
+uniform float knob_16;
+
+// Constants
+#define MAX_RIPPLES 8
+#define PERSISTENCE 0.97
+#define PI 3.14159265359
+#define TIME (iTime/10.)
+
+// Ripple characteristics
+#define RIPPLE_COUNT 1
+#define RIPPLE_SPEED 0.5
+#define RIPPLE_THICKNESS knob_14
+#define RIPPLE_DISTANCE_DECAY 0.5
+#define RIPPLE_AGE_DECAY knob_15
+#define RIPPLE_BIRTH_STAGGER knob_16
+#define RIPPLE_LIFE_DURATION 5.0
+#define RIPPLE_BASE_STRENGTH 1.0
+
+// Color and blending
+#define COLOR_PERSISTENCE 0.97
+#define COLOR_SATURATION 0.9
+#define COLOR_BRIGHTNESS_SCALE 0.8
+
+// Ripple structure
 struct Ripple {
     vec2 center;
-    float birth;    // When the ripple started
+    float birth;
     float strength;
-    float freq;
 };
 
-// Proper UV wrapping function
-vec2 wrapUV(vec2 uv) {
-    return fract(uv + 0.5) - 0.5;
+// Better random function
+float random(float seed) {
+    return fract(sin(seed * 12.9898 + 78.233) * 43758.5453);
 }
 
-// Create a single ripple
-float singleRipple(vec2 p, Ripple r) {
-    vec2 delta = p - r.center;
-    float d = length(delta);
-
-    // Calculate age of ripple
-    float age = time - r.birth;
-
-    // Expanding radius based on age
-    float radius = age * 0.3;
-
-    // Ring width gets wider as it expands
-    float width = 0.02 + radius * 0.01;
-
-    // Create sharp ring that expands outward
-    float ring = smoothstep(radius - width, radius, d) -
-                smoothstep(radius, radius + width, d);
-
-    // Fade out based on age and distance
-    float fade = exp(-age * 1.0) * // Time-based fade
-                exp(-d * 0.5) *    // Distance-based fade
-                r.strength;
-
-    return ring * fade;
+// 2D random
+vec2 random2(float seed) {
+    return vec2(
+        random(seed),
+        random(seed + 1234.5678)
+    );
 }
 
-// Get ripple sources
-Ripple[MAX_RIPPLES] getRipples(vec2 uv) {
+float createRipple(vec2 p, Ripple r) {
+    float d = length(p - r.center);
+    float age = TIME - r.birth;
+
+    float radius = age * RIPPLE_SPEED;
+    float thickness = RIPPLE_THICKNESS * 0.004;
+    float wave = exp(-thickness * pow(d - radius, 2.0));
+
+    float distanceDecay = exp(-d * RIPPLE_DISTANCE_DECAY);
+    float ageDecay = exp(-age * RIPPLE_AGE_DECAY);
+
+    return wave * distanceDecay * ageDecay * r.strength * RIPPLE_STRENGTH;
+}
+
+Ripple[MAX_RIPPLES] getRipples() {
     Ripple[MAX_RIPPLES] ripples;
 
     for(int i = 0; i < MAX_RIPPLES; i++) {
-        // Stagger ripple births
-        float birthOffset = mod(time + float(i) * 0.5, 4.0);
+        float birthOffset = mod(TIME + float(i) * RIPPLE_BIRTH_STAGGER, RIPPLE_LIFE_DURATION);
 
-        // Random-ish position within view bounds
-        float angle = random(uv);
-        float dist = random(uv);
+        float angle = float(i) * PI * 2.0 / float(MAX_RIPPLES) + RIPPLE_CHAOS * PI;
+        vec2 pos = vec2(cos(angle), sin(angle)) * RIPPLE_SPREAD;
 
-        vec2 pos = vec2(
-            cos(angle) * dist,
-            sin(angle) * dist
-        );
-
-        // Strength decreases with age
-        float strength = smoothstep(4.0, 0.0, birthOffset) *
-                        (1.0 + spectralFluxZScore * 0.5);
-
-        ripples[i] = Ripple(
-            pos,
-            time - birthOffset,
-            strength,
-            30.0 + spectralSpreadNormalized * 20.0
-        );
+        ripples[i] = Ripple(pos, TIME - birthOffset, RIPPLE_BASE_STRENGTH);
     }
     return ripples;
 }
 
-void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec2 uv = (fragCoord - 0.5 * resolution.xy) / min(resolution.x, resolution.y);
-
-    // Sample previous frame
-    vec2 prevUV = fragCoord.xy / resolution.xy;
-    vec4 prevColor = texture(prevFrame, prevUV);
-
-    // Get ripples
-    Ripple[MAX_RIPPLES] ripples = getRipples(uv);
-
-    // Combine ripple patterns
-    float pattern = 0.0;
-    for(int i = 0; i < MAX_RIPPLES; i++) {
-        pattern += singleRipple(uv, ripples[i]);
-    }
-
-    // Create base color
-    vec3 color = vec3(0.0); // Start with black
-
-    // Add colored ripples
-    if(pattern > 0.0) {
-        vec3 rippleColor = vec3(
-            0.5 + spectralCentroidNormalized * 0.2,  // Base hue
-            0.8,                                      // High saturation
-            clamp(pattern * 2.0, 0.0, 1.0)           // Brightness from pattern
-        );
-        color = hsl2rgb(rippleColor);
-    }
-
-    // Beat response
-    float blendFactor = 0.1;
-    if(beat) {
-        // Create new ripple at beat position
-        vec2 beatPos = vec2(
-            cos(spectralCentroidZScore * PI) * 0.3,
-            sin(spectralFluxZScore * PI) * 0.3
-        );
-        float beatDist = length(uv - beatPos);
-        float beatRipple = exp(-beatDist * 8.0) * // Sharp falloff
-                          (0.5 + spectralFluxNormalized); // Intensity from flux
-        color += vec3(0.2, 0.3, 0.4) * beatRipple;
-    }
-
-    // Blend with previous frame
-    vec3 blendedColor = mix(prevColor.rgb * PERSISTENCE, color, blendFactor);
-
-    // Subtle vignette
-    float vignette = smoothstep(1.1, 0.3, length(uv));
-    blendedColor *= vignette;
-
-    fragColor = vec4(blendedColor, 1.0);
+vec2 getWaveDistortion(vec2 uv) {
+    float distortionX = sin(uv.y * PATTERN_SCALE * 4.0 + TIME * WAVE_SPEED) * 0.003;
+    float distortionY = cos(uv.x * PATTERN_SCALE * 4.0 + TIME * WAVE_SPEED) * 0.003;
+    return vec2(distortionX, distortionY);
 }
 
-// Hash function for pseudo-random numbers
-float hash(float n) {
-    return fract(sin(n) * 43758.5453123);
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 uv = (fragCoord - 0.5 * iResolution.xy) / min(iResolution.x, iResolution.y);
+    vec2 texUV = fragCoord.xy / iResolution.xy;
+
+    vec4 prevColor = getLastFrameColor(texUV);
+    vec3 prevHSL = rgb2hsl(prevColor.rgb);
+
+    Ripple[MAX_RIPPLES] ripples = getRipples();
+
+    float totalWave = 0.0;
+    for(int i = 0; i < MAX_RIPPLES; i++) {
+        totalWave += createRipple(uv, ripples[i]);
+    }
+
+    float interference = pow(abs(totalWave), 0.8);
+    float brightness = smoothstep(0.1, 0.3, interference);
+
+    vec2 flowOffset = normalize(uv) * interference * 0.001;
+    vec4 offsetColor = getLastFrameColor(texUV + flowOffset);
+    vec3 offsetHSL = rgb2hsl(offsetColor.rgb);
+
+    vec3 newColorHSL = vec3(
+        fract(offsetHSL.x + interference * 0.2 + COLOR_SHIFT),
+        COLOR_SATURATION,
+        brightness * COLOR_BRIGHTNESS_SCALE
+    );
+
+    if(beat) {
+        vec2 beatPos = vec2(
+            cos(RIPPLE_CHAOS * PI) * 0.3,
+            sin(WAVE_SPEED * PI) * 0.3
+        );
+        float beatRipple = createRipple(uv, Ripple(beatPos, TIME, 2.0));
+        newColorHSL.x = fract(newColorHSL.x + beatRipple * 0.2);
+        newColorHSL.z = min(1.0, newColorHSL.z + beatRipple * BEAT_INTENSITY);
+    }
+
+    float blendFactor = 0.15;
+    vec3 blendedHSL;
+
+    if(brightness > 0.1) {
+        blendedHSL = vec3(
+            fract(mix(prevHSL.x, newColorHSL.x, blendFactor)),
+            COLOR_SATURATION,
+            mix(prevHSL.z * COLOR_PERSISTENCE, newColorHSL.z, blendFactor)
+        );
+    } else {
+        blendedHSL = vec3(
+            prevHSL.x,
+            max(0.0, prevHSL.y - 0.1),
+            prevHSL.z * COLOR_PERSISTENCE * 0.95
+        );
+    }
+
+    vec3 finalColor = hsl2rgb(blendedHSL);
+
+    float vignette = smoothstep(1.1, 0.3, length(uv));
+    finalColor *= vignette;
+    finalColor *= smoothstep(0.05, 0.1, brightness);
+
+    fragColor = vec4(finalColor, 1.0);
 }
