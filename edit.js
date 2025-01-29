@@ -36,7 +36,10 @@ const FeatureEditor = ({ name, feature, onChange, onDelete }) => {
 
     return html`
         <div className="edit-feature" key=${name}>
-            <label>${name}:</label>
+            <label>
+                <button onClick=${() => onDelete(name)}>×</button>
+                ${name}:
+            </label>
             <input class="min-feature-value" type="number" step="0.1" value=${feature.min} onInput=${handleMinChange} />
             <input
                 class="feature-value"
@@ -48,28 +51,16 @@ const FeatureEditor = ({ name, feature, onChange, onDelete }) => {
                 onInput=${handleValueChange}
                 onChange=${handleCommitValue}
             />
-            <span> (${feature.value})</span>
             <input class="max-feature-value" type="number" step="0.1" value=${feature.max} onInput=${handleMaxChange} />
-            <button onClick=${() => onDelete(name)}>x</button>
+            <span class="value-display">${feature.value}</span>
         </div>
     `
-}
-
-// Add drawer toggle functionality
-const setupDrawer = () => {
-    const drawerToggle = document.querySelector('.drawer-toggle')
-    const featureEditor = document.getElementById('feature-editor')
-
-    drawerToggle.addEventListener('click', () => {
-        featureEditor.classList.toggle('open')
-        // Update toggle button text
-        drawerToggle.textContent = featureEditor.classList.contains('open') ? '×' : '⚙️'
-    })
 }
 
 const FeatureAdder = () => {
     const [features, setFeatures] = useState({})
     const [newFeatureName, setNewFeatureName] = useState('')
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
     useEffect(async () => {
         const searchParams = new URLSearchParams(window.location.search)
@@ -87,9 +78,11 @@ const FeatureAdder = () => {
         if (searchParams.has('present')) {
             document.body.classList.add('present')
         }
-
-        setupDrawer()
     }, [])
+
+    const toggleDrawer = () => {
+        setIsDrawerOpen(!isDrawerOpen)
+    }
 
     const updateFeature = (name, updatedFeature) => {
         // get the previous feature
@@ -123,17 +116,38 @@ const FeatureAdder = () => {
 
     return html`
         <${Fragment}>
-            <div className="new-feature">
-                <input type="text" value=${newFeatureName} onInput=${(e) => setNewFeatureName(e.target.value)} placeholder="Enter new feature name" />
-                <button onClick=${addNewFeature}>Add Feature</button>
-            </div>
-            <div id="existing-features-editor">
-                ${Object.entries(features).map(
-                    ([name, feature]) => html` <${FeatureEditor} key=${name} name=${name} feature=${feature} onChange=${updateFeature} onDelete=${deleteFeature} />`,
-                )}
+            <button
+                className="drawer-toggle sparkly animated"
+                onClick=${toggleDrawer}
+            >
+                ${isDrawerOpen ? '×' : '⚙️'}
+            </button>
+            <div className=${`sparkly animated ${isDrawerOpen ? 'open' : ''}`} id="feature-editor">
+                <div className="new-feature">
+                    <input
+                        type="text"
+                        value=${newFeatureName}
+                        onInput=${(e) => setNewFeatureName(e.target.value)}
+                        placeholder="Enter new feature name"
+                    />
+                    <button onClick=${addNewFeature}>Add Feature</button>
+                </div>
+                <div id="existing-features-editor">
+                    ${Object.entries(features).map(
+                        ([name, feature]) => html`
+                            <${FeatureEditor}
+                                key=${name}
+                                name=${name}
+                                feature=${feature}
+                                onChange=${updateFeature}
+                                onDelete=${deleteFeature}
+                            />
+                        `
+                    )}
+                </div>
             </div>
         </${Fragment}>
     `
 }
 
-render(html`<${FeatureAdder} />`, document.getElementById('feature-editor'))
+render(html`<${FeatureAdder} />`, document.getElementById('feature-editor-root'))

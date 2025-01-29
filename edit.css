@@ -30,15 +30,15 @@ body {
 #feature-editor {
   position: fixed;
   top: 0;
-  right: -240px; /* Start hidden, narrower width */
-  width: 240px;
+  right: -320px;
+  width: 320px;
   height: auto;
-  max-height: 80vh;
-  background: rgba(0, 0, 0, 0.85);
+  max-height: 90vh;
+  background: rgba(0, 0, 0, 0.95);
   transition: right 0.3s ease;
   z-index: 1000;
   overflow-y: auto;
-  padding: 8px;
+  padding: 12px;
   box-shadow: -2px 0 10px rgba(0, 0, 0, 0.5);
   font-size: 0.85em;
   border-radius: 0 0 0 8px;
@@ -75,36 +75,95 @@ body {
 /* Feature controls */
 .edit-feature {
   display: grid;
-  grid-template-columns: 3.5em 2.5em auto 2.5em 1.5em 1.2em;
-  gap: 2px;
-  margin-bottom: 2px;
+  grid-template-columns: 6em 3.5em auto 3.5em 2em;
+  gap: 4px;
+  margin-bottom: 4px;
   align-items: center;
-  height: 1.4em;
+  height: 1.6em;
 }
 
-.feature-value {
-  height: 14px;
+.edit-feature label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .min-feature-value,
 .max-feature-value {
-  width: 100%;
-  height: 14px;
-  padding: 1px;
-  font-size: 0.8em;
-}
-
-/* New feature input */
-.new-feature {
-  display: grid;
-  grid-template-columns: auto 3em;
-  gap: 4px;
-  margin-bottom: 4px;
-}
-
-.new-feature input {
-  height: 18px;
+  width: 3.2em;
+  height: 1.4em;
+  padding: 2px 4px;
   font-size: 0.85em;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(30, 30, 30, 0.9);
+  color: white;
+  border-radius: 3px;
+}
+
+.feature-value {
+  height: 1.4em;
+  margin: 0 4px;
+}
+
+/* Value display */
+.value-display {
+  font-size: 0.85em;
+  color: rgba(255, 255, 255, 0.9);
+  text-align: right;
+  padding-right: 4px;
+}
+
+/* Make inputs look more modern */
+input[type="range"] {
+  -webkit-appearance: none;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  height: 4px;
+  margin-top: 6px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  background: white;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Delete button */
+.edit-feature button {
+  background: rgba(255, 50, 50, 0.2);
+  border: 1px solid rgba(255, 50, 50, 0.3);
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  padding: 2px 6px;
+  font-size: 0.9em;
+  transition: all 0.2s;
+  border-radius: 3px;
+  width: 1.6em;
+  height: 1.4em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 4px;
+}
+
+.edit-feature button:hover {
+  background: rgba(255, 50, 50, 0.4);
+  border-color: rgba(255, 50, 50, 0.5);
+  color: white;
 }
 
 /* Save/publish buttons */
