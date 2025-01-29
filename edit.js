@@ -93,20 +93,35 @@ const FeatureAdder = () => {
     const [features, setFeatures] = useState({})
     const [newFeatureName, setNewFeatureName] = useState('')
     const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+    const toggleButtonRef = useRef(null)
+    const prevFeaturesLength = useRef(0)
+
+    useEffect(() => {
+        const currentLength = Object.keys(features).length
+        if (currentLength > prevFeaturesLength.current && toggleButtonRef.current) {
+            const button = toggleButtonRef.current
+            button.classList.remove('wiggle')
+            button.classList.add('wiggle')
+
+            setTimeout(() => {
+                button.classList.remove('wiggle')
+            }, 1000)
+        }
+        prevFeaturesLength.current = currentLength
+    }, [features])
 
     useEffect(async () => {
         const searchParams = new URLSearchParams(window.location.search)
         const initialFeatures = {}
         searchParams.forEach((value, key) => {
-            // if the value is not a number, return.
             if (isNaN(value)) return
             const [featureName, paramType] = key.includes('.') ? key.split('.') : [key, 'value']
             if (!initialFeatures[featureName]) initialFeatures[featureName] = { min: -3, max: 3, value: 0 }
             initialFeatures[featureName][paramType] = parseFloat(value)
         })
         setFeatures(initialFeatures)
+        prevFeaturesLength.current = Object.keys(initialFeatures).length
 
-        // if we have a searchParam of 'present', add the present class to the body
         if (searchParams.has('present')) {
             document.body.classList.add('present')
         }
@@ -117,10 +132,8 @@ const FeatureAdder = () => {
     }
 
     const updateFeature = (name, updatedFeature) => {
-        // get the previous feature
-        updatedFeature.min = updatedFeature.min ?? -2
+        updatedFeature.min = updatedFeature.min ?? 0
         updatedFeature.max = updatedFeature.max ?? 1
-        //round the value to the nearest 3 decimal places
         updatedFeature.value = Math.round(updatedFeature.value * 1000) / 1000
         setFeatures((prev) => ({ ...prev, [name]: updatedFeature }))
     }
@@ -149,7 +162,8 @@ const FeatureAdder = () => {
     return html`
         <${Fragment}>
             <button
-                className="drawer-toggle sparkly animated"
+                ref=${toggleButtonRef}
+                className="drawer-toggle"
                 onClick=${toggleDrawer}
             >
                 ${isDrawerOpen ? '×' : '⚙️'}

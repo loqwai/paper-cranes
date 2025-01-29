@@ -73,6 +73,31 @@ body {
   opacity: 1;
 }
 
+/* Add new keyframes for the wiggle animation */
+@keyframes wiggle {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.9);
+  }
+  50% {
+    transform: scale(3);
+  }
+  75% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Add new class for the wiggle animation */
+.drawer-toggle.wiggle {
+  animation: wiggle 0.4s cubic-bezier(0.36, 0, 0.66, -0.56) both;
+  animation-iteration-count: 2;
+}
+
 /* Feature controls */
 .edit-feature {
   display: grid;
