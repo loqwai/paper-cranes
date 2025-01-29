@@ -1,37 +1,51 @@
-// Audio reactive parameters
-#define WAVE_SPEED (spectralFluxZScore * 0.2)
-#define PATTERN_SCALE (1.0 + spectralCentroidZScore * 0.2)
-#define RIPPLE_CHAOS (spectralCentroidZScore * 0.25)          // How randomly ripples are placed
-#define RIPPLE_SPREAD (0.6 + spectralSpreadZScore * 0.2)      // How far from center ripples appear
-#define RIPPLE_STRENGTH (1.0 + spectralFluxZScore * 0.5)      // How strong ripples are
-#define COLOR_SHIFT (spectralCentroidNormalized * 0.1)        // Base color shift
-#define BEAT_INTENSITY (spectralFluxNormalized)               // Beat response strength
+//http://localhost:6969/edit.html?knob_14=7.583&knob_14.min=0&knob_14.max=10.7&knob_15=1.257&knob_15.min=0&knob_15.max=8.4&knob_16=0.198&knob_16.min=0&knob_16.max=0.6&knob_17=3.928&knob_17.min=0&knob_17.max=4.3&knob_18=0.228&knob_18.min=0&knob_18.max=1&knob_19=0.559&knob_19.min=0&knob_19.max=1&knob_20=11.024&knob_20.min=0&knob_20.max=11.2&knob_21=0&knob_21.min=0&knob_21.max=1&knob_8=1&knob_8.min=0&knob_8.max=1&knob_11=0.63&knob_11.min=0&knob_11.max=1&knob_6=0.291&knob_6.min=0&knob_6.max=1&knob_22=0.866&knob_22.min=0&knob_22.max=10&knob_3=3.583&knob_3.min=0&knob_3.max=11.1&knob_4=2.796&knob_4.min=0&knob_4.max=5.3&knob_7=1&knob_7.min=0&knob_7.max=1&knob_5=0.591&knob_5.min=0&knob_5.max=1&knob_26=0&knob_26.min=0&knob_26.max=1&knob_27=0&knob_27.min=0&knob_27.max=1&knob_9=0.795&knob_9.min=0&knob_9.max=1&knob_10=0.469&knob_10.min=0&knob_10.max=11.9
 
 // Knob controls
 uniform float knob_14;
 uniform float knob_15;
 uniform float knob_16;
+uniform float knob_17;
+uniform float knob_18;
+uniform float knob_19;
+uniform float knob_20;
+uniform float knob_21;
+uniform float knob_22;
 
+uniform float knob_3;
+uniform float knob_4;
+uniform float knob_5;
+uniform float knob_6;
+uniform float knob_7;
+uniform float knob_8;
+uniform float knob_9;
+uniform float knob_10;
 // Constants
-#define MAX_RIPPLES 8
-#define PERSISTENCE 0.97
+#define MAX_RIPPLES 12
 #define PI 3.14159265359
 #define TIME (iTime/10.)
 
+// Audio reactive parameters
+#define WAVE_SPEED knob_3
+#define PATTERN_SCALE knob_4
+#define RIPPLE_CHAOS knob_5      // How randomly ripples are placed
+#define RIPPLE_SPREAD knob_6      // How far from center ripples appear
+#define RIPPLE_STRENGTH knob_7      // How strong ripples are
+#define COLOR_SHIFT knob_8       // Base color shift
+#define BEAT_INTENSITY knob_9
+
 // Ripple characteristics
-#define RIPPLE_COUNT 1
-#define RIPPLE_SPEED 0.5
+#define RIPPLE_SPEED knob_20
 #define RIPPLE_THICKNESS knob_14
-#define RIPPLE_DISTANCE_DECAY 0.5
+#define RIPPLE_DISTANCE_DECAY knob_17
 #define RIPPLE_AGE_DECAY knob_15
 #define RIPPLE_BIRTH_STAGGER knob_16
-#define RIPPLE_LIFE_DURATION 5.0
-#define RIPPLE_BASE_STRENGTH 1.0
+#define RIPPLE_LIFE_DURATION knob_10
+#define RIPPLE_BASE_STRENGTH knob_22
 
 // Color and blending
-#define COLOR_PERSISTENCE 0.97
-#define COLOR_SATURATION 0.9
-#define COLOR_BRIGHTNESS_SCALE 0.8
+#define COLOR_PERSISTENCE knob_19
+#define COLOR_SATURATION knob_21
+#define COLOR_BRIGHTNESS_SCALE knob_18
 
 // Ripple structure
 struct Ripple {
@@ -58,7 +72,7 @@ float createRipple(vec2 p, Ripple r) {
     float age = TIME - r.birth;
 
     float radius = age * RIPPLE_SPEED;
-    float thickness = RIPPLE_THICKNESS * 0.004;
+    float thickness = RIPPLE_THICKNESS * 0.04;
     float wave = exp(-thickness * pow(d - radius, 2.0));
 
     float distanceDecay = exp(-d * RIPPLE_DISTANCE_DECAY);
