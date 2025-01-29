@@ -148,8 +148,7 @@ const animate = ({ render, audio, fragmentShader, vertexShader }) => {
         ...audio.getFeatures(),
         ...Object.fromEntries(params),
         ...window.cranes.manualFeatures,
-        touchX: coordsHandler.coords.x,
-        touchY: coordsHandler.coords.y,
+        touch: [coordsHandler.coords.x, coordsHandler.coords.y],
         touched: coordsHandler.touched
     };
 

@@ -66,8 +66,7 @@ uniform sampler2D initialFrame;
 
 uniform float iRandom;
 
-uniform float touchX;
-uniform float touchY;
+uniform vec2 touch;
 uniform bool touched;
 
 float random(vec2 st, float seed){

@@ -77,7 +77,7 @@ float map(vec3 p) {
 
     // Add touch influence to the mapping
     if(touched) {
-        float touchDist = length(p.xy - vec2(touchX*2.0-1.0, touchY*2.0-1.0));
+        float touchDist = length(p.xy - vec2(touch.x*2.0-1.0, touch.y*2.0-1.0));
         p += vec3(sin(touchDist*10.0 + t)) * 0.1;
     }
 
@@ -259,7 +259,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Touch interaction first (so it can spread)
     if(touched) {
-        vec2 touchUV = vec2(touchX, touchY);
+        vec2 touchUV = vec2(touch.x, touch.y);
         float touchDist = length(uv - touchUV);
 
         float touchInfluence = smoothstep(0.05, 0.0, touchDist);

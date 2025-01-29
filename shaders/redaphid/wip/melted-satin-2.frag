@@ -58,7 +58,7 @@ float map(vec3 p) {
 
     // Add touch influence to the mapping - INVERTED Y
     if(touched) {
-        float touchDist = length(p.xy - vec2(touchX*2.0-1.0, touchY*2.0-1.0)); // Removed the negative
+        float touchDist = length(p.xy - vec2(touch.x*2.0-1.0, touch.y*2.0-1.0)); // Removed the negative
         p += vec3(sin(touchDist*10.0 + t)) * 0.1;
     }
 
@@ -116,7 +116,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Touch interaction with INVERTED Y
     if(touched) {
-        float touchDist = length(p - vec2(touchX*2.0-1.0, touchY*2.0-1.0));
+        float touchDist = length(p - vec2(touch.x*2.0-1.0, touch.y*2.0-1.0));
         // Reduce touch influence range and intensity
         float touchInfluence = smoothstep(0.3, 0.0, touchDist); // Reduced from 0.5 to 0.3
         if(bassZScore > 0.5){
@@ -126,7 +126,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         vec3 hslPrevColor = rgb2hsl(prevColor.rgb);
 
         // Modify how touch affects hue/saturation/lightness
-        cl.x = mix(cl.x, fract(touchX + touchY + t*0.1), touchInfluence * 0.7); // Added scaling factor
+        cl.x = mix(cl.x, fract(touch.x + touch.y + t*0.1), touchInfluence * 0.7); // Added scaling factor
         cl.y = clamp( // Add clamp to prevent saturation blowout
             mix(sin(hslPrevColor.x + touchInfluence + time*0.01),
                 cl.y,

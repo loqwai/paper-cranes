@@ -61,7 +61,7 @@ float map(vec3 p) {
 
     // Add touch influence to the mapping
     if(touched) {
-        float touchDist = length(p.xy - vec2(touchX*2.0-1.0, -(touchY*2.0-1.0)));
+        float touchDist = length(p.xy - vec2(touch.x*2.0-1.0, -(touch.y*2.0-1.0)));
         p += vec3(sin(touchDist*10.0 + t - spectralRolloffZScore)) * 0.1;
     }
 
@@ -119,10 +119,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Touch interaction
     if(touched) {
-        float touchDist = length(p - vec2(touchX*2.0-1.0, -(touchY*2.0-1.0)));
+        float touchDist = length(p - vec2(touch.x*2.0-1.0, -(touch.y*2.0-1.0)));
         float touchInfluence = smoothstep(0.5, 0.0, touchDist);
 
-        cl.x = mix(cl.x, fract(touchX + touchY + t*0.1), touchInfluence * 0.5);
+        cl.x = mix(cl.x, fract(touch.x + touch.y + t*0.1), touchInfluence * 0.5);
         cl.y = mix(0.8,cl.y, touchInfluence * 0.3);
         cl.z = mix(cl.z, 0.6, touchInfluence * 0.2);
     }
