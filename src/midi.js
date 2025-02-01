@@ -4,7 +4,7 @@
 const knobStates = {}
 const relativeKnobs = new Set()
 const seenAbsoluteValues = new Set() // Track knobs that have shown absolute behavior
-const BASE_SENSITIVITY = 0.01 // Base sensitivity that will be scaled by range
+const BASE_SENSITIVITY = 0.1 // Base sensitivity that will be scaled by range
 
 function updateKnobValue(knob, value) {
     if (!window.cranes.updateFeature) return
@@ -13,37 +13,39 @@ function updateKnobValue(knob, value) {
     const min = parseFloat(currentUrl.searchParams.get(`${knob}.min`) ?? 0)
     const max = parseFloat(currentUrl.searchParams.get(`${knob}.max`) ?? 1)
 
-    // If we see any value besides 1 or 127, it's definitely an absolute knob
-    if (value !== 1 && value !== 127) {
+    // For Ableton Push 1, values 1-63 are clockwise, 65-127 are counter-clockwise
+    // Value 64 is no movement
+    const isRelativeEncoder = value === 1 || value === 127 || (value >= 1 && value <= 127)
+
+    if (!knobStates[knob]) {
+        knobStates[knob] = current
+    }
+
+    if (isRelativeEncoder) {
+        relativeKnobs.add(knob)
+        // Scale sensitivity by the range of the knob
+        const range = Math.abs(max - min)
+        const scaledSensitivity = BASE_SENSITIVITY * range
+
+        let delta = 0
+        if (value <= 63) { // Clockwise
+            delta = value * (scaledSensitivity / 63)
+        } else if (value >= 65) { // Counter-clockwise
+            delta = (value - 128) * (scaledSensitivity / 63)
+        }
+        // Value 64 results in no movement (delta = 0)
+
+        knobStates[knob] = Math.max(min, Math.min(max, knobStates[knob] + delta))
+        current = knobStates[knob]
+    } else {
+        // Handle absolute knobs (standard 0-127 range)
         seenAbsoluteValues.add(knob)
         relativeKnobs.delete(knob)
-    }
-
-    if (!seenAbsoluteValues.has(knob)) {
-        relativeKnobs.add(knob)
-    }
-
-    if (!relativeKnobs.has(knob)) {
-        // For absolute knobs (0-127 range)
         current = (value / 127) * (max - min) + min
         knobStates[knob] = current
-        if (!window.cranes.updateFeature) return
-        window.cranes.updateFeature(knob, current)
-        return
     }
 
-    // For relative encoders
-    if (!knobStates[knob]) knobStates[knob] = current
-
-    // Scale sensitivity by the range of the knob
-    const range = Math.abs(max - min)
-    const scaledSensitivity = BASE_SENSITIVITY * range
-
-    // Convert relative values: 1 for CW, 127 for CCW
-    const delta = value === 1 ? scaledSensitivity : value === 127 ? -scaledSensitivity : 0
-    knobStates[knob] = Math.max(min, Math.min(max, knobStates[knob] + delta))
-    current = knobStates[knob]
-
+    if (!window.cranes.updateFeature) return
     window.cranes.updateFeature(knob, current)
 }
 
