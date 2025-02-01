@@ -70,7 +70,7 @@ function updateKnobValue(knob, value) {
             return setKnobValue(knob, currentValue + delta)
         }
         if (value >= 65) { // Clockwise
-            const delta = -(scaledSensitivity * (127 - value));
+            const delta = -(scaledSensitivity * (128 - value));
             console.log('clockwise', knob, value, delta)
             return setKnobValue(knob, currentValue + delta)
         }
