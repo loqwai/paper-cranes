@@ -4,6 +4,7 @@
 
 // http://localhost:6969/edit.html?knob_14.min=-1&knob_14.max=1&knob_15=0.22&knob_15.min=-1&knob_15.max=1&knob_71=0.88&knob_71.min=0&knob_71.max=1&knob_72=8.961&knob_72.min=0&knob_72.max=10.3&knob_73=0.51&knob_73.min=0&knob_73.max=3&knob_74=1.372&knob_74.min=0.1&knob_74.max=2.5&knob_76=0.55&knob_76.min=0&knob_76.max=1&knob_75=2.072&knob_75.min=0&knob_75.max=2.8&knob_77=3.169&knob_77.min=0.1&knob_77.max=3.2&knob_78=2.476&knob_78.min=0.1&knob_78.max=10&knob_79=0.55&knob_79.min=0&knob_79.max=1&knob_14=0.1
 // http://localhost:6969/edit.html?knob_14.min=-1&knob_14.max=1&knob_15=0.9&knob_15.min=-1&knob_15.max=1&knob_71=1&knob_71.min=0&knob_71.max=1&knob_72=38.9&knob_72.min=0&knob_72.max=38.9&knob_73=3&knob_73.min=0&knob_73.max=3&knob_74=2.308&knob_74.min=0.1&knob_74.max=2.5&knob_76=0.61&knob_76.min=0&knob_76.max=1&knob_75=0.672&knob_75.min=0&knob_75.max=2.8&knob_77=0.72&knob_77.min=0.1&knob_77.max=3.2&knob_78=1.684&knob_78.min=0.1&knob_78.max=10&knob_79=1&knob_79.min=0&knob_79.max=1&knob_14=0.56
+// http://localhost:6969/edit.html?knob_14.min=-1&knob_14.max=1&knob_15=0.96&knob_15.min=-1&knob_15.max=1&knob_71=0.09&knob_71.min=0&knob_71.max=1&knob_72=38.9&knob_72.min=0&knob_72.max=38.9&knob_73=1.77&knob_73.min=0&knob_73.max=3&knob_74=0.868&knob_74.min=0.1&knob_74.max=2.5&knob_76=0.85&knob_76.min=0&knob_76.max=1&knob_75=2.688&knob_75.min=0&knob_75.max=2.8&knob_77=3.2&knob_77.min=0.1&knob_77.max=3.2&knob_78=8.812&knob_78.min=0.1&knob_78.max=10&knob_79=0.7&knob_79.min=0&knob_79.max=1&knob_14=0.52
 // Constants
 #define MAX_RIPPLES 12
 #define PI 3.14159265359
