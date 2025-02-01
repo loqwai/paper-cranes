@@ -63,7 +63,6 @@ function updateKnobValue(knob, value) {
         // Scale sensitivity by the range of the knob
         const scaledSensitivity = BASE_SENSITIVITY * range
         // is the value closer to 0 or 127?
-        const delta = value < 64 ? scaledSensitivity : -scaledSensitivity
 
         if (value <= 63) { // Counter-clockwise
             const delta = (scaledSensitivity * value);
