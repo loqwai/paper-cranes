@@ -18,7 +18,7 @@
 
 // Ripple characteristics
 #define RIPPLE_SPEED knob_20
-#define RIPPLE_THICKNESS mapValue(spectralCrestNormalized, 0., 1., 0., knob_14)
+#define RIPPLE_THICKNESS mapValue(spectralCrestNormalized, 0., 1., 0., sin(time/100.))
 #define RIPPLE_DISTANCE_DECAY knob_17
 #define RIPPLE_AGE_DECAY mapValue(energyZScore, -1.,1., knob_14, knob_15)
 #define RIPPLE_BIRTH_STAGGER knob_16
