@@ -21,7 +21,7 @@
 
 // Ripple characteristics
 #define RIPPLE_SPEED knob_72
-#define RIPPLE_THICKNESS mapValue(knob_74, 0., 1., 0., sin(time/100.))
+#define RIPPLE_THICKNESS mapValue(knob_74, 0., 1., 0., sin(time/1000.))
 #define RIPPLE_DISTANCE_DECAY knob_75
 #define RIPPLE_AGE_DECAY mapValue(knob_11, -1.,1., knob_14, knob_15)
 #define RIPPLE_BIRTH_STAGGER knob_16
