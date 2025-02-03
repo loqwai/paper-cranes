@@ -1,5 +1,6 @@
 import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { makeVisualizer } from './src/Visualizer.js'
+import { getConfig } from './src/shader-transformers/shader-wrapper.js'
 import './index.css'
 
 const events = ['touchstart', 'touchmove', 'touchstop', 'keydown', 'mousedown', 'resize']
@@ -86,17 +87,6 @@ const setupCanvasEvents = (canvas) => {
     canvas.addEventListener('mouseleave', resetTouch);
 };
 
-// Check microphone access and initialize
-const initializeAudio = async () => {
-    try {
-        await getAudioStream(audioConfig);
-        main();
-    } catch (err) {
-        document.querySelector('body').classList.remove('ready');
-        console.error('Audio initialization failed:', err);
-    }
-};
-
 const setupAudio = async () => {
     const audioContext = new AudioContext();
     await audioContext.resume();
@@ -117,14 +107,20 @@ const main = async () => {
 
         window.c = cranes;
         startTime = performance.now();
-        const audio = await setupAudio();
 
         const [fragmentShader, vertexShader] = await Promise.all([
             getFragmentShader(),
             getVertexShader()
         ]);
 
-        window.shader = fragmentShader;
+        const config = await getConfig(fragmentShader)
+        const defaultUrlParams = new URLSearchParams(config.default_url_params ?? '')
+        defaultUrlParams.forEach((value, key) => {
+            params.set(key, value)
+        })
+
+        const audio = await setupAudio();
+
         const canvas = getVisualizerDOMElement();
         setupCanvasEvents(canvas);
 

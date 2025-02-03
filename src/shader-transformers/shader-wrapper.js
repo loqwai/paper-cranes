@@ -1,5 +1,17 @@
 import { getFlatAudioFeatures } from '../audio/AudioProcessor'
 
+export const getConfig = async (shader) => {
+    //find any comment that begins with a keyword beginning with '@'
+    const config = {}
+    const lines = shader.split('\n')
+    for (const line of lines) {
+        if (line.startsWith('// @')) {
+            const [keyword, value] = line.split(' ').slice(1)
+            config[keyword] = value
+        }
+    }
+    return config
+}
 export const shaderWrapper = (shader) => {
     const [firstLine, ...lines] = shader.split('\n')
     if (firstLine.includes('#version')) {
