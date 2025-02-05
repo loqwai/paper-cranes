@@ -1,174 +1,141 @@
-//http://localhost:6969/edit.html?knob_14=7.583&knob_14.min=0&knob_14.max=10.7&knob_15=1.257&knob_15.min=0&knob_15.max=8.4&knob_16=0.198&knob_16.min=0&knob_16.max=0.6&knob_17=3.928&knob_17.min=0&knob_17.max=4.3&knob_18=0.228&knob_18.min=0&knob_18.max=1&knob_19=0.559&knob_19.min=0&knob_19.max=1&knob_20=11.024&knob_20.min=0&knob_20.max=11.2&knob_21=0&knob_21.min=0&knob_21.max=1&knob_8=1&knob_8.min=0&knob_8.max=1&knob_11=0.63&knob_11.min=0&knob_11.max=1&knob_6=0.291&knob_6.min=0&knob_6.max=1&knob_22=0.866&knob_22.min=0&knob_22.max=10&knob_3=3.583&knob_3.min=0&knob_3.max=11.1&knob_4=2.796&knob_4.min=0&knob_4.max=5.3&knob_7=1&knob_7.min=0&knob_7.max=1&knob_5=0.591&knob_5.min=0&knob_5.max=1&knob_26=0&knob_26.min=0&knob_26.max=1&knob_27=0&knob_27.min=0&knob_27.max=1&knob_9=0.795&knob_9.min=0&knob_9.max=1&knob_10=0.469&knob_10.min=0&knob_10.max=11.9
-//http://localhost:6969/edit.html?knob_14=0.59&knob_14.min=0&knob_14.max=10.7&knob_15=0&knob_15.min=0&knob_15.max=19.2&knob_16=0.397&knob_16.min=0&knob_16.max=0.6&knob_17=3.487&knob_17.min=0&knob_17.max=4.3&knob_18=0.717&knob_18.min=0&knob_18.max=1&knob_19=0.583&knob_19.min=0&knob_19.max=1&knob_20=1.676&knob_20.min=0&knob_20.max=11.2&knob_21=1&knob_21.min=0&knob_21.max=1&knob_8=1&knob_8.min=0&knob_8.max=1&knob_11=0.496&knob_11.min=0&knob_11.max=1&knob_6=0.417&knob_6.min=0&knob_6.max=1&knob_22=34.3&knob_22.min=0&knob_22.max=34.3&knob_3=5.943&knob_3.min=0&knob_3.max=11.1&knob_4=1.878&knob_4.min=0&knob_4.max=5.3&knob_7=1&knob_7.min=0&knob_7.max=1&knob_5=0.583&knob_5.min=0&knob_5.max=1&knob_26=0&knob_26.min=0&knob_26.max=1&knob_27=0&knob_27.min=0&knob_27.max=1&knob_9=0.866&knob_9.min=0&knob_9.max=1&knob_10=5.528&knob_10.min=0&knob_10.max=11.9&knob_23=0&knob_23.min=0&knob_23.max=1
-//http://localhost:6969/edit.html?knob_14=-0.48&knob_14.min=-1&knob_14.max=1&knob_15=-0.228&knob_15.min=-1&knob_15.max=1&knob_16=0.085&knob_16.min=0&knob_16.max=0.6&knob_17=0.609&knob_17.min=0&knob_17.max=4.3&knob_18=0.559&knob_18.min=0&knob_18.max=1&knob_19=0.85&knob_19.min=0&knob_19.max=1&knob_20=11.2&knob_20.min=0&knob_20.max=11.2&knob_21=0.819&knob_21.min=0&knob_21.max=1&knob_8=0.74&knob_8.min=0&knob_8.max=1&knob_11=0.409&knob_11.min=0&knob_11.max=1&knob_6=0.339&knob_6.min=0&knob_6.max=1&knob_22=4.861&knob_22.min=0&knob_22.max=34.3&knob_3=2.972&knob_3.min=0&knob_3.max=11.1&knob_4=1.586&knob_4.min=0&knob_4.max=5.3&knob_7=0.031&knob_7.min=0.01&knob_7.max=1&knob_5=0.52&knob_5.min=0&knob_5.max=1&knob_26=0&knob_26.min=0&knob_26.max=1&knob_27=0&knob_27.min=0&knob_27.max=1&knob_9=0.622&knob_9.min=0&knob_9.max=1&knob_10=4.31&knob_10.min=0&knob_10.max=11.9&knob_23=0&knob_23.min=0&knob_23.max=1&knob_46=0&knob_46.min=0&knob_46.max=1&knob_48=0&knob_48.min=0&knob_48.max=1&knob_47=0&knob_47.min=0&knob_47.max=1&knob_60=0.433&knob_60.min=0&knob_60.max=1&knob_1=0&knob_1.min=0&knob_1.max=1
-//http://localhost:6969/edit.html?knob_14=0.669&knob_14.min=-1&knob_14.max=1&knob_15=-1&knob_15.min=-1&knob_15.max=1&knob_16=0&knob_16.min=0&knob_16.max=0.2&knob_17=1.852&knob_17.min=0&knob_17.max=2.4&knob_18=0.575&knob_18.min=0&knob_18.max=1&knob_19=0.85&knob_19.min=0&knob_19.max=1&knob_20=7.143&knob_20.min=0&knob_20.max=11.2&knob_21=0.598&knob_21.min=0&knob_21.max=1&knob_8=0.543&knob_8.min=0&knob_8.max=1&knob_11=0.409&knob_11.min=0&knob_11.max=1&knob_6=0.913&knob_6.min=0&knob_6.max=1&knob_22=14.584&knob_22.min=0&knob_22.max=34.3&knob_3=3.059&knob_3.min=0&knob_3.max=11.1&knob_4=2.838&knob_4.min=0&knob_4.max=5.3&knob_7=0.298&knob_7.min=0.01&knob_7.max=1&knob_5=0.488&knob_5.min=0&knob_5.max=1&knob_26=0&knob_26.min=0&knob_26.max=1&knob_27=0&knob_27.min=0&knob_27.max=1&knob_9=0.622&knob_9.min=0&knob_9.max=1&knob_10=0.341&knob_10.min=0.1&knob_10.max=1&knob_23=0&knob_23.min=0&knob_23.max=1&knob_46=0&knob_46.min=0&knob_46.max=1&knob_48=0&knob_48.min=0&knob_48.max=1&knob_47=0&knob_47.min=0&knob_47.max=1&knob_60=0&knob_60.min=0&knob_60.max=0.3&knob_1=0&knob_1.min=0&knob_1.max=1&knob_2=0&knob_2.min=0&knob_2.max=1
-// Constants
-#define MAX_RIPPLES 12
-#define PI 3.14159265359
-#define TIME (iTime/10.)
-#define BEAT knob_23 > 50.
+uniform float knob_71;
+uniform float knob_72;
+uniform float knob_73;
+uniform float knob_74;
+uniform float knob_75;
+uniform float knob_76;
 
-// Audio reactive parameters
-#define WAVE_SPEED knob_3
-#define PATTERN_SCALE knob_4
-#define RIPPLE_CHAOS knob_5      // How randomly ripples are placed
-#define RIPPLE_SPREAD knob_6      // How far from center ripples appear
-#define RIPPLE_STRENGTH knob_7      // How strong ripples are
-#define COLOR_SHIFT knob_8       // Base color shift
-#define BEAT_INTENSITY knob_9
+#define LINE_WIDTH 0.5
+#define SMOOTH_WIDTH 0.25
+#define ULTRA_DROP_COUNT 5
+#define PROBE_A 0.3
+#define PROBE_B 0.95
+#define SMOOTHING_FACTOR 0.151  // Lower = smoother, but more latency
+#define VERTICAL_OFFSET 0.5  // Back to 0.5 (middle of screen)
+#define SCALE 0.25  // Scale factor for visibility (using 25% of screen height each direction)
 
-// Ripple characteristics
-#define RIPPLE_SPEED knob_20
-#define RIPPLE_THICKNESS mapValue(spectralCrestNormalized, 0., 1., 0., sin(time/100.))
-#define RIPPLE_DISTANCE_DECAY knob_17
-#define RIPPLE_AGE_DECAY mapValue(energyZScore, -1.,1., knob_14, knob_15)
-
- // if this is 0, The visualization generates waves slowly from the center.
- // seeme like
-#define RIPPLE_BIRTH_STAGGER mapValue(spectralKurtosisZScore,-1.,1.,0.,0.1)
-#define RIPPLE_LIFE_DURATION knob_10
-#define RIPPLE_BASE_STRENGTH knob_22
-
-// Color and blending
-#define COLOR_PERSISTENCE knob_19
-#define COLOR_SATURATION knob_21
-#define COLOR_BRIGHTNESS_SCALE knob_18
-
-
-// Knob controls
-uniform float knob_14;
-uniform float knob_15;
-uniform float knob_16;
-uniform float knob_17;
-uniform float knob_18;
-uniform float knob_19;
-uniform float knob_20;
-uniform float knob_21;
-uniform float knob_22;
-uniform float knob_23;
-
-uniform float knob_3;
-uniform float knob_4;
-uniform float knob_5;
-uniform float knob_6;
-uniform float knob_7;
-uniform float knob_8;
-uniform float knob_9;
-uniform float knob_10;
-
-// Ripple structure
-struct Ripple {
-    vec2 center;
-    float birth;
-    float strength;
-};
-
-// Better random function
-float random(float seed) {
-    return random(vec2(0.));
+// Decorrelate a z-score from energy influence
+float decorrelateFromEnergy(float zScore, float correlation) {
+    return zScore;
 }
 
-// 2D random
-vec2 random2(float seed) {
-    return vec2(
-        random(seed),
-        random(seed + 1234.5678)
-    );
+// Core feature definitions - define the relationship between colors and values once
+#define BLUE_FEATURE bassZScore
+#define GREEN_FEATURE spectralKurtosisZScore
+#define RED_FEATURE energyZScore
+#define TEAL_FEATURE spectralFluxZScore
+#define YELLOW_FEATURE spectralEntropyZScore
+#define GRAYISH_GREEN_FEATURE spectralRolloffZScore
+
+// Color definitions for consistent use
+#define RED_COLOR vec4(1.0, 0.0, 0.0, 1.0)
+#define GREEN_COLOR vec4(0.0, 1.0, 0.0, 1.0)
+#define BLUE_COLOR vec4(0.0, 0.0, 1.0, 1.0)
+#define TEAL_COLOR vec4(0.3, 0.4, 1.0, 1.0)
+#define YELLOW_COLOR vec4(1.0, 1.0, 0.0, 1.0)
+#define GRAYISH_GREEN_COLOR vec4(0.4, 0.5, 0.4, 1.0)
+
+
+// Use knobs for correlation control and visibility
+#define RED_KNOB knob_71
+#define GREEN_KNOB knob_72
+#define BLUE_KNOB knob_73
+#define TEAL_KNOB knob_74
+#define YELLOW_KNOB knob_75
+#define GRAYISH_GREEN_KNOB knob_76
+
+
+// Smooth value transitions between frames
+float smoothValue(float currentValue, vec2 uv) {
+    vec2 prevUV = vec2(uv.x + 1.0/resolution.x, uv.y);
+    vec4 prevColor = getLastFrameColor(prevUV);
+
+    // Convert UV position back to value space
+    float prevValue = (VERTICAL_OFFSET - prevUV.y) / SCALE;
+
+    return mix(prevValue, currentValue, SMOOTHING_FACTOR);
 }
 
-float createRipple(vec2 p, Ripple r) {
-    float d = length(p - r.center);
-    float age = TIME - r.birth;
 
-    float radius = age * RIPPLE_SPEED;
-    float thickness = RIPPLE_THICKNESS * 0.04;
-    float wave = exp(-thickness * pow(d - radius, 2.0));
+// Use knobs for correlation control
+#define BLUE_VALUE smoothValue(BLUE_FEATURE, uv)
+#define GREEN_VALUE smoothValue(GREEN_FEATURE, uv)
+#define RED_VALUE smoothValue(RED_FEATURE, uv)
+#define TEAL_VALUE smoothValue(TEAL_FEATURE, uv)
+#define YELLOW_VALUE smoothValue(YELLOW_FEATURE, uv)
+#define GRAYISH_GREEN_VALUE smoothValue(GRAYISH_GREEN_FEATURE, uv)
 
-    float distanceDecay = exp(-d * RIPPLE_DISTANCE_DECAY);
-    float ageDecay = exp(-age * RIPPLE_AGE_DECAY);
+float drawLine(vec2 fragCoord, float value) {
+    // Convert to UV space first (0 to 1)
+    vec2 uv = fragCoord.xy / resolution.xy;
 
-    return wave * distanceDecay * ageDecay * r.strength * RIPPLE_STRENGTH;
+    // Calculate line position in UV space
+    float normalizedY = VERTICAL_OFFSET - value * SCALE;
+
+    // Calculate distance in pixels for smooth line
+    float d = abs(uv.y - normalizedY) * resolution.y;
+    return smoothstep(LINE_WIDTH + SMOOTH_WIDTH, LINE_WIDTH - SMOOTH_WIDTH, d);
 }
 
-Ripple[MAX_RIPPLES] getRipples() {
-    Ripple[MAX_RIPPLES] ripples;
-
-    for(int i = 0; i < MAX_RIPPLES; i++) {
-        float birthOffset = mod(TIME + float(i) * RIPPLE_BIRTH_STAGGER, RIPPLE_LIFE_DURATION);
-
-        float angle = float(i) * PI * 2.0 / float(MAX_RIPPLES) + RIPPLE_CHAOS * PI;
-        vec2 pos = vec2(cos(angle), sin(angle)) * RIPPLE_SPREAD;
-
-        ripples[i] = Ripple(pos, TIME - birthOffset, RIPPLE_BASE_STRENGTH);
-    }
-    return ripples;
-}
-
-vec2 getWaveDistortion(vec2 uv) {
-    float distortionX = sin(uv.y * PATTERN_SCALE * 4.0 + TIME * WAVE_SPEED) * 0.003;
-    float distortionY = cos(uv.x * PATTERN_SCALE * 4.0 + TIME * WAVE_SPEED) * 0.003;
-    return vec2(distortionX, distortionY);
-}
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec2 uv = (fragCoord - 0.5 * iResolution.xy) / min(iResolution.x, iResolution.y);
-    vec2 texUV = fragCoord.xy / iResolution.xy;
+    vec2 uv = fragCoord.xy / resolution.xy;
 
-    vec4 prevColor = getLastFrameColor(texUV);
-    vec3 prevHSL = rgb2hsl(prevColor.rgb);
-
-    Ripple[MAX_RIPPLES] ripples = getRipples();
-
-    float totalWave = 0.0;
-    for(int i = 0; i < MAX_RIPPLES; i++) {
-        totalWave += createRipple(uv, ripples[i]);
+    // Background shift
+    if (uv.x < 0.99) {
+        vec2 prevUV = uv + vec2(1.0/resolution.x, 0.0);
+        fragColor = getLastFrameColor(prevUV);
+        return;
     }
 
-    float interference = pow(abs(totalWave), 0.8);
-    float brightness = smoothstep(0.1, 0.3, interference);
+    // Clear rightmost column
+    fragColor = vec4(0.0, 0.0, 0.0, 1.0);
 
-    vec2 flowOffset = normalize(uv) * interference * 0.001;
-    vec4 offsetColor = getLastFrameColor(texUV + flowOffset);
-    vec3 offsetHSL = rgb2hsl(offsetColor.rgb);
+    // Draw lines
+    vec4 lineColor = vec4(0.0);
 
-    vec3 newColorHSL = vec3(
-        fract(offsetHSL.x + interference * 0.2 + COLOR_SHIFT),
-        COLOR_SATURATION,
-        brightness * COLOR_BRIGHTNESS_SCALE
-    );
+    // Smooth the value
 
-    if(BEAT) {
-        vec2 beatPos = vec2(
-            cos(RIPPLE_CHAOS * PI) * 0.3,
-            sin(WAVE_SPEED * PI) * 0.3
-        );
-        float beatRipple = createRipple(uv, Ripple(beatPos, TIME, 2.0));
-        newColorHSL.x = fract(newColorHSL.x + beatRipple * 0.2);
-        newColorHSL.z = min(1.0, newColorHSL.z + beatRipple * BEAT_INTENSITY);
+    // Calculate smoothed lines
+    float redLine = drawLine(fragCoord, RED_VALUE);
+    float greenLine = drawLine(fragCoord, GREEN_VALUE);
+    float blueLine = drawLine(fragCoord, BLUE_VALUE);
+
+    float tealLine = drawLine(fragCoord, TEAL_VALUE);
+    float yellowLine = drawLine(fragCoord, YELLOW_VALUE);
+    float grayishGreen = drawLine(fragCoord, GRAYISH_GREEN_VALUE);
+
+    // Add lines with distinct colors, only if their knob is non-zero
+    lineColor += RED_COLOR * redLine;
+    lineColor += GREEN_COLOR * greenLine;
+    lineColor += BLUE_COLOR * blueLine;
+    lineColor += TEAL_COLOR * tealLine;
+    lineColor += YELLOW_COLOR * yellowLine;
+    lineColor += GRAYISH_GREEN_COLOR * grayishGreen;
+
+    // Drop detection using the original (unsmoothed) values for responsiveness
+    int highZScores = 0;
+    if(abs(RED_FEATURE) > PROBE_B) highZScores++;
+    if(abs(GREEN_FEATURE) > PROBE_B) highZScores++;
+    if(abs(YELLOW_FEATURE) > PROBE_B) highZScores++;
+    if(abs(TEAL_FEATURE) > PROBE_B) highZScores++;
+    if(abs(GRAYISH_GREEN_FEATURE) > PROBE_B) highZScores++;
+
+    // Normal rendering
+    if(highZScores < 2) {
+        fragColor = mix(fragColor, lineColor, lineColor.a);
+        return;
     }
 
-    float blendFactor = 0.15;
-    vec3 blendedHSL;
+    // Drop effect - make lines brighter
+    vec3 hsl = rgb2hsl(lineColor.rgb);
+    float intensity = float(highZScores) / float(ULTRA_DROP_COUNT);
+    hsl.z = min(1.0, hsl.z + intensity * 0.5);
 
-    if(brightness > 0.1) {
-        blendedHSL = vec3(
-            fract(mix(prevHSL.x, newColorHSL.x, blendFactor)),
-            COLOR_SATURATION,
-            mix(prevHSL.z * COLOR_PERSISTENCE, newColorHSL.z, blendFactor)
-        );
-    } else {
-        blendedHSL = vec3(
-            prevHSL.x,
-            max(0.0, prevHSL.y - 0.1),
-            prevHSL.z * COLOR_PERSISTENCE * 0.95
-        );
+    // Ultra drop effect
+    if(highZScores >= ULTRA_DROP_COUNT) {
+        hsl = vec3(0.95, 0.8, 0.8);  // Bright, slightly saturated color
     }
 
-    vec3 finalColor = hsl2rgb(blendedHSL);
-
-    float vignette = smoothstep(1.1, 0.3, length(uv));
-    finalColor *= vignette;
-    finalColor *= smoothstep(0.05, 0.1, brightness);
-
-    fragColor = vec4(finalColor, 1.0);
+    fragColor = vec4(hsl2rgb(hsl), 1.0);
 }
