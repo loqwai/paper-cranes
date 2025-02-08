@@ -125,6 +125,10 @@ const FeatureAdder = () => {
         if (searchParams.has('present')) {
             document.body.classList.add('present')
         }
+
+        if (searchParams.has('open_sliders')) {
+            setIsDrawerOpen(true)
+        }
     }, [])
 
     const toggleDrawer = () => {
