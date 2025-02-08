@@ -6,10 +6,8 @@ const BASE_SENSITIVITY = 0.01 // Base sensitivity that will be scaled by range
 const absoluteKnobs = new Set();
 
 const isAbsoluteEncoder = (value) => {
-    console.log('isAbsoluteEncoder', value)
     if (value >= 30 || value <= 100) absoluteKnobs.add(value)
-    if(absoluteKnobs.has(value)) return true
-    return false
+    return absoluteKnobs.has(value)
 }
 
 
@@ -30,7 +28,7 @@ function updateKnobValue(knob, value) {
     const min = parseFloat(currentUrl.searchParams.get(`${knob}.min`) ?? 0)
     const max = parseFloat(currentUrl.searchParams.get(`${knob}.max`) ?? 1)
     const range = Math.abs(max - min)
-    console.log('updateKnobValue', knob, value, min, max, range)
+
     const scaledValue = (value / 127) * range + min
 
     if(isAbsoluteEncoder(value)) return setKnobValue(knob, scaledValue)
@@ -49,7 +47,6 @@ function updateKnobValue(knob, value) {
     }
     if (value >= 65) { // Clockwise
         const delta = -(scaledSensitivity * (128 - value));
-        console.log('clockwise', knob, value, delta)
         return setKnobValue(knob, currentValue + delta)
     }
     // Center position (64) - no change
@@ -65,7 +62,7 @@ navigator
         midiAccess.inputs.forEach((input) => {
             input.onmidimessage = (message) => {
                 const [command, control, value] = message.data
-                if (command !== 176) return // Only handle Channel 1 CC messages
+                if (command !== 176) {console.log('not 176', message.data); return} // Only handle Channel 1 CC messages
                 updateKnobValue(`knob_${control}`, value)
             }
         })
