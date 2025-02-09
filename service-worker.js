@@ -6,14 +6,7 @@ self.addEventListener('install', (event) => {
 })
 
 self.addEventListener('activate', async(event) => {
-    event.waitUntil(
-        // Clear all old caches when a new service worker activates
-        caches.keys().then(keys => Promise.all(
-            keys.map(key => caches.delete(key))
-        )).then(() => {
-            self.clients.claim()
-        })
-    )
+    self.clients.claim()
 })
 
 async function fetchWithControlledRetry(request) {
@@ -66,9 +59,7 @@ async function fetchWithControlledRetry(request) {
 }
 
 self.addEventListener('fetch', (event) => {
-    if (event.request.method !== 'GET' || event.request.url.includes('edit')) {
-        return
-    }
+    if (event.request.method !== 'GET') return
 
     event.respondWith(fetchWithControlledRetry(event.request))
 })
