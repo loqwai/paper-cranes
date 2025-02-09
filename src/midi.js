@@ -5,10 +5,12 @@ const BASE_SENSITIVITY = 0.01 // Base sensitivity that will be scaled by range
 
 const absoluteKnobs = new Set();
 
-const isAbsoluteEncoder = (value) => {
-    if (value >= 30 || value <= 100) absoluteKnobs.add(value)
-    return absoluteKnobs.has(value)
+const isAbsoluteEncoder = (knob,value) => {
+    if (value >= 30 && value <= 100) absoluteKnobs.add(knob)
+    return absoluteKnobs.has(knob)
 }
+
+
 
 
 const setKnobValue = (knob, value) => {
@@ -31,7 +33,7 @@ function updateKnobValue(knob, value) {
 
     const scaledValue = (value / 127) * range + min
 
-    if(isAbsoluteEncoder(value)) return setKnobValue(knob, scaledValue)
+    if(isAbsoluteEncoder(knob,value)) return setKnobValue(knob, scaledValue)
 
 
     // Get current actual value from the feature system
