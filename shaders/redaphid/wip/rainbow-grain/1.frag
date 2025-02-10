@@ -10,7 +10,7 @@
 #define PATTERN_SCALE (1.0 + spectralSpreadStandardDeviation * (1./1000.))
 #define FLOW_SPEED (0.2 + energyStandardDeviation * (1./1000.))
 #define INTENSITY (0.5 + energyStandardDeviation * (1./1000.))
-#define PATTERN_DISTORTION 1. + (spectralEntropyStandardDeviation / 1000.)
+#define PATTERN_DISTORTION 1. + (spectralEntropyStandardDeviation / (knob_30*1000.))
 
 uniform float knob_35;
 uniform float knob_37;
@@ -24,6 +24,11 @@ uniform float knob_44;
 uniform float knob_32;
 uniform float knob_42;
 uniform float knob_31;
+
+uniform float knob_30;
+uniform float knob_40;
+#define PROBE_C mapValue(0.,1.,1.,5., bassZScore)
+#define PROBE_D mapValue(0.,1.,1.,5., spectralEntropyNormalized)
 #define PROBE_B mix(0.,0.1,energyZScore)
 // Enhanced noise function with distortion
 
@@ -54,7 +59,7 @@ float noise(vec2 p) {
 
     vec2 i = floor(p);
     vec2 f = fract(p);
-    f = f * f * (3.0 - 2.0 * f);
+    f = f * f * (PROBE_C - PROBE_D * f);
     float a = sin(i.x + i.y * knob_35);
     float b = sin((i.x + 1.0) + i.y * knob_35);
     float c = sin(i.x + (i.y + 1.0) * knob_35);
