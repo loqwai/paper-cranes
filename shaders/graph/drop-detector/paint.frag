@@ -5,14 +5,14 @@ uniform float knob_74;
 uniform float knob_75;
 uniform float knob_76;
 
-#define LINE_WIDTH knob_36*4.
-#define SMOOTH_WIDTH knob_46
+#define LINE_WIDTH knob_36*8.
+#define SMOOTH_WIDTH knob_46*2.0
 #define ULTRA_DROP_COUNT 4
 #define PROBE_A 0.3
 #define PROBE_B 0.95
 #define SMOOTHING_FACTOR 0.151  // Lower = smoother, but more latency
-#define VERTICAL_OFFSET 0.5  // Back to 0.5 (middle of screen)
-#define SCALE 0.25  // Scale factor for visibility (using 25% of screen height each direction)
+#define VERTICAL_OFFSET 0.5  // Middle of screen
+#define SCALE 3.5  // Keeping the scale that works well
 
 uniform float knob_27;
 uniform float knob_37;
@@ -69,13 +69,10 @@ float smoothValue(float currentValue, vec2 uv) {
 float drawLine(vec2 fragCoord, float value, float scale) {
     scale = max(scale, 0.08);
     scale*=LINE_WIDTH;
-    // Convert to UV space first (0 to 1)
     vec2 uv = fragCoord.xy / resolution.xy;
 
-    // Calculate line position in UV space
-    float normalizedY = VERTICAL_OFFSET - value * SCALE;
+    float normalizedY = VERTICAL_OFFSET + value * SCALE;
 
-    // Calculate distance in pixels for smooth line
     float d = abs(uv.y - normalizedY) * resolution.y;
     return smoothstep(scale + SMOOTH_WIDTH, (scale) - SMOOTH_WIDTH, d);
 }
