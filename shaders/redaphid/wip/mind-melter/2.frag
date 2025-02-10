@@ -15,8 +15,8 @@
 #define PROBE_D mapValue(0.,1.,1.,5., spectralEntropyNormalized)
 #define PROBE_B mix(0.,0.1,energyZScore)
 #define SATURATION_THRESHOLD 0.1
-uniform float knob_40;
-#define PROBE_E knob_40
+
+#define PROBE_E 1.
 // Enhanced noise function with distortion
 
 float granular(float x, float resolution) {
@@ -103,10 +103,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         // color.x = sin(olc.x + abs(spectralCentroidZScore/1000.));
         color.y = sin(color.y + energyMedian);
     }
-    color.x = fract(color.x + pitchClassMedian);
+    color.x = sin(color.x + (pitchClassMedian/10.));
     // Convert back to RGB
     color = hsl2rgb(color);
-    // color.b =fract(color.b/2. + bassMedian/bassMax);
+    //  color.b =sin(color.b/4. + bassMedian/bassMax);
     color *= normalize(color);
-    fragColor = vec4(color, 1.0);
+    fragColor = vec4(fract(color), 1.0);
 }
