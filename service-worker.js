@@ -31,7 +31,10 @@ self.addEventListener('activate', event => self.clients.claim());
  * @returns {Promise<Response>} - The response object.
  */
 async function fetchWithRetry(request) {
+    let interval = 0;
     while (true) {
+        if(interval < 2000) interval += 200
+
         log(request, 'fetching with retry');
         try {
             const response = await fetch(request);
@@ -39,7 +42,7 @@ async function fetchWithRetry(request) {
             if (response.ok) return response;
         } catch (error) {
             log(request, `fetch failed: ${error}`);
-            await new Promise(resolve => setTimeout(resolve, 200));
+            await new Promise(resolve => setTimeout(resolve, interval));
         }
     }
     log('where am I?');
@@ -58,9 +61,15 @@ async function fetchWithCache(request) {
     // Create a promise that will handle the caching
     responsePromise.then(async response => {
         log(request, 'caching');
-        const cache = await caches.open(CACHE_NAME);
-        await cache.put(request, response.clone());
-        log(request, 'cached');
+        response = response.clone()
+        try {
+            const cache = await caches.open(CACHE_NAME);
+            log(request, 'got cache');
+            await cache.put(request, response.clone());
+            log(request, 'cached');
+        } catch (error) {
+            log(request, 'error caching', error);
+        }
     }).catch(() => {});
 
     const cache = await caches.open(CACHE_NAME);
@@ -100,7 +109,11 @@ self.addEventListener('fetch', (e) => {
         log(e.request, 'already has an id');
         throw new Error('already has an id');
     }
-    e.request.id = self.id.toFixed(2)
+    let id = self.id.toString();
+    while(id.length < 5) {
+        id = '0' + id;
+    }
+    e.request.id = id;
     // if we're not a GET request, don't cache
     try {
     if(!e.request.url.includes('http')) {
@@ -147,7 +160,9 @@ const maybeFetchWithCache = async (request) => {
     // if we're on localhost, don't cache
     if (url.hostname === 'localhost') {
         log(request, 'not caching localhost');
-        return fetch(request);
+        const res = await fetch(request);
+        log(request, 'returning response', res);
+        return res;
     }
 
     // otherwise, finally, use the cache
