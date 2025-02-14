@@ -1,65 +1,72 @@
-const wait = async (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+// Note: CACHE_NAME is injected by esbuild as "cranes-cache-v10"
 
-self.addEventListener('install', (event) => {
-    // Immediately activate the new service worker
-    event.waitUntil(self.skipWaiting())
-})
+self.addEventListener('install', event => self.skipWaiting());
+self.addEventListener('activate', event => self.clients.claim());
 
-self.addEventListener('activate', async(event) => {
-    self.clients.claim()
-})
-
-async function fetchWithControlledRetry(request) {
-    const cache = await caches.open(CACHE_NAME)
-
-    // Implement stale-while-revalidate strategy for most resources
-    async function attemptFetch() {
-        // Skip caching for esbuild live reload endpoint
-        if (request.url.includes('esbuild')) {
-            return fetch(request)
+async function fetchWithRetry(request) {
+    while (true) {
+        console.log(`fetching with retry ${request.url}`);
+        try {
+            const response = await fetch(request);
+            console.log(`${request.url}: fetch successful`);
+            if (response.ok) return response;
+            await new Promise(resolve => setTimeout(resolve, 200));
+        } catch (error) {
+            console.error(`${request.url}: fetch failed: ${error}`);
+            await new Promise(resolve => setTimeout(resolve, 200));
         }
-
-        // Check cache first
-        const cached = await caches.match(request)
-
-        // Start network fetch immediately
-        const networkPromise = fetch(request)
-            .then(async (response) => {
-                if (response.ok) {
-                    // Cache successful responses in the background
-                    cache.put(request, response.clone())
-                    return response
-                }
-                throw new Error('Network response was not ok')
-            })
-            .catch(async (error) => {
-                const cached = await caches.match(request) // maybe cache was updated.
-                if (cached) return cached
-                await wait(500)
-                return fetch(request)
-            })
-
-        // Return cached response immediately if available
-        if (cached) {
-            return cached
-        }
-
-        // If no cache, wait for network with timeout
-        const timeoutPromise = new Promise((resolve) =>
-            setTimeout(async () => {
-                await wait(500)
-                resolve(fetch(request))
-            }, 5000)
-        )
-
-        return Promise.race([networkPromise, timeoutPromise])
     }
-
-    return attemptFetch()
 }
 
-self.addEventListener('fetch', (event) => {
-    if (event.request.method !== 'GET') return
+async function fetchWithCache(request) {
+    // Skip caching for esbuild
+    if (request.url.includes('esbuild')) return fetch(request);
 
-    event.respondWith(fetchWithControlledRetry(event.request))
-})
+    // send the request out asap, whether it's cached or not
+    console.log(`${request.url}: initiate fetch`);
+    const responsePromise = fetchWithRetry(request);
+    responsePromise.then( response => {
+        console.log(`${request.url}: caching`);
+        cache.put(request, response.clone());
+    }).catch(() => {});
+    // check cache
+    const cache = await caches.open(CACHE_NAME);
+    const cached = await cache.match(request);
+
+    if (cached) return cached;
+
+    // If no cache, look through the earlier caches
+    console.log(`${event.request.url}: checking old caches`);
+    const cacheNames = await caches.keys().sort();
+    for (const cacheName of cacheNames) {
+        console.log(`${request.url}: checking cache ${cacheName}`);
+        const cache = await caches.open(cacheName);
+        const cached = await cache.match(request);
+        console.log(`${request.url}: cache ${cacheName} ${cached ? 'hit' : 'miss'}`);
+        if (cached) return cached;
+    }
+    // if we never find any version of the file, I guess we'll just fetch it
+    console.log(`${request.url}: waiting for fetch`);
+    return await responsePromise;
+}
+
+let cacheEverything = false;
+self.addEventListener('fetch', (event) => {
+    // if we're not a GET request, don't cache
+    if (event.request.method !== 'GET') return
+    const url = new URL(event.request.url);
+    const cacheParam = url.searchParams.get('cache');
+    if (cacheParam === 'everything' || cacheEverything) {
+        console.log(`${event.request.url}: caching set to 'everything'`);
+        return event.respondWith(fetchWithCache(event.request));
+    }
+    // if we're on localhost, don't cache
+    if (url.hostname === 'localhost') {
+        console.log(`${event.request.url}: not caching localhost`);
+        return
+    }
+
+    // otherwise, finally, use the cache
+    console.log(`${event.request.url}: cache/fetch`);
+    event.respondWith(fetchWithCache(event.request));
+});
