@@ -1,18 +1,35 @@
-// Note: CACHE_NAME is injected by esbuild as "cranes-cache-v10"
-
 const startTime = performance.now();
-
+/**
+ * Logs a message with the request details and time elapsed since the service worker started.
+ * @param {Request|string} request - The request object or URL string.
+ * @param {string} message - The message to log.
+ * @param {...any} rest - Additional parameters to log.
+ */
 function log(request, message, ...rest) {
     const id = request.id || 'unknown';
 
     const url = typeof request === 'string' ? request : request.url;
     const timeElapsed = performance.now() - startTime;
-    console.log(`[${id}] [${timeElapsed.toFixed(6)}ms] ${url}: ${message}`, ...rest);
+    console.log(`[${id}] ${message}`, ...rest, `[${timeElapsed.toFixed(6)}ms] ${url}`);
 }
 
+/**
+ * Event listener for the 'install' event. Forces the waiting service worker to become the active service worker.
+ * @param {Event} event - The install event.
+ */
 self.addEventListener('install', event => self.skipWaiting());
+
+/**
+ * Event listener for the 'activate' event. Claims control of all clients immediately.
+ * @param {Event} event - The activate event.
+ */
 self.addEventListener('activate', event => self.clients.claim());
 
+/**
+ * Fetches a request with retry logic. Retries indefinitely until a successful response is received.
+ * @param {Request} request - The request object.
+ * @returns {Promise<Response>} - The response object.
+ */
 async function fetchWithRetry(request) {
     while (true) {
         log(request, 'fetching with retry');
@@ -28,36 +45,40 @@ async function fetchWithRetry(request) {
     log('where am I?');
 }
 
+/**
+ * Fetches a request and caches the response. Initiates the fetch immediately and caches the response once received.
+ * @param {Request} request - The request object.
+ * @returns {Promise<Response>} - The response object.
+ */
 async function fetchWithCache(request) {
     // send the request out asap, whether it's cached or not
     log(request, 'initiate fetch');
     const responsePromise = fetchWithRetry(request);
 
+    // Create a promise that will handle the caching
     responsePromise.then(async response => {
         log(request, 'caching');
         const cache = await caches.open(CACHE_NAME);
-        cache.put(request, response.clone());
+        await cache.put(request, response.clone());
         log(request, 'cached');
     }).catch(() => {});
-    // check cache
-    log(request, 'checking old caches');
-    const cacheNames = await caches.keys()
-    log(request, 'cache names', cacheNames);
-    for (const cacheName of cacheNames) {
-        log(request, `checking cache ${cacheName}`);
-        const cache = await caches.open(cacheName);
-        const cached = await cache.match(request);
-        if (cached) {
-            log(request, 'returning cached response');
-            return cached;
-        }
-        log(request, 'no cached response');
+
+    const cache = await caches.open(CACHE_NAME);
+    const cachedResponse = await cache.match(request);
+    if (cachedResponse) {
+        log(request, 'returning cached response');
+        return cachedResponse;
     }
-    // if we never find any version of the file, I guess we'll just fetch it
     log(request, 'waiting for fetch');
-    return await responsePromise;
+    return responsePromise;
 }
+
+
+self.addEventListener('install', event => self.skipWaiting());
+self.addEventListener('activate', event => self.clients.claim());
+
 const checkCacheParam = async () => {
+
     const clients = await self.clients.matchAll();
     for(const client of clients) {
         const url = new URL(client.url);
@@ -69,50 +90,67 @@ const checkCacheParam = async () => {
     }
     return false;
 }
-self.addEventListener('fetch', async (event) => {
+/**
+ * @param {FetchEvent} event
+ */
+self.addEventListener('fetch', (e) => {
     self.id ??= 1
     self.id++
-    event.request.id = self.id.toFixed(2)
+    if(e.request.id) {
+        log(e.request, 'already has an id');
+        throw new Error('already has an id');
+    }
+    e.request.id = self.id.toFixed(2)
     // if we're not a GET request, don't cache
     try {
-    if(!event.request.url.includes('http')) {
-        log(event.request, 'not a http request');
+    if(!e.request.url.includes('http')) {
+        log(e.request, 'not a http request');
         return;
     }
-    if (event.request.method !== 'GET') {
-        log(event.request, 'not a GET request');
+    if (e.request.method !== 'GET') {
+        log(e.request, 'not a GET request');
         return
     }
 
-    log(event.request, 'checking if we should cache');
-    const url = new URL(event.request.url);
+    const url = new URL(e.request.url);
 
-    log(event.request, 'url', url);
     if (url.pathname.includes('esbuild')) {
-        log(event.request, 'skipping esbuild');
+        log(e.request, 'skipping esbuild');
         return
     }
 
-    // if the window has the cache param set to 'everything', cache everything
-    const shouldCache = await checkCacheParam();
-    log(event.request, 'should cache', shouldCache);
-    if (shouldCache) {
-        log(event.request, 'forced fetch/cache');
-        event.respondWith(fetchWithCache(event.request));
-        return
+    return e.respondWith(maybeFetchWithCache(e.request));
+    } catch (error) {
+        log(e.request, 'error', error);
+        log(e.request, 'stack', error.stack);
     }
-    log(event.request, 'not forcing cache');
+});
+
+/**
+ * @param {Request} request
+ */
+const maybeFetchWithCache = async (request) => {
+    const url = new URL(request.url);
+
+
+    log(request, 'url', url);
+    // if the window has the cache param set to 'everything', cache everything
+    log(request, 'checking if we should cache by looking at the cache param');
+    const shouldCache = await checkCacheParam();
+    log(request, 'should cache', shouldCache);
+    if (shouldCache) {
+        log(request, 'forced fetch/cache');
+        return fetchWithCache(request);
+    }
+
+    log(request, 'not forcing cache');
     // if we're on localhost, don't cache
     if (url.hostname === 'localhost') {
-        log(event.request, 'not caching localhost');
-        return
+        log(request, 'not caching localhost');
+        return fetch(request);
     }
 
     // otherwise, finally, use the cache
-    log(event.request, 'finally, cache/fetch');
-    event.respondWith(fetchWithCache(event.request));
-    } catch (error) {
-        log(event.request, 'error', error);
-        log(event.request, 'stack', error.stack);
-    }
-});
+    log(request, 'finally, cache/fetch');
+    return fetchWithCache(request);
+}
