@@ -87,9 +87,6 @@ self.addEventListener('install', event => self.skipWaiting());
 self.addEventListener('activate', event => self.clients.claim());
 
 const checkCacheParam = async () => {
-    log('early return checkCacheParam');
-    return false;
-
     const clients = await self.clients.matchAll();
     for(const client of clients) {
         const url = new URL(client.url);
@@ -151,7 +148,8 @@ const maybeFetchWithCache = async (request) => {
     log(request, 'url', url);
     // if the window has the cache param set to 'everything', cache everything
     log(request, 'checking if we should cache by looking at the cache param');
-    const shouldCache = await checkCacheParam();
+    // const shouldCache = await checkCacheParam();
+    const shouldCache = false;
     log(request, 'should cache', shouldCache);
     if (shouldCache) {
         log(request, 'forced fetch/cache');
