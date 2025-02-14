@@ -33,7 +33,7 @@ self.addEventListener('activate', event => self.clients.claim());
 async function fetchWithRetry(request) {
     let interval = 0;
     while (true) {
-        if(interval < 2000) interval += 200
+        if(interval < 2000) interval += random(0,300);
 
         log(request, 'fetching with retry');
         try {
@@ -87,6 +87,8 @@ self.addEventListener('install', event => self.skipWaiting());
 self.addEventListener('activate', event => self.clients.claim());
 
 const checkCacheParam = async () => {
+    log('early return checkCacheParam');
+    return false;
 
     const clients = await self.clients.matchAll();
     for(const client of clients) {
@@ -169,3 +171,5 @@ const maybeFetchWithCache = async (request) => {
     log(request, 'finally, cache/fetch');
     return fetchWithCache(request);
 }
+
+const random = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
