@@ -105,7 +105,7 @@ const setupAudio = async () => {
     const sourceNode = audioContext.createMediaStreamSource(stream);
     const historySize = parseInt(params.get('history_size') ?? '500');
     const audioProcessor = new AudioProcessor(audioContext, sourceNode, historySize);
-    await audioProcessor.start();
+    audioProcessor.start();
 
     return audioProcessor;
 };
@@ -117,12 +117,11 @@ const main = async () => {
 
         window.c = cranes;
         startTime = performance.now();
-        const audio = await setupAudio();
-
         const [fragmentShader, vertexShader] = await Promise.all([
             getFragmentShader(),
             getVertexShader()
         ]);
+        const audio = await setupAudio();
 
         window.shader = fragmentShader;
         const canvas = getVisualizerDOMElement();

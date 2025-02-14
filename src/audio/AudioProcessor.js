@@ -99,7 +99,7 @@ export class AudioProcessor {
         this.sourceNode.connect(windowNode)
         windowNode.connect(this.fftAnalyzer)
 
-        await Promise.all(AudioFeatures.map(this.initializeWorker))
+        AudioFeatures.map(this.initializeWorker)
         // await new Promise(resolve => setTimeout(resolve, 100))
 
         this.updateCurrentFeatures()

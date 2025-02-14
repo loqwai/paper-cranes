@@ -88,7 +88,7 @@ self.addEventListener('activate', event => self.clients.claim());
 
 const checkCacheParam = async () => {
     log('early return checkCacheParam');
-    return false;
+    // return false;
 
     const clients = await self.clients.matchAll();
     for(const client of clients) {
