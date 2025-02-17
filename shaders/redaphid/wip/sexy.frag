@@ -14,31 +14,64 @@ uniform float knob_3;
 #define D mapValue(spectralFlux, 0., 1., -0.92,-.22)
 // .23 2.
 void mainImage(out vec4 P, vec2 V) {
-    vec2 Z = iResolution.xy,
-         C = .6 * (Z - V - V).yx / Z.y;
-    // rotate the coordinate over time
-    vec4 last = getLastFrameColor(C);
-    C.x += .77;
-    V = C*D;
+    vec2 uv = (2.0 * V - iResolution.xy) / min(iResolution.x, iResolution.y);
 
-    float v, x, y,
-          z = y = x = 9.;
+    float angle = iTime * 0.05;
+    mat2 rot = mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
+    uv = rot * uv;
 
-    for (int k; k < 50; k++) {
-        float a = atan(V.y, V.x),
-        d = dot(V, V) * A;
-        float c = dot(V, vec2(a, log(d) / 2.));
-        V = exp(-a * V.y) * pow(d, V.x / 2.) * vec2(cos(c), sin(c));
-        V = vec2(V.x * V.x - V.y * V.y, dot(V, V.yx));
-        V -= C * B;
+    float r = length(uv);
+    float falloff = 1.0 - smoothstep(0.8, 1.0, r);
 
-        x = min(x, abs(V.x));
-        y = min(y, abs(V.y));
-        z > (v = dot(V, V)) ? z = v, Z = V : Z;
+    // Add damping to prevent sudden changes
+    float dampedD = D * (0.5 + 0.5 * cos(angle));
+
+    vec4 last = getLastFrameColor(uv);
+    V = uv * (1.0 + dampedD * falloff);
+
+    float v, x, y;
+    float z = 9.0;
+    vec2 bestV = V;
+
+    for (int k = 0; k < 50; k++) {
+        // Smooth out the angle calculation
+        float a = atan(V.y, V.x) * (1.0 - float(k) / 50.0);
+        float d = max(dot(V, V) * A, 1e-6);
+
+        // Add smoothing to prevent sharp transitions
+        float smooth_d = mix(d, last.r, 0.3);
+        float c = dot(V, vec2(a, log(smooth_d) / 2.));
+
+        float expTerm = clamp(-a * V.y, -10.0, 10.0);
+        float powTerm = clamp(pow(smooth_d, V.x / 2.), -1e3, 1e3);
+
+        V = exp(expTerm) * powTerm * vec2(cos(c), sin(c));
+
+        // Smooth out the squared terms
+        float xx = V.x * V.x;
+        float yy = V.y * V.y;
+        V = vec2(xx - yy, 2.0 * V.x * V.y) * (1.0 - float(k) / 100.0);
+
+        // Smooth feedback
+        V -= uv * B * falloff * (0.5 + 0.5 * cos(angle));
+
+        x = (k == 0) ? abs(V.x) : min(x, abs(V.x));
+        y = (k == 0) ? abs(V.y) : min(y, abs(V.y));
+
+        float newV = dot(V, V);
+        if (k == 0 || newV < z) {
+            z = newV;
+            bestV = V;
+        }
     }
 
-    z = 1. -  smoothstep(1., -6., log(y)) * smoothstep(1., -6., log(x));
-    P = sqrt(z + (z - z * z * z) * cos(atan(Z.y, Z.x) - vec4(0, 2.1, 4.2, 0)));
-    P = mix(last,P,0.1);
+    z = 1. - smoothstep(1., -6., log(max(y, 1e-6))) * smoothstep(1., -6., log(max(x, 1e-6)));
 
+    // Smooth the final color calculation
+    vec4 colorPhase = vec4(0, 2.1, 4.2, 0);
+    P = sqrt(z + (z - z * z * z) * cos(atan(bestV.y, bestV.x) - colorPhase));
+
+    // Smooth transition with temporal and spatial damping
+    float mixFactor = 0.1 * falloff * (0.5 + 0.5 * cos(angle));
+    P = mix(last, P, mixFactor);
 }

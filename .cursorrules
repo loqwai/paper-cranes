@@ -252,3 +252,12 @@ You make sure the shaders are centered on the viewport; The object of interest s
 - Excessive white-out or black areas
 - Strobe-like effects
 - Uncontrolled parameter ranges
+
+### Code Style
+
+- use the latest ECMAScript features.
+- early return whenever possible, as soon as possible.
+  - when early returning, keep the if statements to a single line if you can.
+- use arrow functions instead of function declarations.
+- use the .eslintrc file as a guide for style.
+- do not use semicolons.

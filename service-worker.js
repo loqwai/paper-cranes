@@ -1,5 +1,19 @@
-self.addEventListener('install', event => self.skipWaiting())
-self.addEventListener('activate', event => self.clients.claim())
+// Install event - cache critical resources
+self.addEventListener('install', event => {
+    event.waitUntil(
+        caches.open(CACHE_NAME).then(cache => {
+            // Add critical resources to cache during install
+            return cache.addAll([
+                '/', // Add your critical resources here
+                '/index.html',
+                // Add other critical assets
+            ]);
+        })
+    );
+    return self.skipWaiting();
+});
+
+self.addEventListener('activate', event => self.clients.claim());
 
 /**
  * Fetches a request with retry logic. Retries indefinitely until a successful response is received.
@@ -7,15 +21,17 @@ self.addEventListener('activate', event => self.clients.claim())
  * @returns {Promise<Response>} - The response object.
  */
 async function fetchWithRetry(request) {
-    let interval = 100
-    while (true) {
-        if(interval < 5000) interval *= 2
+    let interval = 100;
 
+    while (true) {
         try {
-            const response = await fetch(request)
-            if (response.ok) return response
+            const response = await fetch(request);
+            if (response.ok) return response;
         } catch (error) {
-            await new Promise(resolve => setTimeout(resolve, interval))
+            // Wait before retrying
+            await new Promise(resolve => setTimeout(resolve, interval));
+            // Increase interval more slowly than exponential, cap at 5000ms
+            interval = Math.min(interval * 1.5, 5000);
         }
     }
 }
@@ -26,24 +42,29 @@ async function fetchWithRetry(request) {
  * @returns {Promise<Response>} - The response object.
  */
 async function fetchWithCache(request) {
-    // send the request out asap, whether it's cached or not
-    const responsePromise = fetchWithRetry(request)
+    // Try cache first
+    const cache = await caches.open(CACHE_NAME);
+    const cachedResponse = await cache.match(request);
 
-    // Create a promise that will handle the caching
-    responsePromise.then(async response => {
-        response = response.clone()
-        try {
-            const cache = await caches.open(CACHE_NAME)
-            await cache.put(request, response.clone())
-        } catch (error) {
-            console.error(request, 'error caching', error)
-        }
-    }).catch(() => {})
+    // Start network request in background
+    const networkPromise = fetchWithRetry(request).then(networkResponse => {
+        // Cache the new response
+        cache.put(request, networkResponse.clone());
+        return networkResponse;
+    }).catch(error => {
+        console.warn('Network request failed, using cache', error);
+        return null;
+    });
 
-    const cache = await caches.open(CACHE_NAME)
-    const cachedResponse = await cache.match(request)
-    if (cachedResponse) return cachedResponse
-    return responsePromise
+    // Return cached response immediately if we have it
+    if (cachedResponse) return cachedResponse;
+
+    // If no cache, wait for network
+    const networkResponse = await networkPromise;
+    if (networkResponse) return networkResponse;
+
+    // If both cache and network fail, return error
+    throw new Error('No cached or network response available');
 }
 
 /**
@@ -52,15 +73,14 @@ async function fetchWithCache(request) {
  * @param {FetchEvent} event
  */
 self.addEventListener('fetch', (e) => {
-    if(!e.request.url.includes('http')) return // it happens. about:config, etc.
-    if (e.request.method !== 'GET') return
+    if(!e.request.url.includes('http')) return;
+    if (e.request.method !== 'GET') return;
 
-    const url = new URL(e.request.url)
+    const url = new URL(e.request.url);
+    if (url.pathname.includes('esbuild')) return;
 
-    if (url.pathname.includes('esbuild')) return
-
-    return e.respondWith(fetchAndMaybeCache(e.request))
-})
+    e.respondWith(fetchAndMaybeCache(e.request));
+});
 
 /**
  * @param {Request} request
