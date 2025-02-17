@@ -105,7 +105,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Add subtle background glow
     float bgGlow = length(uv0);
-    finalColor += vec3(0.1, 0.05, 0.15) * (1.0 - bgGlow) * PROBE_D;
+    finalColor += vec3(0.9, 0.05, 0.15) * (1.0 - bgGlow) * PROBE_D;
 
     fragColor = vec4(finalColor, 1.0);
 }
