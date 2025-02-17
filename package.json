@@ -5,7 +5,7 @@
   "type": "module",
   "main": "dist/src/audio/AudioProcessor.js",
   "scripts": {
-    "start": "dev",
+    "start": "npm run dev",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "node esbuild.build.js",
     "dev": "node esbuild.dev.js",
@@ -18,13 +18,12 @@
     "debounce": "^2.2.0",
     "htm": "^3.1.1",
     "hypnosound": "^1.8.0",
-    "monaco-editor": "^0.52.2",
     "preact": "^10.25.4",
     "twgl-base.js": "^5.5.3"
   },
   "devDependencies": {
     "@types/vscode": "^1.96.0",
-    "esbuild": "^0.24.2",
+    "esbuild": "^0.25.0",
     "esbuild-plugin-copy": "^2.1.1",
     "esbuild-plugin-css-modules": "^0.3.0",
     "esbuild-plugin-html": "^1.0.0",

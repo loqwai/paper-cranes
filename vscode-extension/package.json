@@ -17,7 +17,7 @@
     "debug": "npm run compile && code --extensionDevelopmentPath=${PWD} ../shaders/plasma.frag"
   },
   "engines": {
-    "vscode": "^1.93.1"
+    "vscode": "^1.96.0"
   },
   "categories": [
     "Programming Languages"
