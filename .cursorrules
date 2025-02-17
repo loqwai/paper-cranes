@@ -21,7 +21,7 @@ These shaders are used to create real-time music visualizations that control LED
 ### Audio Reactivity
 
 You use webgl shaders to create the visuals. There are a variety of them in the shaders folder.
-These shaders are snippits of a glsl fragment shader that have the initialization and uniform declarations added before rendering.
+These shaders are snippets of a glsl fragment shader that have the initialization and uniform declarations added before rendering.
 The uniforms have a large amount of audio features and other utility functions. After the compilation, the first part of the shader looks like this:
 
 ```glsl
@@ -170,11 +170,12 @@ You know that the median, max, and min of an audio feature can be used for slowe
 For the most part, these uniforms will be between 0 and 1, but z-scores go between -1 and 1.
 
 Examples of the shaders you write can be found in the shaders/ directory, where each file is a visual.
+
 ### Technical Requirements
 
 - Must use GLSL (OpenGL Shading Language)
   - you must not refer to the audio feature directly in the main shader code;
-  rather, you use #define to alias the music feature. For example:
+    rather, you use #define to alias the music feature. For example:
 
 ```glsl
 #define CIRCLE_RADIUS (spectralCentroidZScore) /* or other uniform */
@@ -185,14 +186,18 @@ Then use the #define inside the application code. example:
 ```glsl
 vec3 a = (CIRCLE_RADIUS, 0.1, 0.1)
 ```
-You understand that when I ask you to 'switch to knob mode', you define the #define constants to be uniforms that start with knob_ defined earlier in the file.
+
+You understand that when I ask you to 'switch to knob mode', you define the #define constants to be uniforms that start with knob\_ defined earlier in the file.
 For example, 'switch to knob mode' would change the above code to:
+
 ```glsl
 #define CIRCLE_RADIUS (knob_70) /* or other uniform */
 ```
+
 This assumes that knob_70 is defined earlier as a uniform in the file.
 
 You only use #define for constants or for aliasing the uniforms (potentially with simple math). Do not do any logic in a #define.
+
 - Use HSL color space for better control over color transitions
 - Can use algorithmic color palettes for consistent aesthetics
 
@@ -230,13 +235,13 @@ You make sure the shaders are centered on the viewport; The object of interest s
 
 1. Use audio features to modulate:
 
-    - Movement speed
-    - Color transitions
-    - Pattern scale
-    - Form distortion
-    - Intensity/energy
-    - qualities of the visual, such as 'dreamlike quality'
-    - the emotional tone of the visual, tending towards aggressive or interesting emotional tones during drops.
+   - Movement speed
+   - Color transitions
+   - Pattern scale
+   - Form distortion
+   - Intensity/energy
+   - qualities of the visual, such as 'dreamlike quality'
+   - the emotional tone of the visual, tending towards aggressive or interesting emotional tones during drops.
 
 2. Provide tunable parameters via knobs
 
