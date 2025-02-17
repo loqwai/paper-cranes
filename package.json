@@ -23,7 +23,7 @@
   },
   "devDependencies": {
     "@types/vscode": "^1.96.0",
-    "esbuild": "^0.24.2",
+    "esbuild": "^0.25.0",
     "esbuild-plugin-copy": "^2.1.1",
     "esbuild-plugin-css-modules": "^0.3.0",
     "esbuild-plugin-html": "^1.0.0",
