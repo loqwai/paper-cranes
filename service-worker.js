@@ -5,6 +5,7 @@ self.addEventListener('install', event => {
         caches.open(CACHE_NAME).then(cache => {
             // Add critical resources to cache during install
             return cache.addAll([
+                '/',
                 '/index.html',
                 '/index.js',
             ])
@@ -102,11 +103,7 @@ async function fetchWithCache(request) {
     // Return cached response immediately if available
     if (cachedResponse) return cachedResponse
 
-    const networkResponse = await networkPromise
-    if (networkResponse) return networkResponse
-
-    // If both cache and network fail, return error
-    throw new Error('No cached or network response available')
+    return networkPromise
 }
 
 /**
@@ -127,7 +124,7 @@ self.addEventListener('fetch', (e) => {
 const fetchAndMaybeCache = async (request) => {
     const url = new URL(request.url)
 
-    const forceCache = false // so we can force cache locally during development
+    const forceCache = true // so we can force cache locally during development
     if (forceCache) return fetchWithCache(request)
 
     // If on localhost, don't cache
