@@ -27,7 +27,7 @@ self.addEventListener('activate', event => {
  * @returns {Promise<Response>} - The response object.
  */
 async function fetchWithRetry(request) {
-    let interval = 250 // Start with 250ms delay
+    let interval = 150 // Start with 250ms delay
 
     while (true) {
         try {
@@ -57,9 +57,15 @@ let inflightRequestCount = 0
  * @returns {Promise<Response>} - The response object.
  */
 async function fetchWithCache(request) {
-    // Try cache first
     const cache = await caches.open(CACHE_NAME)
     const cachedResponse = await cache.match(request)
+
+    // Add logging to debug cache status
+    console.log('Cache check:', {
+        url: request.url,
+        hasCachedResponse: !!cachedResponse,
+        cacheVersion: CACHE_NAME
+    })
 
     // Always start a network request in the background
     inflightRequestCount++
@@ -70,8 +76,8 @@ async function fetchWithCache(request) {
             throw new Error('No network response for:', request.url)
         }
 
-        // get old cached response
         const cachedResponse = await cache.match(request)
+        await cache.put(request, networkResponse.clone())
         if(cachedResponse) {
             const networkClone = networkResponse.clone()
             const cachedClone = cachedResponse.clone()
@@ -124,11 +130,7 @@ self.addEventListener('fetch', (e) => {
 const fetchAndMaybeCache = async (request) => {
     const url = new URL(request.url)
 
-    const forceCache = true // so we can force cache locally during development
-    if (forceCache) return fetchWithCache(request)
-
-    // If on localhost, don't cache
-    if (url.hostname === 'localhost') return fetch(request)
-
-    return fetchWithCache(request)
+    // Always use cache in production
+    if (!url.hostname.includes('localhost')) return fetchWithCache(request)
+    return fetch(request)
 }
