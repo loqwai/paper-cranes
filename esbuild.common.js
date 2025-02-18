@@ -48,7 +48,7 @@ export function createBuildOptions(isDev = false) {
         minify: !isDev,
         sourcemap: true,
         define: {
-            CACHE_NAME: '"cranes-cache-v14"',
+            CACHE_NAME: '"cranes-cache-v15"',
             'process.env.NODE_ENV': isDev ? '"development"' : '"production"',
             'process.env.LIVE_RELOAD': isDev ? 'true' : 'false',
         },

@@ -1,4 +1,4 @@
-// Install event - no caching on install
+console.log(`Service worker ${CACHE_NAME} starting`)
 self.addEventListener('install', event => {
     console.log('Service Worker: Installing...')
     event.waitUntil(
@@ -14,7 +14,7 @@ self.addEventListener('install', event => {
     return self.skipWaiting()
 })
 
-// Activate event - claim clients immediately
+// Activate event - claim clients immediately and clean up old caches
 self.addEventListener('activate', event => {
     console.log('Service Worker: Activated')
     event.waitUntil(self.clients.claim())
@@ -41,11 +41,9 @@ async function fetchWithRetry(request) {
             console.warn(`Network error for url ${request.url}, retrying in ${interval}ms...`, error)
         }
 
-        // Ensure we actually wait before retrying
         await new Promise(resolve => setTimeout(resolve, interval))
         const jitter = Math.random() * 100
-        interval = Math.min(interval * (1.5 + jitter), 10000 + (jitter * 10))
-        if(Math.random() < 0.1) interval = 1000
+        interval = Math.min(interval * 1.5, 10000)  // Simpler backoff without jitter
     }
 }
 
@@ -77,7 +75,6 @@ async function fetchWithCache(request) {
         }
 
         const cachedResponse = await cache.match(request)
-        await cache.put(request, networkResponse.clone())
         if(cachedResponse) {
             const networkClone = networkResponse.clone()
             const cachedClone = cachedResponse.clone()
@@ -85,12 +82,11 @@ async function fetchWithCache(request) {
             const oldData = await cachedClone.text()
             const newData = await networkClone.text()
 
-            await cache.put(request, networkResponse.clone())
+            await cache.put(request, networkResponse.clone())  // Only put once
             console.log(`waiting for ${inflightRequestCount} requests to complete`)
-            if(oldData !== newData ) {
+            if(oldData !== newData) {
                 contentChanged = true
                 console.log(`Content changed: ${request.url}. Waiting for ${inflightRequestCount} requests to complete`)
-
             }
             new Promise(resolve => setTimeout(resolve, 10)).then(() => {
             if(inflightRequestCount <= 0 && contentChanged) {
@@ -103,6 +99,7 @@ async function fetchWithCache(request) {
                 }
             })
         }
+        await cache.put(request, networkResponse.clone())
         return networkResponse
     })
 
@@ -131,6 +128,6 @@ const fetchAndMaybeCache = async (request) => {
     const url = new URL(request.url)
 
     // Always use cache in production
-    if (!url.hostname.includes('localhost')) return fetchWithCache(request)
-    return fetch(request)
+   if (url.hostname.includes('localhost')) return fetch(request)
+    return fetchWithCache(request)
 }

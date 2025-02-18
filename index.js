@@ -5,9 +5,9 @@ import './index.css'
 // Add service worker registration
 window.addEventListener('load', () => {
     console.log('Registering service worker...')
-    navigator.serviceWorker.register('/service-worker.js')
+    // Add cache version to URL to force update when version changes
+    navigator.serviceWorker.register(`/service-worker.js?version=${CACHE_NAME}`)
         .then((registration) => {
-
             registration.addEventListener('statechange', (e) =>
                 console.log('ServiceWorker state changed:', e.target.state))
         })
