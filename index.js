@@ -4,14 +4,13 @@ import './index.css'
 
 // Add service worker registration
 window.addEventListener('load', () => {
-    navigator.serviceWorker.register(new URL('/service-worker.js', import.meta.url)).then(
-        (registration) => {
-            console.log(`ServiceWorker:enabled. Cache: ${CACHE_NAME}`)
-        },
-        (err) => {
-            console.log(`ServiceWorker:could not register. Cache: ${CACHE_NAME}`)
-        },
-    )
+    console.log('Registering service worker...')
+    navigator.serviceWorker.register('/service-worker.js')
+        .then((registration) => {
+
+            registration.addEventListener('statechange', (e) =>
+                console.log('ServiceWorker state changed:', e.target.state))
+        })
 })
 
 // Add message listener for reload

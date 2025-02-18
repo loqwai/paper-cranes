@@ -97,9 +97,6 @@ async function fetchWithCache(request) {
             })
         }
         return networkResponse
-    }).catch(error => {
-        inflightRequestCount--
-        return null
     })
 
     // Return cached response immediately if available
