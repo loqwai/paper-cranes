@@ -2,6 +2,27 @@ import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { makeVisualizer } from './src/Visualizer.js'
 import './index.css'
 
+// Add service worker registration
+window.addEventListener('load', () => {
+    navigator.serviceWorker.register(new URL('/service-worker.js', import.meta.url)).then(
+        (registration) => {
+            console.log(`ServiceWorker:enabled. Cache: ${CACHE_NAME}`)
+        },
+        (err) => {
+            console.log(`ServiceWorker:could not register. Cache: ${CACHE_NAME}`)
+        },
+    )
+})
+
+// Add message listener for reload
+navigator.serviceWorker.addEventListener('message', event => {
+    if (event.data === 'reload') {
+        console.log('Received reload message from service worker')
+        window.stop()
+        window.location.reload()
+    }
+})
+
 const events = ['touchstart', 'touchmove', 'touchstop', 'keydown', 'mousedown', 'resize']
 let ranMain = false
 let startTime = 0
@@ -207,20 +228,6 @@ const initializeApp = async () => {
 
 // Start initialization immediately
 initializeApp();
-
-if ('serviceWorker' in navigator) {
-
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register(new URL('/service-worker.js', import.meta.url)).then(
-            (registration) => {
-                console.log(`ServiceWorker:enabled. Cache: ${CACHE_NAME}`)
-            },
-            (err) => {
-                console.log(`ServiceWorker:could not register. Cache: ${CACHE_NAME}`)
-            },
-        )
-    })
-}
 
 window.cranes = {
     manualFeatures: {}
