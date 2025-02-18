@@ -43,7 +43,7 @@ async function fetchWithRetry(request) {
 
         await new Promise(resolve => setTimeout(resolve, interval))
         const jitter = Math.random() * 100
-        interval = Math.min(interval * (1.5 + jitter), 10000 + (jitter * 10))  // Simpler backoff without jitter
+        interval = Math.min(interval * (1.5 + jitter), 10000 + (jitter * 10))
     }
 }
 
