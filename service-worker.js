@@ -6,6 +6,7 @@ self.addEventListener('install', event => {
             // Add critical resources to cache during install
             return cache.addAll([
                 '/index.html',
+                '/index.js',
             ])
         })
     )
@@ -42,7 +43,7 @@ async function fetchWithRetry(request) {
         // Ensure we actually wait before retrying
         await new Promise(resolve => setTimeout(resolve, interval))
         const jitter = Math.random() * 100
-        interval = Math.min(interval * (1.5 + jitter), 10000 + jitter)
+        interval = Math.min(interval * (1.5 + jitter), 10000 + (jitter * 10))
         if(Math.random() < 0.1) interval = 1000
     }
 }
