@@ -59,10 +59,10 @@ const getNormalizedCoordinates = (event, element) => {
     }
 }
 const audioConfig = {
-    echoCancellation: params.get('echoCancellation') === 'true',
-    noiseSuppression: params.get('noiseSuppression') === 'true',
-    autoGainControl: params.get('autoGainControl') !== 'false', // true by default
-    voiceIsolation: params.get('voiceIsolation') === 'true',
+    echoCancellation: false,
+    noiseSuppression: false,
+    autoGainControl: false,
+    voiceIsolation: false,
     latency: params.get('latency') ? parseFloat(params.get('latency')) : 0,
     sampleRate: params.get('sampleRate') ? parseInt(params.get('sampleRate')) : 44100,
     sampleSize: params.get('sampleSize') ? parseInt(params.get('sampleSize')) : 16,
@@ -125,17 +125,42 @@ const initializeAudio = async () => {
 };
 
 const setupAudio = async () => {
-    const audioContext = new AudioContext();
-    await audioContext.resume();
+    try {
+        const audioContext = new AudioContext()
+        await audioContext.resume()
 
-    const stream = await getAudioStream(audioConfig);
-    const sourceNode = audioContext.createMediaStreamSource(stream);
-    const historySize = parseInt(params.get('history_size') ?? '500');
-    const audioProcessor = new AudioProcessor(audioContext, sourceNode, historySize);
-    audioProcessor.start();
+        // Add retry logic for getting audio stream
+        let stream
+        let retries = 3
+        while (retries > 0) {
+            try {
+                stream = await getAudioStream(audioConfig)
+                break
+            } catch (err) {
+                console.warn(`Failed to get audio stream, retries left: ${retries}`, err)
+                retries--
+                if (retries === 0) throw err
+                await new Promise(resolve => setTimeout(resolve, 1000))
+            }
+        }
 
-    return audioProcessor;
-};
+        const sourceNode = audioContext.createMediaStreamSource(stream)
+        const historySize = parseInt(params.get('history_size') ?? '500')
+        const audioProcessor = new AudioProcessor(audioContext, sourceNode, historySize)
+
+        // Add stream ended handler
+        stream.addEventListener('ended', () => {
+            console.warn('Audio stream ended, attempting to reconnect...')
+            setupAudio() // Attempt to reconnect
+        })
+
+        audioProcessor.start()
+        return audioProcessor
+    } catch (e) {
+        console.error('Audio setup failed:', e)
+        throw e
+    }
+}
 
 const main = async () => {
     try {

@@ -136,6 +136,7 @@ async function fetchWithCache(request) {
  */
 self.addEventListener('fetch', (e) => {
     if (!e.request.url.includes('http')) return
+    if(e.request.url.includes('localhost')) return
     if (e.request.method !== 'GET') return
     if(e.request.url.includes('service-worker.js')) return
     if(e.request.url.includes('esbuild')) return

@@ -1,3 +1,8 @@
+const inputAllZeros = (fftData) => {
+    return fftData.every((value) => value === 0)
+}
+
+
 export class WorkerRPC {
     constructor(workerName, historySize, timeout = 50) {
         this.workerName = workerName
@@ -6,22 +11,23 @@ export class WorkerRPC {
         this.currentMessageId = 0
         this.resolveMessage = null
         this.lastMessage = this.createDefaultMessage()
+        this.responseZeroesInARow = 0
     }
 
     createDefaultMessage = () => ({
         type: 'computedValue',
         workerName: this.workerName,
-        value: 0,
+        value: 0.5,
         stats: {
-            current: 0,
-            mean: 0,
-            median: 0,
+            current: 0.5,
+            mean: 0.5,
+            median: 0.5,
             min: 0,
-            max: 0,
-            variance: 0,
-            standardDeviation: 0,
-            zScore: 0,
-            normalized: 0,
+            max: 1,
+            variance: 0.25,
+            standardDeviation: 0.5,
+            zScore: 0.1,
+            normalized: 0.5,
         },
     })
 
@@ -40,23 +46,41 @@ export class WorkerRPC {
     validateMessage = (message) => ({
         ...message,
         workerName: this.workerName,
-        value: isFinite(message.value) ? message.value : 0,
+        value: isFinite(message.value) ? message.value : 0.5,
         stats: this.validateStats(message.stats),
     })
 
     handleMessage = (event) => {
-        if (event.data.type === 'computedValue') {
-            const validatedMessage = this.validateMessage(event.data)
-            this.lastMessage = validatedMessage
+        if(event.data.type === 'debug') {
+            console.log(`${this.workerName} debug:`, event.data.value)
+            return
+        }
+        if(event.data.type !== 'computedValue') return
+        const validatedMessage = this.validateMessage(event.data)
+        this.responseZeroesInARow++
+        if(validatedMessage.value !== 0) this.responseZeroesInARow = 0
+        this.lastMessage = validatedMessage
 
-            if (this.resolveMessage && event.data.id === this.currentMessageId) {
-                this.resolveMessage(validatedMessage)
-                this.resolveMessage = null
-            }
+        if (this.resolveMessage && event.data.id === this.currentMessageId) {
+            this.resolveMessage(validatedMessage)
+            this.resolveMessage = null
+        }
+        if(this.responseZeroesInARow >50) {
+            // console.error(`${this.workerName} returned a value of ${validatedMessage.value} ${this.responseZeroesInARow} times in a row`)
         }
     }
 
     processData = async (fftData) => {
+        if (inputAllZeros(fftData)) {
+            this.inputZeroesInARow++
+            if(this.inputZeroesInARow > 100) {
+                console.error(`${this.workerName} input is all zeros`)
+                // pause forever
+                return new Promise(console.log);
+            }
+        } else {
+            this.inputZeroesInARow = 0
+        }
         if (this.resolveMessage) {
             console.log(`${this.workerName} abandoning message after ${performance.now() - this.currentMessageId}ms`)
             this.resolveMessage()
@@ -99,7 +123,7 @@ export class WorkerRPC {
         const workerUrl = new URL(`/src/audio/analyzers/${this.workerName}.js`, import.meta.url)
         const response = await fetch(workerUrl)
         if (!response.ok) {
-            throw new Error(`Failed to fetch ${this.workerName} worker: ${response.statusText}`)
+            console.error(`Failed to fetch ${this.workerName} worker: ${response.statusText}`)
         }
 
         const code = await response.text()
@@ -108,6 +132,9 @@ export class WorkerRPC {
 
         this.worker.onmessage = this.handleMessage
         this.worker.onerror = this.handleError
+
+        this.responseZeroesInARow = 0
+        this.inputZeroesInARow = 0
 
         this.worker.postMessage({
             type: 'config',
