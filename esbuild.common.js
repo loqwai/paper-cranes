@@ -7,9 +7,9 @@ const generateShadersJson = async (shaderFiles) => {
     const shaders = shaderFiles.sort().map(file => {
         const relativePath = relative('shaders', file)
         return {
-            path: relativePath,
             name: relativePath.replace(/\\/g, '/').replace('.frag', ''),
-            url: `/?shader=${relativePath.replace(/\\/g, '/').replace('.frag', '')}`
+            fileUrl: `shaders/${relativePath}`,
+            visualizerUrl: `/?shader=${relativePath.replace(/\\/g, '/').replace('.frag', '')}`
         }
     })
 
