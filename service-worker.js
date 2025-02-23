@@ -8,7 +8,6 @@ let inflightRequestCount = 0
 self.addEventListener("install", async (event) => {
     console.log("Service Worker: Installing...")
     await self.skipWaiting()
-    console.log("Service Worker: Installed")
     inflightRequestCount = 0
 })
 
