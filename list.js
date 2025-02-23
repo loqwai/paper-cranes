@@ -44,11 +44,34 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl }) => {
       <a href=${visualizerUrl}>${name}</a>
       <ul>
         ${presets.map((preset, index) => html`
-          <li><a href=${preset}>Preset ${index + 1}</a></li>
+          <li>
+            <a href=${preset}>Preset ${index + 1}</a>
+            <${PresetParams} preset=${preset} />
+          </li>
         `)}
       </ul>
     </li>
   `
+}
+
+const PresetParams = ({ preset }) => {
+  const params = new URL(preset).searchParams
+  const presetProps = Array.from(params.entries()).filter(filterPresetProps)
+  // a horizontal list of the other params. Like a chip.
+  return html`
+    <div class="chip-list">
+      ${presetProps.map(([key, value]) => html`
+        <div class="chip">${key}: ${value}</div>
+      `)}
+    </div>
+  `
+}
+
+const filterPresetProps = ([key]) => {
+  if (key === 'shader') return false
+  if (key.endsWith('.min')) return false
+  if (key.endsWith('.max')) return false
+  return true
 }
 
 /**
@@ -91,6 +114,18 @@ const getPresetUrl = (visualizerUrl, line) => {
   }
 
   return resultUrl.toString()
+}
+
+/**
+ * Formats query parameters for display
+ * @param {string} url - URL to extract and format parameters from
+ * @returns {string} Formatted parameter string
+ */
+const formatQueryParams = (url) => {
+  const params = new URL(url).searchParams
+  return Array.from(params.entries())
+    .map(([key, value]) => `${key}: ${value}`)
+    .join(', ')
 }
 
 // Load shaders and render the list
