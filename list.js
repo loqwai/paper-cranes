@@ -1,47 +1,71 @@
-import { render} from 'preact'
+import { render } from 'preact'
 import { useState, useEffect } from 'preact/hooks'
 import { html } from 'htm/preact'
 
-const shaders = await fetch('/shaders.json').then(res => res.json())
-const List = () => {
-    console.log(shaders)
-  return html`<ul>${shaders.map(shader => html`<${MusicVisual} ...${shader} />`)}</ul>`
-}
-const MusicVisual = ({name, fileUrl, visualizerUrl}) => {
-  const [presets, setPresets] = useState([])
-  const [shaderCode, setShaderCode] = useState()
+/**
+ * @typedef {Object} Shader
+ * @property {string} name - Display name of the shader
+ * @property {string} fileUrl - URL to the shader source file
+ * @property {string} visualizerUrl - URL to view the shader in the visualizer
+ */
 
-  useEffect(async () => {
+/**
+ * Fetches shader code and extracts preset URLs
+ * @param {Object} props
+ * @param {string} props.name - Display name of the shader
+ * @param {string} props.fileUrl - URL to the shader source file
+ * @param {string} props.visualizerUrl - URL to view the shader in the visualizer
+ */
+const MusicVisual = ({ name, fileUrl, visualizerUrl }) => {
+  const [presets, setPresets] = useState([])
+  const [shaderCode, setShaderCode] = useState('')
+
+  // Fetch shader source code
+  useEffect(() => {
     if (!fileUrl) return
-    const res = await fetch(fileUrl)
-    const text = await res.text()
-    setShaderCode(text)
+
+    const fetchShaderCode = async () => {
+      const res = await fetch(fileUrl)
+      const text = await res.text()
+      setShaderCode(text)
+    }
+
+    fetchShaderCode()
   }, [fileUrl])
 
-  useEffect(async () => {
+  // Extract presets when shader code is loaded
+  useEffect(() => {
     if (!shaderCode) return
-    const presets = extractPresets(visualizerUrl, shaderCode)
-    setPresets(presets)
-  }, [shaderCode])
+    setPresets(extractPresets(visualizerUrl, shaderCode))
+  }, [shaderCode, visualizerUrl])
 
-  return html`<li>
-    <a href=${visualizerUrl}>${name}</a>
-    <ul>
-      ${presets.map((preset, index) => html`<li><a href=${preset}>${index}</a></li>`)}
-    </ul>
-  </li>`
+  return html`
+    <li>
+      <a href=${visualizerUrl}>${name}</a>
+      <ul>
+        ${presets.map((preset, index) => html`
+          <li><a href=${preset}>Preset ${index + 1}</a></li>
+        `)}
+      </ul>
+    </li>
+  `
 }
+
+/**
+ * Extracts preset URLs from shader code
+ * @param {string} visualizerUrl - Base visualizer URL
+ * @param {string} shaderCode - Raw shader source code
+ * @returns {string[]} Array of preset URLs
+ */
 const extractPresets = (visualizerUrl, shaderCode) => {
-  // for each line in the shader code, if that line contains a url
-  const presets = []
-  const lines = shaderCode.split('\n')
-  for (const line of lines) {
-    if(!(line.includes('https://') || line.includes('http://'))) continue
-    const presetUrl = getPresetUrl(visualizerUrl, line)
-    presets.push(presetUrl)
-  }
-  return presets
+  if (!shaderCode) return []
+
+  return shaderCode
+    .split('\n')
+    .filter(line => line.includes('http://') || line.includes('https://'))
+    .map(line => getPresetUrl(visualizerUrl, line))
 }
+
 /**
  * Creates a preset URL by combining the visualizer base URL with preset parameters
  * @param {string} visualizerUrl - Base visualizer URL
@@ -49,27 +73,33 @@ const extractPresets = (visualizerUrl, shaderCode) => {
  * @returns {string} Combined URL with merged parameters
  */
 const getPresetUrl = (visualizerUrl, line) => {
-  // Extract the preset URL from the line
   const presetUrlMatch = line.match(/https?:\/\/[^\s]+/)
   if (!presetUrlMatch) return visualizerUrl
 
   const presetUrl = new URL(presetUrlMatch[0])
   const baseUrl = new URL(visualizerUrl, window.location.href)
-
-  // Create new URL with current window's origin and visualizer's pathname
   const resultUrl = new URL(baseUrl.pathname, window.location.origin)
 
-  // First add preset parameters
-  for (const [key, value] of presetUrl.searchParams.entries()) {
+  // Add preset parameters first
+  for (const [key, value] of presetUrl.searchParams) {
     resultUrl.searchParams.set(key, value)
   }
 
-  // Then add/override with visualizer parameters
-  for (const [key, value] of baseUrl.searchParams.entries()) {
+  // Override with visualizer parameters
+  for (const [key, value] of baseUrl.searchParams) {
     resultUrl.searchParams.set(key, value)
   }
 
   return resultUrl.toString()
 }
+
+// Load shaders and render the list
+const shaders = await fetch('/shaders.json').then(res => res.json())
+
+const List = () => html`
+  <ul>
+    ${shaders.map(shader => html`<${MusicVisual} ...${shader} />`)}
+  </ul>
+`
 
 render(html`<${List} />`, document.getElementsByTagName('main')[0])
