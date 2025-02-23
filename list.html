@@ -8,12 +8,26 @@
       display: flex;
       flex-wrap: wrap;
       gap: 0.5rem;
+      font-size: 0.8rem;
+    }
+
+    /* Color function class - takes --n as input */
+    .pastel-color {
+      --hue: calc(137.508deg * var(--n, 0));
+      --sat: 85%;
+      --light: 90%;
+      background-color: hsl(var(--hue), var(--sat), var(--light));
     }
 
     .chip {
-      background-color: #f0f0f0;
       padding: 0.25rem 0.5rem;
       border-radius: 0.25rem;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      transition: filter 0.2s ease;
+    }
+
+    .chip:hover {
+      filter: brightness(0.95);
     }
   </style>
 </head>

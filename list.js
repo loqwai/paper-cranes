@@ -57,11 +57,16 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl }) => {
 const PresetParams = ({ preset }) => {
   const params = new URL(preset).searchParams
   const presetProps = Array.from(params.entries()).filter(filterPresetProps)
-  // a horizontal list of the other params. Like a chip.
+
   return html`
     <div class="chip-list">
-      ${presetProps.map(([key, value]) => html`
-        <div class="chip">${key}: ${value}</div>
+      ${presetProps.map(([key, value], index) => html`
+        <div
+          class="chip pastel-color"
+          style="--n: ${index / presetProps.length}"
+        >
+          ${key}: ${value}
+        </div>
       `)}
     </div>
   `
@@ -105,6 +110,7 @@ const getPresetUrl = (visualizerUrl, line) => {
 
   // Add preset parameters first
   for (const [key, value] of presetUrl.searchParams) {
+    if (key.endsWith('.min') || key.endsWith('.max')) continue
     resultUrl.searchParams.set(key, value)
   }
 
@@ -115,19 +121,6 @@ const getPresetUrl = (visualizerUrl, line) => {
 
   return resultUrl.toString()
 }
-
-/**
- * Formats query parameters for display
- * @param {string} url - URL to extract and format parameters from
- * @returns {string} Formatted parameter string
- */
-const formatQueryParams = (url) => {
-  const params = new URL(url).searchParams
-  return Array.from(params.entries())
-    .map(([key, value]) => `${key}: ${value}`)
-    .join(', ')
-}
-
 // Load shaders and render the list
 const shaders = await fetch('/shaders.json').then(res => res.json())
 
