@@ -110,7 +110,6 @@ const getPresetUrl = (visualizerUrl, line) => {
 
   // Add preset parameters first
   for (const [key, value] of presetUrl.searchParams) {
-    if (key.endsWith('.min') || key.endsWith('.max')) continue
     resultUrl.searchParams.set(key, value)
   }
 
