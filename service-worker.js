@@ -42,6 +42,7 @@ async function fetchWithRetry(request) {
         } catch (error) {
             if (interval > 15000) {
                 console.error(`retry's about to lie`)
+                inflightRequestCount = Math.max(0, inflightRequestCount - 1)
                 reject(new Error("Failed to fetch")) // but keep going.
             }
             console.warn(`Network error for url ${request.url}, retrying in ${interval}ms...`, error)
@@ -108,6 +109,8 @@ self.addEventListener("fetch", (e) => {
     if (e.request.method !== "GET") return
     if (e.request.url.includes("service-worker.js")) return
     if (e.request.url.includes("esbuild")) return
-
+    // if the url is not in our domain, continue
+    if (!e.request.url.includes(location.origin)) return
+    console.log(`fetching ${e.request.url} as it is ours`)
     e.respondWith(fetchWithCache(e.request))
 })
