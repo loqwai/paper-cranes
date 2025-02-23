@@ -2,25 +2,12 @@ console.log(`Service worker ${CACHE_NAME} starting`)
 const timeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 /**
- * Install event - cache critical resources during install
+ * Install event - The event returned by the install event is used to cache critical resources during install
  * @param {InstallEvent} event
  */
 self.addEventListener("install", async (event) => {
     console.log("Service Worker: Installing...")
-    event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => {
-            // Add critical resources to cache during install
-            return cache.addAll([
-                "/",
-                "/index.html",
-                "/index.js",
-                "/shaders/beat-trip.frag",
-                "/shaders/default.frag",
-                "/images/placeholder-image.png"
-            ])
-        })
-    )
-    return self.skipWaiting()
+    event.waitUntil(self.skipWaiting())
 })
 
 // Activate event - claim clients immediately and clean up old caches

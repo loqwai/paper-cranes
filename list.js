@@ -41,17 +41,30 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl }) => {
 
   return html`
     <li>
-      <a href=${visualizerUrl}>${name}</a>
+      <a href="${visualizerUrl}">${name}</a>
+      <a href="${getEditUrl(visualizerUrl)}">Edit</a>
       <ul>
         ${presets.map((preset, index) => html`
           <li>
-            <a href=${preset}>Preset ${index + 1}</a>
+            <a href="${preset}">Preset ${index + 1}</a>
+            <a href="${getEditUrl(preset)}">Edit</a>
             <${PresetParams} preset=${preset} />
           </li>
         `)}
       </ul>
     </li>
   `
+}
+
+
+const getEditUrl = (visualizationUrl) => {
+  try {
+    const url = new URL(visualizationUrl)
+    url.pathname = '/edit.html'
+    return url.toString()
+  } catch (e) {
+    return `edit.html${visualizationUrl}`
+  }
 }
 
 const PresetParams = ({ preset }) => {
