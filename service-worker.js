@@ -30,11 +30,6 @@ async function fetchWithRetry(request) {
     let interval = 150 // Start with 250ms delay
     return new Promise(async (resolve, reject) => {
         while (true) {
-        if (interval > 15000)  {
-            inflightRequestCount = Math.max(0, inflightRequestCount - 1)
-            console.error(`retry's about to lie`)
-            reject(new Error("Failed to fetch")) // but keep going.
-        }
         try {
             const response = await fetch(request)
             if (response.ok) return resolve(response)
@@ -45,13 +40,17 @@ async function fetchWithRetry(request) {
                 `Fetch failed for url ${request.url} (status: ${response.status}), retrying in ${interval}ms...`
             )
         } catch (error) {
+            if (interval > 15000) {
+                console.error(`retry's about to lie`)
+                reject(new Error("Failed to fetch")) // but keep going.
+            }
             console.warn(`Network error for url ${request.url}, retrying in ${interval}ms...`, error)
         }
 
         await timeout(interval)
-        const jitter = Math.random() * 100
-            interval = Math.min(interval * (1.5 + jitter), 10000 + jitter * 10)
-    }
+            const jitter = Math.random() * 100
+            interval *= (1.5 + jitter)
+        }
     })
 }
 
