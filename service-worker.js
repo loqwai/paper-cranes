@@ -62,13 +62,6 @@ async function fetchWithCache(request) {
     const cache = await caches.open(CACHE_NAME)
     const cachedResponse = await cache.match(request)
 
-    // Add logging to debug cache status
-    console.log('Cache check:', {
-        url: request.url,
-        hasCachedResponse: !!cachedResponse,
-        cacheVersion: CACHE_NAME
-    })
-
     // Always start a network request in the background
     inflightRequestCount++
 
