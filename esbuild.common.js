@@ -47,11 +47,10 @@ export async function findFiles(dir, extensions = ['.js', '.css', '.html']) {
 }
 
 export function createBuildOptions(isDev = false) {
-
     const sharedOptions = {
         format: 'esm',
         minify: !isDev,
-        sourcemap: true ,
+        sourcemap: true,
         define: {
             CACHE_NAME: '"2025-02-23:02:54"',
             'process.env.NODE_ENV': isDev ? '"development"' : '"production"',
@@ -69,6 +68,10 @@ export function createBuildOptions(isDev = false) {
             '.jpeg': 'copy',
             '.jpg': 'copy',
             '.png': 'copy',
+        },
+        alias: {
+            'monaco-editor/min/vs/editor/editor.main.css': 'monaco-editor/min/vs/editor/editor.main.css',
+            'monaco-editor/min/vs/base/browser/ui/codicons/codicon/codicon.ttf': 'monaco-editor/min/vs/base/browser/ui/codicons/codicon/codicon.ttf'
         }
     }
 
@@ -91,6 +94,7 @@ export function createBuildOptions(isDev = false) {
             'list.js',
             'service-worker.js',
             ...jsFiles,
+            'node_modules/monaco-editor/min/vs/editor/editor.main.css'
         ]
 
         const copyEntrypoints = [
