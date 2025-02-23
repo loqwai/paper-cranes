@@ -9,6 +9,7 @@ self.addEventListener("install", async (event) => {
     console.log("Service Worker: Installing...")
     await self.skipWaiting()
     console.log("Service Worker: Installed")
+    inflightRequestCount = 0
 })
 
 // Activate event - claim clients immediately and clean up old caches
@@ -62,14 +63,8 @@ async function fetchWithCache(request) {
     // Always start a network request in the background
     inflightRequestCount++
 
-    const timeoutId = setTimeout(() => {
-        console.log(`It's been a while since ${request.url} started. I won't wait for it to complete.`)
-        inflightRequestCount = Math.max(0, inflightRequestCount - 1)
-    }, 10000)
-
     const networkPromise = fetchWithRetry(request).then(async (networkResponse) => {
         inflightRequestCount--
-        clearTimeout(timeoutId)
 
         const cachedResponse = await cache.match(request)
         if (cachedResponse) {
@@ -82,7 +77,7 @@ async function fetchWithCache(request) {
             await cache.put(request, networkResponse.clone()) // Only put once
             console.log(`waiting for ${inflightRequestCount} requests to complete`)
             contentChanged ||= oldData !== newData
-            await timeout(10)
+            await timeout(50)
 
             if (inflightRequestCount <= 0 && contentChanged) {
                 // wait a bit to see if more requests come in
