@@ -4,30 +4,139 @@
 <head>
   <title>Paper Cranes - Secret List</title>
   <style>
+    body {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 1rem;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0a0a0f;
+      color: #e5e7eb;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    /* Parent shader item */
+    li {
+      margin: 1.5rem 0;
+      background: rgba(10, 10, 15, 0.95);
+      /* Slightly darker than body for layering */
+      backdrop-filter: blur(4px);
+    }
+
+    /* Make the parent link group sticky */
+    li>.link-group {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      font-size: 1.25rem;
+      background: rgba(10, 10, 15, 0.95);
+      /* Match parent background */
+      color: #00ffff;
+      border: 1px solid #00ffff;
+      backdrop-filter: blur(4px);
+    }
+
+    /* Add some spacing between sticky headers */
+    li+li {
+      margin-top: 3rem;
+      /* Increased spacing between shader sections */
+    }
+
+    /* Ensure preset list starts below sticky header */
+    li>ul {
+      margin-left: 1rem;
+      padding-left: 1rem;
+      border-left: 2px solid #ff00ff;
+      margin-top: 0.75rem;
+      position: relative;
+      /* For proper z-index layering */
+      z-index: 1;
+    }
+
+    /* Preset items */
+    li>ul>li {
+      margin: 1rem 0;
+      padding: 0.5rem;
+      background: rgba(20, 20, 35, 0.95);
+      border: 1px solid #00ffff;
+      backdrop-filter: blur(4px);
+    }
+
+    .link-group {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.75rem;
+      margin: -0.5rem;
+      transition: all 0.2s ease;
+    }
+
+    /* Preset link group */
+    li>ul .link-group {
+      font-size: 1rem;
+      background: rgba(0, 255, 255, 0.1);
+      border: 1px solid #00ffff;
+      color: #00ffff;
+    }
+
+    .link-group:hover {
+      filter: hue-rotate(90deg);
+    }
+
+    .main-link {
+      flex: 1;
+      padding: 0.5rem 0;
+      text-decoration: none;
+      color: inherit;
+      font-weight: 600;
+    }
+
+    .edit-link {
+      padding: 0.5rem 1rem;
+      background: rgba(255, 0, 255, 0.15);
+      color: #ff00ff;
+      text-decoration: none;
+      white-space: nowrap;
+      font-weight: 500;
+      border: 1px solid #ff00ff;
+    }
+
+    li>ul .edit-link {
+      background-color: transparent;
+      color: #ff00ff;
+      border: 1px solid #ff00ff;
+    }
+
+    .edit-link:hover {
+      filter: hue-rotate(-90deg);
+    }
+
     .chip-list {
+      margin-top: 0.75rem;
       display: flex;
       flex-wrap: wrap;
       gap: 0.5rem;
-      font-size: 0.8rem;
     }
 
-    /* Color function class - takes --n as input */
     .pastel-color {
       --hue: calc(137.508deg * var(--n, 0));
-      --sat: 85%;
-      --light: 90%;
+      --sat: 70%;
+      --light: 30%;
       background-color: hsl(var(--hue), var(--sat), var(--light));
+      color: rgba(255, 255, 255, 0.9);
     }
 
     .chip {
       padding: 0.25rem 0.5rem;
-      border-radius: 0.25rem;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-      transition: filter 0.2s ease;
+      transition: all 0.2s ease;
+      border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
     .chip:hover {
-      filter: brightness(0.95);
+      filter: brightness(1.2);
     }
   </style>
 </head>
