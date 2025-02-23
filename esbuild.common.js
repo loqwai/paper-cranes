@@ -49,7 +49,7 @@ export function createBuildOptions(isDev = false) {
         minify: !isDev,
         sourcemap: true ,
         define: {
-            CACHE_NAME: '"2025-02-22:21:00"',
+            CACHE_NAME: '"2025-02-22:22:00"',
             'process.env.NODE_ENV': isDev ? '"development"' : '"production"',
             'process.env.LIVE_RELOAD': isDev ? 'true' : 'false',
         },

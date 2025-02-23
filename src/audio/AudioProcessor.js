@@ -109,7 +109,7 @@ export class AudioProcessor {
             this.sourceNode = this.audioContext.createMediaStreamSource(newStream);
             this.sourceNode.connect(this.fftAnalyzer);
 
-        }, 2000)
+        }, 5000)
     }
 
     updateFftData = () => {
