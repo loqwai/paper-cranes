@@ -3,16 +3,20 @@ import { readdir, stat, mkdir, rm } from 'fs/promises'
 import { writeFile } from 'fs/promises'
 import { relative } from 'path'
 
-
- const shaderHtmlFromFiles = async (shaderFiles) => {
-    let htmlContent = '<!DOCTYPE html>\n<html>\n<head>\n<title>Shaders</title>\n</head>\n<body>\n<ul>\n'
-    shaderFiles.sort().forEach((file) => {
+const generateShadersJson = async (shaderFiles) => {
+    const shaders = shaderFiles.sort().map(file => {
         const relativePath = relative('shaders', file)
-        const queryParam = relativePath.replace(/\\/g, '/').replace('.frag', '')
-        htmlContent += `<li><a href="/?shader=${queryParam}">${queryParam}</a></li>\n`
+        return {
+            path: relativePath,
+            name: relativePath.replace(/\\/g, '/').replace('.frag', ''),
+            url: `/?shader=${relativePath.replace(/\\/g, '/').replace('.frag', '')}`
+        }
     })
-    htmlContent += '</ul>\n</body>\n</html>'
-    await writeFile(join('dist', 'shaders.html'), htmlContent)
+
+    await writeFile(
+        join('dist', 'shaders.json'),
+        JSON.stringify(shaders, null, 2)
+    )
 }
 
 export async function ensureDistDirectory() {
@@ -78,12 +82,13 @@ export function createBuildOptions(isDev = false) {
         const shaderFiles = await findFiles(shaderDir, ['.frag'])
         const imgFiles = await findFiles(imgDir, ['.png', '.jpg', '.jpeg'])
 
-        await shaderHtmlFromFiles(shaderFiles)
+        await generateShadersJson(shaderFiles)
 
         const bundleEntrypoints = [
             'index.js',
             'analyze.js',
             'edit.js',
+            'list.js',
             'service-worker.js',
             ...jsFiles,
         ]
@@ -95,6 +100,7 @@ export function createBuildOptions(isDev = false) {
             'edit.html',
             'index.css',
             'index.html',
+            'list.html',
             'BarGraph.css',
             'favicon.ico',
             ...otherFiles,
