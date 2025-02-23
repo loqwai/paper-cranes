@@ -7,13 +7,15 @@ const timeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
  */
 self.addEventListener("install", async (event) => {
     console.log("Service Worker: Installing...")
-    event.waitUntil(self.skipWaiting())
+    await self.skipWaiting()
+    console.log("Service Worker: Installed")
 })
 
 // Activate event - claim clients immediately and clean up old caches
-self.addEventListener("activate", (event) => {
+self.addEventListener("activate", async (event) => {
     console.log("Service Worker: Activated")
-    event.waitUntil(self.clients.claim())
+    await self.clients.claim()
+    console.log("Service Worker: Claimed clients")
 })
 
 /**
