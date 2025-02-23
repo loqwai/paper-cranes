@@ -153,7 +153,7 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
 
         gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, frame.framebuffer)
 
-        const uniforms = {
+        let uniforms = {
             iTime: time,
             iFrame: frameNumber,
             time,
@@ -170,13 +170,15 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
             iChannel3: prevFrame.attachments[0],
             ...features,
         }
-
-        const nonNullOrUndefinedOrNanUniforms = Object.fromEntries(
+        // filter out null, undefined, and NaN values
+        uniforms = Object.fromEntries(
             Object.entries(uniforms).filter(([, value]) => value !== null && value !== undefined && !Number.isNaN(value))
         )
+        // resolve uniform references;
+        uniforms = resolveReferences(uniforms)
 
         setBuffersAndAttributes(gl, programInfo, bufferInfo)
-        setUniforms(programInfo, nonNullOrUndefinedOrNanUniforms)
+        setUniforms(programInfo, uniforms)
         drawBufferInfo(gl, bufferInfo)
 
         gl.bindFramebuffer(gl.READ_FRAMEBUFFER, frame.framebuffer)
@@ -187,4 +189,18 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
     }
 
     return render
+}
+
+const resolveReferences = (uniforms) => {
+    uniforms = { ...uniforms }
+    // resolve references to other uniforms
+    // if the value of a uniform is a string, find the value of that uniform and replace the string with the value
+    for (const [key, value] of Object.entries(uniforms)) {
+        if(typeof value !== 'string') continue
+
+        const resolvedValue = uniforms[value]
+        if(resolvedValue === undefined) continue
+        uniforms[key] = resolvedValue
+    }
+    return uniforms
 }
