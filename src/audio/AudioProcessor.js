@@ -48,7 +48,7 @@ export class AudioProcessor {
 
     createAnalyzer = () => {
         const analyzer = this.audioContext.createAnalyser()
-        analyzer.smoothingTimeConstant = 0.99
+        analyzer.smoothingTimeConstant = 0.8
         analyzer.minDecibels = -100
         analyzer.maxDecibels = -30
         analyzer.fftSize = this.fftSize
@@ -104,6 +104,12 @@ export class AudioProcessor {
 
         this.updateCurrentFeatures()
         this.updateFftData()
+        setInterval(async () => {
+            const newStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            this.sourceNode = this.audioContext.createMediaStreamSource(newStream);
+            this.sourceNode.connect(this.fftAnalyzer);
+
+        }, 2000)
     }
 
     updateFftData = () => {
