@@ -43,12 +43,13 @@ export async function findFiles(dir, extensions = ['.js', '.css', '.html']) {
 }
 
 export function createBuildOptions(isDev = false) {
+
     const sharedOptions = {
         format: 'esm',
         minify: !isDev,
-        sourcemap: true,
+        sourcemap: true ,
         define: {
-            CACHE_NAME: '"cranes-cache-v15"',
+            CACHE_NAME: '"2025-02-22:18:00"',
             'process.env.NODE_ENV': isDev ? '"development"' : '"production"',
             'process.env.LIVE_RELOAD': isDev ? 'true' : 'false',
         },

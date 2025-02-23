@@ -3,24 +3,31 @@ import { makeVisualizer } from './src/Visualizer.js'
 import './index.css'
 
 // Add service worker registration
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
     console.log('Registering service worker...')
+    if(!navigator.serviceWorker) {
+        console.log('Service worker not supported')
+        return
+    }
     // Add cache version to URL to force update when version changes
-    navigator.serviceWorker.register(`/service-worker.js?version=${CACHE_NAME}`)
-        .then((registration) => {
-            registration.addEventListener('statechange', (e) =>
-                console.log('ServiceWorker state changed:', e.target.state))
-        })
+    const registration = await navigator.serviceWorker.register(`/service-worker.js?version=${CACHE_NAME}`)
+    registration.addEventListener('statechange', (e) =>
+        console.log('ServiceWorker state changed:', e.target.state))
+    registration.addEventListener('message', processServiceWorkerMessage)
 })
 
-// Add message listener for reload
-navigator.serviceWorker.addEventListener('message', event => {
+/**
+ * Process messages from the service worker
+ * @param {MessageEvent} event
+ */
+const processServiceWorkerMessage = (event) => {
     if (event.data === 'reload') {
         console.log('Received reload message from service worker')
         window.stop()
-        window.location.reload()
+        return window.location.reload()
     }
-})
+    console.log('Received strange message from service worker', event.data)
+}
 
 const events = ['touchstart', 'touchmove', 'touchstop', 'keydown', 'mousedown', 'resize']
 let ranMain = false

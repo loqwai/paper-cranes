@@ -1,6 +1,24 @@
 console.log(`Service worker ${CACHE_NAME} starting`)
-self.addEventListener('install', event => {
+
+async function deleteAllServiceWorkerCaches() {
+    const cacheNames = await caches.keys()
+    await Promise.all(cacheNames.map(async cacheName => {
+        console.log('looking for service worker key in the', cacheName)
+        // does this cache have a key whose name includes 'service-worker'
+        const cache = await caches.open(cacheName)
+        const keys = await cache.keys()
+        console.log('Keys', keys)
+        const hasServiceWorkerKey = keys.some(key => key.url.includes('service-worker'))
+        if(!hasServiceWorkerKey) return Promise.resolve()
+
+        console.log('Deleting cache', cacheName)
+        return caches.delete(cacheName)
+    }))
+}
+
+self.addEventListener('install', async event => {
     console.log('Service Worker: Installing...')
+    deleteAllServiceWorkerCaches()
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
             // Add critical resources to cache during install
@@ -8,6 +26,9 @@ self.addEventListener('install', event => {
                 '/',
                 '/index.html',
                 '/index.js',
+                '/shaders/beat-trip.frag',
+                '/shaders/default.frag',
+                '/images/placeholder-image.png',
             ])
         })
     )
@@ -116,6 +137,8 @@ async function fetchWithCache(request) {
 self.addEventListener('fetch', (e) => {
     if (!e.request.url.includes('http')) return
     if (e.request.method !== 'GET') return
+    if(e.request.url.includes('service-worker.js')) return
+    if(e.request.url.includes('esbuild')) return
 
     e.respondWith(fetchAndMaybeCache(e.request))
 })
