@@ -61,7 +61,6 @@ export function createBuildOptions(isDev = false) {
             '.png': 'copy',
             '.svg': 'file',
             '.frag': 'copy',
-            '.vert': 'copy',
             '.ico': 'copy',
             '.jpeg': 'copy',
             '.jpg': 'copy',
@@ -76,7 +75,7 @@ export function createBuildOptions(isDev = false) {
 
         const jsFiles = await findFiles(baseDir, ['.js'])
         const otherFiles = await findFiles(baseDir, ['.css', '.html', '.ttf', '.png', '.svg'])
-        const shaderFiles = await findFiles(shaderDir, ['.frag', '.vert'])
+        const shaderFiles = await findFiles(shaderDir, ['.frag'])
         const imgFiles = await findFiles(imgDir, ['.png', '.jpg', '.jpeg'])
 
         await shaderHtmlFromFiles(shaderFiles)

@@ -40,7 +40,6 @@
       ],
       "extensions": [
         ".frag",
-        ".vert",
         ".glsl"
       ]
     }

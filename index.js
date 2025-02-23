@@ -144,10 +144,7 @@ const main = async () => {
 
         window.c = cranes;
         startTime = performance.now();
-        const [fragmentShader, vertexShader] = await Promise.all([
-            getFragmentShader(),
-            getVertexShader()
-        ]);
+        const fragmentShader = await getFragmentShader();
         const audio = await setupAudio();
 
         window.shader = fragmentShader;
@@ -161,14 +158,14 @@ const main = async () => {
         };
 
         const render = await makeVisualizer(visualizerConfig);
-        requestAnimationFrame(() => animate({ render, audio, fragmentShader, vertexShader }));
+        requestAnimationFrame(() => animate({ render, audio, fragmentShader }));
     } catch (e) {
         console.error('Main initialization error:', e);
     }
 };
 
-const animate = ({ render, audio, fragmentShader, vertexShader }) => {
-    requestAnimationFrame(() => animate({ render, audio, fragmentShader, vertexShader }));
+const animate = ({ render, audio, fragmentShader }) => {
+    requestAnimationFrame(() => animate({ render, audio, fragmentShader }));
 
     const features = {
         ...audio.getFeatures(),
@@ -185,7 +182,6 @@ const animate = ({ render, audio, fragmentShader, vertexShader }) => {
             time: (performance.now() - startTime) / 1000,
             features,
             fragmentShader: window.cranes?.shader ?? fragmentShader,
-            vertexShader
         });
     } catch (e) {
         console.error('Render error:', e);
@@ -264,23 +260,6 @@ const getFragmentShader = async () => {
         fragmentShader = await getRelativeOrAbsolute('default.frag')
     }
     return fragmentShader
-}
-
-const getVertexShader = async () => {
-    const shaderUrl = params.get('vertex_shader')
-    let vertexShader
-    if (shaderUrl) {
-        vertexShader = await getRelativeOrAbsolute(`${shaderUrl}.vert`)
-    }
-
-    if (!vertexShader) {
-        vertexShader = localStorage.getItem('cranes-manual-code-vertex')
-    }
-
-    if (!vertexShader) {
-        vertexShader = await getRelativeOrAbsolute('default.vert')
-    }
-    return vertexShader
 }
 
 if(process.env.LIVE_RELOAD) {
