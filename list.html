@@ -31,12 +31,27 @@
       position: sticky;
       top: 0;
       z-index: 10;
-      font-size: 1.25rem;
+      font-size: 1.5rem;
+      /* Larger font */
       background: rgba(10, 10, 15, 0.95);
-      /* Match parent background */
-      color: #00ffff;
       border: 1px solid #00ffff;
       backdrop-filter: blur(4px);
+      text-align: center;
+      justify-content: center;
+      /* Center content */
+      padding: 1.25rem 0;
+      /* More vertical padding */
+    }
+
+    /* Center the main link text */
+    li>.link-group .main-link {
+      padding: 0;
+    }
+
+    /* Position edit link consistently */
+    li>.link-group .edit-link {
+      position: absolute;
+      right: 1rem;
     }
 
     /* Add some spacing between sticky headers */
@@ -61,8 +76,7 @@
       margin: 1rem 0;
       padding: 0.5rem;
       background: rgba(20, 20, 35, 0.95);
-      border: 1px solid #00ffff;
-      backdrop-filter: blur(4px);
+      border-left: 2px solid #00ffff;
     }
 
     .link-group {
@@ -76,14 +90,27 @@
 
     /* Preset link group */
     li>ul .link-group {
-      font-size: 1rem;
-      background: rgba(0, 255, 255, 0.1);
-      border: 1px solid #00ffff;
-      color: #00ffff;
+      font-size: 1.2rem;
+      /* Larger text */
+      background: transparent;
+      color: white;
+      padding: 1rem 0;
+      /* More vertical padding */
+      text-align: center;
+      justify-content: center;
+      /* Center both text and items */
     }
 
-    .link-group:hover {
-      filter: hue-rotate(90deg);
+    /* Center the main link text */
+    li>ul .main-link {
+      text-align: center;
+      padding: 0;
+      /* Remove default padding since parent has padding */
+    }
+
+    li>ul .link-group:hover {
+      color: #00ffff;
+      filter: none;
     }
 
     .main-link {
@@ -115,10 +142,16 @@
     }
 
     .chip-list {
+      opacity: 0.5;
       margin-top: 0.75rem;
+      margin-bottom: 0;
       display: flex;
       flex-wrap: wrap;
       gap: 0.5rem;
+    }
+
+    .chip-list:empty {
+      display: none;
     }
 
     .pastel-color {
