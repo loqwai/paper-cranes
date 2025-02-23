@@ -9,7 +9,7 @@ const generateShadersJson = async (shaderFiles) => {
         return {
             name: relativePath.replace(/\\/g, '/').replace('.frag', ''),
             fileUrl: `shaders/${relativePath}`,
-            visualizerUrl: `?shader=${relativePath.replace(/\\/g, '/').replace('.frag', '')}`
+            visualizerUrl: `/?shader=${relativePath.replace(/\\/g, '/').replace('.frag', '')}`
         }
     })
 

@@ -135,6 +135,8 @@ const getPresetUrl = (visualizerUrl, line) => {
     resultUrl.searchParams.set(key, value)
   }
 
+  resultUrl.pathname = ''
+
   return resultUrl.toString()
 }
 // Load shaders and render the list

@@ -59,8 +59,14 @@ async function fetchWithCache(request) {
     // Always start a network request in the background
     inflightRequestCount++
 
+    const timeoutId = setTimeout(() => {
+        console.log(`It's been a while since ${request.url} started. I won't wait for it to complete.`)
+        inflightRequestCount = Math.max(0, inflightRequestCount - 1)
+    }, 10000)
+
     const networkPromise = fetchWithRetry(request).then(async (networkResponse) => {
         inflightRequestCount--
+        clearTimeout(timeoutId)
 
         const cachedResponse = await cache.match(request)
         if (cachedResponse) {
