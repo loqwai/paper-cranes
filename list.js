@@ -90,7 +90,9 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl }) => {
 
 const getEditUrl = (visualizationUrl) => {
   try {
-    const url = new URL(visualizationUrl)
+    // trim beginning slash, if it exists
+    visualizationUrl = visualizationUrl.startsWith('/') ? visualizationUrl.slice(1) : visualizationUrl
+    const url = new URL(visualizationUrl.slice(1))
     url.pathname = '/edit.html'
     return url.toString()
   } catch (e) {
