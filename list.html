@@ -171,6 +171,42 @@
     .chip:hover {
       filter: brightness(1.2);
     }
+
+    .copy-link {
+      background: none;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: absolute;
+      left: 0.5rem;
+      width: 2.5rem;
+      height: 2.5rem;
+      padding: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.7;
+    }
+
+    .copy-link svg {
+      width: 1.5rem;
+      height: 1.5rem;
+      stroke: #00ffff;
+    }
+
+    li>ul .copy-link svg {
+      width: 1.2rem;
+      height: 1.2rem;
+    }
+
+    .copy-link:hover {
+      opacity: 1;
+      background: rgba(75, 195, 11, 0.884);
+    }
+
+    .copy-link:active {
+      transform: scale(0.95);
+    }
   </style>
 </head>
 
