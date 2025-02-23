@@ -26,12 +26,16 @@ self.addEventListener("activate", async (event) => {
  * @returns {Promise<Response>} - The response object.
  */
 async function fetchWithRetry(request) {
+    let responded = false
     let interval = 150 // Start with 250ms delay
     return new Promise(async (resolve, reject) => {
         while (true) {
         try {
             const response = await fetch(request)
-            if (response.ok) return resolve(response)
+            if (response.ok && !responded) {
+                responded = true
+                return resolve(response)
+            }
 
             if (response.status === 0 && response.type !== "error") return resolve(response)
 
@@ -39,7 +43,8 @@ async function fetchWithRetry(request) {
                 `Fetch failed for url ${request.url} (status: ${response.status}), retrying in ${interval}ms...`
             )
         } catch (error) {
-            if (interval > 15000) {
+            if (interval > 15000 && !responded) {
+                responded = true
                 console.error(`retry's about to lie`)
                 inflightRequestCount = Math.max(0, inflightRequestCount - 1)
                 reject(new Error("Failed to fetch")) // but keep going.
