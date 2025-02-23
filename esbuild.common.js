@@ -69,10 +69,6 @@ export function createBuildOptions(isDev = false) {
             '.jpg': 'copy',
             '.png': 'copy',
         },
-        alias: {
-            'monaco-editor/min/vs/editor/editor.main.css': 'monaco-editor/min/vs/editor/editor.main.css',
-            'monaco-editor/min/vs/base/browser/ui/codicons/codicon/codicon.ttf': 'monaco-editor/min/vs/base/browser/ui/codicons/codicon/codicon.ttf'
-        }
     }
 
     return async function getConfigs() {
@@ -94,7 +90,6 @@ export function createBuildOptions(isDev = false) {
             'list.js',
             'service-worker.js',
             ...jsFiles,
-            'node_modules/monaco-editor/min/vs/editor/editor.main.css'
         ]
 
         const copyEntrypoints = [
