@@ -53,5 +53,8 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
     vec2 uv=fragCoord.xy/resolution.xy;
 
     // Apply the beat-reactive distortion and color effect
-    fragColor=applyDistortion(uv,time,beat);
+    fragColor = applyDistortion(uv, time, beat);
+
+    // Make time move faster during beats
+    outTimeVec = vec4(time * 3., 0.0, 0.0, 0.0);
 }

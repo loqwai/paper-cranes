@@ -11,7 +11,8 @@ export const shaderWrapper = (shader) => {
         return /* glsl */ `#version 300 es
 precision highp float;
 
-out vec4 fragColor;
+layout(location = 0) out vec4 fragColor;
+layout(location = 1) out vec4 outTimeVec;
 ${shaderToyCompatibilityUniforms()}
 ${getAudioUniforms()}
 
@@ -26,6 +27,11 @@ vec4 getInitialFrameColor(vec2 uv){
 ${shader}
 
 void main(void){
+    // Initialize both outputs
+    fragColor = vec4(0.0);
+    outTimeVec = vec4(time, 0.0, 0.0, 0.0);
+
+    // Call the user's shader
     mainImage(fragColor, gl_FragCoord.xy);
 }
 `

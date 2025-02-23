@@ -103,7 +103,23 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
     }
 
     const initialTexture = await getTexture(gl, initialImageUrl)
-    const frameBuffers = [createFramebufferInfo(gl), createFramebufferInfo(gl)]
+    // Enable float textures
+    const ext = gl.getExtension('EXT_color_buffer_float')
+    if (!ext) {
+        console.error('EXT_color_buffer_float not supported')
+        return
+    }
+
+    const frameBuffers = [
+        createFramebufferInfo(gl, [
+            { format: gl.RGBA, type: gl.UNSIGNED_BYTE },  // Color output
+            { internalFormat: gl.RGBA32F, format: gl.RGBA, type: gl.FLOAT, min: gl.NEAREST, mag: gl.NEAREST }   // outTime output
+        ]),
+        createFramebufferInfo(gl, [
+            { format: gl.RGBA, type: gl.UNSIGNED_BYTE },  // Color output
+            { internalFormat: gl.RGBA32F, format: gl.RGBA, type: gl.FLOAT, min: gl.NEAREST, mag: gl.NEAREST }   // outTime output
+        ])
+    ]
     const bufferInfo = createBufferInfoFromArrays(gl, { position: positions })
 
     let frameNumber = 0
@@ -152,6 +168,11 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         const prevFrame = frameBuffers[(frameNumber + 1) % 2]
 
         gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, frame.framebuffer)
+        // Enable both color attachments for writing
+        gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1])
+        gl.viewport(0, 0, frame.width, frame.height)
+        gl.clearColor(0.0, 0.0, 0.0, 1.0)
+        gl.clear(gl.COLOR_BUFFER_BIT)
 
         let uniforms = {
             iTime: time,
@@ -181,8 +202,21 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         setUniforms(programInfo, uniforms)
         drawBufferInfo(gl, bufferInfo)
 
+        // Read outTime value
+        const outTimeBuffer = new Float32Array(4)
+        gl.bindFramebuffer(gl.READ_FRAMEBUFFER, frame.framebuffer)
+        gl.readBuffer(gl.COLOR_ATTACHMENT1)
+        gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.FLOAT, outTimeBuffer)
+        const outTime = outTimeBuffer[0]  // Time is stored in the R component
+        if (!isNaN(outTime) && isFinite(outTime)) {
+            time = outTime
+        }
+
+        // Blit the color buffer to the screen
         gl.bindFramebuffer(gl.READ_FRAMEBUFFER, frame.framebuffer)
         gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null)
+        gl.readBuffer(gl.COLOR_ATTACHMENT0)
+        gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
         gl.blitFramebuffer(0, 0, frame.width, frame.height, 0, 0, gl.canvas.width, gl.canvas.height, gl.COLOR_BUFFER_BIT, gl.LINEAR)
 
         frameNumber++
