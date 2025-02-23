@@ -92,7 +92,7 @@ const getEditUrl = (visualizationUrl) => {
   try {
     // trim beginning slash, if it exists
     visualizationUrl = visualizationUrl.startsWith('/') ? visualizationUrl.slice(1) : visualizationUrl
-    const url = new URL(visualizationUrl.slice(1))
+    const url = new URL(visualizationUrl)
     url.pathname = '/edit.html'
     return url.toString()
   } catch (e) {
