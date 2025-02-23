@@ -1,6 +1,6 @@
 console.log(`Service worker ${CACHE_NAME} starting`)
 const timeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-
+let inflightRequestCount = 0
 /**
  * Install event - The event returned by the install event is used to cache critical resources during install
  * @param {InstallEvent} event
@@ -16,6 +16,7 @@ self.addEventListener("activate", async (event) => {
     console.log("Service Worker: Activated")
     await self.clients.claim()
     console.log("Service Worker: Claimed clients")
+    inflightRequestCount = 0
 })
 
 /**
@@ -48,7 +49,7 @@ async function fetchWithRetry(request) {
 }
 
 let contentChanged = false
-let inflightRequestCount = 0
+
 /**
  * Fetches a request and caches the response. Always starts the fetch immediately.
  * @param {Request} request - The request object.
