@@ -30,7 +30,11 @@ async function fetchWithRetry(request) {
     let interval = 150 // Start with 250ms delay
     return new Promise(async (resolve, reject) => {
         while (true) {
-        if (interval > 15000) reject(new Error("Failed to fetch")) // but keep going.
+        if (interval > 15000)  {
+            inflightRequestCount = Math.max(0, inflightRequestCount - 1)
+            console.error(`retry's about to lie`)
+            reject(new Error("Failed to fetch")) // but keep going.
+        }
         try {
             const response = await fetch(request)
             if (response.ok) return resolve(response)
