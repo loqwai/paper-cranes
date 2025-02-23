@@ -5,8 +5,8 @@ uniform float knob_74;
 uniform float knob_75;
 uniform float knob_76;
 
-#define LINE_WIDTH knob_36*8.
-#define SMOOTH_WIDTH knob_46*2.0
+#define LINE_WIDTH 25.5
+#define SMOOTH_WIDTH 2.0
 #define ULTRA_DROP_COUNT 4
 #define PROBE_A 0.3
 #define PROBE_B 0.95
@@ -106,7 +106,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float blueLine = drawLine(fragCoord, BLUE_VALUE, midsZScore);
 
     float tealLine = drawLine(fragCoord, TEAL_VALUE, spectralFluxNormalized);
-    float yellowLine = drawLine(fragCoord, YELLOW_VALUE, spectralEntropyNormalized);
+    float yellowLine = drawLine(fragCoord, YELLOW_VALUE, spectralEntropyNormalized*4.);
     float grayishGreen = drawLine(fragCoord, GRAYISH_GREEN_VALUE, spectralFluxNormalized);
 
     // Add lines with distinct colors, only if their knob is non-zero

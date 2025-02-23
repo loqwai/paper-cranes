@@ -1,13 +1,7 @@
 console.log(`Service worker ${CACHE_NAME} starting`)
 
-async function deleteAllServiceWorkerCaches() {
-    // delete entire cache storage
-    await caches.delete(CACHE_NAME)
-}
-
 self.addEventListener('install', async event => {
     console.log('Service Worker: Installing...')
-    deleteAllServiceWorkerCaches()
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
             // Add critical resources to cache during install

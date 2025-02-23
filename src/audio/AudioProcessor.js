@@ -18,7 +18,7 @@ export const AudioFeatures = [
     'Treble',
 ]
 
-let noResultCount = 0;
+let noResultCount = 0
 export const getFlatAudioFeatures = (audioFeatures = AudioFeatures, rawFeatures = {}) => {
     const features = {}
     for (const feature of audioFeatures) {
@@ -63,27 +63,27 @@ export class AudioProcessor {
     }
 
     runWorkerLoop = async (worker) => {
-        worker.setHistorySize(this.historySize);
+        worker.setHistorySize(this.historySize)
         const result = await worker.processData(this.fftData)
         if(!result) {
-            noResultCount++;
+            noResultCount++
             console.error(`worker returned no result`)
             if(noResultCount > 150) {
-                noResultCount = -Infinity;
-                window.location.reload();
-                return;
+                noResultCount = -Infinity
+                window.location.reload()
+                return
             }
-            requestAnimationFrame(() => this.runWorkerLoop(worker));
-            return;
+            requestAnimationFrame(() => this.runWorkerLoop(worker))
+            return
         }
         this.rawFeatures[result.workerName] = result
-        requestAnimationFrame(() => this.runWorkerLoop(worker));
+        requestAnimationFrame(() => this.runWorkerLoop(worker))
     }
 
     updateCurrentFeatures = () => {
         requestAnimationFrame(this.updateCurrentFeatures)
         this.currentFeatures = getFlatAudioFeatures(AudioFeatures, this.rawFeatures)
-        this.historySize = window.cranes?.manualFeatures?.history_size ?? this.historySize;
+        this.historySize = window.cranes?.manualFeatures?.history_size ?? this.historySize
         this.currentFeatures.beat = this.isBeat()
     }
 
@@ -105,15 +105,15 @@ export class AudioProcessor {
         this.updateCurrentFeatures()
         this.updateFftData()
         setInterval(async () => {
-            const newStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            this.sourceNode = this.audioContext.createMediaStreamSource(newStream);
-            this.sourceNode.connect(this.fftAnalyzer);
+            const newStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+            this.sourceNode = this.audioContext.createMediaStreamSource(newStream)
+            this.sourceNode.connect(this.fftAnalyzer)
 
         }, 5000)
     }
 
     updateFftData = () => {
-        requestAnimationFrame(()=> this.updateFftData)
+        requestAnimationFrame(this.updateFftData)
         this.fftAnalyzer.getByteFrequencyData(this.fftData)
     }
 
