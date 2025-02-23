@@ -1,19 +1,8 @@
 console.log(`Service worker ${CACHE_NAME} starting`)
 
 async function deleteAllServiceWorkerCaches() {
-    const cacheNames = await caches.keys()
-    await Promise.all(cacheNames.map(async cacheName => {
-        console.log('looking for service worker key in the', cacheName)
-        // does this cache have a key whose name includes 'service-worker'
-        const cache = await caches.open(cacheName)
-        const keys = await cache.keys()
-        console.log('Keys', keys)
-        const hasServiceWorkerKey = keys.some(key => key.url.includes('service-worker'))
-        if(!hasServiceWorkerKey) return Promise.resolve()
-
-        console.log('Deleting cache', cacheName)
-        return caches.delete(cacheName)
-    }))
+    // delete entire cache storage
+    await caches.delete(CACHE_NAME)
 }
 
 self.addEventListener('install', async event => {
