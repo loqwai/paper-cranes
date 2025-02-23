@@ -113,7 +113,7 @@ export class AudioProcessor {
     }
 
     updateFftData = () => {
-        requestAnimationFrame(this.updateFftData)
+        requestAnimationFrame(()=> this.updateFftData)
         this.fftAnalyzer.getByteFrequencyData(this.fftData)
     }
 
