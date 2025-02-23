@@ -28,13 +28,14 @@ self.addEventListener("activate", async (event) => {
  */
 async function fetchWithRetry(request) {
     let interval = 150 // Start with 250ms delay
-
-    while (true) {
+    return new Promise(async (resolve, reject) => {
+        while (true) {
+        if (interval > 15000) reject(new Error("Failed to fetch")) // but keep going.
         try {
             const response = await fetch(request)
-            if (response.ok) return response
+            if (response.ok) return resolve(response)
 
-            if (response.status === 0 && response.type !== "error") return response
+            if (response.status === 0 && response.type !== "error") return resolve(response)
 
             console.warn(
                 `Fetch failed for url ${request.url} (status: ${response.status}), retrying in ${interval}ms...`
@@ -43,10 +44,11 @@ async function fetchWithRetry(request) {
             console.warn(`Network error for url ${request.url}, retrying in ${interval}ms...`, error)
         }
 
-        await new Promise((resolve) => setTimeout(resolve, interval))
+        await timeout(interval)
         const jitter = Math.random() * 100
-        interval = Math.min(interval * (1.5 + jitter), 10000 + jitter * 10)
+            interval = Math.min(interval * (1.5 + jitter), 10000 + jitter * 10)
     }
+    })
 }
 
 let contentChanged = false
