@@ -1,87 +1,39 @@
-uniform float knob_13;
-uniform float knob_14;
-uniform float knob_15;
-uniform float knob_16;
-uniform float knob_17;
+
 #define EPSILON 0.0000001
-#define PROBE_1 mix(1.,1.4,spectralRoughnessNormalized)+EPSILON
-#define PROBE_2 mix(0.60,2.,spectralFluxNormalized)+EPSILON
-#define PROBE_3 mix(-1.5,10.,pitchClassMedian)+EPSILON
-#define PROBE_4 mix(1.,11.,trebleNormalized)+EPSILON
-#define PROBE_5 mix(0.47,0.97,spectralKurtosisNormalized)+EPSILON
-#define PROBE_6 mix(0.4,0.2,energyNormalized)+EPSILON
-#define CELL_SIZE 32.0
+// https://visuals.beadfamous.com/edit?knob_30=0.181&knob_30.min=0&knob_30.max=4.6&knob_40=0&knob_40.min=0&knob_40.max=4.6&knob_41=1&knob_41.min=0&knob_41.max=1&knob_31=0.465&knob_31.min=0&knob_31.max=5.9&knob_42=0.087&knob_42.min=0&knob_42.max=1&knob_43=1&knob_43.min=0&knob_43.max=1&knob_44=0.283&knob_44.min=0&knob_44.max=1&knob_45=0.654&knob_45.min=0&knob_45.max=1&knob_47=4.781&knob_47.min=0&knob_47.max=6.6&knob_46=0.567&knob_46.min=0&knob_46.max=1&knob_32=0.417&knob_32.min=0&knob_32.max=1&knob_33=0.654&knob_33.min=0&knob_33.max=1&knob_37=4.063&knob_37.min=0&knob_37.max=6&knob_34=0.583&knob_34.min=0&knob_34.max=1
+#define PROBE_1 mix(knob_37,knob_47,energyNormalized)+EPSILON
+#define PROBE_2 mix(0.60,2.,knob_41)+EPSILON /* 'fan out' swirls -> multiple squares */
+#define PROBE_3 mix(-1.5,10.,knob_42)+EPSILON /* color */
+#define PROBE_4 mix(1.,11.,knob_43)+EPSILON
+#define PROBE_5 mix(0.47,0.97,knob_44)+EPSILON /* complexity + zoom */
+#define PROBE_6 mix(0.18,0.47,bassNormalized)+EPSILON /*zoom */
 
-vec2 mapMusicFeatureToUV(float zScore1, float zScore2) {
-    return vec2(
-        clamp(mix(-1.0, 1.0, zScore1), -1.0, 1.0),
-        clamp(mix(-1.0, 1.0, zScore2), -1.0, 1.0)
-    );
-}
-
-vec4 generateFractalSquare(vec2 uv) {
-    // Create grid-based pattern similar to automata shaders
-    vec2 cell = floor(uv * CELL_SIZE);
-    vec2 cellUv = fract(uv * CELL_SIZE);
-
-    // Create multiple feature points based on audio
-    vec2 point1 = mapMusicFeatureToUV(spectralCentroidZScore, energyZScore);
-    vec2 point2 = mapMusicFeatureToUV(spectralKurtosisZScore, spectralRoughnessZScore);
-    vec2 point3 = mapMusicFeatureToUV(spectralSpreadZScore, spectralSkewZScore);
-
-    // Calculate distances to feature points
-    float d1 = length(cellUv - point1);
-    float d2 = length(cellUv - point2);
-    float d3 = length(cellUv - point3);
-
-    // Create pattern based on distances
-    float pattern = min(min(d1, d2), d3);
-
-    // Color based on pattern and audio features
-    vec4 color = vec4(
-        mix(0.2, 0.8, smoothstep(0.0, 1.0, d1)),
-        mix(0.1, 0.6, smoothstep(0.0, 1.0, d2)),
-        mix(0.3, 0.9, smoothstep(0.0, 1.0, d3)),
-        1.0
-    );
-
-    // Add variation based on cell position
-    color.rgb *= 0.8 + 0.2 * sin(cell.x * 0.1) * cos(cell.y * 0.1);
-
-    return color;
-}
-
+// Descriptive function to apply periodic transformation and trap calculations
 vec2 applyPeriodicTransformationAndTraps(vec2 position, vec2 multiplier) {
-    position = clamp(position, -10.0, 10.0);
-    position = 0.5 * sin(multiplier * position / (dot(position, position) + 0.1) * PROBE_5);
+    // Normalize the position and apply a periodic function (sine wave) with length inversion
+    position = 0.5* sin(multiplier * position / dot(position, position)*PROBE_6) + EPSILON;
     return position;
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec2 resolution = iResolution.xy;
-    vec2 multiplier = vec2(PROBE_1, PROBE_2);
+    vec2 resolution = iResolution.xy; // Screen resolution
+    vec2 multiplier = vec2(PROBE_1,PROBE_2); // Multiplier for the periodic function
 
-    // Normalize coordinates
-    vec2 uv = fragCoord.xy / resolution.xy;
-    uv = uv * 2.0 - 1.0; // Center UV
-    uv *= PROBE_6; // Apply zoom
+    // Normalize the fragment coordinates
+    vec2 normalizedCoords = (fragCoord + fragCoord - resolution) / resolution.x;
+    // normalizedCoords +=PROBE_6;
+    // Initialize output color
+    fragColor += 1e6 - fragColor;
 
-    // Generate base pattern
-    vec4 basePattern = generateFractalSquare(uv);
-    fragColor = basePattern;
-
-    // Apply transformations
-    vec2 transformedUv = uv;
+    // Main loop for fractal generation with orbit traps
     for (int i = 0; i < 20; i++) {
-        transformedUv = applyPeriodicTransformationAndTraps(transformedUv, multiplier);
-        vec4 transformedPattern = generateFractalSquare(transformedUv);
-        fragColor = mix(fragColor, transformedPattern, 0.2);
-    }
+        normalizedCoords = applyPeriodicTransformationAndTraps(normalizedCoords.xy, multiplier);
 
-    // Beat reaction
-    if (beat) {
-        fragColor = mix(fragColor, fragColor * 1.2, 0.3);
-    }
+        // Calculate orbit traps and update the color
+        float lengthTrap = length(normalizedCoords); // Distance from origin
+        float minAxesTrap = min(abs(normalizedCoords.x), abs(normalizedCoords.y)); // Minimum of the absolute x or y
+        float diagonalDotTrap = abs(dot(normalizedCoords, vec2(PROBE_3, PROBE_4))); // Dot product with (1,1) vector
 
-    fragColor = clamp(fragColor, 0.0, 1.0);
+        fragColor = min(fragColor, vec4(lengthTrap, minAxesTrap, diagonalDotTrap, 1.0));
+    }
 }
