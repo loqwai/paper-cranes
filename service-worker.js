@@ -88,7 +88,7 @@ async function fetchWithCache(request) {
         const networkClone = networkResponse.clone()
         await cache.put(request, networkResponse)
 
-        if(!cachedResponse) return
+        if(!cachedResponse) return networkResponse
 
         const cachedClone = cachedResponse.clone()
 
@@ -96,7 +96,7 @@ async function fetchWithCache(request) {
         const newData = await networkClone.text()
         contentChanged ||= (oldData !== newData)
         console.log(`${request.url} has changed: ${contentChanged}`)
-        if(!contentChanged) return
+        if(!contentChanged) return networkResponse
 
 
         // wait a bit to see if more requests come in
