@@ -112,8 +112,8 @@ async function fetchWithCache(request) {
         clients.forEach((client) => client.postMessage("reload"))
         console.log("Reloaded", clients.length, "clients")
     })
-
-    return (await cache.match(request)) || networkPromise
+    const found = await cache.match(request)
+    return found || networkPromise
 }
 
 /**
