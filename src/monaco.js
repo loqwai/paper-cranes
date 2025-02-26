@@ -399,6 +399,9 @@ function init(monaco) {
 
         tokenizer: {
             root: [
+                // Add knob uniform highlighting before other identifiers
+                [/knob_[0-9]+/, 'variable.parameter.knob'],
+
                 // identifiers and keywords
                 [
                     /[a-zA-Z_]\w*/,
@@ -474,15 +477,54 @@ function init(monaco) {
     // Register a completion item provider for GLSL
     monaco.languages.registerCompletionItemProvider('glsl', {
         provideCompletionItems: () => {
-            const suggestions = keywords.map((keyword) => ({
-                label: keyword,
-                kind: monaco.languages.CompletionItemKind.Keyword,
-                insertText: keyword,
-                range: null, // Specify the range if needed
-            }))
+            const snippets = [
+                {
+                    label: 'define-audio',
+                    kind: monaco.languages.CompletionItemKind.Snippet,
+                    documentation: 'Define an audio feature alias',
+                    insertText: '#define ${1:NAME} (${2:audioFeature})',
+                    insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
+                },
+                {
+                    label: 'color-mix',
+                    kind: monaco.languages.CompletionItemKind.Snippet,
+                    documentation: 'Mix two colors based on audio',
+                    insertText: [
+                        'vec3 color1 = vec3(${1:1.0}, ${2:0.0}, ${3:0.0});',
+                        'vec3 color2 = vec3(${4:0.0}, ${5:1.0}, ${6:0.0});',
+                        'vec3 finalColor = mix(color1, color2, ${7:audioFeature});'
+                    ].join('\n'),
+                    insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
+                },
+                // Add more useful snippets...
+            ]
+
+            const suggestions = [
+                // Add knob suggestions
+                ...Array.from({ length: 200 }, (_, i) => i + 1).map(num => ({
+                    label: `knob_${num}`,
+                    kind: monaco.languages.CompletionItemKind.Variable,
+                    detail: `uniform float knob_${num}`,
+                    documentation: {
+                        value: `A tunable parameter that can be adjusted in real-time. \n Usually between 0.0 and 1.0, unless specified otherwise by the knob_<number>.min and knob_<number>.max query params.`,
+                        isTrusted: true
+                    },
+                    insertText: `knob_${num}`,
+                    sortText: `0knob${num.toString().padStart(3, '0')}` // Ensures knobs appear early and in order
+                })),
+                // Existing keyword suggestions
+                ...keywords.map((keyword) => ({
+                    label: keyword,
+                    kind: monaco.languages.CompletionItemKind.Keyword,
+                    insertText: keyword,
+                    range: null
+                })),
+                ...snippets
+            ]
 
             return { suggestions }
         },
+        triggerCharacters: ['k'] // Trigger suggestions when typing "k" or "_"
     })
 
     monaco.languages.register({ id: 'glsl' })
@@ -572,6 +614,43 @@ function init(monaco) {
     });
 
     document.querySelector('#publish').addEventListener('click', () => {});
+
+    // Add hover provider for audio uniforms
+    monaco.languages.registerHoverProvider('glsl', {
+        provideHover: (model, position) => {
+            const word = model.getWordAtPosition(position)
+            if (!word) return null
+
+            const audioFeatureDescriptions = {
+                spectralCentroid: 'Represents the "center of mass" of the spectrum. Higher values indicate more high-frequency content. Good for detecting brightness/timbre changes.',
+                spectralFlux: 'Measures how quickly the power spectrum changes. Useful for detecting sudden changes in the music, like note onsets or style changes.',
+                energy: 'Overall audio energy/volume of the signal. Good for general amplitude-based reactions.',
+                bass: 'Low frequency energy content. Great for kick drums and bass-driven effects.',
+                mids: 'Mid frequency energy content. Good for vocals and melodic instruments.',
+                treble: 'High frequency energy content. Useful for cymbals and high-hat driven effects.',
+                beat: 'True when a beat is detected. Perfect for synchronizing visual changes with the rhythm. When it works. But it usually doesn\'t.',
+                pitchClass: 'The pitch class of the dominant frequency. Can be used to create color schemes based on musical key. Each note is assigned a fraction between 0 and 1.',
+                spectralSpread: 'The width/spread of the frequency spectrum. High values indicate noise-like sounds, low values for pure tones.',
+                spectralRolloff: 'Frequency below which 85% of the spectrum\'s energy is concentrated. Good for detecting brightness changes.',
+                spectralRoughness: 'Estimates the sensory dissonance. Higher values indicate more "rough" or dissonant sounds.',
+                spectralKurtosis: 'Measures "peakedness" of the spectrum. High values indicate isolated frequency peaks.',
+                spectralEntropy: 'Measures the complexity/unpredictability of the spectrum. Higher values for noise, lower for pure tones.',
+                spectralCrest: 'Ratio between the spectrum\'s peak and mean. Distinguishes between noisy (low) and tonal (high) sounds.',
+                spectralSkew: 'Measures the asymmetry of the spectrum. Useful for detecting unusual frequency distributions.',
+            }
+
+            const description = audioFeatureDescriptions[word.word]
+            if (description) {
+                return {
+                    contents: [
+                        { value: `**${word.word}**` },
+                        { value: description },
+                        { value: `Available variables: \n- ${word.word}Normalized (0-1)\n- ${word.word}Mean\n- ${word.word}Median\n- ${word.word}StandardDeviation\n- ${word.word}ZScore\n- ${word.word}Min\n- ${word.word}Max` }
+                    ]
+                }
+            }
+        }
+    })
 }
 
 // Wait for Monaco to be loaded from CDN
