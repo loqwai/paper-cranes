@@ -103,7 +103,7 @@ async function fetchWithCache(request) {
         await timeout(50)
         if(requestsToRetry.length > 0) {
             console.log(`${request.url} has changed, but I'm waiting for ${requestsToRetry.length} requests to complete`)
-            return
+            return networkClone
         }
 
         console.log("All requests complete, triggering reload")
