@@ -28,26 +28,19 @@ function init(monaco) {
     });
 
     // Watch for shader errors
-    let errorDecorations = [];
     setInterval(() => {
         monaco.editor.setModelMarkers(editor.getModel(), 'glsl', []);
-        const error = window.cranes.error;
-        if(!error) return
-
-            let {lineNumber, message} = error
-            if(!lineNumber) {
-                lineNumber = 0
-                message = error
-            }
-            const markers = [{
-                severity: monaco.MarkerSeverity.Error,
-                message: message,
-                startLineNumber: lineNumber,
-                startColumn: 1,
-                endLineNumber: lineNumber,
-                endColumn: 1000
-            }];
-            monaco.editor.setModelMarkers(editor.getModel(), 'glsl', markers);
+        const error = window.cranes?.error;
+        if (!error) return;
+        const markers = [{
+            severity: monaco.MarkerSeverity.Error,
+            message: error.message || 'Unknown error',
+            startLineNumber: error.lineNumber || 1,
+            startColumn: 1,
+            endLineNumber: error.lineNumber || 1,
+            endColumn: 1000
+        }];
+        monaco.editor.setModelMarkers(editor.getModel(), 'glsl', markers);
     }, 100);
 
     const conf = {
@@ -79,7 +72,6 @@ function init(monaco) {
 
     const keywords = [
         'getLastFrameColor',
-        'PI',
         'mapValue',
         'resolution',
         'time',

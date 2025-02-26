@@ -35,22 +35,28 @@ const handleShaderError = (gl, wrappedFragmentShader, newFragmentShader) => {
     const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
     gl.shaderSource(fragmentShader, wrappedFragmentShader);
     gl.compileShader(fragmentShader);
-    const error = gl.getShaderInfoLog(fragmentShader);
+
+    /**
+     * @type {string | Error}
+     */
+    let error = gl.getShaderInfoLog(fragmentShader);
+    if (error instanceof Error) error = error.message;
+
     gl.deleteShader(fragmentShader);
 
     // Find the line with our marker
     const wrappedLines = wrappedFragmentShader.split('\n');
     const headerLines = wrappedLines.findIndex(line => line.includes('31CF3F64-9176-4686-9E52-E3CFEC21FE72'));
 
-    if (error.match(/ERROR: \d+:(\d+):/)) {
-        error.replace(/ERROR: \d+:(\d+):/, (match, line) =>{
-            const lineNumber = parseInt(line) - headerLines - 1;
-            window.cranes.error = { lineNumber, message: `ERROR: 0:${lineNumber}: ${error.message}` };
-    });
-        console.error(window.cranes.error, error);
-    } else {
-        window.cranes.error = {lineNumber:0, message: `there was something wrong with ur shader`}
+    let message = `there was something wrong with ur shader`
+    let lineNumber = 0
+    for (const line of error.matchAll(/ERROR: \d+:(\d+):/g)) {
+        lineNumber = parseInt(line[1]) - headerLines - 1;
+        message = error.split(':').slice(3).join(':').trim();
     }
+
+    window.cranes.error = {lineNumber, message}
+    console.error(`Error information:`, window.cranes.error);
 }
 
 const calculateResolutionRatio = (frameTime, renderTimes, lastResolutionRatio) => {
