@@ -113,7 +113,7 @@ async function fetchWithCache(request) {
         console.log("Reloaded", clients.length, "clients")
     })
     const found = await cache.match(request)
-    return found || networkPromise
+    return found ?? networkPromise
 }
 
 /**
