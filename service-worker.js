@@ -1,6 +1,9 @@
+const self = /** @type {ServiceWorkerGlobalScope} */ (globalThis)
+
 console.log(`Service worker ${CACHE_NAME} starting`)
 const timeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-let inflightRequestCount = 0
+
+
 /**
  * Install event - The event returned by the install event is used to cache critical resources during install
  * @param {InstallEvent} event
@@ -8,7 +11,6 @@ let inflightRequestCount = 0
 self.addEventListener("install", async (event) => {
     console.log("Service Worker: Installing...")
     await self.skipWaiting()
-    inflightRequestCount = 0
 })
 
 // Activate event - claim clients immediately and clean up old caches
@@ -16,45 +18,55 @@ self.addEventListener("activate", async (event) => {
     console.log("Service Worker: Activated")
     await self.clients.claim()
     console.log("Service Worker: Claimed clients")
-    inflightRequestCount = 0
 })
+
+
+/**
+ * A set of requests that are waiting to be retried.
+ * @type {Array<{request: Request, resolve: (response: Response) => void}>}
+ */
+const requestsToRetry = []
 
 /**
  * Fetches a request with retry logic.
  * Retries **indefinitely** with a backoff delay.
- * WARNING: this may both reject and later resolve. This can cause code to unexpectedly execute when you thought it was done.
  * @param {Request} request - The request object.
  * @returns {Promise<Response>} - The response object.
  */
 async function fetchWithRetry(request) {
-    let responded = false
-    let interval = 150 // Start with 250ms delay
-    return new Promise(async (resolve, reject) => {
+    let interval = 150 // Start with 150ms delay
+
+    return new Promise(async (resolve) => {
+        requestsToRetry.push({request, resolve})
         while (true) {
-        try {
-            const response = await fetch(request)
-            if (response.ok && !responded) {
-                responded = true
-                return resolve(response)
+            if(requestsToRetry.length === 0) return
+            const {request, resolve} = requestsToRetry.shift()
+            if(!request) throw new Error("No request to retry")
+
+            try {
+                const response = await fetch(request)
+                const nextRequest = requestsToRetry.shift()
+                if (nextRequest) fetchWithRetry(nextRequest.request).then(nextRequest.resolve)
+
+                if (response.ok) return resolve(response)
+                if (response.status === 0 && response.type !== "error") return resolve(response)
+
+                requestsToRetry.push({request, resolve})
+
+                console.warn(
+                    `Fetch failed for url ${request.url} (status: ${response.status}). Added to retry queue.`
+                )
+            } catch (error) {
+                requestsToRetry.push({request, resolve})
+                console.error(`Network error for url ${request.url}, retrying in ${interval}ms...`, error)
+                if (interval > 15000) {
+                    interval = 150;
+                    await timeout(Math.random() * 30000 + 10000)
+                }
             }
-
-            if (response.status === 0 && response.type !== "error") return resolve(response)
-
-            console.warn(
-                `Fetch failed for url ${request.url} (status: ${response.status}), retrying in ${interval}ms...`
-            )
-        } catch (error) {
-            if (interval > 15000 && !responded) {
-                responded = true
-                console.error(`retry's about to lie`)
-                inflightRequestCount = Math.max(0, inflightRequestCount - 1)
-                reject(new Error("Failed to fetch")) // but keep going.
-            }
-            console.warn(`Network error for url ${request.url}, retrying in ${interval}ms...`, error)
-        }
-
-        await timeout(interval)
-            const jitter = Math.random() * 100
+            await timeout(interval)
+            console.log(`Back from sleeping when trying to fetch ${request.url}. There are ${requestsToRetry.length} requests to retry`)
+            const jitter = Math.random()
             interval *= (1.5 + jitter)
         }
     })
@@ -69,39 +81,39 @@ let contentChanged = false
  */
 async function fetchWithCache(request) {
     const cache = await caches.open(CACHE_NAME)
-    const cachedResponse = await cache.match(request)
-
-    // Always start a network request in the background
-    inflightRequestCount++
 
     const networkPromise = fetchWithRetry(request).then(async (networkResponse) => {
-        inflightRequestCount--
-
+        console.log(`${request.url} fetched`)
         const cachedResponse = await cache.match(request)
-        if (cachedResponse) {
-            const networkClone = networkResponse.clone()
-            const cachedClone = cachedResponse.clone()
+        const networkClone = networkResponse.clone()
+        await cache.put(request, networkResponse)
 
-            const oldData = await cachedClone.text()
-            const newData = await networkClone.text()
+        if(!cachedResponse) return
 
-            await cache.put(request, networkResponse.clone()) // Only put once
-            console.log(`waiting for ${inflightRequestCount} requests to complete`)
-            contentChanged ||= oldData !== newData
-            await timeout(50)
+        const cachedClone = cachedResponse.clone()
 
-            if (inflightRequestCount <= 0 && contentChanged) {
-                // wait a bit to see if more requests come in
-                console.log("All requests complete, triggering reload", contentChanged)
-                contentChanged = false
-                self.clients.matchAll().then((clients) => clients.forEach((client) => client.postMessage("reload")))
-            }
+        const oldData = await cachedClone.text()
+        const newData = await networkClone.text()
+        contentChanged ||= (oldData !== newData)
+        console.log(`${request.url} has changed: ${contentChanged}`)
+        if(!contentChanged) return
+
+
+        // wait a bit to see if more requests come in
+        await timeout(50)
+        if(requestsToRetry.length > 0) {
+            console.log(`${request.url} has changed, but I'm waiting for ${requestsToRetry.length} requests to complete`)
+            return
         }
-        await cache.put(request, networkResponse.clone())
-        return networkResponse
+
+        console.log("All requests complete, triggering reload")
+        contentChanged = false
+        const clients = await self.clients.matchAll()
+        clients.forEach((client) => client.postMessage("reload"))
+        console.log("Reloaded", clients.length, "clients")
     })
 
-    return cachedResponse || networkPromise
+    return (await cache.match(request)) || networkPromise
 }
 
 /**

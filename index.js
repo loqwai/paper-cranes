@@ -5,15 +5,18 @@ import './index.css'
 // Add service worker registration
 window.addEventListener('load', async () => {
     console.log('Registering service worker...')
-    if(!navigator.serviceWorker) {
+    const { serviceWorker } = navigator
+    if(!serviceWorker) {
         console.log('Service worker not supported')
         return
     }
+    serviceWorker.addEventListener('message', processServiceWorkerMessage)
     // Add cache version to URL to force update when version changes
-    const registration = await navigator.serviceWorker.register(`/service-worker.js?version=${CACHE_NAME}`)
+    const registration = await serviceWorker.register(`/service-worker.js?version=${CACHE_NAME}`)
     registration.addEventListener('statechange', (e) =>
         console.log('ServiceWorker state changed:', e.target.state))
     registration.addEventListener('message', processServiceWorkerMessage)
+
 })
 
 /**
@@ -21,6 +24,7 @@ window.addEventListener('load', async () => {
  * @param {MessageEvent} event
  */
 const processServiceWorkerMessage = (event) => {
+    console.log('Received message from service worker', event.data)
     if (event.data === 'reload') {
         console.log('Received reload message from service worker')
         window.stop()

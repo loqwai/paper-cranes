@@ -22,6 +22,7 @@
     "twgl-base.js": "^5.5.3"
   },
   "devDependencies": {
+    "@types/serviceworker": "^0.0.122",
     "@types/vscode": "^1.96.0",
     "esbuild": "^0.25.0",
     "esbuild-plugin-copy": "^2.1.1",
