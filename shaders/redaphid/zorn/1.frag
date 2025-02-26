@@ -1,9 +1,6 @@
-uniform float knob_13 ;
-uniform float knob_14;
-uniform float knob_15;
-uniform float knob_16;
-uniform float knob_17;
+
 #define EPSILON 0.0000001
+
 #define PROBE_1 mix(1.,1.4,spectralRoughnessNormalized)+EPSILON
 #define PROBE_2 mix(0.60,2.,spectralFluxNormalized)+EPSILON /* 'fan out' swirls -> multiple squares */
 #define PROBE_3 mix(-1.5,10.,pitchClassMedian)+EPSILON /* color */
