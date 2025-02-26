@@ -1,4 +1,4 @@
-import * as monaco from 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/+esm'
+import * as monaco from 'https://esm.sh/monaco-editor@0.52.2'
 function init() {
     //if we have a shader in the query param, return
     // if (new URLSearchParams(window.location.search).get('shader')) return
@@ -12,7 +12,12 @@ function init() {
         minimap: { enabled: false },
         automaticLayout: true,
     });
-
+    // add the web workers
+    self.MonacoEnvironment = {
+        getWorkerUrl: function(moduleId, label) {
+            return 'https://esm.sh/monaco-editor@0.52.2/esm/vs/editor/editor.worker?worker';
+        }
+    }
     // Watch for shader errors
     setInterval(() => {
         monaco.editor.setModelMarkers(editor.getModel(), 'glsl', []);
