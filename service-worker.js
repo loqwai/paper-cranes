@@ -22,6 +22,7 @@ self.addEventListener("activate", async (event) => {
 /**
  * Fetches a request with retry logic.
  * Retries **indefinitely** with a backoff delay.
+ * WARNING: this may both reject and later resolve. This can cause code to unexpectedly execute when you thought it was done.
  * @param {Request} request - The request object.
  * @returns {Promise<Response>} - The response object.
  */

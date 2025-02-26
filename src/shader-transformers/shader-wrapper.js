@@ -1,5 +1,24 @@
 import { getFlatAudioFeatures } from '../audio/AudioProcessor'
 
+const getKnobUniforms = (shader) => {
+    const uniforms = []
+    // Check which knobs are already defined in the shader
+    const existingKnobs = new Set()
+    const knobRegex = /uniform\s+float\s+knob_(\d+)/g
+    let match
+    while ((match = knobRegex.exec(shader)) !== null) {
+        existingKnobs.add(parseInt(match[1]))
+    }
+
+    // Add knobs that don't already exist
+    for (let i = 1; i <= 200; i++) {
+        if (!existingKnobs.has(i)) {
+            uniforms.push(`uniform float knob_${i};`)
+        }
+    }
+    return uniforms.join('\n')
+}
+
 export const shaderWrapper = (shader) => {
     const [firstLine, ...lines] = shader.split('\n')
     if (firstLine.includes('#version')) {
@@ -14,6 +33,7 @@ precision highp float;
 out vec4 fragColor;
 ${shaderToyCompatibilityUniforms()}
 ${getAudioUniforms()}
+${getKnobUniforms(shader)}
 
 ${paperCranes()}
 vec4 getLastFrameColor(vec2 uv){
