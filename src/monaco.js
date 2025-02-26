@@ -23,7 +23,7 @@ function init(monaco) {
         value: '',
         language: 'glsl',
         theme: 'vs-dark',
-        minimap: { enabled: true },
+        minimap: { enabled: false },
         automaticLayout: true,
     });
 
