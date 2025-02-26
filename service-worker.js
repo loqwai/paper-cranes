@@ -40,7 +40,7 @@ async function fetchWithRetry(request) {
         requestsToRetry.push({request, resolve})
         while (true) {
             if(requestsToRetry.length === 0) return
-            const {request, resolve} = requestsToRetry.shift()
+            const {request, resolve} = requestsToRetry.pop() // the first time, do this request first.
             if(!request) throw new Error("No request to retry")
 
             try {
@@ -51,13 +51,13 @@ async function fetchWithRetry(request) {
                 if (response.ok) return resolve(response)
                 if (response.status === 0 && response.type !== "error") return resolve(response)
 
-                requestsToRetry.push({request, resolve})
+                requestsToRetry.unshift({request, resolve})
 
                 console.warn(
                     `Fetch failed for url ${request.url} (status: ${response.status}). Added to retry queue.`
                 )
             } catch (error) {
-                requestsToRetry.push({request, resolve})
+                requestsToRetry.unshift({request, resolve})
                 console.error(`Network error for url ${request.url}, retrying in ${interval}ms...`, error)
                 if (interval > 15000) {
                     interval = 150;
