@@ -1,18 +1,3 @@
-// import * as monaco from 'monaco-editor'
-
-// require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs' }});
-// Set up Monaco's worker path
-window.MonacoEnvironment = {
-    getWorkerUrl: function(workerId, label) {
-        return `data:text/javascript;charset=utf-8,${encodeURIComponent(`
-            self.MonacoEnvironment = {
-                baseUrl: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/'
-            };
-            importScripts('https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/base/worker/workerMain.js');`
-        )}`;
-    }
-}
-
 function init(monaco) {
     //if we have a shader in the query param, return
     // if (new URLSearchParams(window.location.search).get('shader')) return
@@ -536,9 +521,10 @@ function init(monaco) {
                 shader = await res.text()
                 localStorage.setItem('cranes-manual-code', shader)
                 const newUrl = new URL(window.location)
-                newUrl.searchParams.set('filename', searchParams.get('shader'))
+                // newUrl.searchParams.set('filename', searchParams.get('shader'))
+                // newUrl.searchParams.set('updateExisting', 'true')
                 newUrl.searchParams.delete('shader')
-                newUrl.searchParams.set('updateExisting', 'true')
+
                 window.history.pushState({}, '', newUrl)
                 window.location.reload()
             }
