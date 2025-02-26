@@ -1,4 +1,5 @@
-function init(monaco) {
+import * as monaco from 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/+esm'
+function init() {
     //if we have a shader in the query param, return
     // if (new URLSearchParams(window.location.search).get('shader')) return
     console.log('no shader in query param')
@@ -683,8 +684,4 @@ function init(monaco) {
 }
 
 // Wait for Monaco to be loaded from CDN
-window.addEventListener('load', () => {
-    if (window.monaco) {
-        init(window.monaco);
-    }
-});
+window.addEventListener('load', () => init());
