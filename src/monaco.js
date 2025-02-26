@@ -536,7 +536,9 @@ function init(monaco) {
                 shader = await res.text()
                 localStorage.setItem('cranes-manual-code', shader)
                 const newUrl = new URL(window.location)
+                newUrl.searchParams.set('filename', searchParams.get('shader'))
                 newUrl.searchParams.delete('shader')
+                newUrl.searchParams.set('updateExisting', 'true')
                 window.history.pushState({}, '', newUrl)
                 window.location.reload()
             }
@@ -558,77 +560,79 @@ function init(monaco) {
         editor.pushUndoStop()
     })
 
-    // save on control or command s
+    // Update the save command to work on both Windows and Mac
     editor.addAction({
         id: 'save',
         label: 'Save',
-        keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_S],
-        run: function() {
-            editor.pushUndoStop();
-            window.cranes.shader = editor.getValue();
-            localStorage.setItem('cranes-manual-code', editor.getValue());
-            editor.pushUndoStop();
+        keybindings: [
+            monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, // This handles both Ctrl+S and Cmd+S
+        ],
+        contextMenuGroupId: 'file',
+        contextMenuOrder: 1.5,
+        run: () => {
+            editor.pushUndoStop()
+            window.cranes.shader = editor.getValue()
+            localStorage.setItem('cranes-manual-code', editor.getValue())
+            editor.pushUndoStop()
+            return null // Prevent default browser save dialog
         }
-    });
+    })
 
     document.querySelector('#reset').addEventListener('click', () => {
         localStorage.removeItem('cranes-manual-code');
         window.location.reload();
     });
 
-    // Update the undo/redo commands to work on both Windows and Mac
+    // Update undo/redo actions to work consistently across platforms
     editor.addAction({
-        id: 'undo-win',
-        label: 'Undo (Windows)',
-        keybindings: [monaco.KeyMod.WinCtrl | monaco.KeyCode.KEY_Z],
-        run: () => editor.trigger('keyboard', 'undo', null)
-    });
+        id: 'undo',
+        label: 'Undo',
+        keybindings: [
+            monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyZ, // Handles both Ctrl+Z and Cmd+Z
+        ],
+        contextMenuGroupId: 'edit',
+        contextMenuOrder: 1.0,
+        run: () => {
+            editor.getModel().undo()
+            return null
+        }
+    })
 
     editor.addAction({
-        id: 'undo-mac',
-        label: 'Undo (Mac)',
-        keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_Z],
-        run: () => editor.trigger('keyboard', 'undo', null)
-    });
-
-    editor.addAction({
-        id: 'redo-win',
-        label: 'Redo (Windows)',
-        keybindings: [monaco.KeyMod.WinCtrl | monaco.KeyMod.Shift | monaco.KeyCode.KEY_Z],
-        run: () => editor.trigger('keyboard', 'redo', null)
-    });
-
-    editor.addAction({
-        id: 'redo-mac',
-        label: 'Redo (Mac)',
-        keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KEY_Z],
-        run: () => editor.trigger('keyboard', 'redo', null)
-    });
-
+        id: 'redo',
+        label: 'Redo',
+        keybindings: [
+            monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyZ, // Handles both Ctrl+Shift+Z and Cmd+Shift+Z
+        ],
+        contextMenuGroupId: 'edit',
+        contextMenuOrder: 1.1,
+        run: () => {
+            editor.getModel().redo()
+            return null
+        }
+    })
 
     const getFilename = (shaderCode) => {
-        const filename = new URLSearchParams(window.location.search).get('filename');
-        if(filename) return filename.replaceAll('.frag', '') + '.frag'
-        return 'my-new-shader.frag'
+        const filename = new URLSearchParams(window.location.search).get('filename') || 'my-new-shader.frag'
+        return filename.replaceAll('.frag', '') + '.frag' // I can't see how this will ever go wrong.
     }
 
     const getUsername = (shaderCode) => {
-        const username = new URLSearchParams(window.location.search).get('username');
-        if(username) return username
-        return ''
+        return new URLSearchParams(window.location.search).get('username') || ''
     }
 
     const getRepoName = (shaderCode) => {
-        const repoName = new URLSearchParams(window.location.search).get('repo');
-        if(repoName) return repoName
-        return 'loqwai/paper-cranes'
+        return new URLSearchParams(window.location.search).get('repo') || 'loqwai/paper-cranes'
     }
 
     const getShaderWithInstructions = (shaderCode) => {
-        if(shaderCode.includes('"shaders/<YOUR_GITHUB_USERNAME>" folder')) return shaderCode
-        let code = "// ⚠ make sure to name put your shader in the \"shaders/<YOUR_GITHUB_USERNAME>\" folder\n"
+        // Only add instructions for new files, not updates
+        const isUpdate = new URLSearchParams(window.location.search).get('updateExisting') === 'true'
+        if (isUpdate || shaderCode.includes('"shaders/<YOUR_GITHUB_USERNAME>" folder')) return shaderCode
+
+        let code = "// MAKE SURE TO NAME PUT YOUR SHADER IN \"shaders/<YOUR_GITHUB_USERNAME>\"\n"
         code += "// and make sure the filename ends in .frag\n"
-        code += "// for example, if your username is \"hypnodroid\", and you want to publish \"my-shader.frag\", the filename above should be \"hypnodroid/my-shader.frag\"\n"
+        code += "// for example, if your username is \"hypnodroid\", and you want to publish \"my-shader.frag\", the filename should be \"hypnodroid/my-shader.frag\"\n"
         code += shaderCode
         return code
     }
@@ -638,14 +642,20 @@ function init(monaco) {
         const filename = getFilename(shaderCode)
         const repoName = getRepoName(shaderCode)
         const username = getUsername(shaderCode)
-
-        const newUrl = new URL(`https://github.com/${repoName}/new/main/shaders/${username}`)
-        newUrl.searchParams.set('filename', filename)
-        newUrl.searchParams.set('value', shaderCode)
-        // set the language to glsl
-        newUrl.searchParams.set('language', 'glsl')
-        // Update URL without reloading the page
-        window.open(newUrl, '_blank')
+        const isUpdate = new URLSearchParams(window.location.search).get('updateExisting') === 'true'
+        // if this is an update:
+        // 1. copy the code into the clipboard
+        // 2. redirect to the edit url.
+        if (isUpdate) {
+            navigator.clipboard.writeText(shaderCode)
+            const editUrl = `https://github.com/${repoName}/edit/main/shaders/${filename}`
+            return window.open(editUrl, '_blank')
+        }
+        const baseUrl = new URL(`https://github.com/${repoName}/new/main/shaders/${username}`)
+        //if (isUpdate) baseUrl = new URL(`https://github.com/${repoName}/edit/main/shaders/${filename}`)
+        baseUrl.searchParams.set('filename', filename)
+        baseUrl.searchParams.set('value', shaderCode)
+        window.open(baseUrl, '_blank')
     })
 
     // Add hover provider for audio uniforms
