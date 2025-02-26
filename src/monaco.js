@@ -605,7 +605,48 @@ function init(monaco) {
         run: () => editor.trigger('keyboard', 'redo', null)
     });
 
-    document.querySelector('#publish').addEventListener('click', () => {});
+
+    const getFilename = (shaderCode) => {
+        const filename = new URLSearchParams(window.location.search).get('filename');
+        if(filename) return filename.replaceAll('.frag', '') + '.frag'
+        return 'my-new-shader.frag'
+    }
+
+    const getUsername = (shaderCode) => {
+        const username = new URLSearchParams(window.location.search).get('username');
+        if(username) return username
+        return ''
+    }
+
+    const getRepoName = (shaderCode) => {
+        const repoName = new URLSearchParams(window.location.search).get('repo');
+        if(repoName) return repoName
+        return 'loqwai/paper-cranes'
+    }
+
+    const getShaderWithInstructions = (shaderCode) => {
+        if(shaderCode.includes('"shaders/<YOUR_GITHUB_USERNAME>" folder')) return shaderCode
+        let code = "// ⚠ make sure to name put your shader in the \"shaders/<YOUR_GITHUB_USERNAME>\" folder\n"
+        code += "// and make sure the filename ends in .frag\n"
+        code += "// for example, if your username is \"hypnodroid\", and you want to publish \"my-shader.frag\", the filename above should be \"hypnodroid/my-shader.frag\"\n"
+        code += shaderCode
+        return code
+    }
+
+    document.querySelector('#publish').addEventListener('click', () => {
+        const shaderCode = getShaderWithInstructions(editor.getValue())
+        const filename = getFilename(shaderCode)
+        const repoName = getRepoName(shaderCode)
+        const username = getUsername(shaderCode)
+
+        const newUrl = new URL(`https://github.com/${repoName}/new/main/shaders/${username}`)
+        newUrl.searchParams.set('filename', filename)
+        newUrl.searchParams.set('value', shaderCode)
+        // set the language to glsl
+        newUrl.searchParams.set('language', 'glsl')
+        // Update URL without reloading the page
+        window.open(newUrl, '_blank')
+    })
 
     // Add hover provider for audio uniforms
     monaco.languages.registerHoverProvider('glsl', {
