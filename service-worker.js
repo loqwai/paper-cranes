@@ -115,7 +115,6 @@ self.addEventListener("fetch", (e) => {
     if (e.request.url.includes("service-worker.js")) return
     if (e.request.url.includes("esbuild")) return
     // if the url is not in our domain, continue
-    if (!e.request.url.includes(location.origin)) return
-    console.log(`fetching ${e.request.url} as it is ours`)
+    // if (!e.request.url.includes(location.origin)) return // actually I want to get and cache monaco.
     e.respondWith(fetchWithCache(e.request))
 })
