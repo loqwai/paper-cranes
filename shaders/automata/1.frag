@@ -1,3 +1,4 @@
+https://visuals.beadfamous.zcom/edit?cell_size=1000&cell_size.min=-3&cell_size.max=3
 uniform float cell_size;
 #define CELL_SIZE cell_size
 #define WRAP(value, max) mod(value, max)
