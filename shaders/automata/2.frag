@@ -1,3 +1,4 @@
+//
 uniform float cell_size;
 #define CELL_SIZE cell_size
 #define WRAP(value, max) mod(value, max)
