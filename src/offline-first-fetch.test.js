@@ -15,14 +15,14 @@ describe("offline-first-fetch", () => {
     })
 
     describe("when the url is cached", () => {
-        beforeEach(() => {
+        let response
+        beforeEach(async () => {
             cache.match = vi.fn().mockResolvedValue(new Response("the-cached-response"))
+            const request = new Request("https://famous-beads.com")
+            response = await offlineFirstFetch(request)
         })
         it("should give us a response", async () => {
-            const request = new Request("https://famous-beads.com")
-            const response = await offlineFirstFetch(request)
-            const value = await response.text()
-            expect(value).toEqual("the-cached-response")
+            await expect(response.text()).resolves.toEqual("the-cached-response")
         })
     })
     describe("when the url is not cached", () => {
