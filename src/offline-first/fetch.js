@@ -17,7 +17,6 @@ const fetchLoop = async (request) => {
         while(pendingRequests.length > 0) {
             const {request,resolve} = pendingRequests.shift()
             if(!request || !resolve) continue
-            console.log({request,resolve})
             const response = await fetch(request)
             shouldReload ||= await add(request,response)
             resolve(response)

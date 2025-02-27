@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
-import { offlineFirstFetch } from "./fetch"
+const timeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
+import { offlineFirstFetch } from "./fetch"
 import * as cache from "./cache"
 import reloadPage from "./reload-page"
 vi.mock("./cache", () => ({
@@ -50,8 +51,9 @@ describe("offline-first-fetch", () => {
         })
 
         describe('when add tells us we need to reload the page', () => {
-            beforeEach(() => {
+            beforeEach(async () => {
                 resolve(true)
+                await timeout(50)
             })
             it('should reload the page', () => {
                 expect(reloadPage).toHaveBeenCalled()
