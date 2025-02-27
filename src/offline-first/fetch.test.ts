@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
-import { offlineFirstFetch } from "./offline-first-fetch"
+import { offlineFirstFetch } from "./fetch"
 
 describe("offline-first-fetch", () => {
     let cache
     const fetch = vi.fn()
+    const tellPageToReload = vi.fn()
     beforeEach(() => {
         cache = {
             match: vi.fn(),
@@ -14,6 +15,16 @@ describe("offline-first-fetch", () => {
         }
         globalThis.VERSION = "twiddle-grr"
         globalThis.fetch = fetch
+
+        globalThis.self = {
+            clients: {
+                matchAll: vi.fn().mockResolvedValue([
+                    {
+                        postMessage: tellPageToReload
+                    }
+                ])
+            }
+        }
     })
     it("should exist", () => {
         expect(offlineFirstFetch).toBeDefined()
@@ -33,19 +44,21 @@ describe("offline-first-fetch", () => {
         it("should have fetched in the background", async () => {
             expect(globalThis.fetch).toHaveBeenCalled()
         })
-        describe("when the fetch resolves", () => {
+        describe("when the fetch resolves to something different from the cached response", () => {
             beforeEach(() => {
                 globalThis.fetch.mockResolvedValue(new Response("the-network-response"))
             })
-            it('should have cached something', () => {
+            it("should have cached something", () => {
                 expect(cache.put).toHaveBeenCalled()
             })
 
             it("should add the network request to the cache", async () => {
-                const [request,response]  = cache.put.mock.calls[0]
+                const [request, response] = cache.put.mock.calls[0]
                 expect(request.url).toEqual("https://famous-beads.com/")
                 await expect(response.text()).resolves.toEqual("the-network-response")
-
+            })
+            it("reloads the page", async () => {
+                expect(tellPageToReload).toHaveBeenCalled()
             })
         })
     })
