@@ -13,20 +13,25 @@ export const offlineFirstFetch = async (request) => {
 const fetchLoop = async (request) => {
     let shouldReload = false
     return new Promise(async (resolve) => {
-        pendingRequests.push({request,resolve})
+        pendingRequests.unshift({request,resolve})
         while(pendingRequests.length > 0) {
+            console.log("fetchLoop", pendingRequests.length)
             try {
                 const {request,resolve} = pendingRequests.shift()
                 if(!request || !resolve) continue
                 const response = await fetch(request)
+                console.log('fetched');
                 shouldReload ||= await add(request,response)
+                console.log('added to cache', shouldReload);
                 resolve(response)
             } catch(e) {
                 pendingRequests.push({request,resolve})
                 await timeout(10)
             }
         }
+        console.log("before timeout")
         await timeout(10)
+        console.log("fetchLoop ended", {pendingRequests, shouldReload})
         if(pendingRequests.length === 0 && shouldReload) reloadPage()
     })
 }

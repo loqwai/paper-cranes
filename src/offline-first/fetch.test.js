@@ -1,6 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
 const timeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
+// Helper to flush promises and advance timers
+const flushPromisesAndTimers = async () => {
+    await Promise.resolve()
+    vi.advanceTimersToNextTimer()
+
+}
+
 import { offlineFirstFetch } from "./fetch"
 import * as cache from "./cache"
 import reloadPage from "./reload-page"
@@ -58,17 +65,16 @@ describe("offline-first-fetch", () => {
         describe('when add tells us we need to reload the page', () => {
             beforeEach(async () => {
                 resolve(true)
-                console.log("advancing timers")
-                vi.advanceTimersByTime(50)
-                console.log("advancing timers")
+                await flushPromisesAndTimers()
             })
             it('should reload the page', () => {
                 expect(reloadPage).toHaveBeenCalled()
             })
         })
         describe('when addToCache tells us we do not need to reload the page', () => {
-            beforeEach(() => {
+            beforeEach(async () => {
                 resolve(false)
+                await flushPromisesAndTimers()
             })
             it('should not reload the page', () => {
                 expect(reloadPage).not.toHaveBeenCalled()
