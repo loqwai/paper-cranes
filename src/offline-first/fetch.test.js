@@ -3,7 +3,7 @@ import { offlineFirstFetch } from "./fetch"
 
 import addToCache from "./add-to-cache"
 import reloadPage from "./reload-page"
-
+const timeout = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 vi.mock("./add-to-cache", () => ({
     default: vi.fn()
 }))
@@ -71,15 +71,20 @@ describe("offline-first-fetch", () => {
         })
     })
     describe("when the url is not cached", () => {
-        beforeEach(() => {
+        let response
+        beforeEach(async () => {
             globalThis.fetch = vi.fn().mockResolvedValue(new Response("the-network-response"))
             cache.match = vi.fn().mockResolvedValue(null)
-        })
-        it("should fetch the url", async () => {
             const request = new Request("https://famous-beads.com")
-            const response = await offlineFirstFetch(request)
+            response = await offlineFirstFetch(request)
+        })
+        it("should return the fetched response", async () => {
             const value = await response.text()
             expect(value).toEqual("the-network-response")
+        })
+        it('should have cached the response', async () => {
+            await timeout(0)
+            expect(addToCache).toHaveBeenCalled()
         })
     })
 })
