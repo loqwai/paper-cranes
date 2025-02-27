@@ -82,6 +82,7 @@ describe("offline-first-fetch", () => {
             expect(cache.add).toHaveBeenCalled()
         })
     })
+
     describe("when we have pending requests", () => {
         beforeEach(async () => {
             globalThis.fetch = vi.fn().mockResolvedValue(new Response("the-network-response"))
