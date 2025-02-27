@@ -1,15 +1,26 @@
-import addToCache from "./add-to-cache"
+import {add, get} from "./cache"
 import reloadPage from "./reload-page"
 /** @param {Request} request */
 export const offlineFirstFetch = async (request) => {
-    const cache = await caches.open(VERSION)
-    const cachedResponse = await cache.match(request)
-    const netPromise = fetch(request).then(async (response) => {
-        console.log('adding to cache')
-        const shouldReload = await addToCache({request,response,cache})
-        if(shouldReload) reloadPage()
-        return response
-    })
+    // add request to list of pending requests
+    const netPromise = fetchLoop(request)
+    const cachedResponse = await get(request)
     if(cachedResponse) return cachedResponse
     return netPromise
+}
+
+const fetchLoop = async (request) => {
+    let shouldReload = false
+
+    return new Promise(async (resolve) => {
+        pendingRequests.push({request,resolve})
+        while(pendingRequests.length > 0) {
+            const {request,resolve} = pendingRequests.shift()
+            const response = await fetch(request)
+            shouldReload ||= await add(request,response)
+            resolve(response)
+        }
+        await timeout(10)
+        if(pendingRequests.length === 0 && shouldReload) reloadPage()
+    })
 }

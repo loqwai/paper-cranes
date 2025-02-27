@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
 import { offlineFirstFetch } from "./fetch"
 
-import addToCache from "./add-to-cache"
+import * as cache from "./cache"
 import reloadPage from "./reload-page"
-const timeout = (ms) => new Promise(resolve => setTimeout(resolve, ms))
-vi.mock("./add-to-cache", () => ({
-    default: vi.fn()
+vi.mock("./cache", () => ({
+    add: vi.fn(),
+    get: vi.fn(),
 }))
 
 vi.mock("./reload-page", () => ({
@@ -13,19 +13,13 @@ vi.mock("./reload-page", () => ({
 }))
 
 describe("offline-first-fetch", () => {
-    let cache
     const fetch = vi.fn()
     beforeEach(() => {
         vi.clearAllMocks()
-        cache = {
-            match: vi.fn(),
-        }
-        globalThis.caches /** @type {Partial<CacheStorage>} */ = {
-            open: vi.fn().mockResolvedValue(cache)
-        }
-        globalThis.VERSION = "twiddle-grr"
+        globalThis.pendingRequests = []
         globalThis.fetch = fetch
     })
+
     it("should exist", () => {
         expect(offlineFirstFetch).toBeDefined()
     })
@@ -34,9 +28,9 @@ describe("offline-first-fetch", () => {
         let response
         let resolve
         beforeEach(async () => {
-            cache.match = vi.fn().mockResolvedValue(new Response("the-cached-response"))
+            cache.get.mockResolvedValue(new Response("the-cached-response"))
             fetch.mockResolvedValue(new Response("the-network-response"))
-            addToCache.mockReturnValue(new Promise((r) => {
+            cache.add.mockReturnValue(new Promise((r) => {
                 resolve = r
             }))
             const request = new Request("https://famous-beads.com/")
@@ -50,10 +44,12 @@ describe("offline-first-fetch", () => {
         it("should have fetched in the background", async () => {
             expect(globalThis.fetch).toHaveBeenCalled()
         })
-        it('should have called addToCache', () => {
-            expect(addToCache).toHaveBeenCalled()
+
+        it('should have called add', () => {
+            expect(cache.add).toHaveBeenCalled()
         })
-        describe('when addToCache tells us we need to reload the page', () => {
+
+        describe('when add tells us we need to reload the page', () => {
             beforeEach(() => {
                 resolve(true)
             })
@@ -74,7 +70,7 @@ describe("offline-first-fetch", () => {
         let response
         beforeEach(async () => {
             globalThis.fetch = vi.fn().mockResolvedValue(new Response("the-network-response"))
-            cache.match = vi.fn().mockResolvedValue(null)
+            cache.get.mockResolvedValue(null)
             const request = new Request("https://famous-beads.com")
             response = await offlineFirstFetch(request)
         })
@@ -82,9 +78,22 @@ describe("offline-first-fetch", () => {
             const value = await response.text()
             expect(value).toEqual("the-network-response")
         })
-        it('should have cached the response', async () => {
-            await timeout(0)
-            expect(addToCache).toHaveBeenCalled()
+        it('should have cached the response', () => {
+            expect(cache.add).toHaveBeenCalled()
+        })
+    })
+    describe("when we have pending requests", () => {
+        beforeEach(async () => {
+            globalThis.fetch = vi.fn().mockResolvedValue(new Response("the-network-response"))
+            globalThis.pendingRequests.push(new Request("https://famousww-beads.com"))
+            cache.add.mockResolvedValue(true)
+            cache.get.mockResolvedValue(null)
+            const request = new Request("https://famous-beads.com")
+            await offlineFirstFetch(request)
+        })
+
+        it('should not reload the page yet', () => {
+            expect(reloadPage).not.toHaveBeenCalled()
         })
     })
 })
