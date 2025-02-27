@@ -76,7 +76,7 @@ async function fetchWithRetry(request) {
                 console.warn(`Fetch failed for url ${request.url} (status: ${response.status})`)
                 if(tries > 10) {
                     console.warn(`failed 10x. Giving up.`)
-                    return resolve(response)
+                    return // don't resolve. We'll never admit we can't find the resource.
                 }
 
             } catch (error) {
