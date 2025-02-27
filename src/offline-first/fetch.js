@@ -15,11 +15,16 @@ const fetchLoop = async (request) => {
     return new Promise(async (resolve) => {
         pendingRequests.push({request,resolve})
         while(pendingRequests.length > 0) {
-            const {request,resolve} = pendingRequests.shift()
-            if(!request || !resolve) continue
-            const response = await fetch(request)
-            shouldReload ||= await add(request,response)
-            resolve(response)
+            try {
+                const {request,resolve} = pendingRequests.shift()
+                if(!request || !resolve) continue
+                const response = await fetch(request)
+                shouldReload ||= await add(request,response)
+                resolve(response)
+            } catch(e) {
+                pendingRequests.push({request,resolve})
+                await timeout(10)
+            }
         }
         await timeout(10)
         if(pendingRequests.length === 0 && shouldReload) reloadPage()

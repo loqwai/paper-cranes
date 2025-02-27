@@ -4,6 +4,11 @@ const timeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 import { offlineFirstFetch } from "./fetch"
 import * as cache from "./cache"
 import reloadPage from "./reload-page"
+
+vi.useFakeTimers()
+vi.setConfig({
+    hookTimeout: 100
+})
 vi.mock("./cache", () => ({
     add: vi.fn(),
     get: vi.fn(),
@@ -53,7 +58,9 @@ describe("offline-first-fetch", () => {
         describe('when add tells us we need to reload the page', () => {
             beforeEach(async () => {
                 resolve(true)
-                await timeout(50)
+                console.log("advancing timers")
+                vi.advanceTimersByTime(50)
+                console.log("advancing timers")
             })
             it('should reload the page', () => {
                 expect(reloadPage).toHaveBeenCalled()
@@ -97,6 +104,20 @@ describe("offline-first-fetch", () => {
 
         it('should not reload the page yet', () => {
             expect(reloadPage).not.toHaveBeenCalled()
+        })
+    })
+    describe('when the fetch throws because of a network error', () => {
+        let response
+        beforeEach(async () => {
+            globalThis.fetch = vi.fn().mockRejectedValueOnce(new Error("network error"))
+            globalThis.fetch.mockResolvedValueOnce(new Response("the-network-response"))
+            const request = new Request("https://famous-beads.com")
+            response = await offlineFirstFetch(request)
+        })
+
+        it('should return the fetched response', async () => {
+            const value = await response.text()
+            expect(value).toEqual("the-network-response")
         })
     })
 })
