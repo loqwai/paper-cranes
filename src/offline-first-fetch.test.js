@@ -14,12 +14,15 @@ describe("offline-first-fetch", () => {
     })
     describe("when the url is cached", () => {
         beforeEach(() => {
-            /** @type { Partial<CacheStorage> } */
+            /** @type {Partial<CacheStorage>} */
             const caches = {
-                open: 4,
-            }
-            globalThis.caches = caches
-        })
+                open: vi.fn(),
+            };
+
+            // I hate you, TypeScript.
+            globalThis.caches = /** @type {CacheStorage} */ (caches)
+        });
+
         it("should give us a response", async () => {
             const request = new Request("https://famous-beads.com")
             const response = await offlineFirstFetch(request)
