@@ -3,12 +3,17 @@ import { offlineFirstFetch } from "./offline-first-fetch"
 
 describe("offline-first-fetch", () => {
     let cache
+    const fetch = vi.fn()
     beforeEach(() => {
-        cache = {}
+        cache = {
+            match: vi.fn(),
+            put: vi.fn()
+        }
         globalThis.caches /** @type {Partial<CacheStorage>} */ = {
             open: vi.fn().mockResolvedValue(cache)
         }
         globalThis.VERSION = "twiddle-grr"
+        globalThis.fetch = fetch
     })
     it("should exist", () => {
         expect(offlineFirstFetch).toBeDefined()
@@ -18,11 +23,30 @@ describe("offline-first-fetch", () => {
         let response
         beforeEach(async () => {
             cache.match = vi.fn().mockResolvedValue(new Response("the-cached-response"))
-            const request = new Request("https://famous-beads.com")
+            fetch.mockResolvedValue(new Response("the-network-response"))
+            const request = new Request("https://famous-beads.com/")
             response = await offlineFirstFetch(request)
         })
         it("should give us a response", async () => {
             await expect(response.text()).resolves.toEqual("the-cached-response")
+        })
+        it("should have fetched in the background", async () => {
+            expect(globalThis.fetch).toHaveBeenCalled()
+        })
+        describe("when the fetch resolves", () => {
+            beforeEach(() => {
+                globalThis.fetch.mockResolvedValue(new Response("the-network-response"))
+            })
+            it('should have cached something', () => {
+                expect(cache.put).toHaveBeenCalled()
+            })
+
+            it("should add the network request to the cache", async () => {
+                const [request,response]  = cache.put.mock.calls[0]
+                expect(request.url).toEqual("https://famous-beads.com/")
+                await expect(response.text()).resolves.toEqual("the-network-response")
+
+            })
         })
     })
     describe("when the url is not cached", () => {
