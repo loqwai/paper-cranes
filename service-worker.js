@@ -2,7 +2,11 @@ const self = /** @type {ServiceWorkerGlobalScope} */ (globalThis)
 
 console.log(`Service worker ${CACHE_NAME} starting`)
 const timeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-
+/**
+ * A set of requests that are waiting to be retried.
+ * @type {Array<{request: Request, resolve: (response: Response) => void, tries: number}>}
+ */
+const requestsToRetry = []
 
 /**
  * Install event - The event returned by the install event is used to cache critical resources during install
@@ -10,22 +14,35 @@ const timeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
  */
 self.addEventListener("install", async (event) => {
     console.log("Service Worker: Installing...")
+    requestsToRetry.length = 0
     await self.skipWaiting()
 })
 
 // Activate event - claim clients immediately and clean up old caches
 self.addEventListener("activate", async (event) => {
     console.log("Service Worker: Activated")
+    requestsToRetry.length = 0
     await self.clients.claim()
     console.log("Service Worker: Claimed clients")
 })
 
 
-/**
- * A set of requests that are waiting to be retried.
- * @type {Array<{request: Request, resolve: (response: Response) => void}>}
- */
-const requestsToRetry = []
+
+
+const addToRetryQueue = async (request, resolve, tries) => {
+    tries++
+    const cache = await caches.open(CACHE_NAME)
+    if (await cache.match(request)) {
+        console.warn(`${request.url} is in the cache, putting it at the back of the queue.`)
+        return requestsToRetry.push({request, resolve, tries})
+    }
+    if(Math.random() < 0.1) {
+        console.warn(`no cache for ${request.url}, putting it in the back anyway`)
+        return requestsToRetry.push({request, resolve, tries})
+    }
+    console.warn(`there is no cache for ${request.url}, putting it in the front of the queue.`)
+    requestsToRetry.unshift({request, resolve, tries: tries + 1})
+}
 
 /**
  * Fetches a request with retry logic.
@@ -35,37 +52,43 @@ const requestsToRetry = []
  */
 async function fetchWithRetry(request) {
     let interval = 150 // Start with 150ms delay
-
     return new Promise(async (resolve) => {
-        requestsToRetry.push({request, resolve})
+        requestsToRetry.unshift({request, resolve, tries: 0})
         while (true) {
             if(requestsToRetry.length === 0) return
-            const {request, resolve} = requestsToRetry.pop() // the first time, do this request first.
-            if(!request) throw new Error("No request to retry")
+            const {request, resolve, tries} = requestsToRetry.shift() // the first time, do this request first.
+            if(!request) {
+                console.warn("No request to retry")
+                return
+            }
+            console.log(`Fetching ${request.url} (tries: ${tries})`)
 
             try {
                 const response = await fetch(request)
-                const nextRequest = requestsToRetry.shift()
-                if (nextRequest) fetchWithRetry(nextRequest.request).then(nextRequest.resolve)
+
+                for(let i = 0; i < 3; i++) {
+                    const nextRequest = requestsToRetry.shift()
+                    if (nextRequest) timeout(Math.random() * 1000).then(() => fetchWithRetry(nextRequest.request).then(nextRequest.resolve) )
+                }
 
                 if (response.ok) return resolve(response)
                 if (response.status === 0 && response.type !== "error") return resolve(response)
+                console.warn(`Fetch failed for url ${request.url} (status: ${response.status})`)
+                if(tries > 10) {
+                    console.warn(`failed 10x. Giving up.`)
+                    return resolve(response)
+                }
 
-                requestsToRetry.unshift({request, resolve})
-
-                console.warn(
-                    `Fetch failed for url ${request.url} (status: ${response.status}). Added to retry queue.`
-                )
             } catch (error) {
-                requestsToRetry.unshift({request, resolve})
                 console.error(`Network error for url ${request.url}, retrying in ${interval}ms...`, error)
                 if (interval > 15000) {
                     interval = 150;
                     await timeout(Math.random() * 30000 + 10000)
                 }
             }
+            addToRetryQueue(request, resolve, tries)
             await timeout(interval)
-            console.log(`Back from sleeping when trying to fetch ${request.url}. There are ${requestsToRetry.length} requests to retry`)
+            console.log(`Back from sleeping when trying to fetch ${request.url}. There are ${requestsToRetry.length} requests to retry. interval: ${interval}`)
             const jitter = Math.random()
             interval *= (1.5 + jitter)
         }
@@ -118,16 +141,35 @@ async function fetchWithCache(request) {
 }
 
 /**
- * Possibly intercepts a fetch event and caches the response.
- * @param {FetchEvent} event
+ * Intercepts a fetch event and caches the response.
+ * @param {FetchEvent} event The fetch event containing request and respondWith
  */
 self.addEventListener("fetch", (e) => {
+
     if (!e.request.url.includes("http")) return
-    if (e.request.url.includes("localhost")) return
+
+    // if (e.request.url.includes("localhost")) return
+
     if (e.request.method !== "GET") return
+
     if (e.request.url.includes("service-worker.js")) return
+
     if (e.request.url.includes("esbuild")) return
-    // if the url is not in our domain, continue
-    // if (!e.request.url.includes(location.origin)) return // actually I want to get and cache monaco.
-    e.respondWith(fetchWithCache(e.request))
+
+    // if it's not our domain, cache and return.
+    // if it's not a  navigation request, cache and return.
+    if(!e.request.mode === "navigate") return e.respondWith(fetchWithCache(e.request))
+
+    if(!e.request.url.startsWith(location.origin)) return e.respondWith(fetchWithCache(e.request))
+
+    const strippedUrl = new URL(e.request.url)
+    strippedUrl.search = ""
+    const strippedRequest = new Request(strippedUrl.toString())
+
+    for(const key in e.request.headers) {
+        strippedRequest.headers.set(key, e.request.headers.get(key))
+    }
+
+    return e.respondWith(fetchWithCache(strippedRequest))
+
 })
