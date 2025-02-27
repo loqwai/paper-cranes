@@ -1,4 +1,4 @@
-//https://visuals.beadfamous.com/edit?cell_size=1000&cell_size.min=-3&cell_size.max=3
+//https://visuals.beadfamous.com/?cell_size=300&cell_size.min=-3&cell_size.max=3&shader=automata%2F4
 uniform float cell_size;
 #define CELL_SIZE cell_size
 #define WRAP(value, max) mod(value, max)
