@@ -6,7 +6,7 @@
   "main": "dist/src/audio/AudioProcessor.js",
   "scripts": {
     "start": "npm run dev",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest",
     "build": "node esbuild.build.js",
     "dev": "node esbuild.dev.js",
     "format": "eslint --fix ."
@@ -30,7 +30,8 @@
     "esbuild-plugin-html": "^1.0.0",
     "eslint": "^8.57.1",
     "mini-css-extract-plugin": "^2.9.2",
-    "prettier": "^3.4.2"
+    "prettier": "^3.4.2",
+    "vitest": "^3.0.7"
   },
   "languages": [
     {
