@@ -4,17 +4,18 @@ console.log(`Service worker ${CACHE_NAME} starting`)
 const timeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 self.addEventListener("install", (event) => {
-    console.log("Service Worker: Installing...");
-    event.waitUntil(self.skipWaiting());
-});
+    console.log("Service Worker: Installing...")
+    self.skipWaiting()
+})
 
 
 self.addEventListener("activate", (event) => {
-    console.log("Service Worker: Activated");
+    console.log("Service Worker: Activated")
+
     event.waitUntil(self.clients.claim().then(() => {
-        console.log("Service Worker: Claimed clients");
-    }));
-});
+        console.log("Service Worker: Claimed clients")
+    }))
+})
 
 
 self.addEventListener("message", (event) => {
@@ -77,7 +78,7 @@ async function fetchWithRetry(request) {
             await timeout(interval)
             console.log(`Back from sleeping when trying to fetch ${retryItem.request.url}. There are ${requestsToRetry.length} requests to retry`)
             const jitter = Math.random()
-            interval *= (1.5 + jitter)
+            interval *= (2 + jitter)
         }
     })
 }
@@ -92,7 +93,7 @@ const retryDeadRequests = () => {
     deadRequests.forEach(item => item.timesDead = (item.timesDead ?? 0) + 1)
 
     // filter out requests that have been retried too many times
-    deadRequests = deadRequests.filter(item => (item.timesDead ?? 0) < 10)
+    deadRequests = deadRequests.filter(item => (item.timesDead ?? 0) < 3)
     // filter out duplicate requests
     const seenUrls = new Set()
     deadRequests = deadRequests.filter((item) => {
@@ -114,32 +115,68 @@ const retryDeadRequests = () => {
 let contentChanged = false
 
 /**
+ * Gets a response from cache, checking both exact matches and URLs without query params
+ * @param {Request} request - The request to find in cache
+ * @returns {Promise<Response|undefined>} The cached response if found, undefined otherwise
+ */
+async function getFromCache(request) {
+    const cache = await caches.open(CACHE_NAME)
+
+    // Check for exact match first
+    const exactMatch = await cache.match(request)
+    if (exactMatch) return exactMatch.clone()
+
+    // Try matching without query params
+    const url = new URL(request.url)
+    url.search = '' // Remove query params
+    const cleanRequest = new Request(url.toString())
+    return (await cache.match(cleanRequest))?.clone()
+}
+/**
+ * Adds a request to the cache, storing both with and without query params
+ * @param {Request} req - The request to cache
+ * @param {Response} res - The response to cache
+ * @returns {Promise<void>}
+ */
+const addToCache = async (req, res) => {
+    res = res.clone()
+    const cleanRes = res.clone()
+    const cache = await caches.open(CACHE_NAME)
+
+    // Store original request
+    await cache.put(req,res)
+
+    // Store version without query params
+    const url = new URL(req.url)
+    url.search = ''
+    const cleanRequest = new Request(url.toString())
+    console.log("Adding to cache", cleanRequest.url)
+    await cache.put(cleanRequest,cleanRes)
+}
+
+const didThingsChange = async (request, response) => {
+    const safeResponse = response.clone()
+    const cached = await getFromCache(request)
+    const newData = await safeResponse.text()
+    const oldData = await cached?.text()
+    return oldData !== newData
+}
+
+/**
  * Fetches a request and caches the response. Always starts the fetch immediately.
  * @param {Request} request - The request object.
  * @returns {Promise<Response>} - The response object.
  */
 async function fetchWithCache(request) {
-    const cache = await caches.open(CACHE_NAME)
+    const networkPromise = fetchWithRetry(request).then(async (response) => {
+        contentChanged ||= await didThingsChange(request, response)
+        await addToCache(request, response)
 
-    const networkPromise = fetchWithRetry(request).then(async (networkResponse) => {
-        console.log(`${request.url} fetched`)
-        const cachedResponse = await cache.match(request)
-        const networkClone = networkResponse.clone()
-        await cache.put(request, networkResponse)
-
-        if(!cachedResponse) return networkClone
-
-        const cachedClone = cachedResponse.clone()
-
-        const oldData = await cachedClone.text()
-        const newData = await networkClone.text()
-        contentChanged ||= (oldData !== newData)
         console.log(`${request.url} has changed: ${contentChanged}`)
-        return networkClone
+        return response
     })
-    const found = await cache.match(request)
-    if(found) return found
-    return networkPromise
+
+    return (await getFromCache(request)) ?? networkPromise
 }
 
 /**
@@ -148,7 +185,7 @@ async function fetchWithCache(request) {
  */
 self.addEventListener("fetch", (e) => {
     if (!e.request.url.includes("http")) return
-    if (e.request.url.includes("localhost")) return
+    // if (e.request.url.includes("localhost")) return
     if (e.request.method !== "GET") return
     if (e.request.url.includes("service-worker.js")) return
     if (e.request.url.includes("esbuild")) return
