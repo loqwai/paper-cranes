@@ -92,7 +92,7 @@ const retryDeadRequests = () => {
     deadRequests.forEach(item => item.timesDead = (item.timesDead ?? 0) + 1)
 
     // filter out requests that have been retried too many times
-    deadRequests = deadRequests.filter(item => (item.timesDead ?? 0) < 100)
+    deadRequests = deadRequests.filter(item => (item.timesDead ?? 0) < 10)
     // filter out duplicate requests
     const seenUrls = new Set()
     deadRequests = deadRequests.filter((item) => {
