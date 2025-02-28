@@ -68,7 +68,7 @@ async function fetchWithRetry(request) {
                 console.error(`Network error for url ${retryItem.request.url}, retrying in ${interval}ms...`, error)
             }
 
-            if (interval > 15000) {
+            if (interval > 10000) {
                 console.log("Adding to dead requests", retryItem.request.url, retryItem.timesDead)
                 deadRequests.push(retryItem)
                 return
