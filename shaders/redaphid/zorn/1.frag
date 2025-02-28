@@ -1,9 +1,9 @@
 
 #define EPSILON 0.0000001
 
-#define PROBE_1 mix(1.,1.4,spectralRoughnessNormalized)+EPSILON
+#define PROBE_1 mix(1.,1.4,spectralCentroidNormalized)+EPSILON
 #define PROBE_2 mix(0.60,2.,spectralFluxNormalized)+EPSILON /* 'fan out' swirls -> multiple squares */
-#define PROBE_3 mix(-1.5,10.,pitchClassMedian)+EPSILON /* color */
+#define PROBE_3 mix(-1.5,10.,energyZScore)+EPSILON /* color */
 #define PROBE_4 mix(1.,11.,trebleNormalized)+EPSILON
 #define PROBE_5 mix(0.47,0.97,spectralKurtosisNormalized)+EPSILON /* complexity + zoom */
 #define PROBE_6 mix(0.4,0.2,energyNormalized)+EPSILON /*zoom */
@@ -35,5 +35,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float diagonalDotTrap = abs(dot(normalizedCoords, vec2(PROBE_3, PROBE_4))); // Dot product with (1,1) vector
 
         fragColor = min(fragColor, vec4(lengthTrap, minAxesTrap, diagonalDotTrap, 1.0));
+        vec3 hslColor = rgb2hsl(fragColor.rgb);
+        // hslColor.r += 0.5;
+        fragColor.rgb = hsl2rgb(hslColor);
     }
 }

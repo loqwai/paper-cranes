@@ -3,22 +3,19 @@ const self = /** @type {ServiceWorkerGlobalScope} */ (globalThis)
 console.log(`Service worker ${CACHE_NAME} starting`)
 const timeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
+self.addEventListener("install", (event) => {
+    console.log("Service Worker: Installing...");
+    event.waitUntil(self.skipWaiting());
+});
 
-/**
- * Install event - The event returned by the install event is used to cache critical resources during install
- * @param {InstallEvent} event
- */
-self.addEventListener("install", async (event) => {
-    console.log("Service Worker: Installing...")
-    await self.skipWaiting()
-})
 
-// Activate event - claim clients immediately and clean up old caches
-self.addEventListener("activate", async (event) => {
-    console.log("Service Worker: Activated")
-    await self.clients.claim()
-    console.log("Service Worker: Claimed clients")
-})
+self.addEventListener("activate", (event) => {
+    console.log("Service Worker: Activated");
+    event.waitUntil(self.clients.claim().then(() => {
+        console.log("Service Worker: Claimed clients");
+    }));
+});
+
 
 self.addEventListener("message", (event) => {
     console.log("Service Worker: Message", event)
@@ -76,7 +73,7 @@ async function fetchWithRetry(request) {
             if (interval > 10000) {
                 console.log("Adding to dead requests", retryItem.request.url, retryItem.timesDead)
                 deadRequests.push(retryItem)
-                return reject(new Error("Failed to fetch"))
+                return
             }
 
             requestsToRetry.unshift(retryItem)
@@ -99,10 +96,11 @@ const retryDeadRequests = () => {
 
     // filter out requests that have been retried too many times
     deadRequests = deadRequests.filter(item => (item.timesDead ?? 0) < 100)
-
+    // shuffle deadRequests
+    deadRequests = deadRequests.sort(() => Math.random() - 0.5)
 
     requestsToRetry.push(...deadRequests)
-    deadRequests.length = 0
+    deadRequests = []
 
     console.log('total requests to retry', requestsToRetry.length)
     fetchWithRetry()
