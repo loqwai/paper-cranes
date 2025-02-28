@@ -25,10 +25,10 @@ function init() {
         if (!error) return;
         const markers = [{
             severity: monaco.MarkerSeverity.Error,
-            message: error.message || 'Unknown error',
-            startLineNumber: error.lineNumber || 1,
+            message: error.message ?? 'Unknown error',
+            startLineNumber: error.lineNumber ?? 1,
             startColumn: 1,
-            endLineNumber: error.lineNumber || 1,
+            endLineNumber: error.lineNumber ?? 1,
             endColumn: 1000
         }];
         monaco.editor.setModelMarkers(editor.getModel(), 'glsl', markers);
@@ -460,28 +460,6 @@ function init() {
     // Register a completion item provider for GLSL
     monaco.languages.registerCompletionItemProvider('glsl', {
         provideCompletionItems: () => {
-            const snippets = [
-                {
-                    label: 'define-audio',
-                    kind: monaco.languages.CompletionItemKind.Snippet,
-                    documentation: 'Define an audio feature alias',
-                    insertText: '#define ${1:NAME} (${2:audioFeature})',
-                    insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
-                },
-                {
-                    label: 'color-mix',
-                    kind: monaco.languages.CompletionItemKind.Snippet,
-                    documentation: 'Mix two colors based on audio',
-                    insertText: [
-                        'vec3 color1 = vec3(${1:1.0}, ${2:0.0}, ${3:0.0});',
-                        'vec3 color2 = vec3(${4:0.0}, ${5:1.0}, ${6:0.0});',
-                        'vec3 finalColor = mix(color1, color2, ${7:audioFeature});'
-                    ].join('\n'),
-                    insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
-                },
-                // Add more useful snippets...
-            ]
-
             const suggestions = [
                 // Add knob suggestions
                 ...Array.from({ length: 200 }, (_, i) => i + 1).map(num => ({
@@ -502,7 +480,6 @@ function init() {
                     insertText: keyword,
                     range: null
                 })),
-                ...snippets
             ]
 
             return { suggestions }
@@ -545,28 +522,37 @@ function init() {
             editor.layout();
         })();
 
-    document.querySelector('#save').addEventListener('click', () => {
+    const save = () => {
         editor.pushUndoStop()
         window.cranes.shader = editor.getValue()
         localStorage.setItem('cranes-manual-code', editor.getValue())
         editor.pushUndoStop()
-    })
+    }
+    const undo = () => editor.getModel().undo()
+    const redo = () => editor.getModel().redo()
 
-    // Update the save command to work on both Windows and Mac
-    editor.addAction({
-        id: 'save',
-        label: 'Save',
-        keybindings: [
-            monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, // This handles both Ctrl+S and Cmd+S
-        ],
-        contextMenuGroupId: 'file',
-        contextMenuOrder: 1.5,
-        run: () => {
-            editor.pushUndoStop()
-            window.cranes.shader = editor.getValue()
-            localStorage.setItem('cranes-manual-code', editor.getValue())
-            editor.pushUndoStop()
-            return null // Prevent default browser save dialog
+    document.querySelector('#save').addEventListener('click', save)
+
+    // Add keyboard event listeners
+    document.addEventListener('keydown', (e) => {
+        if(!(e.metaKey || e.ctrlKey)) return;
+        switch(e.key) {
+            case 's':
+                e.preventDefault()
+                save()
+                return;
+            case 'z':
+                e.preventDefault()
+                if(e.shiftKey) {
+                    redo()
+                    return;
+                }
+                undo()
+                return;
+            case 'y':
+                e.preventDefault()
+                redo()
+                return;
         }
     })
 
@@ -574,35 +560,6 @@ function init() {
         localStorage.removeItem('cranes-manual-code');
         window.location.reload();
     });
-
-    // Update undo/redo actions to work consistently across platforms
-    editor.addAction({
-        id: 'undo',
-        label: 'Undo',
-        keybindings: [
-            monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyZ, // Handles both Ctrl+Z and Cmd+Z
-        ],
-        contextMenuGroupId: 'edit',
-        contextMenuOrder: 1.0,
-        run: () => {
-            editor.getModel().undo()
-            return null
-        }
-    })
-
-    editor.addAction({
-        id: 'redo',
-        label: 'Redo',
-        keybindings: [
-            monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyZ, // Handles both Ctrl+Shift+Z and Cmd+Shift+Z
-        ],
-        contextMenuGroupId: 'edit',
-        contextMenuOrder: 1.1,
-        run: () => {
-            editor.getModel().redo()
-            return null
-        }
-    })
 
     const getFilename = (shaderCode) => {
         const filename = new URLSearchParams(window.location.search).get('filename') || 'my-new-shader.frag'
