@@ -269,4 +269,9 @@ const getFragmentShader = async () => {
 if(process.env.LIVE_RELOAD) {
     new EventSource('/esbuild').addEventListener('change', () => location.reload());
 }
+if(navigator.connection) {
+    navigator.connection.addEventListener('change', () => {
+        navigator.serviceWorker.controller.postMessage({type:'network-changed'})
+    })
+}
 console.log(`paper cranes version ${CACHE_NAME}`);

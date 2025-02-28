@@ -20,56 +20,92 @@ self.addEventListener("activate", async (event) => {
     console.log("Service Worker: Claimed clients")
 })
 
+self.addEventListener("message", (event) => {
+    console.log("Service Worker: Message", event)
+    if(event.data.type === "network-changed") retryDeadRequests()
+})
 
-/**
- * A set of requests that are waiting to be retried.
- * @type {Array<{request: Request, resolve: (response: Response) => void}>}
- */
+const reloadAllClients = async () => {
+    console.log("Reloading all clients")
+    contentChanged = false
+    const clients = await self.clients.matchAll()
+    clients.forEach((client) => client.postMessage("reload"))
+    console.log("Reloaded", clients.length, "clients")
+}
+
+
 const requestsToRetry = []
+let deadRequests = []
 
 /**
  * Fetches a request with retry logic.
  * Retries **indefinitely** with a backoff delay.
- * @param {Request} request - The request object.
+ * @param {Request | undefined} request - The request object.
  * @returns {Promise<Response>} - The response object.
  */
 async function fetchWithRetry(request) {
     let interval = 150 // Start with 150ms delay
 
-    return new Promise(async (resolve) => {
-        requestsToRetry.push({request, resolve})
+    return new Promise(async (resolve, reject) => {
+        if(request) {
+            const retryData = {request, resolve, reject}
+            requestsToRetry.push(retryData)
+        }
         while (true) {
-            if(requestsToRetry.length === 0) return
-            const {request, resolve} = requestsToRetry.pop() // the first time, do this request first.
-            if(!request) throw new Error("No request to retry")
+            if(requestsToRetry.length === 0) {
+                if(contentChanged) reloadAllClients()
+                return
+            }
+
+            const retryItem = requestsToRetry.pop() // the first time, do this request first.
+            if(!retryItem?.request) return console.error("No request to retry")
 
             try {
-                const response = await fetch(request)
-                const nextRequest = requestsToRetry.shift()
-                if (nextRequest) fetchWithRetry(nextRequest.request).then(nextRequest.resolve)
-
-                if (response.ok) return resolve(response)
-                if (response.status === 0 && response.type !== "error") return resolve(response)
-
-                requestsToRetry.unshift({request, resolve})
+                const response = await fetch(retryItem.request)
+                if(requestsToRetry.length > 0) fetchWithRetry()
+                if (response.ok) return retryItem.resolve(response)
+                if (response.status === 0 && response.type !== "error") return retryItem.resolve(response)
 
                 console.warn(
-                    `Fetch failed for url ${request.url} (status: ${response.status}). Added to retry queue.`
+                    `Fetch failed for url ${retryItem.request.url} (status: ${response.status}). Added to retry queue.`
                 )
             } catch (error) {
-                requestsToRetry.unshift({request, resolve})
-                console.error(`Network error for url ${request.url}, retrying in ${interval}ms...`, error)
-                if (interval > 15000) {
-                    interval = 150;
-                    await timeout(Math.random() * 30000 + 10000)
-                }
+                console.error(`Network error for url ${retryItem.request.url}, retrying in ${interval}ms...`, error)
             }
+
+            if (interval > 10000) {
+                console.log("Adding to dead requests", retryItem.request.url, retryItem.timesDead)
+                deadRequests.push(retryItem)
+                return reject(new Error("Failed to fetch"))
+            }
+
+            requestsToRetry.unshift(retryItem)
             await timeout(interval)
-            console.log(`Back from sleeping when trying to fetch ${request.url}. There are ${requestsToRetry.length} requests to retry`)
+            console.log(`Back from sleeping when trying to fetch ${retryItem.request.url}. There are ${requestsToRetry.length} requests to retry`)
             const jitter = Math.random()
             interval *= (1.5 + jitter)
         }
     })
+}
+
+// restart the fetchWithRetry loop every 10 seconds
+setInterval(fetchWithRetry, 10000)
+
+const retryDeadRequests = () => {
+    console.log("Retrying dead requests", deadRequests.length)
+
+    // increase dead count
+    deadRequests.forEach(item => item.timesDead = (item.timesDead ?? 0) + 1)
+
+    // filter out requests that have been retried too many times
+    deadRequests = deadRequests.filter(item => (item.timesDead ?? 0) < 100)
+
+
+    requestsToRetry.push(...deadRequests)
+    deadRequests.length = 0
+
+    console.log('total requests to retry', requestsToRetry.length)
+    fetchWithRetry()
 }
 
 let contentChanged = false
@@ -96,21 +132,7 @@ async function fetchWithCache(request) {
         const newData = await networkClone.text()
         contentChanged ||= (oldData !== newData)
         console.log(`${request.url} has changed: ${contentChanged}`)
-        if(!contentChanged) return networkClone
-
-
-        // wait a bit to see if more requests come in
-        await timeout(50)
-        if(requestsToRetry.length > 0) {
-            console.log(`${request.url} has changed, but I'm waiting for ${requestsToRetry.length} requests to complete`)
-            return networkClone
-        }
-
-        console.log("All requests complete, triggering reload")
-        contentChanged = false
-        const clients = await self.clients.matchAll()
-        clients.forEach((client) => client.postMessage("reload"))
-        console.log("Reloaded", clients.length, "clients")
+        return networkClone
     })
     const found = await cache.match(request)
     if(found) return found
@@ -123,7 +145,7 @@ async function fetchWithCache(request) {
  */
 self.addEventListener("fetch", (e) => {
     if (!e.request.url.includes("http")) return
-    if (e.request.url.includes("localhost")) return
+    // if (e.request.url.includes("localhost")) return
     if (e.request.method !== "GET") return
     if (e.request.url.includes("service-worker.js")) return
     if (e.request.url.includes("esbuild")) return
