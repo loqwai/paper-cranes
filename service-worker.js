@@ -31,7 +31,7 @@ const reloadAllClients = async () => {
 }
 
 
-const requestsToRetry = []
+let requestsToRetry = []
 let deadRequests = []
 
 /**
@@ -93,6 +93,14 @@ const retryDeadRequests = () => {
 
     // filter out requests that have been retried too many times
     deadRequests = deadRequests.filter(item => (item.timesDead ?? 0) < 100)
+    // filter out duplicate requests
+    const seenUrls = new Set()
+    deadRequests = deadRequests.filter((item) => {
+        if (seenUrls.has(item.request.url)) return false
+        seenUrls.add(item.request.url)
+        return true
+    })
+
     // shuffle deadRequests
     deadRequests = deadRequests.sort(() => Math.random() - 0.5)
 
