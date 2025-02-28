@@ -35,10 +35,7 @@ const requestsToRetry = []
 let deadRequests = []
 
 /**
- * Fetches a request with retry logic.
- * Retries **indefinitely** with a backoff delay.
  * @param {Request | undefined} request - The request object.
- * @returns {Promise<Response>} - The response object.
  */
 async function fetchWithRetry(request) {
     let interval = 150 // Start with 150ms delay
@@ -46,7 +43,7 @@ async function fetchWithRetry(request) {
     return new Promise(async (resolve, reject) => {
         if(request) {
             const retryData = {request, resolve, reject}
-            requestsToRetry.push(retryData)
+            requestsToRetry.push(retryData) // the first time, do this request first.
         }
         while (true) {
             if(requestsToRetry.length === 0) {
@@ -54,7 +51,7 @@ async function fetchWithRetry(request) {
                 return
             }
 
-            const retryItem = requestsToRetry.pop() // the first time, do this request first.
+            const retryItem = requestsToRetry.pop()
             if(!retryItem?.request) return console.error("No request to retry")
 
             try {
@@ -143,7 +140,7 @@ async function fetchWithCache(request) {
  */
 self.addEventListener("fetch", (e) => {
     if (!e.request.url.includes("http")) return
-    // if (e.request.url.includes("localhost")) return
+    if (e.request.url.includes("localhost")) return
     if (e.request.method !== "GET") return
     if (e.request.url.includes("service-worker.js")) return
     if (e.request.url.includes("esbuild")) return
