@@ -1,0 +1,145 @@
+//http://localhost:6969/edit.html?knob_1=0.57&knob_1.min=0&knob_1.max=1&knob_28=0.48&knob_28.min=0&knob_28.max=1&knob_67=0.47&knob_67.min=0&knob_67.max=1&knob_64=0&knob_64.min=0&knob_64.max=1&knob_49=0.67&knob_49.min=0&knob_49.max=1&knob_2=0.66&knob_2.min=0&knob_2.max=1&knob_45=0.64&knob_45.min=0&knob_45.max=1&knob_24=0.56&knob_24.min=0&knob_24.max=1&knob_31=0.6&knob_31.min=0.32&knob_31.max=1&knob_25=0.33&knob_25.min=0&knob_25.max=1&knob_30=0.157&knob_30.min=0&knob_30.max=10&knob_40=0.118&knob_40.min=0&knob_40.max=1&knob_41=0&knob_41.min=0&knob_41.max=1&knob_32=1&knob_32.min=0&knob_32.max=1&knob_33=0.48&knob_33.min=0&knob_33.max=1&knob_34=0.102&knob_34.min=0&knob_34.max=1&knob_36=0.433&knob_36.min=0&knob_36.max=1&knob_37=0.638&knob_37.min=0&knob_37.max=1&knob_35=9&knob_35.min=1&knob_35.max=13.7
+// Constants
+#define MAX_RIPPLES 6
+#define PI 3.14159265359
+#define TIME (iTime/1000.)
+#define BEAT beat
+
+// Audio reactive parameters
+#define WAVE_SPEED 1.
+#define PATTERN_SCALE 1.
+#define RIPPLE_CHAOS mapValue(spectralSpreadMedian,0.,1., 0.32,1.)    // How randomly ripples are placed
+#define RIPPLE_SPREAD 0.32     // How far from center ripples appear
+#define RIPPLE_STRENGTH energy/10.      // How strong ripples are
+#define COLOR_SHIFT bassZScore*0.5       // Base color shift
+#define BEAT_INTENSITY 1.
+
+
+#define RIPPLE_THICKNESS knob_60
+#define RIPPLE_DISTANCE_DECAY mapValue(spectralCrestMedian, 0.1, 1., 20., 13.)
+#define RIPPLE_AGE_DECAY 1.
+#define RIPPLE_BIRTH_STAGGER 0.2
+#define RIPPLE_LIFE_DURATION 0.8
+#define RIPPLE_BASE_STRENGTH mapValue(bassZScore*energyZScore*spectralCentroidZScore,-1.,1.,3.,8.)
+
+// Color and blending
+#define COLOR_PERSISTENCE 0.1
+#define COLOR_SATURATION 1.
+#define COLOR_BRIGHTNESS_SCALE 0.4
+#define COLOR_MAX_DIFF 0.09
+
+#define PROBE_A 1.
+#define PROBE_B spectralRoughnessMedian
+// Knob controls
+
+// Ripple structure
+struct Ripple {
+    vec2 center;
+    float birth;
+    float strength;
+};
+
+float createRipple(vec2 p, Ripple r) {
+    float d = length(p - r.center);
+    float age = TIME - r.birth;
+
+    float radius = age;
+    float thickness = RIPPLE_THICKNESS * 0.04;
+    float wave = exp(-thickness * pow(d - radius, 2.0));
+
+    float distanceDecay = exp(-d * RIPPLE_DISTANCE_DECAY);
+    float ageDecay = exp(-age * RIPPLE_AGE_DECAY);
+
+    return wave * distanceDecay * ageDecay * r.strength * RIPPLE_STRENGTH;
+}
+
+Ripple[MAX_RIPPLES] getRipples() {
+    Ripple[MAX_RIPPLES] ripples;
+
+    for(int i = 0; i < MAX_RIPPLES; i++) {
+        float birthOffset = mod(TIME + float(i) * RIPPLE_BIRTH_STAGGER, RIPPLE_LIFE_DURATION);
+
+        float angle = float(i) * PI * 2.0 / float(MAX_RIPPLES) * RIPPLE_CHAOS * PI;
+        vec2 pos = vec2(cos(angle), sin(angle)) * RIPPLE_SPREAD;
+
+        ripples[i] = Ripple(pos, TIME - birthOffset, RIPPLE_BASE_STRENGTH);
+    }
+    return ripples;
+}
+
+vec2 getWaveDistortion(vec2 uv) {
+    float distortionX = sin(uv.y * PATTERN_SCALE * 4.0 + TIME * WAVE_SPEED) * 0.003;
+    float distortionY = cos(uv.x * PATTERN_SCALE * 4.0 + TIME * WAVE_SPEED) * 0.003;
+    return vec2(distortionX, distortionY);
+}
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 uv = (fragCoord - 0.5 * iResolution.xy) / min(iResolution.x, iResolution.y);
+    // uv.x += 0.5;
+    vec2 texUV = fragCoord.xy / iResolution.xy;
+
+    vec4 prevColor = getLastFrameColor(texUV);
+    vec3 prevHSL = rgb2hsl(prevColor.rgb);
+
+    Ripple[MAX_RIPPLES] ripples = getRipples();
+
+    float totalWave = 0.0;
+    for(int i = 0; i < MAX_RIPPLES; i++) {
+        totalWave += createRipple(uv, ripples[i]);
+    }
+
+    float interference = pow(abs(totalWave), PROBE_A);
+    float brightness = smoothstep(0.1, 0.3, interference);
+
+    vec2 flowOffset = normalize(uv) * interference * 0.001;
+    vec4 offsetColor = getLastFrameColor(texUV + flowOffset);
+    vec3 offsetHSL = rgb2hsl(offsetColor.rgb);
+
+    vec3 newColorHSL = vec3(
+        fract(offsetHSL.x + interference * PROBE_B + COLOR_SHIFT),
+        COLOR_SATURATION,
+        brightness * COLOR_BRIGHTNESS_SCALE
+    );
+
+    if(BEAT) {
+        vec2 beatPos = vec2(
+            cos(RIPPLE_CHAOS * PI) * 0.3,
+            sin(WAVE_SPEED * PI) * 0.3
+        );
+        float beatRipple = createRipple(uv, Ripple(beatPos, TIME, 2.0));
+        newColorHSL.x = fract(newColorHSL.x + beatRipple * PROBE_B);
+        newColorHSL.z = min(1.0, newColorHSL.z + beatRipple * BEAT_INTENSITY);
+    }
+
+    float blendFactor = PROBE_A;
+    vec3 blendedHSL;
+
+    if(brightness > 0.1) {
+        blendedHSL = vec3(
+            fract(mix(prevHSL.x, newColorHSL.x, blendFactor)),
+            COLOR_SATURATION,
+            mix(prevHSL.z * COLOR_PERSISTENCE, newColorHSL.z, blendFactor)
+        );
+    } else {
+        blendedHSL = vec3(
+            prevHSL.x,
+            max(0.0, prevHSL.y - 0.1),
+            0.
+        );
+    }
+
+    float colorDiff = abs(blendedHSL.x - prevHSL.x);
+    if(colorDiff > COLOR_MAX_DIFF && knob_64 < 0.2) {
+        blendedHSL = mix(prevHSL, blendedHSL, colorDiff/10.);
+        blendedHSL.z *= spectralSkewNormalized;
+    }
+
+    vec3 finalColor = hsl2rgb(blendedHSL);
+
+    float vignette = smoothstep(1.1, 0.3, length(uv));
+    finalColor *= vignette;
+    finalColor *= smoothstep(0.05, 0.1, brightness);
+
+
+    fragColor = vec4(finalColor, 1.0);
+}
