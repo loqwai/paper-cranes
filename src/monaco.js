@@ -1,4 +1,3 @@
-import * as monaco from 'https://esm.sh/monaco-editor@0.52.2'
 function init() {
     //if we have a shader in the query param, return
     // if (new URLSearchParams(window.location.search).get('shader')) return
@@ -528,8 +527,6 @@ function init() {
         localStorage.setItem('cranes-manual-code', editor.getValue())
         editor.pushUndoStop()
     }
-    const undo = () => editor.getModel().undo()
-    const redo = () => editor.getModel().redo()
 
     document.querySelector('#save').addEventListener('click', save)
 
@@ -541,28 +538,8 @@ function init() {
                 e.preventDefault()
                 save()
                 return;
-            case 'z':
-                e.preventDefault()
-                if(e.shiftKey) {
-                    redo()
-                    return;
-                }
-                undo()
-                return;
-            case 'y':
-                e.preventDefault()
-                redo()
-                return;
         }
     })
-    // on paste, add the clipboard to monaco where the cursor is selecting text
-    document.addEventListener('paste', (e) => {
-        const text = e.clipboardData.getData('text/plain');
-        const selection = editor.getSelection();
-        if (selection) {
-            editor.getModel()?.replace(selection.startLineNumber, selection.endLineNumber, text)
-        }
-    });
 
     document.querySelector('#reset').addEventListener('click', () => {
         localStorage.removeItem('cranes-manual-code');
