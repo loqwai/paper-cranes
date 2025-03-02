@@ -1,5 +1,12 @@
-function init() {
+async function init() {
+    //if we have a shader in the query param, return
+    // if (new URLSearchParams(window.location.search).get('shader')) return
+    console.log('no shader in query param')
+    // add the worker as a blob url
 
+    const res = await fetch('https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/base/worker/workerMain.js')
+    const blob = await res.blob()
+    const workerUrl = URL.createObjectURL(blob)
     // Create the editor instance
     const editor = monaco.editor.create(document.getElementById('monaco-editor'), {
         value: '',
@@ -9,9 +16,9 @@ function init() {
         automaticLayout: true,
     });
     // add the web workers
-    window.MonacoEnvironment = {
-        getWorkerUrl: () => '/vs/editor/editor.worker.js' // This will trigger the service worker
-    };
+    self.MonacoEnvironment = {
+        getWorkerUrl: () => workerUrl
+        }
 
     // Watch for shader errors
     setInterval(() => {

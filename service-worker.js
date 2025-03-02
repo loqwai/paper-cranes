@@ -189,20 +189,6 @@ self.addEventListener("fetch", (e) => {
     if (!e.request.url.includes("http")) return
     // if (e.request.url.includes("localhost")) return
     if (e.request.method !== "GET") return
-    if(e.request.url.endsWith('editor.worker.js')) {
-        return e.respondWith(fetch('https://esm.sh/monaco-editor@0.52.2/esm/vs/editor/editor.worker?worker', {mode: 'cors'}).then(res => {
-            const newRes = new Response(res.body, {
-                status: res.status,
-                statusText: res.statusText,
-                headers: new Headers({
-                    ...res.headers,
-                    'Access-Control-Allow-Origin': '*',
-                    'Content-Type': 'application/javascript',
-                }),
-            })
-            return newRes
-        }))
-    }
     if (e.request.url.includes("service-worker.js")) return
     if (e.request.url.includes("esbuild")) return
     // if the url is not in our domain, continue
