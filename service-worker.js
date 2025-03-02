@@ -197,6 +197,7 @@ self.addEventListener("fetch", (e) => {
                 headers: new Headers({
                     ...res.headers,
                     'Access-Control-Allow-Origin': '*',
+                    'Content-Type': 'application/javascript',
                 }),
             })
             return newRes
