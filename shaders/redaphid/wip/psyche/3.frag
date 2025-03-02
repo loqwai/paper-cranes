@@ -1,5 +1,3 @@
-//http://localhost:6969/edit.html?knob_1=1.65&knob_1.min=-3&knob_1.max=3&knob_2=-2.34&knob_2.min=-3&knob_2.max=3&knob_3=0.33&knob_3.min=-3&knob_3.max=3&knob_5=3.56&knob_5.min=-3&knob_5.max=4&knob_4=1.63&knob_4.min=-3&knob_4.max=10&knob_6=1.75&knob_6.min=-3&knob_6.max=3
-//http://localhost:6969/edit.html?knob_1=-0.62&knob_1.min=-3&knob_1.max=3&knob_2=-2.34&knob_2.min=-3&knob_2.max=3&knob_3=0.33&knob_3.min=-3&knob_3.max=3&knob_5=3.56&knob_5.min=-3&knob_5.max=4&knob_4=1.63&knob_4.min=-3&knob_4.max=10&knob_6=-0.62&knob_6.min=-1&knob_6.max=1
 //http://localhost:6969/edit.html?knob_1=-2.54&knob_1.min=-3&knob_1.max=3&knob_2=-1.04&knob_2.min=-3&knob_2.max=3&knob_3=-0.26&knob_3.min=-3&knob_3.max=3&knob_5=-2.41&knob_5.min=-3&knob_5.max=4&knob_4=7.89&knob_4.min=-3&knob_4.max=10&knob_6=1.37&knob_6.min=-3&knob_6.max=3
 //http://localhost:6969/edit.html?knob_1=1.5&knob_1.min=0&knob_1.max=3&knob_2=3&knob_2.min=0&knob_2.max=3&knob_3=3&knob_3.min=0&knob_3.max=3&knob_5=5&knob_5.min=0&knob_5.max=5&knob_4=6.33&knob_4.min=0&knob_4.max=9.1&knob_6=2.79&knob_6.min=0&knob_6.max=3
 #define PI 3.14159265359

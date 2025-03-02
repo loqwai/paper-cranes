@@ -555,6 +555,14 @@ function init() {
                 return;
         }
     })
+    // on paste, add the clipboard to monaco where the cursor is selecting text
+    document.addEventListener('paste', (e) => {
+        const text = e.clipboardData.getData('text/plain');
+        const selection = editor.getSelection();
+        if (selection) {
+            editor.getModel()?.replace(selection.startLineNumber, selection.endLineNumber, text)
+        }
+    });
 
     document.querySelector('#reset').addEventListener('click', () => {
         localStorage.removeItem('cranes-manual-code');
