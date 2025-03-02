@@ -1,7 +1,4 @@
 function init() {
-    //if we have a shader in the query param, return
-    // if (new URLSearchParams(window.location.search).get('shader')) return
-    console.log('no shader in query param')
 
     // Create the editor instance
     const editor = monaco.editor.create(document.getElementById('monaco-editor'), {
