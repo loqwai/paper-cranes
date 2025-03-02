@@ -1,9 +1,7 @@
-// http://localhost:6969/edit.html?knob_36=0.173&knob_36.min=-2&knob_36.max=1&knob_30=0&knob_30.min=0&knob_30.max=10&knob_31=-7.48&knob_31.min=-20&knob_31.max=10&knob_32=1&knob_32.min=-2&knob_32.max=1&knob_33=0.717&knob_33.min=-2&knob_33.max=1&knob_34=1&knob_34.min=0&knob_34.max=1&knob_35=8.425&knob_35.min=0&knob_35.max=10&knob_3=-2&knob_3.min=-2&knob_3.max=1&knob_37=0.945&knob_37.min=0&knob_37.max=1&knob_45=0&knob_45.min=0&knob_45.max=1&knob_40=0.559&knob_40.min=0&knob_40.max=1&knob_46=0&knob_46.min=0&knob_46.max=1
+// http://localhost:6969/edit.html?knob_36=3&knob_36.min=-2&knob_36.max=3&knob_30=5.827&knob_30.min=0&knob_30.max=10&knob_31=-7.244&knob_31.min=-20&knob_31.max=10&knob_32=-0.276&knob_32.min=-2&knob_32.max=1&knob_33=0.079&knob_33.min=-2&knob_33.max=1&knob_34=1&knob_34.min=0&knob_34.max=1&knob_35=8.031&knob_35.min=0&knob_35.max=10&knob_3=-2&knob_3.min=-2&knob_3.max=1&knob_37=9.134&knob_37.min=0&knob_37.max=10&knob_45=0&knob_45.min=0&knob_45.max=1&knob_40=0.346&knob_40.min=0&knob_40.max=1&knob_46=0&knob_46.min=0&knob_46.max=1
 
-#define MANUAL_MODE
-#ifdef MANUAL_MODE
 // Evolution controls
-#define EVOLUTION_RATE (0.1 + knob_30 * 0.4)        // How much previous frame affects next
+#define EVOLUTION_RATE (0.1 + knob_5 * 0.4)        // How much previous frame affects next
 #define FRACTAL_SCALE (1.0 + knob_31 * 2.0)         // Overall scale of fractal elements
 #define PATTERN_COMPLEXITY (1.0 + knob_32)           // Number of layers/detail
 #define FLOW_STRENGTH (knob_33 * 0.3)               // How much the pattern flows
@@ -12,10 +10,10 @@
 #define EDGE_SHARPNESS (0.1 + knob_36)        // Sharpness of pattern edges
 #define COLOR_EVOLUTION (knob_37 * 0.3)             // How colors evolve over time
 #define MUTATION_RATE (knob_37 * 0.2)             // How likely pixels are to mutate
-#endif
+
 
 // Color control defines
-#define BASE_COLOR_1 vec3(knob_30, knob_31, knob_32)        // Primary color control
+#define BASE_COLOR_1 vec3(knob_30, knob_36, knob_37)        // Primary color control
 #define COLOR_SPREAD (0.2 + knob_31 * 2.0)                  // How different the colors are
 #define SATURATION_FACTOR (0.5 + knob_32)                   // Overall color saturation
 #define BRIGHTNESS_FACTOR (0.5 + knob_33)                   // Overall brightness
@@ -27,17 +25,7 @@
 #define COLOR_BLEND (knob_37)                               // How colors mix together
 #define FRACTAL_INTENSITY (10.2 + knob_35 * 2.0)  // Controls both swirl and tendril intensity
 
-// Original audio defines (keep these)
-#ifndef MANUAL_MODE
-#define FLOW_SPEED (spectralFluxZScore)
-#define CRYSTAL_SCALE (spectralCentroidZScore)
-#define ENERGY (energyNormalized)
-#define ROUGHNESS (spectralRoughnessNormalized)
-#define BASE_HUE (spectralCentroidMedian + knob_30)         // Now influenced by knob_30
-#define HUE_VARIATION (spectralSpreadZScore * knob_31)      // Now influenced by knob_31
-#define COLOR_INTENSITY (spectralKurtosisMedian)
-#define DISPLACEMENT (spectralFluxNormalized)
-#else
+
 #define FLOW_SPEED (knob_30)
 #define CRYSTAL_SCALE (knob_31)
 #define ENERGY (knob_32)
@@ -46,8 +34,6 @@
 #define HUE_VARIATION (knob_35)
 #define COLOR_INTENSITY (knob_36)
 #define DISPLACEMENT (knob_37)
-
-#endif
 
 // Rotation matrix helper
 mat2 rotate2D(float angle) {
@@ -197,8 +183,8 @@ vec3 getRippleColor(vec2 uv, float pattern, float time) {
     float depth = mix(depth1, depth2, pattern);
 
     // Create wave distortion based on depth
-    float waveX = sin(depth  + time * ENERGY * 0.5) * 0.01;
-    float waveY = cos(depth + time * ENERGY * 0.4) * 0.01;
+    float waveX = sin(depth  + time * ENERGY * 0.5) * 0.1;
+    float waveY = cos(depth + time * ENERGY * 0.4) * 0.1;
 
     if(beat) {
         waveX *= 8.0;
@@ -223,15 +209,7 @@ vec3 getRippleColor(vec2 uv, float pattern, float time) {
     // Add energy-based intensity
     swirledColor *= 1.0 * sin(depth * 1.0 + time * 2.0) * 0.5;
 
-    // Create ripple mask based on depth
-    float rippleMask = smoothstep(-0.5, 0.5, sin(depth + time))* 0.;
 
-    // Enhance colors during beats
-    if(beat) {
-        vec3 beatColor = generateColor(BASE_HUE + 0.5, time * 0.1) * 2.0;
-        swirledColor = mix(swirledColor, beatColor, rippleMask * ENERGY);
-        swirledColor *= 1.3;
-    }
 
     // Create dissipating effect
     float fadeOut = exp(-abs(depth) * 1.0);
