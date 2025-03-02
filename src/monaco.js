@@ -12,11 +12,10 @@ function init() {
         automaticLayout: true,
     });
     // add the web workers
-    self.MonacoEnvironment = {
-        getWorkerUrl: function(moduleId, label) {
-            return 'https://esm.sh/monaco-editor@0.52.2/esm/vs/editor/editor.worker?worker';
-        }
-    }
+    window.MonacoEnvironment = {
+        getWorkerUrl: () => '/vs/editor/editor.worker.js' // This will trigger the service worker
+    };
+
     // Watch for shader errors
     setInterval(() => {
         monaco.editor.setModelMarkers(editor.getModel(), 'glsl', []);

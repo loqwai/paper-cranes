@@ -103,7 +103,7 @@ const retryDeadRequests = () => {
     })
 
 
-    requestsToRetry.push(...deadRequests)
+    // requestsToRetry.push(...deadRequests)
     while (deadRequests.length > 0) {
         requestsToRetry.push(deadRequests.pop())
         fetchWithRetry()
@@ -189,6 +189,19 @@ self.addEventListener("fetch", (e) => {
     if (!e.request.url.includes("http")) return
     // if (e.request.url.includes("localhost")) return
     if (e.request.method !== "GET") return
+    if(e.request.url.endsWith('editor.worker.js')) {
+        return e.respondWith(fetch('https://esm.sh/monaco-editor@0.52.2/esm/vs/editor/editor.worker?worker', {mode: 'cors'}).then(res => {
+            const newRes = new Response(res.body, {
+                status: res.status,
+                statusText: res.statusText,
+                headers: new Headers({
+                    ...res.headers,
+                    'Access-Control-Allow-Origin': '*',
+                }),
+            })
+            return newRes
+        }))
+    }
     if (e.request.url.includes("service-worker.js")) return
     if (e.request.url.includes("esbuild")) return
     // if the url is not in our domain, continue
