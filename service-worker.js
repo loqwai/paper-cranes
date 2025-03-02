@@ -102,14 +102,14 @@ const retryDeadRequests = () => {
         return true
     })
 
-    // shuffle deadRequests
-    deadRequests = deadRequests.sort(() => Math.random() - 0.5)
 
     requestsToRetry.push(...deadRequests)
-    deadRequests = []
+    while (deadRequests.length > 0) {
+        requestsToRetry.push(deadRequests.pop())
+        fetchWithRetry()
+    }
 
     console.log('total requests to retry', requestsToRetry.length)
-    fetchWithRetry()
 }
 
 let contentChanged = false
@@ -159,7 +159,8 @@ const didThingsChange = async (request, response) => {
     const cached = await getFromCache(request)
     const newData = await safeResponse.text()
     const oldData = await cached?.text()
-    return oldData !== newData
+    console.log("Did things change?", oldData && oldData !== newData)
+    return oldData && oldData !== newData
 }
 
 /**
@@ -184,6 +185,7 @@ async function fetchWithCache(request) {
  * @param {FetchEvent} event
  */
 self.addEventListener("fetch", (e) => {
+    console.log("Fetch event", e.request.url)
     if (!e.request.url.includes("http")) return
     // if (e.request.url.includes("localhost")) return
     if (e.request.method !== "GET") return
