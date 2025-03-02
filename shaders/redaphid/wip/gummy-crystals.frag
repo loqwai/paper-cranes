@@ -1,4 +1,6 @@
-// http://localhost:6969/edit.html?knob_36=3&knob_36.min=-2&knob_36.max=3&knob_30=5.827&knob_30.min=0&knob_30.max=10&knob_31=-7.244&knob_31.min=-20&knob_31.max=10&knob_32=-0.276&knob_32.min=-2&knob_32.max=1&knob_33=0.079&knob_33.min=-2&knob_33.max=1&knob_34=1&knob_34.min=0&knob_34.max=1&knob_35=8.031&knob_35.min=0&knob_35.max=10&knob_3=-2&knob_3.min=-2&knob_3.max=1&knob_37=9.134&knob_37.min=0&knob_37.max=10&knob_45=0&knob_45.min=0&knob_45.max=1&knob_40=0.346&knob_40.min=0&knob_40.max=1&knob_46=0&knob_46.min=0&knob_46.max=1
+#define PI 3.14159265359
+
+// http://localhost:6969/edit.html?knob_36=3&knob_36.min=-2&knob_36.max=3&knob_30=10&knob_30.min=0&knob_30.max=10&knob_31=-20&knob_31.min=-20&knob_31.max=10&knob_32=0.976&knob_32.min=-2&knob_32.max=1&knob_33=0.551&knob_33.min=-2&knob_33.max=1&knob_34=0.102&knob_34.min=0&knob_34.max=1&knob_35=5.197&knob_35.min=0&knob_35.max=10&knob_3=-2&knob_3.min=-2&knob_3.max=1&knob_37=9.843&knob_37.min=0&knob_37.max=10&knob_45=0&knob_45.min=0&knob_45.max=1&knob_40=0.205&knob_40.min=0&knob_40.max=1&knob_46=0&knob_46.min=0&knob_46.max=1&knob_41=0.228&knob_41.min=0&knob_41.max=1
 
 // Evolution controls
 #define EVOLUTION_RATE (0.1 + knob_5 * 0.4)        // How much previous frame affects next
@@ -93,57 +95,81 @@ vec4 sampleNeighborhood(vec2 uv, float radius) {
     vec3 sum = vec3(0.0);
     float weight = 0.0;
 
-    // Reduce sample count for better performance
-    for(float x = -1.0; x <= 3.0; x += 1.0) {
-        for(float y = -1.0; y <= 3.0; y += 1.0) {
-            vec2 offset = vec2(x, y) * texel * radius;
-            float w = spectralRoughnessNormalized+ 0.4;
-            sum += getLastFrameColor(uv + offset).rgb * w;
-            weight += w;
-        }
+    // Use circular sampling pattern
+    const int SAMPLES = 6;
+    for(int i = 0; i < SAMPLES; i++) {
+        float angle = float(i) * 2.0 * PI / float(SAMPLES);
+        vec2 offset = vec2(cos(angle), sin(angle)) * texel * radius;
+
+        // Radial weight falloff
+        float w = 1.0 - length(offset) / (radius * length(texel));
+        w = smoothstep(0.0, 1.0, w) * (spectralRoughnessNormalized + 0.4);
+
+        sum += getLastFrameColor(uv + offset).rgb * w;
+        weight += w;
     }
 
-    vec3 avg = sum / weight;
-    return vec4(avg, dot(avg, vec3(0.299, 0.587, 0.114))); // Optimized intensity calculation
+    vec3 avg = sum / max(weight, 0.001);
+    return vec4(avg, dot(avg, vec3(0.299, 0.587, 0.114)));
 }
 
 // Update crystalPattern with the new neighborhood-aware version
 float crystalPattern(vec3 p) {
-    vec2 uv = p.xy * 0.5 + 0.5;
-    vec4 neighborhood = sampleNeighborhood(uv, 4.0); // Reduced radius
+    float r = length(p.xy);
+    float theta = atan(p.y, p.x);
 
-    // Apply evolution rate to flow
+    // Sharper flow effect
     vec2 flow = flowNoise(p.xy * 0.15) * FLOW_STRENGTH;
-    flow += (neighborhood.xy - 0.15) * EVOLUTION_RATE;
-    p.xy += flow;
+    r += length(flow) * 0.2;
+    theta += dot(flow, vec2(cos(theta), sin(theta))) * 0.3;
 
-    p *= FRACTAL_SCALE;
     float pattern = 0.0;
+    float totalWeight = 0.0;
 
-    // Reduce iterations based on PATTERN_COMPLEXITY
-    int iterations = int(20.0 + PATTERN_COMPLEXITY);
-    iterations = min(iterations, 3); // Cap maximum iterations
+    int iterations = int(3.0 + PATTERN_COMPLEXITY);
+    iterations = min(iterations, 3);
 
     for(int i = 0; i < iterations; i++) {
-        vec3 q = p * (1.0 + float(i) * 0.5);
-
-        // Simplified time variation
+        float scale = 1.0 + float(i) * 0.5;
         float layerTime = time * MORPH_SPEED * (1.0 + float(i) * 0.2);
 
-        // Optimized rotation
-        q.xy *= rotate2D(layerTime);
+        float rr = r * scale;
+        float tt = theta + layerTime;
 
-        // Create base shape
-        float shape = length(q.xy) - (0.5 + sin(q.z + layerTime) * 0.2);
-        shape = abs(shape) + tendrilNoise(q);
+        // Create crystalline facets
+        float facets = floor(tt * (4.0 + float(i))) / (4.0 + float(i));
+        float edges = abs(fract(tt * (4.0 + float(i))) - 0.5) * 2.0;
 
-        // Apply edge sharpness
-        float crystal = smoothstep(EDGE_SHARPNESS, 0.5 + EDGE_SHARPNESS, shape);
+        // Sharp radial patterns
+        float radialFacets = floor(rr * (3.0 + float(i))) / (3.0 + float(i));
+        float radialEdges = abs(fract(rr * (3.0 + float(i))) - 0.5) * 2.0;
 
-        // Blend with previous frame
-        crystal = mix(crystal, neighborhood.w, EVOLUTION_RATE);
+        // Combine into crystal pattern
+        float crystalEdges = max(edges, radialEdges);
+        float crystalFacets = mix(facets, radialFacets, 0.5);
 
-        pattern = mix(pattern, crystal, 0.5);
+        // Create sharp edges and faces
+        float shape = crystalEdges * 0.7 + crystalFacets * 0.3;
+        shape += sin(rr * 6.0 + tt * 2.0 + crystalFacets * PI) * 0.3;
+
+        // Add crystalline noise
+        vec2 noisePos = vec2(
+            rr * cos(facets * PI * 2.0),
+            rr * sin(facets * PI * 2.0)
+        );
+        float noise = tendrilNoise(vec3(noisePos * 1.5, p.z + layerTime));
+        shape = abs(shape) + noise * 0.15;
+
+        // Sharper transitions
+        float crystal = smoothstep(EDGE_SHARPNESS, EDGE_SHARPNESS + 0.1, shape);
+
+        // Enhanced edge glow
+        float edgeGlow = (1.0 - crystalEdges) * 0.5;
+        crystal = mix(crystal, 1.0, edgeGlow * 0.3);
+
+        // Layer blending with edge preservation
+        float layerWeight = exp(-float(i) * 0.3);
+        pattern = mix(pattern, crystal, layerWeight);
     }
 
     return pattern;
@@ -219,38 +245,68 @@ vec3 getRippleColor(vec2 uv, float pattern, float time) {
 // Add after existing defines
 #define LIGHT_POS vec3(2.0, -1.0, 2.0)  // Light position
 #define AMBIENT 0.18                      // Ambient light level
-#define SPECULAR_POWER 10.           // Shininess
-#define SPECULAR_INTENSITY 0.9          // Specular highlight intensity
+#define SPECULAR_POWER 64.0              // Higher power for sharper highlights
+#define SPECULAR_INTENSITY 0.7          // Slightly increased intensity
 
 // Add this helper function for Phong shading
 vec3 applyPhongLighting(vec3 baseColor, vec3 normal, vec2 uv) {
     vec3 lightDir = normalize(LIGHT_POS);
-    vec3 viewDir = normalize(vec3(1.0, 0.0, 1.0));
+    vec3 viewDir = normalize(vec3(0.0, 0.0, 1.0));
 
-    // Calculate diffuse lighting
-    float diff = max(dot(normal, lightDir), 0.0)*0.1;
+    // Enhanced diffuse with sharper falloff
+    float diff = pow(max(dot(normal, lightDir), 0.0), 1.5) * 0.7;
 
-    // Calculate specular lighting
-    vec3 reflectDir = reflect(-lightDir, normal);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), SPECULAR_POWER);
+    // Sharper specular highlights
+    vec3 halfwayDir = normalize(lightDir + viewDir);
+    float spec = pow(max(dot(normal, halfwayDir), 0.0), SPECULAR_POWER);
+    spec *= smoothstep(0.3, 0.7, spec);
 
-    // Combine lighting components
+    // Add rim lighting
+    float rim = 1.0 - max(dot(normal, viewDir), 0.0);
+    rim = pow(rim, 3.0) * 0.5;
+
+    // Combine lighting with enhanced rim effect
     vec3 ambient = AMBIENT * baseColor;
     vec3 diffuse = diff * baseColor;
     vec3 specular = SPECULAR_INTENSITY * spec * vec3(1.0);
+    vec3 rimLight = rim * vec3(1.0, 0.9, 0.8) * SPECULAR_INTENSITY;
 
-    return ambient + diffuse + specular;
+    return ambient + diffuse + specular + rimLight;
 }
 
-// Add this function to estimate normal from pattern gradient
+// Improve normal estimation for sharper lighting
 vec3 estimateNormal(vec2 uv, float pattern) {
-    float eps = 0.01;
-    float dx = crystalPattern(vec3((uv + vec2(eps, 0.0)) * 2.0,  1.3)) -
-               crystalPattern(vec3((uv - vec2(eps, 0.0)) * 2.0,  1.3));
-    float dy = crystalPattern(vec3((uv + vec2(0.0, eps)) * 2.0,  1.3)) -
-               crystalPattern(vec3((uv - vec2(0.0, eps)) * 2.0,  1.3));
+    float eps = 0.02;
+    vec3 p = vec3(uv * 2.0, 1.3);
 
-    return normalize(vec3(-dx, -dy, 0.2));
+    // Sample in a more uniform circular pattern
+    vec2 grad = vec2(0.0);
+    const int SAMPLES = 8;
+    float totalWeight = 0.0;
+
+    for(int i = 0; i < SAMPLES; i++) {
+        float angle = float(i) * 2.0 * PI / float(SAMPLES) + time * 0.1; // Rotating sample pattern
+        float r = eps * (1.0 + sin(angle * 2.0) * 0.2); // Varying radius
+
+        vec2 offset = r * vec2(cos(angle), sin(angle));
+        float s = crystalPattern(p + vec3(offset, 0.0));
+        float c = crystalPattern(p);
+
+        // Weight samples based on angle to reduce axis bias
+        float weight = 1.0 + 0.2 * sin(angle * 3.0 + time);
+        grad += normalize(offset) * (s - c) / r * weight;
+        totalWeight += weight;
+    }
+
+    grad /= totalWeight;
+
+    // Add small bias to prevent exact zero gradients
+    grad += vec2(0.001, 0.001) * sin(uv.x * 10.0 + uv.y * 10.0 + time);
+
+    // Ensure non-zero z component
+    float z = 1.0 + 0.1 * sin(uv.x * 5.0 + uv.y * 5.0 + time);
+
+    return normalize(vec3(-grad, z));
 }
 
 // Add these helper functions at the top
@@ -303,51 +359,15 @@ vec3 applyRandomMutation(vec2 uv, vec3 currentColor) {
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord.xy / resolution.xy;
-    vec2 centered_uv = (fragCoord - 0.5 * resolution.xy) / resolution.y;
+    vec2 centered_uv = (2.0 * fragCoord.xy - resolution.xy) / min(resolution.x, resolution.y);
 
-    // Calculate flow and pattern first
+    // Calculate flow and pattern
     vec2 flow = flowNoise(centered_uv) * 0.2;
-    vec3 p = vec3(centered_uv * 2.0 + flow, time * 0.08);
+    vec3 p = vec3(centered_uv + flow, time * 0.08);
     float pattern = crystalPattern(p);
-
-    // Calculate pattern gradients for rim and edge effects
-    float eps = 0.2;
-    vec2 offset = vec2(eps, 0.0);
-    float patternRight = crystalPattern(vec3((centered_uv + offset.xy) * 2.0 + flow, time * 0.08));
-    float patternUp = crystalPattern(vec3((centered_uv + offset.yx) * 2.0 + flow, time * 0.08));
-
-    // Calculate gradient and rim effects
-    vec2 grad = vec2(
-        patternRight - pattern,
-        patternUp - pattern
-    ) / eps;
-
-    float rim = smoothstep(0.2, 0.8, length(grad));
-    rim = pow(rim, 2.5) * (1.0 + ENERGY * 2.0);
-
-    // Calculate pattern transitions
-    float foregroundPattern = smoothstep(0.4, 0.8, pattern);
-    float backgroundPattern = smoothstep(0.0, 0.3, pattern);
-
-    // Calculate ripple intensity
-    float rippleIntensity = 0.3;
-
-    // Calculate flow vectors and previous frame samples
-    vec2 flowVec = getFlowVector(uv, pattern);
-    vec2 flowOffset = uv;
-    vec3 prevSample1 = samplePrevious(uv, flowVec * 0.8 );
-    vec3 prevSample2 = samplePrevious(uv, -flowVec * 0.4 );
-    vec3 prevSample3 = samplePrevious(uv * 2.0, flowVec * 0.5);
-
-    vec3 prevColor = mix(
-        prevSample1,
-        mix(prevSample2, prevSample3, 0.5),
-        0.5
-    );
 
     // Calculate normals for lighting
     vec3 normal = estimateNormal(centered_uv, pattern);
-    vec3 rimNormal = normalize(vec3(grad * 2.0, 0.005));
 
     // Generate and process base colors
     vec3 bgColorHSL = rgb2hsl(generateColor(BASE_HUE, 0.2));
@@ -360,33 +380,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 fgColor = applyPhongLighting(hsl2rgb(fgColorHSL), normal, centered_uv);
 
     // Mix colors and apply effects
-    vec3 color = mix(bgColor, fgColor, foregroundPattern);
-
-    vec3 rippleEffect = getRippleColor(uv, pattern, time)/1000.;
-
-    color = mix(color, rippleEffect, rippleIntensity/100.);
-
-    vec3 rimColor = generateColor(BASE_HUE + 0.3, 0.2);
-    rimColor = applyPhongLighting(rimColor, rimNormal, centered_uv);
-    color += rimColor * rim * .2;
-
-
-    // Add trails and final adjustments
-    vec2 trailUV = uv - flowVec * 0.001;
-    vec3 trailColor = texture(prevFrame, trailUV).rgb;
-    color = mix(color, trailColor, 0.6);
+    vec3 color = mix(bgColor, fgColor, smoothstep(0.4, 0.8, pattern));
 
     vec3 finalColorHSL = rgb2hsl(color);
-    // finalColorHSL = makeColorMoreInteresting(finalColorHSL, ENERGY);
     finalColorHSL.y = fract(finalColorHSL.y);
     finalColorHSL.z = sin(finalColorHSL.z);
     color = hsl2rgb(finalColorHSL);
-
-
-
-    // Apply random mutations
-    color = fract(applyRandomMutation(uv, color));
-    color = preventColorFlashing(color, prevColor);
 
     fragColor = vec4(color, 1.0);
 }
