@@ -139,6 +139,9 @@ async function getFromCache(request) {
  * @returns {Promise<void>}
  */
 const addToCache = async (req, res) => {
+    // Validate response before caching
+    if (!res || !res.ok) throw new Error(`Invalid response for ${req.url}`)
+
     res = res.clone()
     const cleanRes = res.clone()
     const cache = await caches.open(CACHE_NAME)
@@ -187,7 +190,7 @@ async function fetchWithCache(request) {
 self.addEventListener("fetch", (e) => {
     console.log("Fetch event", e.request.url)
     if (!e.request.url.includes("http")) return
-    // if (e.request.url.includes("localhost")) return
+    if (e.request.url.includes("localhost")) return
     if (e.request.method !== "GET") return
     if (e.request.url.includes("service-worker.js")) return
     if (e.request.url.includes("esbuild")) return
