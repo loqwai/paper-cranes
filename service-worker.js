@@ -8,29 +8,19 @@ self.addEventListener("install", (event) => {
     self.skipWaiting()
 })
 
-
 self.addEventListener("activate", (event) => {
-    console.log("Service Worker: Activated")
-
-    event.waitUntil(self.clients.claim().then(() => {
-        console.log("Service Worker: Claimed clients")
-    }))
+    event.waitUntil(self.clients.claim())
 })
 
-
 self.addEventListener("message", (event) => {
-    console.log("Service Worker: Message", event)
     if(event.data.type === "network-changed") retryDeadRequests()
 })
 
 const reloadAllClients = async () => {
-    console.log("Reloading all clients")
     contentChanged = false
     const clients = await self.clients.matchAll()
     clients.forEach((client) => client.postMessage("reload"))
-    console.log("Reloaded", clients.length, "clients")
 }
-
 
 let requestsToRetry = []
 let deadRequests = []
@@ -42,10 +32,8 @@ async function fetchWithRetry(request) {
     let interval = 150 // Start with 150ms delay
 
     return new Promise(async (resolve, reject) => {
-        if(request) {
-            const retryData = {request, resolve, reject}
-            requestsToRetry.push(retryData) // the first time, do this request first.
-        }
+        if(request) requestsToRetry.push({request, resolve, reject}) // the first time, do this request first.
+
         while (true) {
             if(requestsToRetry.length === 0) {
                 if(contentChanged) reloadAllClients()
@@ -57,7 +45,7 @@ async function fetchWithRetry(request) {
 
             try {
                 const response = await fetch(retryItem.request)
-                if(requestsToRetry.length > 0) fetchWithRetry()
+                if(requestsToRetry.length > 0) fetchWithRetry() // I guess triple-check that there are requests to retry.
                 if (response.ok) return retryItem.resolve(response)
                 if (response.status === 0 && response.type !== "error") return retryItem.resolve(response)
 
@@ -68,22 +56,17 @@ async function fetchWithRetry(request) {
                 console.error(`Network error for url ${retryItem.request.url}, retrying in ${interval}ms...`, error)
             }
 
-            if (interval > 10000) {
-                console.log("Adding to dead requests", retryItem.request.url, retryItem.timesDead)
-                deadRequests.push(retryItem)
-                return
-            }
+            if (interval > 10000) return deadRequests.push(retryItem)
 
             requestsToRetry.unshift(retryItem)
             await timeout(interval)
-            console.log(`Back from sleeping when trying to fetch ${retryItem.request.url}. There are ${requestsToRetry.length} requests to retry`)
             const jitter = Math.random()
             interval *= (2 + jitter)
         }
     })
 }
 
-// restart the fetchWithRetry loop every 10 seconds
+// I guess double-check that there are requests to retry every 10 seconds.
 setInterval(fetchWithRetry, 10000)
 
 const retryDeadRequests = () => {
@@ -93,23 +76,19 @@ const retryDeadRequests = () => {
     deadRequests.forEach(item => item.timesDead = (item.timesDead ?? 0) + 1)
 
     // filter out requests that have been retried too many times
-    deadRequests = deadRequests.filter(item => (item.timesDead ?? 0) < 3)
+    deadRequests = deadRequests.filter(item => (item.timesDead ?? 0) < 5)
     // filter out duplicate requests
     const seenUrls = new Set()
     deadRequests = deadRequests.filter((item) => {
         if (seenUrls.has(item.request.url)) return false
-        seenUrls.add(item.request.url)
-        return true
+        return seenUrls.add(item.request.url)
     })
 
-
-    // requestsToRetry.push(...deadRequests)
+    // this is a hack because fetchWithRetry is dumb and doesn't accept the data format it creates.
     while (deadRequests.length > 0) {
         requestsToRetry.push(deadRequests.pop())
         fetchWithRetry()
     }
-
-    console.log('total requests to retry', requestsToRetry.length)
 }
 
 let contentChanged = false
@@ -129,14 +108,13 @@ async function getFromCache(request) {
     // Try matching without query params
     const url = new URL(request.url)
     url.search = '' // Remove query params
-    const cleanRequest = new Request(url.toString())
-    return (await cache.match(cleanRequest))?.clone()
+    return (await cache.match(url))?.clone()
 }
 /**
  * Adds a request to the cache, storing both with and without query params
  * @param {Request} req - The request to cache
  * @param {Response} res - The response to cache
- * @returns {Promise<void>}
+ * @returns {Promise<Request>} - The given request
  */
 const addToCache = async (req, res) => {
     res = res.clone()
@@ -144,14 +122,13 @@ const addToCache = async (req, res) => {
     const cache = await caches.open(CACHE_NAME)
 
     // Store original request
-    await cache.put(req,res)
+    cache.put(req,res)
 
     // Store version without query params
     const url = new URL(req.url)
     url.search = ''
-    const cleanRequest = new Request(url.toString())
-    console.log("Adding to cache", cleanRequest.url)
-    await cache.put(cleanRequest,cleanRes)
+    cache.put(url,cleanRes)
+    return req
 }
 
 const didThingsChange = async (request, response) => {
@@ -159,7 +136,6 @@ const didThingsChange = async (request, response) => {
     const cached = await getFromCache(request)
     const newData = await safeResponse.text()
     const oldData = await cached?.text()
-    console.log("Did things change?", oldData && oldData !== newData)
     return oldData && oldData !== newData
 }
 
@@ -171,10 +147,7 @@ const didThingsChange = async (request, response) => {
 async function fetchWithCache(request) {
     const networkPromise = fetchWithRetry(request).then(async (response) => {
         contentChanged ||= await didThingsChange(request, response)
-        await addToCache(request, response)
-
-        console.log(`${request.url} has changed: ${contentChanged}`)
-        return response
+        return addToCache(request, response)
     })
 
     return (await getFromCache(request)) ?? networkPromise
@@ -185,13 +158,10 @@ async function fetchWithCache(request) {
  * @param {FetchEvent} event
  */
 self.addEventListener("fetch", (e) => {
-    console.log("Fetch event", e.request.url)
+    if (e.request.url.includes("localhost")) return //don't cache dev.
     if (!e.request.url.includes("http")) return
-    // if (e.request.url.includes("localhost")) return
     if (e.request.method !== "GET") return
     if (e.request.url.includes("service-worker.js")) return
     if (e.request.url.includes("esbuild")) return
-    // if the url is not in our domain, continue
-    // if (!e.request.url.includes(location.origin)) return // actually I want to get and cache monaco.
-    e.respondWith(fetchWithCache(e.request))
+    e.respondWith(fetchWithCache(e.request)) // including cdns, etc.
 })

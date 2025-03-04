@@ -49,18 +49,15 @@ export class WorkerRPC {
             const validatedMessage = this.validateMessage(event.data)
             this.lastMessage = validatedMessage
 
-            if (this.resolveMessage && event.data.id === this.currentMessageId) {
-                this.resolveMessage(validatedMessage)
+            if (event.data.id === this.currentMessageId) {
+                this.resolveMessage?.(validatedMessage)
                 this.resolveMessage = null
             }
         }
     }
 
     processData = async (fftData) => {
-        if (this.resolveMessage) {
-            console.log(`${this.workerName} abandoning message after ${performance.now() - this.currentMessageId}ms`)
-            this.resolveMessage()
-        }
+        this.resolveMessage?.()
 
         const messageId = (this.currentMessageId = performance.now())
 
@@ -68,12 +65,10 @@ export class WorkerRPC {
             new Promise((resolve) => {
                 this.resolveMessage = resolve
             }),
-            new Promise((_, reject) => setTimeout(() => reject(new Error(`Worker ${this.workerName} timed out`)), this.timeout)).catch(() => {
-                if (this.currentMessageId === messageId) {
-                    this.resolveMessage = null
-                }
-                return this.lastMessage
-            }),
+            new Promise(resolve => setTimeout(() => {
+                if (this.currentMessageId === messageId) this.resolveMessage = null
+                resolve(this.lastMessage)
+            }, this.timeout))
         ])
 
         this.worker.postMessage({
