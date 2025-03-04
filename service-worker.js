@@ -100,15 +100,7 @@ let contentChanged = false
  */
 async function getFromCache(request) {
     const cache = await caches.open(CACHE_NAME)
-
-    // Check for exact match first
-    const exactMatch = await cache.match(request)
-    if (exactMatch) return exactMatch.clone()
-
-    // Try matching without query params
-    const url = new URL(request.url)
-    url.search = '' // Remove query params
-    return (await cache.match(url))?.clone()
+    return (await cache.match(request, {ignoreSearch: true}))?.clone()
 }
 /**
  * Adds a request to the cache, storing both with and without query params
@@ -118,17 +110,10 @@ async function getFromCache(request) {
  */
 const addToCache = async (req, res) => {
     res = res.clone()
-    const cleanRes = res.clone()
     const cache = await caches.open(CACHE_NAME)
-
     // Store original request
     cache.put(req,res)
-
-    // Store version without query params
-    const url = new URL(req.url)
-    url.search = ''
-    cache.put(url,cleanRes)
-    return req
+    return res
 }
 
 const didThingsChange = async (request, response) => {
