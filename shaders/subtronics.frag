@@ -1,44 +1,117 @@
+#define ZOOM_LEVEL mapValue(bassZScore, -1., 1., 0.7, 2.5)
+#define WAVES_STRENGTH spectralCrestZScore
+#define RIPPLE_FREQUENCY mapValue(spectralRoughnessZScore, -1., 1., 0.1, 100.)
+#define RIPPLE_STRENGTH mapValue(energyZScore, -1., 1., 0.1, 10.)
+#define COLOR_SHIFT spectralCentroid
+#define INFINITY_ZOOM knob_44
+#define CENTER vec2(0.46, 0.65)
+
+// Retrieve last frame safely
+vec3 last(vec2 uv) {
+    return getInitialFrameColor(fract(uv)).rgb;
+}
+
+// **Detect Cyclops' body**
+float isCyclopsBody(vec2 uv) {
+    vec3 hsl = rgb2hsl(last(uv));
+    return smoothstep(0.1, 0.2, hsl.z) * (1.0 - smoothstep(0.7, 0.8, hsl.z)) *
+           smoothstep(0.1, 0.15, hsl.x) * (1.0 - smoothstep(0.16, 0.20, hsl.x));
+}
+
+// **Smooth Wave Detection**
+float isWaves(vec2 uv) {
+    vec3 hsl = rgb2hsl(last(uv));
+    float distFromCenter = length(uv - CENTER);
+
+    float baseWave = smoothstep(0.55, 0.58, hsl.x) * (1.0 - smoothstep(0.62, 0.65, hsl.x)) *
+                     smoothstep(0.3, 0.35, hsl.y) * smoothstep(0.2, 0.28, hsl.z);
+
+    // **Use `smoothstep()` to smooth out grain**
+    float expandedWave = smoothstep(0.0, 1.0, baseWave * fract(distFromCenter * RIPPLE_STRENGTH - iTime));
+
+    return expandedWave;
+}
+
+// **Generate Smooth Ripple Distortion**
+vec2 getRippleDistortion(vec2 uv) {
+    vec2 delta = uv - CENTER;
+    float distFromCenter = length(delta);
+
+    float rippleWave = sin(distFromCenter * (10.0 + RIPPLE_FREQUENCY * 10.0) * (1.0));
+
+    // **Smoothstep applied to wave influence**
+    float waveInfluence = smoothstep(0.0, 1.0, isWaves(uv));
+
+    return normalize(delta) * rippleWave * 0.01 * waveInfluence;
+}
+
+// **Psychedelic Colors that Follow the Waves**
+vec3 psychedelicWaveColors(vec2 uv) {
+    float waveFactor = isWaves(uv);
+    vec3 hsl = vec3(fract(waveFactor * COLOR_SHIFT), 1.0, 0.6);
+    return hsl2rgb(hsl);
+}
+
+// **Fix Cyclops Infinity Zoom (No More Bars)**
+vec3 cyclopsEffect(vec2 uv) {
+    float zoomFactor = mix(1.0, 3.0, INFINITY_ZOOM);
+
+    // **Instead of breaking UVs, smoothly scale them**
+    vec2 zoomedUV = (uv - CENTER) / zoomFactor + CENTER;
+
+    // **Wrap UVs correctly to avoid horizontal/vertical bars**
+    zoomedUV = fract(zoomedUV) - 0.5;
+
+    // **Recursive distortion for added depth**
+    float depth = 8.;
+    zoomedUV += vec2(depth, -depth);
+
+    vec3 color = getLastFrameColor(sin(zoomedUV)).rgb;
+
+    // **Make colors cycle smoothly**
+    vec3 hsl = rgb2hsl(color);
+    hsl.x = fract(hsl.x + zoomFactor * 0.2);
+    hsl.y = 1.0;
+    hsl.z = mix(hsl.z, 0.8, zoomFactor * 0.3);
+
+    return hsl2rgb(hsl);
+}
+
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord / iResolution.xy;
-    vec2 center = vec2(0.5, 0.6); // Keep Cyclops eye as focal point
+    vec2 center = CENTER;
 
-    // Retrieve the original image and last frame
-    vec4 originalColor = getInitialFrameColor(uv);
-    vec4 lastFrame = getLastFrameColor(uv);
+    // **Apply seamless zoom**
+    float zoomAmount = ZOOM_LEVEL;
+    uv = (uv - center) / zoomAmount + center;
+    uv = fract(uv);
 
-    // **Detect black lines (naturally occurring in image)**
-    float darkness =  dot(originalColor.rgb, vec3(0.74)); // Closer to 1 = black
-    float blackLines = smoothstep(0.6, 0.85, darkness); // Isolate darker areas
+    // **Get original colors**
+    vec3 originalColor = getInitialFrameColor(uv).rgb;
+    vec3 lastFrameColor = last(uv);
 
-    // **Knob-controlled parameters**
-    float rippleSpeed = knob_30 * 3.0; // Ripple speed
-    float rippleFrequency = time*100.; // Wave detail
-    float distortionAmount = 0.01 + knob_32 * 0.02; // Distortion strength
-    float colorShift = knob_33 * 1.5; // Color shift intensity
-    float liquidWarp = knob_34; // Warping effect
+    if (bassZScore > 0.5) {
+        lastFrameColor = mix(lastFrameColor, originalColor, 0.3);
+    }
 
-    // **Compute UV Distortion for Liquid Effect**
-    float distFromCenter = length(uv - center);
-    float ripple = sin(distFromCenter * rippleFrequency - iTime * rippleSpeed) * 0.5 + 0.5; // Expanding waves
-    vec2 distortion = vec2(
-        sin(distFromCenter * rippleFrequency + iTime * rippleSpeed) * distortionAmount,
-        cos(distFromCenter * rippleFrequency + iTime * rippleSpeed) * distortionAmount
-    );
+    // **Detect features**
+    float cyclopsBody = isCyclopsBody(uv);
+    float waves = isWaves(uv);
 
-    // **Sample last frame with distortion to create liquid effect**
-    vec4 warpedFrame = getLastFrameColor(uv + distortion * liquidWarp);
+    // **Apply ripple distortions**
+    vec2 rippleOffset = getRippleDistortion(uv);
+    vec3 warpedFrame = getLastFrameColor(fract(uv + rippleOffset)).rgb;
 
-    // **Rainbow Animation Over Black Lines**
-    float rainbow = fract(iTime * 0.5 + colorShift);
-    vec3 auraColor = hsl2rgb(vec3(rainbow, 1.0, 0.8));
+    // **Apply smooth psychedelic colors to waves**
+    vec3 waveColor = psychedelicWaveColors(uv);
 
-    // **Apply the rainbow effect only to detected black lines**
-    vec3 animatedLines = mix(originalColor.rgb, auraColor, blackLines);
+    // **Apply infinity zoom effect to Cyclops**
+    vec3 mirrorColor = cyclopsEffect(uv);
 
-    // **Blend Rippling Aura with Liquid Effect**
-    float ripplingAura = blackLines * ripple;
-    vec3 finalColor = mix(animatedLines, warpedFrame.rgb, ripplingAura);
+    // **Final blending logic**
+    vec3 blendedColor = originalColor;
+    blendedColor = mix(blendedColor, waveColor, waves * WAVES_STRENGTH);  // Waves are now smooth!
+    blendedColor = mix(blendedColor, mirrorColor, cyclopsBody * INFINITY_ZOOM);  // No more bars!
 
-    // **Final Output**
-    fragColor = vec4(finalColor, originalColor.a);
+    fragColor = vec4(blendedColor, 1.0);
 }
