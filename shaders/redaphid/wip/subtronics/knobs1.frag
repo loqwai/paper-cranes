@@ -1,7 +1,7 @@
-// http://localhost:6969/edit.html?fullscreen=true&image=images%2Fsubtronics.jpg&knob_30=1.535&knob_30.min=0&knob_30.max=2.5&knob_31=0.685&knob_31.min=0&knob_31.max=1&knob_41=0.693&knob_41.min=0&knob_41.max=1&knob_33=0.52&knob_33.min=0&knob_33.max=1&knob_34=0.614&knob_34.min=0&knob_34.max=1&knob_32=0.78&knob_32.min=0&knob_32.max=1&knob_36=0.433&knob_36.min=0&knob_36.max=1&knob_35=0.236&knob_35.min=0&knob_35.max=1&knob_40=0.402&knob_40.min=0&knob_40.max=1&knob_43=1&knob_43.min=0&knob_43.max=1
+// http://localhost:6969/edit.html?fullscreen=true&image=images%2Fsubtronics.jpg&knob_30=2.126&knob_30.min=0&knob_30.max=2.5&knob_31=0.661&knob_31.min=0&knob_31.max=1&knob_33=0.52&knob_33.min=0&knob_33.max=1&knob_34=0.614&knob_34.min=0&knob_34.max=1&knob_32=0.78&knob_32.min=0&knob_32.max=1&knob_36=0.433&knob_36.min=0&knob_36.max=1&knob_35=0.236&knob_35.min=0&knob_35.max=1&knob_43=0.449&knob_43.min=0&knob_43.max=1&knob_40=1&knob_40.min=0&knob_40.max=1&knob_41=0.622&knob_41.min=0&knob_41.max=1&knob_44=0.677&knob_44.min=0&knob_44.max=1
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord / iResolution.xy;
-    vec2 center = vec2(0.46, 0.69); // Keep Cyclops eye as focal point
+    vec2 center = vec2(knob_43, knob_44); // Keep Cyclops eye as focal point
 
     // **Knob-controlled zoom effect**
     // float zoomAmount = 1.0 + bassZScore/2.;
@@ -14,7 +14,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec4 lastFrame = getLastFrameColor(uv);
 
     // **Detect black lines (naturally occurring in image)**
-    float darkness = 1.0 - dot(originalColor.rgb, vec3(0.74)); // Closer to 1 = black
+    float darkness = dot(originalColor.rgb, vec3(0.74)); // Closer to 1 = black
     float blackLines = smoothstep(0.6, 0.85, darkness); // Isolate darker areas
 
     // **Knob-controlled parameters**
