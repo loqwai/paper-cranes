@@ -58,21 +58,34 @@ vec3 psychedelicWaveColors(vec2 uv) {
 vec3 cyclopsEffect(vec2 uv) {
     float zoomFactor = mix(1.0, 4.0, INFINITY_ZOOM);
 
+    // **Calculate rotation based on music intensity**
+    float rotationAngle = INFINITY_ZOOM; // **Base rotation**
+    rotationAngle += bassZScore * 0.3; // **Add energy-based rotation**
+
+    // **Apply rotation around center**
+    vec2 rotatedUV = uv - CENTER;
+    float cosA = cos(rotationAngle);
+    float sinA = sin(rotationAngle);
+    rotatedUV = vec2(
+        rotatedUV.x * cosA - rotatedUV.y * sinA,
+        rotatedUV.x * sinA + rotatedUV.y * cosA
+    ) + CENTER;
+
     // **Recursive zoom with smooth UV transitions**
     for (int i = 0; i < int(4.0 * INFINITY_ZOOM); i++) {
-        uv = (uv - CENTER) * zoomFactor + CENTER;
-        uv = fract(uv);  // **Ensures seamless looping**
+        rotatedUV = (rotatedUV - CENTER) * zoomFactor + CENTER;
+        rotatedUV = fract(rotatedUV);  // **Ensures seamless looping**
     }
 
     // **Recursive depth warping & color cycling**
     float depth = sin(iTime * 2.0) * 0.1 * INFINITY_ZOOM;
-    uv += vec2(depth, -depth);
+    rotatedUV += vec2(depth, -depth);
 
-    vec3 color = getLastFrameColor(uv).rgb;
+    vec3 color = getLastFrameColor(rotatedUV).rgb;
 
     // **Music-intensity-based distortion**
     float energyInfluence = smoothstep(0.5, 1.0, energyZScore);
-    uv += sin(uv * (10.0 * energyInfluence)) * 0.02 * energyInfluence;
+    rotatedUV += sin(rotatedUV * (10.0 * energyInfluence)) * 0.02 * energyInfluence;
 
     // **Enhanced color shifting based on musical energy**
     vec3 hsl = rgb2hsl(color);
