@@ -1,3 +1,4 @@
+// http://localhost:6969/edit.html?fullscreen=true&image=images%2Fsubtronics.jpg
 #define ZOOM_LEVEL mapValue(energyZScore, -1., 1., 0.7, 2.5)
 #define WAVES_STRENGTH spectralCrestZScore
 #define RIPPLE_FREQUENCY mapValue(spectralRoughnessZScore, -1., 1., 0.1, 10.)
