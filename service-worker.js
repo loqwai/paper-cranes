@@ -139,8 +139,6 @@ async function getFromCache(request) {
  * @returns {Promise<void>}
  */
 const addToCache = async (req, res) => {
-    // Validate response before caching
-    if (!res || !res.ok) throw new Error(`Invalid response for ${req.url}`)
 
     res = res.clone()
     const cleanRes = res.clone()
