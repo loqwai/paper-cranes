@@ -1,5 +1,5 @@
 // http://localhost:6969/edit.html?fullscreen=true&image=images%2Fsubtronics.jpg
-#define ZOOM_LEVEL mapValue(energyZScore, -1., 1., 0.7, 2.5)
+#define ZOOM_LEVEL mapValue(energyZScore, -1., 1., 0.2, 2.5)
 #define WAVES_STRENGTH spectralCrestZScore
 #define RIPPLE_FREQUENCY mapValue(spectralRoughnessZScore, -1., 1., 0.1, 10.)
 #define RIPPLE_STRENGTH mapValue(energyZScore, -1., 1., 0.1, 10.)
@@ -60,7 +60,7 @@ vec3 cyclopsEffect(vec2 uv) {
     float zoomFactor = mix(1.0, 4.0, INFINITY_ZOOM);
 
     // **Calculate rotation based on music intensity**
-    float rotationAngle = INFINITY_ZOOM; // **Base rotation**
+    float rotationAngle = sin(time); // **Base rotation**
     rotationAngle += bassZScore * 0.3; // **Add energy-based rotation**
 
     // **Apply rotation around center**
@@ -123,6 +123,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float cyclopsBody = isCyclopsBody(uv);
     float waves = isWaves(uv);
 
+
     // **Apply ripple distortions**
     vec2 rippleOffset = getRippleDistortion(uv);
     vec3 warpedFrame = getLastFrameColor(fract(uv + rippleOffset)).rgb;
@@ -130,8 +131,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // **Apply psychedelic colors to waves**
     vec3 waveColor = psychedelicWaveColors(uv);
 
-    // **Apply fixed infinity zoom effect to Cyclops**
+    // **Apply infinity zoom effect to Cyclops**
     vec3 mirrorColor = cyclopsEffect(uv);
+
+    // **Extreme Bass Distortion Mode (If bass is at insane levels)**
+    if (-bassZScore > 0.9 ) {
+        uv *= sin(iTime * 10.0) * 5.0;  // **Wild zoom oscillation**
+        originalColor = fract(-1. * originalColor);
+    }
+
 
     // **Final blending logic**
     vec3 blendedColor = originalColor;
@@ -140,3 +148,4 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     fragColor = vec4(blendedColor, 1.0);
 }
+
