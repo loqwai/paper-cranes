@@ -1,9 +1,12 @@
+// http://localhost:6969/edit.html?fullscreen=true&image=images%2Fsubtronics.jpg&knob_30=1.535&knob_30.min=0&knob_30.max=2.5&knob_31=0.685&knob_31.min=0&knob_31.max=1&knob_41=0.693&knob_41.min=0&knob_41.max=1&knob_33=0.52&knob_33.min=0&knob_33.max=1&knob_34=0.614&knob_34.min=0&knob_34.max=1&knob_32=0.78&knob_32.min=0&knob_32.max=1&knob_36=0.433&knob_36.min=0&knob_36.max=1&knob_35=0.236&knob_35.min=0&knob_35.max=1&knob_40=0.402&knob_40.min=0&knob_40.max=1&knob_43=1&knob_43.min=0&knob_43.max=1
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord / iResolution.xy;
-    vec2 center = vec2(knob_40, knob_41); // Keep Cyclops eye as focal point
+    vec2 center = vec2(0.46, 0.69); // Keep Cyclops eye as focal point
 
     // **Knob-controlled zoom effect**
-    float zoomAmount = 1.0 + knob_43; // Adjust zoom intensity (default = no zoom)
+    // float zoomAmount = 1.0 + bassZScore/2.;
+    float zoomAmount = mapValue(knob_40, 0.,1.,0.5,2.);
+    zoomAmount = clamp(zoomAmount, 0.01, 2.);
     uv = (uv - center) / zoomAmount + center;
 
     // **Retrieve the original image and last frame**
