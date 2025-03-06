@@ -158,6 +158,9 @@ const addToCache = async (req, res) => {
 const didThingsChange = async (request, response) => {
     const safeResponse = response.clone()
     const cached = await getFromCache(request)
+    // if the url is outside of our domain, don't check for changes
+    // I don't know what's causing the frequent reloads, but I'm guessing there's a timestamp or something on an external request.
+    if (!request.url.includes(location.origin)) return false
     const newData = await safeResponse.text()
     const oldData = await cached?.text()
     console.log("Did things change?", oldData && oldData !== newData)
