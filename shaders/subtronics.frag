@@ -3,7 +3,7 @@
 #define RIPPLE_FREQUENCY mapValue(spectralRoughnessZScore, -1., 1., 0.1, 10.)
 #define RIPPLE_STRENGTH mapValue(energyZScore, -1., 1., 0.1, 10.)
 #define COLOR_SHIFT spectralCentroid
-#define INFINITY_ZOOM  mapValue(spectralCrestZScore, -1., 1., 0.,0.5)
+#define INFINITY_ZOOM (energyZScore > 0. ? mapValue(spectralFluxZScore, -1., 1., 0.2, 0.8): 0.)
 #define CENTER vec2(0.46, 0.65)
 
 // **Retrieve last frame safely**
@@ -26,7 +26,7 @@ float isWaves(vec2 uv) {
     float baseWave = smoothstep(0.55, 0.58, hsl.x) * (1.0 - smoothstep(0.62, 0.65, hsl.x)) *
                      smoothstep(0.3, 0.35, hsl.y) * smoothstep(0.2, 0.28, hsl.z);
 
-    // **Use `smoothstep()` to smooth out grain**
+    // **Smooth out wave edges to avoid grain**
     float expandedWave = smoothstep(0.0, 1.0, baseWave * fract(distFromCenter * RIPPLE_STRENGTH - iTime));
 
     return expandedWave;
@@ -37,10 +37,10 @@ vec2 getRippleDistortion(vec2 uv) {
     vec2 delta = uv - CENTER;
     float distFromCenter = length(delta);
 
-    float rippleWave = sin(distFromCenter * (10.0 + RIPPLE_FREQUENCY * 10.0) * (1.0));
+    float rippleWave = sin(distFromCenter * (10.0 + RIPPLE_FREQUENCY * 10.0));
 
     // **Apply chaos if `spectralRoughnessZScore` is high**
-    float roughnessFactor = smoothstep(0.5, 1.0, spectralRoughnessZScore*10.);
+    float roughnessFactor = smoothstep(0.5, 1.0, spectralRoughnessZScore);
     rippleWave *= mix(1.0, fract(sin(uv.x * uv.y * 10000.0) * 43758.5453), roughnessFactor);
 
     float waveInfluence = smoothstep(0.0, 1.0, isWaves(uv));
@@ -54,27 +54,36 @@ vec3 psychedelicWaveColors(vec2 uv) {
     return hsl2rgb(hsl);
 }
 
-// **Fixed Infinity Mirror Effect**
+// **Enhanced Infinity Mirror Effect (Music-Responsive)**
 vec3 cyclopsEffect(vec2 uv) {
-    float zoomFactor = mix(1.0, 3.0, INFINITY_ZOOM);
+    float zoomFactor = mix(1.0, 4.0, INFINITY_ZOOM);
 
-    // **Recursive zoom without breaking UVs**
-    for (int i = 0; i < 4; i++) {
+    // **Recursive zoom with smooth UV transitions**
+    for (int i = 0; i < int(4.0 * INFINITY_ZOOM); i++) {
         uv = (uv - CENTER) * zoomFactor + CENTER;
-        uv = fract(uv);  // **Ensure seamless tiling**
+        uv = fract(uv);  // **Ensures seamless looping**
     }
 
-    // **Recursive depth warping**
-    float depth = sin(iTime * 2.0) * 0.1;
+    // **Recursive depth warping & color cycling**
+    float depth = sin(iTime * 2.0) * 0.1 * INFINITY_ZOOM;
     uv += vec2(depth, -depth);
 
     vec3 color = getLastFrameColor(uv).rgb;
 
-    // **Color shifting**
+    // **Music-intensity-based distortion**
+    float energyInfluence = smoothstep(0.5, 1.0, energyZScore);
+    uv += sin(uv * (10.0 * energyInfluence)) * 0.02 * energyInfluence;
+
+    // **Enhanced color shifting based on musical energy**
     vec3 hsl = rgb2hsl(color);
-    hsl.x = fract(hsl.x + zoomFactor * 0.2);
-    hsl.y = 1.0;
-    hsl.z = mix(hsl.z, 0.2, zoomFactor * 0.3);
+    // **Shift hue based on depth and energy**
+    hsl.x = fract(hsl.x + zoomFactor * 0.2 + energyInfluence * 0.3);
+    // **Increase saturation in deeper layers**
+    hsl.y = mix(1.0, 1.5, INFINITY_ZOOM * energyInfluence);
+    // **Preserve more of the original brightness while adding depth**
+    float baseBrightness = mix(hsl.z, 0.4, zoomFactor * 0.3);
+    float energyBoost = energyInfluence * 0.3;
+    hsl.z = mix(baseBrightness, 0.8, energyBoost);
 
     return hsl2rgb(hsl);
 }
