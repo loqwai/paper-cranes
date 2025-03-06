@@ -1,21 +1,73 @@
-// http://localhost:6969/edit.html?fullscreen=true&image=images%2Fsubtronics.jpg&knob_30=2.126&knob_30.min=0&knob_30.max=2.5&knob_31=0.661&knob_31.min=0&knob_31.max=1&knob_33=0.52&knob_33.min=0&knob_33.max=1&knob_34=0.614&knob_34.min=0&knob_34.max=1&knob_32=0.78&knob_32.min=0&knob_32.max=1&knob_36=0.433&knob_36.min=0&knob_36.max=1&knob_35=0.236&knob_35.min=0&knob_35.max=1&knob_43=0.449&knob_43.min=0&knob_43.max=1&knob_40=1&knob_40.min=0&knob_40.max=1&knob_41=0.622&knob_41.min=0&knob_41.max=1&knob_44=0.677&knob_44.min=0&knob_44.max=1
+#define ZOOM_LEVEL bassZScore
+#define DISOLVE_FACTOR spectralRoughness
+
+vec3 last(vec2 uv) {
+    vec4 initial = getInitialFrameColor(uv);
+    vec4 last = getLastFrameColor(uv);
+    return mix(initial, last, DISOLVE_FACTOR).rgb;
+}
+// Function to check if a pixel is part of the Cyclops' body
+float isCyclopsBody(vec2 uv) {
+    vec3 hsl = rgb2hsl(last(uv));
+
+    // Static color range for Cyclops detection
+    float minLightness = 0.1;
+    float maxLightness = 0.8;
+    float minHue = 0.1;
+    float maxHue = 0.18;
+
+    // If brightness is outside range, ignore
+    if (hsl.z < minLightness || hsl.z > maxLightness) return 0.0;
+
+    // If hue is within adjusted threshold, mark as Cyclops body
+    if (hsl.x > minHue && hsl.x < maxHue) {
+        return 1.0;
+    }
+    return 0.0;
+}
+
+// Function to check surrounding pixels for Cyclops body match
+float isCyclopsBodyWithNeighbors(vec2 uv, float roughnessFactor) {
+    // Base detection at current pixel
+    float bodyDetected = isCyclopsBody(uv);
+    if (bodyDetected > 0.0) return 1.0;
+
+    // If spectral roughness is high, check neighboring pixels
+    float searchRadius =  knob_40 * 0.01; // Scales based on knob_40
+    for (float i = -1.0; i <= 1.0; i += 1.0) {
+        for (float j = -1.0; j <= 1.0; j += 1.0) {
+            vec2 neighborUV = uv + vec2(i, j) * searchRadius;
+            if (isCyclopsBody(neighborUV) > 0.0) {
+                return 1.0; // If any neighbor matches, return true
+            }
+        }
+    }
+    return 0.0;
+}
+
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord / iResolution.xy;
     vec2 center = vec2(knob_43, knob_44); // Keep Cyclops eye as focal point
 
     // **Knob-controlled zoom effect**
-    // float zoomAmount = 1.0 + bassZScore/2.;
-    float zoomAmount = mapValue(knob_40, 0.,1.,0.5,2.);
+    float zoomAmount = mapValue(ZOOM_LEVEL, -1., 1., 0.5, 2.);
     zoomAmount = clamp(zoomAmount, 0.01, 2.);
     uv = (uv - center) / zoomAmount + center;
 
     // **Retrieve the original image and last frame**
     vec4 originalColor = getInitialFrameColor(uv);
+    if(beat) originalColor = getLastFrameColor(uv);
     vec4 lastFrame = getLastFrameColor(uv);
 
-    // **Detect black lines (naturally occurring in image)**
-    float darkness = dot(originalColor.rgb, vec3(0.74)); // Closer to 1 = black
-    float blackLines = smoothstep(0.6, 0.85, darkness); // Isolate darker areas
+    // **Spectral roughness influence on Cyclops detection**
+    float cyclopsBody = isCyclopsBodyWithNeighbors(uv, spectralRoughnessZScore);
+
+    // **Modify Cyclops Body Color Based on Spectral Data**
+    if (cyclopsBody == 1.0) {
+        vec3 cycNew = vec3(pitchClassMedian, spectralCrestNormalized, energyNormalized);
+        fragColor = vec4(cycNew, 1.0);
+        return;
+    }
 
     // **Knob-controlled parameters**
     float rippleSpeed = 0.5 + knob_30 * 3.0; // Speed of outward propagation
@@ -34,14 +86,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec4 warpedFrame = getLastFrameColor(uv + distortion);
 
     // **Rainbow Animation Over Black Lines**
-    float rainbow = fract(iTime * 0.5 + colorShift);
+    float rainbow = fract(colorShift);
     vec3 auraColor = hsl2rgb(vec3(rainbow, 1.0, 0.8));
 
     // **Apply the rainbow effect only to detected black lines**
-    vec3 animatedLines = mix(originalColor.rgb, auraColor, blackLines);
+    vec3 animatedLines = mix(originalColor.rgb, auraColor, cyclopsBody);
 
     // **Blend Rippling Aura with Liquid Effect**
-    float ripplingAura = blackLines * ripple;
+    float ripplingAura = cyclopsBody * ripple;
     vec3 finalColor = mix(animatedLines, warpedFrame.rgb, ripplingAura);
 
     // **Final Output**
