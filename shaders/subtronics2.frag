@@ -1,10 +1,10 @@
 // http://localhost:6969/edit.html?image=images%2Fsubtronics.jpg
-#define ZOOM_LEVEL mapValue(bassNormalized, 0., 1., 0.7, 1.5)
+#define ZOOM_LEVEL mapValue(bassNormalized, 0., 1., 0.8, 1.2)
 #define WAVES_STRENGTH spectralCrestZScore *2.
 #define RIPPLE_FREQUENCY mapValue(spectralCrestNormalized, 0., 1., 0.1, 10.)
-#define RIPPLE_STRENGTH mapValue(spectralFluxZScore, -1., 1., 0.1, 3.)
+#define RIPPLE_STRENGTH mapValue(spectralFluxZScore, -1., 1., 0.1, 2.)
 #define COLOR_SHIFT pitchClass
-#define INFINITY_ZOOM (spectralRoughnessZScore > 0.2 ? mapValue(spectralFluxZScore, -1., 1., 0.4, 0.8): 0.)
+#define INFINITY_ZOOM (energyZScore > 0.3 ? mapValue(spectralFluxZScore, -1., 1., 0.4, 0.8): 0.)
 #define CENTER vec2(0.46, 0.65)
 #define SCREEN_SHAKE_INTENSITY (energyZScore > 0.5 ? smoothstep(0.3, 1.0, spectralRoughnessZScore) * 0.04 : 0.0)
 
