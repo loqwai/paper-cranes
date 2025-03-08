@@ -1,6 +1,6 @@
 const self = /** @type {ServiceWorkerGlobalScope} */ (globalThis)
-
-console.log(`Service worker ${CACHE_NAME} starting`)
+const CACHE_NAME = '2025-03-08T12:23:17.595Z'
+console.log(`Service worker starting`)
 const timeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 self.addEventListener("install", (event) => {
@@ -191,7 +191,7 @@ async function fetchWithCache(request) {
 self.addEventListener("fetch", (e) => {
     console.log("Fetch event", e.request.url)
     if (!e.request.url.includes("http")) return
-    // if (e.request.url.includes("localhost")) return
+    if (e.request.url.includes("localhost")) return
     if (e.request.method !== "GET") return
     if (e.request.url.includes("service-worker.js")) return
     if (e.request.url.includes("esbuild")) return

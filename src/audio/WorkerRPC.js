@@ -45,6 +45,7 @@ export class WorkerRPC {
     })
 
     handleMessage = (event) => {
+        console.log('Received message', event.data)
         if (event.data.type === 'computedValue') {
             const validatedMessage = this.validateMessage(event.data)
             this.lastMessage = validatedMessage
@@ -95,7 +96,6 @@ export class WorkerRPC {
         this.worker = new Worker(`/src/audio/analyzer.js`, { type: "module" });
         this.worker.onmessage = this.handleMessage
         this.worker.onerror = this.handleError
-        console.log('Worker initialized', this.worker)
         this.worker.postMessage({
             type: 'config',
             config: {

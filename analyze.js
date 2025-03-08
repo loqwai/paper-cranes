@@ -1,9 +1,9 @@
 import { render } from 'preact'
 import { useState, useRef } from 'preact/hooks'
 import { html } from 'htm/preact'
-import { AudioProcessor } from './src/audio/AudioProcessor'
-import { normalizeAnalysisData } from './src/audio/normalizer'
-import BarGraph from './src/components/BarGraph'
+import { AudioProcessor } from './src/audio/AudioProcessor.js'
+import { normalizeAnalysisData } from './src/audio/normalizer.js'
+import BarGraph from './src/components/BarGraph.js'
 
 const formatTime = (ms) => {
     const totalSeconds = Math.floor(ms / 1000)
