@@ -4,7 +4,7 @@ self.addEventListener('message', async ({ data: e }) => {
     switch (e.type) {
       case 'config': return configure(e.data)
       case 'fftData': return processFftData(e.data)
-      default: throw new Error(`Unknown message type: ${e.data.type}`)
+      default: throw new Error(`Unknown message type: ${e.type}`)
     }
   } catch (error) {
     console.error('Error in analyzer', error)
@@ -12,7 +12,7 @@ self.addEventListener('message', async ({ data: e }) => {
   }
 })
 
-const setupAnalyzer = async () => {
+async function setupAnalyzer() {
 
   const {analyzerName, historySize} = self
   if(!analyzerName) throw new Error('Analyzer name is required')
@@ -27,14 +27,14 @@ const setupAnalyzer = async () => {
   self.analyzer = analyzer
 }
 
-const configure = async ({historySize, analyzerName}) => {
+async function configure({historySize, analyzerName}) {
   console.log('Configuring analyzer', analyzerName, historySize)
   self.analyzerName = analyzerName ?? self.analyzerName
   self.historySize = historySize ?? self.historySize
   await setupAnalyzer()
 }
 
-const processFftData = async ({fft, id}) => {
+async function processFftData({fft, id}) {
   if(!self.analyzer) throw new Error('Analyzer not initialized')
 
     const value = self.analyzer(fft, self.previousSignal)
