@@ -1,7 +1,7 @@
 {
   "name": "paper-cranes-audio",
   "version": "1.0.2",
-  "description": "",
+  "description": "A real-time music visualization system using WebGL shaders",
   "type": "module",
   "main": "dist/src/audio/AudioProcessor.js",
   "scripts": {
@@ -9,7 +9,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "node esbuild.build.js",
     "dev": "node esbuild.dev.js",
-    "format": "eslint --fix ."
+    "format": "eslint --fix .",
+    "clean": "rm -rf dist/*"
   },
   "author": "hypnodroid",
   "license": "UNLICENSED",

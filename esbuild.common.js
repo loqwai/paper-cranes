@@ -70,44 +70,56 @@ export function createBuildOptions(isDev = false) {
             '.jpg': 'copy',
             '.png': 'copy',
         },
+        resolveExtensions: ['.ts', '.js', '.css', '.json'],
     }
 
     return async function getConfigs() {
-        const baseDir = './src'
-        const shaderDir = './shaders'
-        const imgDir = './images'
+        // Define key directories
+        const dirs = {
+            pages: './src/pages',
+            components: './src/components',
+            audio: './src/audio',
+            shaders: './shaders',
+            images: './images',
+            assets: './assets'
+        }
 
-        const jsFiles = await findFiles(baseDir, ['.js'])
-        const otherFiles = await findFiles(baseDir, ['.css', '.html', '.ttf', '.png', '.svg'])
-        const shaderFiles = await findFiles(shaderDir, ['.frag'])
-        const imgFiles = await findFiles(imgDir, ['.png', '.jpg', '.jpeg'])
+        // Find all files in each directory
+        const files = {
+            pages: await findFiles(dirs.pages, ['.js', '.css', '.html']),
+            components: await findFiles(dirs.components, ['.js', '.css']),
+            audio: await findFiles(dirs.audio, ['.js']),
+            shaders: await findFiles(dirs.shaders, ['.frag']),
+            images: await findFiles(dirs.images, ['.png', '.jpg', '.jpeg']),
+            assets: await findFiles(dirs.assets, ['.js', '.css', '.html', '.ttf', '.ico'])
+        }
 
-        await generateShadersJson(shaderFiles)
+        await generateShadersJson(files.shaders)
 
+        // Root files that need to be handled separately
+        const rootFiles = [
+            './index.js',
+            './index.html',
+            './index.css',
+            './service-worker.js'
+        ]
+
+        // Separate JS files that need bundling from static files that just need copying
         const bundleEntrypoints = [
-            'index.js',
-            'analyze.js',
-            'edit.js',
-            'list.js',
-            // 'live.js',
-            'service-worker.js',
-            ...jsFiles,
+            ...rootFiles.filter(f => f.endsWith('.js')),
+            ...files.pages.filter(f => f.endsWith('.js')),
+            ...files.components.filter(f => f.endsWith('.js')),
+            ...files.audio.filter(f => f.endsWith('.js')),
+            ...files.assets.filter(f => f.endsWith('.js'))
         ]
 
         const copyEntrypoints = [
-            'analyze.css',
-            'analyze.html',
-            'edit.css',
-            'edit.html',
-            'index.css',
-            'index.html',
-            // 'live.html',
-            'list.html',
-            'BarGraph.css',
-            'favicon.ico',
-            ...otherFiles,
-            ...shaderFiles,
-            ...imgFiles,
+            ...rootFiles.filter(f => !f.endsWith('.js')),
+            ...files.pages.filter(f => !f.endsWith('.js')),
+            ...files.components.filter(f => !f.endsWith('.js')),
+            ...files.shaders,
+            ...files.images,
+            ...files.assets.filter(f => !f.endsWith('.js'))
         ]
 
         return {
@@ -121,7 +133,7 @@ export function createBuildOptions(isDev = false) {
             },
             bundleOptions: {
                 ...sharedOptions,
-                entryPoints: [...bundleEntrypoints, ...shaderFiles],
+                entryPoints: [...bundleEntrypoints, ...files.shaders],
                 outdir: join(process.cwd(), 'dist'),
                 outbase: '.',
                 bundle: true,
