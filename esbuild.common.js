@@ -9,7 +9,8 @@ const generateShadersJson = async (shaderFiles) => {
         return {
             name: relativePath.replace(/\\/g, '/').replace('.frag', ''),
             fileUrl: `shaders/${relativePath}`,
-            visualizerUrl: `/?shader=${relativePath.replace(/\\/g, '/').replace('.frag', '')}`
+            visualizerUrl: `/?shader=${relativePath.replace(/\\/g, '/').replace('.frag', '')}`,
+            visualizerQueryParam: relativePath.replace(/\\/g, '/')
         }
     })
 
@@ -88,6 +89,7 @@ export function createBuildOptions(isDev = false) {
             'analyze.js',
             'edit.js',
             'list.js',
+            'live.js',
             'service-worker.js',
             ...jsFiles,
         ]
@@ -99,6 +101,7 @@ export function createBuildOptions(isDev = false) {
             'edit.html',
             'index.css',
             'index.html',
+            'live.html',
             'list.html',
             'BarGraph.css',
             'favicon.ico',

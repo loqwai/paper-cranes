@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Paper Cranes Live Control</title>
+  <style>
+    body {
+      background: #1e1e1e;
+      color: #fff;
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .playlist {
+      background: #2d2d2d;
+      padding: 15px;
+      border-radius: 8px;
+    }
+
+    .playlist-item {
+      padding: 10px;
+      margin: 5px 0;
+      background: #3d3d3d;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .playlist-item:hover {
+      background: #4d4d4d;
+    }
+
+    .playlist-item.active {
+      background: #0078d4;
+    }
+
+    .button-group {
+      margin: 20px 0;
+    }
+
+    button {
+      background: #0078d4;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #106ebe;
+    }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "preact": "https://esm.sh/preact@10.19.3",
+      "preact/hooks": "https://esm.sh/preact@10.19.3/hooks",
+      "htm/preact": "https://esm.sh/htm@3.1.1/preact"
+    }
+  }
+  </script>
+</head>
+
+<body>
+  <script type="module" src="./live.js"></script>
+</body>
+
+</html>
