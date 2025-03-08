@@ -2,41 +2,14 @@ import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { makeVisualizer } from './src/Visualizer.js'
 import './index.css'
 
-// Add service worker registration
-window.addEventListener('load', async () => {
-    console.log('Registering service worker...')
-    const { serviceWorker } = navigator
-    if(!serviceWorker) {
-        console.log('Service worker not supported')
-        return
-    }
-    serviceWorker.addEventListener('message', processServiceWorkerMessage)
-    // Add cache version to URL to force update when version changes
-    const registration = await serviceWorker.register(`/service-worker.js?version=${CACHE_NAME}`)
-    registration.addEventListener('statechange', (e) =>
-        console.log('ServiceWorker state changed:', e.target.state))
-    registration.addEventListener('message', processServiceWorkerMessage)
-
-})
-
-/**
- * Process messages from the service worker
- * @param {MessageEvent} event
- */
-const processServiceWorkerMessage = (event) => {
-    console.log('Received message from service worker', event.data)
-    if (event.data === 'reload') {
-        console.log('Received reload message from service worker')
-        window.stop()
-        return window.location.reload()
-    }
-    console.log('Received strange message from service worker', event.data)
-}
-
 const events = ['touchstart', 'touchmove', 'touchstop', 'keydown', 'mousedown', 'resize']
 let ranMain = false
 let startTime = 0
 const params = new URLSearchParams(window.location.search)
+
+// Live mode channel
+const channel = new BroadcastChannel('paper-cranes-live')
+const isLiveMode = params.get('live') === 'true'
 
 const getVisualizerDOMElement = () => {
     if (!window.visualizer) {
@@ -62,6 +35,7 @@ const getNormalizedCoordinates = (event, element) => {
         y: 1.0 - (y - rect.top) / rect.height  // Flip Y coordinate for WebGL
     }
 }
+
 const audioConfig = {
     echoCancellation: params.get('echoCancellation') === 'true',
     noiseSuppression: params.get('noiseSuppression') === 'true',
@@ -162,14 +136,51 @@ const main = async () => {
         };
 
         const render = await makeVisualizer(visualizerConfig);
-        requestAnimationFrame(() => animate({ render, audio, fragmentShader }));
+
+        // Set up live mode handlers
+        if (isLiveMode) {
+            // Notify control window that we're ready
+            channel.postMessage({ type: 'visualizer_ready' });
+
+            // Listen for control messages
+            channel.onmessage = async (event) => {
+                const { type, shader, knobId, value } = event.data;
+                switch (type) {
+                    case 'shader_update':
+                        console.log('shader_update', shader)
+                        const fragmentShader = await getRelativeOrAbsolute(shader);
+                        console.log('fragmentShader', fragmentShader)
+                        // set the query param
+                        const newUrl = new URL(window.location)
+                        newUrl.searchParams.set('shader', shader)
+                        window.history.pushState({}, '', newUrl)
+
+                        window.cranes.shader = fragmentShader;
+                        cancelAnimationFrame(window.cranes.animationId)
+                        window.cranes.animationId = requestAnimationFrame(() => animate({ render, audio, fragmentShader }));
+                        break;
+                    case 'knob_update':
+                        window.cranes.manualFeatures[knobId] = value;
+                        break;
+                    case 'toggle_fullscreen':
+                        if (document.fullscreenElement) {
+                            document.exitFullscreen();
+                        } else {
+                            document.documentElement.requestFullscreen();
+                        }
+                        break;
+                }
+            };
+        }
+
+        window.cranes.animationId = requestAnimationFrame(() => animate({ render, audio, fragmentShader }));
     } catch (e) {
         console.error('Main initialization error:', e);
     }
 };
 
 const animate = ({ render, audio, fragmentShader }) => {
-    requestAnimationFrame(() => animate({ render, audio, fragmentShader }));
+    window.cranes.animationId = requestAnimationFrame(() => animate({ render, audio, fragmentShader }));
 
     const features = {
         ...audio.getFeatures(),
@@ -188,7 +199,8 @@ const animate = ({ render, audio, fragmentShader }) => {
             fragmentShader: window.cranes?.shader ?? fragmentShader,
         });
     } catch (e) {
-        console.error('Render error:', e);
+        console.error('Render error:', e)
+        cancelAnimationFrame(window.cranes.animationId)
     }
 };
 
@@ -213,7 +225,7 @@ const initializeApp = async () => {
         await main();
 
         // Add click handlers for fullscreen
-        if (!window.location.href.includes('edit')) {
+        if (!window.location.href.includes('edit') && !isLiveMode) {
             const visualizer = getVisualizerDOMElement();
             for (const event of events) {
                 visualizer.addEventListener(event, async () => {
@@ -240,6 +252,7 @@ window.cranes = {
 }
 
 const getRelativeOrAbsolute = async (url) => {
+    console.log('getRelativeOrAbsolute', url)
     //if the url is not a full url, then it's a relative url
     if (!url.includes('http')) {
         url = `/shaders/${url}`
