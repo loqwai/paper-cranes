@@ -1,12 +1,12 @@
-// http://localhost:6969/edit.html?image=images%2Fsubtronics.jpg
-#define ZOOM_LEVEL mapValue(bassNormalized, 0., 1., 0.8, 1.2)
-#define WAVES_STRENGTH spectralCrestZScore *2.
+//https://visuals.beadfamous.com/edit?image=images%2Fsubtronics.jpg&history_size=2000&history_size.min=-3&history_size.max=3
+#define ZOOM_LEVEL mapValue(bassNormalized, 0., 1., 0.8, 1.5)
+#define WAVES_STRENGTH spectralCrestNormalized *2.
 #define RIPPLE_FREQUENCY mapValue(spectralCrestNormalized, 0., 1., 0.1, 10.)
-#define RIPPLE_STRENGTH mapValue(spectralFluxZScore, -1., 1., 0.1, 2.)
+#define RIPPLE_STRENGTH mapValue(spectralFluxNormalized, 0., 1., 0.1, 2.)
 #define COLOR_SHIFT pitchClass
-#define INFINITY_ZOOM (energyZScore > 0.3 ? mapValue(spectralFluxZScore, -1., 1., 0.4, 0.8): 0.)
+#define INFINITY_ZOOM (bassNormalized+energyNormalized > 1. ? mapValue(spectralFluxNormalized, 0., 1., 0.4, 0.8): 0.)
 #define CENTER vec2(0.46, 0.65)
-#define SCREEN_SHAKE_INTENSITY (energyZScore > 0.5 ? smoothstep(0.3, 1.0, spectralRoughnessZScore) * 0.04 : 0.0)
+#define SCREEN_SHAKE_INTENSITY (bassNormalized+energyNormalized > 1.2 ? smoothstep(0.3, 1.0, spectralRoughness) * 0.04 : 0.0)
 
 // **Retrieve last frame safely**
 vec3 last(vec2 uv) {
@@ -53,8 +53,8 @@ vec2 getRippleDistortion(vec2 uv) {
 
     float rippleWave = sin(distFromCenter * (10.0 + RIPPLE_FREQUENCY * 10.0));
 
-    // **Apply chaos if `spectralRoughnessZScore` is high**
-    float roughnessFactor = smoothstep(0.5, 1.0, spectralRoughnessZScore);
+    // **Apply chaos if `spectralRoughness` is high**
+    float roughnessFactor = smoothstep(0.5, 1.0, spectralRoughness);
     rippleWave *= mix(1.0, fract(sin(uv.x * uv.y * 10000.0) * 43758.5453), roughnessFactor);
 
     float waveInfluence = smoothstep(0.0, 1.0, isWaves(uv));
@@ -74,7 +74,7 @@ vec3 cyclopsEffect(vec2 uv) {
 
     // **Calculate rotation based on music intensity**
     float rotationAngle = sin(time); // **Base rotation**
-    rotationAngle += bassZScore * 0.3; // **Add energy-based rotation**
+    rotationAngle += bass * 0.3; // **Add energy-based rotation**
 
     // **Apply rotation around center**
     vec2 rotatedUV = uv - CENTER;
@@ -98,7 +98,7 @@ vec3 cyclopsEffect(vec2 uv) {
     vec3 color = getLastFrameColor(rotatedUV).rgb;
 
     // **Music-intensity-based distortion**
-    float energyInfluence = smoothstep(0.5, 1.0, energyZScore);
+    float energyInfluence = smoothstep(0.5, 1.0, energy);
     rotatedUV += sin(rotatedUV * (10.0 * energyInfluence)) * 0.02 * energyInfluence;
 
     // **Enhanced color shifting based on musical energy**
@@ -115,7 +115,7 @@ vec3 cyclopsEffect(vec2 uv) {
     return hsl2rgb(hsl);
 }
 
-// **Apply screen shake effect based on spectralRoughnessZScore**
+// **Apply screen shake effect based on spectralRoughness**
 vec2 applyScreenShake(vec2 uv) {
     if (SCREEN_SHAKE_INTENSITY > 0.0) {
         // Create a chaotic but smooth shake pattern
@@ -125,7 +125,7 @@ vec2 applyScreenShake(vec2 uv) {
         // Map noise to -1 to 1 range
         vec2 shakeOffset = vec2(noiseX, noiseY) * 2.0 - 1.0;
 
-        // Apply shake with intensity based on spectralRoughnessZScore
+        // Apply shake with intensity based on spectralRoughness
         return uv + shakeOffset * SCREEN_SHAKE_INTENSITY;
     }
     return uv;
@@ -148,7 +148,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 originalColor = getInitialFrameColor(uv).rgb;
     vec3 lastFrameColor = last(uv);
 
-    if (bassZScore > 0.5) {
+    if (bass > 0.5) {
         lastFrameColor = mix(lastFrameColor, originalColor, 0.3);
     }
 
@@ -168,7 +168,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 mirrorColor = cyclopsEffect(uv);
 
     // **Extreme Bass Distortion Mode (If bass is at insane levels)**
-    if (-bassZScore > 0.9 ) {
+    if (-bass > 0.9 ) {
         uv *= sin(iTime * 10.0) * 5.0;  // **Wild zoom oscillation**
         originalColor = fract(-1. * originalColor);
     }
