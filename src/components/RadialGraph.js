@@ -1,6 +1,6 @@
 import { html } from 'htm/preact'
 import { useState } from 'preact/hooks'
-import { AudioFeatures } from '../audio/AudioProcessor'
+import { AudioFeatures } from 'hypnosound'
 
 const FEATURE_SUFFIXES = ['Normalized', 'ZScore', 'Mean', 'StandardDeviation', 'Median', 'Min', 'Max']
 

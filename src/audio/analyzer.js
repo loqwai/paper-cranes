@@ -16,11 +16,11 @@ const setupAnalyzer = async () => {
   if(!analyzerName) throw new Error('Analyzer name is required')
   if(!historySize) throw new Error('History size is required')
 
-  const hypnosound = await import('hypnosound')
-  const analyzer = hypnosound[analyzerName]
+  const analyzer = await import(`https://esm.sh/hypnosound@1.9.0/src/audio/${analyzerName}.js`)
   if (!analyzer) throw new Error(`Analyzer ${analyzerName} not found`)
 
-  const makeCalculateStats = hypnosound.makeCalculateStats
+  const makeCalculateStats = await import('https://esm.sh/hypnosound@1.9.0/src/utils/calculateStats.js')
+
   self.calculateStats = makeCalculateStats(historySize)
   self.analyzer = analyzer
 }
