@@ -1,6 +1,8 @@
 import { render } from 'preact'
 import { useState, useEffect } from 'preact/hooks'
 import { html } from 'htm/preact'
+import { loadShaders } from './src/shader-list.js'
+import { ShaderListItem } from './src/shader-list-item.js'
 
 /**
  * @typedef {Object} Shader
@@ -17,27 +19,7 @@ import { html } from 'htm/preact'
  * @param {string} props.visualizerUrl - URL to view the shader in the visualizer
  */
 const MusicVisual = ({ name, fileUrl, visualizerUrl }) => {
-  const [presets, setPresets] = useState([])
-  const [shaderCode, setShaderCode] = useState('')
-
-  // Fetch shader source code
-  useEffect(() => {
-    if (!fileUrl) return
-
-    const fetchShaderCode = async () => {
-      const res = await fetch(fileUrl)
-      const text = await res.text()
-      setShaderCode(text)
-    }
-
-    fetchShaderCode()
-  }, [fileUrl])
-
-  // Extract presets when shader code is loaded
-  useEffect(() => {
-    if (!shaderCode) return
-    setPresets(extractPresets(visualizerUrl, shaderCode))
-  }, [shaderCode, visualizerUrl])
+  const [presets, shaderCode] = useShaderPresets(fileUrl, visualizerUrl)
 
   const linkIcon = html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
     <path d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
@@ -50,9 +32,7 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl }) => {
       <path d="M4.5 12.75l6 6 9-13.5" />
     </svg>`
     setTimeout(() => {
-      button.innerHTML = button.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
-      </svg>`
+      button.innerHTML = linkIcon
     }, 1000)
   }
 
@@ -87,19 +67,6 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl }) => {
   `
 }
 
-
-const getEditUrl = (visualizationUrl) => {
-  try {
-    // trim beginning slash, if it exists
-    visualizationUrl = visualizationUrl.startsWith('/') ? visualizationUrl.slice(1) : visualizationUrl
-    const url = new URL(visualizationUrl)
-    url.pathname = '/edit.html'
-    return url.toString()
-  } catch (e) {
-    return `edit.html${visualizationUrl}`
-  }
-}
-
 const PresetParams = ({ preset }) => {
   const params = new URL(preset).searchParams
   const presetProps = Array.from(params.entries()).filter(filterPresetProps)
@@ -118,63 +85,28 @@ const PresetParams = ({ preset }) => {
   `
 }
 
-const filterPresetProps = ([key]) => {
-  if (key === 'shader') return false
-  if (key.endsWith('.min')) return false
-  if (key.endsWith('.max')) return false
-  return true
-}
+const List = () => {
+  const [shaders, setShaders] = useState([])
 
-/**
- * Extracts preset URLs from shader code
- * @param {string} visualizerUrl - Base visualizer URL
- * @param {string} shaderCode - Raw shader source code
- * @returns {string[]} Array of preset URLs
- */
-const extractPresets = (visualizerUrl, shaderCode) => {
-  if (!shaderCode) return []
+  useEffect(() => {
+    loadShaders().then(setShaders)
+  }, [])
 
-  return shaderCode
-    .split('\n')
-    .filter(line => line.includes('http://') || line.includes('https://'))
-    .map(line => getPresetUrl(visualizerUrl, line))
-}
-
-/**
- * Creates a preset URL by combining the visualizer base URL with preset parameters
- * @param {string} visualizerUrl - Base visualizer URL
- * @param {string} line - Line containing a preset URL
- * @returns {string} Combined URL with merged parameters
- */
-const getPresetUrl = (visualizerUrl, line) => {
-  const presetUrlMatch = line.match(/https?:\/\/[^\s]+/)
-  if (!presetUrlMatch) return visualizerUrl
-
-  const presetUrl = new URL(presetUrlMatch[0])
-  const baseUrl = new URL(visualizerUrl, window.location.href)
-  const resultUrl = new URL(baseUrl.pathname, window.location.origin)
-
-  // Add preset parameters first
-  for (const [key, value] of presetUrl.searchParams) {
-    resultUrl.searchParams.set(key, value)
+  const handleClick = (url) => {
+    window.location.href = url
   }
 
-  // Override with visualizer parameters
-  for (const [key, value] of baseUrl.searchParams) {
-    resultUrl.searchParams.set(key, value)
-  }
-
-  resultUrl.pathname = ''
-
-  return resultUrl.toString()
+  return html`
+    <ul>
+      ${shaders.map(shader => html`
+        <${ShaderListItem}
+          ...${shader}
+          isActive=${false}
+          onClick=${handleClick}
+        />
+      `)}
+    </ul>
+  `
 }
-// Load shaders and render the list
-const shaders = await fetch('/shaders.json').then(res => res.json())
 
-const List = () => html`
-  <ul>
-    ${shaders.map(shader => html`<${MusicVisual} ...${shader} />`)}
-  </ul>
-`
-
-render(html`<${List} />`, document.getElementsByTagName('main')[0])
+render(html`<${List} />`, document.body)

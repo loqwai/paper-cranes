@@ -2,6 +2,8 @@ import { render } from 'preact'
 import { useState, useEffect } from 'preact/hooks'
 import { html } from 'htm/preact'
 import './src/midi.js'
+import { loadShaders } from './src/shader-list.js'
+import { ShaderListItem } from './src/shader-list-item.js'
 // Communication channel between windows
 const channel = new BroadcastChannel('paper-cranes-live');
 
@@ -12,18 +14,7 @@ const LiveControl = () => {
 
     useEffect(() => {
         // Load shaders on mount
-        fetch('shaders.json')
-            .then(res => res.json())
-            .then(shaderList => setShaders(shaderList))
-            .catch(error => {
-                console.error('Failed to load shaders:', error);
-                // Fallback shaders
-                setShaders([
-                    { name: 'Default', path: 'default' },
-                    { name: 'Gummy Crystals', path: 'redaphid/wip/gummy-crystals' },
-                    { name: 'Rainbow Wave', path: 'redaphid/rainbow-waves/ableton' }
-                ]);
-            });
+        loadShaders().then(setShaders);
 
         // Listen for messages from visualizer
         channel.onmessage = (event) => {
@@ -33,15 +24,41 @@ const LiveControl = () => {
             }
         };
     }, []);
-
+    /**
+     * Select a shader
+     * @typedef {Object} Shader
+     * @property {string} name - The name of the shader
+     * @property {string} visualizerQueryParam - The query parameter to use to select the shader
+     * @param {Shader} shader - The shader to select
+     */
     const selectShader = (shader) => {
-        console.log('selectShader', shader)
+        console.log('selectShader', shader);
         setCurrentShader(shader);
         channel.postMessage({
             type: 'shader_update',
             shader: shader.visualizerQueryParam
         });
     };
+
+    const selectPreset = (presetUrl) => {
+        try {
+            const url = new URL(presetUrl)
+            // Extract all parameters from the preset URL
+            const params = Array.from(url.searchParams.entries())
+            // Send each parameter to the visualizer
+            params.forEach(([key, value]) => {
+                if (key !== 'shader') {
+                    channel.postMessage({
+                        type: 'knob_update',
+                        knobId: key,
+                        value: parseFloat(value)
+                    })
+                }
+            })
+        } catch (error) {
+            console.error('Failed to apply preset:', error)
+        }
+    }
 
     const launchVisualizer = () => {
         if (visualizerWindow && !visualizerWindow.closed) {
@@ -64,22 +81,18 @@ const LiveControl = () => {
 
     return html`
         <div class="container">
-            <div class="playlist">
-                <h2>Shader Playlist</h2>
+            <div class="button-group">
+                <button onClick=${launchVisualizer}>Launch Visualizer</button>
+            </div>
+            <ul class="shader-list">
                 ${shaders.map(shader => html`
-                    <div
-                        class="playlist-item ${shader.fileUrl === currentShader ? 'active' : ''}"
-                        onClick=${() => selectShader(shader)}
-                    >
-                        ${shader.name}
-                    </div>
+                    <${ShaderListItem}
+                        ...${shader}
+                        isActive=${shader === currentShader}
+                        onClick=${handleClick}
+                    />
                 `)}
-            </div>
-            <div class="controls">
-                <div class="button-group">
-                    <button onClick=${launchVisualizer}>Launch Visualizer</button>
-                </div>
-            </div>
+            </ul>
         </div>
     `;
 };
