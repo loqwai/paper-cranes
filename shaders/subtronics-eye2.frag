@@ -1,5 +1,5 @@
 //https://visuals.beadfamous.com/edit?image=images%2Fsubtronics.jpg&history_size=1000&history_size.min=-3&history_size.max=3
-#define ZOOM_LEVEL mapValue(bassNormalized+energyNormalized, 0., 2., 0.6, 4.5)
+#define ZOOM_LEVEL frame < 50 ? 1. : mapValue(energyNormalized, 0.0, 1., 0.6, 3.5)
 #define WAVES_STRENGTH (spectralCrestNormalized + bassNormalized)/2.
 #define RIPPLE_FREQUENCY mapValue(spectralCrestNormalized+bassNormalized, 0., 1., 0.1, 10.)
 #define RIPPLE_STRENGTH mapValue(spectralFluxNormalized+bassNormalized, 0., 1., 0.1, 2.)
@@ -12,10 +12,10 @@
 vec3 last(vec2 uv) {
     vec3 first = getInitialFrameColor(fract(uv)).rgb;
     if (frame < 300) return first;
-    if(energyNormalized < 0.5) return first;
+    if(energyNormalized < 0.3 || bassZScore < 0.2) return first;
     vec3 last = getLastFrameColor(fract(uv)).rgb;
     vec3 cur =  mix(first, last, spectralRoughnessNormalized+bassNormalized/4.);
-    if(bassNormalized > 0.9) {
+    if(bassNormalized > 0.95) {
         cur = rgb2hsl(cur);
         cur.x =  mix(cur.x,pitchClassMedian,bassNormalized);
         cur.y += max(clamp(cur.y+0.5, 0.,1.), energyNormalized);
@@ -31,7 +31,7 @@ float isCyclopsBody(vec2 uv) {
 
     // Target white/whitish areas (high lightness, low saturation)
     // This will specifically detect the white/gray areas of the eye
-    float isWhitish = smoothstep(0., 0.65, hsl.z) * (1.0 - smoothstep(0.0, 0.3, hsl.y));
+    float isWhitish = smoothstep(0., 0.85, hsl.z) * (1.0 - smoothstep(0.0, 0.8, hsl.y));
 
     // Ensure we're only targeting the eye area by using distance from center
     float distFromCenter = length(uv - CENTER);
