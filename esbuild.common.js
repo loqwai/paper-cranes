@@ -81,7 +81,6 @@ export function createBuildOptions(isDev = false) {
             audio: './src/audio',
             shaders: './shaders',
             images: './images',
-            assets: './assets'
         }
 
         // Find all files in each directory
@@ -91,7 +90,6 @@ export function createBuildOptions(isDev = false) {
             audio: await findFiles(dirs.audio, ['.js']),
             shaders: await findFiles(dirs.shaders, ['.frag']),
             images: await findFiles(dirs.images, ['.png', '.jpg', '.jpeg']),
-            assets: await findFiles(dirs.assets, ['.js', '.css', '.html', '.ttf', '.ico'])
         }
 
         await generateShadersJson(files.shaders)
@@ -110,7 +108,6 @@ export function createBuildOptions(isDev = false) {
             ...files.pages.filter(f => f.endsWith('.js')),
             ...files.components.filter(f => f.endsWith('.js')),
             ...files.audio.filter(f => f.endsWith('.js')),
-            ...files.assets.filter(f => f.endsWith('.js'))
         ]
 
         const copyEntrypoints = [
@@ -119,7 +116,6 @@ export function createBuildOptions(isDev = false) {
             ...files.components.filter(f => !f.endsWith('.js')),
             ...files.shaders,
             ...files.images,
-            ...files.assets.filter(f => !f.endsWith('.js'))
         ]
 
         return {
@@ -138,6 +134,9 @@ export function createBuildOptions(isDev = false) {
                 outbase: '.',
                 bundle: true,
                 treeShaking: true,
+                alias: {
+                    'src': './src',
+                }
             }
         }
     }
