@@ -14,7 +14,7 @@ const shaders = await fetch('/shaders.json').then(res => res.json())
 
 const List = () => html`
   <ul>
-    ${shaders.map(shader => html`<${MusicVisual} ...${shader} />`)}
+    ${shaders.map(shader => html`<${VisualsListItem} ...${shader} />`)}
   </ul>
 `
 

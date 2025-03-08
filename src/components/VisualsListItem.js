@@ -1,3 +1,6 @@
+import { useState, useEffect } from 'preact/hooks'
+import { html } from 'htm/preact'
+
 /**
  * Fetches shader code and extracts preset URLs
  * @param {Object} props
