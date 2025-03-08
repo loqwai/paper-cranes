@@ -1,22 +1,5 @@
-import { StatTypes } from 'hypnosound'
+import { StatTypes, AudioFeatures } from 'hypnosound'
 import { WorkerRPC } from './WorkerRPC'
-
-export const AudioFeatures = [
-    'SpectralCentroid',
-    'SpectralFlux',
-    'SpectralSpread',
-    'SpectralRolloff',
-    'SpectralRoughness',
-    'SpectralKurtosis',
-    'Energy',
-    'SpectralEntropy',
-    'SpectralCrest',
-    'SpectralSkew',
-    'PitchClass',
-    'Bass',
-    'Mids',
-    'Treble',
-]
 
 let noResultCount = 0
 export const getFlatAudioFeatures = (audioFeatures = AudioFeatures, rawFeatures = {}) => {

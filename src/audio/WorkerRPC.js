@@ -91,22 +91,16 @@ export class WorkerRPC {
     }
 
     initialize = async () => {
-        const workerUrl = new URL(`/src/audio/analyzers/${this.workerName}.js`, import.meta.url)
-        const response = await fetch(workerUrl)
-        if (!response.ok) {
-            throw new Error(`Failed to fetch ${this.workerName} worker: ${response.statusText}`)
-        }
-
-        const code = await response.text()
-        const blob = new Blob([code], { type: 'application/javascript' })
-        this.worker = new Worker(URL.createObjectURL(blob), { type: 'module' })
-
+        this.worker = new Worker('./analyzer.js', { type: "module" });
         this.worker.onmessage = this.handleMessage
         this.worker.onerror = this.handleError
 
         this.worker.postMessage({
             type: 'config',
-            config: { historySize: this.historySize },
+            config: {
+                historySize: this.historySize,
+                analyzerName: this.workerName,
+            },
         })
     }
 
