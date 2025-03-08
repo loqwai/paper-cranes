@@ -1,6 +1,5 @@
 import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { makeVisualizer } from './src/Visualizer.js'
-import './index.css'
 
 // Add service worker registration
 window.addEventListener('load', async () => {
@@ -12,7 +11,7 @@ window.addEventListener('load', async () => {
     }
     serviceWorker.addEventListener('message', processServiceWorkerMessage)
     // Add cache version to URL to force update when version changes
-    const registration = await serviceWorker.register(`/service-worker.js?version=${CACHE_NAME}`)
+    const registration = await serviceWorker.register(`/service-worker.js`)
     registration.addEventListener('statechange', (e) =>
         console.log('ServiceWorker state changed:', e.target.state))
     registration.addEventListener('message', processServiceWorkerMessage)
@@ -266,12 +265,9 @@ const getFragmentShader = async () => {
     return fragmentShader
 }
 
-if(process.env.LIVE_RELOAD) {
-    new EventSource('/esbuild').addEventListener('change', () => location.reload());
-}
 if(navigator.connection) {
     navigator.connection.addEventListener('change', () => {
         navigator.serviceWorker.controller.postMessage({type:'network-changed'})
     })
 }
-console.log(`paper cranes version ${CACHE_NAME}`);
+console.log(`paper cranes version FREE`);

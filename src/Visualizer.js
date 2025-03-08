@@ -9,7 +9,7 @@ import {
     drawBufferInfo,
 } from 'twgl-base.js'
 
-import { shaderWrapper } from './shader-transformers/shader-wrapper'
+import { shaderWrapper } from './shader-transformers/shader-wrapper.js'
 
 // Simple full-screen quad
 const positions = [

@@ -91,10 +91,11 @@ export class WorkerRPC {
     }
 
     initialize = async () => {
-        this.worker = new Worker('./analyzer.js', { type: "module" });
+        console.log('Initializing worker', this.workerName)
+        this.worker = new Worker(`/src/audio/analyzer.js`, { type: "module" });
         this.worker.onmessage = this.handleMessage
         this.worker.onerror = this.handleError
-
+        console.log('Worker initialized', this.worker)
         this.worker.postMessage({
             type: 'config',
             config: {

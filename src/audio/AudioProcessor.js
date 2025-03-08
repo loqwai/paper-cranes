@@ -1,5 +1,5 @@
 import { StatTypes, AudioFeatures } from 'hypnosound'
-import { WorkerRPC } from './WorkerRPC'
+import { WorkerRPC } from './WorkerRPC.js'
 
 let noResultCount = 0
 export const getFlatAudioFeatures = (audioFeatures = AudioFeatures, rawFeatures = {}) => {
@@ -81,7 +81,6 @@ export class AudioProcessor {
 
         this.sourceNode.connect(windowNode)
         windowNode.connect(this.fftAnalyzer)
-
         AudioFeatures.map(this.initializeWorker)
         // await new Promise(resolve => setTimeout(resolve, 100))
 

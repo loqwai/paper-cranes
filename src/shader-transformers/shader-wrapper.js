@@ -1,4 +1,4 @@
-import { getFlatAudioFeatures } from '../audio/AudioProcessor'
+import { getFlatAudioFeatures } from '../audio/AudioProcessor.js'
 
 const getKnobUniforms = (shader) => {
     const uniforms = []

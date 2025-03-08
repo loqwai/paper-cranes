@@ -8,7 +8,7 @@ window.addEventListener('load', async () => {
   }
   serviceWorker.addEventListener('message', processServiceWorkerMessage)
   // Add cache version to URL to force update when version changes
-  const registration = await serviceWorker.register(`/service-worker.js?version=${CACHE_NAME}`)
+  const registration = await serviceWorker.register(`/service-worker.js`)
   registration.addEventListener('message', processServiceWorkerMessage)
 
 })
