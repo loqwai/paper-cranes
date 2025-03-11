@@ -2,8 +2,8 @@
 self.addEventListener('message', async ({ data: e }) => {
   try {
     switch (e.type) {
-      case 'config': return configure(e.data)
-      case 'fftData': return processFftData(e.data)
+      case 'config': return configure(e)
+      case 'fftData': return processFftData(e)
       default: throw new Error(`Unknown message type: ${e.type}`)
     }
   } catch (error) {
@@ -28,20 +28,20 @@ async function setupAnalyzer() {
   self.analyzer = analyzer
 }
 
-async function configure({historySize, analyzerName}) {
-  self.analyzerName = analyzerName ?? self.analyzerName
-  self.historySize = historySize ?? self.historySize
+async function configure(e) {
+  self.analyzerName = e.data.analyzerName ?? self.analyzerName
+  self.historySize = e.data.historySize ?? self.historySize
   await setupAnalyzer()
 }
 
-async function processFftData({fft, id}) {
+function processFftData(e) {
   if(!self.analyzer) return console.debug(`Analyzer ${self.analyzerName} not initialized`)
 
-    const value = self.analyzer(fft, self.previousSignal)
-  self.previousSignal = fft
+  const value = self.analyzer(e.data.fft, self.previousSignal)
+  self.previousSignal = e.data.fft
 
   self.postMessage({
-    id,
+    id: e.id,
     type: 'computedValue',
     value,
     stats: self.calculateStats(value)
