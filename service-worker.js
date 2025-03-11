@@ -1,34 +1,34 @@
 const self = /** @type {ServiceWorkerGlobalScope} */ (globalThis)
 const CACHE_NAME = '2025-03-08T12:23:17.595Z'
-console.log(`Service worker starting`)
+console.debug(`Service worker starting`)
 const timeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 self.addEventListener("install", (event) => {
-    console.log("Service Worker: Installing...")
+    console.debug("Service Worker: Installing...")
     self.skipWaiting()
 })
 
 
 self.addEventListener("activate", (event) => {
-    console.log("Service Worker: Activated")
+    console.debug("Service Worker: Activated")
 
     event.waitUntil(self.clients.claim().then(() => {
-        console.log("Service Worker: Claimed clients")
+        console.debug("Service Worker: Claimed clients")
     }))
 })
 
 
 self.addEventListener("message", (event) => {
-    console.log("Service Worker: Message", event)
+    console.debug("Service Worker: Message", event)
     if(event.data.type === "network-changed") retryDeadRequests()
 })
 
 const reloadAllClients = async () => {
-    console.log("Reloading all clients")
+    console.debug("Reloading all clients")
     contentChanged = false
     const clients = await self.clients.matchAll()
     clients.forEach((client) => client.postMessage("reload"))
-    console.log("Reloaded", clients.length, "clients")
+    console.debug("Reloaded", clients.length, "clients")
 }
 
 
@@ -69,14 +69,14 @@ async function fetchWithRetry(request) {
             }
 
             if (interval > 10000) {
-                console.log("Adding to dead requests", retryItem.request.url, retryItem.timesDead)
+                console.debug("Adding to dead requests", retryItem.request.url, retryItem.timesDead)
                 deadRequests.push(retryItem)
                 return
             }
 
             requestsToRetry.unshift(retryItem)
             await timeout(interval)
-            console.log(`Back from sleeping when trying to fetch ${retryItem.request.url}. There are ${requestsToRetry.length} requests to retry`)
+            console.debug(`Back from sleeping when trying to fetch ${retryItem.request.url}. There are ${requestsToRetry.length} requests to retry`)
             const jitter = Math.random()
             interval *= (2 + jitter)
         }
@@ -87,7 +87,7 @@ async function fetchWithRetry(request) {
 setInterval(fetchWithRetry, 10000)
 
 const retryDeadRequests = () => {
-    console.log("Retrying dead requests", deadRequests.length)
+    console.debug("Retrying dead requests", deadRequests.length)
 
     // increase dead count
     deadRequests.forEach(item => item.timesDead = (item.timesDead ?? 0) + 1)
@@ -109,7 +109,7 @@ const retryDeadRequests = () => {
         fetchWithRetry()
     }
 
-    console.log('total requests to retry', requestsToRetry.length)
+    console.debug('total requests to retry', requestsToRetry.length)
 }
 
 let contentChanged = false
@@ -151,7 +151,7 @@ const addToCache = async (req, res) => {
     const url = new URL(req.url)
     url.search = ''
     const cleanRequest = new Request(url.toString())
-    console.log("Adding to cache", cleanRequest.url)
+    console.debug("Adding to cache", cleanRequest.url)
     await cache.put(cleanRequest,cleanRes)
 }
 
@@ -163,7 +163,7 @@ const didThingsChange = async (request, response) => {
     if (!request.url.includes(location.origin)) return false
     const newData = await safeResponse.text()
     const oldData = await cached?.text()
-    console.log("Did things change?", oldData && oldData !== newData)
+    console.debug("Did things change?", oldData && oldData !== newData)
     return oldData && oldData !== newData
 }
 
@@ -177,7 +177,7 @@ async function fetchWithCache(request) {
         contentChanged ||= await didThingsChange(request, response)
         await addToCache(request, response)
 
-        console.log(`${request.url} has changed: ${contentChanged}`)
+        console.debug(`${request.url} has changed: ${contentChanged}`)
         return response
     })
 
@@ -189,7 +189,7 @@ async function fetchWithCache(request) {
  * @param {FetchEvent} event
  */
 self.addEventListener("fetch", (e) => {
-    console.log("Fetch event", e.request.url)
+    console.debug("Fetch event", e.request.url)
     if (!e.request.url.includes("http")) return
     if (e.request.url.includes("localhost")) return
     if (e.request.method !== "GET") return

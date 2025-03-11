@@ -35,7 +35,7 @@ async function configure({historySize, analyzerName}) {
 }
 
 async function processFftData({fft, id}) {
-  if(!self.analyzer) throw new Error(`Analyzer ${self.analyzerName} not initialized`)
+  if(!self.analyzer) return console.debug(`Analyzer ${self.analyzerName} not initialized`)
 
     const value = self.analyzer(fft, self.previousSignal)
   self.previousSignal = fft
