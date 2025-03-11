@@ -85,7 +85,7 @@ export class WorkerRPC {
             this.historySize = historySize
             this.worker.postMessage({
                 type: 'config',
-                config: { historySize: this.historySize },
+                data: { historySize: this.historySize },
             })
         }
     }
