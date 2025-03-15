@@ -4,15 +4,15 @@
 
 #define EPSILON 0.0001
 
-#define variety float(int(time*100.) % 1000)/6000.
+#define variety float(int(time*10.) % 10000)/60000.
 // Map PROBEs to knobs initially
-#define PROBE_A float(int(time / 1000.) % 100) + (bassZScore/1. * energyZScore /1.) // Base rotation
+#define PROBE_A float(int(time / 100.) % 10000) + (bassNormalized * energyNormalized) // Base rotation
 #define PROBE_B (mapValue(pitchClassMedian,0.,1.,0.1,0.5)) // Color intensity
 #define PROBE_C (variety) // Pattern scale
-#define PROBE_D (spectralCentroidMedian) // Fractal detail
+#define PROBE_D (spectralRoughness) // Fractal detail
 #define PROBE_E (spectralSpreadNormalized) // Color blend
 #define PROBE_F (energyZScore/10. + (time)) // Pattern evolution
-#define PROBE_G energyNormalized*energyNormalized
+#define PROBE_G energyNormalized/10.
 #define PROBE_H pitchClassMedian
 
 vec3 palette(in float t)
