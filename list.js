@@ -111,31 +111,35 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
   return html`
     <li>
       <a class="main-link" href="${visualizerUrl}">
-        ${name}
-        <button
-          class="copy-link"
-          onClick=${(e) => {
-            e.preventDefault()
-            copyUrl(`${window.location.host}${visualizerUrl}`)
-          }}
-          title="Copy link"
-        >${linkIcon}</button>
-        <a class="edit-link" href="${getEditUrl(visualizerUrl)}">edit</a>
+        <span class="main-link-text">${name}</span>
+        <div class="main-link-actions">
+          <button
+            class="copy-link"
+            onClick=${(e) => {
+              e.preventDefault()
+              copyUrl(`${window.location.host}${visualizerUrl}`)
+            }}
+            title="Copy link"
+          >${linkIcon}</button>
+          <a class="edit-link" href="${getEditUrl(visualizerUrl)}">edit</a>
+        </div>
       </a>
       <ul>
         ${(filterText ? filteredPresets : presets).map((preset, index) => html`
           <li>
             <a class="main-link" href="${preset}">
-              ${getPresetName(preset, index)}
-              <button
-                class="copy-link"
-                onClick=${(e) => {
-                  e.preventDefault()
-                  copyUrl(preset)
-                }}
-                title="Copy link"
-              >${linkIcon}</button>
-              <a class="edit-link" href="${getEditUrl(preset)}">edit</a>
+              <span class="main-link-text">${getPresetName(preset, index)}</span>
+              <div class="main-link-actions">
+                <button
+                  class="copy-link"
+                  onClick=${(e) => {
+                    e.preventDefault()
+                    copyUrl(preset)
+                  }}
+                  title="Copy link"
+                >${linkIcon}</button>
+                <a class="edit-link" href="${getEditUrl(preset)}">edit</a>
+              </div>
             </a>
             <${PresetParams} preset=${preset} />
           </li>

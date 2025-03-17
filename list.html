@@ -9,26 +9,45 @@
       --bg: #000;
       --text: #fff;
       --accent: rgb(248, 248, 248);
-      --gap: clamp(8px, 2vw, 16px);
-      --text-size: clamp(16px, 4vw, 24px);
+      --gap: clamp(4px, 3vw, 12px);
+      --text-size: clamp(26px, 6vw, 48px);
+
+      /* Gradient transition points */
+      --gradient-start: 0%;
+      --gradient-solid: 70%;
+      /* Solid color until here */
+      --gradient-color2: 85%;
+      /* Second color transition */
+      --gradient-end: 100%;
+
+      /* Gradient opacities */
+      --color-opacity: 0.85;
+      --color2-opacity: 0.75;
+      --black-opacity: 0.95;
+      --bg-darkness: 0.4;
+      /* Adjust this to control overall background darkness */
 
       /* Main backgrounds - using HSL for easier complementary calculations */
       --bg-1: linear-gradient(to bottom,
-          hsla(270, 100%, 50%, 0.3) 0%,
-          hsla(270, 100%, 50%, 0.3) 80%,
-          rgba(0, 0, 0, 0.9) 100%);
+          hsla(calc(var(--hue-1)), 100%, 50%, calc(var(--color-opacity) * var(--bg-darkness))) var(--gradient-start),
+          hsla(calc(var(--hue-1)), 100%, 50%, calc(var(--color-opacity) * var(--bg-darkness))) var(--gradient-solid),
+          hsla(calc(var(--hue-1)), 100%, 70%, calc(var(--color2-opacity) * var(--bg-darkness))) var(--gradient-color2),
+          rgba(0, 0, 0, var(--black-opacity)) var(--gradient-end));
       --bg-2: linear-gradient(to bottom,
-          hsla(180, 100%, 50%, 0.3) 0%,
-          hsla(180, 100%, 50%, 0.3) 80%,
-          rgba(0, 0, 0, 0.9) 100%);
+          hsla(calc(var(--hue-2)), 100%, 50%, calc(var(--color-opacity) * var(--bg-darkness))) var(--gradient-start),
+          hsla(calc(var(--hue-2)), 100%, 50%, calc(var(--color-opacity) * var(--bg-darkness))) var(--gradient-solid),
+          hsla(calc(var(--hue-2)), 100%, 70%, calc(var(--color2-opacity) * var(--bg-darkness))) var(--gradient-color2),
+          rgba(0, 0, 0, var(--black-opacity)) var(--gradient-end));
       --bg-3: linear-gradient(to bottom,
-          hsla(330, 100%, 50%, 0.3) 0%,
-          hsla(330, 100%, 50%, 0.3) 80%,
-          rgba(0, 0, 0, 0.9) 100%);
+          hsla(calc(var(--hue-3)), 100%, 50%, calc(var(--color-opacity) * var(--bg-darkness))) var(--gradient-start),
+          hsla(calc(var(--hue-3)), 100%, 50%, calc(var(--color-opacity) * var(--bg-darkness))) var(--gradient-solid),
+          hsla(calc(var(--hue-3)), 100%, 70%, calc(var(--color2-opacity) * var(--bg-darkness))) var(--gradient-color2),
+          rgba(0, 0, 0, var(--black-opacity)) var(--gradient-end));
       --bg-4: linear-gradient(to bottom,
-          hsla(120, 100%, 50%, 0.3) 0%,
-          hsla(120, 100%, 50%, 0.3) 80%,
-          rgba(0, 0, 0, 0.9) 100%);
+          hsla(calc(var(--hue-4)), 100%, 50%, calc(var(--color-opacity) * var(--bg-darkness))) var(--gradient-start),
+          hsla(calc(var(--hue-4)), 100%, 50%, calc(var(--color-opacity) * var(--bg-darkness))) var(--gradient-solid),
+          hsla(calc(var(--hue-4)), 100%, 70%, calc(var(--color2-opacity) * var(--bg-darkness))) var(--gradient-color2),
+          rgba(0, 0, 0, var(--black-opacity)) var(--gradient-end));
 
       /* Base hues for each background */
       --hue-1: 270;
@@ -70,6 +89,7 @@
       font-size: var(--text-size);
       padding: var(--gap);
       line-height: 1.4;
+      max-width: 1600px;
     }
 
     ul {
@@ -110,8 +130,10 @@
 
     /* Shader groups with backgrounds */
     .shader-list>li {
-      margin: calc(var(--gap) * 2) 0;
-      padding: var(--gap);
+      margin: var(--gap) 0;
+      padding: calc(var(--gap));
+      padding-top: calc(var(--gap) * 1.5);
+      padding-bottom: calc(var(--gap) * 1.5);
     }
 
     .shader-list>li:nth-child(4n+1) {
@@ -131,21 +153,30 @@
     }
 
     .main-link {
-      display: block;
-      padding: var(--gap);
-      padding-left: calc(var(--gap) * 6);
-      position: relative;
+      display: flex;
+      align-items: center;
+      width: 100%;
+      padding: calc(var(--gap) * 0.5);
+    }
+
+    .main-link-text {
+      flex: 1;
+    }
+
+    .main-link-actions {
+      display: flex;
+      align-items: center;
+      gap: calc(var(--gap) * 0.5);
+      margin-left: auto;
     }
 
     .shader-list>li>.main-link {
       color: var(--accent);
-      border-left: none;
     }
 
     ul ul {
-      margin-left: calc(var(--gap) * 3);
+      margin-left: var(--gap);
       padding-left: var(--gap);
-      position: relative;
     }
 
     ul ul::before {
@@ -160,18 +191,17 @@
     }
 
     .copy-link {
-      position: absolute;
-      left: var(--gap);
-      top: 50%;
-      transform: translateY(-50%);
       background: none;
       border: none;
       cursor: pointer;
+      padding: 0;
+      display: flex;
+      align-items: center;
     }
 
     .copy-link svg {
-      width: calc(var(--gap) * 3);
-      height: calc(var(--gap) * 3);
+      width: calc(var(--text-size));
+      height: calc(var(--text-size));
       stroke: var(--accent);
     }
 
@@ -180,25 +210,32 @@
       display: none;
     }
 
-    @media (min-width: 768px) {
+    @media (min-width: 1200px) {
       body {
-        max-width: 1200px;
         margin: 0 auto;
         padding: calc(var(--gap) * 2);
       }
 
+      .main-link {
+        padding: var(--gap);
+      }
+
+      .main-link-actions {
+        gap: calc(var(--gap) * 2);
+      }
+
       .edit-link {
         display: block;
-        position: absolute;
-        right: var(--gap);
-        top: 50%;
-        transform: translateY(-50%);
         padding: var(--gap);
         font-size: calc(var(--text-size) * 0.8);
         font-weight: bold;
         text-transform: uppercase;
         border-radius: 4px;
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+      }
+
+      .chip-list {
+        margin-left: var(--gap);
       }
 
       /* Invert hue for edit links based on parent background with gradient */
@@ -231,7 +268,7 @@
         flex-wrap: wrap;
         gap: var(--gap);
         padding: var(--gap);
-        margin-left: calc(var(--gap) * 3);
+        margin-left: calc(var(--gap) * 1.5);
       }
 
       .chip {
