@@ -5,77 +5,13 @@
   <title>Paper Cranes - Secret List</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    /* Layout Variables */
     :root {
-      --bg: #000;
-      --text: #fff;
-      --accent: rgb(248, 248, 248);
-      --gap: clamp(4px, 3vw, 12px);
-      --text-size: clamp(26px, 6vw, 48px);
-
-      /* Gradient transition points */
-      --gradient-start: 0%;
-      --gradient-solid: 70%;
-      /* Solid color until here */
-      --gradient-color2: 85%;
-      /* Second color transition */
-      --gradient-end: 100%;
-
-      /* Gradient opacities */
-      --color-opacity: 0.85;
-      --color2-opacity: 0.75;
-      --black-opacity: 0.95;
-      --bg-darkness: 0.4;
-      /* Adjust this to control overall background darkness */
-
-      /* Main backgrounds - using HSL for easier complementary calculations */
-      --bg-1: linear-gradient(to bottom,
-          hsla(calc(var(--hue-1)), 100%, 50%, calc(var(--color-opacity) * var(--bg-darkness))) var(--gradient-start),
-          hsla(calc(var(--hue-1)), 100%, 50%, calc(var(--color-opacity) * var(--bg-darkness))) var(--gradient-solid),
-          hsla(calc(var(--hue-1)), 100%, 70%, calc(var(--color2-opacity) * var(--bg-darkness))) var(--gradient-color2),
-          rgba(0, 0, 0, var(--black-opacity)) var(--gradient-end));
-      --bg-2: linear-gradient(to bottom,
-          hsla(calc(var(--hue-2)), 100%, 50%, calc(var(--color-opacity) * var(--bg-darkness))) var(--gradient-start),
-          hsla(calc(var(--hue-2)), 100%, 50%, calc(var(--color-opacity) * var(--bg-darkness))) var(--gradient-solid),
-          hsla(calc(var(--hue-2)), 100%, 70%, calc(var(--color2-opacity) * var(--bg-darkness))) var(--gradient-color2),
-          rgba(0, 0, 0, var(--black-opacity)) var(--gradient-end));
-      --bg-3: linear-gradient(to bottom,
-          hsla(calc(var(--hue-3)), 100%, 50%, calc(var(--color-opacity) * var(--bg-darkness))) var(--gradient-start),
-          hsla(calc(var(--hue-3)), 100%, 50%, calc(var(--color-opacity) * var(--bg-darkness))) var(--gradient-solid),
-          hsla(calc(var(--hue-3)), 100%, 70%, calc(var(--color2-opacity) * var(--bg-darkness))) var(--gradient-color2),
-          rgba(0, 0, 0, var(--black-opacity)) var(--gradient-end));
-      --bg-4: linear-gradient(to bottom,
-          hsla(calc(var(--hue-4)), 100%, 50%, calc(var(--color-opacity) * var(--bg-darkness))) var(--gradient-start),
-          hsla(calc(var(--hue-4)), 100%, 50%, calc(var(--color-opacity) * var(--bg-darkness))) var(--gradient-solid),
-          hsla(calc(var(--hue-4)), 100%, 70%, calc(var(--color2-opacity) * var(--bg-darkness))) var(--gradient-color2),
-          rgba(0, 0, 0, var(--black-opacity)) var(--gradient-end));
-
-      /* Base hues for each background */
-      --hue-1: 270;
-      /* Purple */
-      --hue-2: 180;
-      /* Cyan */
-      --hue-3: 330;
-      /* Pink */
-      --hue-4: 120;
-      /* Green */
-
-      /* Chip backgrounds - using complementary colors */
-      --chip-1: rgba(255, 255, 0, 0.2);
-      /* yellow */
-      --chip-2: rgba(255, 0, 255, 0.2);
-      /* magenta */
-      --chip-3: rgba(0, 255, 255, 0.2);
-      /* cyan */
-      --chip-4: rgba(255, 128, 0, 0.2);
-      /* orange */
-
-      /* Rainbow offsets for chips */
-      --rainbow-1: 0;
-      --rainbow-2: 90;
-      --rainbow-3: 180;
-      --rainbow-4: 270;
+      --title-size: clamp(32px, 7vw, 56px);
+      --text-size: clamp(24px, 5vw, 40px);
     }
 
+    /* Reset & Layout */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -84,30 +20,135 @@
 
     body {
       font-family: system-ui;
-      background: var(--bg);
-      color: var(--text);
-      font-size: var(--text-size);
-      line-height: 1.4;
-      margin: 0;
       min-height: 100vh;
       overflow-x: hidden;
+      line-height: 1.4;
     }
 
     main {
-      padding-top: var(--gap);
-      padding-bottom: var(--gap);
       display: flex;
       flex-direction: column;
-      gap: var(--gap);
     }
 
     ul {
       list-style: none;
-      margin: 0;
-      padding: 0;
       display: flex;
       flex-direction: column;
-      gap: var(--gap);
+    }
+
+    .shader-list>li {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .main-link {
+      display: flex;
+      align-items: center;
+    }
+
+    .main-link-text {
+      flex: 1;
+      text-overflow: ellipsis;
+      font-size: var(--title-size);
+    }
+
+    .main-link-actions {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .copy-link {
+      display: flex;
+      align-items: center;
+    }
+
+    .copy-link svg {
+      width: calc(var(--title-size) * 0.8);
+      height: calc(var(--title-size) * 0.8);
+    }
+
+    ul ul {
+      padding-left: 4px;
+    }
+
+    ul ul .main-link-text {
+      font-size: var(--text-size);
+    }
+
+    .search-container {
+      position: relative;
+      display: flex;
+    }
+
+    .search-input {
+      flex: 1;
+      min-width: 0;
+      font-size: var(--text-size);
+    }
+
+    .clear-button {
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: var(--text-size);
+    }
+
+    .chip-list {
+      display: none;
+    }
+
+    .edit-link {
+      display: none;
+    }
+
+    @media (min-width: 1200px) {
+      .shader-list>li {
+        padding: calc(var(--gap) * 2) 0;
+      }
+
+      .main-link-actions {
+        gap: calc(var(--gap) * 2);
+      }
+
+      .chip-list {
+        display: flex;
+        flex-wrap: wrap;
+        margin-left: 4px;
+      }
+
+      .chip {
+        font-size: calc(var(--text-size) * 0.7);
+      }
+
+      .edit-link {
+        display: block;
+        font-size: calc(var(--text-size) * 0.7);
+        font-weight: bold;
+        text-transform: uppercase;
+      }
+    }
+  </style>
+
+  <style>
+    /* Color Variables */
+    :root {
+      --hue-1: 270;
+      /* Purple */
+      --hue-2: 180;
+      /* Cyan */
+      --hue-3: 330;
+      /* Pink */
+      --hue-4: 120;
+      /* Green */
+      --darkness: 0.4;
+    }
+
+    /* Base Colors */
+    body {
+      background: #000;
+      color: #fff;
     }
 
     a {
@@ -115,216 +156,93 @@
       color: inherit;
     }
 
-    .search-container {
-      position: relative;
-      display: flex;
-      width: 100%;
-    }
-
-    .search-input {
-      width: 100%;
-      padding-top: calc(var(--gap) * 2);
-      padding-bottom: calc(var(--gap) * 2);
-      font-size: var(--text-size);
-      background: #111;
-      color: var(--text);
-      border: 1px solid var(--accent);
-    }
-
-    .clear-button {
-      position: absolute;
-      right: var(--gap);
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      color: var(--accent);
-      font-size: var(--text-size);
-      cursor: pointer;
-    }
-
-    .shader-list {
-      width: 100%;
-      box-sizing: border-box;
-    }
-
-    .shader-list>li {
-      padding-top: calc(var(--gap) * 1.5);
-      padding-bottom: calc(var(--gap) * 1.5);
-      display: flex;
-      flex-direction: column;
-    }
-
-    .shader-list>li {
-      counter-increment: shader-counter;
-      background: var(--bg-1);
-    }
-
-    .shader-list>li:nth-child(4n+2) {
-      background: var(--bg-2);
-    }
-
-    .shader-list>li:nth-child(4n+3) {
-      background: var(--bg-3);
-    }
-
-    .shader-list>li:nth-child(4n+4) {
-      background: var(--bg-4);
-    }
-
-    .main-link {
-      display: flex;
-      align-items: center;
-      gap: calc(var(--gap) * 0.5);
-    }
-
-    .main-link-text {
-      flex: 1;
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .main-link-actions {
-      display: flex;
-      align-items: center;
-      gap: calc(var(--gap) * 0.5);
-      flex-shrink: 0;
-    }
-
-    .shader-list>li>.main-link {
-      color: var(--accent);
-    }
-
-    ul ul {
-      padding-left: 4px;
-      position: relative;
-    }
-
-    ul ul::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 2px;
-      background: var(--accent);
-      opacity: 0.3;
-    }
-
     .copy-link {
       background: none;
       border: none;
       cursor: pointer;
-      padding: 0;
-      display: flex;
-      align-items: center;
     }
 
     .copy-link svg {
-      width: calc(var(--text-size) * 0.8);
-      height: calc(var(--text-size) * 0.8);
-      stroke: var(--accent);
+      stroke: #fff;
     }
 
-    .edit-link,
-    .chip-list {
-      display: none;
+    .search-input {
+      background: #111;
+      color: #fff;
+      border: 1px solid #fff;
+    }
+
+    .clear-button {
+      background: none;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    /* Background Gradients */
+    .shader-list>li {
+      background: linear-gradient(to bottom, hsla(var(--hue-1), 100%, 50%, var(--darkness)) 70%, rgba(0, 0, 0, 0.95) 100%);
+    }
+
+    .shader-list>li:nth-child(4n+2) {
+      background: linear-gradient(to bottom, hsla(var(--hue-2), 100%, 50%, var(--darkness)) 70%, rgba(0, 0, 0, 0.95) 100%);
+    }
+
+    .shader-list>li:nth-child(4n+3) {
+      background: linear-gradient(to bottom, hsla(var(--hue-3), 100%, 50%, var(--darkness)) 70%, rgba(0, 0, 0, 0.95) 100%);
+    }
+
+    .shader-list>li:nth-child(4n+4) {
+      background: linear-gradient(to bottom, hsla(var(--hue-4), 100%, 50%, var(--darkness)) 70%, rgba(0, 0, 0, 0.95) 100%);
     }
 
     @media (min-width: 1200px) {
-      .shader-list>li {
-        padding-top: calc(var(--gap) * 2);
-        padding-bottom: calc(var(--gap) * 2);
-      }
-
-      .main-link-actions {
-        gap: calc(var(--gap) * 2);
-      }
-
       .edit-link {
-        display: block;
-        padding: var(--gap);
-        font-size: calc(var(--text-size) * 0.8);
-        font-weight: bold;
-        text-transform: uppercase;
         border-radius: 4px;
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
       }
 
-      /* Edit link backgrounds using custom properties */
-      .edit-link {
-        --hue-offset: var(--hue-1);
-        background: linear-gradient(to right,
-            hsla(calc(var(--hue-offset) + 180), 100%, 50%, 0.9),
-            hsla(calc(var(--hue-offset) + 210), 100%, 50%, 0.9));
+      /* Edit Link Colors */
+      .shader-list>li .edit-link {
+        background: linear-gradient(to right, hsla(calc(var(--hue-1) + 180), 100%, 50%, 0.9), hsla(calc(var(--hue-1) + 210), 100%, 50%, 0.9));
       }
 
       .shader-list>li:nth-child(4n+2) .edit-link {
-        --hue-offset: var(--hue-2);
+        background: linear-gradient(to right, hsla(calc(var(--hue-2) + 180), 100%, 50%, 0.9), hsla(calc(var(--hue-2) + 210), 100%, 50%, 0.9));
       }
 
       .shader-list>li:nth-child(4n+3) .edit-link {
-        --hue-offset: var(--hue-3);
+        background: linear-gradient(to right, hsla(calc(var(--hue-3) + 180), 100%, 50%, 0.9), hsla(calc(var(--hue-3) + 210), 100%, 50%, 0.9));
       }
 
       .shader-list>li:nth-child(4n+4) .edit-link {
-        --hue-offset: var(--hue-4);
+        background: linear-gradient(to right, hsla(calc(var(--hue-4) + 180), 100%, 50%, 0.9), hsla(calc(var(--hue-4) + 210), 100%, 50%, 0.9));
       }
 
-      .chip-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--gap);
-        margin-left: 4px;
-      }
-
+      /* Chip Styles */
       .chip {
-        padding: var(--gap);
-        font-size: calc(var(--text-size) * 0.7);
         border: 1px solid rgba(255, 255, 255, 0.3);
         border-radius: 4px;
-        color: white;
+        color: #fff;
         text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
       }
 
-      /* Rainbow chips using custom properties and counters */
+      /* Rainbow Chips */
       .shader-list>li .chip {
-        --hue-base: var(--hue-1);
-        counter-increment: chip-counter;
-        background: linear-gradient(to right,
-            hsla(calc(var(--hue-base) + var(--rainbow-offset)), 100%, 50%, 0.85),
-            hsla(calc(var(--hue-base) + var(--rainbow-offset) + 30), 100%, 50%, 0.85));
+        background: linear-gradient(to right, hsla(var(--hue-1), 100%, 50%, 0.85), hsla(calc(var(--hue-1) + 30), 100%, 50%, 0.85));
       }
 
       .shader-list>li:nth-child(4n+2) .chip {
-        --hue-base: var(--hue-2);
+        background: linear-gradient(to right, hsla(var(--hue-2), 100%, 50%, 0.85), hsla(calc(var(--hue-2) + 30), 100%, 50%, 0.85));
       }
 
       .shader-list>li:nth-child(4n+3) .chip {
-        --hue-base: var(--hue-3);
+        background: linear-gradient(to right, hsla(var(--hue-3), 100%, 50%, 0.85), hsla(calc(var(--hue-3) + 30), 100%, 50%, 0.85));
       }
 
       .shader-list>li:nth-child(4n+4) .chip {
-        --hue-base: var(--hue-4);
-      }
-
-      .chip:nth-child(4n+1) {
-        --rainbow-offset: var(--rainbow-1);
-      }
-
-      .chip:nth-child(4n+2) {
-        --rainbow-offset: var(--rainbow-2);
-      }
-
-      .chip:nth-child(4n+3) {
-        --rainbow-offset: var(--rainbow-3);
-      }
-
-      .chip:nth-child(4n+4) {
-        --rainbow-offset: var(--rainbow-4);
+        background: linear-gradient(to right, hsla(var(--hue-4), 100%, 50%, 0.85), hsla(calc(var(--hue-4) + 30), 100%, 50%, 0.85));
       }
     }
   </style>
