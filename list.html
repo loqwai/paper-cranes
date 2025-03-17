@@ -202,30 +202,28 @@
         border-radius: 4px;
         text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        background: linear-gradient(to right,
+            hsla(var(--h), 100%, 50%, 0.85),
+            hsla(calc(var(--h) + 30), 100%, 50%, 0.85));
       }
 
-      /* Assign index for each chip */
-      .shader-list>li .chip:nth-child(4n+1) {
-        --chipIndex: 0;
-      }
-
+      /* Rainbow offset for each chip position */
       .shader-list>li .chip:nth-child(4n+2) {
-        --chipIndex: 1;
+        background: linear-gradient(to right,
+            hsla(calc(var(--h) + 90), 100%, 50%, 0.85),
+            hsla(calc(var(--h) + 120), 100%, 50%, 0.85));
       }
 
       .shader-list>li .chip:nth-child(4n+3) {
-        --chipIndex: 2;
+        background: linear-gradient(to right,
+            hsla(calc(var(--h) + 180), 100%, 50%, 0.85),
+            hsla(calc(var(--h) + 210), 100%, 50%, 0.85));
       }
 
       .shader-list>li .chip:nth-child(4n+4) {
-        --chipIndex: 3;
-      }
-
-      /* Use --chipIndex to offset from parent hue */
-      .shader-list>li .chip {
         background: linear-gradient(to right,
-            hsla(calc(var(--h) + var(--chipIndex) * 90), 100%, 50%, 0.85),
-            hsla(calc(var(--h) + var(--chipIndex) * 90 + 30), 100%, 50%, 0.85));
+            hsla(calc(var(--h) + 270), 100%, 50%, 0.85),
+            hsla(calc(var(--h) + 300), 100%, 50%, 0.85));
       }
     }
   </style>
