@@ -15,10 +15,12 @@ import { html } from 'htm/preact'
  * @param {string} props.name - Display name of the shader
  * @param {string} props.fileUrl - URL to the shader source file
  * @param {string} props.visualizerUrl - URL to view the shader in the visualizer
+ * @param {string} props.filterText - Text to filter by
  */
-const MusicVisual = ({ name, fileUrl, visualizerUrl }) => {
+const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
   const [presets, setPresets] = useState([])
   const [shaderCode, setShaderCode] = useState('')
+  const [filteredPresets, setFilteredPresets] = useState([])
 
   // Fetch shader source code
   useEffect(() => {
@@ -39,6 +41,32 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl }) => {
     setPresets(extractPresets(visualizerUrl, shaderCode))
   }, [shaderCode, visualizerUrl])
 
+  // Filter presets when filter text changes
+  useEffect(() => {
+    if (!filterText) {
+      setFilteredPresets(presets)
+      return
+    }
+
+    const lowerFilter = filterText.toLowerCase()
+    setFilteredPresets(presets.filter(preset => {
+      // Check if any preset parameter contains the filter text
+      const url = new URL(preset)
+      const params = Array.from(url.searchParams.entries())
+      return params.some(([key, value]) =>
+        key.toLowerCase().includes(lowerFilter) ||
+        value.toLowerCase().includes(lowerFilter)
+      )
+    }))
+  }, [presets, filterText])
+
+  // If shader name doesn't match filter and no presets match, don't render
+  if (filterText &&
+      !name.toLowerCase().includes(filterText.toLowerCase()) &&
+      filteredPresets.length === 0) {
+    return null
+  }
+
   const linkIcon = html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
     <path d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
   </svg>`
@@ -50,7 +78,7 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl }) => {
       <path d="M4.5 12.75l6 6 9-13.5" />
     </svg>`
     setTimeout(() => {
-      button.innerHTML = button.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      button.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
       </svg>`
     }, 1000)
@@ -58,27 +86,33 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl }) => {
 
   return html`
     <li>
-      <div class="link-group">
+      <a class="main-link" href="${visualizerUrl}">
+        ${name}
         <button
           class="copy-link"
-          onClick=${() => copyUrl(`${window.location.host}${visualizerUrl}`)}
+          onClick=${(e) => {
+            e.preventDefault()
+            copyUrl(`${window.location.host}${visualizerUrl}`)
+          }}
           title="Copy link"
         >${linkIcon}</button>
-        <a class="main-link" href="${visualizerUrl}">${name}</a>
         <a class="edit-link" href="${getEditUrl(visualizerUrl)}">edit</a>
-      </div>
+      </a>
       <ul>
-        ${presets.map((preset, index) => html`
+        ${(filterText ? filteredPresets : presets).map((preset, index) => html`
           <li>
-            <div class="link-group">
+            <a class="main-link" href="${preset}">
+              Preset ${index + 1}
               <button
                 class="copy-link"
-                onClick=${() => copyUrl(preset)}
+                onClick=${(e) => {
+                  e.preventDefault()
+                  copyUrl(preset)
+                }}
                 title="Copy link"
               >${linkIcon}</button>
-              <a class="main-link" href="${preset}">Preset ${index + 1}</a>
               <a class="edit-link" href="${getEditUrl(preset)}">edit</a>
-            </div>
+            </a>
             <${PresetParams} preset=${preset} />
           </li>
         `)}
@@ -104,15 +138,12 @@ const PresetParams = ({ preset }) => {
   const params = new URL(preset).searchParams
   const presetProps = Array.from(params.entries()).filter(filterPresetProps)
 
+  if (presetProps.length === 0) return null
+
   return html`
     <div class="chip-list">
-      ${presetProps.map(([key, value], index) => html`
-        <div
-          class="chip pastel-color"
-          style="--n: ${index / presetProps.length}"
-        >
-          ${key}: ${value}
-        </div>
+      ${presetProps.map(([key, value]) => html`
+        <div class="chip">${key}: ${value}</div>
       `)}
     </div>
   `
@@ -168,13 +199,87 @@ const getPresetUrl = (visualizerUrl, line) => {
 
   return resultUrl.toString()
 }
+
 // Load shaders and render the list
 const shaders = await fetch('/shaders.json').then(res => res.json())
 
-const List = () => html`
-  <ul>
-    ${shaders.map(shader => html`<${MusicVisual} ...${shader} />`)}
-  </ul>
-`
+/**
+ * Search input component
+ * @param {Object} props
+ * @param {string} props.value - Current filter value
+ * @param {Function} props.onChange - Change handler
+ */
+const SearchInput = ({ value, onChange }) => {
+  return html`
+    <div class="search-container">
+      <input
+        type="text"
+        placeholder="Filter shaders and presets..."
+        value=${value}
+        onInput=${(e) => onChange(e.target.value)}
+        class="search-input"
+      />
+      ${value && html`
+        <button
+          class="clear-button"
+          onClick=${() => onChange('')}
+          title="Clear filter"
+        >
+          ×
+        </button>
+      `}
+    </div>
+  `
+}
+
+/**
+ * Updates the URL with the current filter
+ * @param {string} filter - The filter text
+ */
+const updateUrlWithFilter = (filter) => {
+  const url = new URL(window.location)
+  if (filter) {
+    url.searchParams.set('filter', filter)
+  } else {
+    url.searchParams.delete('filter')
+  }
+  window.history.replaceState({}, '', url)
+}
+
+/**
+ * Gets the initial filter from URL query parameters
+ * @returns {string} The filter from URL or empty string
+ */
+const getInitialFilter = () => {
+  const url = new URL(window.location)
+  return url.searchParams.get('filter') || ''
+}
+
+const List = () => {
+  const [filterText, setFilterText] = useState(getInitialFilter())
+
+  // Update URL when filter changes
+  useEffect(() => {
+    updateUrlWithFilter(filterText)
+  }, [filterText])
+
+  const handleFilterChange = (value) => {
+    setFilterText(value)
+  }
+
+  return html`
+    <div>
+      <${SearchInput} value=${filterText} onChange=${handleFilterChange} />
+      <ul>
+        ${shaders.map(shader => html`
+          <${MusicVisual}
+            ...${shader}
+            filterText=${filterText}
+          />
+        `)}
+      </ul>
+    </div>
+  `
+}
 
 render(html`<${List} />`, document.getElementsByTagName('main')[0])
