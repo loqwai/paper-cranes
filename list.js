@@ -21,6 +21,7 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
   const [presets, setPresets] = useState([])
   const [shaderCode, setShaderCode] = useState('')
   const [filteredPresets, setFilteredPresets] = useState([])
+  const [isExpanded, setIsExpanded] = useState(false)
 
   // Fetch shader source code
   useEffect(() => {
@@ -104,41 +105,53 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
 
   return html`
     <li>
-      <a class="main-link" href="${targetUrl}">
-        <span class="main-link-text">${name}</span>
+      <div class="main-link" onClick=${hasPresets ? () => setIsExpanded(!isExpanded) : undefined}>
+        <a
+          href="${targetUrl}"
+          onClick=${hasPresets ? (e) => e.preventDefault() : undefined}
+        >
+          <span>${name}</span>
+        </a>
         <div class="main-link-actions">
           <button
             class="copy-link"
             onClick=${(e) => {
               e.preventDefault()
+              e.stopPropagation()
               copyUrl(getFullUrl(targetUrl))
             }}
             title="Copy link"
           >${linkIcon}</button>
-          <a class="edit-link" href="${getEditUrl(targetUrl)}">edit</a>
+          <a
+            class="edit-link"
+            href="${getEditUrl(targetUrl)}"
+            onClick=${(e) => e.stopPropagation()}
+          >edit</a>
         </div>
-      </a>
-      <ul>
-        ${(filterText ? filteredPresets : presets).map((preset, index) => html`
-          <li>
-            <a class="main-link" href="${preset}">
-              <span class="main-link-text">${getPresetName(preset, index)}</span>
-              <div class="main-link-actions">
-                <button
-                  class="copy-link"
-                  onClick=${(e) => {
-                    e.preventDefault()
-                    copyUrl(getFullUrl(preset))
-                  }}
-                  title="Copy link"
-                >${linkIcon}</button>
-                <a class="edit-link" href="${getEditUrl(preset)}">edit</a>
-              </div>
-            </a>
-            <${PresetParams} preset=${preset} />
-          </li>
-        `)}
-      </ul>
+      </div>
+      ${hasPresets && isExpanded ? html`
+        <ul>
+          ${(filterText ? filteredPresets : presets).map((preset, index) => html`
+            <li>
+              <a class="preset-link" href="${preset}">
+                <span>${getPresetName(preset, index)}</span>
+                <div class="preset-link-actions">
+                  <button
+                    class="copy-link"
+                    onClick=${(e) => {
+                      e.preventDefault()
+                      copyUrl(getFullUrl(preset))
+                    }}
+                    title="Copy link"
+                  >${linkIcon}</button>
+                  <a class="edit-link" href="${getEditUrl(preset)}">edit</a>
+                </div>
+              </a>
+              <${PresetParams} preset=${preset} />
+            </li>
+          `)}
+        </ul>
+      ` : null}
     </li>
   `
 }

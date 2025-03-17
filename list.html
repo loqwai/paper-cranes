@@ -62,14 +62,16 @@
       display: flex;
       align-items: center;
       padding: var(--padding);
+      cursor: pointer;
     }
 
-    .main-link-text {
+    .main-link a {
       flex: 1;
       font-size: var(--title-size);
     }
 
-    .main-link-actions {
+    .main-link-actions,
+    .preset-link-actions {
       display: flex;
       align-items: center;
       flex-shrink: 0;
@@ -89,12 +91,26 @@
       stroke: #fff;
     }
 
-    ul ul {
-      padding-left: 4px;
+    /* Preset list styles */
+    .main-link+ul {
+      margin-left: calc(var(--padding) * 4);
     }
 
-    ul ul .main-link-text {
+    .main-link+ul .copy-link svg {
+      width: calc(var(--text-size)*1.1);
+      height: calc(var(--text-size)*1.1);
+    }
+
+    .preset-link {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--padding);
       font-size: var(--text-size);
+    }
+
+    .preset-link span {
+      flex: 1;
     }
 
     .search-container {
@@ -126,7 +142,6 @@
 
       .main-link-actions {
         gap: calc(var(--padding) * 2);
-
       }
 
       .main-link-actions>* {
@@ -151,7 +166,6 @@
         font-size: var(--text-size);
         font-weight: bold;
         text-transform: uppercase;
-
       }
     }
   </style>
@@ -160,16 +174,12 @@
     /* Global color variables */
     :root {
       --darkness: 0.4;
-      /* Alpha channel for main backgrounds */
       --rainbow-start: 270;
-      /* Starting hue (purple) */
       --rainbow-step: 90;
-      /* Increment between each nth-child */
       --chip-brightness: 0.6;
-      /* Controls chip background intensity (0-1) */
     }
 
-    /* Assign --i for each list item to track which color slot it is */
+    /* Color assignments */
     .shader-list>li:nth-child(4n+1) {
       --i: 0;
     }
@@ -186,7 +196,6 @@
       --i: 3;
     }
 
-    /* Use --i to calculate the hue once */
     .shader-list>li {
       --h: calc(var(--rainbow-start) + (var(--i) * var(--rainbow-step)));
       background: linear-gradient(to bottom,
@@ -203,7 +212,6 @@
             hsla(calc(var(--h) + 210), 100%, 50%, 0.9));
       }
 
-      /* Chip Styles */
       .chip {
         border: 1px solid rgba(255, 255, 255, 0.3);
         border-radius: 4px;
@@ -214,7 +222,6 @@
             hsla(calc(var(--h) + 30), 100%, calc(50% * var(--chip-brightness)), calc(0.85 * var(--chip-brightness))));
       }
 
-      /* Rainbow offset for each chip position */
       .shader-list>li .chip:nth-child(4n+2) {
         background: linear-gradient(to right,
             hsla(calc(var(--h) + 90), 100%, calc(50% * var(--chip-brightness)), calc(0.85 * var(--chip-brightness))),
