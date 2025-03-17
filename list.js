@@ -67,6 +67,9 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
     return null
   }
 
+  const hasPresets = presets.length > 0
+  const targetUrl = hasPresets ? presets[0] : visualizerUrl
+
   const linkIcon = html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
     <path d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
   </svg>`
@@ -89,20 +92,30 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
     return new URL(preset).searchParams.get('name') || `Preset ${index + 1}`
   }
 
+  // Get full URL for copying
+  const getFullUrl = (url) => {
+    try {
+      const fullUrl = new URL(url, window.location.origin)
+      return fullUrl.toString()
+    } catch (e) {
+      return `${window.location.origin}${url}`
+    }
+  }
+
   return html`
     <li>
-      <a class="main-link" href="${visualizerUrl}">
+      <a class="main-link" href="${targetUrl}">
         <span class="main-link-text">${name}</span>
         <div class="main-link-actions">
           <button
             class="copy-link"
             onClick=${(e) => {
               e.preventDefault()
-              copyUrl(`${window.location.host}${visualizerUrl}`)
+              copyUrl(getFullUrl(targetUrl))
             }}
             title="Copy link"
           >${linkIcon}</button>
-          <a class="edit-link" href="${getEditUrl(visualizerUrl)}">edit</a>
+          <a class="edit-link" href="${getEditUrl(targetUrl)}">edit</a>
         </div>
       </a>
       <ul>
@@ -115,7 +128,7 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
                   class="copy-link"
                   onClick=${(e) => {
                     e.preventDefault()
-                    copyUrl(preset)
+                    copyUrl(getFullUrl(preset))
                   }}
                   title="Copy link"
                 >${linkIcon}</button>
@@ -272,21 +285,33 @@ const getInitialFilter = () => {
 
 const List = () => {
   const [filterText, setFilterText] = useState(getInitialFilter())
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1200)
 
   // Update URL when filter changes
   useEffect(() => {
     updateUrlWithFilter(filterText)
   }, [filterText])
 
+  // Update isDesktop state when window resizes
+  useEffect(() => {
+    const handleResize = () => setIsDesktop(window.innerWidth >= 1200)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   const handleFilterChange = (value) => {
     setFilterText(value)
   }
+
+  // Show all shaders if show=all is present in URL or if on desktop
+  const showAll = new URL(window.location).searchParams.get('show') === 'all' || isDesktop
+  const filteredShaders = showAll ? shaders : shaders.filter(shader => !shader.name.includes('/wip/') && !shader.name.includes('knobs'))
 
   return html`
     <div>
       <${SearchInput} value=${filterText} onChange=${handleFilterChange} />
       <ul class="shader-list">
-        ${shaders.map(shader => html`
+        ${filteredShaders.map(shader => html`
           <${MusicVisual}
             ...${shader}
             filterText=${filterText}

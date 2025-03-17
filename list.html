@@ -8,7 +8,7 @@
     /* Layout Variables */
     :root {
       --title-size: clamp(32px, 7vw, 45px);
-      --text-size: clamp(30px, 6vw, 36px);
+      --text-size: clamp(26px, 6vw, 32px);
       --padding: clamp(4px, 1vw, 8px);
     }
 
@@ -84,8 +84,8 @@
     }
 
     .copy-link svg {
-      width: calc(var(--title-size));
-      height: calc(var(--title-size));
+      width: calc(var(--title-size)*1.1);
+      height: calc(var(--title-size)*1.1);
       stroke: #fff;
     }
 
@@ -141,9 +141,9 @@
       }
 
       .chip {
-        font-size: calc(var(--text-size) * 0.7);
-        padding: var(--padding);
-        margin: var(--padding);
+        font-size: calc(var(--text-size) * 0.5);
+        padding: calc(var(--padding) * 0.5);
+        margin: calc(var(--padding) * 0.5);
       }
 
       .edit-link {
