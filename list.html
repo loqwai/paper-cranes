@@ -5,6 +5,63 @@
   <title>Paper Cranes - Secret List</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    /* CSS Variables for semantic adjustments */
+    :root {
+      /* Colors */
+      --color-background: #000;
+      --color-surface: #111;
+      --color-surface-highlight: #222;
+      --color-border: #333;
+      --color-text-primary: #fff;
+      --color-text-secondary: rgba(255, 255, 255, 0.7);
+      --color-accent: #0ff;
+      --color-accent-secondary: #f0f;
+      --color-success: rgba(0, 255, 255, 0.2);
+
+      /* Typography */
+      --font-size-base: 32px;
+      --font-size-small: 14px;
+      --font-size-large: 20px;
+      --font-size-xl: 24px;
+      --font-weight-normal: 400;
+      --font-weight-bold: 700;
+      --line-height: 1.4;
+
+      /* Spacing */
+      --spacing-xs: 5px;
+      --spacing-sm: 10px;
+      --spacing-md: 15px;
+      --spacing-lg: 20px;
+      --spacing-xl: 40px;
+
+      /* Layout */
+      --border-radius-sm: 4px;
+      --border-radius-md: 8px;
+      --border-radius-circle: 50%;
+      --container-width: 1000px;
+
+      /* Component specific */
+      --button-size: 40px;
+      --icon-size: 24px;
+      --input-padding: 15px;
+      --item-padding: 15px 10px;
+      --copy-button-offset: 50px;
+      --edit-button-offset: 80px;
+
+      /* Animation */
+      --transition-speed: 0.2s;
+    }
+
+    /* Desktop overrides */
+    @media (min-width: 768px) {
+      :root {
+        --font-size-base: 18px;
+        --font-size-xl: 32px;
+        --spacing-sm: 20px;
+        --spacing-lg: 30px;
+      }
+    }
+
     /* Reset and base styles */
     * {
       box-sizing: border-box;
@@ -14,50 +71,50 @@
 
     body {
       font-family: system-ui, -apple-system, sans-serif;
-      background: #000;
-      color: #fff;
-      font-size: 18px;
-      line-height: 1.4;
-      padding: 10px;
+      background: var(--color-background);
+      color: var(--color-text-primary);
+      font-size: var(--font-size-base);
+      line-height: var(--line-height);
+      padding: var(--spacing-sm);
     }
 
     h1 {
-      font-size: 24px;
-      margin: 10px 0;
+      font-size: var(--font-size-xl);
+      margin: var(--spacing-sm) 0;
       text-align: center;
     }
 
     /* Search input - simple and large */
     .search-container {
-      margin: 15px 0;
+      margin: var(--spacing-md) 0;
       position: relative;
     }
 
     .search-input {
       width: 100%;
-      padding: 15px;
-      font-size: 18px;
-      background: #111;
-      color: #fff;
-      border: 1px solid #333;
-      border-radius: 8px;
+      padding: var(--input-padding);
+      font-size: var(--font-size-base);
+      background: var(--color-surface);
+      color: var(--color-text-primary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--border-radius-md);
     }
 
     .search-input:focus {
       outline: none;
-      border-color: #0ff;
+      border-color: var(--color-accent);
     }
 
     .clear-button {
       position: absolute;
-      right: 15px;
+      right: var(--spacing-md);
       top: 50%;
       transform: translateY(-50%);
       background: none;
       border: none;
-      color: #999;
-      font-size: 24px;
-      padding: 10px;
+      color: var(--color-text-secondary);
+      font-size: var(--font-size-xl);
+      padding: var(--spacing-sm);
       cursor: pointer;
     }
 
@@ -68,23 +125,23 @@
 
     /* All list items */
     li {
-      margin: 10px 0;
+      margin: var(--spacing-sm) 0;
     }
 
     /* Shader items (parent) */
     main>ul>li {
-      margin-bottom: 20px;
-      border-top: 2px solid #333;
-      padding-top: 10px;
+      margin-bottom: var(--spacing-lg);
+      border-top: 2px solid var(--color-border);
+      padding-top: var(--spacing-sm);
     }
 
     /* Shader header */
     .shader-header {
-      font-size: 22px;
-      font-weight: bold;
-      padding: 15px 0;
-      margin-bottom: 5px;
-      color: #0ff;
+      font-size: var(--font-size-large);
+      font-weight: var(--font-weight-bold);
+      padding: var(--spacing-md) 0;
+      margin-bottom: var(--spacing-xs);
+      color: var(--color-accent);
     }
 
     /* All links */
@@ -96,78 +153,78 @@
     /* Main links (shader and preset names) */
     .main-link {
       display: block;
-      padding: 15px 10px;
-      background: #111;
-      border-radius: 8px;
-      margin: 5px 0;
-      font-weight: bold;
+      padding: var(--item-padding);
+      background: var(--color-surface);
+      border-radius: var(--border-radius-md);
+      margin: var(--spacing-xs) 0;
+      font-weight: var(--font-weight-bold);
       position: relative;
-      padding-left: 50px;
-      /* Space for copy button */
+      padding-left: var(--copy-button-offset);
     }
 
     /* Shader main link */
     main>ul>li>.main-link {
-      background: #222;
-      color: #0ff;
-      font-size: 20px;
+      background: var(--color-surface-highlight);
+      color: var(--color-accent);
+      font-size: var(--font-size-large);
     }
 
     /* Preset main link */
     li>ul>li>.main-link {
-      background: #111;
-      color: #fff;
+      background: var(--color-surface);
+      color: var(--color-text-primary);
     }
 
     /* Copy button */
     .copy-link {
       position: absolute;
-      left: 5px;
+      left: var(--spacing-xs);
       top: 50%;
       transform: translateY(-50%);
       background: none;
       border: none;
-      width: 40px;
-      height: 40px;
+      width: var(--button-size);
+      height: var(--button-size);
       display: flex;
       align-items: center;
       justify-content: center;
       opacity: 0.7;
       cursor: pointer;
+      transition: opacity var(--transition-speed), background var(--transition-speed);
     }
 
     .copy-link svg {
-      width: 24px;
-      height: 24px;
-      stroke: #0ff;
+      width: var(--icon-size);
+      height: var(--icon-size);
+      stroke: var(--color-accent);
     }
 
     /* Active states */
     .main-link:active {
-      background: #333;
+      background: var(--color-border);
     }
 
     .copy-link:active {
       opacity: 1;
-      background: rgba(0, 255, 255, 0.2);
-      border-radius: 50%;
+      background: var(--color-success);
+      border-radius: var(--border-radius-circle);
     }
 
     /* Preset parameters */
     .chip-list {
       display: flex;
       flex-wrap: wrap;
-      gap: 5px;
-      padding: 5px 10px;
-      margin-bottom: 10px;
+      gap: var(--spacing-xs);
+      padding: var(--spacing-xs) var(--spacing-sm);
+      margin-bottom: var(--spacing-sm);
     }
 
     .chip {
-      background: #222;
-      padding: 5px 10px;
-      border-radius: 4px;
-      font-size: 14px;
-      color: rgba(255, 255, 255, 0.7);
+      background: var(--color-surface-highlight);
+      padding: var(--spacing-xs) var(--spacing-sm);
+      border-radius: var(--border-radius-sm);
+      font-size: var(--font-size-small);
+      color: var(--color-text-secondary);
     }
 
     /* Edit link - hidden by default on mobile */
@@ -178,33 +235,33 @@
     /* Media query for larger screens */
     @media (min-width: 768px) {
       body {
-        padding: 20px;
-        max-width: 1000px;
+        padding: var(--spacing-lg);
+        max-width: var(--container-width);
         margin: 0 auto;
       }
 
       h1 {
-        font-size: 32px;
-        margin: 20px 0;
+        font-size: var(--font-size-xl);
+        margin: var(--spacing-lg) 0;
       }
 
       .main-link {
-        padding-right: 80px;
-        /* Space for edit button */
+        padding-right: var(--edit-button-offset);
       }
 
       .edit-link {
         display: block;
         position: absolute;
-        right: 10px;
+        right: var(--spacing-sm);
         top: 50%;
         transform: translateY(-50%);
         background: rgba(255, 0, 255, 0.1);
-        color: #f0f;
-        padding: 8px 15px;
-        border-radius: 4px;
-        border: 1px solid #f0f;
-        font-size: 14px;
+        color: var(--color-accent-secondary);
+        padding: var(--spacing-xs) var(--spacing-md);
+        border-radius: var(--border-radius-sm);
+        border: 1px solid var(--color-accent-secondary);
+        font-size: var(--font-size-small);
+        transition: background var(--transition-speed);
       }
     }
   </style>
