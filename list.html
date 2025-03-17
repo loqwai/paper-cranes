@@ -121,18 +121,18 @@
 
     @media (min-width: 1200px) {
       .shader-list>li {
-        padding: calc(var(--gap) * 2) 0;
+        padding: calc(var(--padding) * 2) 0;
       }
 
       .main-link-actions {
-        gap: calc(var(--gap) * 2);
+        gap: calc(var(--padding) * 2);
       }
 
       .chip-list {
         display: flex;
         flex-wrap: wrap;
         margin-left: 4px;
-        padding: var(--padding);
+        gap: var(--padding);
       }
 
       .chip {
@@ -147,7 +147,6 @@
         font-weight: bold;
         text-transform: uppercase;
         padding: var(--padding);
-        flex: 1;
       }
     }
   </style>
@@ -164,6 +163,10 @@
       --hue-4: 120;
       /* Green */
       --darkness: 0.4;
+      --rainbow-1: 0;
+      --rainbow-2: 90;
+      --rainbow-3: 180;
+      --rainbow-4: 270;
     }
 
     /* Background Gradients */
@@ -215,20 +218,68 @@
       }
 
       /* Rainbow Chips */
-      .shader-list>li .chip {
-        background: linear-gradient(to right, hsla(var(--hue-1), 100%, 50%, 0.85), hsla(calc(var(--hue-1) + 30), 100%, 50%, 0.85));
+      .shader-list>li .chip:nth-child(4n+1) {
+        background: linear-gradient(to right, hsla(calc(var(--hue-1) + var(--rainbow-1)), 100%, 50%, 0.85), hsla(calc(var(--hue-1) + var(--rainbow-1) + 30), 100%, 50%, 0.85));
       }
 
-      .shader-list>li:nth-child(4n+2) .chip {
-        background: linear-gradient(to right, hsla(var(--hue-2), 100%, 50%, 0.85), hsla(calc(var(--hue-2) + 30), 100%, 50%, 0.85));
+      .shader-list>li .chip:nth-child(4n+2) {
+        background: linear-gradient(to right, hsla(calc(var(--hue-1) + var(--rainbow-2)), 100%, 50%, 0.85), hsla(calc(var(--hue-1) + var(--rainbow-2) + 30), 100%, 50%, 0.85));
       }
 
-      .shader-list>li:nth-child(4n+3) .chip {
-        background: linear-gradient(to right, hsla(var(--hue-3), 100%, 50%, 0.85), hsla(calc(var(--hue-3) + 30), 100%, 50%, 0.85));
+      .shader-list>li .chip:nth-child(4n+3) {
+        background: linear-gradient(to right, hsla(calc(var(--hue-1) + var(--rainbow-3)), 100%, 50%, 0.85), hsla(calc(var(--hue-1) + var(--rainbow-3) + 30), 100%, 50%, 0.85));
       }
 
-      .shader-list>li:nth-child(4n+4) .chip {
-        background: linear-gradient(to right, hsla(var(--hue-4), 100%, 50%, 0.85), hsla(calc(var(--hue-4) + 30), 100%, 50%, 0.85));
+      .shader-list>li .chip:nth-child(4n+4) {
+        background: linear-gradient(to right, hsla(calc(var(--hue-1) + var(--rainbow-4)), 100%, 50%, 0.85), hsla(calc(var(--hue-1) + var(--rainbow-4) + 30), 100%, 50%, 0.85));
+      }
+
+      .shader-list>li:nth-child(4n+2) .chip:nth-child(4n+1) {
+        background: linear-gradient(to right, hsla(calc(var(--hue-2) + var(--rainbow-1)), 100%, 50%, 0.85), hsla(calc(var(--hue-2) + var(--rainbow-1) + 30), 100%, 50%, 0.85));
+      }
+
+      .shader-list>li:nth-child(4n+2) .chip:nth-child(4n+2) {
+        background: linear-gradient(to right, hsla(calc(var(--hue-2) + var(--rainbow-2)), 100%, 50%, 0.85), hsla(calc(var(--hue-2) + var(--rainbow-2) + 30), 100%, 50%, 0.85));
+      }
+
+      .shader-list>li:nth-child(4n+2) .chip:nth-child(4n+3) {
+        background: linear-gradient(to right, hsla(calc(var(--hue-2) + var(--rainbow-3)), 100%, 50%, 0.85), hsla(calc(var(--hue-2) + var(--rainbow-3) + 30), 100%, 50%, 0.85));
+      }
+
+      .shader-list>li:nth-child(4n+2) .chip:nth-child(4n+4) {
+        background: linear-gradient(to right, hsla(calc(var(--hue-2) + var(--rainbow-4)), 100%, 50%, 0.85), hsla(calc(var(--hue-2) + var(--rainbow-4) + 30), 100%, 50%, 0.85));
+      }
+
+      .shader-list>li:nth-child(4n+3) .chip:nth-child(4n+1) {
+        background: linear-gradient(to right, hsla(calc(var(--hue-3) + var(--rainbow-1)), 100%, 50%, 0.85), hsla(calc(var(--hue-3) + var(--rainbow-1) + 30), 100%, 50%, 0.85));
+      }
+
+      .shader-list>li:nth-child(4n+3) .chip:nth-child(4n+2) {
+        background: linear-gradient(to right, hsla(calc(var(--hue-3) + var(--rainbow-2)), 100%, 50%, 0.85), hsla(calc(var(--hue-3) + var(--rainbow-2) + 30), 100%, 50%, 0.85));
+      }
+
+      .shader-list>li:nth-child(4n+3) .chip:nth-child(4n+3) {
+        background: linear-gradient(to right, hsla(calc(var(--hue-3) + var(--rainbow-3)), 100%, 50%, 0.85), hsla(calc(var(--hue-3) + var(--rainbow-3) + 30), 100%, 50%, 0.85));
+      }
+
+      .shader-list>li:nth-child(4n+3) .chip:nth-child(4n+4) {
+        background: linear-gradient(to right, hsla(calc(var(--hue-3) + var(--rainbow-4)), 100%, 50%, 0.85), hsla(calc(var(--hue-3) + var(--rainbow-4) + 30), 100%, 50%, 0.85));
+      }
+
+      .shader-list>li:nth-child(4n+4) .chip:nth-child(4n+1) {
+        background: linear-gradient(to right, hsla(calc(var(--hue-4) + var(--rainbow-1)), 100%, 50%, 0.85), hsla(calc(var(--hue-4) + var(--rainbow-1) + 30), 100%, 50%, 0.85));
+      }
+
+      .shader-list>li:nth-child(4n+4) .chip:nth-child(4n+2) {
+        background: linear-gradient(to right, hsla(calc(var(--hue-4) + var(--rainbow-2)), 100%, 50%, 0.85), hsla(calc(var(--hue-4) + var(--rainbow-2) + 30), 100%, 50%, 0.85));
+      }
+
+      .shader-list>li:nth-child(4n+4) .chip:nth-child(4n+3) {
+        background: linear-gradient(to right, hsla(calc(var(--hue-4) + var(--rainbow-3)), 100%, 50%, 0.85), hsla(calc(var(--hue-4) + var(--rainbow-3) + 30), 100%, 50%, 0.85));
+      }
+
+      .shader-list>li:nth-child(4n+4) .chip:nth-child(4n+4) {
+        background: linear-gradient(to right, hsla(calc(var(--hue-4) + var(--rainbow-4)), 100%, 50%, 0.85), hsla(calc(var(--hue-4) + var(--rainbow-4) + 30), 100%, 50%, 0.85));
       }
     }
   </style>
