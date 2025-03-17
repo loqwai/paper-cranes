@@ -1,7 +1,4 @@
 //http://localhost:6969/?shader=wip/brainz&history-size=50
-uniform float knob_0;
-uniform float knob_1;
-uniform float knob_2;
 
 #define MAXDIST 20.
 #define GIFLENGTH 3.570795

@@ -191,6 +191,113 @@ vec3 hslmix(vec3 c1, vec3 c2, float t){
     vec3 hsl2 = rgb2hsl(c2);
     vec3 hsl = mix(hsl1, hsl2, t);
     return hsl2rgb(hsl);
+}
+
+// Utility to make any value pingpong (go forward then backward)
+float pingpong(float t) {
+    float tt = fract(t * 0.5);
+    return tt < 0.5 ? tt * 2.0 : 2.0 - (tt * 2.0);
+}
+
+// Animation easing functions - handles any input value by reversing
+float easeInQuad(float t) {
+    t = pingpong(t);
+    return t * t;
+}
+
+float easeOutQuad(float t) {
+    t = pingpong(t);
+    return t * (2.0 - t);
+}
+
+float easeInOutQuad(float t) {
+    t = pingpong(t);
+    return t < 0.5 ? 2.0 * t * t : -1.0 + (4.0 - 2.0 * t) * t;
+}
+
+float easeInCubic(float t) {
+    t = pingpong(t);
+    return t * t * t;
+}
+
+float easeOutCubic(float t) {
+    t = pingpong(t);
+    float t1 = t - 1.0;
+    return t1 * t1 * t1 + 1.0;
+}
+
+float easeInOutCubic(float t) {
+    t = pingpong(t);
+    return t < 0.5 ? 4.0 * t * t * t : (t - 1.0) * (2.0 * t - 2.0) * (2.0 * t - 2.0) + 1.0;
+}
+
+float easeInExpo(float t) {
+    t = pingpong(t);
+    return t == 0.0 ? 0.0 : pow(2.0, 10.0 * (t - 1.0));
+}
+
+float easeOutExpo(float t) {
+    t = pingpong(t);
+    return t == 1.0 ? 1.0 : 1.0 - pow(2.0, -10.0 * t);
+}
+
+float easeInOutExpo(float t) {
+    t = pingpong(t);
+    if (t == 0.0 || t == 1.0) return t;
+
+    if (t < 0.5) {
+        return 0.5 * pow(2.0, (20.0 * t) - 10.0);
+    } else {
+        return -0.5 * pow(2.0, (-20.0 * t) + 10.0) + 1.0;
     }
+}
+
+float easeInSine(float t) {
+    t = pingpong(t);
+    return -1.0 * cos(t * 1.57079632679) + 1.0;
+}
+
+float easeOutSine(float t) {
+    t = pingpong(t);
+    return sin(t * 1.57079632679);
+}
+
+float easeInOutSine(float t) {
+    t = pingpong(t);
+    return -0.5 * (cos(3.14159265359 * t) - 1.0);
+}
+
+float easeInElastic(float t) {
+    t = pingpong(t);
+    float t1 = t - 1.0;
+    return -pow(2.0, 10.0 * t1) * sin((t1 - 0.075) * 20.943951023932);
+}
+
+float easeOutElastic(float t) {
+    t = pingpong(t);
+    return pow(2.0, -10.0 * t) * sin((t - 0.075) * 20.943951023932) + 1.0;
+}
+
+float easeInOutElastic(float t) {
+    t = pingpong(t);
+    float t1 = t * 2.0;
+    float t2 = t1 - 1.0;
+
+    if (t < 0.5) {
+        return -0.5 * pow(2.0, 10.0 * t2) * sin((t2 - 0.1125) * 13.962634015955);
+    } else {
+        return 0.5 * pow(2.0, -10.0 * t2) * sin((t2 - 0.1125) * 13.962634015955) + 1.0;
+    }
+}
+
+float bounce(float t) {
+    t = pingpong(t);
+    return abs(sin(6.28318530718 * (t + 1.0) * (t + 1.0)) * (1.0 - t));
+}
+
+float smoothBounce(float t) {
+    t = pingpong(t);
+    return 1.0 - pow(abs(sin(6.28318530718 * (t + 1.0) * (t + 1.0))), 0.6) * (1.0 - t);
+}
 `
 export default shaderWrapper
