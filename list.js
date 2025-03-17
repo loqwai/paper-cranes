@@ -86,26 +86,7 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
 
   // Get preset name from URL parameters
   const getPresetName = (preset, index) => {
-      const url = new URL(preset)
-      // Look for a name parameter
-      const nameParam = url.searchParams.get('name')
-      if (nameParam) return nameParam
-
-      // Look for other distinctive parameters
-      const params = Array.from(url.searchParams.entries())
-      const importantParams = params.filter(([key]) =>
-        !key.endsWith('.min') &&
-        !key.endsWith('.max') &&
-        key !== 'shader'
-      )
-
-      if (importantParams.length > 0) {
-        const [key, value] = importantParams[0]
-        return `${key}: ${value}`
-      }
-
-      // Fallback to variant number
-      return `Preset ${index + 1}`
+    return new URL(preset).searchParams.get('name') || `Preset ${index + 1}`
   }
 
   return html`
