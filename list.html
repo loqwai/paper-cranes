@@ -9,6 +9,7 @@
     :root {
       --title-size: clamp(32px, 7vw, 56px);
       --text-size: clamp(24px, 5vw, 40px);
+      --padding: clamp(4px, 1vw, 8px);
     }
 
     /* Reset & Layout */
@@ -18,16 +19,31 @@
       padding: 0;
     }
 
-    body {
+    /* Common Styles */
+    body,
+    input,
+    button,
+    a {
       font-family: system-ui;
+      color: #fff;
+      line-height: 1.4;
+      text-decoration: none;
+      white-space: nowrap;
+      overflow-x: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
+
+    body {
       min-height: 100vh;
       overflow-x: hidden;
-      line-height: 1.4;
+      background: #000;
     }
 
     main {
       display: flex;
       flex-direction: column;
+      padding: var(--padding);
     }
 
     ul {
@@ -39,16 +55,17 @@
     .shader-list>li {
       display: flex;
       flex-direction: column;
+      padding: var(--padding);
     }
 
     .main-link {
       display: flex;
       align-items: center;
+      padding: var(--padding);
     }
 
     .main-link-text {
       flex: 1;
-      text-overflow: ellipsis;
       font-size: var(--title-size);
     }
 
@@ -61,11 +78,15 @@
     .copy-link {
       display: flex;
       align-items: center;
+      background: none;
+      border: none;
+      cursor: pointer;
     }
 
     .copy-link svg {
       width: calc(var(--title-size) * 0.8);
       height: calc(var(--title-size) * 0.8);
+      stroke: #fff;
     }
 
     ul ul {
@@ -79,20 +100,15 @@
     .search-container {
       position: relative;
       display: flex;
+      padding: var(--padding);
     }
 
     .search-input {
       flex: 1;
-      min-width: 0;
       font-size: var(--text-size);
-    }
-
-    .clear-button {
-      position: absolute;
-      right: 0;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: var(--text-size);
+      padding: var(--padding);
+      background: #111;
+      border: 1px solid #fff;
     }
 
     .chip-list {
@@ -116,17 +132,22 @@
         display: flex;
         flex-wrap: wrap;
         margin-left: 4px;
+        padding: var(--padding);
       }
 
       .chip {
         font-size: calc(var(--text-size) * 0.7);
+        padding: var(--padding);
+        margin: var(--padding);
       }
 
       .edit-link {
         display: block;
-        font-size: calc(var(--text-size) * 0.7);
+        font-size: var(--text-size);
         font-weight: bold;
         text-transform: uppercase;
+        padding: var(--padding);
+        flex: 1;
       }
     }
   </style>
@@ -143,40 +164,6 @@
       --hue-4: 120;
       /* Green */
       --darkness: 0.4;
-    }
-
-    /* Base Colors */
-    body {
-      background: #000;
-      color: #fff;
-    }
-
-    a {
-      text-decoration: none;
-      color: inherit;
-    }
-
-    .copy-link {
-      background: none;
-      border: none;
-      cursor: pointer;
-    }
-
-    .copy-link svg {
-      stroke: #fff;
-    }
-
-    .search-input {
-      background: #111;
-      color: #fff;
-      border: 1px solid #fff;
-    }
-
-    .clear-button {
-      background: none;
-      border: none;
-      color: #fff;
-      cursor: pointer;
     }
 
     /* Background Gradients */
@@ -223,7 +210,6 @@
       .chip {
         border: 1px solid rgba(255, 255, 255, 0.3);
         border-radius: 4px;
-        color: #fff;
         text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
       }
