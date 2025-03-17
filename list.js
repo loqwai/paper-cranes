@@ -84,6 +84,30 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
     }, 1000)
   }
 
+  // Get preset name from URL parameters
+  const getPresetName = (preset, index) => {
+      const url = new URL(preset)
+      // Look for a name parameter
+      const nameParam = url.searchParams.get('name')
+      if (nameParam) return nameParam
+
+      // Look for other distinctive parameters
+      const params = Array.from(url.searchParams.entries())
+      const importantParams = params.filter(([key]) =>
+        !key.endsWith('.min') &&
+        !key.endsWith('.max') &&
+        key !== 'shader'
+      )
+
+      if (importantParams.length > 0) {
+        const [key, value] = importantParams[0]
+        return `${key}: ${value}`
+      }
+
+      // Fallback to variant number
+      return `Preset ${index + 1}`
+  }
+
   return html`
     <li>
       <a class="main-link" href="${visualizerUrl}">
@@ -102,7 +126,7 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
         ${(filterText ? filteredPresets : presets).map((preset, index) => html`
           <li>
             <a class="main-link" href="${preset}">
-              Preset ${index + 1}
+              ${getPresetName(preset, index)}
               <button
                 class="copy-link"
                 onClick=${(e) => {
@@ -153,6 +177,7 @@ const filterPresetProps = ([key]) => {
   if (key === 'shader') return false
   if (key.endsWith('.min')) return false
   if (key.endsWith('.max')) return false
+  if (key === 'name') return false
   return true
 }
 
@@ -167,9 +192,14 @@ const extractPresets = (visualizerUrl, shaderCode) => {
 
   return shaderCode
     .split('\n')
-    .filter(line => line.includes('http://') || line.includes('https://'))
+    .filter(isLink)
+    .filter(hasGetParams)
     .map(line => getPresetUrl(visualizerUrl, line))
 }
+
+const hasGetParams = line => line.includes('?')
+
+const isLink = line => line.includes('http://') || line.includes('https://')
 
 /**
  * Creates a preset URL by combining the visualizer base URL with preset parameters

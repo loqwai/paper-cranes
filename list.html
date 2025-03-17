@@ -18,8 +18,12 @@
       --color-accent-secondary: #f0f;
       --color-success: rgba(0, 255, 255, 0.2);
 
+      /* Shader-specific colors */
+      --color-shader-border: #0ff;
+      --color-preset-border: rgba(0, 255, 255, 0.3);
+
       /* Typography */
-      --font-size-base: 32px;
+      --font-size-base: 18px;
       --font-size-small: 14px;
       --font-size-large: 20px;
       --font-size-xl: 24px;
@@ -47,6 +51,7 @@
       --item-padding: 15px 10px;
       --copy-button-offset: 50px;
       --edit-button-offset: 80px;
+      --preset-indent: 15px;
 
       /* Animation */
       --transition-speed: 0.2s;
@@ -59,6 +64,7 @@
         --font-size-xl: 32px;
         --spacing-sm: 20px;
         --spacing-lg: 30px;
+        --preset-indent: 25px;
       }
     }
 
@@ -133,15 +139,15 @@
       margin-bottom: var(--spacing-lg);
       border-top: 2px solid var(--color-border);
       padding-top: var(--spacing-sm);
+      position: relative;
     }
 
-    /* Shader header */
-    .shader-header {
-      font-size: var(--font-size-large);
-      font-weight: var(--font-weight-bold);
-      padding: var(--spacing-md) 0;
-      margin-bottom: var(--spacing-xs);
-      color: var(--color-accent);
+    /* Shader group */
+    .shader-group {
+      border-left: 3px solid var(--color-shader-border);
+      margin-bottom: var(--spacing-lg);
+      border-radius: var(--border-radius-sm);
+      overflow: hidden;
     }
 
     /* All links */
@@ -155,7 +161,6 @@
       display: block;
       padding: var(--item-padding);
       background: var(--color-surface);
-      border-radius: var(--border-radius-md);
       margin: var(--spacing-xs) 0;
       font-weight: var(--font-weight-bold);
       position: relative;
@@ -167,12 +172,53 @@
       background: var(--color-surface-highlight);
       color: var(--color-accent);
       font-size: var(--font-size-large);
+      border-left: 3px solid var(--color-shader-border);
+      border-radius: var(--border-radius-sm);
+      margin-bottom: var(--spacing-sm);
+    }
+
+    /* Preset container */
+    li>ul {
+      margin-left: var(--preset-indent);
+      position: relative;
+    }
+
+    /* Preset list connection line */
+    li>ul::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: -10px;
+      width: 2px;
+      background-color: var(--color-preset-border);
+    }
+
+    /* Preset items */
+    li>ul>li {
+      position: relative;
+    }
+
+    /* Preset connection dot */
+    li>ul>li::before {
+      content: '';
+      position: absolute;
+      left: -10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 8px;
+      height: 8px;
+      background-color: var(--color-preset-border);
+      border-radius: 50%;
+      z-index: 1;
     }
 
     /* Preset main link */
     li>ul>li>.main-link {
       background: var(--color-surface);
       color: var(--color-text-primary);
+      border-left: 2px solid var(--color-preset-border);
+      border-radius: var(--border-radius-sm);
     }
 
     /* Copy button */
@@ -217,6 +263,7 @@
       gap: var(--spacing-xs);
       padding: var(--spacing-xs) var(--spacing-sm);
       margin-bottom: var(--spacing-sm);
+      margin-left: var(--preset-indent);
     }
 
     .chip {
