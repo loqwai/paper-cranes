@@ -5,70 +5,31 @@
   <title>Paper Cranes - Secret List</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* CSS Variables for semantic adjustments */
     :root {
-      /* Colors */
-      --color-background: #000;
-      --color-surface: #111;
-      --color-surface-highlight: #222;
-      --color-border: #333;
-      --color-text-primary: #fff;
-      --color-text-secondary: rgba(255, 255, 255, 0.7);
-      --color-accent: #0ff;
-      --color-accent-secondary: #f0f;
-      --color-success: rgba(0, 255, 255, 0.2);
+      --bg: #000;
+      --text: #fff;
+      --accent: #0ff;
+      --gap: 8px;
+      --text-size: 32px;
 
-      /* Shader-specific colors */
-      --color-shader-border: #0ff;
-      --color-preset-border: rgba(0, 255, 255, 0.3);
-
-      /* Typography */
-      --font-size-base: 18px;
-      --font-size-small: 14px;
-      --font-size-large: 20px;
-      --font-size-xl: 24px;
-      --font-weight-normal: 400;
-      --font-weight-bold: 700;
-      --line-height: 1.4;
-
-      /* Spacing */
-      --spacing-xs: 5px;
-      --spacing-sm: 10px;
-      --spacing-md: 15px;
-      --spacing-lg: 20px;
-      --spacing-xl: 40px;
-
-      /* Layout */
-      --border-radius-sm: 4px;
-      --border-radius-md: 8px;
-      --border-radius-circle: 50%;
-      --container-width: 1000px;
-
-      /* Component specific */
-      --button-size: 40px;
-      --icon-size: 24px;
-      --input-padding: 15px;
-      --item-padding: 15px 10px;
-      --copy-button-offset: 50px;
-      --edit-button-offset: 80px;
-      --preset-indent: 15px;
-
-      /* Animation */
-      --transition-speed: 0.2s;
+      --bg-1: linear-gradient(to bottom,
+          rgba(128, 0, 255, 0.3) 0%,
+          rgba(128, 0, 255, 0.3) 80%,
+          rgba(0, 0, 0, 0.9) 100%);
+      --bg-2: linear-gradient(to bottom,
+          rgba(0, 255, 255, 0.3) 0%,
+          rgba(0, 255, 255, 0.3) 80%,
+          rgba(0, 0, 0, 0.9) 100%);
+      --bg-3: linear-gradient(to bottom,
+          rgba(255, 0, 128, 0.3) 0%,
+          rgba(255, 0, 128, 0.3) 80%,
+          rgba(0, 0, 0, 0.9) 100%);
+      --bg-4: linear-gradient(to bottom,
+          rgba(0, 255, 128, 0.3) 0%,
+          rgba(0, 255, 128, 0.3) 80%,
+          rgba(0, 0, 0, 0.9) 100%);
     }
 
-    /* Desktop overrides */
-    @media (min-width: 768px) {
-      :root {
-        --font-size-base: 18px;
-        --font-size-xl: 32px;
-        --spacing-sm: 20px;
-        --spacing-lg: 30px;
-        --preset-indent: 25px;
-      }
-    }
-
-    /* Reset and base styles */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -76,248 +37,160 @@
     }
 
     body {
-      font-family: system-ui, -apple-system, sans-serif;
-      background: var(--color-background);
-      color: var(--color-text-primary);
-      font-size: var(--font-size-base);
-      line-height: var(--line-height);
-      padding: var(--spacing-sm);
+      font-family: system-ui;
+      background: var(--bg);
+      color: var(--text);
+      font-size: var(--text-size);
+      padding: var(--gap);
     }
 
-    h1 {
-      font-size: var(--font-size-xl);
-      margin: var(--spacing-sm) 0;
-      text-align: center;
-    }
-
-    /* Search input - simple and large */
-    .search-container {
-      margin: var(--spacing-md) 0;
-      position: relative;
-    }
-
-    .search-input {
-      width: 100%;
-      padding: var(--input-padding);
-      font-size: var(--font-size-base);
-      background: var(--color-surface);
-      color: var(--color-text-primary);
-      border: 1px solid var(--color-border);
-      border-radius: var(--border-radius-md);
-    }
-
-    .search-input:focus {
-      outline: none;
-      border-color: var(--color-accent);
-    }
-
-    .clear-button {
-      position: absolute;
-      right: var(--spacing-md);
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      color: var(--color-text-secondary);
-      font-size: var(--font-size-xl);
-      padding: var(--spacing-sm);
-      cursor: pointer;
-    }
-
-    /* List styles */
     ul {
       list-style: none;
     }
 
-    /* All list items */
-    li {
-      margin: var(--spacing-sm) 0;
-    }
-
-    /* Shader items (parent) */
-    main>ul>li {
-      margin-bottom: var(--spacing-lg);
-      border-top: 2px solid var(--color-border);
-      padding-top: var(--spacing-sm);
-      position: relative;
-    }
-
-    /* Shader group */
-    .shader-group {
-      border-left: 3px solid var(--color-shader-border);
-      margin-bottom: var(--spacing-lg);
-      border-radius: var(--border-radius-sm);
-      overflow: hidden;
-    }
-
-    /* All links */
     a {
       text-decoration: none;
       color: inherit;
     }
 
-    /* Main links (shader and preset names) */
-    .main-link {
-      display: block;
-      padding: var(--item-padding);
-      background: var(--color-surface);
-      margin: var(--spacing-xs) 0;
-      font-weight: var(--font-weight-bold);
-      position: relative;
-      padding-left: var(--copy-button-offset);
-    }
-
-    /* Shader main link */
-    main>ul>li>.main-link {
-      background: var(--color-surface-highlight);
-      color: var(--color-accent);
-      font-size: var(--font-size-large);
-      border-left: 3px solid var(--color-shader-border);
-      border-radius: var(--border-radius-sm);
-      margin-bottom: var(--spacing-sm);
-    }
-
-    /* Preset container */
-    li>ul {
-      margin-left: var(--preset-indent);
+    .search-container {
       position: relative;
     }
 
-    /* Preset list connection line */
-    li>ul::before {
-      content: '';
+    .search-input {
+      width: 100%;
+      padding: calc(var(--gap) * 2);
+      padding-right: calc(var(--gap) * 6);
+      font-size: var(--text-size);
+      background: #111;
+      color: var(--text);
+      border: 1px solid var(--accent);
+      margin: var(--gap) 0;
+    }
+
+    .clear-button {
       position: absolute;
-      top: 0;
-      bottom: 0;
-      left: -10px;
-      width: 2px;
-      background-color: var(--color-preset-border);
-    }
-
-    /* Preset items */
-    li>ul>li {
-      position: relative;
-    }
-
-    /* Preset connection dot */
-    li>ul>li::before {
-      content: '';
-      position: absolute;
-      left: -10px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 8px;
-      height: 8px;
-      background-color: var(--color-preset-border);
-      border-radius: 50%;
-      z-index: 1;
-    }
-
-    /* Preset main link */
-    li>ul>li>.main-link {
-      background: var(--color-surface);
-      color: var(--color-text-primary);
-      border-left: 2px solid var(--color-preset-border);
-      border-radius: var(--border-radius-sm);
-    }
-
-    /* Copy button */
-    .copy-link {
-      position: absolute;
-      left: var(--spacing-xs);
+      right: var(--gap);
       top: 50%;
       transform: translateY(-50%);
       background: none;
       border: none;
-      width: var(--button-size);
-      height: var(--button-size);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0.7;
+      color: var(--accent);
+      font-size: var(--text-size);
       cursor: pointer;
-      transition: opacity var(--transition-speed), background var(--transition-speed);
+    }
+
+    /* Shader groups with backgrounds */
+    .shader-list>li {
+      margin: calc(var(--gap) * 2) 0;
+      padding: var(--gap);
+    }
+
+    .shader-list>li:nth-child(4n+1) {
+      background: var(--bg-1);
+    }
+
+    .shader-list>li:nth-child(4n+2) {
+      background: var(--bg-2);
+    }
+
+    .shader-list>li:nth-child(4n+3) {
+      background: var(--bg-3);
+    }
+
+    .shader-list>li:nth-child(4n+4) {
+      background: var(--bg-4);
+    }
+
+    .main-link {
+      display: block;
+      padding: var(--gap);
+      padding-left: calc(var(--gap) * 6);
+      position: relative;
+    }
+
+    .shader-list>li>.main-link {
+      color: var(--accent);
+      border-left: 3px solid var(--accent);
+    }
+
+    ul ul {
+      margin-left: calc(var(--gap) * 3);
+      padding-left: var(--gap);
+      position: relative;
+    }
+
+    ul ul::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--accent);
+      opacity: 0.3;
+    }
+
+    .copy-link {
+      position: absolute;
+      left: var(--gap);
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
     }
 
     .copy-link svg {
-      width: var(--icon-size);
-      height: var(--icon-size);
-      stroke: var(--color-accent);
+      width: calc(var(--gap) * 3);
+      height: calc(var(--gap) * 3);
+      stroke: var(--accent);
     }
 
-    /* Active states */
-    .main-link:active {
-      background: var(--color-border);
-    }
-
-    .copy-link:active {
-      opacity: 1;
-      background: var(--color-success);
-      border-radius: var(--border-radius-circle);
-    }
-
-    /* Preset parameters */
+    .edit-link,
     .chip-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--spacing-xs);
-      padding: var(--spacing-xs) var(--spacing-sm);
-      margin-bottom: var(--spacing-sm);
-      margin-left: var(--preset-indent);
-    }
-
-    .chip {
-      background: var(--color-surface-highlight);
-      padding: var(--spacing-xs) var(--spacing-sm);
-      border-radius: var(--border-radius-sm);
-      font-size: var(--font-size-small);
-      color: var(--color-text-secondary);
-    }
-
-    /* Edit link - hidden by default on mobile */
-    .edit-link {
       display: none;
     }
 
-    /* Media query for larger screens */
     @media (min-width: 768px) {
       body {
-        padding: var(--spacing-lg);
-        max-width: var(--container-width);
+        max-width: 1200px;
         margin: 0 auto;
-      }
-
-      h1 {
-        font-size: var(--font-size-xl);
-        margin: var(--spacing-lg) 0;
-      }
-
-      .main-link {
-        padding-right: var(--edit-button-offset);
+        padding: calc(var(--gap) * 4);
       }
 
       .edit-link {
         display: block;
         position: absolute;
-        right: var(--spacing-sm);
+        right: var(--gap);
         top: 50%;
         transform: translateY(-50%);
-        background: rgba(255, 0, 255, 0.1);
-        color: var(--color-accent-secondary);
-        padding: var(--spacing-xs) var(--spacing-md);
-        border-radius: var(--border-radius-sm);
-        border: 1px solid var(--color-accent-secondary);
-        font-size: var(--font-size-small);
-        transition: background var(--transition-speed);
+        padding: var(--gap);
+        border: 1px solid var(--accent);
+        font-size: calc(var(--text-size) * 0.5);
+      }
+
+      .chip-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--gap);
+        padding: var(--gap);
+        margin-left: calc(var(--gap) * 3);
+      }
+
+      .chip {
+        background: #111;
+        padding: var(--gap);
+        font-size: calc(var(--text-size) * 0.5);
       }
     }
   </style>
 </head>
 
 <body>
-  <h1>Paper Cranes - Secret List</h1>
   <main></main>
-  <script type="module" src="./list.js"></script>
+  <script type="module" src="./list.js">
+  </script>
 </body>
 
 </html>

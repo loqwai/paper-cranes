@@ -300,7 +300,7 @@ const List = () => {
   return html`
     <div>
       <${SearchInput} value=${filterText} onChange=${handleFilterChange} />
-      <ul>
+      <ul class="shader-list">
         ${shaders.map(shader => html`
           <${MusicVisual}
             ...${shader}
