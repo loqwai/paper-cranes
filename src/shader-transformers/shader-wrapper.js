@@ -108,7 +108,6 @@ float mapValue(float val, float inMin, float inMax, float outMin, float outMax) 
     return clamp(normalized, outMin, outMax);
 }
 
-
 float hue2rgb(float f1, float f2, float hue) {
     if (hue < 0.0)
         hue += 1.0;
@@ -199,52 +198,65 @@ float pingpong(float t) {
     return tt < 0.5 ? tt * 2.0 : 2.0 - (tt * 2.0);
 }
 
-// Animation easing functions - handles any input value by reversing
-float easeInQuad(float t) {
+// Simple animations
+float animateSmooth(float t) {
+    return t * t * (3.0 - 2.0 * t);
+}
+
+float animateBounce(float t) {
+    t = pingpong(t);
+    return abs(sin(6.28318530718 * (t + 1.0) * (t + 1.0)) * (1.0 - t));
+}
+
+float animatePulse(float t) {
+    return 0.5 + 0.5 * sin(6.28318530718 * t);
+}
+
+// Easing functions
+float animateEaseInQuad(float t) {
     t = pingpong(t);
     return t * t;
 }
 
-float easeOutQuad(float t) {
+float animateEaseOutQuad(float t) {
     t = pingpong(t);
     return t * (2.0 - t);
 }
 
-float easeInOutQuad(float t) {
+float animateEaseInOutQuad(float t) {
     t = pingpong(t);
     return t < 0.5 ? 2.0 * t * t : -1.0 + (4.0 - 2.0 * t) * t;
 }
 
-float easeInCubic(float t) {
+float animateEaseInCubic(float t) {
     t = pingpong(t);
     return t * t * t;
 }
 
-float easeOutCubic(float t) {
+float animateEaseOutCubic(float t) {
     t = pingpong(t);
     float t1 = t - 1.0;
     return t1 * t1 * t1 + 1.0;
 }
 
-float easeInOutCubic(float t) {
+float animateEaseInOutCubic(float t) {
     t = pingpong(t);
     return t < 0.5 ? 4.0 * t * t * t : (t - 1.0) * (2.0 * t - 2.0) * (2.0 * t - 2.0) + 1.0;
 }
 
-float easeInExpo(float t) {
+float animateEaseInExpo(float t) {
     t = pingpong(t);
     return t == 0.0 ? 0.0 : pow(2.0, 10.0 * (t - 1.0));
 }
 
-float easeOutExpo(float t) {
+float animateEaseOutExpo(float t) {
     t = pingpong(t);
     return t == 1.0 ? 1.0 : 1.0 - pow(2.0, -10.0 * t);
 }
 
-float easeInOutExpo(float t) {
+float animateEaseInOutExpo(float t) {
     t = pingpong(t);
     if (t == 0.0 || t == 1.0) return t;
-
     if (t < 0.5) {
         return 0.5 * pow(2.0, (20.0 * t) - 10.0);
     } else {
@@ -252,37 +264,36 @@ float easeInOutExpo(float t) {
     }
 }
 
-float easeInSine(float t) {
+float animateEaseInSine(float t) {
     t = pingpong(t);
     return -1.0 * cos(t * 1.57079632679) + 1.0;
 }
 
-float easeOutSine(float t) {
+float animateEaseOutSine(float t) {
     t = pingpong(t);
     return sin(t * 1.57079632679);
 }
 
-float easeInOutSine(float t) {
+float animateEaseInOutSine(float t) {
     t = pingpong(t);
     return -0.5 * (cos(3.14159265359 * t) - 1.0);
 }
 
-float easeInElastic(float t) {
+float animateEaseInElastic(float t) {
     t = pingpong(t);
     float t1 = t - 1.0;
     return -pow(2.0, 10.0 * t1) * sin((t1 - 0.075) * 20.943951023932);
 }
 
-float easeOutElastic(float t) {
+float animateEaseOutElastic(float t) {
     t = pingpong(t);
     return pow(2.0, -10.0 * t) * sin((t - 0.075) * 20.943951023932) + 1.0;
 }
 
-float easeInOutElastic(float t) {
+float animateEaseInOutElastic(float t) {
     t = pingpong(t);
     float t1 = t * 2.0;
     float t2 = t1 - 1.0;
-
     if (t < 0.5) {
         return -0.5 * pow(2.0, 10.0 * t2) * sin((t2 - 0.1125) * 13.962634015955);
     } else {
@@ -290,12 +301,7 @@ float easeInOutElastic(float t) {
     }
 }
 
-float bounce(float t) {
-    t = pingpong(t);
-    return abs(sin(6.28318530718 * (t + 1.0) * (t + 1.0)) * (1.0 - t));
-}
-
-float smoothBounce(float t) {
+float animateSmoothBounce(float t) {
     t = pingpong(t);
     return 1.0 - pow(abs(sin(6.28318530718 * (t + 1.0) * (t + 1.0))), 0.6) * (1.0 - t);
 }
