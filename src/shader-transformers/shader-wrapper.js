@@ -194,8 +194,7 @@ vec3 hslmix(vec3 c1, vec3 c2, float t){
 
 // Utility to make any value pingpong (go forward then backward)
 float pingpong(float t) {
-    float tt = fract(t * 0.5);
-    return tt < 0.5 ? tt * 2.0 : 2.0 - (tt * 2.0);
+    return 0.5 + 0.5 * sin(3.14159265359 * t);
 }
 
 // Simple animations
