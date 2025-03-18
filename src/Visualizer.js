@@ -31,6 +31,18 @@ const getTexture = async (gl, url) => {
     })
 }
 
+// Create a texture specifically for initializing time data
+const createTimeInitTexture = (gl) => {
+    return createTexture(gl, {
+        width: 1,
+        height: 1,
+        min: gl.LINEAR,
+        mag: gl.LINEAR,
+        wrap: gl.CLAMP_TO_EDGE,
+        src: new Uint8Array([0, 0, 0, 255]) // RGBA: (0,0,0,1) - Initial time of 0
+    });
+}
+
 const handleShaderError = (gl, wrappedFragmentShader, newFragmentShader) => {
     const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
     gl.shaderSource(fragmentShader, wrappedFragmentShader);
@@ -109,7 +121,19 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
     }
 
     const initialTexture = await getTexture(gl, initialImageUrl)
-    const frameBuffers = [createFramebufferInfo(gl), createFramebufferInfo(gl)]
+    const initialTimeTexture = createTimeInitTexture(gl)
+
+    // Create frame buffers with two color attachments
+    const frameBuffers = [
+        createFramebufferInfo(gl, [
+            { format: gl.RGBA, type: gl.UNSIGNED_BYTE, min: gl.LINEAR, mag: gl.LINEAR, wrap: gl.CLAMP_TO_EDGE },  // Main color output
+            { format: gl.RGBA, type: gl.UNSIGNED_BYTE, min: gl.LINEAR, mag: gl.LINEAR, wrap: gl.CLAMP_TO_EDGE }   // Time color output
+        ]),
+        createFramebufferInfo(gl, [
+            { format: gl.RGBA, type: gl.UNSIGNED_BYTE, min: gl.LINEAR, mag: gl.LINEAR, wrap: gl.CLAMP_TO_EDGE },  // Main color output
+            { format: gl.RGBA, type: gl.UNSIGNED_BYTE, min: gl.LINEAR, mag: gl.LINEAR, wrap: gl.CLAMP_TO_EDGE }   // Time color output
+        ])
+    ]
     const bufferInfo = createBufferInfoFromArrays(gl, { position: positions })
 
     let frameNumber = 0
@@ -158,12 +182,14 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         const prevFrame = frameBuffers[(frameNumber + 1) % 2]
 
         gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, frame.framebuffer)
+        gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1])  // Enable both outputs
 
         let uniforms = {
             iTime: time,
             iFrame: frameNumber,
             time,
             prevFrame: frameNumber === 0 ? initialTexture : prevFrame.attachments[0],
+            prevTimeFrame: frameNumber === 0 ? initialTimeTexture : prevFrame.attachments[1],
             initialFrame: initialTexture,
             resolution: [frame.width, frame.height],
             frame: frameNumber,
@@ -174,6 +200,8 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
             iChannel1: prevFrame.attachments[0],
             iChannel2: initialTexture,
             iChannel3: prevFrame.attachments[0],
+            customTime: initialTexture,
+            deltaTime: time - lastRender,
             ...features,
         }
         // filter out null, undefined, and NaN values
@@ -187,9 +215,15 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         setUniforms(programInfo, uniforms)
         drawBufferInfo(gl, bufferInfo)
 
+        // Copy the result to the screen
         gl.bindFramebuffer(gl.READ_FRAMEBUFFER, frame.framebuffer)
         gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null)
-        gl.blitFramebuffer(0, 0, frame.width, frame.height, 0, 0, gl.canvas.width, gl.canvas.height, gl.COLOR_BUFFER_BIT, gl.LINEAR)
+        gl.readBuffer(gl.COLOR_ATTACHMENT0)  // Read from the main color attachment
+        gl.blitFramebuffer(
+            0, 0, frame.width, frame.height,
+            0, 0, gl.canvas.width, gl.canvas.height,
+            gl.COLOR_BUFFER_BIT, gl.LINEAR
+        )
 
         frameNumber++
     }

@@ -21,23 +21,50 @@ export const shaderWrapper = (shader) => {
         return /* glsl */ `#version 300 es
 precision highp float;
 
-out vec4 fragColor;
+layout(location = 0) out vec4 fragColor;
+layout(location = 1) out vec4 timeColor;
+
 ${shaderToyCompatibilityUniforms()}
 ${getAudioUniforms()}
 ${getKnobUniforms(shader)}
 
+uniform sampler2D prevTimeFrame;
+
 ${paperCranes()}
-vec4 getLastFrameColor(vec2 uv){
+
+vec4 getLastFrameColor(vec2 uv) {
     return texture(prevFrame, uv);
 }
-vec4 getInitialFrameColor(vec2 uv){
+
+vec4 getInitialFrameColor(vec2 uv) {
     return texture(initialFrame, uv);
 }
+
+bool didSetTime = false;
+
+float getTime() {
+    vec4 prevTime = texture(prevTimeFrame, vec2(0.5, 0.5));
+    return prevTime.b > 0.0 ? prevTime.x + deltaTime : iTime;
+}
+
+float getTime(vec2 uv) {
+    vec4 prevTime = texture(prevTimeFrame, uv);
+    if(prevTime.b > 0.0) return prevTime.x + deltaTime;
+    return getTime();
+}
+
+void setTime(float t) {
+    timeColor = vec4(t, 0.0, 1.0, 1.0);
+    didSetTime = true;
+}
+
 // 31CF3F64-9176-4686-9E52-E3CFEC21FE72
 ${shader}
 
-void main(void){
+void main(void) {
     mainImage(fragColor, gl_FragCoord.xy);
+    if (!didSetTime) timeColor = vec4(getTime()-deltaTime, 0.0, 0.0, 1.0);
+
 }
 `
     }
@@ -62,14 +89,16 @@ const getAudioUniforms = () => {
 }
 
 const paperCranes = () => /* glsl */ `
-
+uniform float deltaTime;
 uniform float time;
+
 uniform vec2 resolution;// iResolution equivalent
 
 uniform int frame;
 
 uniform sampler2D prevFrame;// Texture of the previous frame
 uniform sampler2D initialFrame;
+uniform sampler2D customTime;
 
 uniform float iRandom;
 

@@ -1,4 +1,3 @@
-
 #define EPSILON 0.0000001
 
 #define PROBE_1 mix(1.,1.4,spectralCentroidNormalized)+EPSILON
