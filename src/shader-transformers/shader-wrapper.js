@@ -1,22 +1,13 @@
 import { getFlatAudioFeatures } from '../audio/AudioProcessor.js'
 
 const getKnobUniforms = (shader) => {
-    const uniforms = []
-    // Check which knobs are already defined in the shader
-    const existingKnobs = new Set()
-    const knobRegex = /uniform\s+float\s+knob_(\d+)/g
-    let match
-    while ((match = knobRegex.exec(shader)) !== null) {
-        existingKnobs.add(parseInt(match[1]))
-    }
-
-    // Add knobs that don't already exist
-    for (let i = 1; i <= 200; i++) {
-        if (!existingKnobs.has(i)) {
-            uniforms.push(`uniform float knob_${i};`)
-        }
-    }
-    return uniforms.join('\n')
+    const existingKnobs = new Set(
+        [...shader.matchAll(/uniform\s+float\s+knob_(\d+)/g)].map(m => parseInt(m[1]))
+    )
+    return Array.from({length: 200}, (_, i) => i + 1)
+        .filter(i => !existingKnobs.has(i))
+        .map(i => `uniform float knob_${i};`)
+        .join('\n')
 }
 
 export const shaderWrapper = (shader) => {
@@ -64,14 +55,10 @@ uniform sampler2D iChannel3;
 uniform int iFrame;
 `
 const getAudioUniforms = () => {
-    const uniforms = []
-    for (const f in getFlatAudioFeatures()) {
-        uniforms.push(`uniform float ${f};`)
-    }
-    uniforms.push('uniform bool beat;')
-    uniforms.sort()
-
-    return uniforms.join('\n')
+    return [...Object.keys(getFlatAudioFeatures()), 'beat']
+        .sort()
+        .map(f => `uniform ${f === 'beat' ? 'bool' : 'float'} ${f};`)
+        .join('\n')
 }
 
 const paperCranes = () => /* glsl */ `
@@ -125,60 +112,42 @@ float hue2rgb(float f1, float f2, float hue) {
     return res;
 }
 
-vec3 hsl2rgb(vec3 hsl){
-float h=hsl.x;
-float s=hsl.y;
-float l=hsl.z;
-
-float r,g,b;
-
-if(s==0.f){
-  r=g=b=l;// achromatic
-}else{
-  float q=l<.5f?l*(1.f+s):l+s-l*s;
-  float p=2.f*l-q;
-  r=hue2rgb(p,q,h+1.f/3.f);
-  g=hue2rgb(p,q,h);
-  b=hue2rgb(p,q,h-1.f/3.f);
+vec3 hsl2rgb(vec3 hsl) {
+    float h = hsl.x, s = hsl.y, l = hsl.z;
+    float q = l < 0.5 ? l * (1.0 + s) : l + s - l * s;
+    float p = 2.0 * l - q;
+    return vec3(
+        hue2rgb(p, q, h + 1.0/3.0),
+        hue2rgb(p, q, h),
+        hue2rgb(p, q, h - 1.0/3.0)
+    );
 }
 
-return vec3(r,g,b);
-}
+vec3 rgb2hsl(vec3 c) {
+    float maxColor = max(max(c.r, c.g), c.b);
+    float minColor = min(min(c.r, c.g), c.b);
+    float delta = maxColor - minColor;
 
-vec3 rgb2hsl(vec3 color){
-    float maxColor=max(max(color.r,color.g),color.b);
-    float minColor=min(min(color.r,color.g),color.b);
-    float delta=maxColor-minColor;
+    float h = 0.0, s = 0.0, l = (maxColor + minColor) * 0.5;
 
-    float h=0.f;
-    float s=0.f;
-    float l=(maxColor+minColor)/2.f;
+    if (delta > 0.0) {
+        s = l < 0.5 ? delta / (maxColor + minColor) : delta / (2.0 - maxColor - minColor);
 
-    if(delta!=0.f){
-      s=l<.5f?delta/(maxColor+minColor):delta/(2.f-maxColor-minColor);
-
-      if(color.r==maxColor){
-        h=(color.g-color.b)/delta+(color.g<color.b?6.f:0.f);
-      }else if(color.g==maxColor){
-        h=(color.b-color.r)/delta+2.f;
-      }else{
-        h=(color.r-color.g)/delta+4.f;
-      }
-      h/=6.f;
+        if (c.r == maxColor) {
+            h = (c.g - c.b) / delta + (c.g < c.b ? 6.0 : 0.0);
+        } else if (c.g == maxColor) {
+            h = (c.b - c.r) / delta + 2.0;
+        } else {
+            h = (c.r - c.g) / delta + 4.0;
+        }
+        h /= 6.0;
     }
 
-    return vec3(h,s,l);
-  }
+    return vec3(h, s, l);
+}
 
-  vec2 centerUv(vec2 res, vec2 coord) {
-    // step 1: normalize the coord to 0-1
-    vec2 uv = coord.xy / res;
-    // step 2: center the uv
-    uv -= 0.5;
-    // step 3: scale the uv to -1 to 1
-    uv *= 2.0;
-    uv += 0.5;
-    return uv;
+vec2 centerUv(vec2 res, vec2 coord) {
+    return (coord / res - 0.5) * 2.0 + 0.5;
 }
 
 vec2 centerUv(vec2 coord) {
