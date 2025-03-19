@@ -118,7 +118,7 @@ const setupCanvasEvents = (canvas) => {
 
 const setupAudio = async () => {
     // if we have a query param that says 'noaudio=true', just return a dummy audio processor
-    if (params.get('noaudio') === 'true') {
+    if (params.get('noaudio') === 'true' || params.get('embed') === 'true') {
         return {
             getFeatures: () => ({
             })
@@ -236,7 +236,7 @@ const main = async () => {
     const audio = await setupAudio();
     const canvas = getVisualizerDOMElement();
 
-    if (!window.location.href.includes('edit')) addListenersForFullscreen(canvas);
+    if (!window.location.href.includes('edit') && params.get('embed') !== 'true') addListenersForFullscreen(canvas);
 
     window.shader = fragmentShader;
     setupCanvasEvents(canvas);
