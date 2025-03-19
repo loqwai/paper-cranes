@@ -117,6 +117,13 @@ const setupCanvasEvents = (canvas) => {
 };
 
 const setupAudio = async () => {
+    // if we have a query param that says 'noaudio=true', just return a dummy audio processor
+    if (params.get('noaudio') === 'true') {
+        return {
+            getFeatures: () => ({
+            })
+        }
+    }
     // get the default audio input
     const devices = await navigator.mediaDevices.enumerateDevices();
     const audioInputs = devices.filter(device => device.kind === 'audioinput');
