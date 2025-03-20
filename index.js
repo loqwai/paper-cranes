@@ -2,6 +2,31 @@ import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { makeVisualizer } from './src/Visualizer.js'
 
 // Add service worker registration
+window.cranes = {
+    manualFeatures: {},
+    messageParams: {} // Add storage for message params
+}
+
+// Add listener for messages from parent window
+window.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'update-params') {
+        console.log('Received postMessage:', event.data)
+
+        // Store incoming params
+        const { type, ...params } = event.data
+
+        // Update shader code if provided
+        if (params.shaderCode) {
+            window.cranes.shader = params.shaderCode
+        }
+
+        // Store all params
+        Object.entries(params).forEach(([key, value]) => {
+            window.cranes.messageParams[key] = value
+        })
+    }
+})
+
 window.addEventListener('load', async () => {
     console.log('Registering service worker...')
     const { serviceWorker } = navigator
@@ -117,13 +142,75 @@ const setupCanvasEvents = (canvas) => {
 };
 
 const setupAudio = async () => {
-    // if we have a query param that says 'noaudio=true', just return a dummy audio processor
-    if (params.get('noaudio') === 'true' || params.get('embed') === 'true') {
-        return {
-            getFeatures: () => ({
-            })
-        }
+    const audioContext = new AudioContext();
+    await audioContext.resume();
+
+    const stream = await getAudioStream(audioConfig);
+    const sourceNode = audioContext.createMediaStreamSource(stream);
+    const historySize = parseInt(params.get('history_size') ?? '500');
+    const audioProcessor = new AudioProcessor(audioContext, sourceNode, historySize);
+    audioProcessor.start();
+
+    return audioProcessor;
+};
+
+const animate = ({ render, audio, fragmentShader }) => {
+    requestAnimationFrame(() => animate({ render, audio, fragmentShader }));
+
+    const features = {
+        ...audio.getFeatures(),
+        ...Object.fromEntries(params),
+        ...window.cranes.manualFeatures,
+        // Add message params with highest priority
+        ...window.cranes.messageParams,
+        touch: [coordsHandler.coords.x, coordsHandler.coords.y],
+        touched: coordsHandler.touched
+    };
+
+    window.cranes.measuredAudioFeatures = features;
+
+    try {
+        render({
+            time: (performance.now() - startTime) / 1000,
+            features,
+            // Prioritize shader from postMessage if available
+            fragmentShader: window.cranes.shader ?? fragmentShader,
+        });
+    } catch (e) {
+        console.error('Render error:', e);
     }
+};
+
+const main = async () => {
+    try {
+        if (ranMain) return;
+        ranMain = true;
+
+        window.c = cranes;
+        startTime = performance.now();
+        const fragmentShader = await getFragmentShader();
+        const audio = await setupAudio();
+
+        window.shader = fragmentShader;
+        const canvas = getVisualizerDOMElement();
+        setupCanvasEvents(canvas);
+
+        const visualizerConfig = {
+            canvas,
+            initialImageUrl: params.get('image') ?? 'images/placeholder-image.png',
+            fullscreen: (params.get('fullscreen') ?? false) === 'true'
+        };
+
+        const render = await makeVisualizer(visualizerConfig);
+        requestAnimationFrame(() => animate({ render, audio, fragmentShader }));
+    } catch (e) {
+        console.error('Main initialization error:', e);
+    }
+};
+
+// Combine initialization into a single function
+const initializeApp = async () => {
+    if (ranMain) return;
     // get the default audio input
     const devices = await navigator.mediaDevices.enumerateDevices();
     const audioInputs = devices.filter(device => device.kind === 'audioinput');
@@ -137,51 +224,39 @@ const setupAudio = async () => {
                 ...(audioInputs.length > 1 ? { deviceId: { exact: defaultAudioInput } } : {})
             }
         });
-        const audioContext = new AudioContext();
-        await audioContext.resume();
 
-        const stream = await getAudioStream(audioConfig);
-        const sourceNode = audioContext.createMediaStreamSource(stream);
-        const historySize = parseInt(params.get('history_size') ?? '500');
-        const audioProcessor = new AudioProcessor(audioContext, sourceNode, historySize);
-        audioProcessor.start();
+        // If successful, run main
+        await main();
 
-        return audioProcessor;
+        // Add click handlers for fullscreen
+        if (!window.location.href.includes('edit')) {
+            const visualizer = getVisualizerDOMElement();
+            for (const event of events) {
+                visualizer.addEventListener(event, async () => {
+                    try {
+                        await document.documentElement.requestFullscreen();
+                    } catch (e) {
+                        console.error(`requesting fullscreen from event ${event} failed`, e);
+                    }
+                }, { once: true });
+            }
+        }
     } catch (err) {
-        console.error('Audio initialization failed:', err);
+        console.error('Failed to initialize:', err);
+        const body = document.querySelector('body');
+        body.classList.remove('ready');
     }
 };
 
-const animate = ({ render, audio, fragmentShader }) => {
-    requestAnimationFrame(() => animate({ render, audio, fragmentShader }));
-
-    const features = {
-        ...audio.getFeatures(),
-        ...Object.fromEntries(params),
-        ...window.cranes.manualFeatures,
-        touch: [coordsHandler.coords.x, coordsHandler.coords.y],
-        touched: coordsHandler.touched
-    };
-
-    window.cranes.measuredAudioFeatures = features;
-
-    try {
-        render({
-            time: (performance.now() - startTime) / 1000,
-            features,
-            fragmentShader: window.cranes?.shader ?? fragmentShader,
-        });
-    } catch (e) {
-        console.error('Render error:', e);
-    }
-};
+// Start initialization immediately
+initializeApp();
 
 const getRelativeOrAbsolute = async (url) => {
     //if the url is not a full url, then it's a relative url
     if (!url.includes('http')) {
         url = `/shaders/${url}`
     }
-    const res = await fetch(url, {mode: 'no-cors'})
+    const res = await fetch(url)
     const shader = await res.text()
     return shader
 }
@@ -190,15 +265,23 @@ const getFragmentShader = async () => {
     const shaderUrl = params.get('shader')
     let fragmentShader
 
-    if(params.get('shaderCode')) return decodeURIComponent(params.get('shaderCode'))
+    // Check for shader from postMessage
+    if (window.cranes.shader) {
+        return window.cranes.shader
+    }
+
+    // Check for shader code in URL params
+    if (params.get('shaderCode')) {
+        return decodeURIComponent(params.get('shaderCode'))
+    }
 
     if (shaderUrl) {
         fragmentShader = await getRelativeOrAbsolute(`${shaderUrl}.frag`)
     }
+
     if (!fragmentShader) {
         fragmentShader = localStorage.getItem('cranes-manual-code')
     }
-
 
     if (!fragmentShader) {
         fragmentShader = await getRelativeOrAbsolute('default.frag')
@@ -211,49 +294,4 @@ if(navigator.connection) {
         navigator.serviceWorker.controller.postMessage({type:'network-changed'})
     })
 }
-
-const addListenersForFullscreen = (visualizer) => {
-    for (const event of events) {
-        visualizer.addEventListener(event, async () => {
-            try {
-                await document.documentElement.requestFullscreen();
-            } catch (e) {
-                console.error(`requesting fullscreen from event ${event} failed`, e);
-            }
-        }, { once: true });
-    }
-}
-
-const main = async () => {
-    if (ranMain) return;
-    ranMain = true;
-
-    window.cranes = {
-        manualFeatures: {}
-    }
-
-    window.c = window.cranes;
-
-    startTime = performance.now();
-    const fragmentShader = await getFragmentShader();
-    const audio = await setupAudio();
-    const canvas = getVisualizerDOMElement();
-
-    if (!window.location.href.includes('edit') && params.get('embed') !== 'true') addListenersForFullscreen(canvas);
-
-    window.shader = fragmentShader;
-    setupCanvasEvents(canvas);
-
-    const visualizerConfig = {
-        canvas,
-        initialImageUrl: params.get('image') ?? 'images/placeholder-image.png',
-        fullscreen: (params.get('fullscreen') ?? false) === 'true'
-    };
-
-    const render = await makeVisualizer(visualizerConfig);
-    requestAnimationFrame(() => animate({ render, audio, fragmentShader }));
-};
-
-main();
-
 console.log(`paper cranes version FREE`);
