@@ -181,7 +181,7 @@ const getRelativeOrAbsolute = async (url) => {
     if (!url.includes('http')) {
         url = `/shaders/${url}`
     }
-    const res = await fetch(url)
+    const res = await fetch(url, {mode: 'no-cors'})
     const shader = await res.text()
     return shader
 }
@@ -189,13 +189,16 @@ const getRelativeOrAbsolute = async (url) => {
 const getFragmentShader = async () => {
     const shaderUrl = params.get('shader')
     let fragmentShader
+
+    if(params.get('shaderCode')) return params.get('shaderCode')
+
     if (shaderUrl) {
         fragmentShader = await getRelativeOrAbsolute(`${shaderUrl}.frag`)
     }
-
     if (!fragmentShader) {
         fragmentShader = localStorage.getItem('cranes-manual-code')
     }
+
 
     if (!fragmentShader) {
         fragmentShader = await getRelativeOrAbsolute('default.frag')
