@@ -190,7 +190,7 @@ const getFragmentShader = async () => {
     const shaderUrl = params.get('shader')
     let fragmentShader
 
-    if(params.get('shaderCode')) return params.get('shaderCode')
+    if(params.get('shaderCode')) return decodeURIComponent(params.get('shaderCode'))
 
     if (shaderUrl) {
         fragmentShader = await getRelativeOrAbsolute(`${shaderUrl}.frag`)
