@@ -159,6 +159,7 @@ const animate = ({ render, audio, fragmentShader }) => {
         ...audio.getFeatures(),
         ...Object.fromEntries(params),
         ...window.cranes.manualFeatures,
+        ...window.cranes.messageParams,
         touch: [coordsHandler.coords.x, coordsHandler.coords.y],
         touched: coordsHandler.touched
     };
@@ -229,7 +230,8 @@ const main = async () => {
     ranMain = true;
 
     window.cranes = {
-        manualFeatures: {}
+        manualFeatures: {},
+        messageParams: {}
     }
 
     window.c = window.cranes;
