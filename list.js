@@ -318,7 +318,8 @@ const List = () => {
 
   // Show all shaders if show=all is present in URL or if on desktop
   const showAll = new URL(window.location).searchParams.get('show') === 'all' || isDesktop
-  const filteredShaders = showAll ? shaders : shaders.filter(shader => !shader.name.includes('/wip/') && !shader.name.includes('knobs'))
+  const filteredPaths = ['wip', 'knobs', 'static']
+  const filteredShaders = showAll ? shaders : shaders.filter(shader => !filteredPaths.some(path => shader.name.includes(path)))
 
   return html`
     <div>
