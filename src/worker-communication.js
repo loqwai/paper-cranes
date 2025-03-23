@@ -29,17 +29,27 @@ const processServiceWorkerMessage = (event) => {
 
 // Add listener for messages from parent window
 window.addEventListener('message', function(event) {
+  console.log('Received message from parent window', event)
   if(!window.cranes) return
   if (!event.data || event.data.type !== 'update-params') return
-
+  // if there is a event.data.shader, reload the page with  ?shader=event.data.shader
   // Store incoming params
   const {data } = event.data
+  const {shader} = data
+  if (shader) {
+    console.log('Received shader from parent window', shader)
+    const url = new URL(window.location)
+    url.searchParams.set('shader', shader)
+    window.location.href = url.toString()
+  }
+  console.log('Received message from parent window', data)
 
   // Update shader code if provided
   if (data.shaderCode) window.cranes.shader = data.shaderCode
-
+  console.log('Received message from parent window', window.cranes.shader)
   // Store all params
   Object.entries(data).forEach(([key, value]) => {
     window.cranes.messageParams[key] = value
   })
+  console.log('new cranes', window.cranes)
 })

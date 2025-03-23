@@ -7,11 +7,10 @@ wss.on('connection', (ws) => {
 
   ws.on('message', (msg) => {
     console.log('Received from client:', msg.toString())
-
     // ✅ FIX: Broadcast to all other clients
     wss.clients.forEach((client) => {
       if (client !== ws && client.readyState === WebSocket.OPEN) {
-        client.send(msg)
+        client.send(JSON.stringify(JSON.parse(msg.toString())))
       }
     })
   })

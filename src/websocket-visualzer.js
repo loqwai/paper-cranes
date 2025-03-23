@@ -11,6 +11,7 @@ export const addWebsocketListener = (url=window.location.origin, port=6970) => {
       console.log('Received message from WebSocket:', event.data)
       try {
         const json = JSON.parse(event.data)
+        console.log('about to send message to postMessage', json)
         window.postMessage(json, '*')
       } catch (e) {
         console.error('Failed to parse WebSocket message:', e)
