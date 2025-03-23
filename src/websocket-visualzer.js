@@ -1,114 +1,135 @@
-export const addWebsocketListener = (url=window.location.origin, port=6970) => {
+export const addWebsocketListener = (port = 6970) => {
+  const params = new URLSearchParams(window.location.search)
+  const wsHost = params.get('remote')
 
-  // Connect to local WebSocket server
+  const fullUrl = `ws://${wsHost}`
+  console.log('[Visualizer] Connecting to WebSocket at:', fullUrl)
+
   try {
-    const socket = new WebSocket('ws://localhost:6970')
+    const socket = new WebSocket(fullUrl)
+
     socket.addEventListener('open', () => {
-      console.log('Connected to WebSocket server')
+      console.log('[Visualizer] Connected to WebSocket server')
     })
 
-    socket.addEventListener('message', (event) => {
-      console.log('Received message from WebSocket:', event.data)
+    socket.addEventListener('message', async (event) => {
+      console.log('[Visualizer] Received message from WebSocket:', event.data)
+
+      let raw
+      if (event.data instanceof Blob) {
+        raw = await event.data.text()
+      } else {
+        raw = event.data
+      }
+
       try {
-        const json = JSON.parse(event.data)
-        console.log('about to send message to postMessage', json)
+        const json = JSON.parse(raw)
+        console.log('[Visualizer] About to send message to postMessage:', json)
+        // if the json has an image, just put all the variables as query params and reload the page
+        const { data } = json
+        if (data.image) {
+          console.log('[Visualizer] About to reload page with image:', data.image)
+          const url = new URL(window.location)
+          url.searchParams.set('shader', data.shader)
+          url.searchParams.set('image', data.image)
+          window.location.href = url.toString()
+          return
+        }
         window.postMessage(json, '*')
       } catch (e) {
-        console.error('Failed to parse WebSocket message:', e)
+        console.error('[Visualizer] Failed to parse WebSocket message:', e, raw)
       }
     })
 
     socket.addEventListener('close', () => {
-      console.warn('WebSocket connection closed')
+      console.warn('[Visualizer] WebSocket connection closed')
     })
 
     socket.addEventListener('error', (e) => {
-      console.error('WebSocket error:', e)
+      console.error('[Visualizer] WebSocket error:', e)
     })
   } catch (err) {
-    console.error('WebSocket connection failed:', err)
+    console.error('[Visualizer] WebSocket connection failed:', err)
   }
 }
 
-export const addWebsocketController = (url = window.location.hostname, port = 6970) => {
+export const addWebsocketController = () => {
   const params = new URLSearchParams(window.location.search)
+  const wsHost = params.get('remote')
+
   let socket
   let messageQueue = []
   let socketReady = false
+  let lastShaderUrl = null
 
-  const sendShaderParam = (shaderName) => {
-    const nextUrl = new URL(window.location)
-    nextUrl.searchParams.set('shader', shaderName)
-    window.history.pushState({}, '', nextUrl)
-
+  const sendShaderParam = (url) => {
+    const queryParams = new URLSearchParams(url.search)
+    console.log('[Controller] Query params:', queryParams)
     const message = {
       type: 'update-params',
-      data: { shader: shaderName }
+      data: { ...Object.fromEntries(queryParams.entries()) }
     }
 
     if (socketReady && socket?.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify(message))
-      console.log('Sent shader param over WebSocket:', message)
+      console.log('[Controller] Sent shader param over WebSocket:', message)
     } else {
-      console.log('Socket not open yet, queuing message:', message)
+      console.log('[Controller] Socket not open yet, queuing message:', message)
       messageQueue.push(message)
     }
   }
 
-  if (params.get('remote') === 'true') {
+  if (wsHost) {
     try {
-      console.log('Connecting to WebSocket:', `ws://${url}:${port}`)
-      socket = new WebSocket(`ws://${url}:${port}`)
+      console.log('[Controller] Connecting to WebSocket at:', `ws://${wsHost}`)
+      socket = new WebSocket(`ws://${wsHost}`)
 
       socket.addEventListener('open', () => {
         socketReady = true
-        console.log('Connected to WebSocket (remote control mode)')
+        console.log('[Controller] Connected to WebSocket (remote control mode)')
 
-        // Flush queue
         messageQueue.forEach(msg => socket.send(JSON.stringify(msg)))
         messageQueue = []
 
-        // Send initial shader param (if in URL)
         const initialShader = params.get('shader')
         if (initialShader) sendShaderParam(initialShader)
       })
 
       socket.addEventListener('close', () => {
-        console.warn('WebSocket closed (remote mode)')
+        console.warn('[Controller] WebSocket closed')
         socketReady = false
       })
+
+      socket.addEventListener('error', (e) => {
+        console.error('[Controller] WebSocket error:', e)
+      })
     } catch (e) {
-      console.error('WebSocket error (remote mode):', e)
+      console.error('[Controller] WebSocket error (setup):', e)
     }
   }
 
   return {
-    sendShader: (shader) => sendShaderParam(shader)
+    sendShader: (url) => sendShaderParam(url)
   }
 }
 
 export const interceptNavigation = () => {
-  console.log('Intercepting navigation')
+  console.log('[Controller] Intercepting navigation')
   const controller = addWebsocketController()
-  console.log('Controller:', controller)
-  window.addEventListener('popstate', (event) => {
-    event.preventDefault()
-    console.log('Navigation event:', event)
-  })
-  // 1. Intercept link clicks and manually send the update
+  console.log('[Controller] Controller initialized:', controller)
+
   document.addEventListener('click', (e) => {
     const link = e.target.closest('a[href]')
-    if (!link) return // Not a link, ignore
-    console.log('Link:', link)
+    if (!link) return
+
     const url = new URL(link.href)
     const shader = url.searchParams.get('shader')
 
     if (url.origin === location.origin && shader) {
       e.preventDefault()
-      controller.sendShader(shader)
+      controller.sendShader(url)
     }
   })
-
 }
 
 export default addWebsocketListener
