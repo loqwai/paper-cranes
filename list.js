@@ -54,6 +54,7 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
       // Check if any preset parameter contains the filter text
       const url = new URL(preset)
       const params = Array.from(url.searchParams.entries())
+      setupWebsocket(url, params)
       return params.some(([key, value]) =>
         key.toLowerCase().includes(lowerFilter) ||
         value.toLowerCase().includes(lowerFilter)
