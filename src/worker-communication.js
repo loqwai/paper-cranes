@@ -28,7 +28,7 @@ const processServiceWorkerMessage = (event) => {
 }
 
 // Add listener for messages from parent window
-window.addEventListener('message', function(event) {
+window.addEventListener('message', async function(event) {
   console.log('Received message from parent window', event)
   if(!window.cranes) return
   if (!event.data || event.data.type !== 'update-params') return
@@ -38,9 +38,11 @@ window.addEventListener('message', function(event) {
   const {shader} = data
   if (shader) {
     console.log('Received shader from parent window', shader)
-    const url = new URL(window.location)
-    url.searchParams.set('shader', shader)
-    window.location.href = url.toString()
+    // get the shader code
+    const shaderCode = await fetch(`/shaders/${shader}.frag`).then(res => res.text())
+    console.log('Shader code', shaderCode)
+    // update the shader code
+    window.cranes.shader = shaderCode
   }
   console.log('Received message from parent window', data)
 
