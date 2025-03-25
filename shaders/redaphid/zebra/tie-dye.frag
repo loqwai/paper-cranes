@@ -2,22 +2,34 @@
 #define PI 3.14159265359
 #define TAU (2.0*PI)
 
+// Control knobs using implicit uniforms
+#define KNOB_ZOOM_SPEED knob_30
+#define KNOB_SPIN_SPEED knob_31
+#define KNOB_SPIN_RADIUS knob_32
+#define KNOB_WARP_AMOUNT knob_33
+#define KNOB_SWIRL_INTENSITY knob_34
+#define KNOB_FRAME_BLEND knob_35
+#define KNOB_COLOR_SPEED knob_36
+#define KNOB_BEAT_INTENSITY knob_37
+#define KNOB_VIGNETTE_STRENGTH knob_40
+#define KNOB_ENERGY_BOOST knob_44
+
 // Improved zoom parameters
-#define ZOOM_SPEED 0.1
-#define ZOOM_FACTOR pow(1.03, time * ZOOM_SPEED)
+#define ZOOM_SPEED (KNOB_ZOOM_SPEED * (1.0 + 0.3 * bassNormalized))
+#define ZOOM_FACTOR pow(1.02, abs(time * ZOOM_SPEED)) // Slower, more stable zoom
 #define FRACTAL_CENTER vec2(-0.745, 0.186) // Classic Mandelbrot interesting area
 
 // Spinning parameters
-#define SPIN_SPEED 0.1
+#define SPIN_SPEED (KNOB_SPIN_SPEED * (1.0 + 0.2 * midsNormalized))
 #define SPIN_ANGLE (time * SPIN_SPEED)
-#define SPIN_RADIUS 0.1
+#define SPIN_RADIUS (KNOB_SPIN_RADIUS * (1.0 + 0.1 * trebleNormalized))
 
 // Audio-reactive parameters
-#define DETAIL (5.0 + 15.0 * spectralRoughnessNormalized)
-#define COLOR_SPEED (0.05 + 0.1 * midsNormalized)
-#define WARP_AMOUNT (0.1 + 0.2 * spectralSpreadNormalized) // Reduced to prevent stretching
-#define SWIRL_INTENSITY (0.2 + 0.3 * bassNormalized) // Reduced to prevent stretching
-#define FRACTAL_BLEND (0.3 + 0.7 * trebleNormalized)
+#define DETAIL (5.0 + 10.0 * spectralRoughnessNormalized)
+#define COLOR_SPEED (KNOB_COLOR_SPEED * (1.0 + 0.3 * midsNormalized))
+#define WARP_AMOUNT (KNOB_WARP_AMOUNT * (1.0 + 0.3 * spectralSpreadNormalized))
+#define SWIRL_INTENSITY (KNOB_SWIRL_INTENSITY * (1.0 + 0.3 * bassNormalized))
+#define FRACTAL_BLEND (0.3 + 0.5 * trebleNormalized)
 
 // Tie-dye color palette
 vec3 tieDyePalette(float t) {
@@ -52,27 +64,26 @@ void rot(inout vec2 p, float a) {
     p = vec2(c*p.x + s*p.y, -s*p.x + c*p.y);
 }
 
-// Complex power
+// Complex power with safety checks
 vec2 cpow(vec2 z, float n) {
     float r = length(z);
-    if (r < 0.001) return vec2(0.0); // Prevent division by zero
+    if (r < 0.0001) return vec2(0.0); // Prevent division by zero
     float a = atan(z.y, z.x);
     return pow(r, n) * vec2(cos(a*n), sin(a*n));
 }
 
-// Improved swirl distortion with balanced aspect correction
+// Improved swirl distortion with balanced aspect correction and safety checks
 vec2 swirl(vec2 p, float strength) {
     float r = length(p);
-    if (r < 0.001) return p; // Prevent division by zero
+    if (r < 0.0001) return p; // Prevent division by zero
 
     // Limit strength based on radius to prevent extreme stretching
     float limitedStrength = strength * (1.0 - exp(-r * 3.0));
 
     // Apply balanced aspect correction to make shapes circular
-    // Correct both x and y to maintain aspect ratio
     float aspectCorrection = 1.0 + 0.1 * sin(r * 5.0 + time * 0.2);
     p.x *= aspectCorrection;
-    p.y /= aspectCorrection; // Balance the correction
+    p.y /= aspectCorrection;
 
     float a = atan(p.y, p.x) + limitedStrength * r;
     vec2 result = r * vec2(cos(a), sin(a));
@@ -81,36 +92,34 @@ vec2 swirl(vec2 p, float strength) {
     return mix(p, result, smoothstep(0.0, 0.2, r));
 }
 
-// Improved tie-dye warping effect with balanced aspect correction
+// Improved tie-dye warping effect with safety checks
 vec2 tieDyeWarp(vec2 p, float time) {
-    // Scale down warp strength for distant points to prevent stretching
     float r = length(p);
-    float scaledWarpStrength = WARP_AMOUNT * (1.0 - exp(-r * 2.0));
+    if (r < 0.0001) return p; // Prevent division by zero
 
-    // Create concentric ripples with frequency that decreases with distance
-    float rippleFreq = 10.0 / (1.0 + r * 0.5);
+    // Reduced warp strength and smoother falloff
+    float scaledWarpStrength = WARP_AMOUNT * 0.5 * (1.0 - exp(-r * 1.5));
+    float rippleFreq = 8.0 / (1.0 + r * 0.8);
 
-    // Make ripples more circular by applying balanced aspect correction
+    // Smoother aspect correction
     vec2 aspectCorrected = p;
     float angle = atan(p.y, p.x);
-    float aspectFactor = 1.0 + 0.1 * sin(angle * 4.0 + time * 0.3);
+    float aspectFactor = 1.0 + 0.05 * sin(angle * 3.0 + time * 0.2);
     aspectCorrected.x *= aspectFactor;
-    aspectCorrected.y /= aspectFactor; // Balance the correction
+    aspectCorrected.y /= aspectFactor;
 
+    // Reduced ripple effect
     float ripple = sin(length(aspectCorrected) * rippleFreq - time) * scaledWarpStrength;
+    vec2 swirled = swirl(p, SWIRL_INTENSITY * 0.2);
 
-    // Create spiral distortion with limited strength
-    vec2 swirled = swirl(p, SWIRL_INTENSITY * 0.3);
+    // Smoother blending
+    float blend = smoothstep(0.0, 1.0, min(1.0, r * 1.5));
+    vec2 warped = mix(p + p * ripple * (1.0 - r * 0.3), swirled, blend * 0.3);
 
-    // Combine effects with smooth transition to prevent seams
-    float blend = smoothstep(0.0, 1.0, min(1.0, r * 2.0));
-    vec2 warped = mix(p + p * ripple * (1.0 - r * 0.2), swirled, blend * 0.4);
-
-    // Ensure smooth transition at the edges
-    return mix(p, warped, smoothstep(0.0, 0.2, 1.0 - r));
+    return mix(p, warped, smoothstep(0.0, 0.3, 1.0 - r));
 }
 
-// Enhanced Mandelbrot with improved stability
+// Enhanced Mandelbrot with improved stability and frame blending
 float tieDyeFractal(vec2 c, float time) {
     vec2 z = vec2(0.0);
     float iter = 0.0;
@@ -122,6 +131,11 @@ float tieDyeFractal(vec2 c, float time) {
     // Store minimum distance to orbit for trap coloring
     float minDist = 1000.0;
     vec2 trap = vec2(sin(time * 0.1), cos(time * 0.1)) * 2.0;
+
+    // Get previous frame color for blending with proper coordinate transformation
+    vec2 prevUV = (c + vec2(1.0)) * 0.5; // Transform from [-1,1] to [0,1]
+    vec4 prevColor = getLastFrameColor(prevUV);
+    float prevFrameInfluence = 0.3 * (1.0 - length(c) * 0.2); // Fade out at edges
 
     for (float i = 0.0; i < maxIter; i++) {
         // Standard mandelbrot iteration: z = z^2 + c
@@ -148,11 +162,12 @@ float tieDyeFractal(vec2 c, float time) {
     // Combine iteration count with orbit trap
     float orbitFactor = 0.5 + 0.5 * sin(minDist * 5.0);
 
-    // Normalize and return
-    return mix(iter / maxIter, orbitFactor, 0.3);
+    // Normalize and blend with previous frame
+    float baseValue = mix(iter / maxIter, orbitFactor, 0.3);
+    return mix(baseValue, prevColor.r, prevFrameInfluence);
 }
 
-// Improved Julia set variation
+// Improved Julia set variation with frame blending
 float juliaFractal(vec2 z, float time) {
     // Julia set parameters that change with time and audio
     vec2 c = vec2(
@@ -166,6 +181,11 @@ float juliaFractal(vec2 z, float time) {
     // Store minimum distance to orbit for trap coloring
     float minDist = 1000.0;
     vec2 trap = vec2(sin(time * 0.2), cos(time * 0.17)) * 2.0;
+
+    // Get previous frame color for blending with proper coordinate transformation
+    vec2 prevUV = (z + vec2(1.0)) * 0.5; // Transform from [-1,1] to [0,1]
+    vec4 prevColor = getLastFrameColor(prevUV);
+    float prevFrameInfluence = 0.3 * (1.0 - length(z) * 0.2); // Fade out at edges
 
     for (float i = 0.0; i < maxIter; i++) {
         // Apply tie-dye warping with reduced effect
@@ -190,12 +210,44 @@ float juliaFractal(vec2 z, float time) {
     // Combine iteration count with orbit trap
     float orbitFactor = 0.5 + 0.5 * sin(minDist * 5.0);
 
-    // Normalize and return
-    return mix(iter / maxIter, orbitFactor, 0.3);
+    // Normalize and blend with previous frame
+    float baseValue = mix(iter / maxIter, orbitFactor, 0.3);
+    return mix(baseValue, prevColor.r, prevFrameInfluence);
+}
+
+// Function to check if pixel and surrounding area is too bright
+float getBrightnessAmount(vec2 uv, vec2 pixelSize) {
+    vec3 center = getLastFrameColor(uv).rgb;
+    vec3 left = getLastFrameColor(uv - vec2(pixelSize.x, 0.0)).rgb;
+    vec3 right = getLastFrameColor(uv + vec2(pixelSize.x, 0.0)).rgb;
+    vec3 up = getLastFrameColor(uv + vec2(0.0, pixelSize.y)).rgb;
+    vec3 down = getLastFrameColor(uv - vec2(0.0, pixelSize.y)).rgb;
+
+    // Calculate average brightness for each pixel
+    float centerBright = dot(center, vec3(1.0)) / 3.0;
+    float leftBright = dot(left, vec3(1.0)) / 3.0;
+    float rightBright = dot(right, vec3(1.0)) / 3.0;
+    float upBright = dot(up, vec3(1.0)) / 3.0;
+    float downBright = dot(down, vec3(1.0)) / 3.0;
+
+    // Use smoothstep for gradual transition
+    float threshold = 0.95;
+    float smoothness = 0.1;
+
+    float centerSmooth = smoothstep(threshold - smoothness, threshold, centerBright);
+    float leftSmooth = smoothstep(threshold - smoothness, threshold, leftBright);
+    float rightSmooth = smoothstep(threshold - smoothness, threshold, rightBright);
+    float upSmooth = smoothstep(threshold - smoothness, threshold, upBright);
+    float downSmooth = smoothstep(threshold - smoothness, threshold, downBright);
+
+    return (centerSmooth + leftSmooth + rightSmooth + upSmooth + downSmooth) / 5.0;
 }
 
 // Main image function
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    // Calculate pixel size for sampling
+    vec2 pixelSize = 1.0 / iResolution.xy;
+
     // Normalized pixel coordinates with proper aspect ratio
     vec2 uv = fragCoord/iResolution.xy;
     uv = uv * 2.0 - 1.0;
@@ -220,12 +272,18 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     );
     center += spinOffset * (0.5 + 0.5 * sin(time * 0.2));
 
-    // Apply zoom with proper centering
-    uv = (uv - center) / ZOOM_FACTOR + center;
+    // Apply zoom with proper centering and safety checks
+    float zoomScale = ZOOM_FACTOR;
+    // Prevent extreme zooming out
+    zoomScale = max(zoomScale, 1.0);
+    // Prevent extreme zooming in
+    zoomScale = min(zoomScale, 500.0);
 
-    // Apply tie-dye warping to coordinates with reduced effect and smooth transition
-    vec2 warpedUV = tieDyeWarp(uv, time * 0.1);
-    float warpBlend = 0.3 * (1.0 - exp(-length(uv) * 2.0)); // Fade out at edges
+    uv = (uv - center) / zoomScale + center;
+
+    // Reduced warping effect
+    vec2 warpedUV = tieDyeWarp(uv, time * 0.05);
+    float warpBlend = 0.2 * (1.0 - exp(-length(uv) * 1.5));
     uv = mix(uv, warpedUV, warpBlend);
 
     // Compute both fractals
@@ -237,47 +295,60 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float m = mix(m1, m2, blendFactor);
 
     // Create base color with tie-dye palette
-    float colorIndex = m * 3.0 + time * COLOR_SPEED;
+    float colorIndex = fract(m * 3.0 + time * COLOR_SPEED);
     vec3 col = tieDyePalette(colorIndex);
 
     // Add swirling detail bands with smooth transition
     float bands = sin(m * 50.0 * DETAIL + time) * 0.5 + 0.5;
     float bandBlend = 0.5 * (1.0 - 0.3 * exp(-length(uv - center) * 2.0));
-    col = mix(col, secondaryPalette(colorIndex + 0.33), bands * bandBlend);
+    col = mix(col, secondaryPalette(fract(colorIndex + 0.33)), bands * bandBlend);
 
     // Add tie-dye ripple effect with balanced aspect correction
     float rippleAngle = atan(uv.y - center.y, uv.x - center.x);
     float aspectCorrection = 1.0 + 0.1 * sin(rippleAngle * 6.0 + time * 0.2);
     vec2 correctedUV = uv - center;
     correctedUV.x *= aspectCorrection;
-    correctedUV.y /= aspectCorrection; // Balance the correction
+    correctedUV.y /= aspectCorrection;
 
     float rippleDist = length(correctedUV);
     float ripples = 0.5 + 0.5 * sin(rippleDist * 15.0 - time);
     float rippleBlend = 0.2 * (1.0 - 0.3 * exp(-rippleDist * 2.0));
-    col = mix(col, tieDyePalette(colorIndex + 0.67), ripples * rippleBlend);
+    col = mix(col, tieDyePalette(fract(colorIndex + 0.67)), ripples * rippleBlend);
 
     // Add spiral patterns with balanced aspect correction
     float spiralAngle = atan(uv.y - center.y, uv.x - center.x);
     float spiralDist = length(uv - center);
     float spiral = 0.5 + 0.5 * sin(spiralAngle * 8.0 + spiralDist * 15.0 - time);
     float spiralBlend = 0.2 * (1.0 - 0.3 * exp(-spiralDist * 2.0));
-    col = mix(col, secondaryPalette(colorIndex + 0.5), spiral * spiralBlend);
+    col = mix(col, secondaryPalette(fract(colorIndex + 0.5)), spiral * spiralBlend);
 
-    // Add beat response
+    // Add beat response with reduced intensity
     if (beat) {
-        float beatIntensity = 0.2 * bassNormalized * (1.0 - 0.5 * exp(-length(uv - center) * 3.0));
+        float beatIntensity = KNOB_BEAT_INTENSITY * bassNormalized * (1.0 - 0.5 * exp(-length(uv - center) * 3.0));
         col = mix(col, vec3(1.0), beatIntensity);
     }
 
     // Add subtle vignette
-    float vignette = 1.0 - dot(uv - center, uv - center) * 0.1;
+    float vignette = 1.0 - dot(uv - center, uv - center) * KNOB_VIGNETTE_STRENGTH;
     col *= vignette;
 
-    // Boost color intensity based on audio
-    col = pow(col, vec3(1.0 / (0.8 + energyNormalized * 0.4)));
+    // Boost color intensity based on audio with reduced effect
+    col = pow(col, vec3(1.0 / (0.8 + energyNormalized * KNOB_ENERGY_BOOST)));
 
-    // Ensure colors are in valid range
+    // Get previous frame color for blending
+    vec3 prevColor = getLastFrameColor(fragCoord.xy / iResolution.xy).rgb;
+
+    // Get brightness amount for smooth transitions
+    float brightnessAmount = getBrightnessAmount(fragCoord.xy / iResolution.xy, pixelSize);
+
+    // Smooth color mixing with previous frame
+    col = mix(col, prevColor, 0.7);
+
+    // Mix with previous frame if too bright
+    col = mix(col, prevColor, brightnessAmount);
+
+    // Ensure colors are in valid range and prevent artifacts
+    col = fract(col);
     col = clamp(col, 0.0, 1.0);
 
     fragColor = vec4(col, 1.0);
