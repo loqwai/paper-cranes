@@ -1,4 +1,5 @@
-//http://visuals.beadfamous.com/edit?knob_32=-1.471&knob_32.min=-2&knob_32.max=7.6&knob_31=-1.929&knob_31.min=-2&knob_31.max=1&knob_30=0.008&knob_30.min=-2&knob_30.max=1&knob_34=3.244&knob_34.min=-2&knob_34.max=4&knob_35=-2&knob_35.min=-2&knob_35.max=1&knob_36=-1.079&knob_36.min=-2&knob_36.max=1&knob_37=0.976&knob_37.min=-2&knob_37.max=1&knob_33=6.22&knob_33.min=0&knob_33.max=10&knob_40=0.307&knob_40.min=0&knob_40.max=1&variety=0.3&variety.min=-3&variety.max=3&knob_47=0.567&knob_47.min=0&knob_47.max=1&knob_46=0.992&knob_46.min=0&knob_46.max=1&knob_45=0.339&knob_45.min=0&knob_45.max=1&knob_44=0.567&knob_44.min=0&knob_44.max=1&fullscreen=true&history_size=2000&history_size.min=-3&history_size.max=3
+
+//http://localhost:6969/edit.html?knob_32=1.33&knob_32.min=-2&knob_32.max=7.6&knob_31=-0.94&knob_31.min=-2&knob_31.max=1&knob_30=0.01&knob_30.min=-2&knob_30.max=1&knob_34=0.74&knob_34.min=-2&knob_34.max=4&knob_35=-0.63&knob_35.min=-2&knob_35.max=1&knob_36=-1.71&knob_36.min=-2&knob_36.max=1&knob_37=-0.52&knob_37.min=-2&knob_37.max=1&knob_33=5.47&knob_33.min=0&knob_33.max=10&knob_40=0.45&knob_40.min=0&knob_40.max=1&variety=0.3&variety.min=-3&variety.max=3&knob_47=0.567&knob_47.min=0&knob_47.max=1&knob_46=0.992&knob_46.min=0&knob_46.max=1&knob_45=0.339&knob_45.min=0&knob_45.max=1&knob_44=0.567&knob_44.min=0&knob_44.max=1&fullscreen=true&history_size=3&history_size.min=-3&history_size.max=3
 #define PI 3.14159265359
 #define TAU (2.0*PI)
 
@@ -16,7 +17,7 @@
 
 // Improved zoom parameters
 #define ZOOM_SPEED (KNOB_ZOOM_SPEED * (1.0 + 0.3 * bassNormalized))
-#define ZOOM_FACTOR pow(1.02, abs(time * ZOOM_SPEED)) // Slower, more stable zoom
+#define ZOOM_FACTOR pow(1.02, time * ZOOM_SPEED) // Always zoom in
 #define FRACTAL_CENTER vec2(-0.745, 0.186) // Classic Mandelbrot interesting area
 
 // Spinning parameters
@@ -81,7 +82,7 @@ vec2 swirl(vec2 p, float strength) {
     float limitedStrength = strength * (1.0 - exp(-r * 3.0));
 
     // Apply balanced aspect correction to make shapes circular
-    float aspectCorrection = 1.0 + 0.1 * sin(r * 5.0 + time * 0.2);
+    float aspectCorrection = 1.0 + 0.05 * sin(r * 5.0 + time * 0.2);
     p.x *= aspectCorrection;
     p.y /= aspectCorrection;
 
@@ -89,7 +90,7 @@ vec2 swirl(vec2 p, float strength) {
     vec2 result = r * vec2(cos(a), sin(a));
 
     // Smooth transition to prevent seams
-    return mix(p, result, smoothstep(0.0, 0.2, r));
+    return mix(p, result, smoothstep(0.0, 0.3, r));
 }
 
 // Improved tie-dye warping effect with safety checks
@@ -104,7 +105,7 @@ vec2 tieDyeWarp(vec2 p, float time) {
     // Smoother aspect correction
     vec2 aspectCorrected = p;
     float angle = atan(p.y, p.x);
-    float aspectFactor = 1.0 + 0.05 * sin(angle * 3.0 + time * 0.2);
+    float aspectFactor = 1.0 + 0.03 * sin(angle * 3.0 + time * 0.2);
     aspectCorrected.x *= aspectFactor;
     aspectCorrected.y /= aspectFactor;
 
@@ -116,7 +117,8 @@ vec2 tieDyeWarp(vec2 p, float time) {
     float blend = smoothstep(0.0, 1.0, min(1.0, r * 1.5));
     vec2 warped = mix(p + p * ripple * (1.0 - r * 0.3), swirled, blend * 0.3);
 
-    return mix(p, warped, smoothstep(0.0, 0.3, 1.0 - r));
+    // Improved seam prevention
+    return mix(p, warped, smoothstep(0.0, 0.4, 1.0 - r));
 }
 
 // Enhanced Mandelbrot with improved stability and frame blending
@@ -274,17 +276,16 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Apply zoom with proper centering and safety checks
     float zoomScale = ZOOM_FACTOR;
-    // Prevent extreme zooming out
-    zoomScale = max(zoomScale, 1.0);
     // Prevent extreme zooming in
     zoomScale = min(zoomScale, 500.0);
 
-    uv = (uv - center) / zoomScale + center;
+    // Apply zoom with improved centering
+    vec2 zoomedUV = (uv - center) / zoomScale + center;
 
-    // Reduced warping effect
-    vec2 warpedUV = tieDyeWarp(uv, time * 0.05);
-    float warpBlend = 0.2 * (1.0 - exp(-length(uv) * 1.5));
-    uv = mix(uv, warpedUV, warpBlend);
+    // Reduced warping effect with improved seam handling
+    vec2 warpedUV = tieDyeWarp(zoomedUV, time * 0.05);
+    float warpBlend = 0.2 * (1.0 - exp(-length(zoomedUV) * 1.5));
+    uv = mix(zoomedUV, warpedUV, warpBlend);
 
     // Compute both fractals
     float m1 = tieDyeFractal(uv, time);
@@ -305,7 +306,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Add tie-dye ripple effect with balanced aspect correction
     float rippleAngle = atan(uv.y - center.y, uv.x - center.x);
-    float aspectCorrection = 1.0 + 0.1 * sin(rippleAngle * 6.0 + time * 0.2);
+    float aspectCorrection = 1.0 + 0.05 * sin(rippleAngle * 6.0 + time * 0.2);
     vec2 correctedUV = uv - center;
     correctedUV.x *= aspectCorrection;
     correctedUV.y /= aspectCorrection;
