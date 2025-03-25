@@ -9,7 +9,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "node esbuild.build.js",
     "dev": "node esbuild.dev.js",
-    "format": "eslint --fix ."
+    "format": "eslint --fix .",
+    "serve": "node ./server/websocket.js"
   },
   "author": "hypnodroid",
   "license": "UNLICENSED",
