@@ -1,5 +1,4 @@
-
-//http://localhost:6969/edit.html?knob_32=1.33&knob_32.min=-2&knob_32.max=7.6&knob_31=-0.94&knob_31.min=-2&knob_31.max=1&knob_30=0.01&knob_30.min=-2&knob_30.max=1&knob_34=0.74&knob_34.min=-2&knob_34.max=4&knob_35=-0.63&knob_35.min=-2&knob_35.max=1&knob_36=-1.71&knob_36.min=-2&knob_36.max=1&knob_37=-0.52&knob_37.min=-2&knob_37.max=1&knob_33=5.47&knob_33.min=0&knob_33.max=10&knob_40=0.45&knob_40.min=0&knob_40.max=1&variety=0.3&variety.min=-3&variety.max=3&knob_47=0.567&knob_47.min=0&knob_47.max=1&knob_46=0.992&knob_46.min=0&knob_46.max=1&knob_45=0.339&knob_45.min=0&knob_45.max=1&knob_44=0.567&knob_44.min=0&knob_44.max=1&fullscreen=true&history_size=3&history_size.min=-3&history_size.max=3
+//http://localhost:6969/edit.html?knob_32=0.24&knob_32.min=0&knob_32.max=1&knob_31=0.76&knob_31.min=0&knob_31.max=1&knob_30=0.02&knob_30.min=0&knob_30.max=1&knob_34=0.71&knob_34.min=0&knob_34.max=1&knob_35=0.63&knob_35.min=0&knob_35.max=1&knob_36=0.7&knob_36.min=0&knob_36.max=1&knob_37=0.58&knob_37.min=0&knob_37.max=1&knob_33=0.75&knob_33.min=0&knob_33.max=1&knob_40=0.5&knob_40.min=0&knob_40.max=1&fullscreen=true
 #define PI 3.14159265359
 #define TAU (2.0*PI)
 
@@ -134,10 +133,20 @@ float tieDyeFractal(vec2 c, float time) {
     float minDist = 1000.0;
     vec2 trap = vec2(sin(time * 0.1), cos(time * 0.1)) * 2.0;
 
-    // Get previous frame color for blending with proper coordinate transformation
-    vec2 prevUV = (c + vec2(1.0)) * 0.5; // Transform from [-1,1] to [0,1]
+    // Fix for the central seam - process coordinates differently for middle region
+    float centralRegion = smoothstep(0.05, 0.2, abs(c.x)) * smoothstep(0.05, 0.2, abs(c.y));
+
+    // Improved coordinate handling for frame blending - avoid using fract which can cause discontinuities
+    vec2 prevUV = (c + vec2(1.0)) * 0.5;
+    // Ensure UV is in range [0,1] without using fract (which causes seams)
+    prevUV = clamp(prevUV, 0.0, 1.0);
     vec4 prevColor = getLastFrameColor(prevUV);
-    float prevFrameInfluence = 0.3 * (1.0 - length(c) * 0.2); // Fade out at edges
+
+    // Radial falloff to eliminate seams - avoid sharp transitions in the center
+    float dist = length(c);
+    // Modified falloff that handles the center differently
+    float edgeFalloff = smoothstep(0.0, 0.8, 1.0 - dist) * centralRegion;
+    float prevFrameInfluence = 0.3 * edgeFalloff;
 
     for (float i = 0.0; i < maxIter; i++) {
         // Standard mandelbrot iteration: z = z^2 + c
@@ -146,8 +155,15 @@ float tieDyeFractal(vec2 c, float time) {
         // Apply tie-dye warping with reduced effect for stability
         if (i > 10.0) { // Skip more iterations for stability
             // Scale down warping based on iteration to prevent stretching
-            float warpScale = 0.03 * (1.0 - i/maxIter);
-            z = mix(z, tieDyeWarp(z, time), warpScale);
+            float warpScale = 0.02 * (1.0 - i/maxIter);
+
+            // Apply warping smoothly with radius-based falloff to prevent seams
+            float warpFalloff = smoothstep(0.0, 0.5, 1.0 - length(z) / 10.0);
+
+            // Additional check to avoid warping near the coordinate origin
+            float centralWarpAvoidance = smoothstep(0.0, 0.2, length(z));
+
+            z = mix(z, tieDyeWarp(z, time), warpScale * warpFalloff * centralWarpAvoidance);
         }
 
         // Track minimum distance to orbit trap
@@ -164,9 +180,20 @@ float tieDyeFractal(vec2 c, float time) {
     // Combine iteration count with orbit trap
     float orbitFactor = 0.5 + 0.5 * sin(minDist * 5.0);
 
-    // Normalize and blend with previous frame
+    // Normalize and blend with previous frame - reduce influence near center line
     float baseValue = mix(iter / maxIter, orbitFactor, 0.3);
-    return mix(baseValue, prevColor.r, prevFrameInfluence);
+
+    // Apply smooth transition across the x=0 line
+    float seamFix = smoothstep(-0.1, 0.1, c.x);
+    float seamBlend = mix(baseValue, prevColor.r, prevFrameInfluence * seamFix * (1.0 - seamFix) * 4.0);
+
+    // Final result with temporal smoothing
+    float result = mix(baseValue, seamBlend, centralRegion);
+
+    // Smooth out sharp transitions
+    result = mix(result, baseValue, 0.2 * abs(sin(time * 0.1)));
+
+    return result;
 }
 
 // Improved Julia set variation with frame blending
@@ -184,18 +211,35 @@ float juliaFractal(vec2 z, float time) {
     float minDist = 1000.0;
     vec2 trap = vec2(sin(time * 0.2), cos(time * 0.17)) * 2.0;
 
-    // Get previous frame color for blending with proper coordinate transformation
-    vec2 prevUV = (z + vec2(1.0)) * 0.5; // Transform from [-1,1] to [0,1]
+    // Fix for the central seam - process coordinates differently for middle region
+    float centralRegion = smoothstep(0.05, 0.2, abs(z.x)) * smoothstep(0.05, 0.2, abs(z.y));
+
+    // Improved coordinate handling for frame blending - avoid using fract which can cause discontinuities
+    vec2 prevUV = (z + vec2(1.0)) * 0.5;
+    // Ensure UV is in range [0,1] without using fract (which causes seams)
+    prevUV = clamp(prevUV, 0.0, 1.0);
     vec4 prevColor = getLastFrameColor(prevUV);
-    float prevFrameInfluence = 0.3 * (1.0 - length(z) * 0.2); // Fade out at edges
+
+    // Radial falloff to eliminate seams - avoid sharp transitions in the center
+    float dist = length(z);
+    // Modified falloff that handles the center differently
+    float edgeFalloff = smoothstep(0.0, 0.8, 1.0 - dist) * centralRegion;
+    float prevFrameInfluence = 0.3 * edgeFalloff;
 
     for (float i = 0.0; i < maxIter; i++) {
         // Apply tie-dye warping with reduced effect
-        float warpScale = 0.02 * (1.0 - i/maxIter);
-        z = mix(z, tieDyeWarp(z, time), warpScale);
+        float warpScale = 0.015 * (1.0 - i/maxIter);
+
+        // Apply warping smoothly with radius-based falloff to prevent seams
+        float warpFalloff = smoothstep(0.0, 0.5, 1.0 - length(z) / 8.0);
+
+        // Additional check to avoid warping near the coordinate origin
+        float centralWarpAvoidance = smoothstep(0.0, 0.2, length(z));
+
+        z = mix(z, tieDyeWarp(z, time), warpScale * warpFalloff * centralWarpAvoidance);
 
         // Julia iteration with limited power to prevent stretching
-        float power = 2.0 + spectralCentroidNormalized * 0.3;
+        float power = 2.0 + spectralCentroidNormalized * 0.2; // Reduced audio influence
         z = cpow(z, power) + c;
 
         // Track minimum distance to orbit trap
@@ -212,9 +256,20 @@ float juliaFractal(vec2 z, float time) {
     // Combine iteration count with orbit trap
     float orbitFactor = 0.5 + 0.5 * sin(minDist * 5.0);
 
-    // Normalize and blend with previous frame
+    // Normalize and blend with previous frame - reduce influence near center line
     float baseValue = mix(iter / maxIter, orbitFactor, 0.3);
-    return mix(baseValue, prevColor.r, prevFrameInfluence);
+
+    // Apply smooth transition across the x=0 line
+    float seamFix = smoothstep(-0.1, 0.1, z.x);
+    float seamBlend = mix(baseValue, prevColor.r, prevFrameInfluence * seamFix * (1.0 - seamFix) * 4.0);
+
+    // Final result with temporal smoothing
+    float result = mix(baseValue, seamBlend, centralRegion);
+
+    // Smooth out sharp transitions
+    result = mix(result, baseValue, 0.2 * abs(sin(time * 0.1)));
+
+    return result;
 }
 
 // Function to check if pixel and surrounding area is too bright
@@ -282,10 +337,24 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Apply zoom with improved centering
     vec2 zoomedUV = (uv - center) / zoomScale + center;
 
+    // Get edge distance for anti-seam measures
+    float edgeDist = length(zoomedUV) / length(vec2(aspectRatio, 1.0));
+    float edgeFactor = smoothstep(0.8, 1.0, 1.0 - edgeDist);
+
+    // Add special handling for the central seam
+    float centralSeamFix = smoothstep(-0.1, 0.1, zoomedUV.x) * (1.0 - smoothstep(-0.1, 0.1, zoomedUV.x));
+    centralSeamFix = 1.0 - centralSeamFix * 0.5; // Reduce effects near the center line
+
     // Reduced warping effect with improved seam handling
     vec2 warpedUV = tieDyeWarp(zoomedUV, time * 0.05);
-    float warpBlend = 0.2 * (1.0 - exp(-length(zoomedUV) * 1.5));
-    uv = mix(zoomedUV, warpedUV, warpBlend);
+
+    // Apply non-linear warping to avoid grid-like seams
+    float warpBlend = 0.15 * (1.0 - exp(-length(zoomedUV) * 1.5));
+    // Reduce warping near edges and center
+    warpBlend *= (1.0 - 0.5 * edgeFactor) * centralSeamFix;
+
+    // Use smoothstep for smoother blend transitions
+    uv = mix(zoomedUV, warpedUV, smoothstep(0.0, 1.0, warpBlend));
 
     // Compute both fractals
     float m1 = tieDyeFractal(uv, time);
@@ -293,6 +362,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Blend between fractals based on audio with smooth transition
     float blendFactor = FRACTAL_BLEND * (1.0 - 0.5 * exp(-length(uv - center) * 3.0));
+
+    // Use sin function for continuous smooth oscillation between fractals
+    blendFactor *= 0.5 + 0.5 * sin(time * 0.1);
+
+    // Reduce fractal blending near the central seam
+    blendFactor *= centralSeamFix;
+
     float m = mix(m1, m2, blendFactor);
 
     // Create base color with tie-dye palette
@@ -302,30 +378,37 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Add swirling detail bands with smooth transition
     float bands = sin(m * 50.0 * DETAIL + time) * 0.5 + 0.5;
     float bandBlend = 0.5 * (1.0 - 0.3 * exp(-length(uv - center) * 2.0));
+    // Reduce band intensity near edges to avoid seams
+    bandBlend *= (1.0 - 0.7 * edgeFactor);
     col = mix(col, secondaryPalette(fract(colorIndex + 0.33)), bands * bandBlend);
 
     // Add tie-dye ripple effect with balanced aspect correction
     float rippleAngle = atan(uv.y - center.y, uv.x - center.x);
-    float aspectCorrection = 1.0 + 0.05 * sin(rippleAngle * 6.0 + time * 0.2);
+    float aspectCorrection = 1.0 + 0.03 * sin(rippleAngle * 6.0 + time * 0.2);
     vec2 correctedUV = uv - center;
     correctedUV.x *= aspectCorrection;
     correctedUV.y /= aspectCorrection;
 
     float rippleDist = length(correctedUV);
     float ripples = 0.5 + 0.5 * sin(rippleDist * 15.0 - time);
-    float rippleBlend = 0.2 * (1.0 - 0.3 * exp(-rippleDist * 2.0));
+    float rippleBlend = 0.15 * (1.0 - 0.3 * exp(-rippleDist * 2.0));
+    // Reduce ripple intensity near edges
+    rippleBlend *= (1.0 - 0.6 * edgeFactor);
     col = mix(col, tieDyePalette(fract(colorIndex + 0.67)), ripples * rippleBlend);
 
     // Add spiral patterns with balanced aspect correction
     float spiralAngle = atan(uv.y - center.y, uv.x - center.x);
     float spiralDist = length(uv - center);
     float spiral = 0.5 + 0.5 * sin(spiralAngle * 8.0 + spiralDist * 15.0 - time);
-    float spiralBlend = 0.2 * (1.0 - 0.3 * exp(-spiralDist * 2.0));
+    float spiralBlend = 0.15 * (1.0 - 0.3 * exp(-spiralDist * 2.0));
+    // Reduce spiral intensity near edges
+    spiralBlend *= (1.0 - 0.6 * edgeFactor);
     col = mix(col, secondaryPalette(fract(colorIndex + 0.5)), spiral * spiralBlend);
 
     // Add beat response with reduced intensity
     if (beat) {
         float beatIntensity = KNOB_BEAT_INTENSITY * bassNormalized * (1.0 - 0.5 * exp(-length(uv - center) * 3.0));
+        beatIntensity *= (1.0 - 0.7 * edgeFactor); // Reduce beat effect near edges
         col = mix(col, vec3(1.0), beatIntensity);
     }
 
@@ -342,8 +425,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Get brightness amount for smooth transitions
     float brightnessAmount = getBrightnessAmount(fragCoord.xy / iResolution.xy, pixelSize);
 
-    // Smooth color mixing with previous frame
-    col = mix(col, prevColor, 0.7);
+    // Enhanced frame blending - increase blend factor
+    col = mix(col, prevColor, 0.75);
 
     // Mix with previous frame if too bright
     col = mix(col, prevColor, brightnessAmount);
