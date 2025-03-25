@@ -15,9 +15,9 @@
 #define KNOB_ENERGY_BOOST knob_44
 
 // Improved zoom parameters
-#define ZOOM_SPEED (KNOB_ZOOM_SPEED * (1.0 + 0.3 * bassNormalized))
-#define ZOOM_FACTOR pow(1.02, time * ZOOM_SPEED) // Always zoom in
-#define FRACTAL_CENTER vec2(-0.745, 0.186) // Classic Mandelbrot interesting area
+#define ZOOM_SPEED (KNOB_ZOOM_SPEED * 0.05 * (1.0 + 0.3 * bassNormalized))
+#define ZOOM_FACTOR pow(1.01, time * ZOOM_SPEED) // Slower, more stable zoom
+#define FRACTAL_CENTER vec2(-0.77, 0.135) // More interesting Mandelbrot area targeting an arm
 
 // Spinning parameters
 #define SPIN_SPEED (KNOB_SPIN_SPEED * (1.0 + 0.2 * midsNormalized))
@@ -131,10 +131,23 @@ float tieDyeFractal(vec2 c, float time) {
 
     // Store minimum distance to orbit for trap coloring
     float minDist = 1000.0;
-    vec2 trap = vec2(sin(time * 0.1), cos(time * 0.1)) * 2.0;
+    // Multiple orbit traps for more detail
+    vec2 trap1 = vec2(sin(time * 0.1), cos(time * 0.1)) * 2.0;
+    vec2 trap2 = vec2(cos(time * 0.17), sin(time * 0.13)) * 1.5;
+    vec2 trap3 = vec2(sin(time * 0.21 + bassNormalized), cos(time * 0.19 + trebleNormalized));
 
-    // Fix for the central seam - process coordinates differently for middle region
-    float centralRegion = smoothstep(0.05, 0.2, abs(c.x)) * smoothstep(0.05, 0.2, abs(c.y));
+    // Keep track of the last several z values for detailed patterns
+    vec2 zHistory[5];
+    for (int i = 0; i < 5; i++) {
+        zHistory[i] = vec2(0.0);
+    }
+
+    // Fix for the central seam and mirroring - use a larger central region
+    float centralRegion = smoothstep(0.05, 0.3, abs(c.x)) * smoothstep(0.05, 0.3, abs(c.y));
+
+    // Fix for mirroring seam - detect the quadrant we're in
+    float quadrant = step(0.0, c.x) * 2.0 + step(0.0, c.y);
+    float quadrantBlend = smoothstep(0.0, 0.2, abs(c.x)) * smoothstep(0.0, 0.2, abs(c.y));
 
     // Improved coordinate handling for frame blending - avoid using fract which can cause discontinuities
     vec2 prevUV = (c + vec2(1.0)) * 0.5;
@@ -148,26 +161,64 @@ float tieDyeFractal(vec2 c, float time) {
     float edgeFalloff = smoothstep(0.0, 0.8, 1.0 - dist) * centralRegion;
     float prevFrameInfluence = 0.3 * edgeFalloff;
 
+    // Detect if we're in the main bulb of the Mandelbrot set
+    // Using a cardioid test for main bulb and circle test for period-2 bulb
+    float q = (c.x - 0.25) * (c.x - 0.25) + c.y * c.y;
+    bool inCardioid = q * (q + (c.x - 0.25)) < 0.25 * c.y * c.y;
+    bool inCircle = (c.x + 1.0) * (c.x + 1.0) + c.y * c.y < 0.0625;
+    bool isInMainArea = inCardioid || inCircle;
+
+    // Special inner detail value - will be used if we're in the main set
+    float innerDetail = 0.0;
+
+    // Record min/max values for normalization
+    float maxMagnitude = 0.0;
+    float maxDistance = 0.0;
+
     for (float i = 0.0; i < maxIter; i++) {
+        // Shift history values
+        for (int j = 4; j > 0; j--) {
+            zHistory[j] = zHistory[j-1];
+        }
+        zHistory[0] = z;
+
         // Standard mandelbrot iteration: z = z^2 + c
         z = vec2(z.x*z.x - z.y*z.y, 2.0*z.x*z.y) + c;
+
+        // Track maximum magnitude for inner detail
+        maxMagnitude = max(maxMagnitude, length(z));
 
         // Apply tie-dye warping with reduced effect for stability
         if (i > 10.0) { // Skip more iterations for stability
             // Scale down warping based on iteration to prevent stretching
-            float warpScale = 0.02 * (1.0 - i/maxIter);
+            float warpScale = 0.015 * (1.0 - i/maxIter); // Reduced from 0.02
 
             // Apply warping smoothly with radius-based falloff to prevent seams
             float warpFalloff = smoothstep(0.0, 0.5, 1.0 - length(z) / 10.0);
 
             // Additional check to avoid warping near the coordinate origin
-            float centralWarpAvoidance = smoothstep(0.0, 0.2, length(z));
+            float centralWarpAvoidance = smoothstep(0.0, 0.3, length(z));
 
-            z = mix(z, tieDyeWarp(z, time), warpScale * warpFalloff * centralWarpAvoidance);
+            // Add quadrant awareness to prevent mirroring seams
+            float quadrantCorrection = mix(1.0, smoothstep(0.0, 0.2, abs(atan(z.y, z.x) / PI - 0.5)), 0.5);
+
+            z = mix(z, tieDyeWarp(z, time), warpScale * warpFalloff * centralWarpAvoidance * quadrantCorrection);
         }
 
-        // Track minimum distance to orbit trap
-        minDist = min(minDist, length(z - trap));
+        // Track minimum distance to orbit traps
+        minDist = min(minDist, length(z - trap1));
+        minDist = min(minDist, length(z - trap2) * 1.3); // Weight differently for variety
+        minDist = min(minDist, length(z - trap3) * 1.5);
+
+        // Calculate distances between history points for inner detail
+        if (i > 5.0) {
+            float historyDistance = length(z - zHistory[4]); // Distance to point 5 iterations ago
+            maxDistance = max(maxDistance, historyDistance);
+
+            // Create a rich inner pattern based on the path the orbit takes
+            float angle = atan(z.y, z.x);
+            innerDetail += 0.1 * sin(angle * 8.0 + time * 0.2) + 0.1 * cos(length(z) * 5.0 - time * 0.3);
+        }
 
         // Check for escape
         if (dot(z, z) > escapeRadius) {
@@ -177,18 +228,70 @@ float tieDyeFractal(vec2 c, float time) {
         }
     }
 
+    // If we didn't escape, we're inside the set - use inner detail
+    if (iter >= maxIter - 1.0 || isInMainArea) {
+        // Normalize inner detail values
+        float normalizedMagnitude = maxMagnitude / escapeRadius;
+        float normalizedDistance = maxDistance / escapeRadius;
+
+        // Create a detailed pattern for the interior
+        float angle = atan(c.y, c.x);
+        float radius = length(c);
+
+        // Multiple overlapping patterns
+        float pattern1 = 0.5 + 0.5 * sin(angle * 12.0 + time * 0.2);
+        float pattern2 = 0.5 + 0.5 * cos(radius * 20.0 - time * 0.3);
+        float pattern3 = 0.5 + 0.5 * sin(c.x * 15.0 + c.y * 15.0 + time * 0.25);
+
+        // Fractal noise pattern based on coordinates
+        float noise = 0.0;
+        for (float i = 1.0; i < 6.0; i++) {
+            float scale = pow(2.0, i);
+            noise += (sin(c.x * scale + time * 0.1) * cos(c.y * scale + time * 0.15)) / scale;
+        }
+        noise = 0.5 + 0.5 * noise;
+
+        // Combine patterns with noise and inner detail
+        innerDetail = mix(
+            mix(pattern1, pattern2, 0.5),
+            mix(pattern3, noise, 0.5),
+            0.5 + 0.3 * sin(time * 0.1)
+        );
+
+        // Add subtle audio reactivity
+        innerDetail = mix(
+            innerDetail,
+            0.5 + 0.5 * sin(innerDetail * TAU + bassNormalized * 2.0),
+            midsNormalized
+        );
+
+        // Use the inner detail value instead of iteration count
+        iter = maxIter * innerDetail;
+    }
+
     // Combine iteration count with orbit trap
     float orbitFactor = 0.5 + 0.5 * sin(minDist * 5.0);
 
     // Normalize and blend with previous frame - reduce influence near center line
-    float baseValue = mix(iter / maxIter, orbitFactor, 0.3);
+    float baseValue;
+    if (iter >= maxIter - 1.0 || isInMainArea) {
+        // For inner areas, use the inner detail value
+        baseValue = mix(innerDetail, orbitFactor, 0.4);
+    } else {
+        // For outer areas, use the traditional iteration count
+        baseValue = mix(iter / maxIter, orbitFactor, 0.3);
+    }
 
-    // Apply smooth transition across the x=0 line
-    float seamFix = smoothstep(-0.1, 0.1, c.x);
-    float seamBlend = mix(baseValue, prevColor.r, prevFrameInfluence * seamFix * (1.0 - seamFix) * 4.0);
+    // Enhanced seamfix to address mirroring
+    float seamFix = smoothstep(-0.15, 0.15, c.x) * (1.0 - smoothstep(-0.15, 0.15, c.x)) * 2.0;
+    seamFix += smoothstep(-0.15, 0.15, c.y) * (1.0 - smoothstep(-0.15, 0.15, c.y)) * 2.0;
+    seamFix = clamp(seamFix, 0.0, 1.0);
+
+    // Blend differently based on quadrant to prevent mirroring seams
+    float seamBlend = mix(baseValue, prevColor.r, prevFrameInfluence * (1.0 - seamFix));
 
     // Final result with temporal smoothing
-    float result = mix(baseValue, seamBlend, centralRegion);
+    float result = mix(baseValue, seamBlend, quadrantBlend);
 
     // Smooth out sharp transitions
     result = mix(result, baseValue, 0.2 * abs(sin(time * 0.1)));
@@ -198,10 +301,10 @@ float tieDyeFractal(vec2 c, float time) {
 
 // Improved Julia set variation with frame blending
 float juliaFractal(vec2 z, float time) {
-    // Julia set parameters that change with time and audio
+    // Julia set parameters that change with time and audio - target more interesting shapes
     vec2 c = vec2(
-        0.38 + 0.02 * sin(time * 0.1 + bassNormalized),
-        0.28 + 0.02 * cos(time * 0.13 + trebleNormalized)
+        0.355 + 0.02 * sin(time * 0.1 + bassNormalized),
+        0.355 + 0.02 * cos(time * 0.13 + trebleNormalized)
     );
 
     float iter = 0.0;
@@ -211,8 +314,12 @@ float juliaFractal(vec2 z, float time) {
     float minDist = 1000.0;
     vec2 trap = vec2(sin(time * 0.2), cos(time * 0.17)) * 2.0;
 
-    // Fix for the central seam - process coordinates differently for middle region
-    float centralRegion = smoothstep(0.05, 0.2, abs(z.x)) * smoothstep(0.05, 0.2, abs(z.y));
+    // Fix for the central seam and mirroring - use a larger central region
+    float centralRegion = smoothstep(0.05, 0.3, abs(z.x)) * smoothstep(0.05, 0.3, abs(z.y));
+
+    // Fix for mirroring seam - detect the quadrant we're in
+    float quadrant = step(0.0, z.x) * 2.0 + step(0.0, z.y);
+    float quadrantBlend = smoothstep(0.0, 0.2, abs(z.x)) * smoothstep(0.0, 0.2, abs(z.y));
 
     // Improved coordinate handling for frame blending - avoid using fract which can cause discontinuities
     vec2 prevUV = (z + vec2(1.0)) * 0.5;
@@ -228,15 +335,18 @@ float juliaFractal(vec2 z, float time) {
 
     for (float i = 0.0; i < maxIter; i++) {
         // Apply tie-dye warping with reduced effect
-        float warpScale = 0.015 * (1.0 - i/maxIter);
+        float warpScale = 0.01 * (1.0 - i/maxIter); // Reduced from 0.015
 
         // Apply warping smoothly with radius-based falloff to prevent seams
         float warpFalloff = smoothstep(0.0, 0.5, 1.0 - length(z) / 8.0);
 
         // Additional check to avoid warping near the coordinate origin
-        float centralWarpAvoidance = smoothstep(0.0, 0.2, length(z));
+        float centralWarpAvoidance = smoothstep(0.0, 0.3, length(z));
 
-        z = mix(z, tieDyeWarp(z, time), warpScale * warpFalloff * centralWarpAvoidance);
+        // Add quadrant awareness to prevent mirroring seams
+        float quadrantCorrection = mix(1.0, smoothstep(0.0, 0.2, abs(atan(z.y, z.x) / PI - 0.5)), 0.5);
+
+        z = mix(z, tieDyeWarp(z, time), warpScale * warpFalloff * centralWarpAvoidance * quadrantCorrection);
 
         // Julia iteration with limited power to prevent stretching
         float power = 2.0 + spectralCentroidNormalized * 0.2; // Reduced audio influence
@@ -259,12 +369,16 @@ float juliaFractal(vec2 z, float time) {
     // Normalize and blend with previous frame - reduce influence near center line
     float baseValue = mix(iter / maxIter, orbitFactor, 0.3);
 
-    // Apply smooth transition across the x=0 line
-    float seamFix = smoothstep(-0.1, 0.1, z.x);
-    float seamBlend = mix(baseValue, prevColor.r, prevFrameInfluence * seamFix * (1.0 - seamFix) * 4.0);
+    // Enhanced seamfix to address mirroring
+    float seamFix = smoothstep(-0.15, 0.15, z.x) * (1.0 - smoothstep(-0.15, 0.15, z.x)) * 2.0;
+    seamFix += smoothstep(-0.15, 0.15, z.y) * (1.0 - smoothstep(-0.15, 0.15, z.y)) * 2.0;
+    seamFix = clamp(seamFix, 0.0, 1.0);
+
+    // Blend differently based on quadrant to prevent mirroring seams
+    float seamBlend = mix(baseValue, prevColor.r, prevFrameInfluence * (1.0 - seamFix));
 
     // Final result with temporal smoothing
-    float result = mix(baseValue, seamBlend, centralRegion);
+    float result = mix(baseValue, seamBlend, quadrantBlend);
 
     // Smooth out sharp transitions
     result = mix(result, baseValue, 0.2 * abs(sin(time * 0.1)));
@@ -330,9 +444,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     center += spinOffset * (0.5 + 0.5 * sin(time * 0.2));
 
     // Apply zoom with proper centering and safety checks
-    float zoomScale = ZOOM_FACTOR;
+    float zoomScale = max(ZOOM_FACTOR, 1.0); // Ensure zoom is at least 1.0 (no zoom out)
     // Prevent extreme zooming in
-    zoomScale = min(zoomScale, 500.0);
+    zoomScale = min(zoomScale, 2000.0); // Allow deeper zoom
 
     // Apply zoom with improved centering
     vec2 zoomedUV = (uv - center) / zoomScale + center;
@@ -341,15 +455,16 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float edgeDist = length(zoomedUV) / length(vec2(aspectRatio, 1.0));
     float edgeFactor = smoothstep(0.8, 1.0, 1.0 - edgeDist);
 
-    // Add special handling for the central seam
+    // Add special handling for the central seam with quadrant awareness
     float centralSeamFix = smoothstep(-0.1, 0.1, zoomedUV.x) * (1.0 - smoothstep(-0.1, 0.1, zoomedUV.x));
-    centralSeamFix = 1.0 - centralSeamFix * 0.5; // Reduce effects near the center line
+    centralSeamFix += smoothstep(-0.1, 0.1, zoomedUV.y) * (1.0 - smoothstep(-0.1, 0.1, zoomedUV.y));
+    centralSeamFix = 1.0 - clamp(centralSeamFix, 0.0, 1.0) * 0.5; // Reduce effects near center
 
     // Reduced warping effect with improved seam handling
     vec2 warpedUV = tieDyeWarp(zoomedUV, time * 0.05);
 
     // Apply non-linear warping to avoid grid-like seams
-    float warpBlend = 0.15 * (1.0 - exp(-length(zoomedUV) * 1.5));
+    float warpBlend = 0.1 * (1.0 - exp(-length(zoomedUV) * 1.5)); // Reduced from 0.15
     // Reduce warping near edges and center
     warpBlend *= (1.0 - 0.5 * edgeFactor) * centralSeamFix;
 
