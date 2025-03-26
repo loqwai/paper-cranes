@@ -71,7 +71,7 @@ bool sphere_inversion = true;
 #define MAX_MOONS 5
 #define SUN_SIZE 4.
 #define SUN_POSITION vec3(0.0, 0.0, 0.0)
-#define SUN_GLOW_INTENSITY (1.0 + energyNormalized * 60.0) // Reduced from 80.0 to avoid pure white
+#define SUN_GLOW_INTENSITY (1.0 + energyNormalized * 40.0) // Moderate glow intensity
 #define PLASMA_SPEED (bassNormalized*10.) // Plasma animation speed based on bass
 #define PLASMA_SCALE (energyMax/9.) // Plasma scale based on spectral centroid
 #define SUPERNOVA_THRESHOLD 0.9 // Threshold for supernova effect
@@ -229,11 +229,11 @@ vec2 sceneSDF(vec3 p) {
 vec3 getBodyColor(float body_id) {
     // Sun is body_id = 0
     if (body_id < 0.1) {
-        // Sun color - changes with music
+        // Sun color - changes with music - more fiery
         float energy = energyNormalized;
         return mix(
-            vec3(1.0, 0.8, 0.4), // Brighter cooler sun
-            vec3(1.0, 1.0, 0.8), // Even brighter hotter sun
+            vec3(1.0, 0.6, 0.1), // Hot orange base
+            vec3(1.0, 0.4, 0.0), // Even hotter red-orange
             energy
         );
     }
@@ -327,56 +327,75 @@ vec3 render(vec3 ray_origin, vec3 ray_dir) {
 
         // Different shading for sun vs planets
         if (body_id < 0.1) {
-            // Sun shader
+            // Sun shader - fiery plasma appearance
             float dist_to_center = length(p - SUN_POSITION);
 
             // Get previous frame's color for smooth blending
             vec2 uv = p.xy / iResolution.xy;
             vec3 lastFrameColor = getLastFrameColor(uv).rgb;
 
-            // Calculate plasma effect with much smaller scale to avoid tiling
+            // Calculate plasma effect with smaller scale and more turbulence
             vec3 plasma_pos = p - SUN_POSITION;
-            float plasma = plasmaMap(plasma_pos * 0.05);
+            float plasma = plasmaMap(plasma_pos * 0.08);
 
-            // Create plasma color with better color balance
-            float f = clamp((plasma - plasmaMap(plasma_pos * 0.05 + 0.1)) * 0.5, -0.1, 1.0);
-            vec3 plasma_color = vec3(0.3, 0.5, 0.6) + vec3(8.0, 4.0, 5.0) * f;
-            plasma_color = plasma_color * smoothstep(2.5, 0.0, plasma) * 1.0;
+            // Create fiery plasma color with better hot/cold contrast
+            float f = clamp((plasma - plasmaMap(plasma_pos * 0.08 + 0.05)) * 0.6, -0.1, 1.0);
 
-            // Convert to HSL and shift hue based on spectral centroid
-            plasma_color = rgb2hsl(plasma_color);
-            plasma_color.x = fract(plasma_color.x + spectralCentroid);
-            plasma_color = hsl2rgb(plasma_color);
-
-            // Enhanced corona effect with smoother falloff
-            float corona = smoothstep(SUN_SIZE * 1.0, SUN_SIZE * 0.2, dist_to_center);
-            float glow = SUN_GLOW_INTENSITY * (1.0 + energyNormalized * 20.0);
-
-            // Base sun color with energy-based variation - warmer colors
-            vec3 sun_base = mix(
-                vec3(1.0, 0.8, 0.4),  // Warm yellow
-                vec3(1.0, 0.6, 0.2),  // Hot orange
-                energyNormalized
+            // Fire-like color palette - yellow/orange/red
+            vec3 hot_color = mix(
+                vec3(1.0, 0.3, 0.0), // Hot orange-red
+                vec3(1.0, 0.1, 0.0), // Deep red
+                f * 0.5 + 0.5
             );
 
-            // Combine effects with increased brightness and outward radiation
-            final_color = sun_base * (1.0 + glow * corona * 4.0);
-            final_color += plasma_color * (1.0 + glow * corona * 2.0);
+            vec3 cool_color = mix(
+                vec3(1.0, 0.7, 0.2), // Yellow-orange
+                vec3(1.0, 0.5, 0.1), // Orange
+                f * 0.5 + 0.5
+            );
 
-            // Add intense core glow with outward radiation
-            float core_glow = smoothstep(SUN_SIZE * 0.4, 0.0, dist_to_center);
-            final_color += vec3(1.0, 0.9, 0.7) * core_glow * (1.0 + energyNormalized * 12.0) * 4.0;
+            // Mix based on plasma and energy
+            vec3 plasma_color = mix(cool_color, hot_color, f * energyNormalized);
 
-            // Add outward radiation effect with smoother falloff
-            float radiation = smoothstep(SUN_SIZE * 2.5, SUN_SIZE * 0.8, dist_to_center);
-            final_color += vec3(1.0, 0.8, 0.5) * radiation * (1.0 + energyNormalized * 5.0) * 2.0;
+            // Add turbulence to create fire-like effect
+            float turbulence = sin(plasma_pos.x * 0.3 + iTime) * sin(plasma_pos.y * 0.3 + iTime * 1.2) *
+                              sin(plasma_pos.z * 0.3 + iTime * 0.7) * 0.5 + 0.5;
 
-            // Blend with previous frame with reduced blend factor for more brightness
-            final_color = mix(final_color, lastFrameColor, 0.5);
+            plasma_color = mix(plasma_color, hot_color, turbulence * 0.4);
+
+            // Enhanced corona effect with fire-like falloff
+            float corona = smoothstep(SUN_SIZE * 1.2, SUN_SIZE * 0.3, dist_to_center);
+            float glow = SUN_GLOW_INTENSITY * (1.0 + energyNormalized * 15.0);
+
+            // Add flicker effect for fire
+            float flicker = sin(iTime * 10.0) * 0.05 + sin(iTime * 7.3) * 0.03 + sin(iTime * 15.7) * 0.02;
+            glow *= (1.0 + flicker * energyNormalized);
+
+            // Start with base sun color from getBodyColor
+            vec3 base_color = getBodyColor(body_id);
+
+            // Core color - very hot
+            vec3 core_color = vec3(1.0, 0.9, 0.7); // Almost white hot center
+
+            // Layer the effects
+            final_color = base_color * (1.0 + glow * corona * 3.0); // Base glow
+            final_color *= mix(vec3(1.0), plasma_color, 0.7); // Add plasma coloration
+
+            // Add intense core glow
+            float core_glow = smoothstep(SUN_SIZE * 0.5, 0.0, dist_to_center);
+            final_color += core_color * core_glow * (1.0 + energyNormalized * 8.0) * 3.0;
+
+            // Add fire-like flares that extend outward
+            float flare = pow(abs(sin(atan(plasma_pos.y, plasma_pos.x) * 5.0 + iTime)), 5.0) *
+                          smoothstep(SUN_SIZE * 2.0, SUN_SIZE * 0.8, dist_to_center);
+            final_color += hot_color * flare * energyNormalized * 2.0;
+
+            // Blend with previous frame for temporal stability
+            final_color = mix(final_color, lastFrameColor, 0.6);
         } else {
             // Planet or moon shader
-            // Lighting from sun - fixed direction
-            vec3 to_sun = normalize(SUN_POSITION - p); // Fixed direction - light comes FROM the sun
+            // Lighting from sun - correct direction
+            vec3 to_sun = normalize(SUN_POSITION - p); // Light comes FROM the sun TO the planets
             float sun_dist = length(SUN_POSITION - p);
             float sun_atten = 40.0 / (1.0 + sun_dist * sun_dist * 0.01);
 
@@ -426,7 +445,7 @@ vec3 render(vec3 ray_origin, vec3 ray_dir) {
             // Combine lighting with improved dark side
             final_color = base_color * (ambient_light + sun_diffuse * sun_light) * ao + atmosphere;
 
-            // Add specular highlight from sun
+            // Add specular highlight from sun (correct reflection direction)
             float spec = pow(max(0.0, dot(reflect(-to_sun, normal), -ray_dir)), 16.0);
             final_color += sun_light * spec * 0.5;
 
