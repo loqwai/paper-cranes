@@ -43,3 +43,21 @@ window.addEventListener('message', function(event) {
     window.cranes.messageParams[key] = value
   })
 })
+
+// Add listener for esbuild reload events
+if (process.env.LIVE_RELOAD) {
+  try {
+    const eventSource = new EventSource('/esbuild')
+    eventSource.addEventListener('change', () => {
+      console.log('Received change event from esbuild, reloading page')
+      window.stop()
+      window.location.reload()
+    })
+    eventSource.addEventListener('error', (err) => {
+      console.error('Error with esbuild EventSource:', err)
+    })
+    console.log('Listening for esbuild live reload events')
+  } catch (error) {
+    console.error('Failed to set up esbuild live reload listener:', error)
+  }
+}
