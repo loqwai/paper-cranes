@@ -1,10 +1,10 @@
 #define EPSILON 0.0000001
 
-#define PROBE_1 mix(1.,1.4,spectralCentroidNormalized)+EPSILON
-#define PROBE_2 mix(0.60,2.,spectralFluxNormalized)+EPSILON /* 'fan out' swirls -> multiple squares */
-#define PROBE_3 mix(-1.5,10.,energyZScore)+EPSILON /* color */
-#define PROBE_4 mix(1.,11.,trebleNormalized)+EPSILON
-#define PROBE_5 mix(0.47,0.97,spectralKurtosisNormalized)+EPSILON /* complexity + zoom */
+#define PROBE_1 mix(1.,1.2,spectralCentroidNormalized)+EPSILON
+#define PROBE_2 mix(0.60,1.,spectralFluxNormalized)+EPSILON /* 'fan out' swirls -> multiple squares */
+#define PROBE_3 mix(-1.5,1.,energyZScore)+EPSILON /* color */
+#define PROBE_4 mix(1.,1.2,trebleNormalized)+EPSILON
+#define PROBE_5 mix(0.47,0.67,spectralKurtosisNormalized)+EPSILON /* complexity + zoom */
 #define PROBE_6 mix(0.4,0.2,energyNormalized)+EPSILON /*zoom */
 
 // Descriptive function to apply periodic transformation and trap calculations

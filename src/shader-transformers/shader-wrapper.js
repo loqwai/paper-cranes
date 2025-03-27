@@ -17,6 +17,10 @@ export const shaderWrapper = (shader) => {
         lines.unshift(firstLine)
         return lines.join('\n')
     }
+
+    // For debugging purposes - detect if this is a shader testing setTime
+    const isTestingSetTime = shader.includes('setTime(0.');
+
     if (shader.includes('mainImage')) {
         return /* glsl */ `#version 300 es
 precision highp float;
@@ -28,8 +32,6 @@ ${shaderToyCompatibilityUniforms()}
 ${getAudioUniforms()}
 ${getKnobUniforms(shader)}
 
-uniform sampler2D prevTimeFrame;
-
 ${paperCranes()}
 
 vec4 getLastFrameColor(vec2 uv) {
@@ -40,31 +42,35 @@ vec4 getInitialFrameColor(vec2 uv) {
     return texture(initialFrame, uv);
 }
 
-bool didSetTime = false;
+#define getTimeColor(uv) 1. -texture(prevTimeFrame, uv)
 
-float getTime() {
-    vec4 prevTime = texture(prevTimeFrame, vec2(0.5, 0.5));
-    return prevTime.b > 0.0 ? prevTime.x + deltaTime : iTime;
-}
+
 
 float getTime(vec2 uv) {
-    vec4 prevTime = texture(prevTimeFrame, uv);
-    if(prevTime.b > 0.0) return prevTime.x + deltaTime;
-    return getTime();
+    return getTimeColor(uv).x * 1000.;
 }
+
+float getTime() {
+    // Simply return the time value from the previous frame's time texture
+    // If the blue channel is set, use the stored time, otherwise use the global time
+    // Do NOT add deltaTime here - it will lead to double-accumulation
+    return getTime(vec2(0.5, 0.5));
+}
+
 
 void setTime(float t) {
-    timeColor = vec4(t, 0.0, 1.0, 1.0);
-    didSetTime = true;
+    // Store the exact time value provided without adding deltaTime
+    timeColor = vec4(t, 1., 1.0, 1.0);
 }
-
 // 31CF3F64-9176-4686-9E52-E3CFEC21FE72
 ${shader}
 
 void main(void) {
-    mainImage(fragColor, gl_FragCoord.xy);
-    if (!didSetTime) timeColor = vec4(getTime()-deltaTime, 0.0, 0.0, 1.0);
 
+    timeColor = getTimeColor(gl_FragCoord.xy);
+    // Call the user's shader code first
+    mainImage(fragColor, gl_FragCoord.xy);
+    timeColor.x = _time/1000.;
 }
 `
     }
@@ -79,7 +85,9 @@ uniform sampler2D iChannel0;
 uniform sampler2D iChannel1;
 uniform sampler2D iChannel2;
 uniform sampler2D iChannel3;
+uniform sampler2D prevTimeFrame;
 uniform int iFrame;
+
 `
 const getAudioUniforms = () => {
     return [...Object.keys(getFlatAudioFeatures()), 'beat']
@@ -91,6 +99,7 @@ const getAudioUniforms = () => {
 const paperCranes = () => /* glsl */ `
 uniform float deltaTime;
 uniform float time;
+uniform float _time;
 
 uniform vec2 resolution;// iResolution equivalent
 

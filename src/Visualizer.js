@@ -32,14 +32,14 @@ const getTexture = async (gl, url) => {
 }
 
 // Create a texture specifically for initializing time data
-const createTimeInitTexture = (gl) => {
+const createTimeInitTexture = (gl, initialTexture) => {
     return createTexture(gl, {
         width: 1,
         height: 1,
-        min: gl.LINEAR,
-        mag: gl.LINEAR,
-        wrap: gl.CLAMP_TO_EDGE,
-        src: new Uint8Array([0, 0, 0, 255]) // RGBA: (0,0,0,1) - Initial time of 0
+        min: gl.NEAREST_EXACT,
+        mag: gl.NEAREST_EXACT,
+        wrap: gl.WRAP,
+        src: initialTexture
     });
 }
 
@@ -121,17 +121,26 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
     }
 
     const initialTexture = await getTexture(gl, initialImageUrl)
-    const initialTimeTexture = createTimeInitTexture(gl)
+
+    // Create a proper time initialization texture with the blue channel set to 1
+    const initialTimeTexture = createTexture(gl, {
+        width: 1,
+        height: 1,
+        min: gl.NEAREST_EXACT,
+        mag: gl.NEAREST_EXACT,
+        wrap: gl.CLAMP_TO_EDGE,
+        src: new Uint8Array([0, 0, 255, 255]) // RGBA: (0,0,1,1) - Initial time of 0 with blue flag set
+    });
 
     // Create frame buffers with two color attachments
     const frameBuffers = [
         createFramebufferInfo(gl, [
-            { format: gl.RGBA, type: gl.UNSIGNED_BYTE, min: gl.LINEAR, mag: gl.LINEAR, wrap: gl.CLAMP_TO_EDGE },  // Main color output
-            { format: gl.RGBA, type: gl.UNSIGNED_BYTE, min: gl.LINEAR, mag: gl.LINEAR, wrap: gl.CLAMP_TO_EDGE }   // Time color output
+            { format: gl.RGBA, type: gl.UNSIGNED_BYTE, min: gl.LINEAR, mag: gl.LINEAR, wrap: gl.WRAP },  // Main color output
+            { format: gl.RGBA, type: gl.UNSIGNED_BYTE, min: gl.NEAREST_EXACT, mag: gl.NEAREST_EXACT, wrap: gl.WRAP }   // Time color output
         ]),
         createFramebufferInfo(gl, [
-            { format: gl.RGBA, type: gl.UNSIGNED_BYTE, min: gl.LINEAR, mag: gl.LINEAR, wrap: gl.CLAMP_TO_EDGE },  // Main color output
-            { format: gl.RGBA, type: gl.UNSIGNED_BYTE, min: gl.LINEAR, mag: gl.LINEAR, wrap: gl.CLAMP_TO_EDGE }   // Time color output
+            { format: gl.RGBA, type: gl.UNSIGNED_BYTE, min: gl.LINEAR, mag: gl.LINEAR, wrap: gl.WRAP },  // Main color output
+            { format: gl.RGBA, type: gl.UNSIGNED_BYTE, min: gl.NEAREST_EXACT, mag: gl.NEAREST_EXACT, wrap: gl.WRAP }   // Time color output
         ])
     ]
     const bufferInfo = createBufferInfoFromArrays(gl, { position: positions })
@@ -181,15 +190,24 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         const frame = frameBuffers[frameNumber % 2]
         const prevFrame = frameBuffers[(frameNumber + 1) % 2]
 
+        // Start by clearing the frame buffer to ensure clean state
         gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, frame.framebuffer)
-        gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1])  // Enable both outputs
+        gl.clearColor(0.0, 0.0, 0.0, 1.0)
+        gl.clear(gl.COLOR_BUFFER_BIT)
+
+        // Enable both color attachments
+        gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1])
+
+        // Ensure proper time attachment setup and access
+        const prevTimeTexture = frameNumber === 0 ? initialTimeTexture : prevFrame.attachments[1]
 
         let uniforms = {
             iTime: time,
             iFrame: frameNumber,
             time,
+            _time: time,
             prevFrame: frameNumber === 0 ? initialTexture : prevFrame.attachments[0],
-            prevTimeFrame: frameNumber === 0 ? initialTimeTexture : prevFrame.attachments[1],
+            prevTimeFrame: prevTimeTexture,
             initialFrame: initialTexture,
             resolution: [frame.width, frame.height],
             frame: frameNumber,
