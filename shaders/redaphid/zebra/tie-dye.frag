@@ -26,7 +26,7 @@
 
 // Audio-reactive parameters
 #define DETAIL (5.0 + 10.0 * spectralRoughnessNormalized)
-#define COLOR_SPEED (KNOB_COLOR_SPEED * (1.0 + 0.3 * midsNormalized))
+#define COLOR_SPEED (KNOB_COLOR_SPEED * (1.0 + 0.3))
 #define WARP_AMOUNT (KNOB_WARP_AMOUNT * (1.0 + 0.3 * spectralSpreadNormalized))
 #define SWIRL_INTENSITY (KNOB_SWIRL_INTENSITY * (1.0 + 0.3 * bassNormalized))
 #define FRACTAL_BLEND (0.3 + 0.5 * trebleNormalized)
