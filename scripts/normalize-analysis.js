@@ -26,7 +26,7 @@ const {
 } = parseArgs({ options })
 
 if (help) {
-    console.log(`
+    console.debug(`
 Usage: normalize-analysis [options]
 
 Options:
@@ -52,12 +52,12 @@ async function normalizeAnalysis() {
 
         // Write the normalized data
         await fs.writeFile(output, JSON.stringify(normalized))
-        console.log(`Normalized data written to ${output}`)
+        console.debug(`Normalized data written to ${output}`)
 
         // Also save the ranges for reference
         const rangesFile = output.replace('.json', '-ranges.json')
         await fs.writeFile(rangesFile, JSON.stringify(ranges, null, 2))
-        console.log(`Range information written to ${rangesFile}`)
+        console.debug(`Range information written to ${rangesFile}`)
 
     } catch (error) {
         console.error('Error:', error.message)

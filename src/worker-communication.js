@@ -1,9 +1,9 @@
 // Add service worker registration
 window.addEventListener('load', async () => {
-  console.log('Registering service worker...')
+  console.debug('Registering service worker...')
   const { serviceWorker } = navigator
   if (!serviceWorker) {
-      console.log('Service worker not supported')
+      console.debug('Service worker not supported')
       return
   }
   serviceWorker.addEventListener('message', processServiceWorkerMessage)
@@ -18,13 +18,13 @@ window.addEventListener('load', async () => {
  * @param {MessageEvent} event
  */
 const processServiceWorkerMessage = (event) => {
-  console.log('Received message from service worker', event)
+  console.debug('Received message from service worker', event)
   if (event.data === 'reload') {
-      console.log('Received reload message from service worker')
+      console.debug('Received reload message from service worker')
       window.stop()
       return window.location.reload()
   }
-  console.log('Received strange message from service worker', event.data)
+  console.debug('Received strange message from service worker', event.data)
 }
 
 // Add listener for messages from parent window
@@ -49,14 +49,14 @@ if (process.env.LIVE_RELOAD) {
   try {
     const eventSource = new EventSource('/esbuild')
     eventSource.addEventListener('change', () => {
-      console.log('Received change event from esbuild, reloading page')
+      console.debug('Received change event from esbuild, reloading page')
       window.stop()
       window.location.reload()
     })
     eventSource.addEventListener('error', (err) => {
       console.error('Error with esbuild EventSource:', err)
     })
-    console.log('Listening for esbuild live reload events')
+    console.debug('Listening for esbuild live reload events')
   } catch (error) {
     console.error('Failed to set up esbuild live reload listener:', error)
   }

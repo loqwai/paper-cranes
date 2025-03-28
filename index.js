@@ -3,17 +3,17 @@ import { makeVisualizer } from './src/Visualizer.js'
 
 // Add service worker registration
 window.addEventListener('load', async () => {
-    console.log('Registering service worker...')
+    console.debug('Registering service worker...')
     const { serviceWorker } = navigator
     if(!serviceWorker) {
-        console.log('Service worker not supported')
+        console.debug('Service worker not supported')
         return
     }
     serviceWorker.addEventListener('message', processServiceWorkerMessage)
     // Add cache version to URL to force update when version changes
     const registration = await serviceWorker.register(`/service-worker.js`)
     registration.addEventListener('statechange', (e) =>
-        console.log('ServiceWorker state changed:', e.target.state))
+        console.debug('ServiceWorker state changed:', e.target.state))
     registration.addEventListener('message', processServiceWorkerMessage)
 
 })
@@ -23,13 +23,13 @@ window.addEventListener('load', async () => {
  * @param {MessageEvent} event
  */
 const processServiceWorkerMessage = (event) => {
-    console.log('Received message from service worker', event.data)
+    console.debug('Received message from service worker', event.data)
     if (event.data === 'reload') {
-        console.log('Received reload message from service worker')
+        console.debug('Received reload message from service worker')
         window.stop()
         return window.location.reload()
     }
-    console.log('Received strange message from service worker', event.data)
+    console.debug('Received strange message from service worker', event.data)
 }
 
 const events = ['touchstart', 'touchmove', 'touchstop', 'keydown', 'mousedown', 'resize']
@@ -258,4 +258,4 @@ const main = async () => {
 
 main();
 
-console.log(`paper cranes version FREE`);
+console.debug(`paper cranes version FREE`);

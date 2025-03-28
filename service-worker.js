@@ -1,5 +1,8 @@
 const self = /** @type {ServiceWorkerGlobalScope} */ (globalThis)
 const CACHE_NAME = '2025-03-08T12:23:17.595Z'
+console.debug = () => { }
+console.info = () => { }
+
 console.debug(`Service worker starting`)
 const timeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 

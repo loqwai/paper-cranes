@@ -91,7 +91,7 @@ void main() {
 }`
 
 export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) => {
-    await askForWakeLock().catch(e => console.log("Couldn't ask for a screen wake lock"));
+    await askForWakeLock().catch(e => console.debug("Couldn't ask for a screen wake lock"));
 
     const gl = canvas.getContext('webgl2', {
         antialias: false,
@@ -138,7 +138,7 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
 
     const render = ({ time, features, fragmentShader: newFragmentShader }) => {
         if (newFragmentShader !== lastFragmentShader) {
-            console.log('Shader updated')
+            console.debug('Shader updated')
             const wrappedFragmentShader = shaderWrapper(newFragmentShader)
 
             const newProgramInfo = createProgramInfo(gl, [defaultVertexShader, wrappedFragmentShader])
@@ -163,7 +163,7 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         const  resolutionRatio = calculateResolutionRatio(frameTime, renderTimes, lastResolutionRatio)
 
         if (resolutionRatio !== lastResolutionRatio) {
-            console.log(`Adjusting resolution ratio to ${resolutionRatio.toFixed(2)}`)
+            console.debug(`Adjusting resolution ratio to ${resolutionRatio.toFixed(2)}`)
             resizeCanvasToDisplaySize(gl.canvas, resolutionRatio)
             lastResolutionRatio = resolutionRatio
             renderTimes = []

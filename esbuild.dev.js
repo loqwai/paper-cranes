@@ -13,7 +13,7 @@ async function main() {
 
     await ctxCopy.watch()
     await ctxBundle.watch()
-    console.log("🦅 Fly up at http://localhost:6969?shader=beat-trip 🦅")
+    console.debug("🦅 Fly up at http://localhost:6969?shader=beat-trip 🦅")
     await ctxBundle.serve({
         servedir: 'dist',
         port: 6969,
