@@ -24,7 +24,13 @@ const positions = [
 const getTexture = async (gl, url) => {
     return new Promise((resolve) => {
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
-        const texture = createTexture(gl, { src: url, crossOrigin: 'anonymous' }, () => {
+        const texture = createTexture(gl, {
+            src: url,
+            crossOrigin: 'anonymous',
+            min: gl.NEAREST,
+            mag: gl.NEAREST,
+            wrap: gl.REPEAT
+        }, () => {
             gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false)
             resolve(texture)
         })
@@ -110,6 +116,17 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
 
     const initialTexture = await getTexture(gl, initialImageUrl)
     const frameBuffers = [createFramebufferInfo(gl), createFramebufferInfo(gl)]
+
+    // Set texture parameters for both framebuffers
+    frameBuffers.forEach(fb => {
+        const texture = fb.attachments[0]
+        gl.bindTexture(gl.TEXTURE_2D, texture)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
+    })
+
     const bufferInfo = createBufferInfoFromArrays(gl, { position: positions })
 
     let frameNumber = 0
@@ -189,7 +206,7 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
 
         gl.bindFramebuffer(gl.READ_FRAMEBUFFER, frame.framebuffer)
         gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null)
-        gl.blitFramebuffer(0, 0, frame.width, frame.height, 0, 0, gl.canvas.width, gl.canvas.height, gl.COLOR_BUFFER_BIT, gl.LINEAR)
+        gl.blitFramebuffer(0, 0, frame.width, frame.height, 0, 0, gl.canvas.width, gl.canvas.height, gl.COLOR_BUFFER_BIT, gl.NEAREST)
 
         frameNumber++
     }
