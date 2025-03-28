@@ -527,9 +527,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         col = mix(col, vec3(1.0), beatIntensity);
     }
 
-    // Add subtle vignette
-    float vignette = 1.0 - dot(uv - center, uv - center) * KNOB_VIGNETTE_STRENGTH;
-    col *= vignette;
+
 
     // Boost color intensity based on audio with reduced effect
     col = pow(col, vec3(1.0 / (0.8 + energyNormalized * KNOB_ENERGY_BOOST)));
