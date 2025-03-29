@@ -5,7 +5,7 @@
 #define PROBE_5 mix(0.47, 0.97, knob_34)    // complexity + zoom
 #define PROBE_6 mix(0.1, 0.3, knob_35)      // zoom speed
 #define RESET_PERIOD mix(10.0, 30.0, knob_36) // seconds between zoom resets
-#define TRANSITION_LENGTH 0.4  // Portion of cycle dedicated to transition (0.0-1.0)
+#define TRANSITION_LENGTH 0.6  // Portion of cycle dedicated to transition (0.0-1.0)
 
 // A simple pseudo-random function (if needed)
 float rand(vec2 co) {
@@ -31,7 +31,7 @@ vec2 applyPeriodicTransformationAndTraps(vec2 position, vec2 multiplier, float v
 vec4 generateFractal(vec2 uv, vec2 multiplier, float variation, int iterations) {
     vec4 fractalColor = vec4(1e6);
 
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 10; i++) {
         if (i >= iterations) break;
 
         uv = applyPeriodicTransformationAndTraps(uv, multiplier, variation);
@@ -65,12 +65,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float rotationSpeed = 0.05 * (1.0 + 0.2 * sin(iTime * 0.2));
     uv = rotate(uv, iTime * rotationSpeed);
 
-    // Calculate zoom factors - now zooming IN (dividing rather than multiplying)
-    float zoomAmount = 5.0; // How much we zoom during one cycle
-    float currentZoom = mix(1.0, 1.0/zoomAmount, cycleProgress); // Note the inversion for zooming in
+    // ZOOM INWARD - Simple and direct approach
+    // Start with zoom = 1 and decrease (divide by larger numbers) as cycle progresses
+    float zoomScale = 0.2 + 4.8 * cycleProgress; // Maps 0->1 to 0.2->5.0
+    vec2 zoomedUV = uv / zoomScale; // Division means INWARD zoom
 
-    // Apply zoom to UV - division for zoom in
-    vec2 zoomedUV = uv / currentZoom;
+    // Debug - uncomment to verify zoom direction
+    // If the pattern gets smaller as time progresses, we're zooming in correctly
+    // return vec4(vec3(length(zoomedUV) < 0.1 ? 1.0 : 0.0), 1.0);
 
     // Create slightly different variations for visual interest
     float seed1 = floor(iTime / RESET_PERIOD);
@@ -93,13 +95,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         PROBE_2 * (1.0 + cos(seed2 * 0.7) * 0.1)
     );
 
-    // Apply rotation variations to create different patterns
+    // Generate current pattern (zoomed in)
     vec2 patternUV1 = rotate(zoomedUV, angleOffset1);
-    vec2 patternUV2 = rotate(uv, angleOffset2); // Non-zoomed for next cycle
+
+    // For next pattern, use uv/0.2 to start zoomed out
+    vec2 patternUV2 = rotate(uv / 0.2, angleOffset2);
 
     // Iteration count variation for depth perception
-    int iterations1 = 100;
-    int iterations2 = int(mix(80.0, 100.0, resetBlend)); // Slightly fewer iterations for the next pattern
+    int iterations1 = min(100, int(mix(30.0, 100.0, cycleProgress))); // Fewer iterations early in the cycle
+    int iterations2 = 100;
 
     // Generate fractal patterns
     vec4 currentFractal = generateFractal(patternUV1, multiplier1, variation1, iterations1);
@@ -108,17 +112,28 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Create distortion in the center for transition hiding
     float centerWeight = smoothstep(0.3, 0.0, originalDist);
 
-    // Enhanced transition when during blend period
-    float transitionPhase = smoothstep(transitionStart, 1.0, cycleProgress);
+    // Smooth transition between patterns
+    float transitionEase = smoothstep(0.0, 1.0,
+        smoothstep(transitionStart, 1.0, cycleProgress));
 
-    // Dynamic transition with wave patterns
-    float wavePattern = sin(originalDist * 15.0 + iTime * 2.0) * 0.3 +
-                        sin(originalDist * 7.0 - iTime * 1.5) * 0.2;
+    // Extra smooth transition at center
+    float centerTransition = mix(transitionEase,
+        0.5 + 0.5 * sin(cycleProgress * 6.28 + originalDist * 10.0),
+        centerWeight);
 
-    // Blend fractals with extended transition effects
-    float finalBlend = mix(resetBlend, resetBlend + wavePattern, centerWeight * transitionPhase);
+    // Super smooth transition with multiple overlapping wave patterns
+    float wavePattern =
+        0.3 * sin(originalDist * 15.0 + iTime * 2.0) +
+        0.2 * sin(originalDist * 7.0 - iTime * 1.5) +
+        0.15 * sin(originalDist * 3.0 + iTime * 0.7) +
+        0.1 * sin(atan(originalUV.y, originalUV.x) * 6.0 + iTime * 1.0);
+
+    float finalBlend = mix(centerTransition,
+        centerTransition + wavePattern,
+        centerWeight * transitionEase);
     finalBlend = clamp(finalBlend, 0.0, 1.0);
 
+    // Blend fractals
     vec4 fractalColor = mix(currentFractal, nextFractal, finalBlend);
 
     // Add some color variation based on position and time
@@ -131,21 +146,32 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Normalize color
     color = color * 0.5 + 0.5;
 
-    // Add extra visual interest during transitions - extended to entire transition period
-    if (resetBlend > 0.01) {
-        // Add swirling effect during transition
-        float swirl = sin(originalDist * 10.0 - iTime * 3.0) * resetBlend * 0.5;
-        float spiral = sin(atan(originalUV.y, originalUV.x) * 5.0 + iTime * 2.0 + originalDist * 10.0) * resetBlend * 0.4;
+    // Add smooth transition effects that persist for longer
+    if (transitionEase > 0.01) {
+        // Various spiral and swirl patterns
+        float swirl = sin(originalDist * 10.0 - iTime * 3.0) * transitionEase * 0.5;
+        float spiral = sin(atan(originalUV.y, originalUV.x) * 5.0 + iTime * 2.0 + originalDist * 10.0) * transitionEase * 0.4;
+        float spiral2 = sin(atan(originalUV.y, originalUV.x) * 8.0 - iTime * 1.5 + originalDist * 5.0) * transitionEase * 0.3;
 
-        color += vec3(swirl * 0.8, swirl * 0.6, swirl * 0.9) * resetBlend;
-        color += vec3(spiral * 0.4, spiral * 0.5, spiral * 0.7) * resetBlend;
+        // Add transition effects to color with varying amounts
+        color += vec3(swirl * 0.5, swirl * 0.4, swirl * 0.6) * transitionEase;
+        color += vec3(spiral * 0.4, spiral * 0.5, spiral * 0.6) * transitionEase;
+        color += vec3(spiral2 * 0.3, spiral2 * 0.5, spiral2 * 0.4) * transitionEase;
 
-        // Add radial pulse effects
-        float pulse1 = sin(originalDist * 20.0 - iTime * 5.0) * resetBlend * 0.3;
-        float pulse2 = sin(originalDist * 8.0 - iTime * 3.0) * resetBlend * 0.2;
-        color += vec3(pulse1 * 0.5, pulse1 * 0.3, pulse1 * 0.6);
-        color += vec3(pulse2 * 0.3, pulse2 * 0.5, pulse2 * 0.4);
+        // Add pulse effects with varying frequencies
+        float pulse1 = sin(originalDist * 20.0 - iTime * 5.0) * 0.2;
+        float pulse2 = sin(originalDist * 8.0 - iTime * 3.0) * 0.15;
+        float pulse3 = sin(originalDist * 4.0 - iTime * 1.0) * 0.1;
+
+        color += vec3(pulse1 * 0.4, pulse1 * 0.3, pulse1 * 0.5) * transitionEase;
+        color += vec3(pulse2 * 0.3, pulse2 * 0.4, pulse2 * 0.3) * transitionEase;
+        color += vec3(pulse3 * 0.4, pulse3 * 0.3, pulse3 * 0.4) * transitionEase;
     }
+
+    // Add extended effects that persist between cycles
+    float continuousCycle = iTime / RESET_PERIOD;
+    float continuousEffect = 0.1 * sin(continuousCycle * 6.28 + originalDist * 5.0);
+    color += vec3(continuousEffect * 0.1, continuousEffect * 0.05, continuousEffect * 0.15);
 
     // Add center glow to hide artifacts
     float centerGlow = smoothstep(0.2, 0.0, originalDist);
