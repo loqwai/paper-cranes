@@ -5,6 +5,16 @@
 #define BASS_IMPACT bassImpact
 #define MID_IMPACT midImpact
 #define REACTIVITY reactivity
+uniform float controllerRotation;
+uniform float controllerPulse;
+uniform float controllerColorShift;
+uniform float customBeat;
+uniform float bassImpact;
+uniform float midImpact;
+uniform float reactivity;
+uniform float smoothTime;
+
+#define PI 3.14159265359
 
 // Number of symmetry folds
 #define SYMMETRY max(3.0, 6.0 + floor(REACTIVITY * 8.0))
@@ -40,12 +50,6 @@ float star(vec2 p, float r, float sides, float pointiness) {
     float angle = atan(p.y, p.x);
     float starShape = cos(angle * sides) * pointiness + 1.0 - pointiness;
     return length(p) - r * starShape;
-}
-
-// HSL to RGB conversion
-vec3 hsl2rgb(vec3 c) {
-    vec3 rgb = clamp(abs(mod(c.x * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
-    return c.z + c.y * (rgb - 0.5) * (1.0 - abs(2.0 * c.z - 1.0));
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
@@ -109,7 +113,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         vec3 ringColor = hsl2rgb(vec3(hue, sat, lit));
 
         // Flash on beats
-        if (BEAT) {
+        if (beat) {
             ringColor += vec3(0.2, 0.1, 0.3) * (1.0 - idx * 0.5);
         }
 
