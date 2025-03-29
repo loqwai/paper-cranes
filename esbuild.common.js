@@ -75,11 +75,13 @@ export function createBuildOptions(isDev = false) {
         const baseDir = './src'
         const shaderDir = './shaders'
         const imgDir = './images'
+        const controllerDir = './controllers'
 
         const jsFiles = await findFiles(baseDir, ['.js'])
         const otherFiles = await findFiles(baseDir, ['.css', '.html', '.ttf', '.png', '.svg'])
         const shaderFiles = await findFiles(shaderDir, ['.frag'])
         const imgFiles = await findFiles(imgDir, ['.png', '.jpg', '.jpeg'])
+        const controllerFiles = await findFiles(controllerDir, ['.js'])
 
         await generateShadersJson(shaderFiles)
 
@@ -90,6 +92,7 @@ export function createBuildOptions(isDev = false) {
             'list.js',
             'service-worker.js',
             ...jsFiles,
+            ...controllerFiles,
         ]
 
         const copyEntrypoints = [

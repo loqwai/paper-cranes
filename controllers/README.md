@@ -19,13 +19,15 @@ Shader Controllers are JavaScript modules that provide dynamic, programmable con
 
 Features are applied in the following order of precedence (lowest to highest):
 
-1. Audio features (from microphone processing)
-2. Controller features (from controller's returned values)
-3. URL parameters (from the query string)
-4. Manual features (from UI or programmatic changes)
-5. Message parameters (from inter-component communication)
+1. `measuredAudioFeatures` - Raw audio analysis data from microphone
+2. `controllerFeatures` - Values returned by the controller function
+3. URL parameters - From the query string
+4. `manualFeatures` - Set programmatically or via UI
+5. `messageParams` - Inter-component communication
 
-This means that URL parameters will override controller features, and manual features will override URL parameters.
+This means controllers can build on top of audio data, but their values can be overridden by URL parameters, and manually set features have the highest precedence (except for message parameters).
+
+Each of these sources is stored separately in the `window.cranes` object and merged by the `flattenFeatures()` function when needed.
 
 ## Creating a Controller
 

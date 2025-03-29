@@ -155,18 +155,19 @@ const setupAudio = async () => {
 // Set up the application state management
 const setupCranesState = () => {
     window.cranes = {
-        manualFeatures: {},
-        controllerFeatures: {},
-        messageParams: {},
+        measuredAudioFeatures: {},  // Audio features (lowest precedence)
+        controllerFeatures: {},     // Controller-computed features
+        manualFeatures: {},         // Manual features
+        messageParams: {},          // Message parameters (highest precedence)
         frameCount: 0,
         // Centralized feature flattening function with proper order of precedence
-        flattenFeatures: (audioFeatures = {}) => {
+        flattenFeatures: () => {
             return {
-                ...audioFeatures,                    // Base audio features (lowest precedence)
-                ...window.cranes.controllerFeatures, // Controller-computed features
-                ...Object.fromEntries(params),       // URL parameters
-                ...window.cranes.manualFeatures,     // Manual features (highest precedence)
-                ...window.cranes.messageParams,      // Message parameters
+                ...window.cranes.measuredAudioFeatures, // Audio features (lowest precedence)
+                ...window.cranes.controllerFeatures,    // Controller-computed features
+                ...Object.fromEntries(params),          // URL parameters
+                ...window.cranes.manualFeatures,        // Manual features
+                ...window.cranes.messageParams,         // Message parameters (highest precedence)
                 touch: [coordsHandler.coords.x, coordsHandler.coords.y],
                 touched: coordsHandler.touched
             }
@@ -181,14 +182,11 @@ const animateShader = ({ render, audio, fragmentShader }) => {
     requestAnimationFrame(() => animateShader({ render, audio, fragmentShader }))
 
     try {
-        // Get audio features
-        const audioFeatures = audio.getFeatures()
-
-        // Store measured audio features for controller access
-        window.cranes.measuredAudioFeatures = audioFeatures
+        // Get audio features and store in measuredAudioFeatures
+        window.cranes.measuredAudioFeatures = audio.getFeatures() || {}
 
         // Get flattened features using the centralized method
-        const features = window.cranes.flattenFeatures(audioFeatures)
+        const features = window.cranes.flattenFeatures()
 
         // Render the shader
         render({
@@ -207,8 +205,8 @@ const animateController = (controller) => {
 
     const controllerFrame = () => {
         try {
-            // Get the current flattened features for the controller
-            const features = window.cranes.flattenFeatures(window.cranes.measuredAudioFeatures || {})
+            // Get flattened features using the centralized method
+            const features = window.cranes.flattenFeatures()
 
             // Call controller with flattened features
             const controllerResult = controller(features) ?? {}
@@ -262,17 +260,10 @@ const loadController = async () => {
         // 2. Module exports a make() function - call it to get the controller
         // 3. Module exports something else - error
 
-        if (typeof controllerModule.default === 'function') {
+        if (typeof controllerModule.default === 'function')  return controllerModule.default
             // Default export is a function - direct controller or make function
-            return controllerModule.default
-        } else if (typeof controllerModule.make === 'function') {
-            // Make function export
-            return controllerModule.make
-        } else if (typeof controllerModule === 'function') {
-            // Module itself is a function
-            return controllerModule
-        }
-
+        if (typeof controllerModule.make === 'function') return controllerModule.make
+        if (typeof controllerModule === 'function') return controllerModule
         console.error('Controller must export a function directly or provide a make() function')
         return null
     } catch (error) {
@@ -287,16 +278,9 @@ const getFragmentShader = async () => {
 
     if(params.get('shaderCode')) return decodeURIComponent(params.get('shaderCode'))
 
-    if (shaderUrl) {
-        fragmentShader = await getRelativeOrAbsolute(`${shaderUrl}.frag`)
-    }
-    if (!fragmentShader) {
-        fragmentShader = localStorage.getItem('cranes-manual-code')
-    }
-
-    if (!fragmentShader) {
-        fragmentShader = await getRelativeOrAbsolute('default.frag')
-    }
+    if (shaderUrl) fragmentShader = await getRelativeOrAbsolute(`${shaderUrl}.frag`)
+    if (!fragmentShader) fragmentShader = localStorage.getItem('cranes-manual-code')
+    if (!fragmentShader) fragmentShader = await getRelativeOrAbsolute('default.frag')
     return fragmentShader
 }
 
