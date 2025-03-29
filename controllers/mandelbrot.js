@@ -1,8 +1,6 @@
 let frameCount = 0
 const zoomStart = 4.0
 const zoomSpeed = 0.25
-const centerX = -0.7436438870371587
-const centerY = 0.13182590420531197
 
 function splitDouble(x) {
   const hi = Math.fround(x)
@@ -11,8 +9,12 @@ function splitDouble(x) {
 }
 
 export default function controller(features) {
+  const centerX = (features.centerX ?? -0.7436438870371587) + (features.energyNormalized / 10000)
+  const centerY = (features.centerY ?? 0.13182590420531197) + (features.energyNormalized / 10000)
+
   const time = performance.now() / 1000
   frameCount++
+  if(features.energyZScore > 1.0) frameCount += 4
 
   const resolution = features.resolution || { x: 1280, y: 720 }
   const minDim = Math.min(resolution.x, resolution.y)
