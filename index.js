@@ -187,7 +187,8 @@ const animateShader = ({ render, audio, fragmentShader }) => {
 
         // Get flattened features using the centralized method
         const features = window.cranes.flattenFeatures()
-
+        // Update frame count
+        window.cranes.frameCount++
         // Render the shader
         render({
             time: (performance.now() - startTime) / 1000,
@@ -213,9 +214,6 @@ const animateController = (controller) => {
 
             // Store controller result in controllerFeatures
             window.cranes.controllerFeatures = controllerResult
-
-            // Update frame count
-            window.cranes.frameCount++
         } catch (e) {
             console.error('Controller error:', e)
         }
