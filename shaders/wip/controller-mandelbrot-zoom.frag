@@ -1,11 +1,14 @@
-// Mandelbrot shader using CPU-calculated screen origin and pixel span
-
+// High-precision Mandelbrot shader using CPU-calculated screen origin and pixel span (double-float emulation)
+// http://localhost:6969/edit.html?controller=mandelbrot&knob_50=0.22&knob_50.min=-3&knob_50.max=3
 uniform float cameraScreenOriginX;
+
 uniform float cameraScreenOriginY;
-uniform float cameraPixelSpan;
+uniform float cameraScreenOriginLowY;
+uniform float cameraPixelSpanHigh;
+uniform float cameraPixelSpanLow;
 uniform float centerIterNorm;
-uniform float iTime;
-uniform vec2 iResolution;
+uniform float cameraPixelSpan;
+
 
 #define PI 3.14159265359
 #define TAU (2.0 * PI)
@@ -20,8 +23,11 @@ vec3 tieDyePalette(float t) {
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec2 centeredFrag = fragCoord - iResolution * 0.5;
-    vec2 c = vec2(-0.75, 0.1) + centeredFrag * 0.005; // Known interesting region
+    vec2 centeredFrag = fragCoord - iResolution.xy * 0.5;
+    vec2 fragOffsetHigh = centeredFrag * cameraPixelSpanHigh;
+    vec2 fragOffsetLow  = centeredFrag * cameraPixelSpanLow;
+    vec2 c = vec2(cameraScreenOriginX, cameraScreenOriginY) + centeredFrag * cameraPixelSpan;
+
 
 
     vec2 z = vec2(0.0);
@@ -52,9 +58,5 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float spiral = sin(spiralAngle * 5.0 + length(z) * 10.0) * 0.5 + 0.5;
         col *= 1.0 + spiral * 0.2;
     }
-
-    float vignette = 1.0 - length(fragCoord / iResolution - 0.5) * 0.29;
-    col *= vignette;
-
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
