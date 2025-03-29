@@ -1,4 +1,4 @@
-// High-precision checkerboard zoom using CPU-calculated split-precision coordinates
+// High-precision infinite checkerboard zoom using CPU-calculated coordinates
 
 // Controller uniforms from zoomer.js with high precision components
 uniform float cameraCenterHighX;
@@ -51,6 +51,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float scale = pow(2.0, floor(zoomPower));
     vec2 scaledPos = worldPos * scale;
 
+    // Apply modulo to enforce pattern repetition at extreme zoom levels
+    // This works with the controller's reset logic to maintain continuity
+    scaledPos = mod(scaledPos, 1024.0) - 512.0;
+
     // The current level checker
     float checker = basicChecker(scaledPos);
 
@@ -75,20 +79,23 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Debug info at the bottom of the screen
     if (fragCoord.y < 40.0) {
-        float debugWidth = iResolution.x / 4.0;
+        float debugWidth = iResolution.x / 5.0;
 
         if (fragCoord.x < debugWidth) {
             // Zoom level
-            color = vec3(zoom * 100.0, 0.0, 0.0);
+            color = vec3(clamp(zoom, 0.0, 1.0), 0.0, 0.0);
         } else if (fragCoord.x < debugWidth * 2.0) {
             // Zoom power (log2)
-            color = vec3(0.0, clamp(zoomPower / 20.0, 0.0, 1.0), 0.0);
+            color = vec3(0.0, clamp(zoomPower / 30.0, 0.0, 1.0), 0.0);
         } else if (fragCoord.x < debugWidth * 3.0) {
             // World X (show fractional part to track movement)
             color = vec3(0.0, 0.0, fract(abs(worldX)));
-        } else {
+        } else if (fragCoord.x < debugWidth * 4.0) {
             // World Y (show fractional part to track movement)
             color = vec3(fract(abs(worldY)), 0.0, 0.0);
+        } else {
+            // Scale factor
+            color = vec3(fract(scale/100.0), fract(scale/1000.0), 0.0);
         }
     }
 

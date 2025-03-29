@@ -1,13 +1,13 @@
 let frameCount = 0
-const zoomStart = 4.0  // Initial zoom scale (higher = more zoomed out)
-const zoomSpeed = 1.1  // How fast we zoom in (smaller = slower, more stable zoom)
+const zoomStart = 4.0  // Initial world scale
+const zoomSpeed = 0.1  // Zoom rate (smaller = slower, more stable zoom)
+const zoomResetThreshold = 0.00001 // When to reset zoom to avoid precision issues
 
-// Adjust to zoom into an interesting checkerboard area
-const centerX = 0.0   // Center at origin for checkerboard
-const centerY = 0.0
+// Starting position (0,0 for simple checkerboard)
+let centerX = 0.0
+let centerY = 0.0
 
 // Split a double into high and low precision components
-// This is critical for maintaining precision during deep zooms
 function splitDouble(x) {
   const hi = Math.fround(x)
   const lo = x - hi
@@ -21,32 +21,41 @@ export default function controller(features) {
   const resolution = features.resolution || { x: 1280, y: 720 }
   const minDim = Math.min(resolution.x, resolution.y)
 
-  // Exponential zoom with time - this gives a smooth, continuous zoom
-  // Math.exp ensures we never reach zero (avoiding division by zero)
-  const zoom = zoomStart * Math.exp(-zoomSpeed * time)
+  // Exponential zoom with time
+  let zoom = zoomStart * Math.exp(-zoomSpeed * time)
 
-  // Calculate pixel span - this is how much world space each pixel covers
+  // If zoom gets too small (deep zoom), reset with adjusted center
+  // This avoids precision problems while maintaining visual continuity
+  if (zoom < zoomResetThreshold) {
+    // Calculate how many times we need to reset
+    const resetFactor = Math.floor(Math.log(zoomStart / zoom) / Math.log(1/zoomResetThreshold))
+
+    // Apply the reset but maintain the same visual position
+    zoom = zoom * Math.pow(1/zoomResetThreshold, resetFactor)
+
+    // This keeps us visually centered on the same point
+    // We're essentially zooming into a new "copy" of the checkerboard
+    // The pattern repeats, so this maintains visual continuity
+  }
+
+  // Calculate pixel span (world units per pixel)
   const pixelSpan = zoom / minDim
 
-  // Split center coordinates into high and low precision components
-  // This technique preserves precision much better than a single float
+  // Split center coordinates for precision
   const [centerHighX, centerLowX] = splitDouble(centerX)
   const [centerHighY, centerLowY] = splitDouble(centerY)
 
-  // Calculate viewport offset from center
+  // Calculate screen edge offsets
   const dx = resolution.x * 0.5
   const dy = resolution.y * 0.5
-
-  // These offsets determine where in world space the screen edges are
   const offsetX = -dx * pixelSpan
   const offsetY = -dy * pixelSpan
 
-  // Split offsets into high and low precision components
+  // Split offsets into high/low components
   const [offsetHighX, offsetLowX] = splitDouble(offsetX)
   const [offsetHighY, offsetLowY] = splitDouble(offsetY)
 
-  // Return all the precision components separately
-  // The shader will recombine these to get full precision coordinates
+  // Return with full precision
   return {
     controllerFrameCount: frameCount,
     cameraCenterHighX: centerHighX,
@@ -57,7 +66,6 @@ export default function controller(features) {
     offsetLowX,
     offsetHighY,
     offsetLowY,
-    // Also return the raw zoom value for debugging
     zoomLevel: zoom
   }
 }
