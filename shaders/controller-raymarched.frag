@@ -1,3 +1,12 @@
+uniform float controllerRotation;
+uniform float controllerPulse;
+uniform float controllerColorShift;
+uniform float customBeat;
+uniform float bassImpact;
+uniform float trebleImpact;
+uniform float reactivity;
+uniform float smoothTime;
+
 #define ROTATION controllerRotation
 #define PULSE controllerPulse
 #define COLOR_SHIFT controllerColorShift
@@ -5,6 +14,7 @@
 #define BASS_IMPACT bassImpact
 #define TREBLE_IMPACT trebleImpact
 #define REACTIVITY reactivity
+
 
 #define MAX_STEPS 100
 #define MAX_DIST 100.0
@@ -87,7 +97,7 @@ float map(vec3 p) {
 
     // Add twisted boxes on beat
     float twistedBox = MAX_DIST;
-    if (BEAT) {
+    if (beat) {
         vec3 boxPos = p;
         boxPos = rotateX(smoothTime * 1.5) * boxPos;
         float twist = 1.0 + 2.0 * PULSE;
@@ -155,7 +165,7 @@ vec3 getColor(vec3 p, vec3 n) {
     col *= 0.8 + 0.3 * sin(n.y * 5.0 + COLOR_SHIFT * 10.0);
 
     // Flash on beat
-    if (BEAT) {
+    if (beat) {
         col += vec3(0.3, 0.2, 0.4);
     }
 
