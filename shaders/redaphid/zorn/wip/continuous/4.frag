@@ -1,18 +1,18 @@
-//http://localhost:6969/edit.html?knob_41=0.11&knob_41.min=0&knob_41.max=1&knob_40=0.502&knob_40.min=0&knob_40.max=1&knob_32=0&knob_32.min=0&knob_32.max=1&knob_43=0.15&knob_43.min=0&knob_43.max=1&knob_30=0.213&knob_30.min=0&knob_30.max=1&knob_35=0.488&knob_35.min=0&knob_35.max=1&knob_36=0.142&knob_36.min=0&knob_36.max=1&knob_33=0.992&knob_33.min=0&knob_33.max=1&knob_31=0&knob_31.min=0&knob_31.max=1&knob_44=0.094&knob_44.min=0&knob_44.max=1&knob_34=0.591&knob_34.min=0&knob_34.max=1&knob_37=0.205&knob_37.min=0&knob_37.max=1&knob_47=0.543&knob_47.min=0&knob_47.max=1&knob_46=0.961&knob_46.min=0&knob_46.max=1&knob_45=0.268&knob_45.min=0&knob_45.max=1
-#define PROBE_1 mix(1., 1.4, knob_34)
-#define PROBE_2 mix(0.55, 2., knob_35)    // 'fan out' swirls -> multiple squares
-#define PROBE_3 mix(-1.7, 10., knob_36)    // color
-#define PROBE_4 mod(float(frame), 310.15)/100.
-#define PROBE_5 mix(0.47, 0.97, knob_34)    // complexity + zoom
-#define PROBE_6 mix(0.1, 0.3, knob_35)      // zoom speed
-#define RESET_PERIOD mix(10.0, 30.0, knob_36) // seconds between zoom resets
+//http://localhost:6969/edit.html?knob_30=0.118&knob_30.min=0&knob_30.max=1&knob_35=0.575&knob_35.min=0&knob_35.max=1&knob_36=0.165&knob_36.min=0&knob_36.max=1&knob_31=0.417&knob_31.min=0&knob_31.max=1&knob_44=0.094&knob_44.min=0&knob_44.max=1&knob_34=0.307&knob_34.min=0&knob_34.max=1&knob_37=0.071&knob_37.min=0&knob_37.max=1&knob_47=0&knob_47.min=0&knob_47.max=1&knob_46=0.961&knob_46.min=0&knob_46.max=1&knob_45=0.268&knob_45.min=0&knob_45.max=1&knob_32=0&knob_32.min=0&knob_32.max=1&knob_33=0.756&knob_33.min=0&knob_33.max=1&knob_40=1&knob_40.min=0&knob_40.max=1
+#define PROBE_1 mix(1., float(frame/1000), animateBounce(iTime/100.)/10.)
+#define PROBE_2 mix(0.55, 2., animateEaseInOutQuad(knob_34))    // 'fan out' swirls -> multiple squares
+#define PROBE_3 mix(-1.7, 10., animateEaseInOutElastic(iTime/100. + 1./100.))    // color
+#define PROBE_4 mod(float(frame), animateEaseOutSine(iTime/1000. + 33.)*3100.15)/100.
+#define PROBE_5 mix(0.47, 0.97, animatePulse(iTime/100.))    // complexity + zoom
+#define PROBE_6 mix(0.1, 0.3, pow(animateEaseOutCubic(iTime)*100., 0.9))      // zoom speed
+#define RESET_PERIOD animateEaseInOutSine(iTime/100.)*0.02 // seconds between zoom resets
 #define TRANSITION_LENGTH 1.1  // Portion of cycle dedicated to transition (0.0-1.0)
-#define AA_RADIUS knob_30         // Radius for center anti-aliasing
+#define AA_RADIUS 0.17         // Radius for center anti-aliasing
 #define MAX_ITER 10           // Maximum iterations for fractal generation
 #define INNER_CIRCLE_BLEND knob_40 // Controls how much the center circle blends (0.0-1.0)
-#define ZOOM_SPEED 10.15       // Base zoom speed (reduced to prevent panning sensation)
+
 #define EPSILON 0.00001        // Small value to prevent division by zero
-#define PATTERN_CHANGE_SCALE 0.4 // How much pattern changes between cycles
+#define PATTERN_CHANGE_SCALE 0.8 // How much pattern changes between cycles
 #define CENTER_DETAIL_BOOST sin(float(frame / 40))*1.
 
 // A simple pseudo-random function (if needed)
