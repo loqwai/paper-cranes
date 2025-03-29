@@ -116,54 +116,39 @@ const setupCanvasEvents = (canvas) => {
     canvas.addEventListener('mouseleave', resetTouch);
 };
 
-// Check microphone access and initialize
-const initializeAudio = async () => {
-    try {
-        await getAudioStream(audioConfig);
-        main();
-    } catch (err) {
-        document.querySelector('body').classList.remove('ready');
-        console.error('Audio initialization failed:', err);
-    }
-};
-
 const setupAudio = async () => {
-    const audioContext = new AudioContext();
-    await audioContext.resume();
+    // if we have a query param that says 'noaudio=true', just return a dummy audio processor
+    if (params.get('noaudio') === 'true' || params.get('embed') === 'true') {
+        return {
+            getFeatures: () => ({
+            })
+        }
+    }
+    // get the default audio input
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const audioInputs = devices.filter(device => device.kind === 'audioinput');
+    const defaultAudioInput = audioInputs[0].deviceId
 
-    const stream = await getAudioStream(audioConfig);
-    const sourceNode = audioContext.createMediaStreamSource(stream);
-    const historySize = parseInt(params.get('history_size') ?? '500');
-    const audioProcessor = new AudioProcessor(audioContext, sourceNode, historySize);
-    audioProcessor.start();
-
-    return audioProcessor;
-};
-
-const main = async () => {
     try {
-        if (ranMain) return;
-        ranMain = true;
+        // Get microphone access first
+        await navigator.mediaDevices.getUserMedia({
+            audio: {
+                ...audioConfig,
+                ...(audioInputs.length > 1 ? { deviceId: { exact: defaultAudioInput } } : {})
+            }
+        });
+        const audioContext = new AudioContext();
+        await audioContext.resume();
 
-        window.c = cranes;
-        startTime = performance.now();
-        const fragmentShader = await getFragmentShader();
-        const audio = await setupAudio();
+        const stream = await getAudioStream(audioConfig);
+        const sourceNode = audioContext.createMediaStreamSource(stream);
+        const historySize = parseInt(params.get('history_size') ?? '500');
+        const audioProcessor = new AudioProcessor(audioContext, sourceNode, historySize);
+        audioProcessor.start();
 
-        window.shader = fragmentShader;
-        const canvas = getVisualizerDOMElement();
-        setupCanvasEvents(canvas);
-
-        const visualizerConfig = {
-            canvas,
-            initialImageUrl: params.get('image') ?? 'images/placeholder-image.png',
-            fullscreen: (params.get('fullscreen') ?? false) === 'true'
-        };
-
-        const render = await makeVisualizer(visualizerConfig);
-        requestAnimationFrame(() => animate({ render, audio, fragmentShader }));
-    } catch (e) {
-        console.error('Main initialization error:', e);
+        return audioProcessor;
+    } catch (err) {
+        console.error('Audio initialization failed:', err);
     }
 };
 
@@ -174,6 +159,7 @@ const animate = ({ render, audio, fragmentShader }) => {
         ...audio.getFeatures(),
         ...Object.fromEntries(params),
         ...window.cranes.manualFeatures,
+        ...window.cranes.messageParams,
         touch: [coordsHandler.coords.x, coordsHandler.coords.y],
         touched: coordsHandler.touched
     };
@@ -191,59 +177,12 @@ const animate = ({ render, audio, fragmentShader }) => {
     }
 };
 
-// Combine initialization into a single function
-const initializeApp = async () => {
-    if (ranMain) return;
-    // get the default audio input
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const audioInputs = devices.filter(device => device.kind === 'audioinput');
-    const defaultAudioInput = audioInputs[0].deviceId
-
-    try {
-        // Get microphone access first
-        await navigator.mediaDevices.getUserMedia({
-            audio: {
-                ...audioConfig,
-                ...(audioInputs.length > 1 ? { deviceId: { exact: defaultAudioInput } } : {})
-            }
-        });
-
-        // If successful, run main
-        await main();
-
-        // Add click handlers for fullscreen
-        if (!window.location.href.includes('edit')) {
-            const visualizer = getVisualizerDOMElement();
-            for (const event of events) {
-                visualizer.addEventListener(event, async () => {
-                    try {
-                        await document.documentElement.requestFullscreen();
-                    } catch (e) {
-                        console.error(`requesting fullscreen from event ${event} failed`, e);
-                    }
-                }, { once: true });
-            }
-        }
-    } catch (err) {
-        console.error('Failed to initialize:', err);
-        const body = document.querySelector('body');
-        body.classList.remove('ready');
-    }
-};
-
-// Start initialization immediately
-initializeApp();
-
-window.cranes = {
-    manualFeatures: {}
-}
-
 const getRelativeOrAbsolute = async (url) => {
     //if the url is not a full url, then it's a relative url
     if (!url.includes('http')) {
         url = `/shaders/${url}`
     }
-    const res = await fetch(url)
+    const res = await fetch(url, {mode: 'no-cors'})
     const shader = await res.text()
     return shader
 }
@@ -251,13 +190,16 @@ const getRelativeOrAbsolute = async (url) => {
 const getFragmentShader = async () => {
     const shaderUrl = params.get('shader')
     let fragmentShader
+
+    if(params.get('shaderCode')) return decodeURIComponent(params.get('shaderCode'))
+
     if (shaderUrl) {
         fragmentShader = await getRelativeOrAbsolute(`${shaderUrl}.frag`)
     }
-
     if (!fragmentShader) {
         fragmentShader = localStorage.getItem('cranes-manual-code')
     }
+
 
     if (!fragmentShader) {
         fragmentShader = await getRelativeOrAbsolute('default.frag')
@@ -270,4 +212,50 @@ if(navigator.connection) {
         navigator.serviceWorker.controller.postMessage({type:'network-changed'})
     })
 }
+
+const addListenersForFullscreen = (visualizer) => {
+    for (const event of events) {
+        visualizer.addEventListener(event, async () => {
+            try {
+                await document.documentElement.requestFullscreen();
+            } catch (e) {
+                console.error(`requesting fullscreen from event ${event} failed`, e);
+            }
+        }, { once: true });
+    }
+}
+
+const main = async () => {
+    if (ranMain) return;
+    ranMain = true;
+
+    window.cranes = {
+        manualFeatures: {},
+        messageParams: {}
+    }
+
+    window.c = window.cranes;
+
+    startTime = performance.now();
+    const fragmentShader = await getFragmentShader();
+    const audio = await setupAudio();
+    const canvas = getVisualizerDOMElement();
+
+    if (!window.location.href.includes('edit') && params.get('embed') !== 'true') addListenersForFullscreen(canvas);
+
+    window.shader = fragmentShader;
+    setupCanvasEvents(canvas);
+
+    const visualizerConfig = {
+        canvas,
+        initialImageUrl: params.get('image') ?? 'images/placeholder-image.png',
+        fullscreen: (params.get('fullscreen') ?? false) === 'true'
+    };
+
+    const render = await makeVisualizer(visualizerConfig);
+    requestAnimationFrame(() => animate({ render, audio, fragmentShader }));
+};
+
+main();
+
 console.log(`paper cranes version FREE`);

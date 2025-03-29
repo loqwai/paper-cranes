@@ -65,6 +65,7 @@ async function init() {
 
     const keywords = [
         'getLastFrameColor',
+        'getInitialFrameColor',
         'mapValue',
         'resolution',
         'time',
@@ -146,6 +147,28 @@ async function init() {
         'hsl2rgb',
         'rgb2hsl',
         'map',
+        'centerUv',
+        'animateSmooth',
+        'animateBounce',
+        'animatePulse',
+        'animateEaseInQuad',
+        'animateEaseOutQuad',
+        'animateEaseInOutQuad',
+        'animateEaseInCubic',
+        'animateEaseOutCubic',
+        'animateEaseInOutCubic',
+        'animateEaseInExpo',
+        'animateEaseOutExpo',
+        'animateEaseInOutExpo',
+        'animateEaseInSine',
+        'animateEaseOutSine',
+        'animateEaseInOutSine',
+        'animateEaseInElastic',
+        'animateEaseOutElastic',
+        'animateEaseInOutElastic',
+        'animateSmoothBounce',
+        'random',
+        'staticRandom',
 
         'energy',
         'energyNormalized',
@@ -191,7 +214,6 @@ async function init() {
         'spectralFluxZScore',
         'spectralFluxMin',
         'spectralFluxMax',
-        'random',
         'const',
         'uniform',
         'break',
@@ -617,6 +639,27 @@ async function init() {
                 spectralEntropy: 'Measures the complexity/unpredictability of the spectrum. Higher values for noise, lower for pure tones.',
                 spectralCrest: 'Ratio between the spectrum\'s peak and mean. Distinguishes between noisy (low) and tonal (high) sounds.',
                 spectralSkew: 'Measures the asymmetry of the spectrum. Useful for detecting unusual frequency distributions.',
+                getInitialFrameColor: 'Returns the color at the given UV coordinates from the initial frame. Useful for creating effects that reference the starting state of the visualization.',
+                centerUv: 'Centers UV coordinates around (0.5, 0.5) and scales them to (-1, 1). Takes optional resolution parameter. Useful for creating centered effects.',
+                animateSmooth: 'Simple smooth animation that accelerates and decelerates naturally. Good for basic transitions.',
+                animateBounce: 'Creates a bouncing effect that decreases in amplitude over time. Good for playful animations.',
+                animatePulse: 'Creates a smooth pulsing effect that oscillates between 0 and 1. Good for breathing or heartbeat effects.',
+                animateEaseInQuad: 'Quadratic easing that starts slow and accelerates. Good for natural-feeling animations.',
+                animateEaseOutQuad: 'Quadratic easing that starts fast and decelerates. Good for natural-feeling animations.',
+                animateEaseInOutQuad: 'Quadratic easing that starts slow, accelerates in the middle, and decelerates at the end.',
+                animateEaseInCubic: 'Cubic easing that starts slow and accelerates. More pronounced than quadratic.',
+                animateEaseOutCubic: 'Cubic easing that starts fast and decelerates. More pronounced than quadratic.',
+                animateEaseInOutCubic: 'Cubic easing that starts slow, accelerates in the middle, and decelerates at the end.',
+                animateEaseInExpo: 'Exponential easing that starts very slow and accelerates dramatically.',
+                animateEaseOutExpo: 'Exponential easing that starts very fast and decelerates dramatically.',
+                animateEaseInOutExpo: 'Exponential easing that starts very slow, accelerates dramatically in the middle, and decelerates dramatically at the end.',
+                animateEaseInSine: 'Sinusoidal easing that starts slow and accelerates. Creates a smooth, natural motion.',
+                animateEaseOutSine: 'Sinusoidal easing that starts fast and decelerates. Creates a smooth, natural motion.',
+                animateEaseInOutSine: 'Sinusoidal easing that starts slow, accelerates in the middle, and decelerates at the end.',
+                animateEaseInElastic: 'Elastic easing that creates a bouncy effect with overshoot at the start.',
+                animateEaseOutElastic: 'Elastic easing that creates a bouncy effect with overshoot at the end.',
+                animateEaseInOutElastic: 'Elastic easing that creates a bouncy effect with overshoot at both start and end.',
+                animateSmoothBounce: 'Creates a smoother bouncing effect that decreases in amplitude over time.',
             }
 
             const description = audioFeatureDescriptions[word.word]
@@ -625,7 +668,9 @@ async function init() {
                     contents: [
                         { value: `**${word.word}**` },
                         { value: description },
-                        { value: `Available variables: \n- ${word.word}Normalized (0-1)\n- ${word.word}Mean\n- ${word.word}Median\n- ${word.word}StandardDeviation\n- ${word.word}ZScore\n- ${word.word}Min\n- ${word.word}Max` }
+                        { value: word.word.startsWith('animate') ? '```glsl\nfloat ' + word.word + '(float t)\n```\nParameters:\n- t: Time value (usually between 0 and 1)\nReturns: Animated value between 0 and 1' : '' },
+                        { value: word.word.startsWith('animate') ? '\nExample usage:\n```glsl\nfloat t = time * 0.5; // Time-based animation\nvec3 color = mix(color1, color2, animateEaseOutCubic(t));\nfloat scale = 1.0 + 0.2 * animateBounce(t);\nfloat opacity = animateSmooth(t);\n```' : '' },
+                        { value: !word.word.startsWith('animate') ? `Available variables: \n- ${word.word}Normalized (0-1)\n- ${word.word}Mean\n- ${word.word}Median\n- ${word.word}StandardDeviation\n- ${word.word}ZScore\n- ${word.word}Min\n- ${word.word}Max` : '' }
                     ]
                 }
             }
