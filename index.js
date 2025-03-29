@@ -152,30 +152,70 @@ const setupAudio = async () => {
     }
 };
 
-const animate = ({ render, audio, fragmentShader }) => {
-    requestAnimationFrame(() => animate({ render, audio, fragmentShader }));
+// Set up the application state management
+const setupCranesState = () => {
+    window.cranes = {
+        manualFeatures: {},
+        controllerFeatures: {},
+        messageParams: {},
+        frameCount: 0,
+        // Centralized feature flattening function with proper order of precedence
+        flattenFeatures: (audioFeatures = {}) => {
+            return {
+                ...audioFeatures,                    // Base audio features (lowest precedence)
+                ...window.cranes.controllerFeatures, // Controller-computed features
+                ...Object.fromEntries(params),       // URL parameters
+                ...window.cranes.manualFeatures,     // Manual features (highest precedence)
+                ...window.cranes.messageParams,      // Message parameters
+                touch: [coordsHandler.coords.x, coordsHandler.coords.y],
+                touched: coordsHandler.touched
+            }
+        }
+    }
 
-    const features = {
-        ...audio.getFeatures(),
-        ...Object.fromEntries(params),
-        ...window.cranes.manualFeatures,
-        ...window.cranes.messageParams,
-        touch: [coordsHandler.coords.x, coordsHandler.coords.y],
-        touched: coordsHandler.touched
-    };
+    window.c = window.cranes
+}
 
-    window.cranes.measuredAudioFeatures = features;
+// Animation function for the shader rendering
+const animateShader = ({ render, audio, fragmentShader }) => {
+    requestAnimationFrame(() => animateShader({ render, audio, fragmentShader }))
 
     try {
+        // Get audio features
+        const audioFeatures = audio.getFeatures()
+
+        // Store measured audio features for controller access
+        window.cranes.measuredAudioFeatures = audioFeatures
+
+        // Get flattened features using the centralized method
+        const features = window.cranes.flattenFeatures(audioFeatures)
+
+        // Render the shader
         render({
             time: (performance.now() - startTime) / 1000,
             features,
             fragmentShader: window.cranes?.shader ?? fragmentShader,
-        });
+        })
     } catch (e) {
-        console.error('Render error:', e);
+        console.error('Shader render error:', e)
     }
-};
+}
+
+// Separate animation function for the controller
+const animateController = (controller) => {
+    if (!controller) return
+
+    const controllerFrame = () => {
+        requestAnimationFrame(controllerFrame)
+
+        // Get the current flattened features for the controller
+        const features = window.cranes.flattenFeatures(window.cranes.measuredAudioFeatures || {})
+
+        // Call controller with flattened features
+        const controllerResult = controller(features) ?? {}
+        window.cranes.controllerFeatures = controllerResult
+
+}
 
 const getRelativeOrAbsolute = async (url) => {
     //if the url is not a full url, then it's a relative url
@@ -185,6 +225,35 @@ const getRelativeOrAbsolute = async (url) => {
     const res = await fetch(url, {mode: 'no-cors'})
     const shader = await res.text()
     return shader
+}
+
+// Load a controller module from a URL (local or remote)
+const loadController = async () => {
+    const controllerPath = params.get('controller')
+    if (!controllerPath) return null
+
+    try {
+        // Handle paths with or without .js extension
+        let controllerUrl = controllerPath
+        if (!controllerPath.includes('http') && !controllerPath.endsWith('.js')) {
+            controllerUrl = `/controllers/${controllerPath}.js`
+        } else if (!controllerPath.includes('http')) {
+            controllerUrl = `/controllers/${controllerPath}`
+        }
+
+        console.log(`Loading controller from: ${controllerUrl}`)
+        const controllerModule = await import(controllerUrl)
+
+        if (!controllerModule.make || typeof controllerModule.make !== 'function') {
+            console.error('Controller must export a make() function')
+            return null
+        }
+
+        return controllerModule
+    } catch (error) {
+        console.error(`Failed to load controller: ${error}`)
+        return null
+    }
 }
 
 const getFragmentShader = async () => {
@@ -199,7 +268,6 @@ const getFragmentShader = async () => {
     if (!fragmentShader) {
         fragmentShader = localStorage.getItem('cranes-manual-code')
     }
-
 
     if (!fragmentShader) {
         fragmentShader = await getRelativeOrAbsolute('default.frag')
@@ -226,36 +294,54 @@ const addListenersForFullscreen = (visualizer) => {
 }
 
 const main = async () => {
-    if (ranMain) return;
-    ranMain = true;
+    if (ranMain) return
+    ranMain = true
 
-    window.cranes = {
-        manualFeatures: {},
-        messageParams: {}
-    }
+    // Initialize global state
+    setupCranesState()
+    startTime = performance.now()
 
-    window.c = window.cranes;
+    // Load shader and audio
+    const fragmentShader = await getFragmentShader()
+    const audio = await setupAudio()
+    const canvas = getVisualizerDOMElement()
 
-    startTime = performance.now();
-    const fragmentShader = await getFragmentShader();
-    const audio = await setupAudio();
-    const canvas = getVisualizerDOMElement();
+    if (!window.location.href.includes('edit') && params.get('embed') !== 'true') addListenersForFullscreen(canvas)
 
-    if (!window.location.href.includes('edit') && params.get('embed') !== 'true') addListenersForFullscreen(canvas);
-
-    window.shader = fragmentShader;
-    setupCanvasEvents(canvas);
+    window.shader = fragmentShader
+    setupCanvasEvents(canvas)
 
     const visualizerConfig = {
         canvas,
         initialImageUrl: params.get('image') ?? 'images/placeholder-image.png',
         fullscreen: (params.get('fullscreen') ?? false) === 'true'
-    };
+    }
 
-    const render = await makeVisualizer(visualizerConfig);
-    requestAnimationFrame(() => animate({ render, audio, fragmentShader }));
-};
+    // Load and initialize controller if specified
+    const controllerModule = await loadController()
+    if (controllerModule && controllerModule.make) {
+        try {
+            // Initialize controller with make() function
+            const controller = controllerModule.make(window.cranes)
 
-main();
+            if (typeof controller !== 'function') {
+                throw new Error('Controller make() must return a controller function')
+            }
+
+            console.log('Controller initialized successfully')
+
+            // Setup separate animation loop for the controller
+            animateController(controller)
+        } catch (e) {
+            console.error('Failed to initialize controller:', e)
+        }
+    }
+
+    // Initialize visualizer and start shader animation loop
+    const render = await makeVisualizer(visualizerConfig)
+    requestAnimationFrame(() => animateShader({ render, audio, fragmentShader }))
+}
+
+main()
 
 console.log(`paper cranes version FREE`);
