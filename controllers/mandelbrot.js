@@ -1,39 +1,13 @@
-let frameCount = 0
-const zoomStart = 4.0
-const zoomSpeed = 0.25
-const centerX = -0.7436438870371587
-const centerY = 0.13182590420531197
-
-function splitDouble(x) {
-  const hi = Math.fround(x)
-  const lo = x - hi
-  return [hi, lo]
-}
+let zoomStart = 1.0
+let zoomSpeed = 0.05
 
 export default function controller(features) {
   const time = performance.now() / 1000
-  frameCount++
-
-  const resolution = features.resolution || { x: 1280, y: 720 }
-  const minDim = Math.min(resolution.x, resolution.y)
-
-  const zoom = zoomStart * Math.exp(-zoomSpeed * time)
-  const pixelSpan = zoom / minDim
-
-  const screenOriginX = centerX - (resolution.x * pixelSpan) / 2
-  const screenOriginY = centerY - (resolution.y * pixelSpan) / 2
-
-  const [hiX, loX] = splitDouble(screenOriginX)
-  const [hiY, loY] = splitDouble(screenOriginY)
-  const [hiS, loS] = splitDouble(pixelSpan)
+  const cameraScale = zoomStart * Math.exp(-zoomSpeed * time)
 
   return {
-    controllerFrameCount: frameCount,
-    cameraScreenOriginHighX: hiX,
-    cameraScreenOriginLowX: loX,
-    cameraScreenOriginHighY: hiY,
-    cameraScreenOriginLowY: loY,
-    cameraPixelSpanHigh: hiS,
-    cameraPixelSpanLow: loS
+    cameraCenterX: 0.0,
+    cameraCenterY: 0.0,
+    cameraScale
   }
 }
