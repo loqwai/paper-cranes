@@ -8,7 +8,9 @@ Shader Controllers are JavaScript modules that provide dynamic, programmable con
 2. The controller path can be:
     - A local path relative to the `/controllers` directory (`example` or `example.js`)
     - A full URL to a remote JavaScript file (`https://example.com/my-controller.js`)
-3. The controller exports a `make()` function that initializes the controller and returns a controller function
+3. The controller can be implemented in two ways:
+    - **Simple**: Export a function directly that will be called each frame
+    - **Advanced**: Export a `make()` function that initializes the controller and returns a function
 4. The controller function is called on each frame, receiving the flattened features
 5. The returned values are stored in `window.cranes.controllerFeatures`
 6. These values are incorporated into the feature precedence chain
@@ -27,24 +29,54 @@ This means that URL parameters will override controller features, and manual fea
 
 ## Creating a Controller
 
-Create a JavaScript module that exports a `make()` function:
+### Option 1: Simple Function-Based Controller
+
+Export a function directly from your module:
 
 ```js
-// controllers/my-controller.js
+// controllers/simple.js
+// State is kept in module scope
+let rotation = 0
+let color = 0
+
+// Export the controller function directly
+export default function controller(features) {
+    // Update state
+    rotation += 0.01 * (1 + features.bassNormalized)
+    color = (color + 0.005) % 1.0
+
+    // Return values for shader
+    return {
+        myRotation: rotation,
+        myColor: color,
+        customBeat: features.bassNormalized > 0.8
+    }
+}
+```
+
+### Option 2: Make-Based Controller
+
+Export a `make()` function that returns a controller function:
+
+```js
+// controllers/advanced.js
 export function make(cranes) {
-    // Initialize controller state
+    // Initialize with access to global state
+    console.log("Initializing with:", cranes)
+
+    // Create state in closure
     const state = {
         rotation: 0,
         color: 0
     }
 
-    // Return the controller function that will be called each frame
+    // Return the controller function
     return function controller(features) {
-        // Update controller state
+        // Update state
         state.rotation += 0.01 * (1 + features.bassNormalized)
         state.color = (state.color + 0.005) % 1.0
 
-        // Return values that will be available to shaders
+        // Return values for shader
         return {
             myRotation: state.rotation,
             myColor: state.color,
@@ -84,15 +116,29 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 }
 ```
 
-## Example
+## Examples
 
-See `controllers/example.js` for a complete working example.
+Two controller examples are provided:
 
-To use the example, open:
+1. **Simple function controller**: `controllers/simple.js`
 
-```
-/?shader=controller-example&controller=example
-```
+    - Exports a controller function directly
+    - State is kept in module scope variables
+    - Use: `?shader=controller-example&controller=simple`
+
+2. **Make-based controller**: `controllers/example.js`
+    - Uses the advanced `make()` pattern
+    - State is encapsulated in closures
+    - Has access to cranes object for initialization
+    - Use: `?shader=controller-example&controller=example`
+
+## When to Use Each Approach
+
+- **Simple Function Controller**: For simpler controllers that don't need initialization
+- **Make-Based Controller**: When you need:
+    - Initialization with access to global state
+    - More encapsulation of state
+    - More complex setup or resource loading
 
 ## Advanced Usage
 

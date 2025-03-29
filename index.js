@@ -206,15 +206,28 @@ const animateController = (controller) => {
     if (!controller) return
 
     const controllerFrame = () => {
+        try {
+            // Get the current flattened features for the controller
+            const features = window.cranes.flattenFeatures(window.cranes.measuredAudioFeatures || {})
+
+            // Call controller with flattened features
+            const controllerResult = controller(features) ?? {}
+
+            // Store controller result in controllerFeatures
+            window.cranes.controllerFeatures = controllerResult
+
+            // Update frame count
+            window.cranes.frameCount++
+        } catch (e) {
+            console.error('Controller error:', e)
+        }
+
+        // Schedule next frame
         requestAnimationFrame(controllerFrame)
+    }
 
-        // Get the current flattened features for the controller
-        const features = window.cranes.flattenFeatures(window.cranes.measuredAudioFeatures || {})
-
-        // Call controller with flattened features
-        const controllerResult = controller(features) ?? {}
-        window.cranes.controllerFeatures = controllerResult
-
+    // Start controller animation loop
+    requestAnimationFrame(controllerFrame)
 }
 
 const getRelativeOrAbsolute = async (url) => {
@@ -244,12 +257,24 @@ const loadController = async () => {
         console.log(`Loading controller from: ${controllerUrl}`)
         const controllerModule = await import(controllerUrl)
 
-        if (!controllerModule.make || typeof controllerModule.make !== 'function') {
-            console.error('Controller must export a make() function')
-            return null
+        // Handle different module formats:
+        // 1. Module exports a function directly - use it as the controller
+        // 2. Module exports a make() function - call it to get the controller
+        // 3. Module exports something else - error
+
+        if (typeof controllerModule.default === 'function') {
+            // Default export is a function - direct controller or make function
+            return controllerModule.default
+        } else if (typeof controllerModule.make === 'function') {
+            // Make function export
+            return controllerModule.make
+        } else if (typeof controllerModule === 'function') {
+            // Module itself is a function
+            return controllerModule
         }
 
-        return controllerModule
+        console.error('Controller must export a function directly or provide a make() function')
+        return null
     } catch (error) {
         console.error(`Failed to load controller: ${error}`)
         return null
@@ -318,14 +343,27 @@ const main = async () => {
     }
 
     // Load and initialize controller if specified
-    const controllerModule = await loadController()
-    if (controllerModule && controllerModule.make) {
+    const controllerExport = await loadController()
+
+    if (controllerExport) {
         try {
-            // Initialize controller with make() function
-            const controller = controllerModule.make(window.cranes)
+            let controller
+
+            // Check if the export is a make function or direct controller
+            if (typeof controllerExport === 'function') {
+                // If it takes 0-1 arguments, it's likely a direct controller function
+                if (controllerExport.length <= 1) {
+                    controller = controllerExport
+                    console.log('Using direct controller function')
+                } else {
+                    // Otherwise it's probably a make function
+                    controller = controllerExport(window.cranes)
+                    console.log('Using make function to create controller')
+                }
+            }
 
             if (typeof controller !== 'function') {
-                throw new Error('Controller make() must return a controller function')
+                throw new Error('Controller must be a function or return a function')
             }
 
             console.log('Controller initialized successfully')
