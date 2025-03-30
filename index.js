@@ -213,11 +213,16 @@ if(navigator.connection) {
     })
 }
 
+document.addEventListener('fullscreenchange', () => {
+    document.body.style.cursor = document.fullscreenElement ? 'none' : 'default'
+})
+
 const addListenersForFullscreen = (visualizer) => {
     for (const event of events) {
         visualizer.addEventListener(event, async () => {
             try {
                 await document.documentElement.requestFullscreen();
+
             } catch (e) {
                 console.error(`requesting fullscreen from event ${event} failed`, e);
             }
