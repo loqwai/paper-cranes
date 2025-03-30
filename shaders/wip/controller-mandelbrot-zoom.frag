@@ -18,9 +18,9 @@ uniform float extremeZoom;
 
 // Julia set parameters for more interesting structures
 #define JULIA_REAL -0.8
-#define ARM_FLEXIBILITY (1./pow(iTime, 3.))
+#define ARM_FLEXIBILITY (1./pow(iTime, 1.1001) - bassZScore/60.)
 #define JULIA_IMAG 0.156 + ARM_FLEXIBILITY
-#define COLOR_INTENSITY (0.63 + 0.2 * energyNormalized)
+#define COLOR_INTENSITY (0.13 + spectralRoughnessNormalized)
 
 
 // Performance optimizations
@@ -126,15 +126,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     if (iter >= maxIter) {
         // Interior coloring - simpler for performance
-        float pattern = sin(iTime * 0.2) * 0.5 + 0.5;
+        float pattern = sin(iTime * 0.2) * 0.5 + 0.5 + getLastFrameColor(centeredFrag.xy).x;
         col = juliaColorPalette(pattern) * 0.2;
     } else {
         // Exterior coloring with audio reactivity
         float normalizedIter = sqrt(iter / maxIter);
 
         // Music-reactive coloring
-        float colorSpeed = 0.07 + 0.05 * spectralFluxNormalized;
-        float colorCycle = iTime * colorSpeed + bassNormalized;
+        float colorSpeed = 0.07 + 0.05;
+        float colorCycle = iTime * colorSpeed + (bassNormalized/100.);
         float colorIndex = fract(normalizedIter * 3.0 + colorCycle);
 
         col = juliaColorPalette(colorIndex);
@@ -145,7 +145,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         col = mix(col, col * 1.2, bands * bandIntensity);
 
         // Enhance with music energy
-        col *= 0.8 + COLOR_INTENSITY * 0.4;
+        col *= 0.8 + COLOR_INTENSITY * (energyNormalized/10.);
 
         // Angle-based color variation
         float spiralAngle = atan(z.y, z.x);
