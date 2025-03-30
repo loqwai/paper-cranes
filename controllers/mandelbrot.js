@@ -64,7 +64,7 @@ Decimal.config({
 // Interesting Julia set coordinates
 let centerXDecimal = new Decimal('-0.945428')
 let centerYDecimal = new Decimal('0.13009')
-let centerX = -0.945428
+let centerX = -0.845428
 let centerY = 0.13009
 
 // Enhanced split function for better precision
