@@ -1,30 +1,30 @@
 import Decimal from 'decimal.js'
 
 let startTime = null
-const zoomStart = 4.0
-const zoomSpeed = 0.3
+const zoomStart = 14.0
+const zoomSpeed = (t) => 0.4 * Math.exp(-t/40)
 
 // Performance config - can be adjusted for different devices
 const perfConfig = {
   highPerformance: {
-    decimalPrecision: 64,
+    decimalPrecision: 128,
     maxIterations: 200,
     updateFrequency: 1,
-    deepZoomThreshold: 1e-10,
+    deepZoomThreshold: 1e-8,
     extremeZoomThreshold: 1e-50
   },
   mediumPerformance: {
-    decimalPrecision: 32,
+    decimalPrecision: 64,
     maxIterations: 100,
     updateFrequency: 5,
-    deepZoomThreshold: 1e-6,
+    deepZoomThreshold: 1e-5,
     extremeZoomThreshold: 1e-20
   },
   lowPerformance: {
-    decimalPrecision: 20,
+    decimalPrecision: 32,
     maxIterations: 50,
     updateFrequency: 15,
-    deepZoomThreshold: 1e-4,
+    deepZoomThreshold: 1e-3,
     extremeZoomThreshold: 1e-10
   }
 }
@@ -37,6 +37,7 @@ function getPerformanceLevel() {
 
   if (perfParam === 'high') return 'highPerformance'
   if (perfParam === 'low') return 'lowPerformance'
+  if (perfParam === 'medium') return 'mediumPerformance'
 
   // Try to detect based on hardware
   const isHighEnd = window.navigator.hardwareConcurrency >= 8
@@ -44,34 +45,54 @@ function getPerformanceLevel() {
                   /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
 
   return 'highPerformance'
-  // if (isHighEnd) return 'highPerformance'
-  // if (isLowEnd) return 'lowPerformance'
+  if (isHighEnd) return 'highPerformance'
+  if (isLowEnd) return 'lowPerformance'
 
-  // return 'mediumPerformance'
+  return 'mediumPerformance'
 }
 
 // Get the performance configuration
 const performanceLevel = getPerformanceLevel()
 const config = perfConfig[performanceLevel]
-console.log(`Using ${performanceLevel} settings`)
+console.log(`Using ${performanceLevel} settings with ${config.decimalPrecision}-bit precision`)
 
 // Configure Decimal precision based on performance level
-Decimal.config({ precision: config.decimalPrecision, rounding: 4 })
+Decimal.config({
+
+})
 
 // Interesting Julia set coordinates
-const centerXDecimal = new Decimal('-0.945428')
-const centerYDecimal = new Decimal('0.213009')
-const centerX = -0.945428
-const centerY = 0.213009
+let centerXDecimal = new Decimal('-0.945428')
+let centerYDecimal = new Decimal('0.13009')
+let centerX = -0.945428
+let centerY = 0.13009
 
-// Optimized split function for better performance
+// Enhanced split function for better precision
 function splitDouble(value) {
-  if (Math.abs(value) < 1e-150) {
-    return { high: 0, low: 0 };
+  // Handle very small values with better precision
+  if (Math.abs(value) < 1e-30) {
+    return { high: 0, low: 0 }
   }
 
-  const high = Math.fround(value);
-  const low = value - high;
+  // For extreme precision, use a string-based approach
+  if (Math.abs(value) < 1e-15) {
+    const str = value.toString()
+    const scientificMatch = str.match(/^(-?\d*\.?\d+)e([+-]\d+)$/)
+
+    if (scientificMatch) {
+      const mantissa = parseFloat(scientificMatch[1])
+      const exponent = parseInt(scientificMatch[2])
+
+      // Calculate a more precise split for very small numbers
+      const high = mantissa * Math.pow(10, exponent)
+      const remainder = value - high
+      return { high, low: remainder }
+    }
+  }
+
+  // Standard split for normal range values
+  const high = Math.fround(value)
+  const low = value - high
 
   return { high, low }
 }
@@ -79,24 +100,37 @@ function splitDouble(value) {
 export default function controller(features) {
   if (!startTime) startTime = performance.now()
   const time = (performance.now() - startTime) / 1000
-  const t = time
+if(features.bassZScore > 0.9) startTime -= 100
+  const maxTime = 100; // 5 minutes threshold
+  let t = time
+  let baseZoom = zoomStart * Math.exp(-zoomSpeed(t) * t)
+
+  let zoom = baseZoom;
+  // if (time > maxTime) {
+  //   t = maxTime + (time/100000)
+  //   const zoomOutSpeed = 0.7 // Speed at which to zoom out
+  //   zoom = baseZoom / Math.exp(zoomOutSpeed * (t - maxTime))
+  //   // change the julia constants slightly
+
+  // }
 
   const resolution = features.resolution || { x: 1280, y: 720 }
   const minDim = Math.min(resolution.x, resolution.y)
 
   // Calculate zoom level
-  const baseZoom = zoomStart * Math.exp(-zoomSpeed * t)
-  let zoom = baseZoom;
+
+
 
   // Only log occasionally to reduce overhead
   if (t % 15 < 0.1) {
     console.log(`Zoom level: ${zoom.toExponential(5)}, Time: ${t.toFixed(1)}s, Performance: ${performanceLevel}`);
   }
+  // If time exceeds a certain threshold, start zooming out instead
 
   // Only use Decimal for deep zooms - threshold based on performance level
   if (zoom < config.deepZoomThreshold) {
-    // Convert zoom to Decimal with precision according to performance level
-    const zoomDecimal = new Decimal(zoom.toExponential(10))
+    // Convert zoom to Decimal with enhanced precision formatting
+    const zoomDecimal = new Decimal(zoom.toExponential(15))
     const minDimDecimal = new Decimal(minDim)
 
     // Calculate pixel span with high precision
@@ -109,10 +143,31 @@ export default function controller(features) {
     const screenOriginXDecimal = centerXDecimal.minus(halfWidthDecimal)
     const screenOriginYDecimal = centerYDecimal.minus(halfHeightDecimal)
 
-    // Use simplified approach for better performance
-    const screenOriginXSplit = splitDouble(Number(screenOriginXDecimal.toString()))
-    const screenOriginYSplit = splitDouble(Number(screenOriginYDecimal.toString()))
-    const pixelSpanSplit = splitDouble(Number(pixelSpanDecimal.toString()))
+    // Enhanced splitting for better precision
+    let screenOriginXSplit
+    let screenOriginYSplit
+    let pixelSpanSplit
+
+    // For extreme zoom levels, use enhanced precision handling
+    if (zoom < config.extremeZoomThreshold) {
+      // Get full precision strings for extreme zoom levels
+      const soXStr = screenOriginXDecimal.toString()
+      const soYStr = screenOriginYDecimal.toString()
+      const pSpanStr = pixelSpanDecimal.toString()
+
+      screenOriginXSplit = splitDouble(Number(soXStr))
+      screenOriginYSplit = splitDouble(Number(soYStr))
+      pixelSpanSplit = splitDouble(Number(pSpanStr))
+
+      // Also calculate auxiliary values for enhanced precision in shader
+      const pixelSpanInvDecimal = minDimDecimal.div(zoomDecimal)
+      const pixelSpanInvSplit = splitDouble(Number(pixelSpanInvDecimal.toString()))
+    } else {
+      // Standard precision splitting for normal deep zooms
+      screenOriginXSplit = splitDouble(Number(screenOriginXDecimal.toString()))
+      screenOriginYSplit = splitDouble(Number(screenOriginYDecimal.toString()))
+      pixelSpanSplit = splitDouble(Number(pixelSpanDecimal.toString()))
+    }
 
     // Calculate iteration norm (only update occasionally to save performance)
     // Update frequency depends on performance level
@@ -161,7 +216,7 @@ export default function controller(features) {
   }
 }
 
-// Simplified calculation for better performance
+// Enhanced calculation for better precision in iteration
 function calculateHighPrecisionIterNorm(centerXDecimal, centerYDecimal, maxIter) {
   let x = new Decimal(0)
   let y = new Decimal(0)
