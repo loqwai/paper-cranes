@@ -26,10 +26,20 @@ float getMask(vec2 uv) {
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-  // Normalize UV coordinates.
+  // Normalize UV coordinates
   vec2 uv = fragCoord.xy / iResolution.xy;
+  float aspectRatio = iResolution.x / iResolution.y;
+
+  // Scale UV coordinates to maintain aspect ratio
+  vec2 scaledUV = uv;
+  if (aspectRatio > 1.0) {
+    scaledUV.x = (uv.x - 0.5) * aspectRatio + 0.5;
+  } else {
+    scaledUV.y = (uv.y - 0.5) / aspectRatio + 0.5;
+  }
+
   // Base image color and binary text mask.
-  vec3 baseColor =  getInitialFrameColor(uv).rgb;
+  vec3 baseColor = getInitialFrameColor(uv).rgb;
   float baseMask = getMask(uv);
 
   // Get last frame's color for flame effect
@@ -41,7 +51,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
   // Calculate distance from text center
   vec2 center = vec2(0.5, 0.5);
-  float distFromCenter = length(uv - center);
+  float distFromCenter = length(scaledUV - center);
 
   // Create radiating effect
   float radiationFactor = smoothstep(0.0, 0.5, distFromCenter);
@@ -57,7 +67,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   // Use continuous steps instead of discrete
   for(float i = 1.0; i <= currentSteps; i += 0.5) {
     float scale = 1.0 - i * zoomStep;
-    vec2 zoomedUV = (uv - center) / scale + center;
+    vec2 zoomedUV = (scaledUV - center) / scale + center;
 
     // Add plasma-like warping with radial influence
     vec3 p = vec3(zoomedUV / 2.0 - 1.0, 0.0);
@@ -103,7 +113,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   finalColor *= 1.0 + length(flameColor) * 0.5 * smoothstep(0.0, 0.5, invText);
 
   // Add subtle color shifting based on plasma mapping and radiation
-  vec3 p = vec3(uv * 2.0 - 1.0, 0.0);
+  vec3 p = vec3(scaledUV * 2.0 - 1.0, 0.0);
   float rz = map(p);
   finalColor = mix(finalColor, rainbowPalette(rz * 0.1 + radiationPhase * 0.1), 0.1);
 

@@ -31,7 +31,7 @@ const getTexture = async (gl, url) => {
             mag: gl.NEAREST,
             wrap: gl.REPEAT
         }, () => {
-            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
+            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false)
             resolve(texture)
         })
     })
@@ -90,28 +90,6 @@ void main() {
     gl_Position = position;
 }`
 
-const resizeCanvas = (canvas, gl, resolutionRatio = 1) => {
-    const container = canvas.parentElement
-    const containerWidth = container.clientWidth
-    const containerHeight = container.clientHeight
-
-    // Calculate aspect ratio based on container
-    const containerAspect = containerWidth / containerHeight
-
-    // Set canvas dimensions to match container while maintaining aspect ratio
-    canvas.width = containerWidth * resolutionRatio
-    canvas.height = containerHeight * resolutionRatio
-
-    // Update viewport
-    gl.viewport(0, 0, canvas.width, canvas.height)
-
-    return {
-        width: canvas.width,
-        height: canvas.height,
-        aspect: containerAspect
-    }
-}
-
 export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) => {
     await askForWakeLock().catch(e => console.log("Couldn't ask for a screen wake lock"));
 
@@ -127,14 +105,6 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         }
     })
 
-    // Set up resize observer
-    const resizeObserver = new ResizeObserver(() => {
-        if (!fullscreen) {
-            resizeCanvas(canvas, gl)
-        }
-    })
-    resizeObserver.observe(canvas.parentElement)
-
     if (fullscreen) {
         const width = window.innerWidth
         const height = window.innerHeight
@@ -142,8 +112,6 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         canvas.height = height
         gl.viewport(0, 0, width, height)
         canvas.classList.add('fullscreen')
-    } else {
-        resizeCanvas(canvas, gl)
     }
 
     const initialTexture = await getTexture(gl, initialImageUrl)
@@ -192,11 +160,11 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         const currentTime = performance.now()
         const frameTime = currentTime - lastRender
 
-        const resolutionRatio = calculateResolutionRatio(frameTime, renderTimes, lastResolutionRatio)
+        const  resolutionRatio = calculateResolutionRatio(frameTime, renderTimes, lastResolutionRatio)
 
         if (resolutionRatio !== lastResolutionRatio) {
             console.log(`Adjusting resolution ratio to ${resolutionRatio.toFixed(2)}`)
-            const dimensions = resizeCanvas(canvas, gl, resolutionRatio)
+            resizeCanvasToDisplaySize(gl.canvas, resolutionRatio)
             lastResolutionRatio = resolutionRatio
             renderTimes = []
         }
