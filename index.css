@@ -10,10 +10,12 @@ body {
   user-select: none;
   background-color: #000000;
 }
+
 canvas {
   margin: 0;
-  height: 100vmin;
-  width: 100vmin;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
   image-rendering: high-quality;
   will-change: transform;
   backface-visibility: hidden;
@@ -22,6 +24,7 @@ canvas {
 }
 
 canvas.fullscreen {
-  height: 100vh;
   width: 100vw;
+  height: 100vh;
+  object-fit: contain;
 }
