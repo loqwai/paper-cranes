@@ -1,3 +1,4 @@
+#define localTime (iTime/1.)
 vec3 rainbowPalette(float t) {
   // Returns a psychedelic rainbow color cycle.
   return 0.5 + 0.5 * cos(6.2831*(t + vec3(0.0, 0.33, 0.67)));
@@ -10,10 +11,10 @@ mat2 m(float a) {
 }
 
 float map(vec3 p) {
-  p.xz *= m(iTime * 0.4);
-  p.xy *= m(iTime * 0.3);
-  vec3 q = p * 2.0 + iTime;
-  return length(p + vec3(sin(iTime * 0.7))) * log(length(p) + 1.0) +
+  p.xz *= m(localTime * 0.4);
+  p.xy *= m(localTime * 0.3);
+  vec3 q = p * 2.0 + localTime;
+  return length(p + vec3(sin(localTime * 0.7))) * log(length(p) + 1.0) +
          sin(q.x + sin(q.z + sin(q.y))) * 0.5 - 1.0;
 }
 
@@ -44,14 +45,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
   // Create radiating effect
   float radiationFactor = smoothstep(0.0, 0.5, distFromCenter);
-  float radiationPhase = radiationFactor * 6.2831 + iTime * 2.0;
+  float radiationPhase = radiationFactor * 6.2831 + localTime * 2.0;
 
   // Smooth zoom animation with plasma influence
-  float zoomPhase = sin(iTime * 0.5) * 0.5 + 0.5;
+  float zoomPhase = animateEaseInOutExpo(sin(localTime * 0.5)) * 0.5 + 0.5;
   float maxSteps = 12.0;
-  float stepVariation = sin(iTime * 0.5) * 4.0;
+  float stepVariation = sin(localTime * 0.5) * 4.0;
   float currentSteps = maxSteps + stepVariation;
-  float zoomStep = -0.1 - (sin(iTime * 0.5) * 0.005);
+  float zoomStep = 0.1 - (sin(localTime*0.5) * 0.005);
 
   // Use continuous steps instead of discrete
   for(float i = 1.0; i <= currentSteps; i += 0.5) {
@@ -73,7 +74,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float ring = smoothstep(0.0, 0.1, clamp(zoomMask - baseMask, 0.0, 1.0)) * f;
 
     // Each ring gets a unique rainbow color with plasma influence
-    vec3 ringColor = rainbowPalette(i / currentSteps + iTime * 0.1 + rz * 0.1 + radiationPhase * 0.1);
+    vec3 ringColor = rainbowPalette(i / currentSteps + localTime * 0.1 + rz * 0.1 + radiationPhase * 0.1);
 
     // Smooth falloff based on distance from center
     float falloff = smoothstep(1.0, 0.0, i / currentSteps);
@@ -91,7 +92,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Enhanced flame intensity with plasma influence
     float flameIntensity = ring * falloff * (1.0 + f) * (1.0 + sin(radiationPhase) * 0.3);
-    flameColor += flameRingColor * flameIntensity * (1.0 + sin(iTime * 3.0 + i + rz) * 0.3);
+    flameColor += flameRingColor * flameIntensity * (1.0 + sin(localTime * 3.0 + i + rz) * 0.3);
   }
 
   // Smooth text-to-flame transition with plasma influence
