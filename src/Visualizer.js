@@ -31,7 +31,7 @@ const getTexture = async (gl, url) => {
             mag: gl.NEAREST,
             wrap: gl.REPEAT
         }, () => {
-            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false)
+            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
             resolve(texture)
         })
     })
@@ -206,7 +206,8 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
 
         gl.bindFramebuffer(gl.READ_FRAMEBUFFER, frame.framebuffer)
         gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null)
-        gl.blitFramebuffer(0, 0, frame.width, frame.height, 0, gl.canvas.height, gl.canvas.width, 0, gl.COLOR_BUFFER_BIT, gl.NEAREST)
+        gl.blitFramebuffer(0, 0, frame.width, frame.height, 0, 0, gl.canvas.width, gl.canvas.height, gl.COLOR_BUFFER_BIT, gl.NEAREST)
+
 
         frameNumber++
     }
