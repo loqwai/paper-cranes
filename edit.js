@@ -191,7 +191,18 @@ const FeatureAdder = () => {
     const [isDrawerOpen, setIsDrawerOpen] = useState(false)
     const toggleButtonRef = useRef(null)
     const drawerRef = useRef(null)
+    const newFeatureInputRef = useRef(null)
     const prevFeaturesLength = useRef(0)
+
+    // Focus the new feature input when drawer opens
+    useEffect(() => {
+        if (isDrawerOpen && newFeatureInputRef.current) {
+            // Small delay to ensure DOM is ready and drawer animation has started
+            setTimeout(() => {
+                newFeatureInputRef.current.focus()
+            }, 50)
+        }
+    }, [isDrawerOpen])
 
     useEffect(() => {
         const currentLength = Object.keys(features).length
@@ -203,6 +214,25 @@ const FeatureAdder = () => {
         }
         prevFeaturesLength.current = currentLength
     }, [features])
+
+    // Add global keyboard shortcut for opening drawer
+    useEffect(() => {
+        const handleGlobalKeyDown = (event) => {
+            // Check for Command/Control + Shift + D
+            if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === 'd') {
+                event.preventDefault() // Prevent browser default actions
+                setIsDrawerOpen(!isDrawerOpen) // Toggle drawer state
+            }
+        }
+
+        // Add keyboard listener globally
+        document.addEventListener('keydown', handleGlobalKeyDown)
+
+        // Clean up
+        return () => {
+            document.removeEventListener('keydown', handleGlobalKeyDown)
+        }
+    }, [isDrawerOpen]) // Add isDrawerOpen to dependency array
 
     // Add click outside handler
     useEffect(() => {
@@ -349,6 +379,7 @@ const FeatureAdder = () => {
                         onInput=${(e) => setNewFeatureName(e.target.value)}
                         onKeyDown=${handleNewFeatureKeyDown}
                         placeholder="Enter new feature name and press Enter"
+                        ref=${newFeatureInputRef}
                     />
                 </div>
                 <div id="existing-features-editor">
