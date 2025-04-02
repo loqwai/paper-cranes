@@ -52,7 +52,7 @@ body {
 /* Toggle button */
 .drawer-toggle {
   position: fixed;
-  top: 8px;
+  top: 14px;
   right: 8px;
   z-index: 1001;
   width: 28px;
@@ -307,7 +307,9 @@ body.present #feature-editor {
 }
 
 .new-feature input {
-  flex: 1;
+  flex: 0;
+  width: calc(100% - 60px);
+  min-width: calc(100% - 60px);
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.25);
   color: white;
