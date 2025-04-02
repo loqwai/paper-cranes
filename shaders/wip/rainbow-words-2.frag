@@ -1,3 +1,4 @@
+//http://localhost:6969/?shader=rainbow-words/3&image=images/sibi.png
 vec3 rainbowPalette(float t) {
   // Returns a psychedelic rainbow color cycle.
   return 0.5 + 0.5 * cos(6.2831*(t + vec3(0.0, 0.33, 0.67)));

@@ -1,3 +1,4 @@
+//http://localhost:6969/?shader=rainbow-words/3&image=images/sibi.png
 #define localTime (iTime/1.)
 vec3 rainbowPalette(float t) {
   // Returns a psychedelic rainbow color cycle.

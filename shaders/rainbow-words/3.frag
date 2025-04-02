@@ -1,3 +1,4 @@
+//http://localhost:6969/?shader=rainbow-words/3&image=images/sibi.png
 #define EPSILON 0.000001
 
 vec3 rainbowPalette(float t) {
