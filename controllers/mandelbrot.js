@@ -1,4 +1,4 @@
-import Decimal from 'https://cdnjs.cloudflare.com/ajax/libs/decimal.js/9.0.0/decimal.min.js'
+import {Decimal} from 'https://esm.sh/decimal.js@10.5.0'
 
 let startTime = null
 const zoomStart = 14.0
@@ -10,22 +10,22 @@ const perfConfig = {
     decimalPrecision: 128,
     maxIterations: 200,
     updateFrequency: 1,
-    deepZoomThreshold: 1e-8,
+    deepZoomThreshold: 1e-13,
     extremeZoomThreshold: 1e-50
   },
   mediumPerformance: {
     decimalPrecision: 64,
     maxIterations: 100,
     updateFrequency: 5,
-    deepZoomThreshold: 1e-5,
-    extremeZoomThreshold: 1e-20
+    deepZoomThreshold: 1e-13,
+    extremeZoomThreshold: 1e-50
   },
   lowPerformance: {
     decimalPrecision: 32,
     maxIterations: 50,
     updateFrequency: 15,
-    deepZoomThreshold: 1e-3,
-    extremeZoomThreshold: 1e-10
+    deepZoomThreshold: 1e-13,
+    extremeZoomThreshold: 1e-50
   }
 }
 
@@ -58,7 +58,8 @@ console.log(`Using ${performanceLevel} settings with ${config.decimalPrecision}-
 
 // Configure Decimal precision based on performance level
 Decimal.config({
-
+  precision: config.decimalPrecision,
+  precisionTolerance: 1e-30
 })
 
 // Interesting Julia set coordinates
@@ -101,30 +102,16 @@ export default function controller(features) {
   if (!startTime) startTime = performance.now()
   const time = (performance.now() - startTime) / 1000
 if(features.bassZScore > 0.9) startTime -= 100
-  const maxTime = 100; // 5 minutes threshold
   let t = time
   let baseZoom = zoomStart * Math.exp(-zoomSpeed(t) * t)
 
   let zoom = baseZoom;
-  // if (time > maxTime) {
-  //   t = maxTime + (time/100000)
-  //   const zoomOutSpeed = 0.7 // Speed at which to zoom out
-  //   zoom = baseZoom / Math.exp(zoomOutSpeed * (t - maxTime))
-  //   // change the julia constants slightly
-
-  // }
-
   const resolution = features.resolution || { x: 1280, y: 720 }
   const minDim = Math.min(resolution.x, resolution.y)
 
   // Calculate zoom level
 
 
-
-  // Only log occasionally to reduce overhead
-  if (t % 15 < 0.1) {
-    console.log(`Zoom level: ${zoom.toExponential(5)}, Time: ${t.toFixed(1)}s, Performance: ${performanceLevel}`);
-  }
   // If time exceeds a certain threshold, start zooming out instead
 
   // Only use Decimal for deep zooms - threshold based on performance level

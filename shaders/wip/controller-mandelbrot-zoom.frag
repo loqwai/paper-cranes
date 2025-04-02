@@ -1,4 +1,4 @@
-// High-performance Julia set shader with double-float emulation
+/// High-performance Julia set shader with double-float emulation
 // http://localhost:6969/edit.html?controller=mandelbrot&knob_50=0.22&knob_50.min=-3&knob_50.max=3
 uniform float cameraScreenOriginX;
 uniform float cameraScreenOriginXLow;
@@ -18,8 +18,8 @@ uniform float extremeZoom;
 
 // Julia set parameters for more interesting structures
 #define JULIA_REAL -0.8
-#define ARM_FLEXIBILITY (1./pow(iTime, 1.1001) - bassZScore/60.)
-#define JULIA_IMAG 0.156 + ARM_FLEXIBILITY
+#define ARM_FLEXIBILITY 0. / zoomExponent
+#define JULIA_IMAG 0.159 + ARM_FLEXIBILITY
 #define COLOR_INTENSITY (0.13 + spectralRoughnessNormalized)
 
 
