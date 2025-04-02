@@ -2,6 +2,7 @@ import { render, Fragment } from 'preact'
 import { useState, useEffect, useRef } from 'preact/hooks'
 import { html } from 'htm/preact'
 import debounce from 'debounce'
+import { getRelativeOrAbsoluteShaderUrl } from './src/utils.js'
 
 const updateUrl = (params) => {
     const currentUrl = new URL(window.location)
@@ -18,73 +19,69 @@ const updateUrl = (params) => {
 const updateUrlDebounced = debounce(updateUrl, 50)
 
 const FeatureEditor = ({ name, feature, onChange, onDelete }) => {
-    const [showSettings, setShowSettings] = useState(false)
-    const settingsRef = useRef(null)
-
     const handleValueChange = (e) => onChange(name, { ...feature, value: parseFloat(e.target.value) })
-    const handleMinChange = (e) => onChange(name, { ...feature, min: parseFloat(e.target.value) })
-    const handleMaxChange = (e) => onChange(name, { ...feature, max: parseFloat(e.target.value) })
+    const handleMinChange = (e) => {
+        const val = e.target.value
+        if (val === '' || !isNaN(parseFloat(val))) {
+            onChange(name, { ...feature, min: val === '' ? val : parseFloat(val) })
+        }
+    }
+    const handleMaxChange = (e) => {
+        const val = e.target.value
+        if (val === '' || !isNaN(parseFloat(val))) {
+            onChange(name, { ...feature, max: val === '' ? val : parseFloat(val) })
+        }
+    }
     const handleCommitValue = () => {
         updateUrlDebounced({ [name]: feature.value })
     }
 
     useEffect(() => {
-        updateUrlDebounced({
-            [name]: feature.value,
-            [`${name}.min`]: feature.min,
-            [`${name}.max`]: feature.max,
-        })
-        window.cranes.manualFeatures[name] = feature.value
+        if (feature.min !== '' && feature.max !== '' && !isNaN(feature.min) && !isNaN(feature.max)) {
+            updateUrlDebounced({
+                [name]: feature.value,
+                [`${name}.min`]: feature.min,
+                [`${name}.max`]: feature.max,
+            })
+            window.cranes.manualFeatures[name] = feature.value
+        }
     }, [feature])
 
     return html`
         <div className="edit-feature" key=${name}>
-            <label>
-                <button onClick=${() => onDelete(name)} class="delete-button">×</button>
-                ${name}
-            </label>
-            <div class="slider-container">
-                <input
-                    class="feature-value"
-                    type="range"
-                    min=${feature.min}
-                    max=${feature.max}
-                    step="0.01"
-                    value=${feature.value}
-                    onInput=${handleValueChange}
-                    onChange=${handleCommitValue}
-                />
-                <button
-                    class="settings-button ${showSettings ? 'active' : ''}"
-                    onClick=${() => setShowSettings(!showSettings)}
-                    title="Adjust min/max values"
-                >
-                    <span style="transform: rotate(90deg)">⚡</span>
-                </button>
-                ${showSettings && html`
-                    <div class="settings-popover" ref=${settingsRef}>
-                        <div class="setting-row">
-                            <label>Min:</label>
-                            <input
-                                type="number"
-                                step="0.1"
-                                value=${feature.min}
-                                onInput=${handleMinChange}
-                            />
-                        </div>
-                        <div class="setting-row">
-                            <label>Max:</label>
-                            <input
-                                type="number"
-                                step="0.1"
-                                value=${feature.max}
-                                onInput=${handleMaxChange}
-                            />
-                        </div>
-                    </div>
-                `}
+            <div class="feature-header">
+                <div class="feature-name">
+                    <span>${name}</span>
+                    <span class="value-display">${feature.value.toFixed(2)}</span>
+                    <button onClick=${() => onDelete(name)} class="delete-button" title="Delete feature">×</button>
+                </div>
+                <div class="slider-container">
+                    <input
+                        type="text"
+                        value=${feature.min}
+                        onInput=${handleMinChange}
+                        placeholder="0"
+                        class="min-input"
+                    />
+                    <input
+                        class="feature-value"
+                        type="range"
+                        min=${feature.min === '' ? 0 : feature.min}
+                        max=${feature.max === '' ? 1 : feature.max}
+                        step="0.01"
+                        value=${feature.value}
+                        onInput=${handleValueChange}
+                        onChange=${handleCommitValue}
+                    />
+                    <input
+                        type="text"
+                        value=${feature.max}
+                        onInput=${handleMaxChange}
+                        placeholder="1"
+                        class="max-input"
+                    />
+                </div>
             </div>
-            <span class="value-display">${feature.value.toFixed(2)}</span>
         </div>
     `
 }
@@ -102,33 +99,60 @@ const FeatureAdder = () => {
             const button = toggleButtonRef.current
             button.classList.remove('wiggle')
             button.classList.add('wiggle')
-
-            setTimeout(() => {
-                button.classList.remove('wiggle')
-            }, 1000)
+            setTimeout(() => button.classList.remove('wiggle'), 1000)
         }
         prevFeaturesLength.current = currentLength
     }, [features])
 
-    useEffect(async () => {
-        const searchParams = new URLSearchParams(window.location.search)
+    const handleShaderParam = async (searchParams) => {
+        if (!searchParams.has('shader')) return false
+
+        try {
+            const shaderCode = await getRelativeOrAbsoluteShaderUrl(searchParams.get('shader'))
+            localStorage.setItem('cranes-manual-code', shaderCode)
+            const newUrl = new URL(window.location)
+            newUrl.searchParams.delete('shader')
+            window.history.replaceState({}, '', newUrl)
+            window.location.reload()
+            return true
+        } catch (error) {
+            console.error('Failed to fetch shader:', error)
+            return false
+        }
+    }
+
+    const initializeFeatures = (searchParams) => {
         const initialFeatures = {}
         searchParams.forEach((value, key) => {
             if (isNaN(value)) return
             const [featureName, paramType] = key.includes('.') ? key.split('.') : [key, 'value']
-            if (!initialFeatures[featureName]) initialFeatures[featureName] = { min: -3, max: 3, value: 0 }
+            if (!initialFeatures[featureName]) {
+                initialFeatures[featureName] = { min: 0, max: 1, value: 0.5 }
+            }
             initialFeatures[featureName][paramType] = parseFloat(value)
         })
-        setFeatures(initialFeatures)
-        prevFeaturesLength.current = Object.keys(initialFeatures).length
+        return initialFeatures
+    }
 
-        if (searchParams.has('present')) {
-            document.body.classList.add('present')
+    const handleUIState = (searchParams) => {
+        if (searchParams.has('present')) document.body.classList.add('present')
+        if (searchParams.has('open_sliders'))  setIsDrawerOpen(true)
+    }
+
+    useEffect(() => {
+        const init = async () => {
+            const searchParams = new URLSearchParams(window.location.search)
+
+            const shaderHandled = await handleShaderParam(searchParams)
+            if (shaderHandled) return
+
+            const initialFeatures = initializeFeatures(searchParams)
+            setFeatures(initialFeatures)
+            prevFeaturesLength.current = Object.keys(initialFeatures).length
+            handleUIState(searchParams)
         }
 
-        if (searchParams.has('open_sliders')) {
-            setIsDrawerOpen(true)
-        }
+        init()
     }, [])
 
     const toggleDrawer = () => {

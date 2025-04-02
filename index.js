@@ -1,5 +1,6 @@
 import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { makeVisualizer } from './src/Visualizer.js'
+import { getRelativeOrAbsoluteShaderUrl } from './src/utils.js'
 
 // Add service worker registration
 window.addEventListener('load', async () => {
@@ -226,16 +227,6 @@ const animateController = (controller) => {
     requestAnimationFrame(controllerFrame)
 }
 
-const getRelativeOrAbsolute = async (url) => {
-    //if the url is not a full url, then it's a relative url
-    if (!url.includes('http')) {
-        url = `/shaders/${url}`
-    }
-    const res = await fetch(url, {mode: 'no-cors'})
-    const shader = await res.text()
-    return shader
-}
-
 // Load a controller module from a URL (local or remote)
 const loadController = async () => {
     const controllerPath = params.get('controller')
@@ -258,8 +249,8 @@ const loadController = async () => {
         // 2. Module exports a make() function - call it to get the controller
         // 3. Module exports something else - error
 
-        if (typeof controllerModule.default === 'function')  return controllerModule.default
-            // Default export is a function - direct controller or make function
+        if (typeof controllerModule.default === 'function') return controllerModule.default
+        // Default export is a function - direct controller or make function
         if (typeof controllerModule.make === 'function') return controllerModule.make
         if (typeof controllerModule === 'function') return controllerModule
         console.error('Controller must export a function directly or provide a make() function')
@@ -276,9 +267,9 @@ const getFragmentShader = async () => {
 
     if(params.get('shaderCode')) return decodeURIComponent(params.get('shaderCode'))
 
-    if (shaderUrl) fragmentShader = await getRelativeOrAbsolute(`${shaderUrl}.frag`)
+    if (shaderUrl) fragmentShader = await getRelativeOrAbsoluteShaderUrl(shaderUrl)
     if (!fragmentShader) fragmentShader = localStorage.getItem('cranes-manual-code')
-    if (!fragmentShader) fragmentShader = await getRelativeOrAbsolute('default.frag')
+    if (!fragmentShader) fragmentShader = await getRelativeOrAbsoluteShaderUrl('default')
     return fragmentShader
 }
 

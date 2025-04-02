@@ -521,30 +521,18 @@ async function init() {
 
     // Initialize editor content
     const searchParams = new URLSearchParams(window.location.search);
-        (async () => {
-            let shader = localStorage.getItem('cranes-manual-code');
-            if(searchParams.has('shader')){
-                const res = await fetch(`/shaders/${searchParams.get('shader')}.frag`)
-                shader = await res.text()
-                localStorage.setItem('cranes-manual-code', shader)
-                const newUrl = new URL(window.location)
-                // newUrl.searchParams.set('filename', searchParams.get('shader'))
-                // newUrl.searchParams.set('updateExisting', 'true')
-                newUrl.searchParams.delete('shader')
-
-                window.history.pushState({}, '', newUrl)
-                window.location.reload()
-            }
-
-            if (!shader) {
-                const res = await fetch('/shaders/default.frag')
-                shader = await res.text()
-            }
-            editor.pushUndoStop();
-            editor.setValue(shader);
-            editor.pushUndoStop();
-            editor.layout();
-        })();
+    (async () => {
+        // Normal initialization - only runs if no shader param or fetch failed
+        let shader = localStorage.getItem('cranes-manual-code')
+        if (!shader) {
+            const res = await fetch('/shaders/default.frag')
+            shader = await res.text()
+        }
+        editor.pushUndoStop()
+        editor.setValue(shader)
+        editor.pushUndoStop()
+        editor.layout()
+    })()
 
     const save = () => {
         editor.pushUndoStop()

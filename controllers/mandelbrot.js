@@ -1,4 +1,4 @@
-import Decimal from 'decimal.js'
+import Decimal from 'https://cdnjs.cloudflare.com/ajax/libs/decimal.js/9.0.0/decimal.min.js'
 
 let startTime = null
 const zoomStart = 14.0
