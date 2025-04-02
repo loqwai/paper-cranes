@@ -82,7 +82,7 @@ const FeatureEditor = ({ name, feature, onChange, onDelete }) => {
                 <div class="feature-name">
                     <span>${name}</span>
                     <span class="value-display">${feature.value.toFixed(2)}</span>
-                    <button onClick=${() => onDelete(name)} class="delete-button" title="Delete feature">×</button>
+                    <button onClick=${() => onDelete(name)} class="delete-button" title="Delete feature"></button>
                 </div>
                 <div class="slider-container">
                     <input
@@ -208,7 +208,7 @@ const FeatureAdder = () => {
             alert('Feature name cannot be empty')
             return
         }
-        const newFeature = { value: 1, min: -3, max: 3 }
+        const newFeature = { value: 0.5, min: 0, max: 1 }
         updateFeature(newFeatureName, newFeature)
         setNewFeatureName('')
     }
