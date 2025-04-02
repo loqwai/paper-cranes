@@ -51,9 +51,16 @@ const FeatureEditor = ({ name, feature, onChange, onDelete }) => {
         if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
 
         e.preventDefault()
-        const step = e.shiftKey ? 0.01 : 0.1
 
-        // Get current value, default to 0 if empty or invalid
+        // Get min and max values
+        const min = feature.min === '' || isNaN(parseFloat(feature.min)) ? 0 : parseFloat(feature.min)
+        const max = feature.max === '' || isNaN(parseFloat(feature.max)) ? 1 : parseFloat(feature.max)
+
+        // Calculate range and step size based on percentage
+        const range = max - min
+        const step = e.shiftKey ? range * 0.01 : range * 0.1
+
+        // Get current value
         const fieldName = type === 'min' ? 'min' : 'max'
         const currentVal = feature[fieldName]
         const numVal = currentVal === '' || isNaN(parseFloat(currentVal)) ? 0 : parseFloat(currentVal)
@@ -65,6 +72,49 @@ const FeatureEditor = ({ name, feature, onChange, onDelete }) => {
         const updatedFeature = { ...feature }
         updatedFeature[fieldName] = newVal
         onChange(name, updatedFeature)
+    }
+
+    const handleSliderKeyDown = (e) => {
+        if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+
+        e.preventDefault()
+
+        // Get current min and max
+        const min = feature.min === '' ? 0 : parseFloat(feature.min)
+        const max = feature.max === '' ? 1 : parseFloat(feature.max)
+
+        // Calculate step size as percentage of the range
+        const range = max - min
+        const step = e.shiftKey ? range * 0.01 : range * 0.1
+
+        // Get current value
+        const currentVal = parseFloat(feature.value)
+
+        // Calculate new value based on key pressed and round to 4 decimal places
+        // Make sure arrow up increases and arrow down decreases the value
+        const direction = e.key === 'ArrowUp' ? 1 : -1
+        const newVal = Math.round((currentVal + direction * step) * 10000) / 10000
+
+        // Create updated feature object
+        const updatedFeature = { ...feature }
+
+        // If the new value exceeds max, expand the max boundary
+        if (newVal > max) {
+            updatedFeature.max = Math.round(newVal * 10000) / 10000
+            updatedFeature.value = updatedFeature.max
+        }
+        // If the new value is below min, expand the min boundary
+        else if (newVal < min) {
+            updatedFeature.min = Math.round(newVal * 10000) / 10000
+            updatedFeature.value = updatedFeature.min
+        }
+        // Otherwise just update the value within boundaries
+        else {
+            updatedFeature.value = newVal
+        }
+
+        onChange(name, updatedFeature)
+        handleCommitValue()
     }
 
     // Format displayed value to avoid floating point issues
@@ -97,7 +147,7 @@ const FeatureEditor = ({ name, feature, onChange, onDelete }) => {
                 <div class="feature-name">
                     <span>${name}</span>
                     <span class="value-display">${feature.value.toFixed(2)}</span>
-                    <button onClick=${() => onDelete(name)} class="delete-button" title="Delete feature">×</button>
+                    <button onClick=${() => onDelete(name)} class="delete-button" title="Delete feature"></button>
                 </div>
                 <div class="slider-container">
                     <input
@@ -118,6 +168,7 @@ const FeatureEditor = ({ name, feature, onChange, onDelete }) => {
                         value=${feature.value}
                         onInput=${handleValueChange}
                         onChange=${handleCommitValue}
+                        onKeyDown=${handleSliderKeyDown}
                     />
                     <input
                         type="number"

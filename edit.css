@@ -134,6 +134,11 @@ input[type="range"] {
   margin: 0;
 }
 
+input[type="range"]:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(100, 150, 255, 0.3);
+}
+
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 16px;
