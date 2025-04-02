@@ -193,13 +193,41 @@ const FeatureAdder = () => {
     const drawerRef = useRef(null)
     const newFeatureInputRef = useRef(null)
     const prevFeaturesLength = useRef(0)
+    const editorCursorPositionRef = useRef(null) // Store cursor position
 
-    // Focus the new feature input when drawer opens
+    // Focus the new feature input when drawer opens or monaco when drawer closes
     useEffect(() => {
         if (isDrawerOpen && newFeatureInputRef.current) {
+            // Store current cursor position before focusing drawer
+            try {
+                const editor = window.monaco?.editor?.getEditors?.()?.[0]
+                if (editor) {
+                    editorCursorPositionRef.current = editor.getPosition()
+                }
+            } catch (e) {
+                console.error('Error saving cursor position:', e)
+            }
+
             // Small delay to ensure DOM is ready and drawer animation has started
             setTimeout(() => {
                 newFeatureInputRef.current.focus()
+            }, 50)
+        } else if (!isDrawerOpen) {
+            // Focus monaco editor when drawer closes
+            setTimeout(() => {
+                try {
+                    const editor = window.monaco?.editor?.getEditors?.()?.[0]
+                    if (editor) {
+                        editor.focus()
+                        // Restore cursor position if we have one saved
+                        if (editorCursorPositionRef.current) {
+                            editor.setPosition(editorCursorPositionRef.current)
+                            editor.revealPositionInCenter(editorCursorPositionRef.current)
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error restoring cursor position:', e)
+                }
             }, 50)
         }
     }, [isDrawerOpen])
