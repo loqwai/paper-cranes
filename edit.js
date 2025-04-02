@@ -20,18 +20,47 @@ const updateUrlDebounced = debounce(updateUrl, 50)
 
 const FeatureEditor = ({ name, feature, onChange, onDelete }) => {
     const handleValueChange = (e) => onChange(name, { ...feature, value: parseFloat(e.target.value) })
+
     const handleMinChange = (e) => {
+        // Allow the field to be empty temporarily
         const val = e.target.value
-        if (val === '' || !isNaN(parseFloat(val))) {
-            onChange(name, { ...feature, min: val === '' ? val : parseFloat(val) })
+        if (val === '') {
+            onChange(name, { ...feature, min: '' })
+        } else if (!isNaN(parseFloat(val))) {
+            onChange(name, { ...feature, min: parseFloat(val) })
         }
     }
+
     const handleMaxChange = (e) => {
+        // Allow the field to be empty temporarily
         const val = e.target.value
-        if (val === '' || !isNaN(parseFloat(val))) {
-            onChange(name, { ...feature, max: val === '' ? val : parseFloat(val) })
+        if (val === '') {
+            onChange(name, { ...feature, max: '' })
+        } else if (!isNaN(parseFloat(val))) {
+            onChange(name, { ...feature, max: parseFloat(val) })
         }
     }
+
+    const handleKeyDown = (e, type) => {
+        if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+
+        e.preventDefault()
+        const step = e.shiftKey ? 0.01 : 0.1
+
+        // Get current value, default to 0 if empty or invalid
+        const fieldName = type === 'min' ? 'min' : 'max'
+        const currentVal = feature[fieldName]
+        const numVal = currentVal === '' || isNaN(parseFloat(currentVal)) ? 0 : parseFloat(currentVal)
+
+        // Calculate new value based on key pressed
+        const newVal = e.key === 'ArrowUp' ? numVal + step : numVal - step
+
+        // Update the value
+        const updatedFeature = { ...feature }
+        updatedFeature[fieldName] = newVal
+        onChange(name, updatedFeature)
+    }
+
     const handleCommitValue = () => {
         updateUrlDebounced({ [name]: feature.value })
     }
@@ -57,11 +86,13 @@ const FeatureEditor = ({ name, feature, onChange, onDelete }) => {
                 </div>
                 <div class="slider-container">
                     <input
-                        type="text"
-                        value=${feature.min}
+                        type="number"
+                        value=${feature.min === '' ? '' : feature.min}
                         onInput=${handleMinChange}
+                        onKeyDown=${(e) => handleKeyDown(e, 'min')}
                         placeholder="0"
                         class="min-input"
+                        step="0.1"
                     />
                     <input
                         class="feature-value"
@@ -74,11 +105,13 @@ const FeatureEditor = ({ name, feature, onChange, onDelete }) => {
                         onChange=${handleCommitValue}
                     />
                     <input
-                        type="text"
-                        value=${feature.max}
+                        type="number"
+                        value=${feature.max === '' ? '' : feature.max}
                         onInput=${handleMaxChange}
+                        onKeyDown=${(e) => handleKeyDown(e, 'max')}
                         placeholder="1"
                         class="max-input"
+                        step="0.1"
                     />
                 </div>
             </div>
