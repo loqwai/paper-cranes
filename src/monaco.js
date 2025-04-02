@@ -551,6 +551,20 @@ async function init() {
                 e.preventDefault()
                 save()
                 return;
+            case 'z':
+                e.preventDefault()
+                if (e.shiftKey) {
+                    editor.trigger('keyboard', 'redo', null)
+                } else {
+                    editor.trigger('keyboard', 'undo', null)
+                }
+                return;
+            case 'y':
+                if (!e.shiftKey) { // Only handle Ctrl+Y (Windows style redo)
+                    e.preventDefault()
+                    editor.trigger('keyboard', 'redo', null)
+                }
+                return;
         }
     })
 
