@@ -27,7 +27,10 @@ const FeatureEditor = ({ name, feature, onChange, onDelete }) => {
         if (val === '') {
             onChange(name, { ...feature, min: '' })
         } else if (!isNaN(parseFloat(val))) {
-            onChange(name, { ...feature, min: parseFloat(val) })
+            const numericValue = parseFloat(val)
+            // Round to 4 decimal places to avoid floating point errors
+            const roundedValue = Math.round(numericValue * 10000) / 10000
+            onChange(name, { ...feature, min: roundedValue })
         }
     }
 
@@ -37,7 +40,10 @@ const FeatureEditor = ({ name, feature, onChange, onDelete }) => {
         if (val === '') {
             onChange(name, { ...feature, max: '' })
         } else if (!isNaN(parseFloat(val))) {
-            onChange(name, { ...feature, max: parseFloat(val) })
+            const numericValue = parseFloat(val)
+            // Round to 4 decimal places to avoid floating point errors
+            const roundedValue = Math.round(numericValue * 10000) / 10000
+            onChange(name, { ...feature, max: roundedValue })
         }
     }
 
@@ -52,13 +58,22 @@ const FeatureEditor = ({ name, feature, onChange, onDelete }) => {
         const currentVal = feature[fieldName]
         const numVal = currentVal === '' || isNaN(parseFloat(currentVal)) ? 0 : parseFloat(currentVal)
 
-        // Calculate new value based on key pressed
-        const newVal = e.key === 'ArrowUp' ? numVal + step : numVal - step
+        // Calculate new value based on key pressed and round to 4 decimal places
+        const newVal = Math.round((e.key === 'ArrowUp' ? numVal + step : numVal - step) * 10000) / 10000
 
         // Update the value
         const updatedFeature = { ...feature }
         updatedFeature[fieldName] = newVal
         onChange(name, updatedFeature)
+    }
+
+    // Format displayed value to avoid floating point issues
+    const formatNumber = (num) => {
+        if (num === '' || isNaN(num)) return ''
+        // For small numbers or integers, show as is
+        if (Number.isInteger(num) || Math.abs(num) < 0.0001) return num
+        // Otherwise limit to 4 decimal places
+        return parseFloat(num.toFixed(4))
     }
 
     const handleCommitValue = () => {
@@ -82,12 +97,12 @@ const FeatureEditor = ({ name, feature, onChange, onDelete }) => {
                 <div class="feature-name">
                     <span>${name}</span>
                     <span class="value-display">${feature.value.toFixed(2)}</span>
-                    <button onClick=${() => onDelete(name)} class="delete-button" title="Delete feature"></button>
+                    <button onClick=${() => onDelete(name)} class="delete-button" title="Delete feature">×</button>
                 </div>
                 <div class="slider-container">
                     <input
                         type="number"
-                        value=${feature.min === '' ? '' : feature.min}
+                        value=${formatNumber(feature.min)}
                         onInput=${handleMinChange}
                         onKeyDown=${(e) => handleKeyDown(e, 'min')}
                         placeholder="0"
@@ -106,7 +121,7 @@ const FeatureEditor = ({ name, feature, onChange, onDelete }) => {
                     />
                     <input
                         type="number"
-                        value=${feature.max === '' ? '' : feature.max}
+                        value=${formatNumber(feature.max)}
                         onInput=${handleMaxChange}
                         onKeyDown=${(e) => handleKeyDown(e, 'max')}
                         placeholder="1"
@@ -124,6 +139,7 @@ const FeatureAdder = () => {
     const [newFeatureName, setNewFeatureName] = useState('')
     const [isDrawerOpen, setIsDrawerOpen] = useState(false)
     const toggleButtonRef = useRef(null)
+    const drawerRef = useRef(null)
     const prevFeaturesLength = useRef(0)
 
     useEffect(() => {
@@ -136,6 +152,32 @@ const FeatureAdder = () => {
         }
         prevFeaturesLength.current = currentLength
     }, [features])
+
+    // Add click outside handler
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            // If drawer is closed or click is inside drawer or on toggle button, do nothing
+            if (!isDrawerOpen ||
+                !drawerRef.current ||
+                drawerRef.current.contains(event.target) ||
+                (toggleButtonRef.current && toggleButtonRef.current.contains(event.target))) {
+                return
+            }
+
+            // Close the drawer
+            setIsDrawerOpen(false)
+        }
+
+        // Add event listener when drawer is open
+        if (isDrawerOpen) {
+            document.addEventListener('mousedown', handleClickOutside)
+        }
+
+        // Clean up
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside)
+        }
+    }, [isDrawerOpen])
 
     const handleShaderParam = async (searchParams) => {
         if (!searchParams.has('shader')) return false
@@ -220,6 +262,12 @@ const FeatureAdder = () => {
         delete window.cranes?.manualFeatures[name]
     }
 
+    const handleNewFeatureKeyDown = (e) => {
+        if (e.key === 'Enter' && newFeatureName.trim()) {
+            addNewFeature()
+        }
+    }
+
     return html`
         <${Fragment}>
             <button
@@ -229,15 +277,19 @@ const FeatureAdder = () => {
             >
                 ${isDrawerOpen ? '×' : '⚙️'}
             </button>
-            <div className=${`sparkly animated ${isDrawerOpen ? 'open' : ''}`} id="feature-editor">
+            <div
+                ref=${drawerRef}
+                className=${`sparkly animated ${isDrawerOpen ? 'open' : ''}`}
+                id="feature-editor"
+            >
                 <div className="new-feature">
                     <input
                         type="text"
                         value=${newFeatureName}
                         onInput=${(e) => setNewFeatureName(e.target.value)}
-                        placeholder="Enter new feature name"
+                        onKeyDown=${handleNewFeatureKeyDown}
+                        placeholder="Enter new feature name and press Enter"
                     />
-                    <button onClick=${addNewFeature}>Add Feature</button>
                 </div>
                 <div id="existing-features-editor">
                     ${Object.entries(features).map(
