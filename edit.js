@@ -219,14 +219,23 @@ const FeatureAdder = () => {
             setIsDrawerOpen(false)
         }
 
+        // Handle Escape key to close drawer
+        const handleEscKey = (event) => {
+            if (event.key === 'Escape' && isDrawerOpen) {
+                setIsDrawerOpen(false)
+            }
+        }
+
         // Add event listener when drawer is open
         if (isDrawerOpen) {
             document.addEventListener('mousedown', handleClickOutside)
+            document.addEventListener('keydown', handleEscKey)
         }
 
         // Clean up
         return () => {
             document.removeEventListener('mousedown', handleClickOutside)
+            document.removeEventListener('keydown', handleEscKey)
         }
     }, [isDrawerOpen])
 
