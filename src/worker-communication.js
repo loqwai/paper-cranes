@@ -39,7 +39,7 @@ window.addEventListener('message', async function(event) {
   if (shader) {
     console.log('Received shader from parent window', shader)
     // get the shader code
-    const shaderCode = await fetch(`/shaders/${shader}.frag`).then(res => res.text())
+    const shaderCode = await fetch(`/shaders/${shader}.frag`, {mode: 'no-cors'}).then(res => res.text())
     console.log('Shader code', shaderCode)
     // update the shader code
     window.cranes.shader = shaderCode

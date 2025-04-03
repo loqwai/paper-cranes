@@ -56,7 +56,7 @@ async function fetchWithRetry(request) {
             if(!retryItem?.request) return console.error("No request to retry")
 
             try {
-                const response = await fetch(retryItem.request)
+                const response = await fetch(retryItem.request, {mode: 'no-cors'})
                 if(requestsToRetry.length > 0) fetchWithRetry()
                 if (response.ok) return retryItem.resolve(response)
                 if (response.status === 0 && response.type !== "error") return retryItem.resolve(response)
