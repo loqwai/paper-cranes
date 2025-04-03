@@ -2,7 +2,7 @@ import {Decimal} from 'https://esm.sh/decimal.js@10.5.0'
 
 let startTime = null
 const zoomStart = 14.0
-const zoomSpeed = (t) => 0.4 * Math.exp(-t/40)
+const zoomSpeed = (t) => 0.4
 
 // Performance config - can be adjusted for different devices
 const perfConfig = {
@@ -106,11 +106,11 @@ if(features.bassZScore > 0.9) startTime -= 100
   let baseZoom = zoomStart * Math.exp(-zoomSpeed(t) * t)
 
   let zoom = baseZoom;
+
   const resolution = features.resolution || { x: 1280, y: 720 }
   const minDim = Math.min(resolution.x, resolution.y)
 
   // Calculate zoom level
-
 
   // If time exceeds a certain threshold, start zooming out instead
 
