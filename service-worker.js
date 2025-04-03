@@ -1,5 +1,5 @@
 const self = /** @type {ServiceWorkerGlobalScope} */ (globalThis)
-const CACHE_NAME = '2025-03-08T12:23:17.595Z'
+const CACHE_NAME = '2025-04-03T06:39:26.341Z'
 console.debug(`Service worker starting`)
 const timeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -56,7 +56,7 @@ async function fetchWithRetry(request) {
             if(!retryItem?.request) return console.error("No request to retry")
 
             try {
-                const response = await fetch(retryItem.request, {mode: 'no-cors'})
+                const response = await fetch(retryItem.request)
                 if(requestsToRetry.length > 0) fetchWithRetry()
                 if (response.ok) return retryItem.resolve(response)
                 if (response.status === 0 && response.type !== "error") return retryItem.resolve(response)
