@@ -54,7 +54,6 @@ function getPerformanceLevel() {
 // Get the performance configuration
 const performanceLevel = getPerformanceLevel()
 const config = perfConfig[performanceLevel]
-console.log(`Using ${performanceLevel} settings with ${config.decimalPrecision}-bit precision`)
 
 // Configure Decimal precision based on performance level
 Decimal.config({

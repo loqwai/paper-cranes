@@ -3,18 +3,15 @@ export const addWebsocketListener = (port = 6970) => {
   const wsHost = params.get('remote')
 
   const fullUrl = `ws://${wsHost}`
-  console.log('[Visualizer] Connecting to WebSocket at:', fullUrl)
 
   try {
     const socket = new WebSocket(fullUrl)
 
     socket.addEventListener('open', () => {
-      console.log('[Visualizer] Connected to WebSocket server')
+      // Connected to WebSocket server
     })
 
     socket.addEventListener('message', async (event) => {
-      console.log('[Visualizer] Received message from WebSocket:', event.data)
-
       let raw
       if (event.data instanceof Blob) {
         raw = await event.data.text()
@@ -24,11 +21,9 @@ export const addWebsocketListener = (port = 6970) => {
 
       try {
         const json = JSON.parse(raw)
-        console.log('[Visualizer] About to send message to postMessage:', json)
         // if the json has an image, just put all the variables as query params and reload the page
         const { data } = json
         if (data.image) {
-          console.log('[Visualizer] About to reload page with image:', data.image)
           const url = new URL(window.location)
           url.searchParams.set('shader', data.shader)
           url.searchParams.set('image', data.image)
@@ -64,7 +59,6 @@ export const addWebsocketController = () => {
 
   const sendShaderParam = (url) => {
     const queryParams = new URLSearchParams(url.search)
-    console.log('[Controller] Query params:', queryParams)
     const message = {
       type: 'update-params',
       data: { ...Object.fromEntries(queryParams.entries()) }
@@ -72,21 +66,17 @@ export const addWebsocketController = () => {
 
     if (socketReady && socket?.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify(message))
-      console.log('[Controller] Sent shader param over WebSocket:', message)
     } else {
-      console.log('[Controller] Socket not open yet, queuing message:', message)
       messageQueue.push(message)
     }
   }
 
   if (wsHost) {
     try {
-      console.log('[Controller] Connecting to WebSocket at:', `ws://${wsHost}`)
       socket = new WebSocket(`ws://${wsHost}`)
 
       socket.addEventListener('open', () => {
         socketReady = true
-        console.log('[Controller] Connected to WebSocket (remote control mode)')
 
         messageQueue.forEach(msg => socket.send(JSON.stringify(msg)))
         messageQueue = []
@@ -114,9 +104,7 @@ export const addWebsocketController = () => {
 }
 
 export const interceptNavigation = () => {
-  console.log('[Controller] Intercepting navigation')
   const controller = addWebsocketController()
-  console.log('[Controller] Controller initialized:', controller)
 
   document.addEventListener('click', (e) => {
     const link = e.target.closest('a[href]')

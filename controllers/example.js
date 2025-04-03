@@ -12,8 +12,6 @@
  * @returns {Function} - The controller function that will be called each frame
  */
 export function make(cranes) {
-  console.log('Controller initializing with:', cranes)
-
   // Initialize persistent state for this controller
   const state = {
     rotation: 0,

@@ -64,7 +64,7 @@ navigator
         midiAccess.inputs.forEach((input) => {
             input.onmidimessage = (message) => {
                 const [command, control, value] = message.data
-                if (command !== 176) {console.log('not 176', message.data); return} // Only handle Channel 1 CC messages
+                if (command !== 176) return // Only handle Channel 1 CC messages
                 updateKnobValue(`knob_${control}`, value)
             }
         })

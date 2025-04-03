@@ -4,19 +4,15 @@ import { getRelativeOrAbsoluteShaderUrl } from './src/utils.js'
 
 // Add service worker registration
 window.addEventListener('load', async () => {
-    console.log('Registering service worker...')
     const { serviceWorker } = navigator
     if(!serviceWorker) {
-        console.log('Service worker not supported')
         return
     }
     serviceWorker.addEventListener('message', processServiceWorkerMessage)
     // Add cache version to URL to force update when version changes
     const registration = await serviceWorker.register(`/service-worker.js`)
-    registration.addEventListener('statechange', (e) =>
-        console.log('ServiceWorker state changed:', e.target.state))
+    registration.addEventListener('statechange', (e) => {})
     registration.addEventListener('message', processServiceWorkerMessage)
-
 })
 
 /**
@@ -24,13 +20,10 @@ window.addEventListener('load', async () => {
  * @param {MessageEvent} event
  */
 const processServiceWorkerMessage = (event) => {
-    console.log('Received message from service worker', event.data)
     if (event.data === 'reload') {
-        console.log('Received reload message from service worker')
         window.stop()
         return window.location.reload()
     }
-    console.log('Received strange message from service worker', event.data)
 }
 
 const events = ['touchstart', 'touchmove', 'touchstop', 'keydown', 'mousedown', 'resize']
@@ -241,7 +234,6 @@ const loadController = async () => {
             controllerUrl = `/controllers/${controllerPath}`
         }
 
-        console.log(`Loading controller from: ${controllerUrl}`)
         const controllerModule = await import(controllerUrl)
 
         // Handle different module formats:
@@ -288,7 +280,6 @@ const addListenersForFullscreen = (visualizer) => {
         visualizer.addEventListener(event, async () => {
             try {
                 await document.documentElement.requestFullscreen();
-
             } catch (e) {
                 console.error(`requesting fullscreen from event ${event} failed`, e);
             }
@@ -332,19 +323,15 @@ const main = async () => {
                 // If it takes 0-1 arguments, it's likely a direct controller function
                 if (controllerExport.length <= 1) {
                     controller = controllerExport
-                    console.log('Using direct controller function')
                 } else {
                     // Otherwise it's probably a make function
                     controller = controllerExport(window.cranes)
-                    console.log('Using make function to create controller')
                 }
             }
 
             if (typeof controller !== 'function') {
                 throw new Error('Controller must be a function or return a function')
             }
-
-            console.log('Controller initialized successfully')
 
             // Setup separate animation loop for the controller
             animateController(controller)
@@ -359,5 +346,3 @@ const main = async () => {
 }
 
 main()
-
-console.log(`paper cranes version FREE`);
