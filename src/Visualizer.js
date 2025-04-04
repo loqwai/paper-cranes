@@ -7,7 +7,6 @@ import {
     setBuffersAndAttributes,
     setUniforms,
     drawBufferInfo,
-    resizeFramebufferInfo,
 } from 'twgl-base.js'
 
 import { shaderWrapper } from './shader-transformers/shader-wrapper.js'
@@ -66,6 +65,19 @@ const handleShaderError = (gl, wrappedFragmentShader, newFragmentShader) => {
     console.error(`Error information:`, window.cranes.error);
 }
 
+const calculateResolutionRatio = (frameTime, renderTimes, lastResolutionRatio) => {
+    renderTimes.push(frameTime)
+    if (renderTimes.length > 20) renderTimes.shift()
+    if(renderTimes.length < 20) return lastResolutionRatio
+
+    // Calculate average frame time over last 20 frames
+    const avgFrameTime = renderTimes.reduce((a, b) => a + b) / renderTimes.length
+
+    if (avgFrameTime > 50) return Math.max(0.5, lastResolutionRatio - 0.5)
+    if (avgFrameTime < 20 && lastResolutionRatio < 1) return Math.min(1, lastResolutionRatio + 0.1)
+    return lastResolutionRatio
+}
+
 const askForWakeLock = async () => {
     if(!navigator.wakeLock) return
     return navigator.wakeLock.request('screen')
@@ -122,19 +134,9 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
     let programInfo
     let lastFragmentShader
     let renderTimes = []
+    let lastResolutionRatio = 1
 
     const render = ({ time, features, fragmentShader: newFragmentShader }) => {
-        // Check if the canvas size needs to be updated and resize if necessary
-        const resized = resizeCanvasToDisplaySize(gl.canvas);
-
-        // If the canvas was resized, resize the offscreen framebuffers too
-        if (resized) {
-            resizeFramebufferInfo(gl, frameBuffers[0]);
-            resizeFramebufferInfo(gl, frameBuffers[1]);
-            // Optional: clear render times if you were using them for something else
-            renderTimes = [];
-        }
-
         if (newFragmentShader !== lastFragmentShader) {
             const wrappedFragmentShader = shaderWrapper(newFragmentShader)
 
@@ -156,6 +158,14 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
 
         const currentTime = performance.now()
         const frameTime = currentTime - lastRender
+
+        const  resolutionRatio = calculateResolutionRatio(frameTime, renderTimes, lastResolutionRatio)
+
+        if (resolutionRatio !== lastResolutionRatio) {
+            resizeCanvasToDisplaySize(gl.canvas, resolutionRatio)
+            lastResolutionRatio = resolutionRatio
+            renderTimes = []
+        }
 
         lastRender = currentTime
 
