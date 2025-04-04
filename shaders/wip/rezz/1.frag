@@ -114,10 +114,36 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     vec2 centerUv  = (fragCoord - 0.5 * iResolution.xy) / iResolution.y;
     float angle    = atan(centerUv.y, centerUv.x);
     float radius   = length(centerUv);
-    float swirl    = fract((angle + radius * 8.0 - t * 2.0) * 3.0);
-    vec3 swirlCol  = mix(vec3(0.0), vec3(1.0, 0.0, 0.0), step(0.5, swirl));
-    // Mix the spiral with existing color
-    color = mix(color, swirlCol, 0.6);
+
+    // Apply fractal-based displacement to the spiral
+    vec2 fractalUv = julia(centerUv * (1.0 + spectralSpreadZScore * 0.3), t);
+    float fractalDisplacement = length(fractalUv) * 0.2;
+
+    // Get previous frame color for modulation
+    vec3 prevFrameCol = getLastFrameColor(centerUv).rgb;
+    float prevLuma = dot(prevFrameCol, vec3(0.299, 0.587, 0.114));
+
+    // Modulate the spiral with fractal and previous frame
+    float swirlSpeed = 2.0 * (1.0 + prevLuma * spectralCentroidZScore * 0.5);
+    float swirlDensity = 8.0 + fractalDisplacement * 4.0;
+    float swirl = fract((angle + radius * swirlDensity - t * swirlSpeed) * 3.0);
+
+    // Create dynamic red color based on audio features
+    vec3 redColor = vec3(1.0 + spectralCrestZScore * 0.2,
+                        max(0.0, spectralRoughnessZScore * 0.3),
+                        max(0.0, bassZScore * 0.2));
+
+    // Create spiral with soft edges
+    float swirlEdge = smoothstep(0.45, 0.55, swirl);
+    vec3 swirlCol = mix(vec3(0.0), redColor, swirlEdge);
+
+    // Modulate spiral intensity with fractal pattern
+    float spiralMask = smoothstep(0.0, 0.8, 1.0 - length(centerUv));
+    float fractalInfluence = length(fractalUv) * 0.5;
+
+    // Mix the spiral with existing color using fractal influence
+    float mixAmount = 0.6 * spiralMask * (1.0 + fractalInfluence);
+    color = mix(color, swirlCol, mixAmount);
 
     fragColor = vec4(color, 1.0);
 }
