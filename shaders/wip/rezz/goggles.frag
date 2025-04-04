@@ -87,33 +87,58 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // Apply Julia set distortion to create fractal background
     vec2 distortedUv = julia(uv * (0.8 + PROBE_C * 0.4), t);
 
-    // Create texture distortion based on fractal
-    float distortionStrength = mix(0.05, 0.2, PROBE_C); // Control warp intensity with fractal influence
+    // Calculate distance fields for both eyes to control distortion radius
+    float leftEyeDist = length(uv - vec2(-EYE_DISTANCE - LEFT_X_ADJUST, -EYE_Y_OFFSET));
+    float rightEyeDist = length(uv - vec2(EYE_DISTANCE - RIGHT_X_ADJUST, -EYE_Y_OFFSET));
+
+    // Combined distance field (minimum distance to either eye)
+    float eyesDistance = min(leftEyeDist, rightEyeDist);
+
+    // Create a smooth falloff for the distortion effect
+    float distortionRadius = mix(0.5, 1.2, PROBE_C); // Radius of influence around eyes
+    float distortionFalloff = smoothstep(distortionRadius, distortionRadius * 0.3, eyesDistance);
+
+    // Scale distortion strength based on proximity to eyes and fractal intensity
+    float baseDistortionStrength = mix(0.05, 0.15, PROBE_C); // Base intensity
+    float fractalIntensity = length(distortedUv) * 1.5; // Fractal influence
+    float distortionStrength = baseDistortionStrength * distortionFalloff * (1.0 + fractalIntensity * 0.5);
+
+    // Original sample coordinates
     vec2 warpedSampleUv = sampleUv;
 
     // Generate distortion vectors from fractal pattern
-    float fractalNoise = length(distortedUv) * 2.0;
     vec2 distortOffset = vec2(
-        sin(fractalNoise * 5.0 + t * 2.0) * distortionStrength,
-        cos(fractalNoise * 4.0 - t * 1.5) * distortionStrength
+        sin(fractalIntensity * 5.0 + t * 2.0) * distortionStrength,
+        cos(fractalIntensity * 4.0 - t * 1.5) * distortionStrength
     );
 
-    // Apply distortion with variation based on bass
-    warpedSampleUv += distortOffset;
+    // Apply distortion only around the eyes
+    warpedSampleUv += distortOffset * distortionFalloff;
 
     // Sample the initial image with distortion
     vec3 warpedInit = getInitialFrameColor(warpedSampleUv).rgb;
 
-    // Apply additional sampling for distorted areas
-    vec2 secondaryWarp = warpedSampleUv + distortOffset * 0.5;
+    // Apply secondary sampling with reduced distortion for more subtle effect
+    vec2 secondaryWarp = sampleUv + distortOffset * distortionFalloff * 0.3;
     vec3 secondaryInit = getInitialFrameColor(secondaryWarp).rgb;
 
-    // Blend multiple samples for interesting effect
-    vec3 distortedTexture = mix(warpedInit, secondaryInit, fractalNoise * 0.3);
+    // Original undistorted texture
+    vec3 originalTexture = getInitialFrameColor(sampleUv).rgb;
 
-    // Enhance red channel in texture to match theme
-    distortedTexture.r = mix(distortedTexture.r, distortedTexture.r * 1.3, 0.6);
-    distortedTexture.gb *= mix(0.7, 0.9, PROBE_D);
+    // Blend multiple samples based on proximity to eyes
+    vec3 distortedTexture = mix(
+        originalTexture,                                       // Original far from eyes
+        mix(warpedInit, secondaryInit, fractalIntensity * 0.3), // Distorted near eyes
+        distortionFalloff
+    );
+
+    // Enhance red channel in the distorted areas only
+    distortedTexture.r = mix(distortedTexture.r,
+                          distortedTexture.r * 1.3,
+                          distortionFalloff * 0.6);
+    distortedTexture.gb = mix(distortedTexture.gb,
+                           distortedTexture.gb * mix(0.7, 0.9, PROBE_D),
+                           distortionFalloff);
 
     // Get previous frame color for background effects
     vec3 prevColor = getLastFrameColor(distortedUv).rgb;
@@ -223,6 +248,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // Final blend with the distorted texture
     float textureBlend = knob_22 * (1.0 - combinedSpiralMask * 0.8); // Reduce texture in spiral areas
     color = mix(color, distortedTexture, textureBlend);
+
+    // Debug visualization (comment out for final version)
+    // color = mix(color, vec3(1.0, 0.0, 0.0), distortionFalloff * 0.3); // Show distortion radius
 
     fragColor = vec4(color, 1.0);
 }
