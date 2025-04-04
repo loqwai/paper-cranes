@@ -250,6 +250,17 @@ body.present #feature-editor {
   display: none;
 }
 
+/* Hide elements in presentation mode */
+.hidden {
+  display: none !important;
+}
+
+/* Full screen canvas in presentation mode */
+body.present #visualizer {
+  width: 100vw !important;
+  height: 100vh !important;
+}
+
 /* Sparkly effect */
 .sparkly {
   background: linear-gradient(270deg, var(--color-nebula-purple), var(--color-asteroid-pink), var(--color-galaxy-blue));

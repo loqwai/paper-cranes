@@ -189,6 +189,7 @@ const FeatureAdder = () => {
     const [features, setFeatures] = useState({})
     const [newFeatureName, setNewFeatureName] = useState('')
     const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+    const [isPresentationMode, setIsPresentationMode] = useState(false)
     const toggleButtonRef = useRef(null)
     const drawerRef = useRef(null)
     const newFeatureInputRef = useRef(null)
@@ -251,6 +252,12 @@ const FeatureAdder = () => {
                 event.preventDefault() // Prevent browser default actions
                 setIsDrawerOpen(!isDrawerOpen) // Toggle drawer state
             }
+
+            // Check for Command/Control + Shift + E (presentation mode)
+            if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === 'e') {
+                event.preventDefault() // Prevent browser default actions
+                togglePresentationMode() // Toggle presentation mode
+            }
         }
 
         // Add keyboard listener globally
@@ -260,7 +267,46 @@ const FeatureAdder = () => {
         return () => {
             document.removeEventListener('keydown', handleGlobalKeyDown)
         }
-    }, [isDrawerOpen]) // Add isDrawerOpen to dependency array
+    }, [isDrawerOpen, isPresentationMode]) // Add dependencies
+
+    const togglePresentationMode = () => {
+        const newMode = !isPresentationMode
+        setIsPresentationMode(newMode)
+
+        // Toggle presentation class on body
+        if (newMode) {
+            document.body.classList.add('present')
+            // Hide monaco editor and drawer
+            setIsDrawerOpen(false)
+            document.getElementById('monaco-editor')?.classList.add('hidden')
+            // Make canvas fullscreen
+            const canvas = document.querySelector('canvas')
+            if (canvas) {
+                canvas.style.width = '100vw'
+                canvas.style.height = '100vh'
+                canvas.classList.add('fullscreen')
+                // Trigger resize event for the canvas to adapt
+                window.dispatchEvent(new Event('resize'))
+            }
+            // Update URL
+            updateUrl({ present: 'true' })
+        } else {
+            document.body.classList.remove('present')
+            // Show monaco editor
+            document.getElementById('monaco-editor')?.classList.remove('hidden')
+            // Reset canvas size
+            const canvas = document.querySelector('canvas')
+            if (canvas) {
+                canvas.style.width = ''
+                canvas.style.height = ''
+                canvas.classList.remove('fullscreen')
+                // Trigger resize event for the canvas to adapt
+                window.dispatchEvent(new Event('resize'))
+            }
+            // Update URL
+            updateUrl({ present: null })
+        }
+    }
 
     // Add click outside handler
     useEffect(() => {
@@ -328,8 +374,11 @@ const FeatureAdder = () => {
     }
 
     const handleUIState = (searchParams) => {
-        if (searchParams.has('present')) document.body.classList.add('present')
-        if (searchParams.has('open_sliders'))  setIsDrawerOpen(true)
+        if (searchParams.has('present')) {
+            document.body.classList.add('present')
+            setIsPresentationMode(true)
+        }
+        if (searchParams.has('open_sliders')) setIsDrawerOpen(true)
     }
 
     useEffect(() => {
