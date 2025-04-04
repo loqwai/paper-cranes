@@ -1,7 +1,4 @@
-// Updated shader with Rezz-inspired red/black spiral motif
-// -------------------------------------------------------
-// http://localhost:6969/edit.html?knob_71=0.27&knob_71.min=0&knob_71.max=1&knob_72=0.36&knob_72.min=0&knob_72.max=1&knob_73=0.68&knob_73.min=0&knob_73.max=1&knob_74=1&knob_74.min=0&knob_74.max=1&knob_75=0.13&knob_75.min=0&knob_75.max=1&knob_76=0.79&knob_76.min=0&knob_76.max=1&knob_77=0.09&knob_77.min=0&knob_77.max=1&knob_78=0.05&knob_78.min=0&knob_78.max=1&knob_79=0.04&knob_79.min=0&knob_79.max=1&knob_19=0.543&knob_19.min=0&knob_19.max=1&knob_14=0.496&knob_14.min=0&knob_14.max=1&image=images%5Crezz-full-lips-cropped.png&knob_22=0.409&knob_22.min=0&knob_22.max=1&knob_21=0.898&knob_21.min=0&knob_21.max=1&knob_20=0.976&knob_20.min=0&knob_20.max=1&knob_18=0.622&knob_18.min=0&knob_18.max=1
-// http://localhost:6969/edit.html?knob_71=0.53&knob_71.min=0&knob_71.max=1&knob_72=0.19&knob_72.min=0&knob_72.max=1&knob_73=0.79&knob_73.min=0&knob_73.max=1&knob_74=0.24&knob_74.min=0&knob_74.max=1&knob_75=-0.547&knob_75.min=-0.7&knob_75.max=1&knob_76=0.44&knob_76.min=0&knob_76.max=1&knob_77=0.94&knob_77.min=0&knob_77.max=1&knob_78=0.03&knob_78.min=0&knob_78.max=1&knob_79=0.05&knob_79.min=0&knob_79.max=1&knob_19=0.543&knob_19.min=0&knob_19.max=1&knob_14=0.315&knob_14.min=0&knob_14.max=1&image=images%5Crezz-full-lips-cropped.png&knob_22=0.614&knob_22.min=0&knob_22.max=1&knob_21=0.921&knob_21.min=0&knob_21.max=1&knob_20=0.961&knob_20.min=0&knob_20.max=1&knob_18=0.622&knob_18.min=0&knob_18.max=1&knob_11=0.945&knob_11.min=0&knob_11.max=1&knob_15=0.52&knob_15.min=0&knob_15.max=1&knob_16=0.173&knob_16.min=0&knob_16.max=1&knob_3=0.606&knob_3.min=0&knob_3.max=1&knob_10=0&knob_10.min=0&knob_10.max=1
+//http://localhost:6969/edit.html?knob_71=0.99&knob_71.min=0&knob_71.max=1&knob_72=0.05&knob_72.min=0&knob_72.max=1&knob_73=0.02&knob_73.min=0&knob_73.max=1&knob_74=0&knob_74.min=0&knob_74.max=1&knob_75=-0.649&knob_75.min=-0.7&knob_75.max=1&knob_76=1&knob_76.min=0&knob_76.max=1&knob_77=0&knob_77.min=0&knob_77.max=1&knob_78=0&knob_78.min=0&knob_78.max=1&knob_79=0.01&knob_79.min=0&knob_79.max=1&knob_19=0.567&knob_19.min=0&knob_19.max=1&knob_14=0&knob_14.min=0&knob_14.max=1&image=images%5Crezz-full-lips-cropped.png&knob_22=1&knob_22.min=0&knob_22.max=1&knob_21=0.606&knob_21.min=0&knob_21.max=1&knob_20=0.291&knob_20.min=0&knob_20.max=1&knob_18=0.63&knob_18.min=0&knob_18.max=1&knob_11=1&knob_11.min=0&knob_11.max=1&knob_15=0&knob_15.min=0&knob_15.max=1&knob_16=0.457&knob_16.min=0&knob_16.max=1&knob_3=0.323&knob_3.min=0&knob_3.max=1&knob_10=0&knob_10.min=0&knob_10.max=1&knob_17=1&knob_17.min=0&knob_17.max=1
 #define BACKGROUND_OFFSET_X 0.961
 #define BACKGROUND_OFFSET_Y 0.898
 
@@ -15,17 +12,17 @@
 #define PROBE_E (knob_75)     // Controls spiral thickness
 #define PROBE_F (knob_76)     // Controls overall scale/zoom
 #define PROBE_G (knob_77)     // Controls the balance between spiral and fractal
-#define PROBE_H (knob_3)     // Controls background warping intensity
+#define PROBE_H (knob_80)     // Controls background warping intensity
 
 // Recursive scaling parameters
-#define RECURSIVE_SCALE_AMOUNT (knob_11)   // Controls intensity of recursive scaling (0-1)
-#define RECURSIVE_ITERATIONS (knob_82 * 3.0 + 1.0) // Number of recursive samples (1-4)
+#define RECURSIVE_SCALE_AMOUNT (knob_14)   // Controls intensity of recursive scaling (0-1)
+#define RECURSIVE_ITERATIONS (knob_15 * 3.0 + 1.0) // Number of recursive samples (1-4)
 #define RECURSIVE_SCALE_FACTOR (knob_83 * 0.4 + 0.4) // Scale factor for each iteration (0.4-0.8)
 
 // Spiral position controls
 #define EYE_DISTANCE (knob_78 * 0.6 + 0.25)   // Controls horizontal distance between spirals (0.25-0.85)
 #define EYE_Y_OFFSET (knob_79 * 0.2 - 0.1)    // Controls vertical position of both spirals (-0.1-0.1)
-#define LEFT_X_ADJUST (knob_10 * 0.1)        // Fine adjustment of left spiral X position
+#define LEFT_X_ADJUST (knob_3 * 0.1)        // Fine adjustment of left spiral X position
 #define RIGHT_X_ADJUST (knob_11 * 0.1)       // Fine adjustment of right spiral X position
 #define SPIRAL_DENSITY (knob_12 * 8.0 + 4.0) // Controls spiral density/tightness (4.0-12.0)
 #define SPIRAL_ITERATIONS (knob_13 * 5.0 + 3.0) // Controls number of spiral iterations (3.0-8.0)
