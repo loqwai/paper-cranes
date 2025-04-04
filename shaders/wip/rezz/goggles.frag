@@ -1,7 +1,7 @@
 // Updated shader with Rezz-inspired red/black spiral motif
 // -------------------------------------------------------
 // http://localhost:6969/edit.html?knob_71=0.27&knob_71.min=0&knob_71.max=1&knob_72=0.36&knob_72.min=0&knob_72.max=1&knob_73=0.68&knob_73.min=0&knob_73.max=1&knob_74=1&knob_74.min=0&knob_74.max=1&knob_75=0.13&knob_75.min=0&knob_75.max=1&knob_76=0.79&knob_76.min=0&knob_76.max=1&knob_77=0.09&knob_77.min=0&knob_77.max=1&knob_78=0.05&knob_78.min=0&knob_78.max=1&knob_79=0.04&knob_79.min=0&knob_79.max=1&knob_19=0.543&knob_19.min=0&knob_19.max=1&knob_14=0.496&knob_14.min=0&knob_14.max=1&image=images%5Crezz-full-lips-cropped.png&knob_22=0.409&knob_22.min=0&knob_22.max=1&knob_21=0.898&knob_21.min=0&knob_21.max=1&knob_20=0.976&knob_20.min=0&knob_20.max=1&knob_18=0.622&knob_18.min=0&knob_18.max=1
-// http://localhost:6969/edit.html?knob_71=0.53&knob_71.min=0&knob_71.max=1&knob_72=0.15&knob_72.min=0&knob_72.max=1&knob_73=0.74&knob_73.min=0&knob_73.max=1&knob_74=0.25&knob_74.min=0&knob_74.max=1&knob_75=-0.598&knob_75.min=-0.7&knob_75.max=1&knob_76=0.28&knob_76.min=0&knob_76.max=1&knob_77=0.81&knob_77.min=0&knob_77.max=1&knob_78=0&knob_78.min=0&knob_78.max=1&knob_79=0.02&knob_79.min=0&knob_79.max=1&knob_19=0.543&knob_19.min=0&knob_19.max=1&knob_14=0.496&knob_14.min=0&knob_14.max=1&image=images%5Crezz-full-lips-cropped.png&knob_22=0.37&knob_22.min=0&knob_22.max=1&knob_21=0.921&knob_21.min=0&knob_21.max=1&knob_20=0.898&knob_20.min=0&knob_20.max=1&knob_18=0.622&knob_18.min=0&knob_18.max=1&knob_11=0&knob_11.min=0&knob_11.max=1
+// http://localhost:6969/edit.html?knob_71=0.53&knob_71.min=0&knob_71.max=1&knob_72=0.19&knob_72.min=0&knob_72.max=1&knob_73=0.79&knob_73.min=0&knob_73.max=1&knob_74=0.24&knob_74.min=0&knob_74.max=1&knob_75=-0.547&knob_75.min=-0.7&knob_75.max=1&knob_76=0.44&knob_76.min=0&knob_76.max=1&knob_77=0.94&knob_77.min=0&knob_77.max=1&knob_78=0.03&knob_78.min=0&knob_78.max=1&knob_79=0.05&knob_79.min=0&knob_79.max=1&knob_19=0.543&knob_19.min=0&knob_19.max=1&knob_14=0.315&knob_14.min=0&knob_14.max=1&image=images%5Crezz-full-lips-cropped.png&knob_22=0.614&knob_22.min=0&knob_22.max=1&knob_21=0.921&knob_21.min=0&knob_21.max=1&knob_20=0.961&knob_20.min=0&knob_20.max=1&knob_18=0.622&knob_18.min=0&knob_18.max=1&knob_11=0.945&knob_11.min=0&knob_11.max=1&knob_15=0.52&knob_15.min=0&knob_15.max=1&knob_16=0.173&knob_16.min=0&knob_16.max=1&knob_3=0.606&knob_3.min=0&knob_3.max=1&knob_10=0&knob_10.min=0&knob_10.max=1
 #define BACKGROUND_OFFSET_X knob_20
 #define BACKGROUND_OFFSET_Y knob_21
 
@@ -15,6 +15,12 @@
 #define PROBE_E (knob_75)     // Controls spiral thickness
 #define PROBE_F (knob_76)     // Controls overall scale/zoom
 #define PROBE_G (knob_77)     // Controls the balance between spiral and fractal
+#define PROBE_H (knob_3)     // Controls background warping intensity
+
+// Recursive scaling parameters
+#define RECURSIVE_SCALE_AMOUNT (knob_11)   // Controls intensity of recursive scaling (0-1)
+#define RECURSIVE_ITERATIONS (knob_82 * 3.0 + 1.0) // Number of recursive samples (1-4)
+#define RECURSIVE_SCALE_FACTOR (knob_83 * 0.4 + 0.4) // Scale factor for each iteration (0.4-0.8)
 
 // Spiral position controls
 #define EYE_DISTANCE (knob_78 * 0.6 + 0.25)   // Controls horizontal distance between spirals (0.25-0.85)
@@ -98,8 +104,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float distortionRadius = mix(0.5, 1.2, PROBE_C); // Radius of influence around eyes
     float distortionFalloff = smoothstep(distortionRadius, distortionRadius * 0.3, eyesDistance);
 
-    // Scale distortion strength based on proximity to eyes and fractal intensity
-    float baseDistortionStrength = mix(0.05, 0.15, PROBE_C); // Base intensity
+    // Scale distortion strength based on proximity to eyes, fractal intensity, and PROBE_H
+    float baseDistortionStrength = mix(0.0, 0.3, PROBE_H); // Fine-grained control over warping
     float fractalIntensity = length(distortedUv) * 1.5; // Fractal influence
     float distortionStrength = baseDistortionStrength * distortionFalloff * (1.0 + fractalIntensity * 0.5);
 
@@ -131,6 +137,52 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         mix(warpedInit, secondaryInit, fractalIntensity * 0.3), // Distorted near eyes
         distortionFalloff
     );
+
+    // Implement recursive scaling effect along fractal lines
+    vec3 recursiveTexture = originalTexture;
+    float recursiveInfluence = RECURSIVE_SCALE_AMOUNT * smoothstep(0.0, 0.4, fractalIntensity);
+
+    if (recursiveInfluence > 0.01) {
+        // Start point for scaling - use the distorted coordinates as a base
+        vec2 scaledUv = sampleUv;
+        float totalWeight = 1.0;
+        float weight = 1.0;
+
+        // Follow the fractal contours by using the julia set to guide the direction
+        vec2 fractalDirection = normalize(distortedUv - uv) * 0.01;
+
+        // Apply recursive sampling
+        for (float i = 0.0; i < 4.0; i++) {
+            if (i >= RECURSIVE_ITERATIONS) break;
+
+            // Scale down for each iteration
+            float scaleFactor = RECURSIVE_SCALE_FACTOR + fractalIntensity * 0.1;
+
+            // Move along fractal direction
+            scaledUv += fractalDirection * (i + 1.0);
+
+            // Scale around the center of the face
+            vec2 faceCenter = vec2(0.5, 0.5); // Assuming the face is centered in texture
+            scaledUv = faceCenter + (scaledUv - faceCenter) * scaleFactor;
+
+            // Get scaled texture
+            vec3 scaledTexture = getInitialFrameColor(scaledUv).rgb;
+
+            // Decrease weight for each iteration
+            weight *= 0.7;
+            recursiveTexture += scaledTexture * weight;
+            totalWeight += weight;
+        }
+
+        // Normalize
+        recursiveTexture /= totalWeight;
+
+        // Apply light red tint to recursive samples
+        recursiveTexture = mix(recursiveTexture, recursiveTexture * vec3(1.2, 0.8, 0.8), 0.3);
+    }
+
+    // Blend the recursive effect with the distorted texture
+    distortedTexture = mix(distortedTexture, recursiveTexture, recursiveInfluence);
 
     // Enhance red channel in the distorted areas only
     distortedTexture.r = mix(distortedTexture.r,
