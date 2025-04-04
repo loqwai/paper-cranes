@@ -1,56 +1,51 @@
-//http://localhost:6969/edit.html?knob_71=0.51&knob_71.min=0&knob_71.max=1&knob_72=0.52&knob_72.min=0&knob_72.max=1&knob_73=0&knob_73.min=0&knob_73.max=1&knob_74=0.77&knob_74.min=0&knob_74.max=1&knob_75=0.235&knob_75.min=-0.7&knob_75.max=1&knob_76=0.44&knob_76.min=0&knob_76.max=1&knob_77=0.52&knob_77.min=0&knob_77.max=1&knob_78=0.03&knob_78.min=0&knob_78.max=1&knob_79=0.94&knob_79.min=0&knob_79.max=1&knob_19=0.402&knob_19.min=0&knob_19.max=1&knob_14=0.882&knob_14.min=0&knob_14.max=1&image=images%5Crezz-full-lips-cropped.png&knob_22=1&knob_22.min=0&knob_22.max=1&knob_21=0.732&knob_21.min=0&knob_21.max=1&knob_20=1&knob_20.min=0&knob_20.max=1&knob_18=1&knob_18.min=0&knob_18.max=1&knob_11=1&knob_11.min=0&knob_11.max=1&knob_15=0.646&knob_15.min=0&knob_15.max=1&knob_16=0.543&knob_16.min=0&knob_16.max=1&knob_3=0.236&knob_3.min=0&knob_3.max=1&knob_10=0&knob_10.min=0&knob_10.max=1&knob_17=0.488&knob_17.min=0&knob_17.max=1&knob_4=1&knob_4.min=0&knob_4.max=1&knob_5=0.921&knob_5.min=0&knob_5.max=1&knob_6=1&knob_6.min=0&knob_6.max=1&knob_7=0&knob_7.min=0&knob_7.max=1&knob_8=0&knob_8.min=0&knob_8.max=1&knob_9=0.528&knob_9.min=0&knob_9.max=1&knob_60=0.181&knob_60.min=0&knob_60.max=1
+//http://localhost:6969/edit.html?knob_71=0.51&knob_71.min=0&knob_71.max=1&knob_72=0.52&knob_72.min=0&knob_72.max=1&knob_73=0&knob_73.min=0&knob_73.max=1&knob_74=0.77&knob_74.min=0&knob_74.max=1&knob_75=0.235&knob_75.min=-0.7&knob_75.max=1&knob_76=0.44&knob_76.min=0&knob_76.max=1&knob_77=0.52&knob_77.min=0&knob_77.max=1&knob_78=0.03&knob_78.min=0&knob_78.max=1&knob_79=0.94&knob_79.min=0&knob_79.max=1&knob_19=1&knob_19.min=0&knob_19.max=1&knob_14=1&knob_14.min=0&knob_14.max=1&image=images%5Crezz-full-lips-cropped.png&knob_22=1&knob_22.min=0&knob_22.max=1&knob_21=0.52&knob_21.min=0&knob_21.max=1&knob_20=0&knob_20.min=0&knob_20.max=1&knob_18=0.228&knob_18.min=0&knob_18.max=1&knob_11=0.559&knob_11.min=0&knob_11.max=1&knob_15=0.354&knob_15.min=0&knob_15.max=1&knob_16=0.606&knob_16.min=0&knob_16.max=1&knob_3=0.543&knob_3.min=0&knob_3.max=1&knob_10=0.512&knob_10.min=0&knob_10.max=1&knob_17=0.606&knob_17.min=0&knob_17.max=1&knob_4=0.764&knob_4.min=0&knob_4.max=1&knob_5=0.882&knob_5.min=0&knob_5.max=1&knob_6=0.787&knob_6.min=0&knob_6.max=1&knob_7=0.827&knob_7.min=0&knob_7.max=1&knob_8=0.126&knob_8.min=0&knob_8.max=1&knob_9=0.48&knob_9.min=0&knob_9.max=1&knob_60=0.142&knob_60.min=0&knob_60.max=1
 
-// --- Positioning & Sizing Controls ---
+// --- General Positioning & Sizing ---
 #define BACKGROUND_OFFSET_X knob_3 // Controls background horizontal offset
 #define BACKGROUND_OFFSET_Y knob_4 // Controls background vertical offset
 #define BACKGROUND_STRETCH_X knob_5 // Controls background horizontal stretch
 #define BACKGROUND_ZOOM_Y knob_6   // Controls background vertical zoom/stretch
 #define ZOOM (mix(0.5, 2.5, knob_7)) // Controls overall scale/zoom of the main visual
-#define EYE_DISTANCE (knob_8 * 0.6 + 0.125)   // Controls horizontal distance between spirals (0.125-0.725)
-#define EYE_Y_OFFSET (knob_9 * 0.4 - 0.2)    // Controls vertical position of both spirals (-0.2 to 0.2)
-#define LEFT_X_ADJUST (knob_10 * 0.2 - 0.1)    // Fine adjustment of left spiral X position (-0.1 to 0.1)
-#define RIGHT_X_ADJUST (knob_11 * 0.2 - 0.1)   // Fine adjustment of right spiral X position (-0.1 to 0.1)
-#define DISTORTION_RADIUS (knob_12 * 2.0 + 0.5)  // Controls radius of distortion effect (0.5-2.5) - Moved from knob_4
 
-// --- Probe Definitions (Primary Audio Reactivity & Style) ---
-#define PROBE_A (knob_21)     // Controls overall spiral density (0 = sparse, 1 = dense)
-#define PROBE_B (knob_22)     // Controls spiral rotation speed
-#define PROBE_C (knob_19)     // Controls fractal influence on spiral (0 = rigid, 1 = very warped)
-#define PROBE_D (knob_18)     // Controls color intensity and variation
-#define PROBE_E (mix(-2.8, 1., knob_76))     // Controls spiral thickness
+// --- Eye/Spiral Positioning, Shape & Distortion ---
+#define EYE_DISTANCE (knob_14 * 0.6 + 0.125)   // Controls horizontal distance between spirals (0.125-0.725) - Moved from knob_8
+#define EYE_Y_OFFSET (knob_15 * 0.4 - 0.2)    // Controls vertical position of both spirals (-0.2 to 0.2) - Moved from knob_9
+#define LEFT_X_ADJUST (knob_16 * 0.2 - 0.1)    // Fine adjustment of left spiral X position (-0.1 to 0.1) - Moved from knob_10
+#define RIGHT_X_ADJUST (knob_17 * 0.2 - 0.1)   // Fine adjustment of right spiral X position (-0.1 to 0.1) - Moved from knob_11
+#define PROBE_A (knob_18)     // Controls overall spiral density (0 = sparse, 1 = dense) - Moved from knob_21
+#define PROBE_B (knob_19)     // Controls spiral rotation speed - Moved from knob_22
+#define PROBE_C (knob_20)     // Controls fractal influence on spiral (0 = rigid, 1 = very warped) - Moved from knob_19
+#define PROBE_E (mix(-2.8, 1., knob_21))     // Controls spiral thickness - Moved from knob_76
+#define SPIRAL_DENSITY (knob_22 * 8.0 + 4.0) // Controls spiral density/tightness (4.0-12.0) - Moved from knob_13
+#define SPIRAL_ITERATIONS (knob_23 * 5.0 + 3.0) // Controls number of spiral iterations (3.0-8.0) - Moved from knob_14
+#define SPIRAL_DISTORTION_BOOST (knob_24 * 50.0 + 1.0)  // Extra distortion in spiral areas (1.0-51.0) - Moved from knob_16
+#define DISTORTION_RADIUS (knob_25 * 2.0 + 0.5)  // Controls radius of distortion effect (0.5-2.5) - Moved from knob_12
+#define FRACTAL_COMPLEXITY (knob_26 * 24.0 + 8.0)  // Controls Julia set complexity (8-32 iterations) - Moved from knob_17
+#define JULIA_VARIATION (knob_27 * 0.3)  // Controls variation in Julia set constants (0.0-0.3) - Moved from knob_20
+#define RED_TINT_AMOUNT (knob_28 * 0.8)  // Controls amount of red tinting in spiral distortion (0.0-0.8) - New knob
+
+// --- Other Visual Effects & Audio Reactivity ---
+#define PROBE_D (knob_13)     // Controls color intensity and variation - Moved from knob_18
 #define PROBE_G (spectralCentroidNormalized/2.)     // Controls the balance between spiral and fractal
 #define PROBE_H (spectralEntropyNormalized/100.)     // Controls background warping intensity
-
-// --- Recursive Scaling Parameters ---
 #define RECURSIVE_SCALE_AMOUNT (spectralCrestNormalized)   // Controls intensity of recursive scaling (0-1)
-#define RECURSIVE_ITERATIONS (knob_15 * 3.0 + 1.0) // Number of recursive samples (1-4)
+#define RECURSIVE_ITERATIONS (knob_12 * 3.0 + 1.0) // Number of recursive samples (1-4) - Moved from knob_15
 #define RECURSIVE_SCALE_FACTOR ((energyZScore) * 0.4 + 0.4) // Scale factor for each iteration (0.4-0.8)
-
-// --- Spiral Shape & Iteration Controls ---
-#define SPIRAL_DENSITY (knob_13 * 8.0 + 4.0) // Controls spiral density/tightness (4.0-12.0) - Moved from knob_12
-#define SPIRAL_ITERATIONS (knob_14 * 5.0 + 3.0) // Controls number of spiral iterations (3.0-8.0) - Moved from knob_13
-
-// --- Distortion & Fractal Controls ---
-#define SPIRAL_DISTORTION_BOOST (knob_16 * 50.0 + 1.0)  // Extra distortion in spiral areas (1.0-51.0) - Moved from knob_5
-#define FRACTAL_COMPLEXITY (knob_17 * 24.0 + 8.0)  // Controls Julia set complexity (8-32 iterations) - Moved from knob_6
 #define DISTORTION_DIRECTIONALITY (0.)  // Controls how directional the distortion is (0=radial, 1=along fractal)
-#define JULIA_VARIATION (knob_20 * 0.3)  // Controls variation in Julia set constants (0.0-0.3) - Moved from knob_9
-#define RED_TINT_AMOUNT 0.  // Controls amount of red tinting in distortion (0.2-0.8)
-
-// --- Animation Timing ---
 #define TIME_SCALE (knob_70 * 0.2 + 0.01)  // Controls overall animation speed (0.01-0.21) - Moved from knob_7
 
-
-// --- Unused / Placeholder Knobs (available for reassignment) ---
-// knob_60
-// knob_71
-// knob_72
-// knob_73
-// knob_74
-// knob_75
-// knob_77
-// knob_78
-// knob_79
+// --- Unused / Placeholder Knobs ---
+// knob_3 to knob_7 are used
+// knob_8 to knob_11 are now free
+// knob_12 is used (Recursive Iterations)
+// knob_13 is used (Probe D / Color Intensity)
+// knob_14 to knob_28 are used (Eye/Spiral Block)
+// knob_29 to knob_69 are free
+// knob_70 is used (Time Scale)
+// knob_71 to knob_75 are free
+// knob_76 is free
+// knob_77 to knob_79 are free
+// knob_60 is free
 
 // Function to apply Julia set distortion
 vec2 julia(vec2 uv, float t){
@@ -96,8 +91,7 @@ vec2 juliaFromPoint(vec2 uv, vec2 center, float t){
 // Main image function
 void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // Scale UV based on ZOOM for overall zoom control
-    float zoom = mix(0.8, 1.5, ZOOM);
-    vec2 uv = (fragCoord * 2.0 - iResolution.xy) / (iResolution.y * zoom);
+    vec2 uv = (fragCoord * 2.0 - iResolution.xy) / (iResolution.y * ZOOM);
     vec2 sampleUv = uv;
     vec2 sampleZoom = vec2(BACKGROUND_STRETCH_X, BACKGROUND_ZOOM_Y);
     vec2 sampleOffset = vec2(BACKGROUND_OFFSET_X, BACKGROUND_OFFSET_Y);
@@ -254,7 +248,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     baseColor = mix(baseColor, darkRed, sin(atan(distortedUv.y, distortedUv.x) * 3.0) * 0.5 + 0.5);
 
     // Blend fractal color with distorted texture
-    baseColor = mix(baseColor, distortedTexture, knob_22 * 0.7);
+    baseColor = mix(baseColor, distortedTexture, PROBE_B * 0.7);
 
     // Apply color intensity from PROBE_D
     float colorIntensity = mix(0.7, 1.2, PROBE_D);
@@ -406,7 +400,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
 
 
     // Final blend with the distorted texture - reduced blend in spiral areas to preserve spiral visual
-    float textureBlend = knob_22 * (1.0 - combinedSpiralMask * 0.8);
+    float textureBlend = PROBE_B * (1.0 - combinedSpiralMask * 0.8);
     color = mix(color, distortedTexture, textureBlend);
 
     // Debug visualization (comment out for final version)
