@@ -261,3 +261,13 @@ You make sure the shaders are centered on the viewport; The object of interest s
 - use arrow functions instead of function declarations.
 - use the .eslintrc file as a guide for style.
 - do not use semicolons.
+
+### Knobs
+Knobs are uniforms that are made implicitly available to the shader as floats from 0-1
+I have the following knobs:
+
+knob_{14-22}
+knob_{3-11}
+knob_{71-79}
+
+
