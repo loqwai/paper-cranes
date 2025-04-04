@@ -69,12 +69,22 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // Get previous frame color for background effects
     vec3 prevColor = getLastFrameColor(distortedUv).rgb;
 
-    // Create base fractal color
-    vec3 fractalColor = prevColor;
-    vec3 hsl = rgb2hsl(fractalColor);
-    hsl.x += 0.05;
-    hsl.y = mix(hsl.y, 0.8, 0.1);
-    fractalColor = hsl2rgb(hsl);
+    // Create base fractal color with dark red/maroon theme
+    vec3 darkRed = vec3(0.5, 0.0, 0.0);
+    vec3 maroon = vec3(0.4, 0.0, 0.1);
+    vec3 blackRed = vec3(0.2, 0.0, 0.0);
+
+    // Position-based color variation
+    float posFactor = fract(length(distortedUv) * 1.5 + t * 0.5);
+    vec3 baseColor = mix(blackRed, maroon, posFactor);
+    baseColor = mix(baseColor, darkRed, sin(atan(distortedUv.y, distortedUv.x) * 3.0) * 0.5 + 0.5);
+
+    // Apply color intensity from PROBE_D
+    float colorIntensity = mix(0.7, 1.2, PROBE_D);
+    baseColor *= colorIntensity;
+
+    // Mix with previous frame for temporal stability
+    vec3 fractalColor = mix(prevColor, baseColor, 0.4);
 
     // Create spiral pattern centered on screen
     vec2 centerUv = uv;
