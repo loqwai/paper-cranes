@@ -12,7 +12,7 @@
 #define PROBE_D (knob_18)     // Controls color intensity and variation
 #define PROBE_E (mix(-2.8, 1., knob_76))     // Controls spiral thickness
 
-#define PROBE_G (knob_10)     // Controls the balance between spiral and fractal
+#define PROBE_G (spectralCentroidNormalized/2.)     // Controls the balance between spiral and fractal
 #define PROBE_H (spectralEntropyNormalized/100.)     // Controls background warping intensity
 
 // Recursive scaling parameters
@@ -36,32 +36,6 @@
 #define TIME_SCALE (knob_7 * 0.2 + 0.05)  // Controls overall animation speed (0.05-0.25)
 #define RED_TINT_AMOUNT 0.  // Controls amount of red tinting in distortion (0.2-0.8)
 #define JULIA_VARIATION (knob_9 * 0.3)  // Controls variation in Julia set constants (0.0-0.3)
-
-// Function to check if pixel and surrounding area is solid white
-float getWhiteAmount(vec2 uv, vec2 pixelSize) {
-    vec3 center = getLastFrameColor(uv).rgb;
-    vec3 left   = getLastFrameColor(uv - vec2(pixelSize.x, 0.0)).rgb;
-    vec3 right  = getLastFrameColor(uv + vec2(pixelSize.x, 0.0)).rgb;
-    vec3 up     = getLastFrameColor(uv + vec2(0.0, pixelSize.y)).rgb;
-    vec3 down   = getLastFrameColor(uv - vec2(0.0, pixelSize.y)).rgb;
-
-    float centerWhite = dot(center, vec3(1.0)) / 3.0;
-    float leftWhite   = dot(left,   vec3(1.0)) / 3.0;
-    float rightWhite  = dot(right,  vec3(1.0)) / 3.0;
-    float upWhite     = dot(up,     vec3(1.0)) / 3.0;
-    float downWhite   = dot(down,   vec3(1.0)) / 3.0;
-
-    float threshold   = 0.95;
-    float smoothness  = 0.1;
-
-    float centerSmooth = smoothstep(threshold - smoothness, threshold, centerWhite);
-    float leftSmooth   = smoothstep(threshold - smoothness, threshold, leftWhite);
-    float rightSmooth  = smoothstep(threshold - smoothness, threshold, rightWhite);
-    float upSmooth     = smoothstep(threshold - smoothness, threshold, upWhite);
-    float downSmooth   = smoothstep(threshold - smoothness, threshold, downWhite);
-
-    return (centerSmooth + leftSmooth + rightSmooth + upSmooth + downSmooth) / 5.0;
-}
 
 // Function to apply Julia set distortion
 vec2 julia(vec2 uv, float t){
@@ -119,7 +93,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float t = time * TIME_SCALE; // Use TIME_SCALE for animation speed
 
     vec2 pixelSize = 1.0 / iResolution.xy;
-    float whiteAmount = getWhiteAmount(fragCoord / iResolution.xy, pixelSize);
 
     // Define eye centers in UV space
     vec2 leftEyeCenter = vec2(-EYE_DISTANCE - LEFT_X_ADJUST, -EYE_Y_OFFSET);
@@ -416,8 +389,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float mixRatio = mix(-.7, 2., PROBE_G);
     vec3 color = mix(fractalColor, spiralColor, mixRatio);
 
-    // Apply previous frame white amount
-    color = mix(color, vec3(1.0), whiteAmount * 0.);
 
     // Final blend with the distorted texture - reduced blend in spiral areas to preserve spiral visual
     float textureBlend = knob_22 * (1.0 - combinedSpiralMask * 0.8);
