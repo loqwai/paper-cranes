@@ -1,8 +1,8 @@
-//http://localhost:6969/edit.html?knob_71=0.78&knob_71.min=0&knob_71.max=1&knob_72=0.09&knob_72.min=0&knob_72.max=1&knob_73=0&knob_73.min=0&knob_73.max=1&knob_74=0.58&knob_74.min=0&knob_74.max=1&knob_75=0.558&knob_75.min=-0.7&knob_75.max=1&knob_76=0.52&knob_76.min=0&knob_76.max=1&knob_77=0.81&knob_77.min=0&knob_77.max=1&knob_78=0.51&knob_78.min=0&knob_78.max=1&knob_79=0.63&knob_79.min=0&knob_79.max=1&knob_19=1&knob_19.min=0&knob_19.max=1&knob_14=0.016&knob_14.min=0&knob_14.max=1&image=images%5Crezz-full-lips-cropped.png&knob_22=0.087&knob_22.min=0&knob_22.max=1&knob_21=0.575&knob_21.min=0&knob_21.max=1&knob_20=0&knob_20.min=0&knob_20.max=1&knob_18=0.37&knob_18.min=0&knob_18.max=1&knob_11=0.48&knob_11.min=0&knob_11.max=1&knob_15=0.291&knob_15.min=0&knob_15.max=1&knob_16=0.197&knob_16.min=0&knob_16.max=1&knob_3=0.465&knob_3.min=0&knob_3.max=1&knob_10=0&knob_10.min=0&knob_10.max=1&knob_17=0.331&knob_17.min=0&knob_17.max=1&knob_4=0.638&knob_4.min=0&knob_4.max=1&knob_5=0.976&knob_5.min=0&knob_5.max=1&knob_6=0.874&knob_6.min=0&knob_6.max=1&knob_7=0.646&knob_7.min=0&knob_7.max=1&knob_8=1&knob_8.min=0&knob_8.max=1&knob_9=0&knob_9.min=0&knob_9.max=1&knob_60=0.567&knob_60.min=0&knob_60.max=1&knob_34=0.425&knob_34.min=0&knob_34.max=1&knob_30=0.693&knob_30.min=0&knob_30.max=1&knob_37=0.575&knob_37.min=0&knob_37.max=1&knob_40=0.52&knob_40.min=0&knob_40.max=1&knob_41=0.52&knob_41.min=0&knob_41.max=1&knob_43=0.409&knob_43.min=0&knob_43.max=1&knob_47=0.654&knob_47.min=0&knob_47.max=1&knob_31=0.173&knob_31.min=0&knob_31.max=1&knob_36=0.276&knob_36.min=0&knob_36.max=1&knob_35=0.5&knob_35.min=0&knob_35.max=1
+//http://localhost:6969/edit.html?image=images%5Crezz-full-lips-cropped.png
 
 // ======================== CONFIGURATION START ========================
 // Control Mode: Switch between audio reactive and knob control
-// #define USE_AUDIO_REACTIVE
+#define USE_AUDIO_REACTIVE
 // Comment out the line above to use knobs for all parameters
 
 // ======================== KNOB DEFINITIONS ========================
@@ -35,22 +35,24 @@
 #define JULIA_VARIATION knob_73     // Variation in Julia constants
 #define COLOR_TINT knob_74          // Red tint amount
 
-// --- Additional Effects [knobs 8-9, 75] ---
-#define RECURSIVE_ITERATIONS knob_8 // Number of recursive samples
+// --- Additional Effects [knobs 9, 75] ---
+// RECURSIVE_ITERATIONS knob_8 is now reactive
 #define COLOR_INTENSITY knob_9      // Color intensity
 #define ANIMATION_SPEED knob_75     // Overall animation speed
 
 // --- Audio Reactive Parameters ---
 #ifdef USE_AUDIO_REACTIVE
-    #define SPIRAL_MIX_RATIO (spectralCentroidNormalized / 2.0)  // Balance: Spiral vs Fractal
-    #define BACKGROUND_WARP (spectralEntropyNormalized / 100.0)  // Background warping intensity
-    #define RECURSIVE_SCALE_AMT (spectralCrestNormalized)        // Recursive scale intensity
-    #define RECURSIVE_SCALE_FACTOR ((energyZScore) * 0.4 + 0.4)  // Scale factor for iterations
+    #define SPIRAL_MIX_RATIO (spectralCentroidNormalized * 0.7 + 0.1)  // Balance: Spiral vs Fractal - Adjusted range
+    #define BACKGROUND_WARP (spectralEntropyNormalized * 0.5)  // Background warping intensity - Adjusted scaling
+    #define RECURSIVE_SCALE_AMT (spectralCrestNormalized * 0.8 + 0.2) // Recursive scale intensity - Adjusted range
+    #define RECURSIVE_SCALE_FACTOR (mapValue(energyZScore, -1.0, 2.0, 0.4, 0.8))  // Scale factor for iterations - Using mapValue
+    #define RECURSIVE_ITERATIONS (mapValue(bassNormalized, 0., 1., 1., 4.)) // Reactive recursive iterations - Replaced knob_8
 #else
     #define SPIRAL_MIX_RATIO (knob_30 * 0.5)                     // Balance: Spiral vs Fractal
     #define BACKGROUND_WARP (knob_31 * 0.01)                     // Background warping intensity
     #define RECURSIVE_SCALE_AMT (0.7)                            // Always ensure some recursive scale
     #define RECURSIVE_SCALE_FACTOR ((knob_33 * 2.0 - 1.0) * 0.4 + 0.4) // Scale factor for iterations
+    #define RECURSIVE_ITERATIONS (knob_8 * 3.0 + 1.0) // Knob-controlled recursive iterations
 #endif
 
 // ======================== CONFIGURATION END ========================
@@ -215,7 +217,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Apply contrast enhancement to make the initial texture more visible in fractal
     float contrastPower = mix(0.7, 1.5, FRACTAL_BRIGHTNESS);
-    recursiveTexture = pow(recursiveTexture, vec3(1.0/contrastPower));
+    recursiveTexture = pow(recursiveTexture, vec3(contrastPower)); // Fixed contrast application
 
     // Reduce color tinting to preserve original texture colors better
     float tintAmount = mix(0.0, 0.4, COLOR_TINT);

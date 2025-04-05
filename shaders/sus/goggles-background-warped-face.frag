@@ -2,27 +2,27 @@
 // -------------------------------------------------------
 // http://localhost:6969/edit.html?knob_71=0.27&knob_71.min=0&knob_71.max=1&knob_72=0.36&knob_72.min=0&knob_72.max=1&knob_73=0.68&knob_73.min=0&knob_73.max=1&knob_74=1&knob_74.min=0&knob_74.max=1&knob_75=0.13&knob_75.min=0&knob_75.max=1&knob_76=0.79&knob_76.min=0&knob_76.max=1&knob_77=0.09&knob_77.min=0&knob_77.max=1&knob_78=0.05&knob_78.min=0&knob_78.max=1&knob_79=0.04&knob_79.min=0&knob_79.max=1&knob_19=0.543&knob_19.min=0&knob_19.max=1&knob_14=0.496&knob_14.min=0&knob_14.max=1&image=images%5Crezz-full-lips-cropped.png&knob_22=0.409&knob_22.min=0&knob_22.max=1&knob_21=0.898&knob_21.min=0&knob_21.max=1&knob_20=0.976&knob_20.min=0&knob_20.max=1&knob_18=0.622&knob_18.min=0&knob_18.max=1
 // http://localhost:6969/edit.html?knob_71=0.53&knob_71.min=0&knob_71.max=1&knob_72=0.15&knob_72.min=0&knob_72.max=1&knob_73=0.74&knob_73.min=0&knob_73.max=1&knob_74=0.25&knob_74.min=0&knob_74.max=1&knob_75=-0.598&knob_75.min=-0.7&knob_75.max=1&knob_76=0.28&knob_76.min=0&knob_76.max=1&knob_77=0.81&knob_77.min=0&knob_77.max=1&knob_78=0&knob_78.min=0&knob_78.max=1&knob_79=0.02&knob_79.min=0&knob_79.max=1&knob_19=0.543&knob_19.min=0&knob_19.max=1&knob_14=0.496&knob_14.min=0&knob_14.max=1&image=images%5Crezz-full-lips-cropped.png&knob_22=0.37&knob_22.min=0&knob_22.max=1&knob_21=0.921&knob_21.min=0&knob_21.max=1&knob_20=0.898&knob_20.min=0&knob_20.max=1&knob_18=0.622&knob_18.min=0&knob_18.max=1&knob_11=0&knob_11.min=0&knob_11.max=1
-#define BACKGROUND_OFFSET_X knob_20
-#define BACKGROUND_OFFSET_Y knob_21
+#define BACKGROUND_OFFSET_X (spectralSkewNormalized)
+#define BACKGROUND_OFFSET_Y (spectralKurtosisNormalized)
 
-#define BACKGROUND_ZOOM_X knob_19
-#define BACKGROUND_ZOOM_Y knob_18
+#define BACKGROUND_ZOOM_X (spectralSpreadNormalized * 0.8 + 0.2)
+#define BACKGROUND_ZOOM_Y (spectralEntropyNormalized * 0.8 + 0.2)
 // Probe definitions for parametric control
-#define PROBE_A (knob_71)     // Controls overall spiral density (0 = sparse, 1 = dense)
-#define PROBE_B (knob_72)     // Controls spiral rotation speed
-#define PROBE_C (knob_73)     // Controls fractal influence on spiral (0 = rigid, 1 = very warped)
-#define PROBE_D (knob_74)     // Controls color intensity and variation
-#define PROBE_E (knob_75)     // Controls spiral thickness
-#define PROBE_F (knob_76)     // Controls overall scale/zoom
-#define PROBE_G (knob_77)     // Controls the balance between spiral and fractal
+#define PROBE_A (spectralFluxNormalized)
+#define PROBE_B (spectralCentroidNormalized * 0.2 + 0.05)
+#define PROBE_C (spectralRoughnessNormalized * 0.8)
+#define PROBE_D (energyNormalized * 0.5 + 0.5)
+#define PROBE_E (mapValue(trebleNormalized, 0.0, 1.0, -0.7, 1.0))
+#define PROBE_F (mapValue(energyZScore, -1.0, 2.0, 0.8, 1.5))
+#define PROBE_G (mapValue(spectralFluxNormalized, 0., 1., 0.1, 0.9))
 
 // Spiral position controls
-#define EYE_DISTANCE (knob_78 * 0.6 + 0.25)   // Controls horizontal distance between spirals (0.25-0.85)
-#define EYE_Y_OFFSET (knob_79 * 0.2 - 0.1)    // Controls vertical position of both spirals (-0.1-0.1)
-#define LEFT_X_ADJUST (knob_10 * 0.1)        // Fine adjustment of left spiral X position
-#define RIGHT_X_ADJUST (knob_11 * 0.1)       // Fine adjustment of right spiral X position
-#define SPIRAL_DENSITY (knob_12 * 8.0 + 4.0) // Controls spiral density/tightness (4.0-12.0)
-#define SPIRAL_ITERATIONS (knob_13 * 5.0 + 3.0) // Controls number of spiral iterations (3.0-8.0)
+#define EYE_DISTANCE (spectralCrest * 0.6 + 0.25)
+#define EYE_Y_OFFSET (spectralFluxNormalized * 0.2 - 0.1)
+#define LEFT_X_ADJUST (spectralCrestNormalized * 0.1)
+#define RIGHT_X_ADJUST (midsNormalized * 0.1)
+#define SPIRAL_DENSITY (mapValue(bassNormalized, 0.0, 1.0, 4.0, 12.0))
+#define SPIRAL_ITERATIONS (mapValue(spectralSkewNormalized, 0.0, 1.0, 3.0, 8.0))
 
 // Function to check if pixel and surrounding area is solid white
 float getWhiteAmount(vec2 uv, vec2 pixelSize) {
@@ -129,7 +129,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     baseColor = mix(baseColor, darkRed, sin(atan(distortedUv.y, distortedUv.x) * 3.0) * 0.5 + 0.5);
 
     // Blend fractal color with distorted texture
-    baseColor = mix(baseColor, distortedTexture, knob_22 * 0.7);
+    baseColor = mix(baseColor, distortedTexture, spectralFluxNormalized * 0.7);
 
     // Apply color intensity from PROBE_D
     float colorIntensity = mix(0.7, 1.2, PROBE_D);
@@ -221,7 +221,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     color = mix(color, vec3(1.0), whiteAmount * 0.5);
 
     // Final blend with the distorted texture
-    float textureBlend = knob_22 * (1.0 - combinedSpiralMask * 0.8); // Reduce texture in spiral areas
+    float textureBlend = spectralFluxNormalized * (1.0 - combinedSpiralMask * 0.8);
     color = mix(color, distortedTexture, textureBlend);
 
     fragColor = vec4(color, 1.0);

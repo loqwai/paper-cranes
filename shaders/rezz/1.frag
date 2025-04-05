@@ -1,41 +1,42 @@
 //http://localhost:6969/edit.html?knob_71=0.51&knob_71.min=0&knob_71.max=1&knob_72=0.52&knob_72.min=0&knob_72.max=1&knob_73=1&knob_73.min=0&knob_73.max=1&knob_74=0.88&knob_74.min=0&knob_74.max=1&knob_75=0.405&knob_75.min=-0.7&knob_75.max=1&knob_76=0.44&knob_76.min=0&knob_76.max=1&knob_77=0.52&knob_77.min=0&knob_77.max=1&knob_78=0.03&knob_78.min=0&knob_78.max=1&knob_79=0.94&knob_79.min=0&knob_79.max=1&knob_19=0.457&knob_19.min=0&knob_19.max=1&knob_14=0.835&knob_14.min=0&knob_14.max=1&image=images%5Crezz-full-lips-cropped.png&knob_22=0.299&knob_22.min=0&knob_22.max=1&knob_21=0.969&knob_21.min=0&knob_21.max=1&knob_20=0.961&knob_20.min=0&knob_20.max=1&knob_18=0.772&knob_18.min=0&knob_18.max=1&knob_11=0.244&knob_11.min=0&knob_11.max=1&knob_15=0.323&knob_15.min=0&knob_15.max=1&knob_16=0.205&knob_16.min=0&knob_16.max=1&knob_3=0.102&knob_3.min=0&knob_3.max=1&knob_10=1&knob_10.min=0&knob_10.max=1&knob_17=0.157&knob_17.min=0&knob_17.max=1&knob_4=1&knob_4.min=0&knob_4.max=1&knob_5=1&knob_5.min=0&knob_5.max=1&knob_6=0.472&knob_6.min=0&knob_6.max=1&knob_7=1&knob_7.min=0&knob_7.max=1&knob_8=0.449&knob_8.min=0&knob_8.max=1&knob_9=0.819&knob_9.min=0&knob_9.max=1&knob_60=0.181&knob_60.min=0&knob_60.max=1
-#define BACKGROUND_OFFSET_X knob_71
-#define BACKGROUND_OFFSET_Y knob_72
+#http://localhost:6969/edit.html?image=images%5Crezz-full-lips-cropped.png
+#define BACKGROUND_OFFSET_X 0.51 // Replaced knob_71
+#define BACKGROUND_OFFSET_Y 0.52 // Replaced knob_72
 
 #define BACKGROUND_STRETCH_X 1.
 #define BACKGROUND_ZOOM_Y 1.
-#define ZOOM (mix(2.,4.,0.5 / animateEaseInQuad(energyNormalized)))     // Controls overall scale/zoom
+#define ZOOM (mix(0.8, 1.5, energyNormalized))     // Controls overall scale/zoom - Replaced complex expression with energy
 // Probe definitions for parametric control
-#define PROBE_A (knob_21)     // Controls overall spiral density (0 = sparse, 1 = dense)
-#define PROBE_B (knob_22)     // Controls spiral rotation speed
-#define PROBE_C (knob_19)     // Controls fractal influence on spiral (0 = rigid, 1 = very warped)
-#define PROBE_D (knob_18)     // Controls color intensity and variation
-#define PROBE_E (mix(-2.8, 1., knob_76))     // Controls spiral thickness
+#define PROBE_A (spectralFluxNormalized)     // Controls overall spiral density - Replaced knob_21
+#define PROBE_B (spectralCentroidNormalized * 0.3 + 0.05)     // Controls spiral rotation speed - Replaced knob_22
+#define PROBE_C (spectralRoughnessNormalized * 0.5)     // Controls fractal influence on spiral - Replaced knob_19
+#define PROBE_D (energyNormalized)     // Controls color intensity and variation - Replaced knob_18
+#define PROBE_E (mapValue(bassNormalized, 0.0, 1.0, -0.7, 1.0)) // Controls spiral thickness - Replaced knob_76/mix
 
 #define PROBE_G (spectralCentroidNormalized/2.)     // Controls the balance between spiral and fractal
-#define PROBE_H (spectralEntropyNormalized/100.)     // Controls background warping intensity
+#define PROBE_H (spectralEntropyNormalized * 0.5)     // Controls background warping intensity - Replaced /100.
 
 // Recursive scaling parameters
 #define RECURSIVE_SCALE_AMOUNT (spectralCrestNormalized)   // Controls intensity of recursive scaling (0-1)
-#define RECURSIVE_ITERATIONS (knob_15 * 3.0 + 1.0) // Number of recursive samples (1-4)
-#define RECURSIVE_SCALE_FACTOR ((energyZScore) * 0.4 + 0.4) // Scale factor for each iteration (0.4-0.8)
+#define RECURSIVE_ITERATIONS (2.0) // Number of recursive samples (1-4) - Replaced knob_15 calc with constant 2.0 for mobile
+#define RECURSIVE_SCALE_FACTOR (mapValue(energyZScore, -1.0, 2.0, 0.4, 0.8)) // Scale factor for each iteration (0.4-0.8) - Replaced simple energyZScore calc
 
 // Spiral position controls
-#define EYE_DISTANCE (knob_78 * 0.6 + 0.125)   // Controls horizontal distance between spirals (0.25-0.85)
-#define EYE_Y_OFFSET (knob_79 * 0.2 - 0.3)    // Controls vertical position of both spirals (-0.1-0.1)
-#define LEFT_X_ADJUST (knob_3 * 0.1)        // Fine adjustment of left spiral X position
-#define RIGHT_X_ADJUST (knob_11 * 0.1)       // Fine adjustment of right spiral X position
-#define SPIRAL_DENSITY (knob_12 * 8.0 + 4.0) // Controls spiral density/tightness (4.0-12.0)
-#define SPIRAL_ITERATIONS (knob_13 * 5.0 + 3.0) // Controls number of spiral iterations (3.0-8.0)
+#define EYE_DISTANCE (spectralCrest * 0.6 + 0.25)   // Controls horizontal distance between spirals (0.25-0.85) - Replaced knob_78 calc
+#define EYE_Y_OFFSET (spectralFluxNormalized * 0.2 - 0.1)    // Controls vertical position of both spirals (-0.1-0.1) - Replaced knob_79 calc
+#define LEFT_X_ADJUST (spectralCrestNormalized * 0.1)        // Fine adjustment of left spiral X position - Replaced knob_3 calc
+#define RIGHT_X_ADJUST (midsNormalized * 0.1)       // Fine adjustment of right spiral X position - Replaced knob_11 calc
+#define SPIRAL_DENSITY (mapValue(bassNormalized, 0.0, 1.0, 4.0, 12.0)) // Controls spiral density/tightness (4.0-12.0) - Replaced knob_12 calc
+#define SPIRAL_ITERATIONS (mapValue(spectralSkewNormalized, 0.0, 1.0, 3.0, 8.0)) // Controls number of spiral iterations (3.0-8.0) - Replaced knob_13 calc
 
 // Additional distortion controls
-#define DISTORTION_RADIUS (knob_4 * 2.0 + 0.5)  // Controls radius of distortion effect (0.5-2.5)
-#define SPIRAL_DISTORTION_BOOST (knob_5 * 50.0 + 1.0)  // Extra distortion in spiral areas (1.0-6.0)
-#define FRACTAL_COMPLEXITY (knob_6 * 24.0 + 8.0)  // Controls Julia set complexity (8-32 iterations)
+#define DISTORTION_RADIUS (2.5)  // Controls radius of distortion effect (0.5-2.5) - Replaced knob_4 calc with constant
+#define SPIRAL_DISTORTION_BOOST (mapValue(energyZScore, -1.0, 2.0, 1.0, 10.0))  // Extra distortion in spiral areas (1.0-10.0) - Replaced knob_5 calc
+#define FRACTAL_COMPLEXITY (16.0)  // Controls Julia set complexity (8-32 iterations) - Replaced knob_6 calc with constant 16.0 for mobile
 #define DISTORTION_DIRECTIONALITY (0.)  // Controls how directional the distortion is (0=radial, 1=along fractal)
-#define TIME_SCALE (knob_7 * 0.2 + 0.05)  // Controls overall animation speed (0.05-0.25)
+#define TIME_SCALE (0.25)  // Controls overall animation speed (0.05-0.25) - Replaced knob_7 calc with constant
 #define RED_TINT_AMOUNT 0.  // Controls amount of red tinting in distortion (0.2-0.8)
-#define JULIA_VARIATION (knob_9 * 0.3)  // Controls variation in Julia set constants (0.0-0.3)
+#define JULIA_VARIATION (0.2457)  // Controls variation in Julia set constants (0.0-0.3) - Replaced knob_9 calc with constant
 
 // Function to apply Julia set distortion
 vec2 julia(vec2 uv, float t){

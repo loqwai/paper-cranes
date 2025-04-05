@@ -1,43 +1,42 @@
-// Updated shader with Rezz-inspired red/black spiral motif
-// -------------------------------------------------------
-// http://localhost:6969/edit.html?knob_71=0.27&knob_71.min=0&knob_71.max=1&knob_72=0.36&knob_72.min=0&knob_72.max=1&knob_73=0.68&knob_73.min=0&knob_73.max=1&knob_74=1&knob_74.min=0&knob_74.max=1&knob_75=0.13&knob_75.min=0&knob_75.max=1&knob_76=0.79&knob_76.min=0&knob_76.max=1&knob_77=0.09&knob_77.min=0&knob_77.max=1&knob_78=0.05&knob_78.min=0&knob_78.max=1&knob_79=0.04&knob_79.min=0&knob_79.max=1&knob_19=0.543&knob_19.min=0&knob_19.max=1&knob_14=0.496&knob_14.min=0&knob_14.max=1&image=images%5Crezz-full-lips-cropped.png&knob_22=0.409&knob_22.min=0&knob_22.max=1&knob_21=0.898&knob_21.min=0&knob_21.max=1&knob_20=0.976&knob_20.min=0&knob_20.max=1&knob_18=0.622&knob_18.min=0&knob_18.max=1
-// http://localhost:6969/edit.html?knob_71=0.53&knob_71.min=0&knob_71.max=1&knob_72=0.19&knob_72.min=0&knob_72.max=1&knob_73=0.79&knob_73.min=0&knob_73.max=1&knob_74=0.24&knob_74.min=0&knob_74.max=1&knob_75=-0.547&knob_75.min=-0.7&knob_75.max=1&knob_76=0.44&knob_76.min=0&knob_76.max=1&knob_77=0.94&knob_77.min=0&knob_77.max=1&knob_78=0.03&knob_78.min=0&knob_78.max=1&knob_79=0.05&knob_79.min=0&knob_79.max=1&knob_19=0.543&knob_19.min=0&knob_19.max=1&knob_14=0.315&knob_14.min=0&knob_14.max=1&image=images%5Crezz-full-lips-cropped.png&knob_22=0.614&knob_22.min=0&knob_22.max=1&knob_21=0.921&knob_21.min=0&knob_21.max=1&knob_20=0.961&knob_20.min=0&knob_20.max=1&knob_18=0.622&knob_18.min=0&knob_18.max=1&knob_11=0.945&knob_11.min=0&knob_11.max=1&knob_15=0.52&knob_15.min=0&knob_15.max=1&knob_16=0.173&knob_16.min=0&knob_16.max=1&knob_3=0.606&knob_3.min=0&knob_3.max=1&knob_10=0&knob_10.min=0&knob_10.max=1
-#define BACKGROUND_OFFSET_X 0.961
-#define BACKGROUND_OFFSET_Y 0.898
+//http://localhost:6969/edit.html?image=images%5Crezz-full-lips-cropped.png
 
-#define BACKGROUND_ZOOM_X knob_19
-#define BACKGROUND_ZOOM_Y knob_18
+#define BACKGROUND_OFFSET_X 0.51 // Replaced knob_71
+#define BACKGROUND_OFFSET_Y 0.5 // Replaced knob_72
+
+#define BACKGROUND_STRETCH_X 1.
+#define BACKGROUND_ZOOM_Y 1.
+#define ZOOM (mix(0.8, 1.5, energyNormalized))     // Controls overall scale/zoom - Replaced knob_75/mix
 // Probe definitions for parametric control
-#define PROBE_A (knob_71)     // Controls overall spiral density (0 = sparse, 1 = dense)
-#define PROBE_B (knob_72)     // Controls spiral rotation speed
-#define PROBE_C (knob_73)     // Controls fractal influence on spiral (0 = rigid, 1 = very warped)
-#define PROBE_D (knob_74)     // Controls color intensity and variation
-#define PROBE_E (knob_75)     // Controls spiral thickness
-#define PROBE_F (knob_76)     // Controls overall scale/zoom
-#define PROBE_G (knob_77)     // Controls the balance between spiral and fractal
-#define PROBE_H (knob_3)     // Controls background warping intensity
+#define PROBE_A (spectralDensityNormalized)     // Controls overall spiral density - Replaced knob_21 (0.449)
+#define PROBE_B (spectralCentroidNormalized * 0.2 + 0.05)     // Controls spiral rotation speed - Replaced knob_22 (0.165)
+#define PROBE_C (spectralRoughnessNormalized * 0.5)     // Controls fractal influence on spiral - Replaced knob_19 (0.291)
+#define PROBE_D (energyNormalized)     // Controls color intensity and variation - Replaced knob_18 (0.677)
+#define PROBE_E (mapValue(trebleNormalized, 0.0, 1.0, -0.7, 1.0)) // Controls spiral thickness - Replaced knob_76/mix (0.44)
+
+#define PROBE_G (spectralFluxNormalized * 0.5)     // Controls the balance between spiral and fractal - Replaced knob_77 (0)
+#define PROBE_H (spectralEntropyNormalized * 0.5)     // Controls background warping intensity - Replaced knob_80 (assume 0.5)
 
 // Recursive scaling parameters
-#define RECURSIVE_SCALE_AMOUNT (knob_11)   // Controls intensity of recursive scaling (0-1)
-#define RECURSIVE_ITERATIONS (knob_82 * 3.0 + 1.0) // Number of recursive samples (1-4)
-#define RECURSIVE_SCALE_FACTOR (knob_83 * 0.4 + 0.4) // Scale factor for each iteration (0.4-0.8)
+#define RECURSIVE_SCALE_AMOUNT (spectralCrestNormalized)   // Controls intensity of recursive scaling (0-1) - Replaced knob_14 (1)
+#define RECURSIVE_ITERATIONS (mapValue(bassNormalized, 0., 1., 1., 4.)) // Number of recursive samples (1-4) - Replaced knob_15 calc (0.496)
+#define RECURSIVE_SCALE_FACTOR (mapValue(energyZScore, -1.0, 2.0, 0.4, 0.8)) // Scale factor for each iteration (0.4-0.8) - Replaced sin(time) calc
 
 // Spiral position controls
-#define EYE_DISTANCE (knob_78 * 0.6 + 0.25)   // Controls horizontal distance between spirals (0.25-0.85)
-#define EYE_Y_OFFSET (knob_79 * 0.2 - 0.1)    // Controls vertical position of both spirals (-0.1-0.1)
-#define LEFT_X_ADJUST (knob_10 * 0.1)        // Fine adjustment of left spiral X position
-#define RIGHT_X_ADJUST (knob_11 * 0.1)       // Fine adjustment of right spiral X position
-#define SPIRAL_DENSITY (knob_12 * 8.0 + 4.0) // Controls spiral density/tightness (4.0-12.0)
-#define SPIRAL_ITERATIONS (knob_13 * 5.0 + 3.0) // Controls number of spiral iterations (3.0-8.0)
+#define EYE_DISTANCE (spectralCrest * 0.6 + 0.25)   // Controls horizontal distance between spirals - Replaced knob_78 calc (0)
+#define EYE_Y_OFFSET (spectralFluxNormalized * 0.2 - 0.1)    // Controls vertical position of both spirals - Replaced knob_79 calc (0.88)
+#define LEFT_X_ADJUST (spectralCrestNormalized * 0.1)        // Fine adjustment of left spiral X position - Replaced knob_3 calc (0.008)
+#define RIGHT_X_ADJUST (midsNormalized * 0.1)       // Fine adjustment of right spiral X position - Replaced knob_11 calc (0.197)
+#define SPIRAL_DENSITY (mapValue(bassNormalized, 0.0, 1.0, 4.0, 12.0)) // Controls spiral density/tightness - Replaced knob_12 calc (assume 0)
+#define SPIRAL_ITERATIONS (mapValue(spectralSkewNormalized, 0.0, 1.0, 3.0, 8.0)) // Controls number of spiral iterations - Replaced knob_13 calc (assume 0)
 
 // Additional distortion controls
-#define DISTORTION_RADIUS (knob_84 * 2.0 + 0.5)  // Controls radius of distortion effect (0.5-2.5)
-#define SPIRAL_DISTORTION_BOOST (knob_85 * 5.0 + 1.0)  // Extra distortion in spiral areas (1.0-6.0)
-#define FRACTAL_COMPLEXITY (knob_86 * 24.0 + 8.0)  // Controls Julia set complexity (8-32 iterations)
-#define DISTORTION_DIRECTIONALITY (knob_87)  // Controls how directional the distortion is (0=radial, 1=along fractal)
-#define TIME_SCALE (knob_88 * 0.2 + 0.05)  // Controls overall animation speed (0.05-0.25)
-#define RED_TINT_AMOUNT (knob_89 * 0.6 + 0.2)  // Controls amount of red tinting in distortion (0.2-0.8)
-#define JULIA_VARIATION (knob_90 * 0.3)  // Controls variation in Julia set constants (0.0-0.3)
+#define DISTORTION_RADIUS (1.5)  // Controls radius of distortion effect (0.5-2.5) - Replaced knob_4 calc with constant (0.244)
+#define SPIRAL_DISTORTION_BOOST (mapValue(energyZScore, -1.0, 2.0, 1.0, 10.0))  // Extra distortion in spiral areas (1.0-10.0) - Replaced knob_5 calc (0.48)
+#define FRACTAL_COMPLEXITY (16.0)  // Controls Julia set complexity (8-32 iterations) - Replaced knob_6 calc with constant 16.0 for mobile (0.307)
+#define DISTORTION_DIRECTIONALITY (0.)  // Controls how directional the distortion is (0=radial, 1=along fractal)
+#define TIME_SCALE (0.1)  // Controls overall animation speed (0.05-0.25) - Replaced knob_7 calc with constant (0)
+#define RED_TINT_AMOUNT 0.  // Controls amount of red tinting in distortion (0.2-0.8)
+#define JULIA_VARIATION (0.1)  // Controls variation in Julia set constants (0.0-0.3) - Replaced knob_9 calc with constant (0)
 
 // Function to check if pixel and surrounding area is solid white
 float getWhiteAmount(vec2 uv, vec2 pixelSize) {
@@ -108,11 +107,11 @@ vec2 juliaFromPoint(vec2 uv, vec2 center, float t){
 
 // Main image function
 void mainImage(out vec4 fragColor, in vec2 fragCoord){
-    // Scale UV based on PROBE_F for overall zoom control
-    float zoom = mix(0.8, 1.5, PROBE_F);
+    // Scale UV based on ZOOM for overall zoom control
+    float zoom = mix(0.8, 1.5, ZOOM);
     vec2 uv = (fragCoord * 2.0 - iResolution.xy) / (iResolution.y * zoom);
     vec2 sampleUv = uv;
-    vec2 sampleZoom = vec2(BACKGROUND_ZOOM_X, BACKGROUND_ZOOM_Y);
+    vec2 sampleZoom = vec2(BACKGROUND_STRETCH_X, BACKGROUND_ZOOM_Y);
     vec2 sampleOffset = vec2(BACKGROUND_OFFSET_X, BACKGROUND_OFFSET_Y);
     sampleUv += sampleOffset;
     sampleUv *= sampleZoom;
@@ -268,7 +267,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     baseColor = mix(baseColor, darkRed, sin(atan(distortedUv.y, distortedUv.x) * 3.0) * 0.5 + 0.5);
 
     // Blend fractal color with distorted texture
-    baseColor = mix(baseColor, distortedTexture, knob_22 * 0.7);
+    baseColor = mix(baseColor, distortedTexture, PROBE_G * 0.7);
 
     // Apply color intensity from PROBE_D
     float colorIntensity = mix(0.7, 1.2, PROBE_D);
@@ -419,10 +418,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     vec3 color = mix(fractalColor, spiralColor, mixRatio);
 
     // Apply previous frame white amount
-    color = mix(color, vec3(1.0), whiteAmount * 0.5);
+    color = mix(color, vec3(1.0), whiteAmount * 0.);
 
     // Final blend with the distorted texture - reduced blend in spiral areas to preserve spiral visual
-    float textureBlend = knob_22 * (1.0 - combinedSpiralMask * 0.8);
+    float textureBlend = PROBE_G * (1.0 - combinedSpiralMask * 0.8);
     color = mix(color, distortedTexture, textureBlend);
 
     // Debug visualization (comment out for final version)

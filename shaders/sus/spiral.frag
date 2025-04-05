@@ -2,13 +2,13 @@
 // -------------------------------------------------------
 
 // Probe definitions for parametric control
-#define PROBE_A (knob_1)     // Controls overall spiral density (0 = sparse, 1 = dense)
-#define PROBE_B (knob_2)     // Controls spiral rotation speed
-#define PROBE_C (knob_3)     // Controls fractal influence on spiral (0 = rigid, 1 = very warped)
-#define PROBE_D (knob_4)     // Controls color intensity and variation
-#define PROBE_E (knob_5)     // Controls spiral thickness
-#define PROBE_F (knob_6)     // Controls overall scale/zoom
-#define PROBE_G (knob_7)     // Controls the balance between spiral and fractal
+#define PROBE_A (spectralDensityNormalized)     // Controls overall spiral density - Replaced knob_1
+#define PROBE_B (spectralCentroidNormalized * 0.2 + 0.05)     // Controls spiral rotation speed - Replaced knob_2
+#define PROBE_C (spectralRoughnessNormalized)     // Controls fractal influence on spiral - Replaced knob_3
+#define PROBE_D (energyNormalized)     // Controls color intensity and variation - Replaced knob_4
+#define PROBE_E (mapValue(trebleNormalized, 0.0, 1.0, 0.15, 0.4))     // Controls spiral thickness - Replaced knob_5
+#define PROBE_F (mapValue(energyZScore, -1.0, 2.0, 0.8, 1.5))     // Controls overall scale/zoom - Replaced knob_6
+#define PROBE_G (mapValue(spectralFluxNormalized, 0., 1., 0.6, 0.9))     // Controls the balance between spiral and fractal - Replaced knob_7
 
 // Function to check if pixel and surrounding area is solid white
 float getWhiteAmount(vec2 uv, vec2 pixelSize) {
@@ -42,7 +42,7 @@ vec2 julia(vec2 uv, float t){
     float cIm = cos(t) * 0.7885;
 
     // Scale iterations for mobile performance
-    int maxIter = 32;
+    int maxIter = 16; // Reduced from 32
     for(int i=0; i<maxIter; i++){
         float x = uv.x*uv.x - uv.y*uv.y + cRe;
         float y = 2.0*uv.x*uv.y + cIm;

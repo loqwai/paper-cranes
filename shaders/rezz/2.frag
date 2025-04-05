@@ -8,36 +8,36 @@
 #define BACKGROUND_ZOOM_X 0.543
 #define BACKGROUND_ZOOM_Y 0.622
 // Probe definitions for parametric control
-#define PROBE_A (0.27)     // Controls overall spiral density (0 = sparse, 1 = dense)
-#define PROBE_B (0.36)     // Controls spiral rotation speed
-#define PROBE_C (sin(time))     // Controls fractal influence on spiral (0 = rigid, 1 = very warped)
-#define PROBE_D (1.0)     // Controls color intensity and variation
+#define PROBE_A (spectralDensityNormalized)     // Controls overall spiral density (0 = sparse, 1 = dense)
+#define PROBE_B (spectralCentroidNormalized * 0.4)     // Controls spiral rotation speed
+#define PROBE_C (spectralRoughnessNormalized)     // Controls fractal influence on spiral (0 = rigid, 1 = very warped)
+#define PROBE_D (energyNormalized)     // Controls color intensity and variation
 #define PROBE_E (bassZScore)     // Controls spiral thickness
 #define PROBE_F (animateEaseOutCubic(energyZScore))     // Controls overall scale/zoom
-#define PROBE_G (0.09)     // Controls the balance between spiral and fractal
-#define PROBE_H (0.606)     // Controls background warping intensity
+#define PROBE_G (mapValue(spectralFluxNormalized, 0., 1., 0.05, 0.3))     // Controls the balance between spiral and fractal
+#define PROBE_H (mapValue(spectralEntropyNormalized, 0., 1., 0.2, 0.8))     // Controls background warping intensity
 
 // Recursive scaling parameters
-#define RECURSIVE_SCALE_AMOUNT (0.945)   // Controls intensity of recursive scaling (0-1)
-#define RECURSIVE_ITERATIONS (3.0) // Number of recursive samples (1-4), using default value
-#define RECURSIVE_SCALE_FACTOR (0.6) // Scale factor for each iteration (0.4-0.8), using default value
+#define RECURSIVE_SCALE_AMOUNT (spectralCrestNormalized * 0.8)   // Controls intensity of recursive scaling (0-1)
+#define RECURSIVE_ITERATIONS (2.0) // Number of recursive samples (1-4), using default value
+#define RECURSIVE_SCALE_FACTOR (mapValue(energyZScore, -1.0, 2.0, 0.4, 0.8)) // Scale factor for each iteration (0.4-0.8)
 
 // Spiral position controls
-#define EYE_DISTANCE (0.05 * 0.6 + 0.25)   // Controls horizontal distance between spirals (0.25-0.85)
-#define EYE_Y_OFFSET (0.04 * 0.2 - 0.1)    // Controls vertical position of both spirals (-0.1-0.1)
-#define LEFT_X_ADJUST (0.0 * 0.1)        // Fine adjustment of left spiral X position
-#define RIGHT_X_ADJUST (0.945 * 0.1)       // Fine adjustment of right spiral X position
-#define SPIRAL_DENSITY (8.0) // Controls spiral density/tightness (4.0-12.0), using default value
-#define SPIRAL_ITERATIONS (5.5) // Controls number of spiral iterations (3.0-8.0), using default value
+#define EYE_DISTANCE (spectralCrest * 0.6 + 0.25)   // Controls horizontal distance between spirals (0.25-0.85)
+#define EYE_Y_OFFSET (spectralFluxNormalized * 0.2 - 0.1)    // Controls vertical position of both spirals (-0.1-0.1)
+#define LEFT_X_ADJUST (spectralCrestNormalized * 0.1)        // Fine adjustment of left spiral X position
+#define RIGHT_X_ADJUST (midsNormalized * 0.1)       // Fine adjustment of right spiral X position
+#define SPIRAL_DENSITY (mapValue(bassNormalized, 0.0, 1.0, 4.0, 12.0)) // Controls spiral density/tightness (4.0-12.0)
+#define SPIRAL_ITERATIONS (mapValue(spectralSkewNormalized, 0.0, 1.0, 3.0, 8.0)) // Controls number of spiral iterations (3.0-8.0)
 
 // Additional distortion controls
-#define DISTORTION_RADIUS (1.5)  // Controls radius of distortion effect (0.5-2.5), using default value
-#define SPIRAL_DISTORTION_BOOST (3.5)  // Extra distortion in spiral areas (1.0-6.0), using default value
-#define FRACTAL_COMPLEXITY (20.0)  // Controls Julia set complexity (8-32 iterations), using default value
-#define DISTORTION_DIRECTIONALITY (0.5)  // Controls how directional the distortion is (0=radial, 1=along fractal), using default value
-#define TIME_SCALE (0.15)  // Controls overall animation speed (0.05-0.25), using default value
-#define RED_TINT_AMOUNT (0.5)  // Controls amount of red tinting in distortion (0.2-0.8), using default value
-#define JULIA_VARIATION (0.15)  // Controls variation in Julia set constants (0.0-0.3), using default value
+#define DISTORTION_RADIUS (1.5)  // Controls radius of distortion effect (0.5-2.5)
+#define SPIRAL_DISTORTION_BOOST (mapValue(energyZScore, -1.0, 2.0, 1.0, 6.0))  // Extra distortion in spiral areas (1.0-6.0)
+#define FRACTAL_COMPLEXITY (16.0)  // Controls Julia set complexity (8-32 iterations)
+#define DISTORTION_DIRECTIONALITY (0.5)  // Controls how directional the distortion is (0=radial, 1=along fractal)
+#define TIME_SCALE (0.15)  // Controls overall animation speed (0.05-0.25)
+#define RED_TINT_AMOUNT (0.5)  // Controls amount of red tinting in distortion (0.2-0.8)
+#define JULIA_VARIATION (0.15)  // Controls variation in Julia set constants (0.0-0.3)
 
 // Function to check if pixel and surrounding area is solid white
 float getWhiteAmount(vec2 uv, vec2 pixelSize) {

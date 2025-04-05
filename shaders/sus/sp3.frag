@@ -1,9 +1,9 @@
-//http://localhost:6969/edit.html?knob_71=0.6&knob_71.min=0&knob_71.max=1&knob_72=0.14&knob_72.min=0&knob_72.max=1&knob_73=0.06&knob_73.min=0&knob_73.max=1&knob_74=0.54&knob_74.min=0&knob_74.max=1&knob_75=0.32&knob_75.min=-0.7&knob_75.max=1&knob_76=0.55&knob_76.min=0&knob_76.max=1&knob_77=0.54&knob_77.min=0&knob_77.max=1&knob_78=0.2&knob_78.min=0&knob_78.max=1&knob_79=0.71&knob_79.min=0&knob_79.max=1&knob_19=0.157&knob_19.min=0&knob_19.max=1&knob_14=0&knob_14.min=0&knob_14.max=1&image=images%5Crezz-full-lips-cropped.png&knob_22=1&knob_22.min=0&knob_22.max=1&knob_21=0.52&knob_21.min=0&knob_21.max=1&knob_20=0.276&knob_20.min=0&knob_20.max=1&knob_18=0.055&knob_18.min=0&knob_18.max=1&knob_11=0.715&knob_11.min=0&knob_11.max=1&knob_15=0.276&knob_15.min=0&knob_15.max=1&knob_16=0.386&knob_16.min=0&knob_16.max=1&knob_3=0.551&knob_3.min=0&knob_3.max=1&knob_10=0&knob_10.min=0&knob_10.max=1&knob_17=0&knob_17.min=0&knob_17.max=1&knob_4=0.622&knob_4.min=0&knob_4.max=1&knob_5=0.835&knob_5.min=0&knob_5.max=1&knob_6=0.906&knob_6.min=0&knob_6.max=1&knob_7=0.803&knob_7.min=0&knob_7.max=1&knob_8=1&knob_8.min=0&knob_8.max=1&knob_9=0&knob_9.min=0&knob_9.max=1&knob_60=0.567&knob_60.min=0&knob_60.max=1&knob_34=0.425&knob_34.min=0&knob_34.max=1&knob_30=0.394&knob_30.min=0&knob_30.max=1&knob_37=0.575&knob_37.min=0&knob_37.max=1&knob_40=0.52&knob_40.min=0&knob_40.max=1&knob_41=0.52&knob_41.min=0&knob_41.max=1&knob_43=0.409&knob_43.min=0&knob_43.max=1&knob_47=0.654&knob_47.min=0&knob_47.max=1&knob_31=0.134&knob_31.min=0&knob_31.max=1&knob_36=0.276&knob_36.min=0&knob_36.max=1&knob_35=0.5&knob_35.min=0&knob_35.max=1
+//http://localhost:6969/edit.html?image=images%5Crezz-full-lips-cropped.png
 
 // --- Control Mode --- //
 // Define USE_KNOBS (e.g., #define USE_KNOBS 1) to use knobs for all parameters.
 // Comment out or #define USE_KNOBS 0 to use knobs for static parameters and audio features for reactive ones.
-#define USE_KNOBS 1
+// #define USE_KNOBS 1 // Commented out to default to audio-reactive mode
 
 #ifndef USE_KNOBS // --- Audio Feature Mode --- //
   // (USE_KNOBS is undefined or 0)
@@ -21,30 +21,31 @@
   #define EYE_Y_OFFSET (knob_15 * 0.4 - 0.2)
   #define LEFT_X_ADJUST (knob_16 * 0.2 - 0.1)
   #define RIGHT_X_ADJUST (knob_17 * 0.2 - 0.1)
-  #define PROBE_A (knob_18)       // Spiral density
-  #define PROBE_B (knob_19)       // Spiral rotation speed
-  #define PROBE_C (knob_20)       // Fractal influence on spiral
-  #define PROBE_E (mix(-2.8, 1., knob_21)) // Spiral thickness
-  #define SPIRAL_DENSITY (knob_22 * 8.0 + 4.0)
-  #define SPIRAL_ITERATIONS (knob_10 * 5.0 + 3.0)
-  #define SPIRAL_DISTORTION_BOOST (knob_11 * 50.0 + 1.0)
-  #define DISTORTION_RADIUS (knob_71 * 2.0 + 0.5)
-  #define FRACTAL_COMPLEXITY (knob_72 * 24.0 + 8.0)
-  #define JULIA_VARIATION (knob_73 * 0.3)
-  #define RED_TINT_AMOUNT (knob_74 * 0.8)
-  // Other Visual Effects [Knobs 8-9, 75, 35]
-  #define PROBE_D (knob_9)         // Color intensity and variation
-  #define RECURSIVE_ITERATIONS (knob_8 * 3.0 + 1.0)
-  #define DISTORTION_DIRECTIONALITY (0.)
-  #define TIME_SCALE (knob_75 * 0.2 + 0.01)
-  #define FRACTAL_VISIBILITY (knob_35) // Direct blend control: 0=Base Warp, 1=Recursive Fractal
-  #define FRACTAL_INTENSITY (knob_36) // Controls fractal brightness and contrast: 0=Normal, 1=Maximum
+  #define PROBE_A (knob_18)       // Spiral density - Static Knob
+  #define PROBE_B (knob_19)       // Spiral rotation speed - Static Knob
+  #define PROBE_C (knob_20)       // Fractal influence on spiral - Static Knob
+  #define PROBE_E (mix(-2.8, 1., knob_21)) // Spiral thickness - Static Knob
+  #define SPIRAL_DENSITY (knob_22 * 8.0 + 4.0) // Static Knob
+  #define SPIRAL_ITERATIONS (knob_10 * 5.0 + 3.0) // Static Knob
+  #define SPIRAL_DISTORTION_BOOST (knob_11 * 50.0 + 1.0) // Static Knob
+  #define DISTORTION_RADIUS (knob_71 * 2.0 + 0.5) // Static Knob
+  #define FRACTAL_COMPLEXITY (16.0) // Replaced knob_72 calc with constant 16.0 for mobile
+  #define JULIA_VARIATION (knob_73 * 0.3) // Static Knob
+  #define RED_TINT_AMOUNT (knob_74 * 0.8) // Static Knob
+  // Other Visual Effects [Knobs 9, 75, 35, 36]
+  #define PROBE_D (knob_9)         // Color intensity and variation - Static Knob
+  // RECURSIVE_ITERATIONS is now reactive
+  #define DISTORTION_DIRECTIONALITY (0.) // Kept constant
+  #define TIME_SCALE (knob_75 * 0.2 + 0.01) // Static Knob
+  #define FRACTAL_VISIBILITY (knob_35) // Direct blend control - Static Knob
+  #define FRACTAL_INTENSITY (knob_36) // Controls fractal brightness and contrast - Static Knob
 
   // --- Reactive Parameters (Audio Feature Controlled) ---
   #define PROBE_G (spectralCentroidNormalized / 2.0)      // Balance: Background vs Visual Texture
-  #define PROBE_H (spectralEntropyNormalized / 100.0)     // BG Warp Intensity
+  #define PROBE_H (spectralEntropyNormalized * 0.5)     // BG Warp Intensity - Adjusted scaling
   #define RECURSIVE_SCALE_AMOUNT (spectralCrestNormalized)      // Recursive Scale Base Intensity
-  #define RECURSIVE_SCALE_FACTOR ((energyZScore) * 0.4 + 0.4) // Recursive Scale Factor
+  #define RECURSIVE_SCALE_FACTOR (mapValue(energyZScore, -1.0, 2.0, 0.4, 0.8)) // Recursive Scale Factor - Using mapValue
+  #define RECURSIVE_ITERATIONS (mapValue(bassNormalized, 0., 1., 1., 4.)) // Replaced knob_8 calc
 
 #else // --- Knob Control Mode --- //
   // (USE_KNOBS is defined and non-zero)
@@ -74,9 +75,9 @@
   #define JULIA_VARIATION (knob_73 * 0.3)
   #define RED_TINT_AMOUNT (knob_74 * 0.8)
 
-  // --- Other Visual Effects & Reactivity --- [Knobs 8-9, 30-33, 75, 35-36]
+  // --- Other Visual Effects & Reactivity --- [Knobs 9, 30-33, 75, 35-36]
   #define PROBE_D (knob_9)         // Color intensity and variation
-  #define RECURSIVE_ITERATIONS (knob_8 * 3.0 + 1.0)
+  // RECURSIVE_ITERATIONS is defined below
   #define DISTORTION_DIRECTIONALITY (0.)
   #define TIME_SCALE (knob_75 * 0.2 + 0.01)
   #define FRACTAL_VISIBILITY (knob_35) // Direct blend control: 0=Base Warp, 1=Recursive Fractal
@@ -86,6 +87,7 @@
   #define PROBE_H (knob_31 * 0.01)                        // BG Warp Intensity
   #define RECURSIVE_SCALE_AMOUNT (knob_32)                   // Recursive Scale Base Intensity
   #define RECURSIVE_SCALE_FACTOR ((knob_33 * 2.0 - 1.0) * 0.4 + 0.4) // Recursive Scale Factor (Range: 0.0-0.8)
+  #define RECURSIVE_ITERATIONS (knob_8 * 3.0 + 1.0) // Replaced with knob_8 for consistency
 
   // --- Knob Usage Summary (USE_KNOBS=1) ---
   // Total Used: 29 knobs
