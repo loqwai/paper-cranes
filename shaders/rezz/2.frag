@@ -337,7 +337,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     );
 
     // Combine both spirals with black background
-    float leftEyeRadius = mix(0.3, 0.5, PROBE_E); // Eye size affected by thickness
+    float leftEyeRadius = mix(0.1, 0.3, PROBE_E); // Eye size affected by thickness
     float rightEyeRadius = leftEyeRadius; // Same size for both eyes
 
     // Create circular masks for the eyes
