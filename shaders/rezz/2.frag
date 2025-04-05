@@ -1,43 +1,43 @@
 // Updated shader with Rezz-inspired red/black spiral motif
 // -------------------------------------------------------
-// http://localhost:6969/edit.html?knob_71=0.27&knob_71.min=0&knob_71.max=1&knob_72=0.36&knob_72.min=0&knob_72.max=1&knob_73=0.68&knob_73.min=0&knob_73.max=1&knob_74=1&knob_74.min=0&knob_74.max=1&knob_75=0.13&knob_75.min=0&knob_75.max=1&knob_76=0.79&knob_76.min=0&knob_76.max=1&knob_77=0.09&knob_77.min=0&knob_77.max=1&knob_78=0.05&knob_78.min=0&knob_78.max=1&knob_79=0.04&knob_79.min=0&knob_79.max=1&knob_19=0.543&knob_19.min=0&knob_19.max=1&knob_14=0.496&knob_14.min=0&knob_14.max=1&image=images%5Crezz-full-lips-cropped.png&knob_22=0.409&knob_22.min=0&knob_22.max=1&knob_21=0.898&knob_21.min=0&knob_21.max=1&knob_20=0.976&knob_20.min=0&knob_20.max=1&knob_18=0.622&knob_18.min=0&knob_18.max=1
-// http://localhost:6969/edit.html?knob_71=0.53&knob_71.min=0&knob_71.max=1&knob_72=0.19&knob_72.min=0&knob_72.max=1&knob_73=0.79&knob_73.min=0&knob_73.max=1&knob_74=0.24&knob_74.min=0&knob_74.max=1&knob_75=-0.547&knob_75.min=-0.7&knob_75.max=1&knob_76=0.44&knob_76.min=0&knob_76.max=1&knob_77=0.94&knob_77.min=0&knob_77.max=1&knob_78=0.03&knob_78.min=0&knob_78.max=1&knob_79=0.05&knob_79.min=0&knob_79.max=1&knob_19=0.543&knob_19.min=0&knob_19.max=1&knob_14=0.315&knob_14.min=0&knob_14.max=1&image=images%5Crezz-full-lips-cropped.png&knob_22=0.614&knob_22.min=0&knob_22.max=1&knob_21=0.921&knob_21.min=0&knob_21.max=1&knob_20=0.961&knob_20.min=0&knob_20.max=1&knob_18=0.622&knob_18.min=0&knob_18.max=1&knob_11=0.945&knob_11.min=0&knob_11.max=1&knob_15=0.52&knob_15.min=0&knob_15.max=1&knob_16=0.173&knob_16.min=0&knob_16.max=1&knob_3=0.606&knob_3.min=0&knob_3.max=1&knob_10=0&knob_10.min=0&knob_10.max=1
+// http://localhost:6969/edit.html?image=images%5Crezz-full-lips-cropped.png
+
 #define BACKGROUND_OFFSET_X 0.961
 #define BACKGROUND_OFFSET_Y 0.898
 
-#define BACKGROUND_ZOOM_X knob_19
-#define BACKGROUND_ZOOM_Y knob_18
+#define BACKGROUND_ZOOM_X 0.543
+#define BACKGROUND_ZOOM_Y 0.622
 // Probe definitions for parametric control
-#define PROBE_A (knob_71)     // Controls overall spiral density (0 = sparse, 1 = dense)
-#define PROBE_B (knob_72)     // Controls spiral rotation speed
+#define PROBE_A (0.27)     // Controls overall spiral density (0 = sparse, 1 = dense)
+#define PROBE_B (0.36)     // Controls spiral rotation speed
 #define PROBE_C (sin(time))     // Controls fractal influence on spiral (0 = rigid, 1 = very warped)
-#define PROBE_D (knob_74)     // Controls color intensity and variation
+#define PROBE_D (1.0)     // Controls color intensity and variation
 #define PROBE_E (bassZScore)     // Controls spiral thickness
 #define PROBE_F (animateEaseOutCubic(energyZScore))     // Controls overall scale/zoom
-#define PROBE_G (knob_77)     // Controls the balance between spiral and fractal
-#define PROBE_H (knob_3)     // Controls background warping intensity
+#define PROBE_G (0.09)     // Controls the balance between spiral and fractal
+#define PROBE_H (0.606)     // Controls background warping intensity
 
 // Recursive scaling parameters
-#define RECURSIVE_SCALE_AMOUNT (knob_11)   // Controls intensity of recursive scaling (0-1)
-#define RECURSIVE_ITERATIONS (knob_32 * 3.0 + 1.0) // Number of recursive samples (1-4)
-#define RECURSIVE_SCALE_FACTOR (knob_33 * 0.4 + 0.4) // Scale factor for each iteration (0.4-0.8)
+#define RECURSIVE_SCALE_AMOUNT (0.945)   // Controls intensity of recursive scaling (0-1)
+#define RECURSIVE_ITERATIONS (3.0) // Number of recursive samples (1-4), using default value
+#define RECURSIVE_SCALE_FACTOR (0.6) // Scale factor for each iteration (0.4-0.8), using default value
 
 // Spiral position controls
-#define EYE_DISTANCE (knob_78 * 0.6 + 0.25)   // Controls horizontal distance between spirals (0.25-0.85)
-#define EYE_Y_OFFSET (knob_79 * 0.2 - 0.1)    // Controls vertical position of both spirals (-0.1-0.1)
-#define LEFT_X_ADJUST (knob_10 * 0.1)        // Fine adjustment of left spiral X position
-#define RIGHT_X_ADJUST (knob_11 * 0.1)       // Fine adjustment of right spiral X position
-#define SPIRAL_DENSITY (knob_12 * 8.0 + 4.0) // Controls spiral density/tightness (4.0-12.0)
-#define SPIRAL_ITERATIONS (knob_13 * 5.0 + 3.0) // Controls number of spiral iterations (3.0-8.0)
+#define EYE_DISTANCE (0.05 * 0.6 + 0.25)   // Controls horizontal distance between spirals (0.25-0.85)
+#define EYE_Y_OFFSET (0.04 * 0.2 - 0.1)    // Controls vertical position of both spirals (-0.1-0.1)
+#define LEFT_X_ADJUST (0.0 * 0.1)        // Fine adjustment of left spiral X position
+#define RIGHT_X_ADJUST (0.945 * 0.1)       // Fine adjustment of right spiral X position
+#define SPIRAL_DENSITY (8.0) // Controls spiral density/tightness (4.0-12.0), using default value
+#define SPIRAL_ITERATIONS (5.5) // Controls number of spiral iterations (3.0-8.0), using default value
 
 // Additional distortion controls
-#define DISTORTION_RADIUS (knob_34 * 2.0 + 0.5)  // Controls radius of distortion effect (0.5-2.5)
-#define SPIRAL_DISTORTION_BOOST (knob_35 * 5.0 + 1.0)  // Extra distortion in spiral areas (1.0-6.0)
-#define FRACTAL_COMPLEXITY (knob_36 * 24.0 + 8.0)  // Controls Julia set complexity (8-32 iterations)
-#define DISTORTION_DIRECTIONALITY (knob_37)  // Controls how directional the distortion is (0=radial, 1=along fractal)
-#define TIME_SCALE (knob_38 * 0.2 + 0.05)  // Controls overall animation speed (0.05-0.25)
-#define RED_TINT_AMOUNT (knob_39 * 0.6 + 0.2)  // Controls amount of red tinting in distortion (0.2-0.8)
-#define JULIA_VARIATION (knob_90 * 0.3)  // Controls variation in Julia set constants (0.0-0.3)
+#define DISTORTION_RADIUS (1.5)  // Controls radius of distortion effect (0.5-2.5), using default value
+#define SPIRAL_DISTORTION_BOOST (3.5)  // Extra distortion in spiral areas (1.0-6.0), using default value
+#define FRACTAL_COMPLEXITY (20.0)  // Controls Julia set complexity (8-32 iterations), using default value
+#define DISTORTION_DIRECTIONALITY (0.5)  // Controls how directional the distortion is (0=radial, 1=along fractal), using default value
+#define TIME_SCALE (0.15)  // Controls overall animation speed (0.05-0.25), using default value
+#define RED_TINT_AMOUNT (0.5)  // Controls amount of red tinting in distortion (0.2-0.8), using default value
+#define JULIA_VARIATION (0.15)  // Controls variation in Julia set constants (0.0-0.3), using default value
 
 // Function to check if pixel and surrounding area is solid white
 float getWhiteAmount(vec2 uv, vec2 pixelSize) {
@@ -268,7 +268,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     baseColor = mix(baseColor, darkRed, sin(atan(distortedUv.y, distortedUv.x) * 3.0) * 0.5 + 0.5);
 
     // Blend fractal color with distorted texture
-    baseColor = mix(baseColor, distortedTexture, knob_22 * 0.7);
+    baseColor = mix(baseColor, distortedTexture, 0.409 * 0.7);
 
     // Apply color intensity from PROBE_D
     float colorIntensity = mix(0.7, 1.2, PROBE_D);
@@ -422,7 +422,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     color = mix(color, vec3(1.0), whiteAmount * 0.5);
 
     // Final blend with the distorted texture - reduced blend in spiral areas to preserve spiral visual
-    float textureBlend = knob_22 * (1.0 - combinedSpiralMask * 0.8);
+    float textureBlend = 0.409 * (1.0 - combinedSpiralMask * 0.8);
     color = mix(color, distortedTexture, textureBlend);
 
     // Debug visualization (comment out for final version)
