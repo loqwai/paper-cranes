@@ -1,4 +1,3 @@
-
 #define BACKGROUND_OFFSET_X 0.5
 #define BACKGROUND_OFFSET_Y 0.5
 
@@ -27,7 +26,7 @@ vec2 julia(vec2 uv, float t){
     float cIm = cos(t) * 0.7885;
 
     // Scale iterations for mobile performance
-    int maxIter = 32;
+    int maxIter = 16;
     for(int i=0; i<maxIter; i++){
         float x = uv.x*uv.x - uv.y*uv.y + cRe;
         float y = 2.0*uv.x*uv.y + cIm;
@@ -75,12 +74,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // Sample the initial image with distortion
     vec3 warpedInit = getInitialFrameColor(warpedSampleUv).rgb;
 
-    // Apply additional sampling for distorted areas
-    vec2 secondaryWarp = warpedSampleUv + distortOffset * 0.5;
-    vec3 secondaryInit = getInitialFrameColor(secondaryWarp).rgb;
-
-    // Blend multiple samples for interesting effect
-    vec3 distortedTexture = mix(warpedInit, secondaryInit, fractalNoise * 0.3);
+    // Use only the primary distorted sample
+    vec3 distortedTexture = warpedInit; // Simplified from mix
 
     // Enhance red channel in texture to match theme
     distortedTexture.r = mix(distortedTexture.r, distortedTexture.r * 1.3, 0.6);
@@ -135,21 +130,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // Apply fractal warping to spirals
     float warpAmount = mix(0.0, 0.3, PROBE_C);
 
-    // Create Rezz-style red color with variation
-    // vec3 redColor = mix( // Removed unused color definition
-    //     vec3(1.0, 0.0, 0.0), // Pure red
-    //     vec3(1.0, 0.2, 0.2), // Lighter red
-    //     PROBE_D * 0.3
-    // );
-
-
     // Mix spiral with fractal background based on PROBE_G
     float mixRatio = mix(0.1, 0.9, PROBE_G);
-    // vec3 color =sin( mix(fractalColor, init, mixRatio/2.)); // Removed sin() to reduce flashing
     vec3 color = mix(fractalColor, init, warpAmount); // Use direct mix instead
-
-
-    // color = mix(color, distortedTexture, 0.7);
 
     fragColor = vec4(color, 1.0);
 }

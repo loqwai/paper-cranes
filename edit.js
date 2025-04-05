@@ -477,4 +477,17 @@ const FeatureAdder = () => {
     `
 }
 
+function stripQueryParams(url) {
+    const allowedParams = new Set(['image', 'fullscreen']);
+    const parsedUrl = new URL(url);
+    for (const key of parsedUrl.searchParams.keys()) {
+      if (!allowedParams.has(key)) {
+        parsedUrl.searchParams.delete(key);
+      }
+    }
+    return parsedUrl.toString();
+  }
+
+window.stripQueryParams = stripQueryParams
 render(html`<${FeatureAdder} />`, document.getElementById('feature-editor-root'))
+

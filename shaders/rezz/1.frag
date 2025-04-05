@@ -43,7 +43,7 @@ vec2 julia(vec2 uv, float t){
     float cIm = cos(t) * 0.7885;
 
     // Scale iterations for mobile performance
-    int maxIter = 32;
+    int maxIter = 16;
     for(int i=0; i<maxIter; i++){
         float x = uv.x*uv.x - uv.y*uv.y + cRe;
         float y = 2.0*uv.x*uv.y + cIm;
@@ -65,8 +65,7 @@ vec2 juliaFromPoint(vec2 uv, vec2 center, float t){
 
     // Scale iterations based on FRACTAL_COMPLEXITY
     int maxIter = int(FRACTAL_COMPLEXITY);
-    for(int i=0; i<32; i++){
-        if(i >= maxIter) break;
+    for(int i=0; i<maxIter; i++){
         float x = adjustedUv.x*adjustedUv.x - adjustedUv.y*adjustedUv.y + cRe;
         float y = 2.0*adjustedUv.x*adjustedUv.y + cIm;
         adjustedUv.x = x;
@@ -157,17 +156,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // Sample the initial image with distortion
     vec3 warpedInit = getInitialFrameColor(warpedSampleUv).rgb;
 
-    // Apply secondary sampling with reduced distortion for more subtle effect
-    vec2 secondaryWarp = sampleUv + distortOffset * distortionFalloff * 0.3;
-    vec3 secondaryInit = getInitialFrameColor(secondaryWarp).rgb;
-
     // Original undistorted texture
     vec3 originalTexture = getInitialFrameColor(sampleUv).rgb;
 
     // Blend multiple samples based on proximity to eyes
     vec3 distortedTexture = mix(
         originalTexture,                                       // Original far from eyes
-        mix(warpedInit, secondaryInit, fractalIntensity * 0.3), // Distorted near eyes
+        warpedInit, // Use only primary sample near eyes
         distortionFalloff
     );
 

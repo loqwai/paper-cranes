@@ -17,7 +17,7 @@ vec2 julia(vec2 uv, float t){
     float cIm = cos(t) * 0.7885;
 
     // Scale iterations for mobile performance
-    int maxIter = 32;
+    int maxIter = 16;
     for(int i=0; i<maxIter; i++){
         float x = uv.x*uv.x - uv.y*uv.y + cRe;
         float y = 2.0*uv.x*uv.y + cIm;
