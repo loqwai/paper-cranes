@@ -18,7 +18,6 @@ canvas {
   will-change: transform;
   backface-visibility: hidden;
   transform: translateZ(0);
-  webkit-forced-dark-mode: on;
 }
 
 canvas.fullscreen {

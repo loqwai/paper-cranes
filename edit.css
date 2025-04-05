@@ -10,12 +10,15 @@ body {
 }
 
 /* Main layout */
-#visualizer {
+#visualizer-container {
   position: absolute;
   left: 0;
   top: 0;
   width: 50vw;
   height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 #monaco-editor {
@@ -257,8 +260,18 @@ body.present #feature-editor {
 
 /* Full screen canvas in presentation mode */
 body.present #visualizer {
-  width: 100vw !important;
-  height: 100vh !important;
+  width: 100vmin;
+  height: 100vmin;
+}
+
+canvas {
+  margin: 0;
+  height: 100vmin;
+  width: 100vmin;
+  image-rendering: high-quality;
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
 /* Sparkly effect */
