@@ -46,8 +46,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     vec2 sampleUv = uv;
     vec2 sampleZoom = vec2(BACKGROUND_ZOOM_X, BACKGROUND_ZOOM_Y);
     vec2 sampleOffset = vec2(BACKGROUND_OFFSET_X, BACKGROUND_OFFSET_Y);
-    sampleUv += sampleOffset;
-    sampleUv *= sampleZoom;
+    // Apply zoom before offset to center the effect
+    sampleUv = sampleUv * sampleZoom + sampleOffset;
     sampleUv = fract(sampleUv);
     vec3 init = getInitialFrameColor(sampleUv).rgb;
     float t = time * 0.1;
@@ -100,7 +100,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     baseColor = mix(baseColor, darkRed, sin(atan(distortedUv.y, distortedUv.x) * 3.0) * 0.5 + 0.5);
 
     // Blend fractal color with distorted texture
-    baseColor = mix(baseColor, distortedTexture, 0.835 * 0.7);
+    baseColor = mix(baseColor, distortedTexture, 0.8);
 
     // Apply color intensity from PROBE_D
     float colorIntensity = mix(0.7, 1.2, PROBE_D);
@@ -148,7 +148,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     vec3 color = fractalColor;
 
 
-    color = mix(color, distortedTexture, 0.4);
+    color = mix(color, distortedTexture, 0.7);
 
     fragColor = vec4(color, 1.0);
 }
