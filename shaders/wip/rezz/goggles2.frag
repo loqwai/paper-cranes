@@ -1,4 +1,5 @@
-//http://localhost:6969/edit.html?knob_71=0.6&knob_71.min=0&knob_71.max=1&knob_72=0.14&knob_72.min=0&knob_72.max=1&knob_73=0.06&knob_73.min=0&knob_73.max=1&knob_74=0.54&knob_74.min=0&knob_74.max=1&knob_75=0.32&knob_75.min=-0.7&knob_75.max=1&knob_76=0.55&knob_76.min=0&knob_76.max=1&knob_77=0.54&knob_77.min=0&knob_77.max=1&knob_78=0.2&knob_78.min=0&knob_78.max=1&knob_79=0.71&knob_79.min=0&knob_79.max=1&knob_19=0.157&knob_19.min=0&knob_19.max=1&knob_14=0&knob_14.min=0&knob_14.max=1&image=images%5Crezz-full-lips-cropped.png&knob_22=1&knob_22.min=0&knob_22.max=1&knob_21=0.52&knob_21.min=0&knob_21.max=1&knob_20=0.276&knob_20.min=0&knob_20.max=1&knob_18=0.055&knob_18.min=0&knob_18.max=1&knob_11=0.715&knob_11.min=0&knob_11.max=1&knob_15=0.276&knob_15.min=0&knob_15.max=1&knob_16=0.386&knob_16.min=0&knob_16.max=1&knob_3=0.551&knob_3.min=0&knob_3.max=1&knob_10=0&knob_10.min=0&knob_10.max=1&knob_17=0&knob_17.min=0&knob_17.max=1&knob_4=0.622&knob_4.min=0&knob_4.max=1&knob_5=0.835&knob_5.min=0&knob_5.max=1&knob_6=0.906&knob_6.min=0&knob_6.max=1&knob_7=0.803&knob_7.min=0&knob_7.max=1&knob_8=1&knob_8.min=0&knob_8.max=1&knob_9=0&knob_9.min=0&knob_9.max=1&knob_60=0.567&knob_60.min=0&knob_60.max=1&knob_34=0.425&knob_34.min=0&knob_34.max=1&knob_30=0.394&knob_30.min=0&knob_30.max=1&knob_37=0.575&knob_37.min=0&knob_37.max=1&knob_40=0.52&knob_40.min=0&knob_40.max=1&knob_41=0.52&knob_41.min=0&knob_41.max=1&knob_43=0.409&knob_43.min=0&knob_43.max=1&knob_47=0.654&knob_47.min=0&knob_47.max=1&knob_31=0.134&knob_31.min=0&knob_31.max=1&knob_36=0.276&knob_36.min=0&knob_36.max=1&knob_35=0.5&knob_35.min=0&knob_35.max=1
+// Updated shader with Rezz-inspired red/black spiral motif
+// -------------------------------------------------------
 
 // --- Control Mode --- //
 // Define USE_KNOBS (e.g., #define USE_KNOBS 1) to use knobs for all parameters.
@@ -6,107 +7,124 @@
 #define USE_KNOBS 1
 
 #ifndef USE_KNOBS // --- Audio Feature Mode --- //
-  // (USE_KNOBS is undefined or 0)
-  // Static parameters use knobs, reactive parameters use audio features.
-
-  // --- Static Parameters (Knob Controlled) ---
-  // General Positioning & Sizing [Knobs 3-7]
-  #define BACKGROUND_OFFSET_X knob_3
-  #define BACKGROUND_OFFSET_Y knob_4
-  #define BACKGROUND_STRETCH_X knob_5
-  #define BACKGROUND_ZOOM_Y knob_6
-  #define ZOOM (mix(0.5, 2.5, knob_7))
-  // Eye/Spiral Positioning, Shape & Distortion [Knobs 14-22, 10-11, 71-74]
-  #define EYE_DISTANCE (knob_14 * 0.6 + 0.125)
-  #define EYE_Y_OFFSET (knob_15 * 0.4 - 0.2)
-  #define LEFT_X_ADJUST (knob_16 * 0.2 - 0.1)
-  #define RIGHT_X_ADJUST (knob_17 * 0.2 - 0.1)
-  #define PROBE_A (knob_18)       // Spiral density
-  #define PROBE_B (knob_19)       // Spiral rotation speed
-  #define PROBE_C (knob_20)       // Fractal influence on spiral
-  #define PROBE_E (mix(-2.8, 1., knob_21)) // Spiral thickness
-  #define SPIRAL_DENSITY (knob_22 * 8.0 + 4.0)
-  #define SPIRAL_ITERATIONS (knob_10 * 5.0 + 3.0)
-  #define SPIRAL_DISTORTION_BOOST (knob_11 * 50.0 + 1.0)
-  #define DISTORTION_RADIUS (knob_71 * 2.0 + 0.5)
-  #define FRACTAL_COMPLEXITY (knob_72 * 24.0 + 8.0)
-  #define JULIA_VARIATION (knob_73 * 0.3)
-  #define RED_TINT_AMOUNT (knob_74 * 0.8)
-  // Other Visual Effects [Knobs 8-9, 75, 35]
-  #define PROBE_D (knob_9)         // Color intensity and variation
-  #define RECURSIVE_ITERATIONS (knob_8 * 3.0 + 1.0)
-  #define DISTORTION_DIRECTIONALITY (0.)
-  #define TIME_SCALE (knob_75 * 0.2 + 0.01)
-  #define FRACTAL_VISIBILITY (knob_35) // Direct blend control: 0=Base Warp, 1=Recursive Fractal
-  #define FRACTAL_INTENSITY (knob_36) // Controls fractal brightness and contrast: 0=Normal, 1=Maximum
-
-  // --- Reactive Parameters (Audio Feature Controlled) ---
-  #define PROBE_G (spectralCentroidNormalized / 2.0)      // Balance: Background vs Visual Texture
-  #define PROBE_H (spectralEntropyNormalized / 100.0)     // BG Warp Intensity
-  #define RECURSIVE_SCALE_AMOUNT (spectralCrestNormalized)      // Recursive Scale Base Intensity
-  #define RECURSIVE_SCALE_FACTOR ((energyZScore) * 0.4 + 0.4) // Recursive Scale Factor
-
-#else // --- Knob Control Mode --- //
-  // (USE_KNOBS is defined and non-zero)
-  // All parameters are controlled by knobs.
+  // Static parameters use knobs, reactive parameters use audio features
 
   // --- General Positioning & Sizing --- [Knobs 3-7]
   #define BACKGROUND_OFFSET_X knob_3
   #define BACKGROUND_OFFSET_Y knob_4
-  #define BACKGROUND_STRETCH_X knob_5
+  #define BACKGROUND_ZOOM_X knob_5
   #define BACKGROUND_ZOOM_Y knob_6
   #define ZOOM (mix(0.5, 2.5, knob_7))
 
-  // --- Eye/Spiral Positioning, Shape & Distortion --- [Knobs 14-22, 10-11, 71-74]
-  #define EYE_DISTANCE (knob_14 * 0.6 + 0.125)
-  #define EYE_Y_OFFSET (knob_15 * 0.4 - 0.2)
-  #define LEFT_X_ADJUST (knob_16 * 0.2 - 0.1)
-  #define RIGHT_X_ADJUST (knob_17 * 0.2 - 0.1)
-  #define PROBE_A (knob_18)       // Spiral density
-  #define PROBE_B (knob_19)       // Spiral rotation speed
-  #define PROBE_C (knob_20)       // Fractal influence on spiral
-  #define PROBE_E (mix(-2.8, 1., knob_21)) // Spiral thickness
-  #define SPIRAL_DENSITY (knob_22 * 8.0 + 4.0)
-  #define SPIRAL_ITERATIONS (knob_10 * 5.0 + 3.0)
-  #define SPIRAL_DISTORTION_BOOST (knob_11 * 50.0 + 1.0)
-  #define DISTORTION_RADIUS (knob_71 * 2.0 + 0.5)
-  #define FRACTAL_COMPLEXITY (knob_72 * 24.0 + 8.0)
-  #define JULIA_VARIATION (knob_73 * 0.3)
-  #define RED_TINT_AMOUNT (knob_74 * 0.8)
+  // --- Eye/Spiral Positioning --- [Knobs 14-19]
+  #define EYE_DISTANCE (knob_14 * 0.6 + 0.25)
+  #define EYE_Y_OFFSET (knob_15 * 0.2 - 0.1)
+  #define LEFT_X_ADJUST (knob_16 * 0.1)
+  #define RIGHT_X_ADJUST (knob_17 * 0.1)
+  #define SPIRAL_DENSITY (knob_18 * 8.0 + 4.0)
+  #define SPIRAL_ITERATIONS (knob_19 * 5.0 + 3.0)
 
-  // --- Other Visual Effects & Reactivity --- [Knobs 8-9, 30-33, 75, 35-36]
-  #define PROBE_D (knob_9)         // Color intensity and variation
-  #define RECURSIVE_ITERATIONS (knob_8 * 3.0 + 1.0)
-  #define DISTORTION_DIRECTIONALITY (0.)
-  #define TIME_SCALE (knob_75 * 0.2 + 0.01)
-  #define FRACTAL_VISIBILITY (knob_35) // Direct blend control: 0=Base Warp, 1=Recursive Fractal
-  #define FRACTAL_INTENSITY (knob_36) // Controls fractal brightness and contrast: 0=Normal, 1=Maximum
-  // Reactive Parameters Mapped to Knobs:
-  #define PROBE_G (knob_30 * 0.5)                         // Balance: Background vs Visual Texture
-  #define PROBE_H (knob_31 * 0.01)                        // BG Warp Intensity
-  #define RECURSIVE_SCALE_AMOUNT (knob_32)                   // Recursive Scale Base Intensity
-  #define RECURSIVE_SCALE_FACTOR ((knob_33 * 2.0 - 1.0) * 0.4 + 0.4) // Recursive Scale Factor (Range: 0.0-0.8)
+  // --- Spiral & Fractal Controls --- [Knobs 20-22, 8-11]
+  #define SPIRAL_DISTORTION_BOOST (knob_8 * 5.0 + 1.0)
+  #define DISTORTION_RADIUS (knob_9 * 2.0 + 0.5)
+  #define FRACTAL_COMPLEXITY (knob_10 * 24.0 + 8.0)
+  #define JULIA_VARIATION (knob_11 * 0.3)
+  #define PROBE_C (knob_20)       // Fractal influence on spiral (0 = rigid, 1 = very warped)
+  #define PROBE_E (mix(-0.7, 1.0, knob_21)) // Controls spiral thickness
+  #define RED_TINT_AMOUNT (knob_22 * 0.6 + 0.2)
+
+  // --- Reactive Parameters --- (Audio Feature Controlled)
+  #define PROBE_A (spectralCentroidNormalized)  // Controls overall spiral density
+  #define PROBE_B (spectralFluxNormalized)      // Controls spiral rotation speed
+  #define PROBE_D (energyNormalized)            // Controls color intensity and variation
+  #define PROBE_F (spectralRolloffNormalized)   // Controls overall scale/zoom
+  #define PROBE_G (spectralRoughnessNormalized) // Controls balance between spiral and fractal
+  #define PROBE_H (spectralEntropyNormalized)   // Controls background warping intensity
+  #define RECURSIVE_SCALE_AMOUNT (spectralCrestNormalized)
+  #define RECURSIVE_SCALE_FACTOR (spectralSpreadNormalized * 0.4 + 0.4)
+  #define RECURSIVE_ITERATIONS (bassNormalized * 3.0 + 1.0)
+  #define TIME_SCALE (midsNormalized * 0.2 + 0.05)
+  #define DISTORTION_DIRECTIONALITY (trebleNormalized)
+
+#else // --- Knob Control Mode --- //
+  // All parameters controlled by knobs
+
+  // --- General Positioning & Sizing --- [Knobs 3-7]
+  #define BACKGROUND_OFFSET_X knob_3
+  #define BACKGROUND_OFFSET_Y knob_4
+  #define BACKGROUND_ZOOM_X knob_5
+  #define BACKGROUND_ZOOM_Y knob_6
+  #define ZOOM (mix(0.5, 2.5, knob_7))
+
+  // --- Eye/Spiral Positioning --- [Knobs 14-19]
+  #define EYE_DISTANCE (knob_14 * 0.6 + 0.25)
+  #define EYE_Y_OFFSET (knob_15 * 0.2 - 0.1)
+  #define LEFT_X_ADJUST (knob_16 * 0.1)
+  #define RIGHT_X_ADJUST (knob_17 * 0.1)
+  #define SPIRAL_DENSITY (knob_18 * 8.0 + 4.0)
+  #define SPIRAL_ITERATIONS (knob_19 * 5.0 + 3.0)
+
+  // --- Spiral & Fractal Controls --- [Knobs 20-22, 8-11]
+  #define SPIRAL_DISTORTION_BOOST (knob_8 * 5.0 + 1.0)
+  #define DISTORTION_RADIUS (knob_9 * 2.0 + 0.5)
+  #define FRACTAL_COMPLEXITY (knob_10 * 24.0 + 8.0)
+  #define JULIA_VARIATION (knob_11 * 0.3)
+  #define PROBE_C (knob_20)       // Fractal influence on spiral (0 = rigid, 1 = very warped)
+  #define PROBE_E (mix(-0.7, 1.0, knob_21)) // Controls spiral thickness
+  #define RED_TINT_AMOUNT (knob_22 * 0.6 + 0.2)
+
+  // --- Animation & Effect Controls --- [Knobs 30-37, 71-79]
+  #define PROBE_A (knob_71)       // Controls overall spiral density (0 = sparse, 1 = dense)
+  #define PROBE_B (knob_72)       // Controls spiral rotation speed
+  #define PROBE_D (knob_73)       // Controls color intensity and variation
+  #define PROBE_F (knob_74)       // Controls overall scale/zoom
+  #define PROBE_G (knob_75)       // Controls balance between spiral and fractal
+  #define PROBE_H (knob_76)       // Controls background warping intensity
+  #define RECURSIVE_SCALE_AMOUNT (knob_77)
+  #define RECURSIVE_SCALE_FACTOR (knob_78 * 0.4 + 0.4)
+  #define RECURSIVE_ITERATIONS (knob_79 * 3.0 + 1.0)
+  #define TIME_SCALE (knob_30 * 0.2 + 0.05)
+  #define DISTORTION_DIRECTIONALITY (knob_31)
+
+  // --- Additional Effects --- [Knobs 32-37, 40-41, 43-47, 60]
+  // NOTE: These are available for future expansion
+  // #define ADDITIONAL_EFFECT_1 (knob_32)
+  // #define ADDITIONAL_EFFECT_2 (knob_33)
 
   // --- Knob Usage Summary (USE_KNOBS=1) ---
-  // Total Used: 29 knobs
-  //   [3-7]:   General Positioning & Sizing (5)
-  //   [8]:     Recursive Iterations (1)
-  //   [9]:     Probe D (Color Intensity) (1)
-  //   [10]:    Spiral Iterations (1)
-  //   [11]:    Spiral Distortion Boost (1)
-  //   [14-22]: Eye/Spiral Positioning/Shape (9)
-  //   [30]:    Probe G (Background/Visual Balance) (1)
-  //   [31]:    Probe H (BG Warp Intensity) (1)
-  //   [32]:    Recursive Scale Amount (1)
-  //   [33]:    Recursive Scale Factor (1)
-  //   [35]:    Fractal Visibility (1)
-  //   [36]:    Fractal Intensity/Brightness (1)
-  //   [71-74]: Eye/Spiral Distortion/Fractal (4)
-  //   [75]:    Time Scale (1)
-  // Available Knobs: 34, 37-41, 60, 76-79 (15 total)
+  // Total Used: 30 knobs
+  //   [3-11]:   General Positioning & Distortion Controls (9)
+  //   [14-22]:  Eye/Spiral Positioning & Shape Controls (9)
+  //   [30-31]:  Time Scale & Distortion Direction (2)
+  //   [71-79]:  Animation & Effect Controls (9)
+  // Available Knobs: 32-37, 40-41, 43-47, 60 (15 total)
 #endif
 
-// --- Function Definitions --- //
+// Function to check if pixel and surrounding area is solid white
+float getWhiteAmount(vec2 uv, vec2 pixelSize) {
+    vec3 center = getLastFrameColor(uv).rgb;
+    vec3 left   = getLastFrameColor(uv - vec2(pixelSize.x, 0.0)).rgb;
+    vec3 right  = getLastFrameColor(uv + vec2(pixelSize.x, 0.0)).rgb;
+    vec3 up     = getLastFrameColor(uv + vec2(0.0, pixelSize.y)).rgb;
+    vec3 down   = getLastFrameColor(uv - vec2(0.0, pixelSize.y)).rgb;
+
+    float centerWhite = dot(center, vec3(1.0)) / 3.0;
+    float leftWhite   = dot(left,   vec3(1.0)) / 3.0;
+    float rightWhite  = dot(right,  vec3(1.0)) / 3.0;
+    float upWhite     = dot(up,     vec3(1.0)) / 3.0;
+    float downWhite   = dot(down,   vec3(1.0)) / 3.0;
+
+    float threshold   = 0.95;
+    float smoothness  = 0.1;
+
+    float centerSmooth = smoothstep(threshold - smoothness, threshold, centerWhite);
+    float leftSmooth   = smoothstep(threshold - smoothness, threshold, leftWhite);
+    float rightSmooth  = smoothstep(threshold - smoothness, threshold, rightWhite);
+    float upSmooth     = smoothstep(threshold - smoothness, threshold, upWhite);
+    float downSmooth   = smoothstep(threshold - smoothness, threshold, downWhite);
+
+    return (centerSmooth + leftSmooth + rightSmooth + upSmooth + downSmooth) / 5.0;
+}
 
 // Function to apply Julia set distortion
 vec2 julia(vec2 uv, float t){
@@ -151,10 +169,11 @@ vec2 juliaFromPoint(vec2 uv, vec2 center, float t){
 
 // Main image function
 void mainImage(out vec4 fragColor, in vec2 fragCoord){
-    // Scale UV based on ZOOM for overall zoom control
-    vec2 uv = (fragCoord * 2.0 - iResolution.xy) / (iResolution.y * ZOOM);
+    // Scale UV based on PROBE_F for overall zoom control
+    float zoom = mix(0.8, 1.5, PROBE_F);
+    vec2 uv = (fragCoord * 2.0 - iResolution.xy) / (iResolution.y * zoom);
     vec2 sampleUv = uv;
-    vec2 sampleZoom = vec2(BACKGROUND_STRETCH_X, BACKGROUND_ZOOM_Y);
+    vec2 sampleZoom = vec2(BACKGROUND_ZOOM_X, BACKGROUND_ZOOM_Y);
     vec2 sampleOffset = vec2(BACKGROUND_OFFSET_X, BACKGROUND_OFFSET_Y);
     sampleUv += sampleOffset;
     sampleUv *= sampleZoom;
@@ -163,6 +182,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float t = time * TIME_SCALE; // Use TIME_SCALE for animation speed
 
     vec2 pixelSize = 1.0 / iResolution.xy;
+    float whiteAmount = getWhiteAmount(fragCoord / iResolution.xy, pixelSize);
 
     // Define eye centers in UV space
     vec2 leftEyeCenter = vec2(-EYE_DISTANCE - LEFT_X_ADJUST, -EYE_Y_OFFSET);
@@ -234,54 +254,45 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // Original undistorted texture
     vec3 originalTexture = getInitialFrameColor(sampleUv).rgb;
 
+    // Blend multiple samples based on proximity to eyes
+    vec3 distortedTexture = mix(
+        originalTexture,                                       // Original far from eyes
+        mix(warpedInit, secondaryInit, fractalIntensity * 0.3), // Distorted near eyes
+        distortionFalloff
+    );
+
     // Implement recursive scaling effect along fractal lines
-    // Start with samples from the initial texture
-    vec3 recursiveTexture = vec3(0.0);
+    vec3 recursiveTexture = originalTexture;
     float recursiveInfluence = RECURSIVE_SCALE_AMOUNT * smoothstep(0.0, 0.4, fractalIntensity);
 
     if (recursiveInfluence > 0.01) {
-        // Start sampling point
+        // Start point for scaling - use the distorted coordinates as a base
         vec2 scaledUv = sampleUv;
-        float totalWeight = 0.0;
+        float totalWeight = 1.0;
         float weight = 1.0;
 
         // Follow the fractal path emanating from the eye center
         vec2 fractalDirection = normalize(distortedUv - closestEyeCenter) * 0.01;
 
-        // Determine iterations based on settings
-        int maxIterations = int(RECURSIVE_ITERATIONS) + int(FRACTAL_VISIBILITY * 2.0);
+        // Apply recursive sampling
+        for (float i = 0.0; i < 4.0; i++) {
+            if (i >= RECURSIVE_ITERATIONS) break;
 
-        // First sample is directly from initial texture with full weight
-        recursiveTexture = getInitialFrameColor(scaledUv).rgb;
-        totalWeight = 1.0;
+            // Scale down for each iteration
+            float scaleFactor = RECURSIVE_SCALE_FACTOR + fractalIntensity * 0.1;
 
-        // Then add the recursive samples with decreasing weights
-        for (float i = 0.0; i < 6.0; i++) {
-            if (i >= float(maxIterations)) break;
+            // Move along fractal direction
+            scaledUv += fractalDirection * (i + 1.0);
 
-            // More aggressive scaling for higher intensity
-            float scaleFactor = RECURSIVE_SCALE_FACTOR +
-                              fractalIntensity * 0.1 +
-                              FRACTAL_INTENSITY * 0.2;
-
-            // Move along fractal direction (further with high intensity)
-            scaledUv += fractalDirection * (i + 1.0) * (1.0 + FRACTAL_INTENSITY * 0.5);
-
-            // Scale around the eye center for better positioning control
-            vec2 scaleCenter = mix(
-                vec2(0.5, 0.5),                         // Standard center
-                closestEyeCenter * 0.5 + vec2(0.5, 0.5), // Eye-centered
-                FRACTAL_VISIBILITY * 0.7                 // Blend based on visibility
-            );
-
-            scaledUv = scaleCenter + (scaledUv - scaleCenter) * scaleFactor;
+            // Scale around the center of the face
+            vec2 faceCenter = vec2(0.5, 0.5); // Assuming the face is centered in texture
+            scaledUv = faceCenter + (scaledUv - faceCenter) * scaleFactor;
 
             // Get scaled texture
             vec3 scaledTexture = getInitialFrameColor(scaledUv).rgb;
 
-            // Decrease weight for each iteration, but less so with higher intensity
-            float weightDecay = mix(0.6, 0.85, FRACTAL_INTENSITY);
-            weight *= weightDecay;
+            // Decrease weight for each iteration
+            weight *= 0.7;
             recursiveTexture += scaledTexture * weight;
             totalWeight += weight;
         }
@@ -289,43 +300,20 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // Normalize
         recursiveTexture /= totalWeight;
 
-        // Apply brightness/contrast enhancement based on FRACTAL_INTENSITY
-        float contrastPower = mix(1.0, 2.5, FRACTAL_INTENSITY); // Non-linear contrast
-        float brightnessBoost = mix(1.0, 2.0, FRACTAL_INTENSITY); // Brightness multiplier
-
-        // Apply contrast
-        recursiveTexture = pow(recursiveTexture, vec3(1.0/contrastPower));
-
-        // Apply brightness
-        recursiveTexture *= brightnessBoost;
-
-        // Apply color tint controlled by both visibility and intensity
-        float tintStrength = mix(0.2, 0.8, FRACTAL_INTENSITY);
-        vec3 tintColor = mix(
-            vec3(1.2, 0.8, 0.8),    // Subtle red tint at low intensity
-            vec3(1.5, 0.4, 0.4),    // Strong red tint at high intensity
-            FRACTAL_INTENSITY
-        );
-        recursiveTexture = mix(recursiveTexture, recursiveTexture * tintColor, tintStrength);
+        // Apply light red tint to recursive samples
+        recursiveTexture = mix(recursiveTexture, recursiveTexture * vec3(1.2, 0.8, 0.8), 0.3);
     }
 
     // Blend the recursive effect with the distorted texture
-    vec3 baseWarpedTexture = mix(
-        originalTexture,                                       // Original far from eyes
-        mix(warpedInit, secondaryInit, fractalIntensity * 0.3), // Distorted near eyes
-        distortionFalloff
-    );
-
-    // Direct control using FRACTAL_VISIBILITY knob
-    vec3 finalVisualTexture = mix(baseWarpedTexture, recursiveTexture, FRACTAL_VISIBILITY);
+    distortedTexture = mix(distortedTexture, recursiveTexture, recursiveInfluence);
 
     // Enhance red channel in the distorted areas only
-    finalVisualTexture.r = mix(finalVisualTexture.r,
-                           finalVisualTexture.r * 1.3,
-                           distortionFalloff * 0.6);
-    finalVisualTexture.gb = mix(finalVisualTexture.gb,
-                            finalVisualTexture.gb * mix(0.7, 0.9, PROBE_D),
-                            distortionFalloff);
+    distortedTexture.r = mix(distortedTexture.r,
+                          distortedTexture.r * 1.3,
+                          distortionFalloff * 0.6);
+    distortedTexture.gb = mix(distortedTexture.gb,
+                           distortedTexture.gb * mix(0.7, 0.9, PROBE_D),
+                           distortionFalloff);
 
     // Get previous frame color for background effects
     vec3 prevColor = getLastFrameColor(distortedUv).rgb;
@@ -339,6 +327,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float posFactor = fract(length(distortedUv) * 1.5 + t * 0.5);
     vec3 baseColor = mix(blackRed, maroon, posFactor);
     baseColor = mix(baseColor, darkRed, sin(atan(distortedUv.y, distortedUv.x) * 3.0) * 0.5 + 0.5);
+
+    // Blend fractal color with distorted texture
+    baseColor = mix(baseColor, distortedTexture, 0.7);
 
     // Apply color intensity from PROBE_D
     float colorIntensity = mix(0.7, 1.2, PROBE_D);
@@ -474,60 +465,26 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     }
 
     // Blend standard distorted texture with enhanced spiral area distortion
-    vec3 spiralColor = mix(vec3(0.0), redColor, smoothstep(0.5 - spiralThickness, 0.5 + spiralThickness, spiralWarpedInit.r));
+    distortedTexture = mix(distortedTexture, spiralRecursiveTexture, spiralDistortionFalloff * recursiveInfluence * 2.0);
 
-    // --- Completely Redesigned Final Compositing Stage ---
+    // Apply spiral pattern only within the eye circles
+    float leftFinalMask = leftSpiralMask * leftEyeMask;
+    float rightFinalMask = rightSpiralMask * rightEyeMask;
 
-    // 1. Standard color calculation (background + spirals)
-    float mixRatio = mix(-.7, 2., PROBE_G);
-    vec3 standardColor = mix(fractalColor, spiralColor, mixRatio);
+    // Combine both eye spirals
+    float combinedSpiralMask = max(leftFinalMask, rightFinalMask);
+    vec3 spiralColor = mix(vec3(0.0), redColor, combinedSpiralMask);
 
-    // 2. Apply additional brightness/contrast to the recursive texture based on FRACTAL_INTENSITY
-    //    (This is in addition to brightness/contrast changes already applied in the recursive texture generation)
-    vec3 fractalFinalTexture = recursiveTexture;
+    // Mix spiral with fractal background based on PROBE_G
+    float mixRatio = mix(0.6, 0.9, PROBE_G);
+    vec3 color = mix(fractalColor, spiralColor, mixRatio);
 
-    // Apply an extreme version of the contrast boost only in the final stage
-    // for maximum effect with high FRACTAL_INTENSITY values
-    float finalContrastBoost = mix(1.0, 3.0, FRACTAL_INTENSITY);
-    float finalBrightnessBoost = mix(1.0, 2.5, FRACTAL_INTENSITY);
+    // Apply previous frame white amount
+    color = mix(color, vec3(1.0), whiteAmount * 0.5);
 
-    // Apply a more aggressive color transformation with S-curve for more dramatic effect
-    vec3 midtoneValue = vec3(0.4, 0.2, 0.2); // Reddish midtone anchor point
-    fractalFinalTexture = mix(
-        pow(fractalFinalTexture, vec3(1.0/finalContrastBoost)) * finalBrightnessBoost,
-        pow(smoothstep(vec3(0.0), vec3(1.0), fractalFinalTexture), vec3(0.7)) * vec3(1.5, 0.5, 0.5),
-        FRACTAL_INTENSITY
-    );
-
-    // 3. Create a more extreme curve for FRACTAL_VISIBILITY with FRACTAL_INTENSITY influence
-    //    Higher FRACTAL_INTENSITY makes the transition to fractals more dramatic
-    float hardnessControl = mix(0.7, 0.4, FRACTAL_INTENSITY); // Controls curve sharpness
-    float hardTransition = smoothstep(hardnessControl, 1.0, FRACTAL_VISIBILITY);
-    float extremeVisibility = mix(
-        FRACTAL_VISIBILITY * 0.7,            // Normal range for lower values
-        1.0,                                 // Pure fractals at max
-        hardTransition                       // Hard transition near the top
-    );
-
-    // 4. Apply a "step function" at high values for absolute purity with high intensity
-    float purityThreshold = mix(0.95, 0.85, FRACTAL_INTENSITY); // Lower threshold with higher intensity
-    if (FRACTAL_VISIBILITY > purityThreshold) extremeVisibility = 1.0;
-
-    // 5. Direct blend - with added FRACTAL_INTENSITY influence
-    //    Higher intensity causes fractal texture to be favored more in the blend
-    float finalBlendFactor = extremeVisibility * (1.0 + FRACTAL_INTENSITY * 0.5);
-    finalBlendFactor = clamp(finalBlendFactor, 0.0, 1.0); // Ensure it stays in 0-1 range
-
-    vec3 color = mix(standardColor, fractalFinalTexture, finalBlendFactor);
-
-    // 6. Add spirals on top, but completely remove them at high fractal visibility
-    if (extremeVisibility < 0.9) {
-        // Only show spirals when we're not in "pure fractal" mode
-        float spiralStrength = combinedEyeMask * (1.0 - extremeVisibility);
-        if (spiralStrength > 0.01) {
-            color = mix(color, redColor, spiralStrength);
-        }
-    }
+    // Final blend with the distorted texture - reduced blend in spiral areas to preserve spiral visual
+    float textureBlend = 0.7 * (1.0 - combinedSpiralMask * 0.8);
+    color = mix(color, distortedTexture, textureBlend);
 
     fragColor = vec4(color, 1.0);
 }
