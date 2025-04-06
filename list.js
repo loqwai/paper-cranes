@@ -92,6 +92,11 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
       newParams.set('fullscreen', 'true')
     }
 
+    // Add default image if not present
+    if (!newParams.has('image')) {
+      newParams.set('image', 'images/rezz-full-lips-cropped.png')
+    }
+
     const finalUrl = new URL(originalUrl.pathname, originalUrl.origin)
     finalUrl.search = newParams.toString()
 
