@@ -22,14 +22,14 @@ const processServiceWorkerMessage = (event) => {
   }
 }
 
-// Add listener for messages from parent window
-window.addEventListener('message', async function(event) {
+export const receive = async (event) => {
   if(!window.cranes) return
-  if (!event.data || event.data.type !== 'update-params') return
-  // if there is a event.data.shader, reload the page with  ?shader=event.data.shader
-  // Store incoming params
-  const {data } = event.data
-  const {shader} = data
+  const {data, type} = event.data ?? {}
+  if (!data || type !== 'update-params') {
+      console.log('Ignoring message: Invalid structure or type not update-params', event.data)
+      return
+  }
+  const { shader } = data
   if (shader) {
     // get the shader code
     const shaderCode = await fetch(`/shaders/${shader}.frag`, {mode: 'no-cors'}).then(res => res.text())
@@ -38,13 +38,15 @@ window.addEventListener('message', async function(event) {
   }
 
   // Update shader code if provided
-  if (data.shaderCode) window.cranes.shader = data.shaderCode
+  if (shader) window.cranes.shader = shader
 
   // Store all params
   Object.entries(data).forEach(([key, value]) => {
     window.cranes.messageParams[key] = value
   })
-})
+}
+// Add listener for messages from parent window
+window.addEventListener('message', receive)
 
 // Add listener for esbuild reload events
 if (process.env.LIVE_RELOAD) {

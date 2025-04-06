@@ -256,7 +256,7 @@ const FeatureAdder = () => {
             // Check for Command/Control + Shift + E (presentation mode)
             if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === 'e') {
                 event.preventDefault() // Prevent browser default actions
-                togglePresentationMode() // Toggle presentation mode
+                openRendererInANewWindowAndControlIt() // Toggle presentation mode
             }
         }
 
@@ -269,43 +269,15 @@ const FeatureAdder = () => {
         }
     }, [isDrawerOpen, isPresentationMode]) // Add dependencies
 
-    const togglePresentationMode = () => {
-        const newMode = !isPresentationMode
-        setIsPresentationMode(newMode)
+    const openRendererInANewWindowAndControlIt = () => {
+       // open renderer in a new window
+       const newWindow = window.open(window.location.href.replace('edit', 'index'), '_blank', 'width=1000,height=1000')
+       sendCranesStateToNewWindow(newWindow)
+    }
 
-        // Toggle presentation class on body
-        if (newMode) {
-            document.body.classList.add('present')
-            // Hide monaco editor and drawer
-            setIsDrawerOpen(false)
-            document.getElementById('monaco-editor')?.classList.add('hidden')
-            // Make canvas fullscreen
-            const canvas = document.querySelector('canvas')
-            if (canvas) {
-                canvas.style.width = '100vw'
-                canvas.style.height = '100vh'
-                canvas.classList.add('fullscreen')
-                // Trigger resize event for the canvas to adapt
-                window.dispatchEvent(new Event('resize'))
-            }
-            // Update URL
-            updateUrl({ present: 'true' })
-        } else {
-            document.body.classList.remove('present')
-            // Show monaco editor
-            document.getElementById('monaco-editor')?.classList.remove('hidden')
-            // Reset canvas size
-            const canvas = document.querySelector('canvas')
-            if (canvas) {
-                canvas.style.width = ''
-                canvas.style.height = ''
-                canvas.classList.remove('fullscreen')
-                // Trigger resize event for the canvas to adapt
-                window.dispatchEvent(new Event('resize'))
-            }
-            // Update URL
-            updateUrl({ present: null })
-        }
+    const sendCranesStateToNewWindow = (newWindow) => {
+        newWindow.postMessage({ type: 'update-params', data: window.cranes.flattenFeatures()})
+        requestAnimationFrame( () => sendCranesStateToNewWindow(newWindow))
     }
 
     // Add click outside handler

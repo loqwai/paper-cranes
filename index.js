@@ -146,6 +146,18 @@ const setupAudio = async () => {
     }
 };
 
+export const getCranesState = () => {
+    return {
+        ...window.cranes.measuredAudioFeatures, // Audio features (lowest precedence)
+        ...window.cranes.controllerFeatures,    // Controller-computed features
+        ...Object.fromEntries(params),          // URL parameters
+        ...window.cranes.manualFeatures,        // Manual features
+        ...window.cranes.messageParams,         // Message parameters (highest precedence)
+        touch: [coordsHandler.coords.x, coordsHandler.coords.y],
+        touched: coordsHandler.touched
+    }
+}
+
 // Set up the application state management
 const setupCranesState = () => {
     window.cranes = {
@@ -155,17 +167,7 @@ const setupCranesState = () => {
         messageParams: {},          // Message parameters (highest precedence)
         frameCount: 0,
         // Centralized feature flattening function with proper order of precedence
-        flattenFeatures: () => {
-            return {
-                ...window.cranes.measuredAudioFeatures, // Audio features (lowest precedence)
-                ...window.cranes.controllerFeatures,    // Controller-computed features
-                ...Object.fromEntries(params),          // URL parameters
-                ...window.cranes.manualFeatures,        // Manual features
-                ...window.cranes.messageParams,         // Message parameters (highest precedence)
-                touch: [coordsHandler.coords.x, coordsHandler.coords.y],
-                touched: coordsHandler.touched
-            }
-        }
+        flattenFeatures: getCranesState
     }
 
     window.c = window.cranes
