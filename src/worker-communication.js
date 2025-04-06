@@ -26,7 +26,7 @@ export const receive = async (event) => {
   if(!window.cranes) return
   const {data, type} = event.data ?? {}
   if (!data || type !== 'update-params') {
-      console.log('Ignoring message: Invalid structure or type not update-params', event.data)
+      // console.log('Ignoring message: Invalid structure or type not update-params', event.data)
       return
   }
   const { shader } = data
