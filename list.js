@@ -75,17 +75,39 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
     <path d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
   </svg>`
 
-  const copyUrl = (url) => {
-    navigator.clipboard.writeText(url)
-    const button = event.currentTarget
-    button.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="M4.5 12.75l6 6 9-13.5" />
-    </svg>`
-    setTimeout(() => {
+  const copyUrl = (url, options = {}) => {
+    const { stripKnobs = true, addFullscreen = false } = options
+
+    const originalUrl = new URL(url)
+    const newParams = new URLSearchParams()
+
+    for (const [key, value] of originalUrl.searchParams) {
+      if (stripKnobs && key.toLowerCase().includes('knob')) {
+        continue
+      }
+      newParams.set(key, value)
+    }
+
+    if (addFullscreen) {
+      newParams.set('fullscreen', 'true')
+    }
+
+    const finalUrl = new URL(originalUrl.pathname, originalUrl.origin)
+    finalUrl.search = newParams.toString()
+
+    navigator.clipboard.writeText(finalUrl.toString())
+
+    // Use a more robust way to get the button, maybe pass it as an argument if needed
+    const button = event?.currentTarget
+    if (button) {
+      const originalContent = button.innerHTML
       button.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+        <path d="M4.5 12.75l6 6 9-13.5" />
       </svg>`
-    }, 1000)
+      setTimeout(() => {
+        button.innerHTML = originalContent // Restore original icon
+      }, 1000)
+    }
   }
 
   // Get preset name from URL parameters
@@ -103,6 +125,10 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
     }
   }
 
+  const fullscreenIcon = html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9.75 9.75M20.25 3.75v4.5m0-4.5h-4.5m4.5 0L14.25 9.75M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9.75 14.25m10.5 6v-4.5m0 4.5h-4.5m4.5 0L14.25 14.25" />
+  </svg>`
+
   return html`
     <li>
       <div class="main-link" onClick=${hasPresets ? () => setIsExpanded(!isExpanded) : undefined}>
@@ -118,10 +144,19 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
             onClick=${(e) => {
               e.preventDefault()
               e.stopPropagation()
-              copyUrl(getFullUrl(targetUrl))
+              copyUrl(getFullUrl(targetUrl), { stripKnobs: true })
             }}
-            title="Copy link"
+            title="Copy link (no knobs)"
           >${linkIcon}</button>
+          <button
+            class="copy-link"
+            onClick=${(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              copyUrl(getFullUrl(targetUrl), { stripKnobs: true, addFullscreen: true })
+            }}
+            title="Copy fullscreen link (no knobs)"
+          >${fullscreenIcon}</button>
           <a
             class="edit-link"
             href="${getEditUrl(targetUrl)}"
@@ -140,11 +175,21 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
                     class="copy-link"
                     onClick=${(e) => {
                       e.preventDefault()
-                      copyUrl(getFullUrl(preset))
+                      e.stopPropagation()
+                      copyUrl(getFullUrl(preset), { stripKnobs: true })
                     }}
-                    title="Copy link"
+                    title="Copy link (no knobs)"
                   >${linkIcon}</button>
-                  <a class="edit-link" href="${getEditUrl(preset)}">edit</a>
+                  <button
+                    class="copy-link"
+                    onClick=${(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      copyUrl(getFullUrl(preset), { stripKnobs: true, addFullscreen: true })
+                    }}
+                    title="Copy fullscreen link (no knobs)"
+                  >${fullscreenIcon}</button>
+                  <a class="edit-link" href="${getEditUrl(preset)}" onClick=${(e) => e.stopPropagation()}>edit</a>
                 </div>
               </a>
               <${PresetParams} preset=${preset} />
