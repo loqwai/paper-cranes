@@ -35,7 +35,7 @@ async function configure(e) {
 }
 
 function processFftData(e) {
-  if(!self.analyzer) return console.debug(`Analyzer ${self.analyzerName} not initialized`)
+  if(!self.analyzer) return
 
   const value = self.analyzer(e.data.fft, self.previousSignal)
   self.previousSignal = e.data.fft

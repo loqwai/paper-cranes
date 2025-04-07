@@ -39,6 +39,7 @@ export const receive = async (event) => {
 
   // Update shader code if provided
   if (shader) window.cranes.shader = shader
+  if(data.shaderCode) window.cranes.shader = data.shaderCode
 
   // Store all params
   Object.entries(data).forEach(([key, value]) => {

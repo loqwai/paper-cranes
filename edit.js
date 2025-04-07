@@ -276,7 +276,9 @@ const FeatureAdder = () => {
     }
 
     const sendCranesStateToNewWindow = (newWindow) => {
-        newWindow.postMessage({ type: 'update-params', data: window.cranes.flattenFeatures()})
+        //get the shaderCode = window.cranes.shader
+        const shaderCode = window.cranes.shader
+        newWindow.postMessage({ type: 'update-params', data: { shaderCode, ...window.cranes.flattenFeatures()}})
         requestAnimationFrame( () => sendCranesStateToNewWindow(newWindow))
     }
 
