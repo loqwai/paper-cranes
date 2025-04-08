@@ -163,7 +163,6 @@ const didThingsChange = async (request, response) => {
     if (!request.url.includes(location.origin)) return false
     const newData = await safeResponse.text()
     const oldData = await cached?.text()
-    //console.debug("Did things change?", oldData && oldData !== newData)
     return oldData && oldData !== newData
 }
 
@@ -174,10 +173,12 @@ const didThingsChange = async (request, response) => {
  */
 async function fetchWithCache(request) {
     const networkPromise = fetchWithRetry(request).then(async (response) => {
-        contentChanged ||= await didThingsChange(request, response)
+        if (await didThingsChange(request, response)) {
+            contentChanged = true
+            // Trigger reload right away when changes are detected
+            reloadAllClients()
+        }
         await addToCache(request, response)
-
-        //console.debug(`${request.url} has changed: ${contentChanged}`)
         return response
     })
 
