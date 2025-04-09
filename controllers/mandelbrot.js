@@ -97,19 +97,8 @@ function calculateViewBounds(zoom, resolution) {
 // Transfer BigNumber data to shader using high and low precision components
 // Simple and consistent approach for all number ranges
 function bigNumberToComponents(bn) {
-  // First get integer part using BigNumber's built-in method
-  const intPart = bn.integerValue(BigNumber.ROUND_DOWN);
-
-  // Get fractional part by subtraction
-  const fracPart = bn.minus(intPart);
-
-  // Convert integer part to JavaScript number (high precision component)
-  const high = intPart.isZero() ? 0 : Number(intPart.toString());
-
-  // Convert fractional part to JavaScript number (low precision component)
-  const low = fracPart.isZero() ? 0 : Number(fracPart.toString());
-
-  return { high, low };
+  const asNumber = Number(bn.toString());
+  return { high: asNumber, low: 0.0 };
 }
 
 // Main controller function
@@ -185,33 +174,35 @@ const originComponents = {
 
   // Calculate zoom exponent for color cycling
   const zoomExponent = Math.log10(1.0 / zoom);
+  const result = {
+  offsetX_high: originComponents.x.high,
+  offsetX_low: originComponents.x.low,
+  offsetY_high: originComponents.y.high,
+  offsetY_low: originComponents.y.low,
 
+  // Pixel span (high/low components)
+  pixelSpan_high: pixelSpanComponents.high,
+  pixelSpan_low: pixelSpanComponents.low,
+
+  // Iteration and visual control
+  maxIterations: config.maxIterations,
+  currentZoomLevel: zoom,
+  zoomExponent: zoomExponent,
+  colorCycle: (zoomExponent * 0.05) % 1.0,
+  zoomCycle: 5, // Fixed to a specific color palette
+
+  // Transition control
+  transitionBlend: 0.0,
+
+  // Performance level
+  performanceLevel: performanceLevel === 'high' ? 2.0 :
+                    performanceLevel === 'medium' ? 1.0 : 0.0,
+
+  // Location info for UI
+  locationName: 'Deep Structure'
+}
+console.log(result)
   // Return values to shader with high precision components
-  return {
-    offsetX_high: originComponents.x.high,
-    offsetX_low: originComponents.x.low,
-    offsetY_high: originComponents.y.high,
-    offsetY_low: originComponents.y.low,
+  return result;
 
-    // Pixel span (high/low components)
-    pixelSpan_high: pixelSpanComponents.high,
-    pixelSpan_low: pixelSpanComponents.low,
-
-    // Iteration and visual control
-    maxIterations: config.maxIterations,
-    currentZoomLevel: zoom,
-    zoomExponent: zoomExponent,
-    colorCycle: (zoomExponent * 0.05) % 1.0,
-    zoomCycle: 5, // Fixed to a specific color palette
-
-    // Transition control
-    transitionBlend: 0.0,
-
-    // Performance level
-    performanceLevel: performanceLevel === 'high' ? 2.0 :
-                      performanceLevel === 'medium' ? 1.0 : 0.0,
-
-    // Location info for UI
-    locationName: 'Deep Structure'
-  };
 }
