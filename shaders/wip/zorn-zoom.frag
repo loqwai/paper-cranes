@@ -1,31 +1,45 @@
 //http://localhost:6969/edit.html?knob_30=0.118&knob_30.min=0&knob_30.max=1&knob_35=0.575&knob_35.min=0&knob_35.max=1&knob_36=0.165&knob_36.min=0&knob_36.max=1&knob_31=0.417&knob_31.min=0&knob_31.max=1&knob_44=0.094&knob_44.min=0&knob_44.max=1&knob_34=0.307&knob_34.min=0&knob_34.max=1&knob_37=0.071&knob_37.min=0&knob_37.max=1&knob_47=0&knob_47.min=0&knob_47.max=1&knob_46=0.961&knob_46.min=0&knob_46.max=1&knob_45=0.268&knob_45.min=0&knob_45.max=1&knob_32=0&knob_32.min=0&knob_32.max=1&knob_33=0.756&knob_33.min=0&knob_33.max=1&knob_40=1&knob_40.min=0&knob_40.max=1
-#define LOOP_FRAMES 1000  // Number of frames in one complete loop
-#define CURRENT_FRAME (iFrame % LOOP_FRAMES)  // Current frame in the loop
-#define PI 3.14159265359
-#define FRAME_ANGLE (float(CURRENT_FRAME) * 2.0 * PI / float(LOOP_FRAMES))
 
+// Remove internal frame calculations
+// #define LOOP_FRAMES 1000
+// #define CURRENT_FRAME (iFrame % LOOP_FRAMES)
+// #define FRAME_ANGLE (float(CURRENT_FRAME) * 2.0 * PI / float(LOOP_FRAMES))
+
+// Remove controller uniforms and frame logic
+// uniform float controllerFrameAngle;
+// uniform float controllerAdaptiveSmooth;
+
+#define PI 3.14159265359
+uniform float controllerFrameAngle;
 // Remove iTime based probes
 // #define PROBE_1 fract(iTime * 0.1)
 // #define PROBE_4 fract(iTime * 0.3)
 // #define PROBE_5 fract(iTime * 0.2)
 // #define PROBE_6 fract(iTime * 0.05)
 
-#define PROBE_2 mix(0.55, 2., animateEaseInOutQuad(knob_34))
+// Remove frame-based probes
+// #define PROBE_4 (0.5 + 0.5 * sin(controllerFrameAngle * 3.0))
+// #define PROBE_5 (0.5 + 0.5 * cos(controllerFrameAngle * 2.0))
+// #define PROBE_2 mix(0.55, 2., animateEaseInOutQuad(knob_34))
 #define PROBE_3 mix(-1.7, 10., knob_36)
-
-// Add frame-based probes for 4 and 5
-#define PROBE_4 (0.5 + 0.5 * sin(FRAME_ANGLE * 3.0)) // Example: cyclical value between 0 and 1
-#define PROBE_5 (0.5 + 0.5 * cos(FRAME_ANGLE * 2.0)) // Example: another cyclical value between 0 and 1
+#define PROBE_4 (0.5 + 0.5 * sin(iTime * 0.19))
+#define PROBE_5 (0.5 + 0.5 * cos(iTime * 0.14))
 
 #define AA_RADIUS knob_30
 #define MAX_ITER 100
 #define INNER_CIRCLE_BLEND knob_40
-#define ZOOM_SPEED 1.0        // Controls how many zoom cycles happen per loop
-#define ROTATION_SPEED 1.0    // Controls how many rotations happen per loop
+#define ZOOM_SPEED 0.15       // Continuous zoom speed
 #define EPSILON 0.00001
 #define PATTERN_SCALE 1.5
-#define CENTER_DETAIL_BOOST sin(FRAME_ANGLE)*10.
-// Removed PATTERN_EVOLUTION_SPEED as it's now tied to FRAME_ANGLE
+#define CENTER_DETAIL_BOOST sin(controllerFrameAngle)*10.
+
+// Declare uniforms from controller
+uniform float controllerAngle;
+uniform float controllerMultX;
+uniform float controllerMultY;
+uniform float controllerVariation;
+uniform float controllerColorPhase;
+uniform float controllerAdaptiveSmooth;
 
 // A simple pseudo-random function (if needed)
 float rand(vec2 co) {
@@ -112,8 +126,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 resolution = iResolution.xy;
     vec2 uv = (fragCoord - 0.5 * resolution) / resolution.x;
 
-    // Use frame angle for offset
-    uv += vec2(EPSILON * sin(FRAME_ANGLE), EPSILON * cos(FRAME_ANGLE));
+    // Simple iTime offset
+    uv += vec2(EPSILON * sin(iTime), EPSILON * cos(iTime));
     vec2 originalUV = uv;
     float originalDist = length(originalUV);
 
@@ -122,42 +136,37 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         return;
     }
 
-    // Frame-based looping zoom - completes ZOOM_SPEED cycles per loop
-    float zoomProgress = fract(float(CURRENT_FRAME) / float(LOOP_FRAMES) * ZOOM_SPEED);
-    float continuousZoom = pow(2.0, zoomProgress * 2.0 * PI);
-
-    // Frame-based looping rotation - completes ROTATION_SPEED cycles per loop
-    float baseRotation = FRAME_ANGLE * ROTATION_SPEED;
+    // Continuous exponential zoom
+    float continuousZoom = pow(2.0, iTime * ZOOM_SPEED);
+    // Rotation driven by controller
+    float baseRotation = controllerAngle; // Use controller angle directly
     uv = rotate(uv, baseRotation);
     vec2 zoomedUV = uv / continuousZoom;
 
-    // Pattern generation based on cyclical FRAME_ANGLE
-    vec2 multiplier = PATTERN_SCALE * vec2(
-        1.0 + 0.5 * sin(FRAME_ANGLE),
-        1.0 + 0.5 * cos(FRAME_ANGLE)
-    );
-    float variation = 0.95 + 0.05 * sin(FRAME_ANGLE * 1.618);
+    // Pattern generation using controller parameters
+    vec2 multiplier = PATTERN_SCALE * vec2(controllerMultX, controllerMultY);
+    float variation = controllerVariation;
 
-    // Generate fractal using zoomed coords and frame-based pattern params
+    // Generate fractal using controller-driven parameters
     vec4 fractalResult = generateFractal(zoomedUV, multiplier, variation, MAX_ITER);
 
     // --- Anti-Aliasing using Derivatives ---
     vec4 dx = dFdx(fractalResult);
     vec4 dy = dFdy(fractalResult);
     float gradientLength = length(vec2(length(dx), length(dy)));
-    float smoothFactor = smoothstep(0.01, 0.1, gradientLength);
+    float smoothFactor = smoothstep(0.01, 0.15, gradientLength);
     // --- End Anti-Aliasing ---
 
-    // Color calculation based on cyclical FRAME_ANGLE
+    // Color calculation using controller color phase
     vec3 color = vec3(
-        sin(fractalResult.x * 10.0 + FRAME_ANGLE * 2.0),
-        cos(fractalResult.y * 8.0 + FRAME_ANGLE * 3.0),
-        sin(fractalResult.z * 12.0 + FRAME_ANGLE * 1.0)
+        sin(fractalResult.x * 10.0 + controllerColorPhase * 1.5),
+        cos(fractalResult.y * 8.0 + controllerColorPhase * 1.0),
+        sin(fractalResult.z * 12.0 + controllerColorPhase * 2.0)
     );
     color = color * 0.5 + 0.5;
 
-    // Apply derivative-based smoothing
-    color = mix(color, vec3(0.5), smoothFactor * 0.5);
+    // Apply derivative-based smoothing using controller value
+    color = mix(color, vec3(0.5), smoothFactor * controllerAdaptiveSmooth);
 
     // Calculate anti-aliasing weight
     float centerFade = smoothstep(AA_RADIUS * (1.0 + INNER_CIRCLE_BLEND), 0.0, originalDist);
@@ -165,21 +174,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Add fractal detail and temporal anti-aliasing in center
     if (aaWeight > 0.05) {
-        // Use FRAME_ANGLE for offset
-        vec2 centerDetailUV = zoomedUV + vec2(0.01 * sin(FRAME_ANGLE * 15.0), 0.01 * cos(FRAME_ANGLE * 11.0));
-        vec4 centerFractalResult = generateFractal(centerDetailUV, multiplier, variation, MAX_ITER);
-
-        // Calculate center color based on cyclical FRAME_ANGLE
-        vec3 centerDetailColor = vec3(
-            sin(centerFractalResult.x * 10.0 + FRAME_ANGLE * 2.0),
-            cos(centerFractalResult.y * 8.0 + FRAME_ANGLE * 3.0),
-            sin(centerFractalResult.z * 12.0 + FRAME_ANGLE * 1.0)
-        );
-        centerDetailColor = centerDetailColor * 0.5 + 0.5;
-
-        // Blend the main color with the center detail color
-        color = mix(color, centerDetailColor, aaWeight * 0.7);
-
         // Apply temporal anti-aliasing using the previous frame's color
         vec4 prevFrameColor = getLastFrameColor(originalUV);
         float temporalBlend = mix(0.1, 0.6, INNER_CIRCLE_BLEND) * aaWeight * aaWeight;

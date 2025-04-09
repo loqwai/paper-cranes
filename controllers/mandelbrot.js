@@ -1,228 +1,217 @@
-import {Decimal} from 'https://esm.sh/decimal.js@10.5.0'
+import BigNumber from 'bignumber.js'
 
-let startTime = null
-const zoomStart = 14.0
-const zoomSpeed = (t) => 0.4
-
-// Performance config - can be adjusted for different devices
-const perfConfig = {
-  highPerformance: {
-    decimalPrecision: 128,
+// Performance configurations based on device capabilities
+const performanceConfig = {
+  high: {
+    decimalPlaces: 500,
+    maxIterations: 800,
+    exponentialAt: 1e9
+  },
+  medium: {
+    decimalPlaces: 250,
+    maxIterations: 500,
+    exponentialAt: 1e9
+  },
+  low: {
+    decimalPlaces: 60,
     maxIterations: 200,
-    updateFrequency: 1,
-    deepZoomThreshold: 1e-13,
-    extremeZoomThreshold: 1e-50
-  },
-  mediumPerformance: {
-    decimalPrecision: 64,
-    maxIterations: 100,
-    updateFrequency: 5,
-    deepZoomThreshold: 1e-13,
-    extremeZoomThreshold: 1e-50
-  },
-  lowPerformance: {
-    decimalPrecision: 32,
-    maxIterations: 50,
-    updateFrequency: 15,
-    deepZoomThreshold: 1e-13,
-    extremeZoomThreshold: 1e-50
+    exponentialAt: 1e9
   }
 }
 
-// Get device performance level - default to medium
-function getPerformanceLevel() {
-  // Check for URL parameter
-  const urlParams = new URLSearchParams(window.location.search)
-  const perfParam = urlParams.get('performance')
-
-  if (perfParam === 'high') return 'highPerformance'
-  if (perfParam === 'low') return 'lowPerformance'
-  if (perfParam === 'medium') return 'mediumPerformance'
-
-  // Try to detect based on hardware
-  const isHighEnd = window.navigator.hardwareConcurrency >= 8
-  const isLowEnd = window.navigator.hardwareConcurrency <= 2 ||
-                  /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-
-  return 'highPerformance'
-  if (isHighEnd) return 'highPerformance'
-  if (isLowEnd) return 'lowPerformance'
-
-  return 'mediumPerformance'
+// Determine performance level - simplified and defaults to high
+const getPerformanceLevel = () => {
+  return 'high'
 }
 
-// Get the performance configuration
 const performanceLevel = getPerformanceLevel()
-const config = perfConfig[performanceLevel]
+const config = performanceConfig[performanceLevel]
 
-// Configure Decimal precision based on performance level
-Decimal.config({
-  precision: config.decimalPrecision,
-  precisionTolerance: 1e-30
+// Configure BigNumber once
+BigNumber.config({
+  DECIMAL_PLACES: config.decimalPlaces,
+  EXPONENTIAL_AT: config.exponentialAt
 })
 
-// Interesting Julia set coordinates
-let centerXDecimal = new Decimal('-0.945428')
-let centerYDecimal = new Decimal('0.13009')
-let centerX = -0.845428
-let centerY = 0.13009
-
-// Enhanced split function for better precision
-function splitDouble(value) {
-  // Handle very small values with better precision
-  if (Math.abs(value) < 1e-30) {
-    return { high: 0, low: 0 }
-  }
-
-  // For extreme precision, use a string-based approach
-  if (Math.abs(value) < 1e-15) {
-    const str = value.toString()
-    const scientificMatch = str.match(/^(-?\d*\.?\d+)e([+-]\d+)$/)
-
-    if (scientificMatch) {
-      const mantissa = parseFloat(scientificMatch[1])
-      const exponent = parseInt(scientificMatch[2])
-
-      // Calculate a more precise split for very small numbers
-      const high = mantissa * Math.pow(10, exponent)
-      const remainder = value - high
-      return { high, low: remainder }
-    }
-  }
-
-  // Standard split for normal range values
-  const high = Math.fround(value)
-  const low = value - high
-
-  return { high, low }
+// Deep Structure coordinates
+const deepStructure = {
+  x: '-0.743643887037151',
+  y: '0.13182590420533'
 }
 
+// Stable timing and state management
+let startTime = null
+let lastFrameTime = 0
+let frameCount = 0
+
+// State control for smooth zooming
+const zoomStart = 14.0
+const zoomSpeed = 0.4
+const resetZoomThreshold = 1e-15
+const resetZoomRatio = 16.0
+let lastResetZoom = 1.0
+
+// Current view coordinates
+const currentLocation = {
+  x: new BigNumber(deepStructure.x),
+  y: new BigNumber(deepStructure.y)
+}
+
+// Calculation cache
+let calculationCache = {
+  lastZoom: null,
+  viewParameters: null,
+  screenOrigin: null,
+  lastUpdateTime: 0
+}
+
+// Use the power of BigNumber directly for coordinate precision
+function calculateViewBounds(zoom, resolution) {
+  // Round zoom to ensure stable frame-to-frame calculations
+  const zoomBN = new BigNumber(zoom).toFixed(10);
+
+  // Return cached values if zoom hasn't changed
+  if (calculationCache.lastZoom === zoomBN && calculationCache.viewParameters) {
+    return calculationCache.viewParameters;
+  }
+
+  // Update zoom cache
+  calculationCache.lastZoom = zoomBN;
+
+  // Calculate view dimensions
+  const minDimension = Math.min(resolution.x, resolution.y);
+  const pixelSpan = new BigNumber(zoomBN).dividedBy(minDimension);
+  const halfWidth = pixelSpan.times(resolution.x).dividedBy(2);
+  const halfHeight = pixelSpan.times(resolution.y).dividedBy(2);
+
+  // Cache and return results
+  calculationCache.viewParameters = {
+    pixelSpan,
+    halfWidth,
+    halfHeight
+  };
+
+  return calculationCache.viewParameters;
+}
+
+// Transfer BigNumber data to shader using high and low precision components
+// Simple and consistent approach for all number ranges
+function bigNumberToComponents(bn) {
+  // First get integer part using BigNumber's built-in method
+  const intPart = bn.integerValue(BigNumber.ROUND_DOWN);
+
+  // Get fractional part by subtraction
+  const fracPart = bn.minus(intPart);
+
+  // Convert integer part to JavaScript number (high precision component)
+  const high = intPart.isZero() ? 0 : Number(intPart.toString());
+
+  // Convert fractional part to JavaScript number (low precision component)
+  const low = fracPart.isZero() ? 0 : Number(fracPart.toString());
+
+  return { high, low };
+}
+
+// Main controller function
 export default function controller(features) {
-  if (!startTime) startTime = performance.now()
-  const time = (performance.now() - startTime) / 1000
-if(features.bassZScore > 0.9) startTime -= 100
-  let t = time
-  let baseZoom = zoomStart * Math.exp(-zoomSpeed(t) * t)
+  // Initialize timing on first call
+  if (!startTime) startTime = performance.now();
 
-  let zoom = baseZoom;
+  // Calculate time with stable frame updates
+  const currentTime = performance.now();
+  const elapsedTime = (currentTime - startTime) / 1000;
 
-  const resolution = features.resolution || { x: 1280, y: 720 }
-  const minDim = Math.min(resolution.x, resolution.y)
+  // Track frame timing
+  const deltaTime = elapsedTime - lastFrameTime;
+  lastFrameTime = elapsedTime;
+  frameCount++;
 
-  // Calculate zoom level
+  // Stabilize time to prevent micro-fluctuations
+  const stableTime = Math.floor(elapsedTime * 100) / 100;
 
-  // If time exceeds a certain threshold, start zooming out instead
+  // Calculate exponential zoom level
+  let zoom = zoomStart * Math.exp(-zoomSpeed * stableTime);
 
-  // Only use Decimal for deep zooms - threshold based on performance level
-  if (zoom < config.deepZoomThreshold) {
-    // Convert zoom to Decimal with enhanced precision formatting
-    const zoomDecimal = new Decimal(zoom.toExponential(15))
-    const minDimDecimal = new Decimal(minDim)
+  // Reset zoom if we go too deep, but keep the same location
+  if (zoom < resetZoomThreshold && zoom < lastResetZoom / resetZoomRatio) {
+    // Record new reset point
+    lastResetZoom = zoom;
 
-    // Calculate pixel span with high precision
-    const pixelSpanDecimal = zoomDecimal.div(minDimDecimal)
-
-    // Calculate screen origin with high precision
-    const halfWidthDecimal = pixelSpanDecimal.mul(resolution.x).div(2)
-    const halfHeightDecimal = pixelSpanDecimal.mul(resolution.y).div(2)
-
-    const screenOriginXDecimal = centerXDecimal.minus(halfWidthDecimal)
-    const screenOriginYDecimal = centerYDecimal.minus(halfHeightDecimal)
-
-    // Enhanced splitting for better precision
-    let screenOriginXSplit
-    let screenOriginYSplit
-    let pixelSpanSplit
-
-    // For extreme zoom levels, use enhanced precision handling
-    if (zoom < config.extremeZoomThreshold) {
-      // Get full precision strings for extreme zoom levels
-      const soXStr = screenOriginXDecimal.toString()
-      const soYStr = screenOriginYDecimal.toString()
-      const pSpanStr = pixelSpanDecimal.toString()
-
-      screenOriginXSplit = splitDouble(Number(soXStr))
-      screenOriginYSplit = splitDouble(Number(soYStr))
-      pixelSpanSplit = splitDouble(Number(pSpanStr))
-
-      // Also calculate auxiliary values for enhanced precision in shader
-      const pixelSpanInvDecimal = minDimDecimal.div(zoomDecimal)
-      const pixelSpanInvSplit = splitDouble(Number(pixelSpanInvDecimal.toString()))
-    } else {
-      // Standard precision splitting for normal deep zooms
-      screenOriginXSplit = splitDouble(Number(screenOriginXDecimal.toString()))
-      screenOriginYSplit = splitDouble(Number(screenOriginYDecimal.toString()))
-      pixelSpanSplit = splitDouble(Number(pixelSpanDecimal.toString()))
-    }
-
-    // Calculate iteration norm (only update occasionally to save performance)
-    // Update frequency depends on performance level
-    const centerIterNorm = (t % config.updateFrequency < 0.1) ?
-      calculateHighPrecisionIterNorm(centerXDecimal, centerYDecimal, config.maxIterations) : 0.5;
-
-    return {
-      cameraScreenOriginX: screenOriginXSplit.high,
-      cameraScreenOriginXLow: screenOriginXSplit.low,
-      cameraScreenOriginY: screenOriginYSplit.high,
-      cameraScreenOriginYLow: screenOriginYSplit.low,
-      cameraPixelSpan: pixelSpanSplit.high,
-      cameraPixelSpanLow: pixelSpanSplit.low,
-      centerIterNorm,
-      currentZoomLevel: zoom,
-      highPrecision: 1.0,
-      zoomExponent: Math.log10(1.0 / zoom),
-      extremeZoom: zoom < config.extremeZoomThreshold ? 1.0 : 0.0,
-      performanceLevel: performanceLevel === 'highPerformance' ? 2.0 :
-                        performanceLevel === 'mediumPerformance' ? 1.0 : 0.0
-    }
-  } else {
-    // Use standard precision for better performance at shallow zoom
-    const pixelSpan = zoom / minDim;
-    const screenOriginX = centerX - (resolution.x * pixelSpan) / 2;
-    const screenOriginY = centerY - (resolution.y * pixelSpan) / 2;
-
-    // Simple calculation for better performance
-    let centerIterNorm = 0.5;
-
-    return {
-      cameraScreenOriginX: screenOriginX,
-      cameraScreenOriginXLow: 0,
-      cameraScreenOriginY: screenOriginY,
-      cameraScreenOriginYLow: 0,
-      cameraPixelSpan: pixelSpan,
-      cameraPixelSpanLow: 0,
-      centerIterNorm,
-      currentZoomLevel: zoom,
-      highPrecision: 0.0,
-      zoomExponent: Math.log10(1.0 / zoom),
-      extremeZoom: 0.0,
-      performanceLevel: performanceLevel === 'highPerformance' ? 2.0 :
-                        performanceLevel === 'mediumPerformance' ? 1.0 : 0.0
-    }
-  }
-}
-
-// Enhanced calculation for better precision in iteration
-function calculateHighPrecisionIterNorm(centerXDecimal, centerYDecimal, maxIter) {
-  let x = new Decimal(0)
-  let y = new Decimal(0)
-
-  for (let iter = 0; iter < maxIter; iter++) {
-    const xSq = x.mul(x)
-    const ySq = y.mul(y)
-    const twoXY = x.mul(y).mul(2)
-
-    const nextX = xSq.minus(ySq).plus(centerXDecimal)
-    const nextY = twoXY.plus(centerYDecimal)
-
-    x = nextX
-    y = nextY
-
-    const magSquared = x.mul(x).plus(y.mul(y))
-    if (magSquared.greaterThan(4)) {
-      return iter / maxIter; // Simplified calculation
-    }
+    // Clear calculation cache for fresh calculations
+    calculationCache = {
+      lastZoom: null,
+      viewParameters: null,
+      screenOrigin: null,
+      lastUpdateTime: 0
+    };
   }
 
-  return 1
+  // Get screen resolution with fallback
+  const resolution = features.resolution || { x: 1280, y: 720 };
+
+  // Calculate view parameters using BigNumber
+  const viewBounds = calculateViewBounds(zoom, resolution);
+
+  // Update screen origin for stability (less frequently at deeper zooms)
+  const updateThreshold = Math.max(0.1, Math.min(0.5, Math.pow(zoom, 0.25) * 0.1));
+  if (!calculationCache.screenOrigin || Math.abs(stableTime - calculationCache.lastUpdateTime) > updateThreshold) {
+    calculationCache.screenOrigin = {
+      x: currentLocation.x.minus(viewBounds.halfWidth),
+      y: currentLocation.y.minus(viewBounds.halfHeight)
+    };
+    calculationCache.lastUpdateTime = stableTime;
+  }
+
+// NEW: center is always (0, 0) in shader space
+const offsetComponents = {
+  x: { high: 0.0, low: 0.0 },
+  y: { high: 0.0, low: 0.0 }
+};
+
+// Shift origin so (0,0) is currentLocation in shader
+calculationCache.screenOrigin = {
+  x: currentLocation.x.minus(viewBounds.halfWidth),
+  y: currentLocation.y.minus(viewBounds.halfHeight)
+};
+
+// Pass origin as actual fractal coordinates
+const originComponents = {
+  x: bigNumberToComponents(calculationCache.screenOrigin.x),
+  y: bigNumberToComponents(calculationCache.screenOrigin.y)
+};
+
+  // Calculate pixel span for coordinate conversion
+  const pixelSpanComponents = bigNumberToComponents(viewBounds.pixelSpan);
+
+  // Calculate zoom exponent for color cycling
+  const zoomExponent = Math.log10(1.0 / zoom);
+
+  // Return values to shader with high precision components
+  return {
+    offsetX_high: originComponents.x.high,
+    offsetX_low: originComponents.x.low,
+    offsetY_high: originComponents.y.high,
+    offsetY_low: originComponents.y.low,
+
+    // Pixel span (high/low components)
+    pixelSpan_high: pixelSpanComponents.high,
+    pixelSpan_low: pixelSpanComponents.low,
+
+    // Iteration and visual control
+    maxIterations: config.maxIterations,
+    currentZoomLevel: zoom,
+    zoomExponent: zoomExponent,
+    colorCycle: (zoomExponent * 0.05) % 1.0,
+    zoomCycle: 5, // Fixed to a specific color palette
+
+    // Transition control
+    transitionBlend: 0.0,
+
+    // Performance level
+    performanceLevel: performanceLevel === 'high' ? 2.0 :
+                      performanceLevel === 'medium' ? 1.0 : 0.0,
+
+    // Location info for UI
+    locationName: 'Deep Structure'
+  };
 }

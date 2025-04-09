@@ -245,7 +245,7 @@ const loadController = async () => {
 
         if (typeof controllerModule.default === 'function') return controllerModule.default
         // Default export is a function - direct controller or make function
-        if (typeof controllerModule.make === 'function') return controllerModule.make
+        if (typeof controllerModule.make === 'function') return controllerModule.make()
         if (typeof controllerModule === 'function') return controllerModule
         console.error('Controller must export a function directly or provide a make() function')
         return null
@@ -334,7 +334,7 @@ const main = async () => {
             if (typeof controller !== 'function') {
                 throw new Error('Controller must be a function or return a function')
             }
-
+            console.log('controller', controller)
             // Setup separate animation loop for the controller
             animateController(controller)
         } catch (e) {
