@@ -13,13 +13,6 @@
             }
         }
     </script>
-    <script type="module" id="add-fullscreen-query-param-to-url">
-        const url = new URL(window.location.href)
-        if (!url.searchParams.get('fullscreen')) {
-            url.searchParams.set('fullscreen', 'true')
-            window.location.href = url.toString()
-        }
-    </script>
     <script type="module" src="./src/worker-communication.js"></script>
 </head>
 
