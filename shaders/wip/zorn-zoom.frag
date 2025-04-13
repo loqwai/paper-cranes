@@ -1,4 +1,4 @@
-//http://localhost:6969/edit.html?knob_30=0.118&knob_30.min=0&knob_30.max=1&knob_35=0.575&knob_35.min=0&knob_35.max=1&knob_36=0.165&knob_36.min=0&knob_36.max=1&knob_31=0.417&knob_31.min=0&knob_31.max=1&knob_44=0.094&knob_44.min=0&knob_44.max=1&knob_34=0.307&knob_34.min=0&knob_34.max=1&knob_37=0.071&knob_37.min=0&knob_37.max=1&knob_47=0&knob_47.min=0&knob_47.max=1&knob_46=0.961&knob_46.min=0&knob_46.max=1&knob_45=0.268&knob_45.min=0&knob_45.max=1&knob_32=0&knob_32.min=0&knob_32.max=1&knob_33=0.756&knob_33.min=0&knob_33.max=1&knob_40=1&knob_40.min=0&knob_40.max=1
+//http://localhost:6969/edit.html?knob_30=0.118&knob_30.min=0&knob_30.max=1&knob_35=0.575&knob_35.min=0&knob_35.max=1&knob_36=0.165&knob_36.min=0&knob_36.max=1&knob_31=0.417&knob_31.min=0&knob_31.max=1&knob_44=0.094&knob_44.min=0&knob_44.max=1&knob_34=0.307&knob_34.min=0&knob_34.max=1&knob_37=0.071&knob_37.min=0&knob_37.max=1&knob_47=0&knob_47.min=0&knob_47.max=1&knob_46=0.961&knob_46.min=0&knob_46.max=1&knob_45=0.268&knob_45.min=0&knob_45.max=1&knob_32=0&knob_32.min=0&knob_32.max=1&knob_33=0.756&knob_33.min=0&knob_33.max=1&knob_40=1&knob_40.min=0&knob_40.max=1&knob_41=0.5&knob_41.min=0&knob_41.max=1&knob_43=0.5&knob_43.min=0&knob_43.max=1&knob_44=0.5&knob_44.min=0&knob_44.max=1
 #define LOOP_FRAMES 1000  // Number of frames in one complete loop
 #define CURRENT_FRAME (iFrame % LOOP_FRAMES)  // Current frame in the loop
 #define PI 3.14159265359
@@ -20,11 +20,12 @@
 #define AA_RADIUS knob_30
 #define MAX_ITER 100
 #define INNER_CIRCLE_BLEND knob_40
-#define ZOOM_SPEED 1.0        // Controls how many zoom cycles happen per loop
-#define ROTATION_SPEED 1.0    // Controls how many rotations happen per loop
+#define ZOOM_SPEED knob_41    // Controls how many zoom cycles happen per loop (use integer values for perfect loops)
+#define ROTATION_SPEED knob_70 // Controls how many rotations happen per loop (use integer values for perfect loops)
+#define CENTER_SMOOTHING knob_44 // Controls how much to smooth the fractal result near the center
 #define EPSILON 0.00001
 #define PATTERN_SCALE 1.5
-#define CENTER_DETAIL_BOOST sin(FRAME_ANGLE)*10.
+#define CENTER_DETAIL_BOOST sin(FRAME_ANGLE)*10. // Keep this for now, might adjust later
 // Removed PATTERN_EVOLUTION_SPEED as it's now tied to FRAME_ANGLE
 
 // A simple pseudo-random function (if needed)
@@ -46,12 +47,12 @@ float smoothTransition(float progress, float smoothness) {
 
 // Applies a periodic transformation using an inversion factor.
 vec2 applyPeriodicTransformationAndTraps(vec2 position, vec2 multiplier, float variation) {
-    // Add small offset to prevent zero division issues at origin
-    position += vec2(EPSILON * sin(iTime * 6.28318530718 / 1000.0), EPSILON * cos(iTime * 6.28318530718 / 1000.0));
+    // Add small offset based on frame angle to prevent static artifacts at origin
+    position += vec2(EPSILON * sin(FRAME_ANGLE * 1.73), EPSILON * cos(FRAME_ANGLE * 2.31));
 
     float d = dot(position, position);
-    // Ensure we never divide by values too close to zero
-    float inv = 1.0 / max(d, EPSILON);
+    // Ensure we never divide by values too close to zero, add a small constant bias
+    float inv = 1.0 / (d + EPSILON * 0.1); // Added small bias to d
     position = 0.5 * sin(multiplier * position * inv * PROBE_5 * variation);
     return position;
 }
@@ -63,7 +64,7 @@ float noise(vec2 uv) {
 
 // Generate a fractal pattern with limited iterations
 vec4 generateFractal(vec2 uv, vec2 multiplier, float variation, int iterations) {
-    vec4 fractalColor = vec4(1e6);
+    vec4 fractalColor = vec4(1e6); // Initialize with large values for min function
 
     // Hard limit of MAX_ITER iterations for performance
     iterations = min(MAX_ITER, iterations);
@@ -75,8 +76,13 @@ vec4 generateFractal(vec2 uv, vec2 multiplier, float variation, int iterations) 
         float lengthTrap = length(uv);
         float minAxesTrap = min(abs(uv.x), abs(uv.y));
         float diagonalDotTrap = abs(dot(uv, vec2(PROBE_3, PROBE_4)));
+
+        // Use mix for smoother trap accumulation if needed, but min is often fine
         fractalColor = min(fractalColor, vec4(lengthTrap, minAxesTrap, diagonalDotTrap, 1.0));
     }
+
+    // Prevent excessively small values which can cause issues
+    fractalColor = max(fractalColor, vec4(EPSILON));
 
     return fractalColor;
 }
@@ -122,14 +128,16 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         return;
     }
 
-    // Frame-based looping zoom - completes ZOOM_SPEED cycles per loop
-    float zoomProgress = fract(float(CURRENT_FRAME) / float(LOOP_FRAMES) * ZOOM_SPEED);
-    float continuousZoom = pow(2.0, zoomProgress * 2.0 * PI);
-
-    // Frame-based looping rotation - completes ROTATION_SPEED cycles per loop
-    float baseRotation = FRAME_ANGLE * ROTATION_SPEED;
-    uv = rotate(uv, baseRotation);
-    vec2 zoomedUV = uv / continuousZoom;
+    // --- Frame-based looping zoom and rotation ---
+    // Use cosine for zoom: 0->1->0 ensures zoom in and out symmetrically over the loop
+    // Add PI/2 to start fully zoomed out (cos(PI/2) = 0) or adjust phase as needed
+    // The exponent controls the zoom intensity range
+    float zoomFactor = pow(2.0, (0.5 + 0.5 * cos(FRAME_ANGLE * ZOOM_SPEED + PI)) * mix(1.0, 5.0, knob_45)); // Knob 45 controls zoom intensity
+    // Apply rotation based on FRAME_ANGLE
+    float currentRotation = FRAME_ANGLE * ROTATION_SPEED;
+    uv = rotate(uv, currentRotation);
+    vec2 zoomedUV = uv / max(zoomFactor, EPSILON); // Apply zoom, ensure > 0
+    // --- End Zoom/Rotation ---
 
     // Pattern generation based on cyclical FRAME_ANGLE
     vec2 multiplier = PATTERN_SCALE * vec2(
@@ -144,47 +152,50 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // --- Anti-Aliasing using Derivatives ---
     vec4 dx = dFdx(fractalResult);
     vec4 dy = dFdy(fractalResult);
+    // Use length squared for efficiency if sqrt is bottleneck, but length is fine
     float gradientLength = length(vec2(length(dx), length(dy)));
-    float smoothFactor = smoothstep(0.01, 0.1, gradientLength);
+    // Adjust smoothstep range for desired effect
+    float smoothFactor = smoothstep(0.0, 0.1, gradientLength); // Start smoothing earlier
     // --- End Anti-Aliasing ---
 
-    // Color calculation based on cyclical FRAME_ANGLE
-    vec3 color = vec3(
-        sin(fractalResult.x * 10.0 + FRAME_ANGLE * 2.0),
-        cos(fractalResult.y * 8.0 + FRAME_ANGLE * 3.0),
-        sin(fractalResult.z * 12.0 + FRAME_ANGLE * 1.0)
-    );
-    color = color * 0.5 + 0.5;
+    // --- Center Smoothing & Detail ---
+    // Calculate weight for center operations (smoothing, detail, temporal AA)
+    float centerFade = smoothstep(AA_RADIUS * (1.0 + INNER_CIRCLE_BLEND), 0.0, originalDist);
+    float aaWeight = centerFade * pow(centerFade, mix(0.5, 2.0, INNER_CIRCLE_BLEND)); // Keep existing weight profile
 
-    // Apply derivative-based smoothing
+    // Smooth the raw fractal result near the center before coloring
+    // Mix fractalResult towards its average or a neutral value based on aaWeight
+    vec4 smoothedFractalResult = mix(fractalResult, vec4(0.5), aaWeight * CENTER_SMOOTHING);
+
+    // Optional: Add high-frequency detail back *after* smoothing, if needed
+    // This might re-introduce some aliasing, use carefully
+    // if (aaWeight > 0.05) {
+    //     vec2 centerDetailUV = zoomedUV + vec2(0.01 * sin(FRAME_ANGLE * 15.0), 0.01 * cos(FRAME_ANGLE * 11.0));
+    //     vec4 centerFractalDetail = generateFractal(centerDetailUV, multiplier, variation, MAX_ITER / 2); // Fewer iterations for detail
+    //     // Mix based on detail strength parameter if added
+    //     smoothedFractalResult = mix(smoothedFractalResult, centerFractalDetail, aaWeight * 0.2); // Small amount of detail
+    // }
+    // --- End Center Smoothing & Detail ---
+
+    // Color calculation based on cyclical FRAME_ANGLE, using the smoothed result
+    vec3 color = vec3(
+        sin(smoothedFractalResult.x * 10.0 + FRAME_ANGLE * 2.0),
+        cos(smoothedFractalResult.y * 8.0 + FRAME_ANGLE * 3.0),
+        sin(smoothedFractalResult.z * 12.0 + FRAME_ANGLE * 1.0)
+    );
+    color = color * 0.5 + 0.5; // Remap to [0, 1]
+
+    // Apply derivative-based smoothing globally
     color = mix(color, vec3(0.5), smoothFactor * 0.5);
 
-    // Calculate anti-aliasing weight
-    float centerFade = smoothstep(AA_RADIUS * (1.0 + INNER_CIRCLE_BLEND), 0.0, originalDist);
-    float aaWeight = centerFade * pow(centerFade, mix(0.5, 2.0, INNER_CIRCLE_BLEND));
-
-    // Add fractal detail and temporal anti-aliasing in center
-    if (aaWeight > 0.05) {
-        // Use FRAME_ANGLE for offset
-        vec2 centerDetailUV = zoomedUV + vec2(0.01 * sin(FRAME_ANGLE * 15.0), 0.01 * cos(FRAME_ANGLE * 11.0));
-        vec4 centerFractalResult = generateFractal(centerDetailUV, multiplier, variation, MAX_ITER);
-
-        // Calculate center color based on cyclical FRAME_ANGLE
-        vec3 centerDetailColor = vec3(
-            sin(centerFractalResult.x * 10.0 + FRAME_ANGLE * 2.0),
-            cos(centerFractalResult.y * 8.0 + FRAME_ANGLE * 3.0),
-            sin(centerFractalResult.z * 12.0 + FRAME_ANGLE * 1.0)
-        );
-        centerDetailColor = centerDetailColor * 0.5 + 0.5;
-
-        // Blend the main color with the center detail color
-        color = mix(color, centerDetailColor, aaWeight * 0.7);
-
-        // Apply temporal anti-aliasing using the previous frame's color
-        vec4 prevFrameColor = getLastFrameColor(originalUV);
-        float temporalBlend = mix(0.1, 0.6, INNER_CIRCLE_BLEND) * aaWeight * aaWeight;
+    // Apply temporal anti-aliasing using the previous frame's color in the center
+    if (aaWeight > 0.01) { // Lower threshold slightly if needed
+        vec4 prevFrameColor = getLastFrameColor(fragCoord / iResolution.xy); // Use original fragCoord for lookup
+        // Adjust temporal blend strength and profile
+        float temporalBlend = mix(0.1, 0.8, INNER_CIRCLE_BLEND) * aaWeight * aaWeight; // Potentially stronger blend
         color = mix(color, prevFrameColor.rgb, temporalBlend * 0.5);
     }
 
+    // Final color output
     fragColor = vec4(color, 1.0);
 }
