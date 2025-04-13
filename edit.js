@@ -321,18 +321,15 @@ const FeatureAdder = () => {
     const handleShaderParam = async (searchParams) => {
         if (!searchParams.has('shader')) return false
 
-        try {
-            const shaderCode = await getRelativeOrAbsoluteShaderUrl(searchParams.get('shader'))
-            localStorage.setItem('cranes-manual-code', shaderCode)
-            const newUrl = new URL(window.location)
-            newUrl.searchParams.delete('shader')
-            window.history.replaceState({}, '', newUrl)
-            window.location.reload()
-            return true
-        } catch (error) {
-            console.error('Failed to fetch shader:', error)
-            return false
-        }
+        const shaderPath = searchParams.get('shader')
+        const shaderCode = await getRelativeOrAbsoluteShaderUrl(shaderPath)
+        localStorage.setItem('cranes-manual-code', shaderCode)
+        // Remove shader param from URL *without* reloading
+        const newUrl = new URL(window.location)
+        newUrl.searchParams.delete('shader')
+        window.history.replaceState({}, '', newUrl)
+        // Return the fetched code instead of reloading
+        return shaderCode
     }
 
     const initializeFeatures = (searchParams) => {
@@ -360,13 +357,15 @@ const FeatureAdder = () => {
         const init = async () => {
             const searchParams = new URLSearchParams(window.location.search)
 
-            const shaderHandled = await handleShaderParam(searchParams)
-            if (shaderHandled) return
+            // Attempt to load shader from URL param first
+            const loadedShaderCode = await handleShaderParam(searchParams)
 
-            const initialFeatures = initializeFeatures(searchParams)
+            window.cranes.setEditorCode(loadedShaderCode)
+            const currentSearchParams = new URLSearchParams(window.location.search) // Re-read potentially cleaned params
+            const initialFeatures = initializeFeatures(currentSearchParams)
             setFeatures(initialFeatures)
             prevFeaturesLength.current = Object.keys(initialFeatures).length
-            handleUIState(searchParams)
+            handleUIState(currentSearchParams) // Use potentially cleaned params here too
         }
 
         init()
