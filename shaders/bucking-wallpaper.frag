@@ -1,4 +1,4 @@
-zuniform float knob_1;
+uniform float knob_1;
 uniform float knob_2;
 uniform float knob_3;
 
