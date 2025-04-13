@@ -270,14 +270,15 @@ const FeatureAdder = () => {
     }, [isDrawerOpen, isPresentationMode]) // Add dependencies
 
     const openRendererInANewWindowAndControlIt = () => {
-       // open renderer in a new window
-       const newWindow = window.open(window.location.href.replace('edit', 'index'), '_blank', 'width=1000,height=1000')
+       // create a new window, but replace 'edit' with 'index'. Keep all other params
+       const newUrl = window.location.href.replace('edit', 'index')
+       const newWindow = window.open(newUrl, '_blank', `width=${window.innerWidth},height=${window.innerHeight}`)
        sendCranesStateToNewWindow(newWindow)
     }
 
     const sendCranesStateToNewWindow = (newWindow) => {
         //get the shaderCode = window.cranes.shader
-        const shaderCode = window.cranes.shader
+        const shaderCode = localStorage.getItem('cranes-manual-code')
         newWindow.postMessage({ type: 'update-params', data: { shaderCode, ...window.cranes.flattenFeatures()}})
         requestAnimationFrame( () => sendCranesStateToNewWindow(newWindow))
     }
