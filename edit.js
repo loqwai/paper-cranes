@@ -270,15 +270,14 @@ const FeatureAdder = () => {
     }, [isDrawerOpen, isPresentationMode]) // Add dependencies
 
     const openRendererInANewWindowAndControlIt = () => {
-       // create a new window, but replace 'edit' with 'index'. Keep all other params
-       const newUrl = window.location.href.replace('edit', 'index')
-       const newWindow = window.open(newUrl, '_blank', `width=${window.innerWidth},height=${window.innerHeight}`)
+       // open renderer in a new window
+       const newWindow = window.open(window.location.href.replace('edit', 'index'), '_blank', 'width=1000,height=1000')
        sendCranesStateToNewWindow(newWindow)
     }
 
     const sendCranesStateToNewWindow = (newWindow) => {
         //get the shaderCode = window.cranes.shader
-        const shaderCode = localStorage.getItem('cranes-manual-code')
+        const shaderCode = window.cranes.shader
         newWindow.postMessage({ type: 'update-params', data: { shaderCode, ...window.cranes.flattenFeatures()}})
         requestAnimationFrame( () => sendCranesStateToNewWindow(newWindow))
     }
@@ -321,15 +320,18 @@ const FeatureAdder = () => {
     const handleShaderParam = async (searchParams) => {
         if (!searchParams.has('shader')) return false
 
-        const shaderPath = searchParams.get('shader')
-        const shaderCode = await getRelativeOrAbsoluteShaderUrl(shaderPath)
-        localStorage.setItem('cranes-manual-code', shaderCode)
-        // Remove shader param from URL *without* reloading
-        const newUrl = new URL(window.location)
-        newUrl.searchParams.delete('shader')
-        window.history.replaceState({}, '', newUrl)
-        // Return the fetched code instead of reloading
-        return shaderCode
+        try {
+            const shaderCode = await getRelativeOrAbsoluteShaderUrl(searchParams.get('shader'))
+            localStorage.setItem('cranes-manual-code', shaderCode)
+            const newUrl = new URL(window.location)
+            newUrl.searchParams.delete('shader')
+            window.history.replaceState({}, '', newUrl)
+            window.location.reload()
+            return true
+        } catch (error) {
+            console.error('Failed to fetch shader:', error)
+            return false
+        }
     }
 
     const initializeFeatures = (searchParams) => {
@@ -357,20 +359,13 @@ const FeatureAdder = () => {
         const init = async () => {
             const searchParams = new URLSearchParams(window.location.search)
 
-            // Attempt to load shader from URL param first
-            const loadedShaderCode = await handleShaderParam(searchParams)
+            const shaderHandled = await handleShaderParam(searchParams)
+            if (shaderHandled) return
 
-            // If shader code was loaded from param, update the editor
-            // Wait for Monaco editor to be ready before trying to set code
-            await window.monacoReadyPromise
-            window.cranes.setEditorCode(loadedShaderCode)
-            if (typeof loadedShaderCode === 'string') {
-            // If handleShaderParam returned undefined (no shader param),
-            const currentSearchParams = new URLSearchParams(window.location.search) // Re-read potentially cleaned params
-            const initialFeatures = initializeFeatures(currentSearchParams)
+            const initialFeatures = initializeFeatures(searchParams)
             setFeatures(initialFeatures)
             prevFeaturesLength.current = Object.keys(initialFeatures).length
-            handleUIState(currentSearchParams) // Use potentially cleaned params here too
+            handleUIState(searchParams)
         }
 
         init()

@@ -1,10 +1,3 @@
-
-
-// Promise to signal Monaco editor readiness
-let resolveMonacoReady;
-const monacoReadyPromise = new Promise(resolve => { resolveMonacoReady = resolve; });
-window.monacoReadyPromise = monacoReadyPromise;
-
 async function init() {
     //if we have a shader in the query param, return
     // if (new URLSearchParams(window.location.search).get('shader')) return
@@ -22,11 +15,6 @@ async function init() {
         minimap: { enabled: false },
         automaticLayout: true,
     });
-
-    // Make the editor instance accessible
-    window.cranes.setEditorCode = (code) => editor.setValue(code);
-    window.cranes.getEditorCode = () => editor.getValue();
-
     // add the web workers
     self.MonacoEnvironment = {
         getWorkerUrl: () => workerUrl
@@ -690,9 +678,6 @@ async function init() {
             }
         }
     })
-
-    // Signal that the editor is ready
-    resolveMonacoReady();
 }
 
 // Wait for Monaco to be loaded from CDN
