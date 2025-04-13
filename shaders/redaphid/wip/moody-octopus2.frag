@@ -34,8 +34,8 @@ vec2 julia(vec2 uv,float t){
   vec3 prevColor = getLastFrameColor(texUv).rgb;
 
   // Julia set parameters
-  float cRe = sin(t)*.7885 + (spectralSkewNormalized/100.);
-  float cIm = cos(t)*.7885 + (spectralRolloffNormalized / 100.);
+  float cRe = sin(t)*.7885 + (spectralSkewNormalized/200.);
+  float cIm = cos(t)*.7885 + (spectralRolloffNormalized / 200.);
 
   // Apply the Julia set formula
   int maxIter = 64;
@@ -76,9 +76,9 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
     float whiteAmount = getWhiteAmount(texUv, pixelSize);
 
     // Scale UV for interesting fill pattern (texture sampling)
-    vec2 scaledUv = fract(uv * (1.0 + spectralCentroidZScore * 0.5));
-    scaledUv += vec2(sin(t * 3.0) * spectralSpreadZScore * 0.2,
-                    cos(t * 3.0) * spectralKurtosisZScore * 0.2);
+    vec2 scaledUv = fract(uv * (1.0 + spectralCentroidZScore * 0.2));
+    scaledUv += vec2(sin(t * 3.0) * spectralSpreadZScore * 0.1,
+                    cos(t * 3.0) * spectralKurtosisZScore * 0.1);
     scaledUv = fract(scaledUv);
 
     // Get color from previous frame with scaled UV
@@ -90,17 +90,17 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
     vec3 c = vec3(1.0, 1.0, 1.0);    // Frequency
     vec3 d = vec3(0.0, 0.33, 0.67);  // Phase offset for each channel
 
-    // Create a smooth color transition based on position and audio
-    float colorT = length(uv) * 0.5 + t * 0.1;
-    colorT += spectralCentroidZScore * 0.2;  // Audio influence on color selection
+    // Create a base time/audio modulation value (no initial radial dependency)
+    float baseModulation = t * 0.1 + spectralCentroidZScore * 0.1;
 
     // Modulate palette parameters with audio features
-    b *= 0.5 + spectralFluxZScore * 0.5;  // Color intensity
-    c *= 1.0 + spectralSpreadZScore * 0.5; // Color variation speed
-    d += vec3(spectralRolloffZScore * 0.1); // Color phase shift
+    vec3 pal_b = b * (0.5 + spectralFluxZScore * 0.2);
+    vec3 pal_c = c * (1.0 + spectralSpreadZScore * 0.2);
+    vec3 pal_d = d + vec3(spectralRolloffZScore * 0.05);
 
-    // Generate base color from palette
-    vec3 baseColor = palette(colorT, a, b, c, d);
+    // Generate base color from palette - Placeholder, will be overwritten later
+    float colorT = sin(time/10000.);
+    vec3 baseColor = palette(colorT, a, b, c, d); // Removed old calculation
 
     // Add some variation based on audio features
     vec3 hsl = rgb2hsl(fillColor);
@@ -110,71 +110,81 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
     hsl = rgb2hsl(fillColor);
 
     // Add subtle variations
-    hsl.x = fract(hsl.x + spectralCentroidZScore * 0.1);
-    hsl.y = mix(0.6, 0.8, spectralFluxZScore * 0.5 + 0.5);
-    hsl.z = mix(0.4, 0.6, spectralCrestZScore * 0.5 + 0.5) + whiteAmount * 0.2;
+    hsl.x = fract(hsl.x + spectralCentroidZScore * 0.05);
+    hsl.y = mix(0.6, 0.8, spectralFluxZScore * 0.2 + 0.5);
+    hsl.z = mix(0.4, 0.6, spectralCrestZScore * 0.2 + 0.5) + whiteAmount * 0.2;
 
     vec3 fillColorFinal = hsl2rgb(fract(hsl));
 
     // Original shader code continues here
     // Keep UV continuous for effects
     uv += vec2(spectralSpreadMedian, spectralSpreadMedian)/100.;
-    uv += vec2(sin(t*2.)*(spectralCentroidZScore)/100.,
-               cos(t*2.)*(trebleZScore)/100.);
+    uv += vec2(sin(t*2.)*(spectralCentroidZScore)/200.,
+               cos(t*2.)*(trebleZScore)/200.);
 
     uv = julia(uv, t);
 
     // Sample previous frame color with smooth transitions (texture sampling)
-    vec3 prevColor = getLastFrameColor(fract(uv + vec2(bassZScore/100., spectralCentroidZScore/100.))).rgb;
+    vec3 prevColor = getLastFrameColor(fract(uv + vec2(bassZScore/200., spectralCentroidZScore/200.))).rgb;
 
-    // Create a complementary color scheme using the palette
+    // --- Emphasize Fractal Coloring ---
+    // Use post-Julia uv length and angle for more detailed coloring
+    float finalDist = length(uv);
+    float finalAngle = atan(uv.y, uv.x);
+
+    // --- Generate Palette Colors Based on Fractal Features ---
+    float paletteT = baseModulation + finalDist * 0.3 + finalAngle * 0.1; // New palette input based on fractal
+    baseColor = palette(paletteT, a, pal_b, pal_c, pal_d);
+    vec3 complementaryColor = palette(paletteT + 0.5, a, pal_b, pal_c, pal_d);
+
+    // Create a complementary color scheme using the palette, now influenced by final fractal state
     vec3 hslOriginal = vec3(0.5);
-    float complementaryT = colorT + 0.5;  // Offset for complementary colors
-    vec3 complementaryColor = palette(complementaryT, a, b, c, d);
-    hslOriginal = rgb2hsl(mix(baseColor, complementaryColor, sin(uv.x + t/100.) * 0.5 + 0.5));
+    // Modulate mix based on fractal angle and pre-Julia uv.x (sin input is now scaled differently)
+    hslOriginal = rgb2hsl(mix(baseColor, complementaryColor, sin(uv.x * 2.0 + finalAngle * 5.0 + t / 5.0) * 0.5 + 0.5));
 
-    // Normalize coordinates to -1.0 to 1.0 range for ripple effect
-    vec2 rippleUv = uv * vec2(bassZScore);
-    if(beat) rippleUv *= 2.1;
+    // Normalize coordinates for ripple effect (less emphasis now)
+    vec2 rippleUv = (fragCoord * 2.0 - iResolution.xy) / iResolution.y; // Use original uv for ripple base
+    rippleUv *= vec2(bassZScore * 0.5); // Reduce bass influence on ripple size
+    if(beat) rippleUv = mix(rippleUv, rippleUv * 1.2, 0.5); // Further soften beat effect
 
-    // Calculate ripple effect with smoother transitions
+    // Calculate ripple effect with smoother transitions & less intensity
     float distanceToCenter = length(rippleUv);
-    float ripple = sin(distanceToCenter*(8.)-t*1.5)*.3+.5;
+    // Reduce amplitude and slightly slow down ripple frequency
+    float ripple = sin(distanceToCenter*(6.)-t*1.0)*.05 + 0.95; // Much weaker ripple
 
-    // Generate harmonious color with smoother transitions
-    float hue = mod(t*0.5 + distanceToCenter*0.2 + colorT, 1.0);
-    vec3 color = hsl2rgb(vec3(hue, 0.6, 0.5));
+    // Generate harmonious color based on fractal structure
+    // Use finalDist and finalAngle for hue calculation, remove colorT dependency
+    float hue = mod(t*0.05 + finalDist*0.6 + finalAngle * 0.2, 1.0);
+    vec3 color = hsl2rgb(vec3(hue, 0.7, 0.55)); // Slightly increased saturation/brightness
 
-    // Apply ripple effect with reduced intensity
-    color *= mix(0.7, 1.0, ripple);
+    // Apply ripple effect weakly
+    color *= ripple; // Apply ripple as a subtle multiplier
 
-    // Smoother color mixing with previous frame
-    color = mix(prevColor, color, 0.0005);
+    // Smoother color mixing with previous frame (keep damping)
+    color = mix(prevColor, color, 0.001);
 
-    // Mix between original shader color and fill color based on white amount
+    // Mix between fractal/ripple color and fill color based on white amount
     color = mix(color, fillColorFinal, whiteAmount);
 
     vec3 prevHsl = rgb2hsl(prevColor);
 
-    // Add subtle color variations based on audio
-    hslOriginal.x += spectralCentroidZScore * 0.1;
+    // Add subtle color variations based on audio (keep these)
+    hslOriginal.x += spectralCentroidZScore * 0.05;
     if(hslOriginal.y < 0.5){
-        hslOriginal.x += spectralRolloffNormalized * 0.1;
+        hslOriginal.x += spectralRolloffNormalized * 0.05;
         hslOriginal.y += (prevHsl.x) * 0.1;
     }
-
     if(hslOriginal.z > 0.8) {
-        hslOriginal.z -= bassNormalized * 0.2;
-        hslOriginal.x += spectralKurtosisZScore * 0.1;
+        hslOriginal.z -= bassNormalized * 0.1;
+        hslOriginal.x += spectralKurtosisZScore * 0.05;
     }
-
     if(hslOriginal.z < 0.1) {
-        hslOriginal.z += spectralCrestZScore * 0.1;
+        hslOriginal.z += spectralCrestZScore * 0.05;
     }
 
-    // Final color blending with subtle variations
-    color = mix(hsl2rgb(hslOriginal), color, 0.7);
-    color = fract(color + (color * bassZScore));
+    // --- Final color blending: Prioritize fractal color ---
+    // Give more weight to hslOriginal (derived from fractal structure)
+    color = mix(hsl2rgb(hslOriginal), color, 0.3); // Was 0.7, now favors hslOriginal
 
     fragColor = vec4(color, 1.);
 }
