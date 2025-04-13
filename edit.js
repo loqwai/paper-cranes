@@ -360,7 +360,12 @@ const FeatureAdder = () => {
             // Attempt to load shader from URL param first
             const loadedShaderCode = await handleShaderParam(searchParams)
 
+            // If shader code was loaded from param, update the editor
+            // Wait for Monaco editor to be ready before trying to set code
+            await window.monacoReadyPromise
             window.cranes.setEditorCode(loadedShaderCode)
+            if (typeof loadedShaderCode === 'string') {
+            // If handleShaderParam returned undefined (no shader param),
             const currentSearchParams = new URLSearchParams(window.location.search) // Re-read potentially cleaned params
             const initialFeatures = initializeFeatures(currentSearchParams)
             setFeatures(initialFeatures)
