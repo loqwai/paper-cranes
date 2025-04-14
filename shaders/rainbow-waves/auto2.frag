@@ -7,12 +7,12 @@
 
 // Audio reactive parameters
 #define WAVE_SPEED knob_71
-#define PATTERN_SCALE knob_72
+#define PATTERN_SCALE mix(0.1,100., sin(animateEaseInExpo(time/1000.)))
 #define RIPPLE_CHAOS knob_73      // How randomly ripples are placed
 #define RIPPLE_SPREAD knob_73      // How far from center ripples appear
 #define RIPPLE_STRENGTH knob_78      // How strong ripples are
-#define COLOR_SHIFT knob_79       // Base color shift
-#define BEAT_INTENSITY knob_78
+#define COLOR_SHIFT animatePulse(time/10000.)       // Base color shift
+#define BEAT_INTENSITY mix(0.,100., animateEaseInExpo(cos(time*3.14*2.)))
 
 // Ripple characteristics
 #define RIPPLE_SPEED knob_72
@@ -21,7 +21,7 @@
 #define RIPPLE_AGE_DECAY mapValue(knob_79, -1.,1., knob_14, knob_15)
 #define RIPPLE_BIRTH_STAGGER knob_16
 #define RIPPLE_LIFE_DURATION knob_74
-#define RIPPLE_BASE_STRENGTH knob_77
+#define RIPPLE_BASE_STRENGTH mix(0.12,0.14,animateSmooth(cos(time/10.)))
 
 // Color and blending
 #define COLOR_PERSISTENCE knob_71
