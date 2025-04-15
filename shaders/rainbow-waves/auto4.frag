@@ -1,4 +1,4 @@
-//https://visuals.beadfamous.com/edit?knob_14.min=-1&knob_14.max=1&knob_15=0.22&knob_15.min=-1&knob_15.max=1&knob_71=0.608&knob_71.min=-4.6&knob_71.max=1&knob_72=3.996&knob_72.min=0&knob_72.max=14.8&knob_73=0.75&knob_73.min=0&knob_73.max=3&knob_74=0.436&knob_74.min=0.1&knob_74.max=2.5&knob_76=0.77&knob_76.min=0&knob_76.max=1&knob_75=2.8&knob_75.min=0&knob_75.max=2.8&knob_77=0.379&knob_77.min=0.1&knob_77.max=3.2&knob_78=8.911&knob_78.min=0.1&knob_78.max=10&knob_79=0.73&knob_79.min=0&knob_79.max=1&knob_14=0.1
+//https://visuals.beadfamous.com/edit?knob_14.min=-1&knob_14.max=1&knob_15=0.24&knob_15.min=-1&knob_15.max=1&knob_71=0.608&knob_71.min=-4.6&knob_71.max=1&knob_72=3.996&knob_72.min=0&knob_72.max=14.8&knob_73=0.75&knob_73.min=0&knob_73.max=3&knob_74=0.436&knob_74.min=0.1&knob_74.max=2.5&knob_76=0.77&knob_76.min=0&knob_76.max=1&knob_75=2.8&knob_75.min=0&knob_75.max=2.8&knob_77=0.379&knob_77.min=0.1&knob_77.max=3.2&knob_78=8.911&knob_78.min=0.1&knob_78.max=10&knob_79=0.73&knob_79.min=0&knob_79.max=1&knob_14=0.1&fullscreen=true
 // Constants
 #define MAX_RIPPLES 12
 #define PI 3.14159265359
