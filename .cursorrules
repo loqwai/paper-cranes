@@ -265,14 +265,6 @@ You make sure the shaders are centered on the viewport; The object of interest s
 ### Knobs
 Knobs are uniforms that are made implicitly available to the shader as floats from 0-1
 I have the following knobs:
-
-knob_{14-22}
-knob_{3-11}
-knob_{71-79}
-knob_{30-37}
-knob_40
-knob_41
-knob_{43-47}
-knob_60
+knob_{1-63}
 
 

@@ -142,7 +142,7 @@ const FeatureEditor = ({ name, feature, onChange, onDelete }) => {
     }, [feature])
 
     return html`
-        <div className="edit-feature" key=${name}>
+        <div class="edit-feature" key=${name}>
             <div class="feature-header">
                 <div class="feature-name">
                     <span>${name}</span>
@@ -190,6 +190,7 @@ const FeatureAdder = () => {
     const [newFeatureName, setNewFeatureName] = useState('')
     const [isDrawerOpen, setIsDrawerOpen] = useState(false)
     const [isPresentationMode, setIsPresentationMode] = useState(false)
+    const [lastChangedKnob, setLastChangedKnob] = useState(null)
     const toggleButtonRef = useRef(null)
     const drawerRef = useRef(null)
     const newFeatureInputRef = useRef(null)
@@ -317,6 +318,14 @@ const FeatureAdder = () => {
         }
     }, [isDrawerOpen])
 
+    // Effect to update the dedicated DOM element for last changed knob
+    useEffect(() => {
+        const displayElement = document.getElementById('last-knob-display')
+        if (displayElement) {
+            displayElement.textContent = lastChangedKnob ? `Last Knob: ${lastChangedKnob}` : ''
+        }
+    }, [lastChangedKnob])
+
     const handleShaderParam = async (searchParams) => {
         if (!searchParams.has('shader')) return false
 
@@ -380,6 +389,11 @@ const FeatureAdder = () => {
         updatedFeature.max = updatedFeature.max ?? 1
         updatedFeature.value = Math.round(updatedFeature.value * 1000) / 1000
         setFeatures((prev) => ({ ...prev, [name]: updatedFeature }))
+
+        // Update last changed knob state if it's a knob
+        if (name.startsWith('knob_')) {
+            setLastChangedKnob(name)
+        }
     }
 
     window.cranes.updateFeature = (name, value) => {
@@ -411,19 +425,25 @@ const FeatureAdder = () => {
 
     return html`
         <${Fragment}>
+            {/* Display last changed knob near the toggle button - REMOVED */}
+            {/* ${lastChangedKnob && html`
+                <div class="last-knob-indicator">
+                    Last Knob: ${lastChangedKnob}
+                </div>
+            `} */}
             <button
                 ref=${toggleButtonRef}
-                className="drawer-toggle"
+                class="drawer-toggle"
                 onClick=${toggleDrawer}
             >
                 ${isDrawerOpen ? '×' : '⚙️'}
             </button>
             <div
                 ref=${drawerRef}
-                className=${`sparkly animated ${isDrawerOpen ? 'open' : ''}`}
+                class=${`sparkly animated ${isDrawerOpen ? 'open' : ''}`}
                 id="feature-editor"
             >
-                <div className="new-feature">
+                <div class="new-feature">
                     <input
                         type="text"
                         value=${newFeatureName}
