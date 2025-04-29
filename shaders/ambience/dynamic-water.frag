@@ -1,26 +1,29 @@
+//https://visuals.beadfamous.com/edit?knob_11=0.591&knob_11.min=0&knob_11.max=1&knob_9=0.803&knob_9.min=0&knob_9.max=1&knob_14=0.976&knob_14.min=0&knob_14.max=1&knob_13=0&knob_13.min=0&knob_13.max=1&knob_12=0&knob_12.min=0&knob_12.max=1&knob_10=0.071&knob_10.min=0&knob_10.max=1&knob_5=0.079&knob_5.min=0&knob_5.max=1&knob_4=1&knob_4.min=0&knob_4.max=1&knob_3=0.071&knob_3.min=0&knob_3.max=1&knob_2=0&knob_2.min=0&knob_2.max=1&knob_1=0.039&knob_1.min=0&knob_1.max=1&knob_6=0.843&knob_6.min=0&knob_6.max=1&knob_7=0&knob_7.min=0&knob_7.max=1&knob_0=0.268&knob_0.min=0&knob_0.max=1&knob_8=0.772&knob_8.min=0&knob_8.max=1&knob_15_2=0&knob_15_2.min=0&knob_15_2.max=1&knob_15=0.701&knob_15.min=0&knob_15.max=1&knob_10_2=0&knob_10_2.min=0&knob_10_2.max=1&knob_1_2=0&knob_1_2.min=0&knob_1_2.max=1&knob_1_4=0&knob_1_4.min=0&knob_1_4.max=1&knob_23=0.898&knob_23.min=0&knob_23.max=1&knob_16=0.386&knob_16.min=0&knob_16.max=1&knob_17=0.26&knob_17.min=0&knob_17.max=1&knob_18=0&knob_18.min=0&knob_18.max=1&knob_19=0.843&knob_19.min=0&knob_19.max=1&knob_22=0.016&knob_22.min=0&knob_22.max=1&knob_20=0.126&knob_20.min=0&knob_20.max=1&knob_24=0.701&knob_24.min=0&knob_24.max=1&knob_21=0.394&knob_21.min=0&knob_21.max=1&knob_0_4=0&knob_0_4.min=0&knob_0_4.max=1&knob_0_2=0&knob_0_2.min=0&knob_0_2.max=1&knob_0_5=0.89&knob_0_5.min=0&knob_0_5.max=1&knob_1_5=0.669&knob_1_5.min=0&knob_1_5.max=1&knob_2_2=0&knob_2_2.min=0&knob_2_2.max=1&knob_3_2=0&knob_3_2.min=0&knob_3_2.max=1&knob_4_2=0&knob_4_2.min=0&knob_4_2.max=1&knob_14_2=0&knob_14_2.min=0&knob_14_2.max=1&knob_31=0.252&knob_31.min=0&knob_31.max=1&knob_19_2=0&knob_19_2.min=0&knob_19_2.max=1&knob_7_2=0&knob_7_2.min=0&knob_7_2.max=1&knob_8_2=0&knob_8_2.min=0&knob_8_2.max=1
 #define TWO_PI 6.28318530718
+
+uniform float knob_1;
+uniform float knob_0_5;
+uniform float knob_1_5;
+
 //--------------------------------------------------------------
 // ⬆️  put these above mainImage()
 //--------------------------------------------------------------
 mat2  rot(float a){ return mat2(cos(a),-sin(a),sin(a),cos(a)); }
-//https://visuals.beadfamous.com/edit?knob_72=0.97&knob_72.min=0&knob_72.max=1&knob_73=0.25&knob_73.min=0&knob_73.max=1&knob_75=0&knob_75.min=0&knob_75.max=1&knob_76=0.92&knob_76.min=0&knob_76.max=1&knob_71=0&knob_71.min=0&knob_71.max=1&knob_74=0.87&knob_74.min=0&knob_74.max=1&knob_77=1&knob_77.min=0&knob_77.max=1&knob_79=0.76&knob_79.min=0&knob_79.max=1&knob_78=1&knob_78.min=0&knob_78.max=1
+
+#define PAN_X mix(-0.5, 0.5, knob_0_5)
+#define PAN_Y mix(-0.5, 0.5, knob_1_5)
 // A little spiral‑ish helper to keep the flow alive
 float spiralNoise(vec2 p){
-    // p += (vec2(sin(time),cos(time)) - vec2(0.5));
     float a = 0.0, f = 2.0;
-    for(int i=0;i<10;i++){
+    for(int i=0;i<3;i++){
         a += abs(sin(p.x*f)+cos(p.y*f))/f;
         p   = rot(0.6)*p + time*0.04;   // slow swirl
         f  *= 1.95;
     }
-    return sin(a * bassNormalized * length(p) + (animateEaseInOutElastic(time/10.)/1000.));
+    return a;
 }
 // Basic 2D pseudo-fractal (FBM) noise
 float simpleNoise(vec2 p) {
-    // Replace with your preferred noise function.
-    // This quick sine-based approach is just for illustration.
-    float offsetMagnitude = energy;
-    vec2 offset = vec2((random(p)/offsetMagnitude) - offsetMagnitude/2.) ;
     return spiralNoise(p);
 }
 
@@ -38,7 +41,7 @@ float fbm(vec2 p) {
 vec2 domainWarp(vec2 p, float warp, float offset) {
     // Offset helps differentiate multiple warp passes
     float n1 = fbm(p - offset);
-    float n2 = fbm(p + spectralCentroid - offset);
+    float n2 = fbm(p + 3.14159 - offset);
     return p + warp * vec2(n1, n2);
 }
 
@@ -60,7 +63,7 @@ float deepFractal(vec2 p){
 }
 
 // ─── helpers ────────────────────────────────────────────────
-float hash(vec2 p){ return staticRandom(p); }
+float hash(vec2 p){ return spiralNoise(p) * staticRandom(p); }
 
 // cheap Voronoi-ish cell distance
 float cell(vec2 p){
@@ -99,6 +102,7 @@ float varied(vec2 p,float t){
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Normalize coordinates
     vec2 uv = fragCoord.xy / iResolution.xy;
+    uv += vec2(PAN_X, PAN_Y);
     // Calculate aspect-corrected coordinates, centered and scaled by the shorter dimension
     vec2 p = (2.0 * fragCoord.xy - iResolution.xy) / min(iResolution.x, iResolution.y);
 
@@ -106,8 +110,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec3 prevRGB = getLastFrameColor(uv).rgb;
     vec3 lastCol = rgb2hsl(prevRGB);
-    lastCol.z = clamp(lastCol.z + (knob_79-0.5), 0., 1.);
-    lastCol.y = lastCol.y > 0.8 ? lastCol.y : lastCol.y + (lastCol.z - 0.5);
     // Time factor
     float t = time * (0.05 + 0.05 * knob_72); // knob_10 -> overall speed
 
@@ -117,7 +119,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     p *= baseScale;
 
     // Warp pass #1
-    p = domainWarp(p, knob_73 * length(prevRGB), t * 0.1);  // knob_11 -> warp strength
+    p = domainWarp(p, knob_15 * 0.4, t * 0.1);  // knob_11 -> warp strength
 
     // Warp pass #2, let knob_0 intensify
     p = domainWarp(p, knob_10 * 0.3, -t * 0.07);
@@ -133,8 +135,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float base = fbm(p * extraScale + t * 0.2);          // old look
     float f = deepFractal(p * extraScale);           // new depth
 // ─── inside mainImage(), replace pattern calc ───────────────
-    float pattern = varied(p*mix(energyStandardDeviation,energyZScore,animateSmoothBounce(time))+t*0.2, t);
-    pattern = mix(pattern, pattern*pattern, knob_60); // contrast warp
+    float pattern = varied(p*mix(1.0,4.0,knob_8)+t*0.2, t);
+    pattern = mix(pattern, pattern*pattern, knob_9); // contrast warp
 
     // Hue shift: slow drift plus knob_14
     float hueShift = t * (0.1 + knob_14 * 0.2);
@@ -160,7 +162,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Use knob_1 to shift brightness up/down
     lit += knob_1 * 0.1;
     // Use knob_15 as overall brightness multiplier
-    lit *= (1.0 + knob_15 * 1.0);
+    lit *= (1.0 + knob_3 * 1.0);
 
     // Extra hack: knob_6 can also push saturation for a "pop" effect
     sat += knob_6 * 0.1;
@@ -197,23 +199,23 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     avgHueVec += vec2(cos(n3_hsl.x * TWO_PI), sin(n3_hsl.x * TWO_PI));
     avgHueVec += vec2(cos(n4_hsl.x * TWO_PI), sin(n4_hsl.x * TWO_PI));
     float avgHue = atan(avgHueVec.y, avgHueVec.x) / TWO_PI;
-    avgHue = animateBounce(avgHue);
+    if (avgHue < 0.0) avgHue += 1.0;
 
     float avgSat = (n1_hsl.y + n2_hsl.y + n3_hsl.y + n4_hsl.y) / 4.0;
     float avgLum = (n1_hsl.z + n2_hsl.z + n3_hsl.z + n4_hsl.z) / 4.0;
 
     // --- Define Animal-like Behaviors using Knobs 3-11 ---
-    #define GROUPING_STRENGTH ( spectralFluxMedian)     // Slightly stronger base grouping
-    #define HUE_VARIATION (length(uv) + pow(spectralEntropyNormalized, 4.))     // Further reduced base random hue shifts
-    #define HUNGER_DRIVE (bassZScore)       // How strongly creatures seek luminance (energy)
-    #define FEEDING_EFFICIENCY (spectralFluxMedian) // How much saturation increases upon feeding
-    #define METABOLISM (animateBounce(treble/100. + length(centerUv(uv))) * 0.2 *length(vec2(lastCol.x, uv.x)))        // Natural rate of luminance (energy) decay
+    #define GROUPING_STRENGTH (sin(time) * 0.55)     // Slightly stronger base grouping
+    #define HUE_VARIATION (sin(time/1000.) * length(uv))
+    #define HUNGER_DRIVE (knob_13)       // How strongly creatures seek luminance (energy)
+    #define FEEDING_EFFICIENCY (0.01) // How much saturation increases upon feeding
+    #define METABOLISM (knob_17)        // Natural rate of luminance (energy) decay
     #define SATURATION_DECAY (animateEaseInOutExpo(time) * 0.15)    // Natural rate of saturation decay
-    #define PHEROMONE_STRENGTH (animateEaseInQuad(time))   // Attraction/Repulsion based on avg neighbor hue
-    #define BLOB_THRESHOLD (1. - bassNormalized, 0.5)    // Luminance threshold below which feeding/strong grouping occurs
-    #define ENVIRONMENT_FOOD (energyMedian)  // Ambient energy available
-    #define HUE_DAMPING (0.75 - spectralCrestStandardDeviation * 0.20) // Constrained damping factor [0.75, 0.95]
-    #define MAX_HUE_CHANGE .08 // Limit max hue shift per frame
+    #define PHEROMONE_STRENGTH (knob_16)   // Attraction/Repulsion based on avg neighbor hue
+    #define BLOB_THRESHOLD (knob_22)    // Luminance threshold below which feeding/strong grouping occurs
+    #define ENVIRONMENT_FOOD (knob_18)  // Ambient energy available
+    #define HUE_DAMPING (0.75 + knob_19) // Constrained damping factor [0.75, 0.95]
+    #define MAX_HUE_CHANGE knob_20 // Limit max hue shift per frame
 
     // --- Apply Behaviors to currentHSL ---
     vec3 lifeAdjustedHSL = currentHSL;
@@ -231,7 +233,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // 3. Grouping / Flocking / Tribal Behavior
     float totalAttraction = 1e-5; // Avoid divide by zero
-    vec2 targetHueVec = vec2(energy);
+    vec2 targetHueVec = vec2(0.0);
     float currentHueRad = lifeAdjustedHSL.x * TWO_PI;
 
     // Calculate attraction to each neighbor based on hue similarity
@@ -253,7 +255,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Calculate the target hue based on weighted neighbor average
     float targetHue = atan(targetHueVec.y, targetHueVec.x) / TWO_PI;
-    if (targetHue < bassZScore) targetHue += 1.0;
+    if (targetHue < 0.0) targetHue += 1.0;
 
     // Calculate difference towards the *tribal* target hue
     float tribalHueDiff = targetHue - lifeAdjustedHSL.x;
@@ -263,9 +265,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float currentGrouping = GROUPING_STRENGTH + hungerFactor * 0.3; // Group tighter when hungry
     float hueChange = currentGrouping * tribalHueDiff; // Pull towards tribal hue
 
-    // 4. Hue Variation / Randomness (Reduced when hungry)
+    // 4. Hue Variation
     float currentHueVariation = HUE_VARIATION * (1.0 - hungerFactor * 0.7); // Less variation when hungry
-    hueChange += (random(uv + time) - 0.5) * currentHueVariation;
+    hueChange +=  currentHueVariation;
 
     // 5. Clamp and Apply Damped Hue Change
     hueChange = clamp(hueChange, -MAX_HUE_CHANGE, MAX_HUE_CHANGE); // Clamp before damping
@@ -278,19 +280,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Feedback blending with knob_17 (using the life-adjusted color)
     // Lower knob_17 -> stronger feedback from last frame
-    float feedbackFactor = clamp(length(uv)/spectralRoughnessMedian, 0.0, 1.0);
-    vec3 finalHSL = fract(mix(lastCol, lifeAdjustedHSL, lifeAdjustedHSL.y)); // Use life-adjusted color
+    float feedbackFactor = clamp(length(uv), 0.0, 1.0);
+    vec3 finalHSL = fract(mix(lastCol, lifeAdjustedHSL, feedbackFactor)); // Use life-adjusted color
 
     // Another small twist: knob_1 can also shift hue a bit in feedback
-    finalHSL.x = fract(finalHSL.x + knob_71 * 0.05);
-    while(finalHSL.z > 0.5) {
-        finalHSL.x = mix(finalHSL.x, pitchClassMedian, finalHSL.z);
-        finalHSL.z = finalHSL.z - spectralSpreadMedian;
-        finalHSL.y = mix(finalHSL.y, 0.8, 0.7);
-    }
+    finalHSL.x = fract(finalHSL.x + knob_7 * 0.15);
+
     // Convert final HSL back to RGB
     vec3 finalRGB = hsl2rgb(finalHSL);
-    finalRGB = mix(prevRGB, finalRGB, mix(0.02, 0.03, animateBounce(time)));
+    finalRGB = mix(prevRGB, finalRGB, knob_23);
     fragColor = vec4(finalRGB, 1.0);
 }
-
