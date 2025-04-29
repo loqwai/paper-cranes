@@ -5,7 +5,7 @@ const CC = 0xb0 // Control Change message type
 
 // Track seen knob/channel combinations and their assigned names
 const seen = new Map()
-let counter = 0
+let counter = 1
 
 const isAbsoluteEncoder = (knob, value) => {
   if (value >= 30 && value <= 100) absoluteKnobs.add(knob)
