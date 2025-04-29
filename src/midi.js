@@ -1,9 +1,11 @@
 "use strict"
-const relativeKnobs = new Set()
-
 const BASE_SENSITIVITY = 0.01 // Base sensitivity that will be scaled by range
-
 const absoluteKnobs = new Set()
+const CC = 0xb0 // Control Change message type
+
+// Track seen knob/channel combinations and their assigned names
+const seen = new Map()
+let counter = 0
 
 const isAbsoluteEncoder = (knob, value) => {
   if (value >= 30 && value <= 100) absoluteKnobs.add(knob)
@@ -35,7 +37,6 @@ function updateKnobValue(knob, value) {
 
   // Scale sensitivity by the range of the knob
   const scaledSensitivity = BASE_SENSITIVITY * range
-  // is the value closer to 0 or 127?
 
   if (value <= 63) {
     // Counter-clockwise
@@ -57,18 +58,17 @@ navigator
   .then((midiAccess) => {
     midiAccess.inputs.forEach((input) => {
       input.addEventListener("midimessage", (message) => {
-        console.log("midimessage", message)
-        const [command, control, value] = message.data
+        const [status, control, value] = message.data
 
-        // Check if it's a Control Change message (0xB0 to 0xBF)
-        const isCC = (command & 0xf0) === 0xb0
-        if (!isCC) return // Only handle CC messages
+        const chan = status & 0x0f
+        const key = `${chan}:${control}`
 
-        // Extract channel (1-16) from the command byte
-        const channel = (command & 0x0f) + 1
+        // Handle rotation controls
+        if (!seen.has(key)) seen.set(key, `knob_${counter++}`)
 
-        // Generate knob name based on control and correct channel
-        const knobName = channel === 1 ? `knob_${control}` : `knob_${control}_${channel}`
+        const knobName = seen.get(key)
+
+        // Update the knob value
         updateKnobValue(knobName, value)
       })
     })
