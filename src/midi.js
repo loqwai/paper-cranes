@@ -57,7 +57,6 @@ navigator
   .then((midiAccess) => {
     midiAccess.inputs.forEach((input) => {
       input.addEventListener("midimessage", (message) => {
-        console.log("midimessage", message)
         const [command, control, value] = message.data
 
         // Check if it's a Control Change message (0xB0 to 0xBF)
