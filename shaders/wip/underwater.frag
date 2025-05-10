@@ -1,3 +1,7 @@
+// Original: Adapted from "Psychedelic Trip" style shaders
+// Refactored for clarity, descriptive names, and HSL palette integration
+
+// --- Base Colors & Iterations ---
 #define GOLD_HSL vec3(0.13f, 0.9f, 0.55f) // Bright Gold
 #define DARK_BLUE_HSL vec3(0.6f, 0.85f, 0.3f) // Dark Blue
 #define ITERATIONS 19.0f
@@ -48,7 +52,8 @@
 #define BASE_COLOR_DRIVER_Z_VEC vec4(1.0f, 2.0f, 3.0f, 0.0f) // Constant vector for color driving term
 #define FEEDBACK_METRIC_UPDATE_SCALE 0.1f         // Scale for averaging intensity into feedback metric
 #define FEEDBACK_METRIC_CLAMP_MAX 10.0f           // Max clamp for visual_feedback_metric
-#define PEAK_METRIC_AVG_INTENSITY_SCALE 0.025f    // Scales average_intensity for mapped_peak_metric
+#define BASE_PEAK_METRIC_AVG_INTENSITY_SCALE 0.025f // Base scale for average_intensity for mapped_peak_metric
+#define GOLD_SPARK_OCCURRENCE_FACTOR 1.0f         // Higher value = more gold sparks tend to appear. Modulates the effect of BASE_PEAK_METRIC_AVG_INTENSITY_SCALE.
 #define PEAK_METRIC_POW_EXPONENT 0.65f            // Exponent for mapped_peak_metric calculation
 #define UV_DARKENING_DIVISOR 250.0f               // Divisor for final UV-based darkening
 
@@ -138,7 +143,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     }
 
     float average_intensity = total_intensity_metric / ITERATIONS;
-    float mapped_peak_metric = pow(average_intensity * PEAK_METRIC_AVG_INTENSITY_SCALE, PEAK_METRIC_POW_EXPONENT);
+    float mapped_peak_metric = pow(average_intensity * BASE_PEAK_METRIC_AVG_INTENSITY_SCALE * GOLD_SPARK_OCCURRENCE_FACTOR, PEAK_METRIC_POW_EXPONENT);
     mapped_peak_metric = clamp(mapped_peak_metric, 0.0f, 1.0f);
 
     float uv_distance_darkening = dot(point, point) / UV_DARKENING_DIVISOR;
