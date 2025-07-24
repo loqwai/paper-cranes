@@ -9,24 +9,24 @@ async function captureShaderMedia(shaderPath, options = {}) {
         captureVideo = true,
         width = 800,
         height = 800,
-        outputDir = './screenshots'
+        outputDir = '../../screenshots'
     } = options;
     
     // Create directory structure
     const shaderName = shaderPath.split('/').pop().replace('.frag', '');
     const baseDir = path.join(outputDir, shaderName);
-    const screenshotsDir = path.join(baseDir, 'screenshots');
+    const imagesDir = path.join(baseDir, 'images');
     const videosDir = path.join(baseDir, 'videos');
     
     // Create directories
-    [baseDir, screenshotsDir, videosDir].forEach(dir => {
+    [baseDir, imagesDir, videosDir].forEach(dir => {
         if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true });
         }
     });
     
-    // Timestamp for this capture session
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    // Use ISO timestamp format
+    const timestamp = new Date().toISOString();
     
     const browser = await chromium.launch({ 
         headless: true
@@ -67,8 +67,10 @@ async function captureShaderMedia(shaderPath, options = {}) {
         console.log(`Capturing ${frameCount} screenshots...`);
         
         for (let i = 0; i < frameCount; i++) {
-            const filename = `${shaderName}-${timestamp}-frame-${String(i).padStart(3, '0')}.png`;
-            const filepath = path.join(screenshotsDir, filename);
+            // Create ISO timestamp for each frame
+            const frameTimestamp = new Date().toISOString();
+            const filename = `${frameTimestamp}.png`;
+            const filepath = path.join(imagesDir, filename);
             
             await page.screenshot({ path: filepath });
             console.log(`  Frame ${i + 1}/${frameCount}: ${filename}`);
@@ -87,7 +89,8 @@ async function captureShaderMedia(shaderPath, options = {}) {
             const video = await context.video();
             if (video) {
                 const videoPath = await video.path();
-                const newVideoPath = path.join(videosDir, `${shaderName}-${timestamp}.webm`);
+                const videoTimestamp = new Date().toISOString();
+                const newVideoPath = path.join(videosDir, `${videoTimestamp}.webm`);
                 
                 // Wait a bit for video to be written
                 await new Promise(resolve => setTimeout(resolve, 1000));
@@ -110,11 +113,7 @@ async function captureShaderMedia(shaderPath, options = {}) {
             frameCount,
             resolution: { width, height },
             captureVideo,
-            frames: Array.from({ length: frameCount }, (_, i) => ({
-                index: i,
-                filename: `${shaderName}-${timestamp}-frame-${String(i).padStart(3, '0')}.png`,
-                time: i / fps
-            }))
+            frames: frameCount
         };
         
         const metadataPath = path.join(baseDir, `${shaderName}-${timestamp}-metadata.json`);
