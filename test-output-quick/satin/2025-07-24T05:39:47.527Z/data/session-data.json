@@ -1,0 +1,125 @@
+{
+  "frames": [
+    {
+      "frame": 0,
+      "timestamp": 0,
+      "progress": 0,
+      "params": {
+        "knob_1": 0.2,
+        "knob_2": 0.2,
+        "knob_3": 0.5
+      },
+      "screenshot": "../../test-output-quick/satin/2025-07-24T05:39:47.527Z/images/frame-0000.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 1,
+      "timestamp": 500,
+      "progress": 0.25,
+      "params": {
+        "knob_1": 0.5,
+        "knob_2": 0.5,
+        "knob_3": 0.5
+      },
+      "screenshot": "../../test-output-quick/satin/2025-07-24T05:39:47.527Z/images/frame-0001.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 2,
+      "timestamp": 1000,
+      "progress": 0.5,
+      "params": {
+        "knob_1": 0.8,
+        "knob_2": 0.8,
+        "knob_3": 0.5
+      },
+      "screenshot": "../../test-output-quick/satin/2025-07-24T05:39:47.527Z/images/frame-0002.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 3,
+      "timestamp": 1500,
+      "progress": 0.75,
+      "params": {
+        "knob_1": 0.5,
+        "knob_2": 0.5,
+        "knob_3": 0.5
+      },
+      "screenshot": "../../test-output-quick/satin/2025-07-24T05:39:47.527Z/images/frame-0003.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 4,
+      "timestamp": 2000,
+      "progress": 1,
+      "params": {
+        "knob_1": 0.2,
+        "knob_2": 0.2,
+        "knob_3": 0.5
+      },
+      "screenshot": "../../test-output-quick/satin/2025-07-24T05:39:47.527Z/images/frame-0004.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    }
+  ],
+  "metrics": [],
+  "animation": {
+    "duration": 2000,
+    "fps": 2.5,
+    "keyframes": [
+      {
+        "time": 0,
+        "params": {
+          "knob_1": 0.2,
+          "knob_2": 0.2,
+          "knob_3": 0.5
+        }
+      },
+      {
+        "time": 0.5,
+        "params": {
+          "knob_1": 0.8,
+          "knob_2": 0.8,
+          "knob_3": 0.5
+        }
+      },
+      {
+        "time": 1,
+        "params": {
+          "knob_1": 0.2,
+          "knob_2": 0.2,
+          "knob_3": 0.5
+        }
+      }
+    ]
+  }
+}

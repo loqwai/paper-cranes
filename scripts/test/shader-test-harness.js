@@ -108,10 +108,10 @@ class ShaderTestHarness {
 
         // Load shader with embed mode
         const url = `${this.baseUrl}/?shader=${shaderPath}&embed=true`;
-        await this.page.goto(url, { waitUntil: 'networkidle' });
+        await this.page.goto(url, { waitUntil: 'domcontentloaded' });
         
         // Wait for shader initialization
-        await this.page.waitForTimeout(1000);
+        await this.page.waitForTimeout(2000);
 
         return {
             page: this.page,
