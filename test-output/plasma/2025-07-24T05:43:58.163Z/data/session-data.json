@@ -1,0 +1,713 @@
+{
+  "frames": [
+    {
+      "frame": 0,
+      "timestamp": 0,
+      "progress": 0,
+      "params": {
+        "knob_1": 0.3,
+        "knob_2": 0.3
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0000.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 1,
+      "timestamp": 102.56410256410255,
+      "progress": 0.02564102564102564,
+      "params": {
+        "knob_1": 0.3205128205128205,
+        "knob_2": 0.3205128205128205
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0001.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 2,
+      "timestamp": 205.1282051282051,
+      "progress": 0.05128205128205128,
+      "params": {
+        "knob_1": 0.34102564102564104,
+        "knob_2": 0.34102564102564104
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0002.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 3,
+      "timestamp": 307.69230769230774,
+      "progress": 0.07692307692307693,
+      "params": {
+        "knob_1": 0.36153846153846153,
+        "knob_2": 0.36153846153846153
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0003.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 4,
+      "timestamp": 410.2564102564102,
+      "progress": 0.10256410256410256,
+      "params": {
+        "knob_1": 0.382051282051282,
+        "knob_2": 0.382051282051282
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0004.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 5,
+      "timestamp": 512.8205128205128,
+      "progress": 0.1282051282051282,
+      "params": {
+        "knob_1": 0.4025641025641025,
+        "knob_2": 0.4025641025641025
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0005.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 6,
+      "timestamp": 615.3846153846155,
+      "progress": 0.15384615384615385,
+      "params": {
+        "knob_1": 0.4230769230769231,
+        "knob_2": 0.4230769230769231
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0006.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 7,
+      "timestamp": 717.9487179487179,
+      "progress": 0.1794871794871795,
+      "params": {
+        "knob_1": 0.44358974358974357,
+        "knob_2": 0.44358974358974357
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0007.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 8,
+      "timestamp": 820.5128205128204,
+      "progress": 0.20512820512820512,
+      "params": {
+        "knob_1": 0.46410256410256406,
+        "knob_2": 0.46410256410256406
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0008.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 9,
+      "timestamp": 923.0769230769231,
+      "progress": 0.23076923076923078,
+      "params": {
+        "knob_1": 0.48461538461538456,
+        "knob_2": 0.48461538461538456
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0009.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 10,
+      "timestamp": 1025.6410256410256,
+      "progress": 0.2564102564102564,
+      "params": {
+        "knob_1": 0.5051282051282051,
+        "knob_2": 0.5051282051282051
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0010.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 11,
+      "timestamp": 1128.2051282051282,
+      "progress": 0.28205128205128205,
+      "params": {
+        "knob_1": 0.5256410256410255,
+        "knob_2": 0.5256410256410255
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0011.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 12,
+      "timestamp": 1230.769230769231,
+      "progress": 0.3076923076923077,
+      "params": {
+        "knob_1": 0.5461538461538461,
+        "knob_2": 0.5461538461538461
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0012.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 13,
+      "timestamp": 1333.3333333333333,
+      "progress": 0.3333333333333333,
+      "params": {
+        "knob_1": 0.5666666666666667,
+        "knob_2": 0.5666666666666667
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0013.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 14,
+      "timestamp": 1435.8974358974358,
+      "progress": 0.358974358974359,
+      "params": {
+        "knob_1": 0.5871794871794871,
+        "knob_2": 0.5871794871794871
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0014.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 15,
+      "timestamp": 1538.4615384615386,
+      "progress": 0.38461538461538464,
+      "params": {
+        "knob_1": 0.6076923076923078,
+        "knob_2": 0.6076923076923078
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0015.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 16,
+      "timestamp": 1641.0256410256409,
+      "progress": 0.41025641025641024,
+      "params": {
+        "knob_1": 0.6282051282051282,
+        "knob_2": 0.6282051282051282
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0016.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 17,
+      "timestamp": 1743.5897435897436,
+      "progress": 0.4358974358974359,
+      "params": {
+        "knob_1": 0.6487179487179486,
+        "knob_2": 0.6487179487179486
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0017.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 18,
+      "timestamp": 1846.1538461538462,
+      "progress": 0.46153846153846156,
+      "params": {
+        "knob_1": 0.6692307692307692,
+        "knob_2": 0.6692307692307692
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0018.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 19,
+      "timestamp": 1948.7179487179487,
+      "progress": 0.48717948717948717,
+      "params": {
+        "knob_1": 0.6897435897435897,
+        "knob_2": 0.6897435897435897
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0019.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 20,
+      "timestamp": 2051.2820512820513,
+      "progress": 0.5128205128205128,
+      "params": {
+        "knob_1": 0.6897435897435897,
+        "knob_2": 0.6897435897435897
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0020.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 21,
+      "timestamp": 2153.846153846154,
+      "progress": 0.5384615384615384,
+      "params": {
+        "knob_1": 0.6692307692307692,
+        "knob_2": 0.6692307692307692
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0021.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 22,
+      "timestamp": 2256.4102564102564,
+      "progress": 0.5641025641025641,
+      "params": {
+        "knob_1": 0.6487179487179486,
+        "knob_2": 0.6487179487179486
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0022.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 23,
+      "timestamp": 2358.974358974359,
+      "progress": 0.5897435897435898,
+      "params": {
+        "knob_1": 0.6282051282051282,
+        "knob_2": 0.6282051282051282
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0023.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 24,
+      "timestamp": 2461.538461538462,
+      "progress": 0.6153846153846154,
+      "params": {
+        "knob_1": 0.6076923076923076,
+        "knob_2": 0.6076923076923076
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0024.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 25,
+      "timestamp": 2564.1025641025644,
+      "progress": 0.6410256410256411,
+      "params": {
+        "knob_1": 0.5871794871794871,
+        "knob_2": 0.5871794871794871
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0025.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 26,
+      "timestamp": 2666.6666666666665,
+      "progress": 0.6666666666666666,
+      "params": {
+        "knob_1": 0.5666666666666667,
+        "knob_2": 0.5666666666666667
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0026.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 27,
+      "timestamp": 2769.230769230769,
+      "progress": 0.6923076923076923,
+      "params": {
+        "knob_1": 0.5461538461538461,
+        "knob_2": 0.5461538461538461
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0027.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 28,
+      "timestamp": 2871.7948717948716,
+      "progress": 0.717948717948718,
+      "params": {
+        "knob_1": 0.5256410256410255,
+        "knob_2": 0.5256410256410255
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0028.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 29,
+      "timestamp": 2974.3589743589746,
+      "progress": 0.7435897435897436,
+      "params": {
+        "knob_1": 0.5051282051282051,
+        "knob_2": 0.5051282051282051
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0029.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 30,
+      "timestamp": 3076.923076923077,
+      "progress": 0.7692307692307693,
+      "params": {
+        "knob_1": 0.48461538461538456,
+        "knob_2": 0.48461538461538456
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0030.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 31,
+      "timestamp": 3179.487179487179,
+      "progress": 0.7948717948717948,
+      "params": {
+        "knob_1": 0.4641025641025641,
+        "knob_2": 0.4641025641025641
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0031.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 32,
+      "timestamp": 3282.0512820512818,
+      "progress": 0.8205128205128205,
+      "params": {
+        "knob_1": 0.44358974358974357,
+        "knob_2": 0.44358974358974357
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0032.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 33,
+      "timestamp": 3384.6153846153848,
+      "progress": 0.8461538461538461,
+      "params": {
+        "knob_1": 0.4230769230769231,
+        "knob_2": 0.4230769230769231
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0033.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 34,
+      "timestamp": 3487.1794871794873,
+      "progress": 0.8717948717948718,
+      "params": {
+        "knob_1": 0.4025641025641025,
+        "knob_2": 0.4025641025641025
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0034.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 35,
+      "timestamp": 3589.74358974359,
+      "progress": 0.8974358974358975,
+      "params": {
+        "knob_1": 0.382051282051282,
+        "knob_2": 0.382051282051282
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0035.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 36,
+      "timestamp": 3692.3076923076924,
+      "progress": 0.9230769230769231,
+      "params": {
+        "knob_1": 0.3615384615384615,
+        "knob_2": 0.3615384615384615
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0036.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 37,
+      "timestamp": 3794.871794871795,
+      "progress": 0.9487179487179487,
+      "params": {
+        "knob_1": 0.34102564102564104,
+        "knob_2": 0.34102564102564104
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0037.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 38,
+      "timestamp": 3897.4358974358975,
+      "progress": 0.9743589743589743,
+      "params": {
+        "knob_1": 0.32051282051282054,
+        "knob_2": 0.32051282051282054
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0038.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "frame": 39,
+      "timestamp": 4000,
+      "progress": 1,
+      "params": {
+        "knob_1": 0.3,
+        "knob_2": 0.3
+      },
+      "screenshot": "../../test-output/plasma/2025-07-24T05:43:58.163Z/images/frame-0039.png",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    }
+  ],
+  "metrics": [],
+  "animation": {
+    "name": "plasma-morph",
+    "duration": 4000,
+    "keyframes": [
+      {
+        "time": 0,
+        "params": {
+          "knob_1": 0.3,
+          "knob_2": 0.3
+        }
+      },
+      {
+        "time": 0.5,
+        "params": {
+          "knob_1": 0.7,
+          "knob_2": 0.7
+        }
+      },
+      {
+        "time": 1,
+        "params": {
+          "knob_1": 0.3,
+          "knob_2": 0.3
+        }
+      }
+    ],
+    "fps": 10
+  }
+}
