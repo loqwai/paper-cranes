@@ -119,6 +119,24 @@ function generateVisualCheck() {
             font-weight: bold;
             color: #00ccff;
             margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .film-strip-link {
+            font-size: 12px;
+            font-weight: normal;
+            color: #00ff88;
+            text-decoration: none;
+            padding: 4px 8px;
+            border: 1px solid #00ff88;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        
+        .film-strip-link:hover {
+            background: rgba(0, 255, 136, 0.1);
         }
         
         .images {
@@ -174,7 +192,12 @@ function generateVisualCheck() {
     <div class="shader-grid">
         ${selectedImages.map(({ shader, first, middle, last }) => `
             <div class="shader-card">
-                <div class="shader-name">${shader}</div>
+                <div class="shader-name">
+                    <span>${shader}</span>
+                    <a href="film-strip-viewer.html?shader=${encodeURIComponent(shader)}" class="film-strip-link">
+                        🎬 View Film Strip
+                    </a>
+                </div>
                 <div class="images">
                     ${first ? `
                         <div class="image-wrapper">
