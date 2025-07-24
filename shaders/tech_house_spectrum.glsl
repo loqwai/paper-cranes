@@ -2,22 +2,36 @@
 // Layered frequency domain visualization with multiple color zones
 // Blues, purples and gold with audio reactivity
 
-// --- Knob Definitions ---
-#define BASE_SPEED (0.2 + knob_1 * 2.0)            // Base animation speed
-#define COLOR_INTENSITY (0.5 + knob_2 * 1.5)       // Overall color intensity
-#define AUDIO_REACTIVITY (knob_3 * 1.2)            // How strongly patterns react to audio
-#define FRACTAL_DETAIL (1.0 + floor(knob_4 * 3.0)) // Level of fractal detail (1-4)
-#define PATTERN_SCALE (1.0 + knob_5 * 8.0)         // Scale of main pattern
-#define PATTERN_DISTORTION (knob_6 * 0.8)          // Amount of wave distortion
-#define BLUE_THRESHOLD (0.2 + knob_7 * 0.4)        // Threshold for blue zone
-#define PURPLE_THRESHOLD (0.6 + knob_8 * 0.3)      // Threshold for purple zone
-#define GOLD_THRESHOLD (0.85 + knob_9 * 0.1)       // Threshold for gold highlights
-#define SECONDARY_PATTERN (knob_10 * 0.8)          // Intensity of secondary pattern
-#define ROTATION_SPEED (knob_11 * 0.6 - 0.3)       // Speed of pattern rotation (can go negative)
-#define EDGE_INTENSITY (knob_12 * 2.0)             // Intensity of edge highlighting
-#define SYMMETRY (1.0 + floor(knob_13 * 7.0))      // Radial symmetry (1-8)
-#define ZOOM_PULSE (knob_14 * 0.3)                 // Pulsing zoom amount
-#define COLOR_SHIFT (knob_15 * 0.5)                // Dynamic color shift amount
+// --- Audio Feature Mappings (Spectrum Analysis Edition) ---
+// Visualizes the frequency spectrum as tech house patterns
+#define BASS_INTENSITY knob_1        // 0-1, low frequency band
+#define KICK_DETECTION knob_2        // 0-1, kick drum transients
+#define MID_PRESENCE knob_3          // 0-1, mid frequency band
+#define HIGH_SPARKLE knob_4          // 0-1, high frequency band
+#define OVERALL_ENERGY knob_5        // 0-1, total spectral energy
+#define SPECTRAL_BRIGHTNESS knob_6   // 0-1, spectral centroid
+#define TEMPO_SYNC knob_7            // 0-1, tempo synchronization
+#define DROP_MOMENT knob_8           // 0/1, drop detection
+#define VOCAL_PRESENCE knob_9        // 0-1, vocal frequency detection
+#define SUB_BASS knob_10             // 0-1, sub-bass frequencies
+
+// --- Visual Parameter Mappings ---
+// Spectrum visualization driven by audio
+#define BASE_SPEED (0.2 + TEMPO_SYNC * 2.0) // Speed locked to BPM
+#define COLOR_INTENSITY (0.5 + OVERALL_ENERGY * 1.5) // Energy brightens colors
+#define AUDIO_REACTIVITY (MID_PRESENCE * 1.2) // Mids drive reactivity
+#define FRACTAL_DETAIL (1.0 + floor(HIGH_SPARKLE * 3.0)) // Highs add detail
+#define PATTERN_SCALE (1.0 + BASS_INTENSITY * 8.0) // Bass scales pattern
+#define PATTERN_DISTORTION (KICK_DETECTION * 0.8) // Kick distorts waves
+#define BLUE_THRESHOLD (0.2 + TEMPO_SYNC * 0.4) // Blue zone synced to beat
+#define PURPLE_THRESHOLD (0.6 + DROP_MOMENT * 0.3) // Purple during drops
+#define GOLD_THRESHOLD (0.85 + VOCAL_PRESENCE * 0.1) // Gold for vocals
+#define SECONDARY_PATTERN (SUB_BASS * 0.8) // Sub-bass overlay
+#define ROTATION_SPEED (SPECTRAL_BRIGHTNESS * 0.6 - 0.3) // Brightness rotates
+#define EDGE_INTENSITY (HIGH_SPARKLE * 2.0) // Highs highlight edges
+#define SYMMETRY (1.0 + floor(knob_13 * 7.0)) // Radial symmetry control
+#define ZOOM_PULSE (KICK_DETECTION * 0.3) // Kick creates zoom pulse
+#define COLOR_SHIFT (OVERALL_ENERGY * 0.5) // Energy shifts colors
 
 // --- Color Palette ---
 #define DEEP_BLUE vec3(0.0, 0.1, 0.5)

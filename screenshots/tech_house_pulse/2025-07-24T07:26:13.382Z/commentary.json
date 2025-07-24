@@ -1,0 +1,102 @@
+{
+  "shader": "Tech House Pulse",
+  "sequence": "melodic-journey",
+  "sequenceDescription": "Progressive house melodic progression with emotional peaks",
+  "musicalContext": "Follows a typical progressive house structure with evolving melodies. Mid frequencies carry the main theme while bass provides foundation and highs add sparkle.",
+  "emotionalArc": "Steady groove with subtle variations",
+  "visualJourney": "Rhythmic pulsing intensifies, colors shift from blue to purple",
+  "keyMoments": [
+    {
+      "time": 0,
+      "params": {
+        "knob_1": 0.5,
+        "knob_2": 0.3,
+        "knob_3": 0.3,
+        "knob_4": 0.2,
+        "knob_9": 0
+      },
+      "mood": "contemplative",
+      "description": "Quiet moment - the form breathes gently, awaiting the next wave"
+    },
+    {
+      "time": 10,
+      "params": {
+        "knob_1": 0.6666666666666666,
+        "knob_2": 0.4666666666666667,
+        "knob_3": 0.8333333333333333,
+        "knob_4": 0.5333333333333333,
+        "knob_9": 0.7
+      },
+      "mood": "contemplative",
+      "description": "Quiet moment - the form breathes gently, awaiting the next wave"
+    },
+    {
+      "time": 20,
+      "params": {
+        "knob_1": 0.6666666666666666,
+        "knob_2": 0.4666666666666667,
+        "knob_3": 0.7000000000000001,
+        "knob_4": 0.6333333333333333,
+        "knob_9": 0.5
+      },
+      "mood": "contemplative",
+      "description": "Quiet moment - the form breathes gently, awaiting the next wave"
+    },
+    {
+      "time": 30,
+      "params": {
+        "knob_1": 0.5,
+        "knob_2": 0.3,
+        "knob_3": 0.3,
+        "knob_4": 0.3,
+        "knob_9": 0
+      },
+      "mood": "contemplative",
+      "description": "Quiet moment - the form breathes gently, awaiting the next wave"
+    }
+  ],
+  "dropMoment": null,
+  "parameterAnalysis": {
+    "bass": {
+      "min": 0.5,
+      "max": 0.7,
+      "avg": 0.6,
+      "variance": 0.19999999999999996,
+      "visualImpact": "Controls twist factor - bass creates hypnotic spiral motion"
+    },
+    "kick": {
+      "min": 0.3,
+      "max": 0.5,
+      "avg": 0.39999999999999997,
+      "variance": 0.2,
+      "visualImpact": "Drives pulse intensity - the visual kick drum"
+    },
+    "mid": {
+      "min": 0.3,
+      "max": 0.8500000000000001,
+      "avg": 0.5833333333333334,
+      "variance": 0.55,
+      "visualImpact": "Controls shape morphing between sphere and cube forms"
+    },
+    "high": {
+      "min": 0.2,
+      "max": 0.6499999999999999,
+      "avg": 0.45,
+      "variance": 0.4499999999999999,
+      "visualImpact": "Creates rim lighting and sharp edge definition"
+    },
+    "vocal": {
+      "min": 0,
+      "max": 0.7,
+      "avg": 0.36666666666666664,
+      "variance": 0.7,
+      "visualImpact": "Affects visual parameters"
+    }
+  },
+  "technicalNotes": {
+    "totalFrames": 7,
+    "maxEnergy": 0,
+    "maxBass": 0.7,
+    "hasDropMoment": false
+  }
+}

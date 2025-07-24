@@ -1,0 +1,27 @@
+{
+  "shader": "tech_house_pulse",
+  "timestamp": "2025-07-24T07:26:47.893Z",
+  "totalTests": 3,
+  "totalFrames": 21,
+  "averageDuration": 30432.333333333332,
+  "sequences": [
+    {
+      "name": "the-drop",
+      "frames": 7,
+      "emotionalArc": "Classic tension and release - building to explosive climax",
+      "visualJourney": "Rhythmic pulsing intensifies, colors shift from blue to purple"
+    },
+    {
+      "name": "techno-hammer",
+      "frames": 7,
+      "emotionalArc": "High-energy assault with moments of euphoria",
+      "visualJourney": "Rhythmic pulsing intensifies, colors shift from blue to purple"
+    },
+    {
+      "name": "melodic-journey",
+      "frames": 7,
+      "emotionalArc": "Steady groove with subtle variations",
+      "visualJourney": "Rhythmic pulsing intensifies, colors shift from blue to purple"
+    }
+  ]
+}

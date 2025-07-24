@@ -1,22 +1,36 @@
 // Tech House Grid - 2D Cellular Grid with Pulse
 // A clean grid-based pattern with pulsing cells and precise color shifts
 
-// --- Knob Definitions ---
-#define GRID_SCALE (1.0 + knob_1 * 10.0)           // Base grid size
-#define TIME_SPEED (0.2 + knob_2 * 2.0)           // Animation speed
-#define PATTERN_ROTATION (knob_3 * 0.4)            // Pattern rotation amount
-#define CELL_ROUNDNESS (0.05 + knob_4 * 0.95)      // Cell shape: 0=square, 1=circle
-#define PULSE_INTENSITY (knob_5 * 0.4)             // How strongly cells pulse with the beat
-#define PULSE_SYNC_FACTOR (1.0 + knob_6 * 7.0)     // Phase difference between adjacent cells
-#define WAVE_DISTORTION (knob_7 * 0.15)            // How much wave distortion is applied to grid
-#define SECONDARY_GRID_SCALE (knob_8 * 8.0)        // Scale of the secondary overlay pattern
-#define SECONDARY_GRID_OPACITY (knob_9 * 0.7)      // Opacity of secondary pattern
-#define COLOR_SHIFT_SPEED (knob_10 * 0.8)          // Speed of color cycling
-#define BLUE_PURPLE_MIX (knob_11)                  // Mix between blue and purple tones
-#define GOLD_PRESENCE (knob_12 * 0.7)              // Amount of gold accents
-#define LINE_THICKNESS (0.02 + knob_13 * 0.2)      // Thickness of grid lines
-#define GLOW_INTENSITY (knob_14 * 2.0)             // Intensity of edge glow/bloom
-#define PATTERN_COMPLEXITY (1.0 + floor(knob_15 * 3.0)) // Affects complexity of pattern
+// --- Audio Feature Mappings (Grid Rave Edition) ---
+// Grid patterns that respond to tech house grooves
+#define BASS_INTENSITY knob_1        // 0-1, bass drives grid scale
+#define KICK_DETECTION knob_2        // 0-1, kick drum hits
+#define MID_PRESENCE knob_3          // 0-1, melodic elements
+#define HIGH_SPARKLE knob_4          // 0-1, hi-hat patterns
+#define OVERALL_ENERGY knob_5        // 0-1, total energy
+#define SPECTRAL_BRIGHTNESS knob_6   // 0-1, frequency brightness
+#define TEMPO_SYNC knob_7            // 0-1, BPM sync factor
+#define DROP_MOMENT knob_8           // 0/1, drop detection
+#define VOCAL_PRESENCE knob_9        // 0-1, vocal detection
+#define SUB_BASS knob_10             // 0-1, sub frequencies
+
+// --- Visual Parameter Mappings ---
+// Grid responds to the beat
+#define GRID_SCALE (1.0 + BASS_INTENSITY * 10.0) // Bass controls grid size
+#define TIME_SPEED (0.2 + TEMPO_SYNC * 2.0) // Animation locked to BPM
+#define PATTERN_ROTATION (MID_PRESENCE * 0.4) // Melody rotates pattern
+#define CELL_ROUNDNESS (0.05 + HIGH_SPARKLE * 0.95) // Hi-hats round the cells
+#define PULSE_INTENSITY (KICK_DETECTION * 0.4) // Kick drives cell pulse
+#define PULSE_SYNC_FACTOR (1.0 + SPECTRAL_BRIGHTNESS * 7.0) // Phase spread
+#define WAVE_DISTORTION (TEMPO_SYNC * 0.15) // Grid waves to the beat
+#define SECONDARY_GRID_SCALE (DROP_MOMENT * 8.0) // Drop reveals second grid
+#define SECONDARY_GRID_OPACITY (VOCAL_PRESENCE * 0.7) // Vocals show overlay
+#define COLOR_SHIFT_SPEED (OVERALL_ENERGY * 0.8) // Energy drives color
+#define BLUE_PURPLE_MIX (SUB_BASS) // Sub-bass shifts to purple
+#define GOLD_PRESENCE (HIGH_SPARKLE * 0.7) // Gold from cymbals
+#define LINE_THICKNESS (0.02 + knob_13 * 0.2) // Grid line width
+#define GLOW_INTENSITY (OVERALL_ENERGY * 2.0) // Energy creates glow
+#define PATTERN_COMPLEXITY (1.0 + floor(knob_15 * 3.0)) // Pattern layers
 
 // --- Color Constants ---
 #define DEEP_BLUE vec3(0.0, 0.1, 0.4)

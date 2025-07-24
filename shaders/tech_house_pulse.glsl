@@ -2,22 +2,36 @@
 // Features rhythmic pulsing, combined SDFs, and a blue/purple/gold palette.
 // Controlled by knob_1 to knob_15.
 
-// --- Knob Definitions ---
-#define TIME_SCALE (0.05 + knob_1 * 1.0)       // Base animation speed
-#define PULSE_SPEED (knob_2 * 10.0)          // Speed of the rhythmic pulse (BPM-like)
-#define PULSE_INTENSITY (knob_3 * 0.3)        // How strongly pulse affects size/shape
-#define REPEAT_FREQ (mix(1.5, 8.0, knob_4))   // Domain repetition frequency
-#define TWIST_FACTOR (knob_5 * 4.0)           // Twisting deformation amount
-#define SHAPE_MIX (knob_6)                   // Blend factor between base shapes (e.g., sphere vs box)
-#define SMOOTH_FACTOR (mix(0.05, 0.6, knob_7)) // Smoothness for smin operations
-#define NOISE_AMOUNT (knob_8 * 0.15)        // Surface noise amplitude
-#define NOISE_FREQ (mix(1.0, 12.0, knob_9))   // Surface noise frequency/scale
-#define COLOR_PATTERN_FREQ (mix(0.5, 6.0, knob_10)) // Frequency of color variations
-#define BLUE_PURPLE_BIAS (knob_11 * 0.2)      // Hue shift (0=Blue ~0.7, 1=Purple ~0.8)
-#define GOLD_AMOUNT (knob_12)               // Mix factor/intensity for gold highlights
-#define LIGHTNESS_SATURATION (knob_13)      // Combined control: L=f(k), S=g(k)
-#define RIM_INTENSITY (knob_14 * 1.5)        // Rim light strength
-#define GLOBAL_SCALE (mix(0.6, 1.8, knob_15)) // Overall size
+// --- Audio Feature Mappings (Tech House Vampire Edition) ---
+// Designed for 4/4 tech house patterns at 125-130 BPM
+#define BASS_INTENSITY knob_1        // 0-1, sub and bass frequencies
+#define KICK_DETECTION knob_2        // 0-1, kick drum transients
+#define MID_PRESENCE knob_3          // 0-1, synth and vocal range
+#define HIGH_SPARKLE knob_4          // 0-1, hi-hats and cymbals
+#define OVERALL_ENERGY knob_5        // 0-1, total energy level
+#define SPECTRAL_BRIGHTNESS knob_6   // 0-1, brightness of sound
+#define TEMPO_SYNC knob_7            // 0-1, BPM sync (125 BPM = 0.893)
+#define DROP_MOMENT knob_8           // 0/1, drop detection
+#define VOCAL_PRESENCE knob_9        // 0-1, vocal frequencies
+#define SUB_BASS knob_10             // 0-1, deep sub frequencies
+
+// --- Visual Parameter Mappings ---
+// Tech house specific mappings for hypnotic visuals
+#define TIME_SCALE (0.05 + TEMPO_SYNC * 1.0) // Locked to BPM
+#define PULSE_SPEED (TEMPO_SYNC * 10.0) // Rhythmic pulse at beat rate
+#define PULSE_INTENSITY (KICK_DETECTION * 0.3) // Kick drives the pulse
+#define REPEAT_FREQ (mix(1.5, 8.0, MID_PRESENCE)) // Synths control repetition
+#define TWIST_FACTOR (BASS_INTENSITY * 4.0) // Bass creates twist
+#define SHAPE_MIX (SPECTRAL_BRIGHTNESS) // Brightness morphs shapes
+#define SMOOTH_FACTOR (mix(0.05, 0.6, 1.0 - HIGH_SPARKLE)) // Hi-hats sharpen edges
+#define NOISE_AMOUNT (VOCAL_PRESENCE * 0.15) // Vocals add texture
+#define NOISE_FREQ (mix(1.0, 12.0, knob_9)) // Texture frequency
+#define COLOR_PATTERN_FREQ (mix(0.5, 6.0, OVERALL_ENERGY)) // Energy drives color changes
+#define BLUE_PURPLE_BIAS (DROP_MOMENT * 0.2) // Drop shifts to purple
+#define GOLD_AMOUNT (HIGH_SPARKLE) // Gold accents from cymbals
+#define LIGHTNESS_SATURATION (OVERALL_ENERGY) // Energy controls vibrancy
+#define RIM_INTENSITY (SUB_BASS * 1.5) // Deep bass creates rim glow
+#define GLOBAL_SCALE (mix(0.6, 1.8, 1.0 - KICK_DETECTION * 0.3)) // Kick makes it contract
 
 // --- Constants ---
 #define MAX_STEPS 80

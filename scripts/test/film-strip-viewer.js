@@ -12,7 +12,7 @@ const __dirname = dirname(__filename);
  * for a specific shader based on query parameter
  */
 function generateFilmStripViewer() {
-    const outputDirs = ['../../test-output', '../../test-output-quick'];
+    const outputDirs = ['../../screenshots', '../../test-output', '../../test-output-quick'];
     
     // Collect all test data
     const shaderData = {};
@@ -43,18 +43,36 @@ function generateFilmStripViewer() {
                 
                 if (fs.existsSync(imagesDir)) {
                     const images = fs.readdirSync(imagesDir)
-                        .filter(f => f.endsWith('.png'))
+                        .filter(f => f.endsWith('.png') || f.endsWith('.jpg') || f.endsWith('.jpeg'))
                         .sort()
                         .map(img => path.join(outputDir, shaderName, sessionId, 'images', img));
                     
-                    // Try to load session data
+                    // Try to load session data or timeline
                     let sessionData = null;
                     const dataPath = path.join(shaderDir, sessionId, 'data', 'session-data.json');
-                    if (fs.existsSync(dataPath)) {
+                    const timelinePath = path.join(shaderDir, sessionId, 'timeline.json');
+                    
+                    if (fs.existsSync(timelinePath)) {
+                        try {
+                            sessionData = JSON.parse(fs.readFileSync(timelinePath, 'utf8'));
+                        } catch (e) {
+                            console.error(`Error reading timeline: ${e.message}`);
+                        }
+                    } else if (fs.existsSync(dataPath)) {
                         try {
                             sessionData = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
                         } catch (e) {
                             console.error(`Error reading session data: ${e.message}`);
+                        }
+                    }
+                    
+                    // Check for video files
+                    const videosDir = path.join(shaderDir, sessionId, 'videos');
+                    let videoPath = null;
+                    if (fs.existsSync(videosDir)) {
+                        const videos = fs.readdirSync(videosDir).filter(f => f.endsWith('.webm') || f.endsWith('.mp4'));
+                        if (videos.length > 0) {
+                            videoPath = path.join(outputDir, shaderName, sessionId, 'videos', videos[0]);
                         }
                     }
                     
@@ -64,7 +82,8 @@ function generateFilmStripViewer() {
                             images,
                             frameCount: images.length,
                             sessionData,
-                            timestamp: sessionId
+                            timestamp: sessionId,
+                            videoPath
                         });
                     }
                 }
@@ -280,6 +299,20 @@ function generateFilmStripViewer() {
             margin: 20px;
             border-radius: 4px;
         }
+        
+        .video-container {
+            background: #0a0a0a;
+            padding: 20px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .video-container video {
+            max-height: 400px;
+            width: auto;
+            margin: 0 auto;
+            display: block;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -360,8 +393,17 @@ function generateFilmStripViewer() {
                             <div class="session-title">Test Session #\${idx + 1}</div>
                             <div class="session-info">
                                 \${dateStr} • \${session.frameCount} frames
+                                \${session.videoPath ? '• 🎥 Video available' : ''}
                             </div>
                         </div>
+                        \${session.videoPath ? \`
+                        <div class="video-container">
+                            <video controls width="100%" id="video-\${idx}">
+                                <source src="\${session.videoPath.replace(/^\.\./, '')}" type="video/webm">
+                                Your browser does not support the video tag.
+                            </video>
+                        </div>
+                        \` : ''}
                         <div class="film-strip" id="strip-\${idx}">
                 \`;
                 
@@ -369,19 +411,26 @@ function generateFilmStripViewer() {
                 session.images.forEach((img, frameIdx) => {
                     let paramInfo = '';
                     
-                    if (session.sessionData && session.sessionData.frames && session.sessionData.frames[frameIdx]) {
-                        const frame = session.sessionData.frames[frameIdx];
-                        if (frame.params) {
-                            const params = Object.entries(frame.params)
+                    // Handle both old format (frames) and new format (timeline)
+                    if (session.sessionData) {
+                        const frameData = session.sessionData.timeline ? 
+                            session.sessionData.timeline[frameIdx] : 
+                            (session.sessionData.frames && session.sessionData.frames[frameIdx]);
+                            
+                        if (frameData && frameData.params) {
+                            const params = Object.entries(frameData.params)
                                 .map(([k, v]) => \`\${k}=\${typeof v === 'number' ? v.toFixed(2) : v}\`)
                                 .join(' ');
                             paramInfo = params;
                         }
                     }
                     
+                    // Convert path to web-served URL
+                    const webPath = img.replace(/^\.\.\//, '/');
+                    
                     html += \`
                         <div class="frame">
-                            <img src="\${img}" alt="Frame \${frameIdx}" loading="lazy">
+                            <img src="\${webPath}" alt="Frame \${frameIdx}" loading="lazy">
                             <div class="frame-number">Frame \${frameIdx}</div>
                             \${paramInfo ? \`<div class="frame-params">\${paramInfo}</div>\` : ''}
                         </div>
@@ -393,16 +442,28 @@ function generateFilmStripViewer() {
                 \`;
                 
                 // Add animation info if available
-                if (session.sessionData && session.sessionData.animation) {
-                    const anim = session.sessionData.animation;
-                    html += \`
-                        <div class="animation-info">
-                            <strong>Animation:</strong> 
-                            \${anim.duration}ms duration, 
-                            \${anim.fps} FPS
-                            \${anim.keyframes ? \`, \${anim.keyframes.length} keyframes\` : ''}
-                        </div>
-                    \`;
+                if (session.sessionData) {
+                    if (session.sessionData.animation) {
+                        const anim = session.sessionData.animation;
+                        html += \`
+                            <div class="animation-info">
+                                <strong>Animation:</strong> 
+                                \${anim.duration}ms duration, 
+                                \${anim.fps} FPS
+                                \${anim.keyframes ? \`, \${anim.keyframes.length} keyframes\` : ''}
+                            </div>
+                        \`;
+                    }
+                    
+                    // Show musical context for new timeline format
+                    if (session.sessionData.description || session.sessionData.musicalContext) {
+                        html += \`
+                            <div class="animation-info">
+                                \${session.sessionData.description ? \`<strong>\${session.sessionData.description}</strong><br>\` : ''}
+                                \${session.sessionData.musicalContext ? \`<em>\${session.sessionData.musicalContext}</em>\` : ''}
+                            </div>
+                        \`;
+                    }
                 }
                 
                 html += \`</div>\`;

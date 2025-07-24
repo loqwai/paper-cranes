@@ -1,0 +1,234 @@
+{
+  "shader": "tech_house_pulse",
+  "description": "Progressive house melodic progression with emotional peaks",
+  "musicalContext": "Follows a typical progressive house structure with evolving melodies. Mid frequencies carry the main theme while bass provides foundation and highs add sparkle.",
+  "duration": 30000,
+  "screenshotInterval": 5000,
+  "timeline": [
+    {
+      "time": 0,
+      "params": {
+        "knob_1": 0.5,
+        "knob_2": 0.3,
+        "knob_3": 0.3,
+        "knob_4": 0.2,
+        "knob_9": 0
+      },
+      "screenshot": "2025-07-24T07:26:15.581Z🦇🌙knob_1🩸0.500🪦knob_2🩸0.300🪦knob_3🩸0.300🪦knob_4🩸0.200🪦knob_9🩸0.000.jpg",
+      "description": "Intro - sparse elements",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "time": 5000,
+      "params": {
+        "knob_1": 0.5833333333333333,
+        "knob_2": 0.38333333333333336,
+        "knob_3": 0.6333333333333333,
+        "knob_4": 0.3666666666666667,
+        "knob_9": 0.41666666666666663
+      },
+      "screenshot": "2025-07-24T07:26:20.634Z🦇🌙knob_1🩸0.583🪦knob_2🩸0.383🪦knob_3🩸0.633🪦knob_4🩸0.367🪦knob_9🩸0.417.jpg",
+      "description": "Intro - sparse elements",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "time": 10000,
+      "params": {
+        "knob_1": 0.6666666666666666,
+        "knob_2": 0.4666666666666667,
+        "knob_3": 0.8333333333333333,
+        "knob_4": 0.5333333333333333,
+        "knob_9": 0.7
+      },
+      "screenshot": "2025-07-24T07:26:25.683Z🦇🌙knob_1🩸0.667🪦knob_2🩸0.467🪦knob_3🩸0.833🪦knob_4🩸0.533🪦knob_9🩸0.700.jpg",
+      "description": "Melody enters with vocals",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "time": 15000,
+      "params": {
+        "knob_1": 0.7,
+        "knob_2": 0.5,
+        "knob_3": 0.8500000000000001,
+        "knob_4": 0.6499999999999999,
+        "knob_9": 0.7
+      },
+      "screenshot": "2025-07-24T07:26:30.734Z🦇🌙knob_1🩸0.700🪦knob_2🩸0.500🪦knob_3🩸0.850🪦knob_4🩸0.650🪦knob_9🩸0.700.jpg",
+      "description": "Emotional peak - full arrangement",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "time": 20000,
+      "params": {
+        "knob_1": 0.6666666666666666,
+        "knob_2": 0.4666666666666667,
+        "knob_3": 0.7000000000000001,
+        "knob_4": 0.6333333333333333,
+        "knob_9": 0.5
+      },
+      "screenshot": "2025-07-24T07:26:35.782Z🦇🌙knob_1🩸0.667🪦knob_2🩸0.467🪦knob_3🩸0.700🪦knob_4🩸0.633🪦knob_9🩸0.500.jpg",
+      "description": "Sustained energy",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "time": 25000,
+      "params": {
+        "knob_1": 0.5833333333333333,
+        "knob_2": 0.38333333333333336,
+        "knob_3": 0.4666666666666667,
+        "knob_4": 0.4666666666666667,
+        "knob_9": 0.25
+      },
+      "screenshot": "2025-07-24T07:26:40.829Z🦇🌙knob_1🩸0.583🪦knob_2🩸0.383🪦knob_3🩸0.467🪦knob_4🩸0.467🪦knob_9🩸0.250.jpg",
+      "description": "Breaking down",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "time": 30000,
+      "params": {
+        "knob_1": 0.5,
+        "knob_2": 0.3,
+        "knob_3": 0.3,
+        "knob_4": 0.3,
+        "knob_9": 0
+      },
+      "screenshot": "2025-07-24T07:26:45.862Z🦇🌙knob_1🩸0.500🪦knob_2🩸0.300🪦knob_3🩸0.300🪦knob_4🩸0.300🪦knob_9🩸0.000.jpg",
+      "description": "Breaking down",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    }
+  ],
+  "animation": {
+    "duration": 30000,
+    "description": "Progressive house melodic progression with emotional peaks",
+    "musicalContext": "Follows a typical progressive house structure with evolving melodies. Mid frequencies carry the main theme while bass provides foundation and highs add sparkle.",
+    "screenshotInterval": 5000,
+    "keyframes": [
+      {
+        "time": 0,
+        "params": {
+          "knob_1": 0.5,
+          "knob_2": 0.3,
+          "knob_3": 0.3,
+          "knob_4": 0.2,
+          "knob_9": 0
+        }
+      },
+      {
+        "time": 0.2,
+        "params": {
+          "knob_1": 0.6,
+          "knob_2": 0.4,
+          "knob_3": 0.7,
+          "knob_4": 0.4,
+          "knob_9": 0.5
+        }
+      },
+      {
+        "time": 0.4,
+        "params": {
+          "knob_1": 0.7,
+          "knob_2": 0.5,
+          "knob_3": 0.9,
+          "knob_4": 0.6,
+          "knob_9": 0.8
+        }
+      },
+      {
+        "time": 0.6,
+        "params": {
+          "knob_1": 0.7,
+          "knob_2": 0.5,
+          "knob_3": 0.8,
+          "knob_4": 0.7,
+          "knob_9": 0.6
+        }
+      },
+      {
+        "time": 0.8,
+        "params": {
+          "knob_1": 0.6,
+          "knob_2": 0.4,
+          "knob_3": 0.5,
+          "knob_4": 0.5,
+          "knob_9": 0.3
+        }
+      },
+      {
+        "time": 1,
+        "params": {
+          "knob_1": 0.5,
+          "knob_2": 0.3,
+          "knob_3": 0.3,
+          "knob_4": 0.3,
+          "knob_9": 0
+        }
+      }
+    ],
+    "descriptions": [
+      {
+        "time": 0,
+        "text": "Intro - sparse elements"
+      },
+      {
+        "time": 0.2,
+        "text": "Melody enters with vocals"
+      },
+      {
+        "time": 0.4,
+        "text": "Emotional peak - full arrangement"
+      },
+      {
+        "time": 0.6,
+        "text": "Sustained energy"
+      },
+      {
+        "time": 0.8,
+        "text": "Breaking down"
+      }
+    ],
+    "name": "melodic-journey"
+  },
+  "sessionId": "2025-07-24T07:26:13.382Z"
+}

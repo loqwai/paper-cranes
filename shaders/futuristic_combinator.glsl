@@ -2,22 +2,36 @@
 // Uses raymarching with domain repetition, twist, and noise.
 // Controlled by knob_1 to knob_15.
 
-// --- Knob Definitions ---
-#define TIME_SCALE (0.1 + knob_1 * 2.0) // Controls the overall speed of animation
-#define SHAPE_ITERATIONS (1.0 + floor(knob_2 * 8.0)) // Complexity/Iterations in shape modulation
-#define REPEAT_FREQ (mix(1.0, 10.0, knob_3)) // Frequency of domain repetition
-#define TWIST_FACTOR (knob_4 * 5.0) // Amount of twisting deformation
-#define GLOBAL_SCALE (mix(0.5, 2.0, knob_5)) // Overall size of the object
-#define MAX_STEPS int(mix(32.0, 128.0, knob_6)) // Raymarching steps (performance/quality)
-#define SMOOTH_FACTOR (mix(0.01, 0.5, knob_7)) // Smoothness for operations like smooth union
-#define COLOR_HUE_BASE (knob_8) // Base hue for the color scheme
-#define COLOR_HUE_RANGE (knob_9 * 0.5) // Range of hues used
-#define COLOR_SATURATION (mix(0.5, 1.0, knob_10)) // Saturation of the colors
-#define COLOR_LIGHTNESS (mix(0.3, 0.7, knob_11)) // Base lightness of the colors
-#define RIM_INTENSITY (knob_12 * 2.0) // Intensity of the rim lighting effect
-#define BG_BRIGHTNESS (knob_13 * 0.2) // Brightness of the background gradient
-#define NOISE_AMOUNT (knob_14 * 0.2) // Influence of noise on the surface
-#define NOISE_FREQ (mix(1.0, 8.0, knob_15)) // Frequency/scale of the noise pattern
+// --- Audio Feature Mappings (Vampire Rave Edition) ---
+// These parameters simulate audio-reactive behavior
+#define BASS_INTENSITY knob_1        // 0-1, low frequency power (20-250Hz)
+#define KICK_DETECTION knob_2        // 0-1, transient spike detection
+#define MID_PRESENCE knob_3          // 0-1, melodic content (250Hz-4kHz)
+#define HIGH_SPARKLE knob_4          // 0-1, cymbal/hi-hat energy (4kHz+)
+#define OVERALL_ENERGY knob_5        // 0-1, total spectral energy
+#define SPECTRAL_BRIGHTNESS knob_6   // 0-1, spectral centroid normalized
+#define TEMPO_SYNC knob_7            // 0-1, BPM/140 for sync to beat
+#define DROP_MOMENT knob_8           // 0/1, binary drop detector
+#define VOCAL_PRESENCE knob_9        // 0-1, mid-range vocal detection
+#define SUB_BASS knob_10             // 0-1, below 60Hz rumble
+
+// --- Visual Parameter Mappings ---
+// Map audio features to visual effects
+#define TIME_SCALE (0.1 + TEMPO_SYNC * 2.0) // Animation speed synced to BPM
+#define SHAPE_ITERATIONS (1.0 + floor(OVERALL_ENERGY * 8.0)) // Complexity based on energy
+#define REPEAT_FREQ (mix(1.0, 10.0, MID_PRESENCE)) // Domain repetition follows melody
+#define TWIST_FACTOR (BASS_INTENSITY * 5.0) // Bass controls twisting
+#define GLOBAL_SCALE (mix(0.5, 2.0, KICK_DETECTION * 0.5 + 0.5)) // Kick makes it pulse
+#define MAX_STEPS int(mix(32.0, 128.0, knob_6)) // Quality setting
+#define SMOOTH_FACTOR (mix(0.01, 0.5, 1.0 - HIGH_SPARKLE)) // Highs make it sharper
+#define COLOR_HUE_BASE (DROP_MOMENT * 0.1 + SPECTRAL_BRIGHTNESS * 0.8) // Color follows brightness
+#define COLOR_HUE_RANGE (VOCAL_PRESENCE * 0.5) // Vocals add color variation
+#define COLOR_SATURATION (mix(0.5, 1.0, OVERALL_ENERGY)) // Energy increases saturation
+#define COLOR_LIGHTNESS (mix(0.3, 0.7, SPECTRAL_BRIGHTNESS)) // Brightness follows spectrum
+#define RIM_INTENSITY (HIGH_SPARKLE * 2.0) // Rim lighting from highs
+#define BG_BRIGHTNESS (SUB_BASS * 0.2) // Background pulses with sub-bass
+#define NOISE_AMOUNT (knob_14 * 0.2) // Surface texture
+#define NOISE_FREQ (mix(1.0, 8.0, knob_15)) // Noise frequency
 
 
 // --- Utility Functions ---

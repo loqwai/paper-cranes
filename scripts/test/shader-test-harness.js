@@ -16,7 +16,7 @@ import path from 'path';
 class ShaderTestHarness {
     constructor(options = {}) {
         this.baseUrl = options.baseUrl || 'http://localhost:6969';
-        this.outputDir = options.outputDir || '../../test-output';
+        this.outputDir = options.outputDir || '../../screenshots';
         this.defaultViewport = options.viewport || { width: 800, height: 800 };
         this.browser = null;
         this.context = null;
@@ -69,7 +69,10 @@ class ShaderTestHarness {
         if (recordVideo) {
             contextOptions.recordVideo = {
                 dir: path.join(sessionDir, 'videos'),
-                size: viewport
+                size: viewport,
+                // Force 60fps for smooth capture
+                videoBitsPerSecond: 8000000,
+                videoCodec: 'vp9'
             };
         }
 
@@ -133,11 +136,28 @@ class ShaderTestHarness {
             },
             
             // Capture methods
-            screenshot: async (name) => {
-                const filename = `${name || new Date().toISOString()}.png`;
+            screenshot: async (params = {}) => {
+                // Get current timestamp
+                const timestamp = new Date().toISOString();
+                
+                // Build vampire naming format
+                let filename = timestamp + '🦇🌙';
+                
+                // Add parameters in vampire format
+                const paramPairs = [];
+                for (const [key, value] of Object.entries(params)) {
+                    paramPairs.push(`${key}🩸${typeof value === 'number' ? value.toFixed(3) : value}`);
+                }
+                filename += paramPairs.join('🪦');
+                filename += '.jpg';
+                
                 const filepath = path.join(sessionDir, 'images', filename);
-                await this.page.screenshot({ path: filepath });
-                return filepath;
+                await this.page.screenshot({ 
+                    path: filepath,
+                    type: 'jpeg',
+                    quality: 85
+                });
+                return { filepath, filename, timestamp, params };
             },
             
             // Get performance metrics
@@ -168,21 +188,34 @@ class ShaderTestHarness {
      * Run an animation sequence with parameter changes
      */
     async animateParameters(session, animation) {
-        const { keyframes, duration = 5000, fps = 30 } = animation;
-        const frameCount = Math.floor(duration * fps / 1000);
-        const frameInterval = 1000 / fps;
+        const { 
+            keyframes, 
+            duration = 30000, // Default 30 seconds
+            screenshotInterval = 5000, // Screenshot every 5 seconds
+            description = '',
+            musicalContext = ''
+        } = animation;
         
         const results = {
-            frames: [],
-            metrics: [],
-            animation: animation
+            shader: session.shaderName,
+            description,
+            musicalContext,
+            duration,
+            screenshotInterval,
+            timeline: [],
+            animation: animation,
+            sessionId: session.sessionId
         };
 
-        console.log(`Running animation: ${frameCount} frames at ${fps} FPS`);
+        console.log(`Running animation: ${description || 'Unnamed'} (${duration}ms)`);
+        console.log(`Screenshots every ${screenshotInterval}ms`);
 
-        for (let frame = 0; frame < frameCount; frame++) {
-            const progress = frame / (frameCount - 1);
-            const timestamp = progress * duration;
+        const startTime = Date.now();
+        let elapsedTime = 0;
+        let screenshotCount = 0;
+
+        while (elapsedTime <= duration) {
+            const progress = elapsedTime / duration;
             
             // Interpolate parameters for this frame
             const params = this.interpolateKeyframes(keyframes, progress);
@@ -190,33 +223,63 @@ class ShaderTestHarness {
             // Apply parameters
             await session.setParams(params);
             
-            // Small delay to ensure shader updates
-            await session.page.waitForTimeout(frameInterval);
+            // Wait a bit for shader to update
+            await session.page.waitForTimeout(100);
             
-            // Capture frame
-            const screenshotPath = await session.screenshot(`frame-${String(frame).padStart(4, '0')}`);
+            // Capture screenshot with vampire naming
+            const screenshot = await session.screenshot(params);
             
             // Capture metrics
             const metrics = await session.getMetrics();
             
-            results.frames.push({
-                frame,
-                timestamp,
-                progress,
+            // Build timeline entry
+            const timelineEntry = {
+                time: elapsedTime,
                 params,
-                screenshot: screenshotPath,
+                screenshot: screenshot.filename,
+                description: this.getDescriptionForProgress(animation, progress),
                 metrics
-            });
+            };
             
-            if (frame % 10 === 0) {
-                console.log(`  Progress: ${Math.round(progress * 100)}%`);
+            results.timeline.push(timelineEntry);
+            screenshotCount++;
+            
+            console.log(`  [${elapsedTime}ms] Captured: ${screenshot.filename}`);
+            
+            // Wait for next screenshot interval
+            if (elapsedTime < duration) {
+                const nextTime = Math.min(elapsedTime + screenshotInterval, duration);
+                const waitTime = nextTime - elapsedTime;
+                await session.page.waitForTimeout(waitTime - 100); // Account for processing time
+                elapsedTime = nextTime;
+            } else {
+                break;
             }
         }
 
-        // Save animation data
-        await session.saveData(results);
+        console.log(`Animation complete: ${screenshotCount} screenshots captured`);
+
+        // Save timeline data
+        const timelinePath = path.join(session.sessionDir, 'timeline.json');
+        fs.writeFileSync(timelinePath, JSON.stringify(results, null, 2));
         
         return results;
+    }
+
+    /**
+     * Get description for current progress in animation
+     */
+    getDescriptionForProgress(animation, progress) {
+        if (!animation.descriptions) return '';
+        
+        // Find the most recent description
+        let description = '';
+        for (const desc of animation.descriptions) {
+            if (desc.time <= progress) {
+                description = desc.text;
+            }
+        }
+        return description;
     }
 
     /**
@@ -285,12 +348,13 @@ class ShaderTestHarness {
             await session.setParam(param, value);
             await session.page.waitForTimeout(100);
             
-            const screenshotPath = await session.screenshot(`sweep-${param}-${value.toFixed(3)}`);
+            const screenshot = await session.screenshot({ [param]: value });
             
             results.push({
                 param,
                 value,
-                screenshot: screenshotPath
+                screenshot: screenshot.filename,
+                filepath: screenshot.filepath
             });
             
             console.log(`  ${param} = ${value.toFixed(3)}`);
@@ -316,7 +380,7 @@ class ShaderTestHarness {
         
         for (let i = 0; i < sampleCount; i++) {
             // Capture screenshot
-            const screenshotPath = await session.screenshot(`validation-${i}`);
+            const screenshot = await session.screenshot({ validation: i });
             
             // Check for console errors
             const errors = await session.page.evaluate(() => {
@@ -330,7 +394,8 @@ class ShaderTestHarness {
             
             validation.samples.push({
                 index: i,
-                screenshot: screenshotPath,
+                screenshot: screenshot.filename,
+                filepath: screenshot.filepath,
                 timestamp: Date.now()
             });
             

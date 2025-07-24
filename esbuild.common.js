@@ -2,6 +2,7 @@ import { join } from 'path'
 import { readdir, stat, mkdir, rm } from 'fs/promises'
 import { writeFile } from 'fs/promises'
 import { relative } from 'path'
+import { mediaProcessingPlugin } from './esbuild-media-plugin.js'
 
 const generateShadersJson = async (shaderFiles) => {
     const shaders = shaderFiles.sort().map(file => {
@@ -68,7 +69,10 @@ export function createBuildOptions(isDev = false) {
             '.jpeg': 'copy',
             '.jpg': 'copy',
             '.png': 'copy',
+            '.webm': 'copy',
+            '.mp4': 'copy',
         },
+        plugins: [mediaProcessingPlugin],
     }
 
     return async function getConfigs() {

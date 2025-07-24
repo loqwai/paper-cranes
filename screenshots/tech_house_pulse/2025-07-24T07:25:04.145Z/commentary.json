@@ -1,0 +1,121 @@
+{
+  "shader": "Tech House Pulse",
+  "sequence": "the-drop",
+  "sequenceDescription": "Classic EDM drop with tension building and explosive release",
+  "musicalContext": "Simulates a typical EDM buildup and drop pattern at 140 BPM. The tension rises through filtering and energy increase, then explodes with full bass and kick at the drop moment.",
+  "emotionalArc": "Classic tension and release - building to explosive climax",
+  "visualJourney": "Rhythmic pulsing intensifies, colors shift from blue to purple",
+  "keyMoments": [
+    {
+      "time": 0,
+      "params": {
+        "knob_1": 0.3,
+        "knob_2": 0,
+        "knob_3": 0.4,
+        "knob_4": 0.2,
+        "knob_5": 0.2
+      },
+      "mood": "contemplative",
+      "description": "Quiet moment - the form breathes gently, awaiting the next wave"
+    },
+    {
+      "time": 10,
+      "params": {
+        "knob_1": 0.8833333333333334,
+        "knob_2": 0.7833333333333333,
+        "knob_3": 0.6833333333333333,
+        "knob_4": 0.6833333333333333,
+        "knob_5": 0.8833333333333334,
+        "knob_8": 0
+      },
+      "mood": "euphoric",
+      "description": "Maximum intensity - the The heartbeat of the underground dancefloor explodes with energy"
+    },
+    {
+      "time": 20,
+      "params": {
+        "knob_1": 0.7444444444444445,
+        "knob_2": 0.5888888888888889,
+        "knob_3": 0.5444444444444445,
+        "knob_4": 0.5444444444444445,
+        "knob_5": 0.6888888888888889
+      },
+      "mood": "energetic",
+      "description": "Rising energy - complexity increases as the beat drives forward"
+    },
+    {
+      "time": 30,
+      "params": {
+        "knob_1": 0.5,
+        "knob_2": 0.3,
+        "knob_3": 0.4,
+        "knob_4": 0.4,
+        "knob_5": 0.4
+      },
+      "mood": "building",
+      "description": "Energy 40%, Bass 50%"
+    }
+  ],
+  "dropMoment": {
+    "time": 5,
+    "params": {
+      "knob_1": 0.8047619047619048,
+      "knob_2": 0.9904761904761905,
+      "knob_3": 0.7952380952380953,
+      "knob_4": 0.8904761904761905,
+      "knob_5": 0.9952380952380953,
+      "knob_8": 0.9523809523809524
+    },
+    "description": "THE DROP - Maximum energy explosion, all parameters peak"
+  },
+  "parameterAnalysis": {
+    "bass": {
+      "min": 0.3,
+      "max": 0.8833333333333334,
+      "avg": 0.6713151927437642,
+      "variance": 0.5833333333333335,
+      "visualImpact": "Controls twist factor - bass creates hypnotic spiral motion"
+    },
+    "kick": {
+      "min": 0,
+      "max": 0.9904761904761905,
+      "avg": 0.5470521541950114,
+      "variance": 0.9904761904761905,
+      "visualImpact": "Drives pulse intensity - the visual kick drum"
+    },
+    "mid": {
+      "min": 0.4,
+      "max": 0.7952380952380953,
+      "avg": 0.5580498866213152,
+      "variance": 0.3952380952380953,
+      "visualImpact": "Controls shape morphing between sphere and cube forms"
+    },
+    "high": {
+      "min": 0.2,
+      "max": 0.8904761904761905,
+      "avg": 0.5430839002267575,
+      "variance": 0.6904761904761905,
+      "visualImpact": "Creates rim lighting and sharp edge definition"
+    },
+    "energy": {
+      "min": 0.2,
+      "max": 0.9952380952380953,
+      "avg": 0.647732426303855,
+      "variance": 0.7952380952380953,
+      "visualImpact": "Saturates colors from muted blues to vibrant purples"
+    },
+    "drop": {
+      "min": 0,
+      "max": 0.9523809523809524,
+      "avg": 0.1360544217687075,
+      "variance": 0.9523809523809524,
+      "visualImpact": "Triggers color palette shift from blue to purple/gold"
+    }
+  },
+  "technicalNotes": {
+    "totalFrames": 7,
+    "maxEnergy": 0.9952380952380953,
+    "maxBass": 0.8833333333333334,
+    "hasDropMoment": true
+  }
+}

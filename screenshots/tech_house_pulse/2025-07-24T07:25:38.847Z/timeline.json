@@ -1,0 +1,240 @@
+{
+  "shader": "tech_house_pulse",
+  "description": "Relentless techno with driving kick pattern",
+  "musicalContext": "Industrial techno at 135 BPM. Constant kick drum with evolving percussion and acid-style frequency sweeps. Raw and hypnotic.",
+  "duration": 30000,
+  "screenshotInterval": 5000,
+  "timeline": [
+    {
+      "time": 0,
+      "params": {
+        "knob_1": 0.7,
+        "knob_2": 0.8,
+        "knob_3": 0.2,
+        "knob_4": 0.3,
+        "knob_5": 0.7
+      },
+      "screenshot": "2025-07-24T07:25:41.036Z🦇🌙knob_1🩸0.700🪦knob_2🩸0.800🪦knob_3🩸0.200🪦knob_4🩸0.300🪦knob_5🩸0.700.jpg",
+      "description": "Techno hammer begins",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "time": 5000,
+      "params": {
+        "knob_1": 0.7333333333333333,
+        "knob_2": 0.8666666666666667,
+        "knob_3": 0.3333333333333333,
+        "knob_4": 0.43333333333333335,
+        "knob_5": 0.7666666666666667
+      },
+      "screenshot": "2025-07-24T07:25:46.084Z🦇🌙knob_1🩸0.733🪦knob_2🩸0.867🪦knob_3🩸0.333🪦knob_4🩸0.433🪦knob_5🩸0.767.jpg",
+      "description": "Techno hammer begins",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "time": 10000,
+      "params": {
+        "knob_1": 0.8,
+        "knob_2": 0.8666666666666667,
+        "knob_3": 0.4666666666666667,
+        "knob_4": 0.5666666666666667,
+        "knob_5": 0.8333333333333334
+      },
+      "screenshot": "2025-07-24T07:25:51.135Z🦇🌙knob_1🩸0.800🪦knob_2🩸0.867🪦knob_3🩸0.467🪦knob_4🩸0.567🪦knob_5🩸0.833.jpg",
+      "description": "Percussion layers building",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "time": 15000,
+      "params": {
+        "knob_1": 0.9,
+        "knob_2": 0.8,
+        "knob_3": 0.6,
+        "knob_4": 0.7,
+        "knob_5": 0.9
+      },
+      "screenshot": "2025-07-24T07:25:56.186Z🦇🌙knob_1🩸0.900🪦knob_2🩸0.800🪦knob_3🩸0.600🪦knob_4🩸0.700🪦knob_5🩸0.900.jpg",
+      "description": "Peak intensity - acid sweep",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "time": 20000,
+      "params": {
+        "knob_1": 0.8333333333333334,
+        "knob_2": 0.8666666666666667,
+        "knob_3": 0.4666666666666667,
+        "knob_4": 0.5666666666666667,
+        "knob_5": 0.8333333333333334
+      },
+      "screenshot": "2025-07-24T07:26:01.232Z🦇🌙knob_1🩸0.833🪦knob_2🩸0.867🪦knob_3🩸0.467🪦knob_4🩸0.567🪦knob_5🩸0.833.jpg",
+      "description": "Peak intensity - acid sweep",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "time": 25000,
+      "params": {
+        "knob_1": 0.7666666666666667,
+        "knob_2": 0.8666666666666667,
+        "knob_3": 0.3333333333333333,
+        "knob_4": 0.4333333333333333,
+        "knob_5": 0.7666666666666667
+      },
+      "screenshot": "2025-07-24T07:26:06.282Z🦇🌙knob_1🩸0.767🪦knob_2🩸0.867🪦knob_3🩸0.333🪦knob_4🩸0.433🪦knob_5🩸0.767.jpg",
+      "description": "Returning to base groove",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "time": 30000,
+      "params": {
+        "knob_1": 0.7,
+        "knob_2": 0.8,
+        "knob_3": 0.2,
+        "knob_4": 0.3,
+        "knob_5": 0.7
+      },
+      "screenshot": "2025-07-24T07:26:11.335Z🦇🌙knob_1🩸0.700🪦knob_2🩸0.800🪦knob_3🩸0.200🪦knob_4🩸0.300🪦knob_5🩸0.700.jpg",
+      "description": "Returning to base groove",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    }
+  ],
+  "animation": {
+    "duration": 30000,
+    "description": "Relentless techno with driving kick pattern",
+    "musicalContext": "Industrial techno at 135 BPM. Constant kick drum with evolving percussion and acid-style frequency sweeps. Raw and hypnotic.",
+    "screenshotInterval": 5000,
+    "keyframes": [
+      {
+        "time": 0,
+        "params": {
+          "knob_1": 0.7,
+          "knob_2": 0.8,
+          "knob_3": 0.2,
+          "knob_4": 0.3,
+          "knob_5": 0.7
+        }
+      },
+      {
+        "time": 0.125,
+        "params": {
+          "knob_1": 0.7,
+          "knob_2": 0.9,
+          "knob_3": 0.3,
+          "knob_4": 0.4,
+          "knob_5": 0.75
+        }
+      },
+      {
+        "time": 0.25,
+        "params": {
+          "knob_1": 0.8,
+          "knob_2": 0.8,
+          "knob_3": 0.4,
+          "knob_4": 0.5,
+          "knob_5": 0.8
+        }
+      },
+      {
+        "time": 0.375,
+        "params": {
+          "knob_1": 0.8,
+          "knob_2": 0.9,
+          "knob_3": 0.5,
+          "knob_4": 0.6,
+          "knob_5": 0.85
+        }
+      },
+      {
+        "time": 0.5,
+        "params": {
+          "knob_1": 0.9,
+          "knob_2": 0.8,
+          "knob_3": 0.6,
+          "knob_4": 0.7,
+          "knob_5": 0.9
+        }
+      },
+      {
+        "time": 0.75,
+        "params": {
+          "knob_1": 0.8,
+          "knob_2": 0.9,
+          "knob_3": 0.4,
+          "knob_4": 0.5,
+          "knob_5": 0.8
+        }
+      },
+      {
+        "time": 1,
+        "params": {
+          "knob_1": 0.7,
+          "knob_2": 0.8,
+          "knob_3": 0.2,
+          "knob_4": 0.3,
+          "knob_5": 0.7
+        }
+      }
+    ],
+    "descriptions": [
+      {
+        "time": 0,
+        "text": "Techno hammer begins"
+      },
+      {
+        "time": 0.25,
+        "text": "Percussion layers building"
+      },
+      {
+        "time": 0.5,
+        "text": "Peak intensity - acid sweep"
+      },
+      {
+        "time": 0.75,
+        "text": "Returning to base groove"
+      }
+    ],
+    "name": "techno-hammer"
+  },
+  "sessionId": "2025-07-24T07:25:38.847Z"
+}

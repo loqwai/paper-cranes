@@ -1,0 +1,102 @@
+{
+  "shader": "Tech House Pulse",
+  "sequence": "techno-hammer",
+  "sequenceDescription": "Relentless techno with driving kick pattern",
+  "musicalContext": "Industrial techno at 135 BPM. Constant kick drum with evolving percussion and acid-style frequency sweeps. Raw and hypnotic.",
+  "emotionalArc": "High-energy assault with moments of euphoria",
+  "visualJourney": "Rhythmic pulsing intensifies, colors shift from blue to purple",
+  "keyMoments": [
+    {
+      "time": 0,
+      "params": {
+        "knob_1": 0.7,
+        "knob_2": 0.8,
+        "knob_3": 0.2,
+        "knob_4": 0.3,
+        "knob_5": 0.7
+      },
+      "mood": "energetic",
+      "description": "Rising energy - complexity increases as the beat drives forward"
+    },
+    {
+      "time": 10,
+      "params": {
+        "knob_1": 0.8,
+        "knob_2": 0.8666666666666667,
+        "knob_3": 0.4666666666666667,
+        "knob_4": 0.5666666666666667,
+        "knob_5": 0.8333333333333334
+      },
+      "mood": "euphoric",
+      "description": "Maximum intensity - the The heartbeat of the underground dancefloor explodes with energy"
+    },
+    {
+      "time": 20,
+      "params": {
+        "knob_1": 0.8333333333333334,
+        "knob_2": 0.8666666666666667,
+        "knob_3": 0.4666666666666667,
+        "knob_4": 0.5666666666666667,
+        "knob_5": 0.8333333333333334
+      },
+      "mood": "euphoric",
+      "description": "Maximum intensity - the The heartbeat of the underground dancefloor explodes with energy"
+    },
+    {
+      "time": 30,
+      "params": {
+        "knob_1": 0.7,
+        "knob_2": 0.8,
+        "knob_3": 0.2,
+        "knob_4": 0.3,
+        "knob_5": 0.7
+      },
+      "mood": "energetic",
+      "description": "Rising energy - complexity increases as the beat drives forward"
+    }
+  ],
+  "dropMoment": null,
+  "parameterAnalysis": {
+    "bass": {
+      "min": 0.7,
+      "max": 0.9,
+      "avg": 0.7761904761904762,
+      "variance": 0.20000000000000007,
+      "visualImpact": "Controls twist factor - bass creates hypnotic spiral motion"
+    },
+    "kick": {
+      "min": 0.8,
+      "max": 0.8666666666666667,
+      "avg": 0.838095238095238,
+      "variance": 0.06666666666666665,
+      "visualImpact": "Drives pulse intensity - the visual kick drum"
+    },
+    "mid": {
+      "min": 0.2,
+      "max": 0.6,
+      "avg": 0.3714285714285715,
+      "variance": 0.39999999999999997,
+      "visualImpact": "Controls shape morphing between sphere and cube forms"
+    },
+    "high": {
+      "min": 0.3,
+      "max": 0.7,
+      "avg": 0.47142857142857136,
+      "variance": 0.39999999999999997,
+      "visualImpact": "Creates rim lighting and sharp edge definition"
+    },
+    "energy": {
+      "min": 0.7,
+      "max": 0.9,
+      "avg": 0.7857142857142857,
+      "variance": 0.20000000000000007,
+      "visualImpact": "Saturates colors from muted blues to vibrant purples"
+    }
+  },
+  "technicalNotes": {
+    "totalFrames": 7,
+    "maxEnergy": 0.9,
+    "maxBass": 0.9,
+    "hasDropMoment": false
+  }
+}

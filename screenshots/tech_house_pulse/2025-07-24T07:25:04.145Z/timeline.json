@@ -1,0 +1,266 @@
+{
+  "shader": "tech_house_pulse",
+  "description": "Classic EDM drop with tension building and explosive release",
+  "musicalContext": "Simulates a typical EDM buildup and drop pattern at 140 BPM. The tension rises through filtering and energy increase, then explodes with full bass and kick at the drop moment.",
+  "duration": 30000,
+  "screenshotInterval": 5000,
+  "timeline": [
+    {
+      "time": 0,
+      "params": {
+        "knob_1": 0.3,
+        "knob_2": 0,
+        "knob_3": 0.4,
+        "knob_4": 0.2,
+        "knob_5": 0.2
+      },
+      "screenshot": "2025-07-24T07:25:06.518Z🦇🌙knob_1🩸0.300🪦knob_2🩸0.000🪦knob_3🩸0.400🪦knob_4🩸0.200🪦knob_5🩸0.200.jpg",
+      "description": "Building tension - bass rumbles in the distance",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "time": 5000,
+      "params": {
+        "knob_1": 0.8047619047619048,
+        "knob_2": 0.9904761904761905,
+        "knob_3": 0.7952380952380953,
+        "knob_4": 0.8904761904761905,
+        "knob_5": 0.9952380952380953,
+        "knob_8": 0.9523809523809524
+      },
+      "screenshot": "2025-07-24T07:25:11.570Z🦇🌙knob_1🩸0.805🪦knob_2🩸0.990🪦knob_3🩸0.795🪦knob_4🩸0.890🪦knob_5🩸0.995🪦knob_8🩸0.952.jpg",
+      "description": "THE DROP! Bass and kick explode",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "time": 10000,
+      "params": {
+        "knob_1": 0.8833333333333334,
+        "knob_2": 0.7833333333333333,
+        "knob_3": 0.6833333333333333,
+        "knob_4": 0.6833333333333333,
+        "knob_5": 0.8833333333333334,
+        "knob_8": 0
+      },
+      "screenshot": "2025-07-24T07:25:16.618Z🦇🌙knob_1🩸0.883🪦knob_2🩸0.783🪦knob_3🩸0.683🪦knob_4🩸0.683🪦knob_5🩸0.883🪦knob_8🩸0.000.jpg",
+      "description": "Full energy maintained",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "time": 15000,
+      "params": {
+        "knob_1": 0.8,
+        "knob_2": 0.7,
+        "knob_3": 0.6,
+        "knob_4": 0.6,
+        "knob_5": 0.8
+      },
+      "screenshot": "2025-07-24T07:25:21.667Z🦇🌙knob_1🩸0.800🪦knob_2🩸0.700🪦knob_3🩸0.600🪦knob_4🩸0.600🪦knob_5🩸0.800.jpg",
+      "description": "Groove settling in",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "time": 20000,
+      "params": {
+        "knob_1": 0.7444444444444445,
+        "knob_2": 0.5888888888888889,
+        "knob_3": 0.5444444444444445,
+        "knob_4": 0.5444444444444445,
+        "knob_5": 0.6888888888888889
+      },
+      "screenshot": "2025-07-24T07:25:26.717Z🦇🌙knob_1🩸0.744🪦knob_2🩸0.589🪦knob_3🩸0.544🪦knob_4🩸0.544🪦knob_5🩸0.689.jpg",
+      "description": "Groove settling in",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "time": 25000,
+      "params": {
+        "knob_1": 0.6666666666666666,
+        "knob_2": 0.4666666666666667,
+        "knob_3": 0.48333333333333334,
+        "knob_4": 0.48333333333333334,
+        "knob_5": 0.5666666666666667
+      },
+      "screenshot": "2025-07-24T07:25:31.769Z🦇🌙knob_1🩸0.667🪦knob_2🩸0.467🪦knob_3🩸0.483🪦knob_4🩸0.483🪦knob_5🩸0.567.jpg",
+      "description": "Energy winding down",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    },
+    {
+      "time": 30000,
+      "params": {
+        "knob_1": 0.5,
+        "knob_2": 0.3,
+        "knob_3": 0.4,
+        "knob_4": 0.4,
+        "knob_5": 0.4
+      },
+      "screenshot": "2025-07-24T07:25:36.815Z🦇🌙knob_1🩸0.500🪦knob_2🩸0.300🪦knob_3🩸0.400🪦knob_4🩸0.400🪦knob_5🩸0.400.jpg",
+      "description": "Energy winding down",
+      "metrics": {
+        "memory": {
+          "usedJSHeapSize": 10000000,
+          "totalJSHeapSize": 10000000
+        },
+        "fps": 0
+      }
+    }
+  ],
+  "animation": {
+    "duration": 30000,
+    "description": "Classic EDM drop with tension building and explosive release",
+    "musicalContext": "Simulates a typical EDM buildup and drop pattern at 140 BPM. The tension rises through filtering and energy increase, then explodes with full bass and kick at the drop moment.",
+    "screenshotInterval": 5000,
+    "keyframes": [
+      {
+        "time": 0,
+        "params": {
+          "knob_1": 0.3,
+          "knob_2": 0,
+          "knob_3": 0.4,
+          "knob_4": 0.2,
+          "knob_5": 0.2
+        }
+      },
+      {
+        "time": 0.1,
+        "params": {
+          "knob_1": 0.35,
+          "knob_2": 0,
+          "knob_3": 0.5,
+          "knob_4": 0.3,
+          "knob_5": 0.3
+        }
+      },
+      {
+        "time": 0.15,
+        "params": {
+          "knob_1": 0.4,
+          "knob_2": 0,
+          "knob_3": 0.6,
+          "knob_4": 0.4,
+          "knob_5": 0.5
+        }
+      },
+      {
+        "time": 0.16,
+        "params": {
+          "knob_1": 0.8,
+          "knob_2": 1,
+          "knob_3": 0.8,
+          "knob_4": 0.9,
+          "knob_5": 1,
+          "knob_8": 1
+        }
+      },
+      {
+        "time": 0.3,
+        "params": {
+          "knob_1": 0.9,
+          "knob_2": 0.8,
+          "knob_3": 0.7,
+          "knob_4": 0.7,
+          "knob_5": 0.9,
+          "knob_8": 0
+        }
+      },
+      {
+        "time": 0.5,
+        "params": {
+          "knob_1": 0.8,
+          "knob_2": 0.7,
+          "knob_3": 0.6,
+          "knob_4": 0.6,
+          "knob_5": 0.8
+        }
+      },
+      {
+        "time": 0.8,
+        "params": {
+          "knob_1": 0.7,
+          "knob_2": 0.5,
+          "knob_3": 0.5,
+          "knob_4": 0.5,
+          "knob_5": 0.6
+        }
+      },
+      {
+        "time": 1,
+        "params": {
+          "knob_1": 0.5,
+          "knob_2": 0.3,
+          "knob_3": 0.4,
+          "knob_4": 0.4,
+          "knob_5": 0.4
+        }
+      }
+    ],
+    "descriptions": [
+      {
+        "time": 0,
+        "text": "Building tension - bass rumbles in the distance"
+      },
+      {
+        "time": 0.1,
+        "text": "Filters opening, energy rising"
+      },
+      {
+        "time": 0.15,
+        "text": "Final moment before the drop!"
+      },
+      {
+        "time": 0.16,
+        "text": "THE DROP! Bass and kick explode"
+      },
+      {
+        "time": 0.3,
+        "text": "Full energy maintained"
+      },
+      {
+        "time": 0.5,
+        "text": "Groove settling in"
+      },
+      {
+        "time": 0.8,
+        "text": "Energy winding down"
+      }
+    ],
+    "name": "the-drop"
+  },
+  "sessionId": "2025-07-24T07:25:04.145Z"
+}
