@@ -19,6 +19,9 @@
     "debounce": "^2.2.0",
     "htm": "^3.1.1",
     "hypnosound": "^1.9.0",
+    "pixelmatch": "^6.0.0",
+    "playwright": "^1.54.1",
+    "pngjs": "^7.0.0",
     "preact": "^10.25.4",
     "twgl-base.js": "^5.5.3",
     "ws": "^8.18.1"
