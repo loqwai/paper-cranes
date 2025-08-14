@@ -1,3 +1,6 @@
+// MAKE SURE TO NAME PUT YOUR SHADER IN "shaders/<YOUR_GITHUB_USERNAME>"
+// and make sure the filename ends in .frag
+// for example, if your username is "hypnodroid", and you want to publish "my-shader.frag", the filename should be "hypnodroid/my-shader.frag"
 
 
 
@@ -24,7 +27,7 @@ void mainImage( out vec4 color, in vec2 coord ) {
     vec2 uvc = (coord-R.xy/2.)/R.y;
     float d = 0.;
     float dd = 1.;
-    vec3 p = vec3(0.,0.,T/4.);
+    vec3 p = vec3(0.,0.,T/94.);
     vec3 rd = normalize(vec3(uvc.xy,1.));
     for (float i=0.;i<90. && dd>.001 && d < spectralCentroidMedian * 4.;i++) {
         d += dd;
@@ -35,9 +38,9 @@ void mainImage( out vec4 color, in vec2 coord ) {
     float bw = n.x+n.y;
     bw *= SS(spectralCentroidMedian,spectralEntropyMedian,1./d);
     vec3 final = hsl2rgb(vec3(bw));
-    final.x = spectralCentroid;
-    final.y = spectralRolloffNormalized;
-    final.z = bw;
-    // final = mix(final, hsl2rgb(getLastFrameColor(uv).rgb), 0.9);
-    color = vec4(hsl2rgb(final),1.);
+    final.x += spectralCentroidNormalized/4.;
+    final.y += spectralRolloffNormalized/4.;
+    final.z += bw;
+    final = mix(hsl2rgb(sin(final)), (getLastFrameColor(uv).rgb), 0.9);
+    color = vec4(final,1.);
 }
