@@ -1,0 +1,65 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../hypnosound"
+		}
+	],
+	"settings": {
+		"workbench.colorCustomizations": {
+			"activityBar.activeBackground": "#ab307e",
+			"activityBar.background": "#ab307e",
+			"activityBar.foreground": "#e7e7e7",
+			"activityBar.inactiveForeground": "#e7e7e799",
+			"activityBarBadge.background": "#25320e",
+			"activityBarBadge.foreground": "#e7e7e7",
+			"commandCenter.border": "#e7e7e799",
+			"sash.hoverBorder": "#ab307e",
+			"statusBar.background": "#832561",
+			"statusBar.foreground": "#e7e7e7",
+			"statusBarItem.hoverBackground": "#ab307e",
+			"statusBarItem.remoteBackground": "#832561",
+			"statusBarItem.remoteForeground": "#e7e7e7",
+			"titleBar.activeBackground": "#832561",
+			"titleBar.activeForeground": "#e7e7e7",
+			"titleBar.inactiveBackground": "#83256199",
+			"titleBar.inactiveForeground": "#e7e7e799"
+		},
+		"peacock.color": "#832561",
+		"glsl-canvas.uniforms": {
+			"beat": true,
+			"iTime": 0,
+			"time": 0,
+			"spectralCentroid": 0,
+			"spectralCentroidNormalized": 0,
+			"spectralCentroidZScore": 0,
+			"spectralCentroidMin": 0,
+			"spectralCentroidMax": 0,
+			"spectralCentroidMean": 0,
+			"energy": 0,
+			"energyNormalized": 0,
+			"energyZScore": 0,
+			"energyMin": 0,
+			"energyMax": 0,
+			"energyMean": 0,
+			"energyStandardDeviation": 0,
+			"resolution": [
+				800,
+				800,
+				0
+			],
+			"iResolution": [
+				800,
+				800,
+				0
+			],
+			"prevFrame": [
+				800,
+				800,
+				0
+			]
+		}
+	}
+}
