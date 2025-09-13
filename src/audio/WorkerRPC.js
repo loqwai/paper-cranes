@@ -1,5 +1,5 @@
 export class WorkerRPC {
-    constructor(workerName, historySize, timeout = 50) {
+    constructor(workerName, historySize, timeout = 30) {
         this.workerName = workerName
         this.historySize = historySize
         this.timeout = timeout

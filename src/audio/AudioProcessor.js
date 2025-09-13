@@ -16,7 +16,7 @@ export const getFlatAudioFeatures = (audioFeatures = AudioFeatures, rawFeatures 
 }
 
 export class AudioProcessor {
-    constructor(audioContext, sourceNode, historySize=500,  fftSize = 32768/2) {
+    constructor(audioContext, sourceNode, historySize=500,  fftSize = 4096) {
         this.audioContext = audioContext
         this.sourceNode = sourceNode
         this.fftSize = fftSize
@@ -27,11 +27,13 @@ export class AudioProcessor {
         this.rawFeatures = {}
         this.currentFeatures = getFlatAudioFeatures()
         this.currentFeatures.beat = false
+        this.smoothedFeatures = {}
+        this.smoothingFactor = 0.15 // Lower = smoother, higher = more responsive
     }
 
     createAnalyzer = () => {
         const analyzer = this.audioContext.createAnalyser()
-        analyzer.smoothingTimeConstant = 0.8
+        analyzer.smoothingTimeConstant = 0.2
         analyzer.minDecibels = -100
         analyzer.maxDecibels = -30
         analyzer.fftSize = this.fftSize
@@ -65,7 +67,31 @@ export class AudioProcessor {
 
     updateCurrentFeatures = () => {
         requestAnimationFrame(this.updateCurrentFeatures)
-        this.currentFeatures = getFlatAudioFeatures(AudioFeatures, this.rawFeatures)
+        const newFeatures = getFlatAudioFeatures(AudioFeatures, this.rawFeatures)
+        
+        // Apply exponential smoothing to reduce jitter
+        for (const key in newFeatures) {
+            if (typeof newFeatures[key] === 'number' && isFinite(newFeatures[key])) {
+                // Initialize smoothed value if it doesn't exist
+                if (!(key in this.smoothedFeatures)) {
+                    this.smoothedFeatures[key] = newFeatures[key]
+                }
+                
+                // Exponential smoothing formula
+                // For z-scores and normalized values, use less smoothing to maintain responsiveness
+                const smoothingFactor = key.includes('ZScore') || key.includes('Normalized') 
+                    ? this.smoothingFactor * 2 
+                    : this.smoothingFactor
+                    
+                this.smoothedFeatures[key] = this.smoothedFeatures[key] * (1 - smoothingFactor) + 
+                                             newFeatures[key] * smoothingFactor
+                
+                this.currentFeatures[key] = this.smoothedFeatures[key]
+            } else {
+                this.currentFeatures[key] = newFeatures[key]
+            }
+        }
+        
         this.historySize = window.cranes?.manualFeatures?.history_size ?? this.historySize
         this.currentFeatures.beat = this.isBeat()
     }
