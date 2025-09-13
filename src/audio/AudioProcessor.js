@@ -69,6 +69,9 @@ export class AudioProcessor {
         requestAnimationFrame(this.updateCurrentFeatures)
         const newFeatures = getFlatAudioFeatures(AudioFeatures, this.rawFeatures)
         
+        // Check for manual override of smoothing factor
+        const currentSmoothing = window.cranes?.manualFeatures?.smoothing ?? this.smoothingFactor
+        
         // Apply exponential smoothing to reduce jitter
         for (const key in newFeatures) {
             if (typeof newFeatures[key] === 'number' && isFinite(newFeatures[key])) {
@@ -80,8 +83,8 @@ export class AudioProcessor {
                 // Exponential smoothing formula
                 // For z-scores and normalized values, use less smoothing to maintain responsiveness
                 const smoothingFactor = key.includes('ZScore') || key.includes('Normalized') 
-                    ? this.smoothingFactor * 2 
-                    : this.smoothingFactor
+                    ? currentSmoothing * 2 
+                    : currentSmoothing
                     
                 this.smoothedFeatures[key] = this.smoothedFeatures[key] * (1 - smoothingFactor) + 
                                              newFeatures[key] * smoothingFactor
