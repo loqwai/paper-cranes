@@ -9,6 +9,17 @@ float hash(float n) {
     return fract(sin(n) * 43758.5453123);
 }
 
+// Use previous frame luminance as entropy seed
+float frameLuminance(vec2 uv) {
+    vec4 prev = getLastFrameColor(uv);
+    return dot(prev.rgb, vec3(0.299, 0.587, 0.114));
+}
+
+// Audio-biased noise - treat audio as offset to deterministic noise
+float audioBiasedNoise(float seed, float audioOffset) {
+    return hash(seed + audioOffset * 100.0);
+}
+
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = (fragCoord.xy / resolution.xy - 0.5) * 2.0;
     uv.x *= resolution.x / resolution.y;
@@ -66,20 +77,35 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Energy field visualization
     vec3 col = vec3(0.0);
 
-    // Orbital particles with nonlinear bass animation
+    // Sample frame luminance at particle birth positions for entropy
+    float centerLum = frameLuminance(vec2(0.5));
+
+    // Orbital particles with evolving, aperiodic motion
     float numOrbitals = 12.0;
     for (float i = 0.0; i < numOrbitals; i++) {
-        // Elastic bounce on bass peaks
-        float bassAnim = animateEaseOutElastic(bassZ);
-        float orbitAngle = (i / numOrbitals) * TWO_PI + time * (0.5 + bassAnim * 2.0);
+        // Use audio-biased noise for particle phase - breaks periodicity
+        float phaseNoise = audioBiasedNoise(i, fluxVal + time * 0.1);
 
-        // Smooth pulsing orbit radius
-        float radiusPhase = animateEaseInOutSine(fract(time * 0.3 + i * 0.1));
-        float orbitRadius = 0.35 + bassAnim * 0.4 * radiusPhase;
+        // Elastic bounce on bass peaks with entropy-driven variation
+        float bassAnim = animateEaseOutElastic(bassZ);
+        float angleSpeed = 0.5 + bassAnim * 2.0 + phaseNoise * entropyVal * 0.5;
+        float orbitAngle = (i / numOrbitals) * TWO_PI + time * angleSpeed;
+
+        // Evolving radius - uses frame feedback as seed
+        float radiusSeed = i + centerLum * 10.0;
+        float radiusNoise = audioBiasedNoise(radiusSeed, spreadVal);
+        float radiusPhase = animateEaseInOutSine(fract(time * (0.3 + radiusNoise * 0.2) + i * 0.1));
+        float orbitRadius = 0.35 + bassAnim * 0.4 * radiusPhase + radiusNoise * 0.15;
+
+        // Aperiodic perpendicular wobble using audio-biased noise
+        float perpAngle = orbitAngle + PI * 0.5;
+        float perpSeed = i * 3.0 + time * kurtosisVal * 0.1;
+        float perpNoise = audioBiasedNoise(perpSeed, entropyVal);
+        float perpOffset = perpNoise * 0.12;
 
         vec2 particlePos = vec2(
-            cos(orbitAngle) * orbitRadius,
-            sin(orbitAngle) * orbitRadius
+            cos(orbitAngle) * orbitRadius + cos(perpAngle) * perpOffset,
+            sin(orbitAngle) * orbitRadius + sin(perpAngle) * perpOffset
         );
 
         float particleDist = length(uv - particlePos);
@@ -95,23 +121,40 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float glowAnim = animatePulse(time * 2.0 + i);
         float glow = smoothstep(particleSize * 6.0, particleSize * 0.3, particleDist) * glowAnim;
 
-        // Color shifts with flux using smooth animation
+        // Evolving color palette using audio-biased noise
+        float colorSeed = i * 7.0 + time * roughnessVal * 0.05;
+        float colorNoise = audioBiasedNoise(colorSeed, centroidVal);
         float colorShift = animateSmooth(fluxVal);
-        vec3 particleColor = hsl2rgb(vec3((i / numOrbitals) * 0.8 + colorShift * 0.2, 0.95, 0.65));
+
+        // Hue evolves based on noise + audio + frame feedback
+        float hue = (i / numOrbitals) * 0.9 + colorShift * 0.3 + colorNoise * 0.4 + centerLum * 0.2 + 0.5;
+        hue = mod(hue, 1.0);
+
+        // Saturation varies with roughness
+        float sat = 0.85 + roughnessVal * 0.15 + audioBiasedNoise(i + 50.0, spreadVal) * 0.1;
+        vec3 particleColor = hsl2rgb(vec3(hue, sat, 0.62));
 
         // Controlled particle brightness - dramatic but not blinding
         col += particleColor * (particle * 2.0 + glow * 0.8) * (0.6 + energyAnim * 0.4);
     }
 
-    // Energy rings with bouncing mids animation
+    // Energy rings with aperiodic evolution
     float numRings = 4.0;
     for (float r = 0.0; r < numRings; r++) {
-        // Bounce effect on mids
-        float midsAnim = animateBounce(midsVal);
-        float ringPhase = time * 1.5 + r * 0.5;
+        // Sample frame at ring position for feedback-driven evolution
+        float ringAngle = time * 0.5 + r;
+        vec2 samplePos = vec2(0.5) + vec2(cos(ringAngle), sin(ringAngle)) * 0.3;
+        float ringLum = frameLuminance(samplePos);
 
-        // Rings expand/contract with animated mids
-        float ringRadius = 0.2 + (r / numRings) * 0.5 + midsAnim * 0.25 * animateEaseInOutSine(fract(ringPhase));
+        // Bounce effect on mids with audio-biased phase variation
+        float midsAnim = animateBounce(midsVal);
+        float phaseNoise = audioBiasedNoise(r * 13.0, kurtosisVal + time * 0.05);
+        float ringPhase = time * (1.5 + phaseNoise * 0.5) + r * (0.5 + ringLum * 0.3);
+
+        // Aperiodic radius using audio bias + frame feedback
+        float radiusNoise = audioBiasedNoise(r * 17.0 + time * 0.1, spreadVal);
+        float baseRingRadius = 0.2 + (r / numRings) * 0.5;
+        float ringRadius = baseRingRadius + midsAnim * 0.25 * animateEaseInOutSine(fract(ringPhase)) + radiusNoise * 0.08;
         float ringDist = abs(dist - ringRadius);
 
         // Stronger ring visibility with dramatic pulse
@@ -119,7 +162,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float ring = smoothstep(0.05, 0.008, ringDist) * ringAnim;
         float ringGlow = smoothstep(0.1, 0.02, ringDist) * ringAnim * 0.4;
 
-        vec3 ringColor = hsl2rgb(vec3(0.15 + r * 0.2 + spreadVal * 0.15, 0.9, 0.5));
+        // Evolving ring colors using frame feedback + audio bias
+        float colorNoise = audioBiasedNoise(r * 23.0 + time * 0.08, fluxVal);
+        float ringHue = 0.05 + r * 0.15 + spreadVal * 0.1 + colorNoise * 0.3 + ringLum * 0.15;
+        ringHue = mod(ringHue, 1.0);
+        vec3 ringColor = hsl2rgb(vec3(ringHue, 0.88, 0.52));
         col += ringColor * (ring * 0.8 + ringGlow) * (0.5 + midsAnim * 0.5);
     }
 
