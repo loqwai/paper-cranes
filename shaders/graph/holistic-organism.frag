@@ -198,11 +198,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float limbCore = smoothstep(thickness * (1.0 + edgeSoftness), thickness * edgeSoftness, limbDist);
         float limbGlow = smoothstep(thickness * 3.0, thickness, limbDist) * 0.6;
 
-        // Limb color shifts per limb - warm reds/oranges/pinks
+        // Limb color shifts per limb - evolving warm palette
         float limbColorNoise = audioBiasedNoise(i * 7.0 + time * 0.03, localLum);
-        float limbHue = coreHue + 0.03 + limbIndex * 0.12 + limbColorNoise * 0.15 + spectralFluxNormalized * 0.12;
+        float limbHue = 0.08 + limbIndex * 0.18 + limbColorNoise * 0.20 + spectralFluxNormalized * 0.15 + colorShift * 0.1;
         limbHue = mod(limbHue, 1.0);
-        vec3 limbColor = hsl2rgb(vec3(limbHue, 0.82 + skinRoughness * 0.12, 0.52));
+        float limbSat = 0.80 + skinRoughness * 0.15;
+        float limbLight = 0.50 + midPulse * 0.08;
+        vec3 limbColor = hsl2rgb(vec3(limbHue, limbSat, limbLight));
 
         // Limbs MUCH brighter than trails to stay visible
         col += limbColor * (limbCore * 3.5 + limbGlow * 1.2) * (0.8 + energy * 0.4);

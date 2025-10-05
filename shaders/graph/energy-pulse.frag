@@ -1,4 +1,4 @@
-// Aperiodic Rhythm Field V23 - Fixed fade balance, sharper particles maintained
+// Aperiodic Rhythm Field V25 - Museum quality: crisp trails, enhanced micro-particles, demo-ready
 // Energy (particle size), Bass (orbit radius), Mids (ring pulse), Treble (sparkles)
 // Flux (color shift + turbulence), Centroid (particle hue bias), Roughness (saturation + aberration)
 // Spread (ring hue + perpendicular wobble), Entropy (phase noise + mix), Kurtosis (lightness + ring phase)
@@ -129,15 +129,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float colorNoise = audioBiasedNoise(colorSeed, centroidVal);
         float colorShift = animateSmooth(fluxVal);
 
-        // Rich, deep warm palette - reds (0.95-1.0), oranges (0.05-0.1), yellows (0.12-0.18)
-        float baseHue = 0.95 + (i / numOrbitals) * 0.25; // 0.95 to 1.2 wraps to warm range
-        float hue = baseHue + colorShift * 0.08 + colorNoise * 0.15 + centerLum * 0.08;
+        // Wider warm palette - deep reds to bright yellows with more variety
+        float baseHue = 0.92 + (i / numOrbitals) * 0.35; // 0.92 to 1.27 for more color range
+        float hue = baseHue + colorShift * 0.12 + colorNoise * 0.18 + centerLum * 0.1;
         hue = mod(hue, 1.0);
 
-        // Higher saturation for richer colors
-        float sat = 0.88 + roughnessVal * 0.12 + audioBiasedNoise(i + 50.0, spreadVal) * 0.08;
-        // Lighter tones for better visibility
-        float light = 0.65 + kurtosisVal * 0.12;
+        // High saturation with variation for color depth
+        float sat = 0.86 + roughnessVal * 0.14 + audioBiasedNoise(i + 50.0, spreadVal) * 0.1;
+        // Brighter particles with dynamic range
+        float light = 0.62 + kurtosisVal * 0.18 + energyAnim * 0.08;
         vec3 particleColor = hsl2rgb(vec3(hue, clamp(sat, 0.0, 1.0), light));
 
         // Dramatic particle brightness with sharp core + soft glow
@@ -145,29 +145,29 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         col += particleColor * (particle * 3.2 + particleHard * 2.5 + glow * 1.2) * particleIntensity;
     }
 
-    // Secondary micro-particles for complexity - driven by entropy
-    if (entropyVal > 0.3) {
-        float numMicro = 8.0;
-        for (float m = 0.0; m < numMicro; m++) {
-            float microAngle = (m / numMicro) * TWO_PI + time * 2.5 + hash(m) * TWO_PI;
-            float microRadius = 0.15 + hash(m + 10.0) * 0.15 + entropyVal * 0.1;
+    // Enhanced micro-particles for complexity - always visible, boosted by entropy
+    float numMicro = 10.0; // More micro-particles
+    float microVisibility = 0.4 + entropyVal * 0.6; // Always some, more with entropy
+    for (float m = 0.0; m < numMicro; m++) {
+        float microAngle = (m / numMicro) * TWO_PI + time * 2.8 + hash(m) * TWO_PI;
+        float microRadius = 0.15 + hash(m + 10.0) * 0.18 + entropyVal * 0.12;
 
-            vec2 microPos = vec2(
-                cos(microAngle) * microRadius,
-                sin(microAngle) * microRadius
-            );
+        vec2 microPos = vec2(
+            cos(microAngle) * microRadius,
+            sin(microAngle) * microRadius
+        );
 
-            float microDist = length(uv - microPos);
-            float microSize = 0.008 + entropyVal * 0.012;
-            float microParticle = smoothstep(microSize, microSize * 0.3, microDist);
+        float microDist = length(uv - microPos);
+        float microSize = 0.010 + entropyVal * 0.014;
+        float microParticle = smoothstep(microSize, microSize * 0.2, microDist);
 
-            // Micro particles use complementary warm hues
-            float microHue = mod(0.02 + m * 0.12 + entropyVal * 0.25 + hash(m + 30.0) * 0.1, 1.0);
-            float microSat = 0.88 + hash(m + 40.0) * 0.12;
-            vec3 microColor = hsl2rgb(vec3(microHue, microSat, 0.58));
+        // Vivid complementary warm hues with more variety
+        float microHue = mod(0.05 + m * 0.15 + entropyVal * 0.3 + hash(m + 30.0) * 0.15, 1.0);
+        float microSat = 0.90 + hash(m + 40.0) * 0.10;
+        float microLight = 0.60 + hash(m + 50.0) * 0.15;
+        vec3 microColor = hsl2rgb(vec3(microHue, microSat, microLight));
 
-            col += microColor * microParticle * (0.55 + entropyVal * 0.25);
-        }
+        col += microColor * microParticle * (0.65 + entropyVal * 0.35) * microVisibility;
     }
 
     // Energy rings with aperiodic evolution
@@ -189,11 +189,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float ringRadius = baseRingRadius + midsAnim * 0.25 * animateEaseInOutSine(fract(ringPhase)) + radiusNoise * 0.08;
         float ringDist = abs(dist - ringRadius);
 
-        // Dramatic ring pulses with mids
-        float ringAnim = animateBounce(midsVal); // More dramatic bounce effect
+        // EXPLOSIVE ring pulses with mids - highly visible
+        float ringAnim = animateBounce(midsVal);
         float ringPulse = animateEaseOutElastic(midsAnim);
-        float ring = smoothstep(0.05, 0.005, ringDist) * (0.6 + ringPulse * 0.8);
-        float ringGlow = smoothstep(0.12, 0.015, ringDist) * ringPulse * 0.5;
+        float ringIntensity = 0.7 + midsAnim * 1.2; // Much stronger intensity
+        float ring = smoothstep(0.06, 0.003, ringDist) * ringIntensity;
+        float ringGlow = smoothstep(0.15, 0.01, ringDist) * ringPulse * 0.8;
 
         // Rich ring colors - deeper, more saturated
         float colorNoise = audioBiasedNoise(r * 23.0 + time * 0.08, fluxVal);
@@ -204,13 +205,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         col += ringColor * (ring * 0.6 + ringGlow) * (0.4 + midsAnim * 0.6);
     }
 
-    // Treble sparkles - delicate, not overwhelming
+    // Vivid treble sparkles - bright and noticeable
     float trebleZ = clamp(trebleZScore * 0.5 + 0.5, 0.0, 1.0);
-    if (trebleZ > 0.5) {
-        float numSparkles = 15.0;
+    if (trebleZ > 0.4) { // Lower threshold for more sparkles
+        float numSparkles = 18.0; // More sparkles
         for (float s = 0.0; s < numSparkles; s++) {
-            float sparkleAngle = hash(s) * TWO_PI + time * (1.0 + hash(s + 100.0) * 2.0);
-            float sparkleRadius = 0.65 + hash(s + 200.0) * 0.25;
+            float sparkleAngle = hash(s) * TWO_PI + time * (1.0 + hash(s + 100.0) * 2.5);
+            float sparkleRadius = 0.6 + hash(s + 200.0) * 0.3;
 
             vec2 sparklePos = vec2(
                 cos(sparkleAngle) * sparkleRadius,
@@ -218,20 +219,22 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             );
 
             float sparkleDist = length(uv - sparklePos);
-            float sparkleAnim = animatePulse(time * 5.0 + s * 0.3);
-            float sparkle = smoothstep(0.015, 0.0, sparkleDist) * sparkleAnim * trebleZ;
+            float sparkleAnim = animatePulse(time * 6.0 + s * 0.25);
+            float sparkle = smoothstep(0.018, 0.0, sparkleDist) * sparkleAnim * (0.5 + trebleZ * 0.8);
 
-            // Warm golden sparkles
-            vec3 sparkleColor = vec3(1.0, 0.8, 0.4);
-            col += sparkleColor * sparkle * 0.8;
+            // Brilliant white-yellow sparkles with more punch
+            vec3 sparkleColor = vec3(1.0, 0.95, 0.6);
+            col += sparkleColor * sparkle * 1.2;
         }
     }
 
-    // Beat explosion - sharp but contained
+    // Beat explosion - DRAMATIC and visible
     float beatFlash = beat ? 1.0 : 0.0;
     float beatAnim = animateEaseOutElastic(beatFlash);
-    float beatBurst = beatAnim * smoothstep(0.7, 0.0, dist);
-    col += vec3(beatBurst) * 0.3;
+    float beatBurst = beatAnim * smoothstep(0.8, 0.0, dist);
+    // Warm white flash on beat
+    vec3 beatColor = vec3(1.0, 0.95, 0.85);
+    col += beatColor * beatBurst * 0.6;
 
     // Center energy core - BARELY visible warm accent only
     float coreAnim = animateEaseInOutSine(energyVal);
@@ -239,11 +242,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 coreColor = hsl2rgb(vec3(0.08 + fluxVal * 0.05, 0.85, 0.35));
     col += coreColor * centerGlow;
 
-    // Balanced fade - not too aggressive
-    float fadeAmount = 0.82 + energyZ * 0.08 - entropyVal * 0.03;  // Slower fade prevents black-out
+    // Optimized fade for crisp trails with depth
+    float fadeAmount = 0.80 + energyZ * 0.10 - entropyVal * 0.04;  // Balanced for clarity
 
-    // Moderate chromatic aberration for shimmer without blur
-    float aberrationAmount = roughnessVal * 0.005 + fluxZ * 0.0025;
+    // Subtle chromatic aberration for shimmer, not blur
+    float aberrationAmount = roughnessVal * 0.0035 + fluxZ * 0.002;
     vec2 rOffset = vec2(aberrationAmount, 0.0);
     vec2 bOffset = vec2(-aberrationAmount, 0.0);
     vec2 gOffset = vec2(0.0, aberrationAmount * 0.5);
@@ -253,18 +256,19 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float b = getLastFrameColor(distortedUV + bOffset).b;
     vec3 aberratedTrails = vec3(r, g, b) * fadeAmount;
 
-    // Balanced mix - enough new content to stay visible
-    float mixAmount = 0.20 + entropyVal * 0.08;
+    // Optimized mix - crisp new content with flowing trails
+    float mixAmount = 0.22 + entropyVal * 0.10 + energyZ * 0.05;
     vec3 finalColor = mix(aberratedTrails, col, mixAmount);
 
     // Prevent white-out with smart clamping
     finalColor = clamp(finalColor, 0.0, 1.0);
 
-    // Refined vignette with edge glow for depth
-    float vignette = 1.0 - pow(distFromCenter, 1.8) * 0.35;
-    float edgeGlow = smoothstep(1.0, 0.7, distFromCenter) * 0.15 * energyVal;
+    // Subtle vignette with warm edge glow for professional depth
+    float vignette = 1.0 - pow(distFromCenter, 1.9) * 0.30;
+    float edgeGlow = smoothstep(1.0, 0.75, distFromCenter) * 0.12 * energyVal;
     finalColor *= vignette;
-    finalColor += vec3(edgeGlow) * hsl2rgb(vec3(0.08, 0.7, 0.3));
+    // Warm amber edge glow
+    finalColor += vec3(edgeGlow) * hsl2rgb(vec3(0.08 + fluxVal * 0.03, 0.75, 0.32));
 
     fragColor = vec4(finalColor, 1.0);
 }

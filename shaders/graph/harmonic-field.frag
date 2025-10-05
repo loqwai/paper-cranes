@@ -110,10 +110,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float radiusNoise = audioBiasedNoise(i + centerLum * 10.0, spreadVal);
         float radiusPhase = animateEaseInOutSine(fract(time * (0.2 + radiusNoise * 0.15)));
 
-        // SPREAD controls orbit radius - LARGER for better distribution
+        // SPREAD controls orbit radius - WIDER for full viewport coverage
         float spreadAnim2 = animateEaseOutElastic(spreadVal);
-        float baseRadius = 0.15 + spreadAnim2 * 0.25;
-        float orbitRadius = baseRadius * (0.8 + radiusPhase * 0.4);
+        float baseRadius = 0.20 + spreadAnim2 * 0.20;
+        float orbitRadius = baseRadius * (0.9 + radiusPhase * 0.3);
 
         // KURTOSIS creates vertical clustering (tight vs spread)
         float kurtosisEffect = mix(
