@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { context } from 'esbuild'
-import { ensureDistDirectory, createBuildOptions } from './esbuild.common.js'
+import { ensureDistDirectory, createBuildOptions } from '../../esbuild.common.js'
 
 async function main() {
     await ensureDistDirectory()
@@ -16,7 +16,7 @@ async function main() {
 
     await ctxBundle.serve({
         servedir: 'dist',
-        port: parseInt(process.env.PORT) || 6969,
+        port: 6970,
         host: '0.0.0.0'
     })
 }
