@@ -121,12 +121,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float g = getLastFrameColor(distortedUV).g;
     float b = getLastFrameColor(distortedUV + bOffset).b;
 
-    // ULTRA aggressive fade to prevent white-out accumulation
-    float fadeAmount = 0.60 + energyZScore * 0.02;
+    // EXTREME fade to prevent white-out accumulation
+    float fadeAmount = 0.92;  // Slower fade for smooth trails
     vec3 trails = vec3(r, g, b) * fadeAmount;
 
-    // Hard clamp trails to prevent accumulation
-    trails = min(trails, vec3(0.45));
+    // CRITICAL: Hard clamp trails - this is the MAXIMUM brightness trails can ever be
+    trails = min(trails, vec3(0.15));
 
     // === ORGANISM STRUCTURE ===
 
@@ -159,12 +159,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     coreHue = mod(coreHue, 1.0);
     vec3 coreColor = hsl2rgb(vec3(coreHue, 0.88, 0.35));
 
-    // Minimal core - just a hint (reduced brightness)
-    col += coreColor * coreGlow * 0.04 * (0.15 + energy * 0.08);
+    // Minimal core - just a hint (very dim to prevent white center)
+    col += coreColor * coreGlow * 0.02 * (0.1 + energy * 0.05);
 
-    // === LIMBS/TENDRILS (6 major limbs) ===
-    for (float i = 0.0; i < 6.0; i++) {
-        float limbIndex = i / 6.0;
+    // === LIMBS/TENDRILS (8 major limbs for more organic feel) ===
+    for (float i = 0.0; i < 8.0; i++) {
+        float limbIndex = i / 8.0;
 
         // Audio-biased phase for aperiodic motion
         float phaseNoise = audioBiasedNoise(i, spectralFluxNormalized + time * 0.05);
@@ -189,8 +189,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         vec2 closest = limbDir * projLength;
         float limbDist = length(tiltedPos - closest);
 
-        // Limb thickness varies along length - thicker for visibility
-        float thickness = 0.025 * (1.5 - projLength / limbLength) * (1.0 + featureSharp * 0.5);
+        // Limb thickness varies along length - thicker at base, tapering
+        float thicknessFactor = 1.0 - (projLength / limbLength) * 0.7;  // Taper toward tip
+        float thickness = 0.022 * thicknessFactor * (1.0 + featureSharp * 0.4);
 
         // Edge definition from rolloff
         float edgeSoftness = 1.0 - edgeSharpness * 0.5;
@@ -203,7 +204,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         limbHue = mod(limbHue, 1.0);
         vec3 limbColor = hsl2rgb(vec3(limbHue, 0.82 + skinRoughness * 0.12, 0.52));
 
-        col += limbColor * (limbCore * 1.8 + limbGlow * 0.6) * (0.5 + energy * 0.3);
+        // Limbs MUCH brighter than trails to stay visible
+        col += limbColor * (limbCore * 3.5 + limbGlow * 1.2) * (0.8 + energy * 0.4);
     }
 
     // === SURFACE NERVES (Treble shimmer) ===
@@ -219,8 +221,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float nerveSize = 0.004 + shimmer * 0.006;
         float nerveGlow = smoothstep(nerveSize * 4.0, nerveSize * 0.5, nerveDist);
 
-        // Subtle nerve sparkles (reduced)
-        col += vec3(0.9, 0.8, 0.6) * nerveGlow * shimmer * 0.15;
+        // Subtle nerve sparkles (more visible)
+        col += vec3(0.9, 0.8, 0.6) * nerveGlow * shimmer * 0.35;
     }
 
     // === PULSING RINGS (Mids frequency) ===
@@ -232,7 +234,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float ring = smoothstep(ringWidth * 2.0, ringWidth * 0.3, ringDist) * (1.0 - ringPhase);
 
     vec3 ringColor = hsl2rgb(vec3(mod(coreHue + 0.1, 1.0), 0.8, 0.65));
-    col += ringColor * ring * midPulse * 0.6;
+    col += ringColor * ring * midPulse * 0.8;  // More visible rings
 
     // === BREATHING AURA (Energy field) ===
     // Outer glow that breathes
@@ -245,8 +247,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // === FINAL COMPOSITION ===
 
-    // Mix with trails - more trails visible
-    float mixAmount = 0.22 + nerveChaos * 0.08;
+    // Mix with trails - favor new content heavily
+    float mixAmount = 0.55 + nerveChaos * 0.15;
     vec3 final = mix(trails, col, mixAmount);
 
     // Clamp to prevent white-out
