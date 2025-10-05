@@ -121,12 +121,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float g = getLastFrameColor(distortedUV).g;
     float b = getLastFrameColor(distortedUV + bOffset).b;
 
-    // EXTREME fade to prevent white-out accumulation
-    float fadeAmount = 0.92;  // Slower fade for smooth trails
+    // EXTREMELY aggressive fade to prevent accumulation
+    float fadeAmount = 0.35;  // Very fast fade prevents buildup
     vec3 trails = vec3(r, g, b) * fadeAmount;
 
     // CRITICAL: Hard clamp trails - this is the MAXIMUM brightness trails can ever be
-    trails = min(trails, vec3(0.15));
+    trails = min(trails, vec3(0.02));
 
     // === ORGANISM STRUCTURE ===
 
@@ -159,8 +159,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     coreHue = mod(coreHue, 1.0);
     vec3 coreColor = hsl2rgb(vec3(coreHue, 0.88, 0.35));
 
-    // Minimal core - just a hint (very dim to prevent white center)
-    col += coreColor * coreGlow * 0.02 * (0.1 + energy * 0.05);
+    // NO core glow - prevents white-out
+    // col += coreColor * coreGlow * 0.02 * (0.1 + energy * 0.05);
 
     // === LIMBS/TENDRILS (8 major limbs for more organic feel) ===
     for (float i = 0.0; i < 8.0; i++) {
@@ -208,8 +208,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float limbLight = 0.50 + midPulse * 0.08;
         vec3 limbColor = hsl2rgb(vec3(limbHue, limbSat, limbLight));
 
-        // Limbs MUCH brighter than trails to stay visible
-        col += limbColor * (limbCore * 3.5 + limbGlow * 1.2) * (0.8 + energy * 0.4);
+        // Distance-based dimming to prevent center white-out
+        // Limbs fade out as they approach center to prevent overlap accumulation
+        float centerDimming = smoothstep(0.0, 0.15, projLength / limbLength);
+
+        // Balanced limb brightness - visible but not overwhelming
+        col += limbColor * (limbCore * 1.0 + limbGlow * 0.3) * (0.5 + energy * 0.2) * centerDimming;
     }
 
     // === SECONDARY TENDRILS (Smaller limbs between main ones) ===
@@ -234,7 +238,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
         // Cyan/blue secondary color for contrast
         vec3 secColor = hsl2rgb(vec3(0.5 + secIndex * 0.1, 0.75, 0.55));
-        col += secColor * secCore * nerveChaos * 1.5;
+        col += secColor * secCore * nerveChaos * 0.5;
     }
 
     // === SURFACE NERVES (Treble shimmer) ===
@@ -251,7 +255,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float nerveGlow = smoothstep(nerveSize * 3.0, 0.0, nerveDist);
 
         // Subtle nerve sparkles with treble reactivity
-        col += vec3(0.95, 0.90, 0.70) * nerveGlow * shimmer * 0.6;
+        col += vec3(0.95, 0.90, 0.70) * nerveGlow * shimmer * 0.25;
     }
 
     // === PULSING RINGS (Mids frequency) ===
@@ -265,7 +269,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
         float ringHue = mod(0.15 + r * 0.1 + mids * 0.15, 1.0);
         vec3 ringColor = hsl2rgb(vec3(ringHue, 0.75, 0.60));
-        col += ringColor * ring * midPulse * 1.2;
+        col += ringColor * ring * midPulse * 0.4;
     }
 
     // === BREATHING AURA (Energy field) ===
@@ -278,12 +282,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Complementary aura color
     float auraHue = mod(0.55 + colorShift * 0.3, 1.0);
     vec3 auraColor = hsl2rgb(vec3(auraHue, 0.65, 0.45));
-    col += auraColor * aura * energy * 0.25;
+    col += auraColor * aura * energy * 0.06;
 
     // === FINAL COMPOSITION ===
 
-    // Mix with trails - favor new content heavily
-    float mixAmount = 0.55 + nerveChaos * 0.15;
+    // Mix with trails - favor trails heavily to prevent accumulation
+    float mixAmount = 0.25 + nerveChaos * 0.05;
     vec3 final = mix(trails, col, mixAmount);
 
     // Clamp to prevent white-out

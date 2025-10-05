@@ -89,7 +89,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float b = getLastFrameColor(uvB).b;
 
     // Aggressive fade to prevent accumulation - MUCH faster fade
-    float fadeAmount = 0.70 + spreadZ * 0.05;
+    float fadeAmount = 0.60 + spreadZ * 0.05;
     vec3 trails = vec3(r, g, b) * fadeAmount;
 
     // Draw particles in spectral distribution
@@ -151,10 +151,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float sat = 0.88 + skewVal * 0.12;
         vec3 particleColor = hsl2rgb(vec3(hue, sat, 0.62));
 
-        // Draw particle with MUCH higher brightness to overcome trails
+        // Draw particle with controlled brightness
         float particle = drawParticle(uv, particlePos, 0.020);
         float energyAnim = animateEaseOutExpo(spreadZ * 0.5 + 0.5);
-        col += particleColor * particle * visibility * (6.0 + energyAnim * 2.5);
+        col += particleColor * particle * visibility * (1.8 + energyAnim * 0.7);
     }
 
     // Add VERY subtle center ambient glow (controlled carefully)

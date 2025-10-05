@@ -80,8 +80,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float g = getLastFrameColor(distortedUV + gOffset).g;
     float b = getLastFrameColor(distortedUV + bOffset).b;
 
-    // FASTER fade to prevent accumulation (0.78-0.82)
-    float fadeAmount = 0.80 + clamp(ENTROPY_Z * 0.02, 0.0, 0.02);
+    // FASTER fade to prevent accumulation
+    float fadeAmount = 0.65 + clamp(ENTROPY_Z * 0.02, 0.0, 0.02);
     vec3 aberratedTrails = vec3(r, g, b) * fadeAmount;
 
     // Create flowing ribbons
@@ -119,13 +119,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
         vec3 ribbonColor = hsl2rgb(vec3(hue, sat, light));
 
-        // Brighter ribbons (4-6x) - reduced to prevent white-out
-        col += ribbonColor * (ribbon * 5.0 + glow * 1.5);
+        // Controlled ribbon brightness
+        col += ribbonColor * (ribbon * 1.5 + glow * 0.4);
     }
 
-    // Add texture grain based on roughness
+    // Add subtle texture grain based on roughness
     float grainNoise = audioBiasedNoise(uv.x * 100.0 + uv.y * 100.0, time * 0.1);
-    float grain = grainNoise * clamp(ROUGHNESS, 0.0, 1.0) * 0.12;
+    float grain = grainNoise * clamp(ROUGHNESS, 0.0, 1.0) * 0.03;
     col += vec3(grain);
 
     // Mix trails and new content (20-30% new)
