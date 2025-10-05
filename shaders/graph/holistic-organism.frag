@@ -169,14 +169,16 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         // Audio-biased phase for aperiodic motion
         float phaseNoise = audioBiasedNoise(i, spectralFluxNormalized + time * 0.05);
 
-        // Limb angle with organic wobble
+        // Limb angle with organic wobble and bass responsiveness
         float baseAngle = limbIndex * TWO_PI;
         float wobbleSpeed = metabolismSpeed * (0.8 + phaseNoise * 0.4);
-        float limbAngle = baseAngle + time * wobbleSpeed + nerveChaos * sin(time * 2.0 + i) * 0.5;
+        float bassWobble = animateEaseOutElastic(bassZScore) * sin(time * 3.0 + i) * 0.8;  // Bass makes limbs wave
+        float limbAngle = baseAngle + time * wobbleSpeed + nerveChaos * sin(time * 2.0 + i) * 0.5 + bassWobble;
 
-        // Limb reach varies with spread
+        // Limb reach varies with spread and contracts/extends dramatically
         float reachNoise = audioBiasedNoise(i * 3.0, spectralSpreadNormalized);
-        float limbLength = limbReach * (0.8 + reachNoise * 0.4) * (1.0 + midPulse * 0.3);
+        float bassExtend = animateEaseOutElastic(bassZScore);  // Bass makes limbs shoot out
+        float limbLength = limbReach * (0.8 + reachNoise * 0.4) * (1.0 + midPulse * 0.3) * (1.0 + bassExtend * 0.4);
 
         // Limb position
         vec2 limbDir = vec2(cos(limbAngle), sin(limbAngle));
