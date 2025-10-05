@@ -210,21 +210,46 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         col += limbColor * (limbCore * 3.5 + limbGlow * 1.2) * (0.8 + energy * 0.4);
     }
 
+    // === SECONDARY TENDRILS (Smaller limbs between main ones) ===
+    for (float i = 0.0; i < 8.0; i++) {
+        float secIndex = i / 8.0;
+        float secNoise = audioBiasedNoise(i + 100.0, nerveChaos);
+
+        // Offset by half angle to sit between main limbs
+        float secAngle = (secIndex + 0.5 / 8.0) * TWO_PI + time * (0.5 + secNoise * 0.3);
+        float secLength = limbReach * (0.4 + nerveChaos * 0.3);
+
+        vec2 secDir = vec2(cos(secAngle), sin(secAngle));
+        vec2 secEnd = secDir * secLength;
+
+        float secProj = dot(tiltedPos, secDir);
+        secProj = clamp(secProj, 0.0, secLength);
+        vec2 secClosest = secDir * secProj;
+        float secDist = length(tiltedPos - secClosest);
+
+        float secThick = 0.008 * (1.0 - secProj / secLength);
+        float secCore = smoothstep(secThick * 1.5, secThick * 0.5, secDist);
+
+        // Cyan/blue secondary color for contrast
+        vec3 secColor = hsl2rgb(vec3(0.5 + secIndex * 0.1, 0.75, 0.55));
+        col += secColor * secCore * nerveChaos * 1.5;
+    }
+
     // === SURFACE NERVES (Treble shimmer) ===
     // Small nerve-like particles on surface
     for (float i = 0.0; i < 20.0; i++) {
         float nervePhase = audioBiasedNoise(i * 1.5, shimmer + time * 0.1);
         float nerveAngle = nervePhase * TWO_PI + time * metabolismSpeed * 2.0;
-        float nerveRadius = 0.1 + nerveChaos * 0.3 + sin(time * 3.0 + i) * 0.1;
+        float nerveRadius = 0.1 + nerveChaos * 0.25 + sin(time * 3.0 + i) * 0.08;
 
         vec2 nervePos = vec2(cos(nerveAngle), sin(nerveAngle)) * nerveRadius;
         float nerveDist = length(tiltedPos - nervePos);
 
-        float nerveSize = 0.004 + shimmer * 0.006;
-        float nerveGlow = smoothstep(nerveSize * 4.0, nerveSize * 0.5, nerveDist);
+        float nerveSize = 0.005 + shimmer * 0.007;
+        float nerveGlow = smoothstep(nerveSize * 3.0, 0.0, nerveDist);
 
-        // Subtle nerve sparkles (more visible)
-        col += vec3(0.9, 0.8, 0.6) * nerveGlow * shimmer * 0.35;
+        // Subtle nerve sparkles with treble reactivity
+        col += vec3(0.95, 0.90, 0.70) * nerveGlow * shimmer * 0.6;
     }
 
     // === PULSING RINGS (Mids frequency) ===
