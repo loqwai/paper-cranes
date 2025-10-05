@@ -1,86 +1,83 @@
-// The parameters of memory
-#define MEMORY_DECAY 0.992
-#define TRAIL_THRESHOLD 0.998
+// Multi-ribbon spectral dance with dynamic glow and shimmer
+// Each ribbon represents a different dimension of sound
 
-// Visual constants
-#define VERTICAL_SCALE 0.35
-#define VERTICAL_CENTER 0.5
+#define LINE_THICKNESS 0.020  // Thick, bold lines
+#define AMPLITUDE 0.32
+#define CENTER 0.5
 
-// Line continuity - prevents gaps
-#define BASE_WIDTH 20.0           // Even thicker
-#define GRADIENT_RANGE 1.5        // How far the gradient extends
+// Draw a ribbon with dynamic glow based on intensity
+vec4 drawRibbon(vec2 uv, float value, float intensity, vec3 baseColor) {
+    float val = clamp(value, -1.0, 1.0);
+    float ribbonY = CENTER + val * AMPLITUDE;
+    float dist = abs(uv.y - ribbonY);
 
-// Feature influence
-#define CENTROID_RANGE 0.8        // Vertical movement
-#define ENTROPY_WAVE 0.08         // Organic displacement
+    // Dynamic thickness pulses with intensity
+    float dynamicThickness = LINE_THICKNESS * (0.7 + intensity * 0.6);
+
+    // Sharp core line
+    float line = smoothstep(dynamicThickness * 1.2, dynamicThickness * 0.2, dist);
+
+    // Expanding glow when intense
+    float glowRadius = dynamicThickness * (2.5 + intensity * 6.0);
+    float glow = smoothstep(glowRadius, dynamicThickness * 0.5, dist) * (0.3 + intensity * 0.7);
+
+    // Shimmer effect - subtle pulse
+    float shimmer = 1.0 + sin(time * 3.0 + value * 10.0) * intensity * 0.15;
+
+    // Vibrant colors when intense, desaturated when quiet
+    float saturation = 0.4 + intensity * 0.6;
+    vec3 color = mix(vec3(dot(baseColor, vec3(0.333))), baseColor, saturation);
+
+    vec3 finalColor = color * (line * 3.5 + glow * shimmer * 1.5) * (1.0 + intensity * 0.5);
+    return vec4(finalColor, line + glow * 0.5);
+}
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord.xy / resolution.xy;
 
-    // Memory flows left
-    if (uv.x < TRAIL_THRESHOLD) {
+    // Scrolling with very slow fade
+    if (uv.x < 0.99) {
         vec2 prevUV = uv;
         prevUV.x += 1.0 / resolution.x;
-        vec4 memory = getLastFrameColor(prevUV);
-        fragColor = memory * MEMORY_DECAY;
+
+        // Much slower fade to keep trails visible across screen
+        vec4 prev = getLastFrameColor(prevUV);
+        fragColor = prev * 0.995;
     } else {
         fragColor = vec4(0.0, 0.0, 0.0, 1.0);
     }
 
-    // The present emerges
-    if (uv.x > TRAIL_THRESHOLD) {
-        // Normalize and clamp features
-        float centr = clamp((spectralCentroidZScore + 2.5) / 5.0, 0.0, 1.0);
-        float sprd = clamp((spectralSpreadZScore + 2.5) / 5.0, 0.0, 1.0);
-        float entro = clamp((spectralEntropyZScore + 2.5) / 5.0, 0.0, 1.0);
-        float nrg = clamp((energyZScore + 2.5) / 5.0, 0.0, 1.0);
-        
-        float y = fragCoord.y;
-        
-        // Centerline position
-        float centerY = (VERTICAL_CENTER + (centr - 0.5) * CENTROID_RANGE * VERTICAL_SCALE) * resolution.y;
-        
-        // Width grows with harmonic spread
-        float width = BASE_WIDTH + sprd * 15.0;
-        
-        // Organic waviness from entropy
-        float wave = sin(y * 0.15 + entro * 12.0) * entro * ENTROPY_WAVE * resolution.y;
-        
-        // Distance from centerline
-        float dist = abs(y - centerY - wave);
-        
-        // Correct smoothstep - outer to inner for proper gradient
-        float innerEdge = width * 0.2;
-        float outerEdge = width * GRADIENT_RANGE;
-        float intensity = smoothstep(outerEdge, innerEdge, dist);
-        
-        // Vivid color spectrum based on pitch
-        vec3 color;
-        
-        if (centr < 0.25) {
-            // Deep bass: indigo to blue
-            color = mix(vec3(0.2, 0.0, 0.6), vec3(0.0, 0.3, 1.0), centr * 4.0);
-        } else if (centr < 0.5) {
-            // Low-mid: blue to cyan
-            color = mix(vec3(0.0, 0.3, 1.0), vec3(0.0, 0.9, 0.9), (centr - 0.25) * 4.0);
-        } else if (centr < 0.75) {
-            // High-mid: cyan to yellow
-            color = mix(vec3(0.0, 0.9, 0.9), vec3(1.0, 0.9, 0.0), (centr - 0.5) * 4.0);
-        } else {
-            // Treble: yellow to hot magenta
-            color = mix(vec3(1.0, 0.9, 0.0), vec3(1.0, 0.2, 0.6), (centr - 0.75) * 4.0);
-        }
-        
-        // Energy amplifies brightness dramatically
-        float brightness = 0.8 + nrg * 1.2;
-        
-        // Entropy tints toward purple
-        color = mix(color, vec3(0.9, 0.4, 1.0), entro * 0.25);
-        
-        vec4 sound = vec4(color * intensity * brightness, intensity);
-        
-        // Max blending keeps pure colors
-        fragColor = max(fragColor, sound);
-        fragColor = clamp(fragColor, 0.0, 1.0);
+    // Draw new data on rightmost column
+    if (uv.x > 0.99) {
+        vec3 col = vec3(0.0);
+
+        // Use zScore for intensity (shows peaks and activity)
+        float spreadIntensity = clamp(spectralSpreadZScore * 0.5 + 0.5, 0.0, 1.0);
+        float fluxIntensity = clamp(spectralFluxZScore * 0.5 + 0.5, 0.0, 1.0);
+        float midsIntensity = clamp(midsZScore * 0.5 + 0.5, 0.0, 1.0);
+        float bassIntensity = clamp(bassZScore * 0.5 + 0.5, 0.0, 1.0);
+        float centroidIntensity = clamp(spectralCentroidZScore * 0.5 + 0.5, 0.0, 1.0);
+        float energyIntensity = clamp(energyZScore * 0.5 + 0.5, 0.0, 1.0);
+
+        // Layer ribbons - back to front
+        col += drawRibbon(uv, spectralSpreadNormalized * 2.0 - 1.0, spreadIntensity,
+                         vec3(0.0, 1.0, 0.9)).rgb;
+
+        col += drawRibbon(uv, spectralFluxNormalized * 2.0 - 1.0, fluxIntensity,
+                         vec3(1.0, 0.0, 0.9)).rgb;
+
+        col += drawRibbon(uv, midsNormalized * 2.0 - 1.0, midsIntensity,
+                         vec3(1.0, 0.5, 0.0)).rgb;
+
+        col += drawRibbon(uv, bassNormalized * 2.0 - 1.0, bassIntensity,
+                         vec3(0.2, 0.5, 1.0)).rgb;
+
+        col += drawRibbon(uv, spectralCentroidNormalized * 2.0 - 1.0, centroidIntensity,
+                         vec3(1.0, 1.0, 0.0)).rgb;
+
+        col += drawRibbon(uv, energyNormalized * 2.0 - 1.0, energyIntensity,
+                         vec3(1.0, 0.1, 0.1)).rgb;
+
+        fragColor.rgb += col;
     }
 }

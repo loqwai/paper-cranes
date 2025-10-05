@@ -54,6 +54,127 @@ Each feature has 8 statistical variations:
 - Energy
 - Beat detection
 
+## Audio Features Reference (Hypnosound)
+
+### The 14 Core Features
+
+| Feature | Range | Measures | Musical Meaning | Independence |
+|---------|-------|----------|-----------------|--------------|
+| **bass** | 0-1 | 0-400Hz energy | Low-end power | Independent from treble |
+| **mids** | 0-1 | Mid-range energy | Body/warmth | Semi-independent |
+| **treble** | 0-1 | High freq energy | Brightness/air | Independent from bass |
+| **energy** | 0-1 | Total amplitude | Loudness | Correlates with bass |
+| **pitchClass** | 0-1 | Note (0-11)/12 | Which note playing | Independent from timbre |
+| **spectralCentroid** | 0-1+ | Center of mass | Brightness/pitch center | Semi-correlates with pitchClass |
+| **spectralSpread** | 0-1+ | Frequency variance | Harmonic width | Independent from centroid |
+| **spectralSkew** | varies | Distribution tilt | Dark vs bright tilt | Independent from spread |
+| **spectralKurtosis** | 0-1 | Peakedness | Focus vs diffuse | Independent from skew |
+| **spectralFlux** | 0-1+ | Rate of change | Timbral motion | Semi-correlates with energy |
+| **spectralRolloff** | 0-1+ | High freq cutoff | Where highs die | Independent from others |
+| **spectralRoughness** | 0-1+ | Dissonance | Grittiness/beating | Independent from pitch |
+| **spectralEntropy** | 0-1+ | Unpredictability | Chaos vs order | Independent from most |
+| **spectralCrest** | 0-1+ | Peak/mean ratio | Spiky vs smooth | Independent from others |
+
+### Statistical Variations (8 per feature)
+
+Each audio feature provides 8 statistical variations calculated over a rolling window (default 500 frames):
+
+1. **value** - Raw current value from the analyzer
+2. **normalized** - Min-max normalized to 0-1 range (relative to history)
+3. **mean** - Historical average (baseline character)
+4. **median** - Historical median (robust center)
+5. **min** - Historical minimum (lower bound)
+6. **max** - Historical maximum (upper bound)
+7. **standardDeviation** - Variability measure
+8. **zScore** - Standardized score: `(value - mean) / (stdDev * 2.5)` → roughly -1 to 1
+
+### When to Use Each Statistical Variation
+
+- **zScore**: Detect anomalies, drops, spikes - "is this unusual?"
+- **normalized**: Smooth 0-1 modulation - "where in the range?"
+- **mean/median**: Baseline behavior, slow changes - "what's the average character?"
+- **min/max**: Historical context - "what are the extremes?"
+- **standardDeviation**: Detect stability vs volatility
+- **value**: Raw analysis (less common in shaders)
+
+### Feature Independence Matrix
+
+**Highly Covariant (avoid pairing):**
+- `energy` + `bass` (both increase with loud low frequencies)
+- `energy` + `spectralFlux` (big changes often involve energy changes)
+- `spectralCentroid` + `pitchClass` (both relate to pitch)
+- `spectralSpread` + `spectralKurtosis` (both describe distribution shape)
+- `spectralSpread` + `spectralEntropy` (wider often means more complex)
+
+**Independent Pairings (good for variety):**
+- `bass` vs `treble` (opposite frequency ranges)
+- `spectralCentroid` vs `spectralRoughness` (pitch center vs dissonance)
+- `spectralEntropy` vs `spectralCrest` (chaos vs peakiness)
+- `spectralFlux` vs `spectralRolloff` (change rate vs cutoff)
+- `spectralSkew` vs `energy` (harmonic tilt vs loudness)
+- `pitchClass` vs `spectralKurtosis` (pitch vs distribution shape)
+
+### Feature Domains (for choosing independent features)
+
+Group features by domain and pick from DIFFERENT domains for variety:
+
+**Frequency Bands:**
+- `bass`, `mids`, `treble` (0-400Hz, mid-range, high freq)
+
+**Spectral Shape:**
+- `spectralCentroid` (center), `spectralSpread` (width)
+- `spectralSkew` (tilt), `spectralKurtosis` (peakedness)
+
+**Spectral Quality:**
+- `spectralRoughness` (dissonance), `spectralEntropy` (chaos), `spectralCrest` (peakiness)
+
+**Temporal:**
+- `spectralFlux` (rate of change)
+
+**Tonal:**
+- `pitchClass` (which note), `spectralRolloff` (harmonic cutoff)
+
+**Energy:**
+- `energy` (total loudness)
+
+### Shader Design Patterns
+
+#### Simple Frequency Reactivity
+```glsl
+// Respond to different frequency bands
+#define LOW_ENERGY (bassNormalized)
+#define MID_ENERGY (midsNormalized)
+#define HIGH_ENERGY (trebleNormalized)
+```
+
+#### Complex Timbral Analysis
+```glsl
+// Respond to spectral characteristics
+#define BRIGHTNESS (spectralCentroidNormalized)
+#define HARMONIC_WIDTH (spectralSpreadNormalized)
+#define DISSONANCE (spectralRoughnessNormalized)
+#define CHAOS (spectralEntropyNormalized)
+```
+
+#### Musical Structure Detection
+```glsl
+// Detect drops, builds, transitions
+#define IS_DROP (energyZScore > 0.5)
+#define IS_BUILDING (spectralFluxZScore > 0.3)
+#define TIMBRAL_SHIFT (spectralFluxZScore)
+```
+
+#### Creating Visual Variety
+```glsl
+// Choose independent features from different domains
+#define RIBBON_1 (bassZScore)           // Frequency domain
+#define RIBBON_2 (trebleZScore)          // Frequency domain (opposite)
+#define RIBBON_3 (spectralCentroidNormalized)  // Spectral shape
+#define RIBBON_4 (spectralKurtosisZScore)      // Spectral shape (different aspect)
+#define RIBBON_5 (spectralRoughnessNormalized) // Spectral quality
+#define RIBBON_6 (pitchClassNormalized)        // Tonal
+```
+
 ## Performance Optimizations
 
 ### Latency Reduction (from ~1000ms to ~100ms)
@@ -256,3 +377,4 @@ float complexity = spectralEntropyNormalized * spectralFluxZScore;
 5. **Worker Architecture**: Parallel processing via Web Workers is essential for real-time performance with 15+ audio features.
 
 6. **Shader Philosophy**: Shaders should be artistic, reactive, and performant - avoiding dead zones while maintaining visual coherence.
+- use far less time when running sleep than you ordinarily would; If it were 5 seconds, do 1 instead.

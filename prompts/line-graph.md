@@ -54,17 +54,42 @@ The same song loops continuously. This means:
    - Emphasize: Beauty, coherence, and wow-factor
    - Success metric: Is it mesmerizing? Does it reveal song structure?
 
-**Available audio features** (all with .value and .stats.zScore):
-- spectralCentroidZScore (pitch center - where the energy lives)
-- spectralSpreadZScore (harmonic bandwidth - wide or narrow)
-- spectralSkewZScore (harmonic tilt - leaning bright or dark)
-- spectralKurtosisZScore (peakedness - focused or diffuse)
-- spectralRoughnessZScore (dissonance, grittiness)
-- spectralEntropyZScore (unpredictability, chaos)
-- spectralRolloffZScore (where high frequencies die out)
-- spectralFluxZScore (rate of timbral change)
-- energyZScore (loudness, power)
-- spectralCrestMedian, etc. (median values for scaling)
+**Available audio features** - Each has 8 statistical variations:
+(value, normalized, mean, median, min, max, standardDeviation, zScore)
+
+**Frequency Bands:**
+- bass (0-400Hz energy), mids (mid-range), treble (high frequencies)
+
+**Spectral Shape:**
+- spectralCentroid (pitch center/brightness), spectralSpread (harmonic width)
+- spectralSkew (harmonic tilt), spectralKurtosis (focus vs diffuse)
+
+**Spectral Quality:**
+- spectralRoughness (dissonance/grittiness), spectralEntropy (chaos/unpredictability)
+- spectralCrest (peakiness vs smoothness)
+
+**Temporal & Tonal:**
+- spectralFlux (rate of timbral change), spectralRolloff (high freq cutoff)
+- pitchClass (which note 0-11), energy (total loudness)
+
+**CRITICAL - Feature Independence for Visual Variety:**
+
+To avoid covariant ribbons that move together, choose features from DIFFERENT domains:
+
+**AVOID Pairing (highly covariant):**
+- energy + bass (both spike with loud low frequencies)
+- energy + spectralFlux (changes correlate)
+- spectralCentroid + pitchClass (both pitch-related)
+- spectralSpread + spectralKurtosis (both describe distribution)
+- spectralSpread + spectralEntropy (wider → more complex)
+
+**GOOD Pairings (independent variety):**
+- bass vs treble (opposite frequency bands)
+- spectralCentroid vs spectralRoughness (pitch vs dissonance)
+- spectralEntropy vs spectralCrest (chaos vs peakiness)
+- spectralFlux vs spectralRolloff (change vs cutoff)
+- spectralSkew vs energy (tilt vs loudness)
+- pitchClass vs spectralKurtosis (note vs shape)
 
 **Iterative Process for EACH Shader:**
 
