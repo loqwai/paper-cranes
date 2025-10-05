@@ -253,24 +253,30 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     }
 
     // === PULSING RINGS (Mids frequency) ===
-    // Mid-body rhythmic pulses
-    float ringPhase = fract(time * (0.4 + mids * 0.6));
-    float ringRadius = coreSize + ringPhase * limbReach;
-    float ringDist = abs(coreDist - ringRadius);
-    float ringWidth = 0.01 + midPulse * 0.02;
-    float ring = smoothstep(ringWidth * 2.0, ringWidth * 0.3, ringDist) * (1.0 - ringPhase);
+    // Mid-body rhythmic pulses - multiple rings for depth
+    for (float r = 0.0; r < 3.0; r++) {
+        float ringPhase = fract(time * (0.35 + mids * 0.5) - r * 0.33);
+        float ringRadius = coreSize * 0.5 + ringPhase * (limbReach * 1.2);
+        float ringDist = abs(coreDist - ringRadius);
+        float ringWidth = 0.008 + midPulse * 0.015;
+        float ring = smoothstep(ringWidth * 2.5, ringWidth * 0.2, ringDist) * (1.0 - ringPhase);
 
-    vec3 ringColor = hsl2rgb(vec3(mod(coreHue + 0.1, 1.0), 0.8, 0.65));
-    col += ringColor * ring * midPulse * 0.8;  // More visible rings
+        float ringHue = mod(0.15 + r * 0.1 + mids * 0.15, 1.0);
+        vec3 ringColor = hsl2rgb(vec3(ringHue, 0.75, 0.60));
+        col += ringColor * ring * midPulse * 1.2;
+    }
 
     // === BREATHING AURA (Energy field) ===
-    // Outer glow that breathes
-    float auraRadius = coreSize + limbReach;
+    // Outer glow that breathes with the music
+    float auraRadius = coreSize * 1.5 + limbReach * 0.8;
     float auraDist = coreDist - auraRadius;
-    float aura = exp(-auraDist * (8.0 - energy * 5.0)) * breathPhase;
+    float auraFalloff = 6.0 - energy * 3.0;
+    float aura = exp(-abs(auraDist) * auraFalloff) * breathPhase * (0.5 + energy * 0.5);
 
-    vec3 auraColor = hsl2rgb(vec3(mod(coreHue + 0.5, 1.0), 0.7, 0.5));
-    col += auraColor * aura * energy * 0.12;
+    // Complementary aura color
+    float auraHue = mod(0.55 + colorShift * 0.3, 1.0);
+    vec3 auraColor = hsl2rgb(vec3(auraHue, 0.65, 0.45));
+    col += auraColor * aura * energy * 0.25;
 
     // === FINAL COMPOSITION ===
 
