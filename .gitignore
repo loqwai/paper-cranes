@@ -146,3 +146,4 @@ yarn-error.log*
 !**/.yarn/plugins/
 !**/.yarn/releases/
 !**/.yarn/sdks/
+.playwright-mcp
