@@ -1,12 +1,44 @@
 // Fractal Abyss - Deep evolving fractal landscape
 // Slow temporal evolution, rich colors, complex layered structure
+// Designed for LED sync via screen scraping - dark jewel tones with high saturation
 
-// Subtle audio mappings - structure not rapid color
-#define WARP_DEPTH mapValue(bassNormalized, 0., 1., 0.3, 0.8)
-#define SPIRAL_TIGHTNESS mapValue(spectralCentroidNormalized, 0., 1., 1.2, 3.5)
-#define LAYER_SHIFT mapValue(spectralRoughnessNormalized, 0., 1., 0.1, 0.4)
-#define FOLD_INTENSITY mapValue(midsNormalized, 0., 1., 0.5, 1.5)
-#define SCALE_FACTOR mapValue(spectralSpreadNormalized, 0., 1., 1.8, 2.4)
+// ============================================================================
+// KNOB MODE: Use query params to test different states before connecting audio
+// Example: ?shader=wip/fractal-abyss&knob_1=0.5&knob_2=0.8&knob_3=0.3
+// ============================================================================
+
+// Uncomment to enable knob testing mode (comment out for audio mode)
+// #define KNOB_MODE
+
+#ifdef KNOB_MODE
+    // Knob declarations for testing
+    uniform float knob_1; // WARP_DEPTH: 0=subtle, 1=heavy warping
+    uniform float knob_2; // SPIRAL_TIGHTNESS: 0=loose, 1=tight spirals
+    uniform float knob_3; // LAYER_SHIFT: 0=aligned, 1=offset layers
+    uniform float knob_4; // FOLD_INTENSITY: 0=simple, 1=complex folds
+    uniform float knob_5; // SCALE_FACTOR: 0=zoomed in, 1=zoomed out
+    uniform float knob_6; // ZOOM_REACT: bass zoom reactivity
+    uniform float knob_7; // FLUX_BLEND: how much new color vs feedback
+
+    // Parameter ranges tuned for aesthetic results
+    #define WARP_DEPTH mapValue(knob_1, 0., 1., 0.3, 0.8)
+    #define SPIRAL_TIGHTNESS mapValue(knob_2, 0., 1., 1.2, 3.5)
+    #define LAYER_SHIFT mapValue(knob_3, 0., 1., 0.1, 0.4)
+    #define FOLD_INTENSITY mapValue(knob_4, 0., 1., 0.5, 1.5)
+    #define SCALE_FACTOR mapValue(knob_5, 0., 1., 1.8, 2.4)
+    #define ZOOM_REACT (knob_6 * 0.04)
+    #define FLUX_BLEND (0.15 + knob_7 * 0.15)
+#else
+    // AUDIO MODE: Map audio features to visual parameters
+    // Choose features from DIFFERENT domains for variety (see CLAUDE.md)
+    #define WARP_DEPTH mapValue(bassNormalized, 0., 1., 0.3, 0.8)
+    #define SPIRAL_TIGHTNESS mapValue(spectralCentroidNormalized, 0., 1., 1.2, 3.5)
+    #define LAYER_SHIFT mapValue(spectralRoughnessNormalized, 0., 1., 0.1, 0.4)
+    #define FOLD_INTENSITY mapValue(midsNormalized, 0., 1., 0.5, 1.5)
+    #define SCALE_FACTOR mapValue(spectralSpreadNormalized, 0., 1., 1.8, 2.4)
+    #define ZOOM_REACT (bassZScore * 0.02)
+    #define FLUX_BLEND (0.15 + spectralFluxNormalized * 0.1)
+#endif
 
 #define TAU 6.28318530718
 #define PHI 1.61803398875
@@ -115,16 +147,16 @@ vec3 mandelbrotLayer(vec2 uv, float t) {
     return vec3(smoothVal / 80.0, trap, length(z));
 }
 
-// Deep color palette - rich jewel tones that evolve slowly
+// Deep color palette - CLEAN triadic: sapphire/emerald/amber (NO purple/pink/fuchsia)
 vec3 palette(float t, float angle, float depth) {
     // Base hue cycles very slowly
     float hue = t * 0.01 + angle / TAU;
 
-    // Rich, saturated jewel tones - brighter base
-    vec3 col1 = vec3(0.45, 0.15, 0.65); // Vivid purple
-    vec3 col2 = vec3(0.15, 0.35, 0.70); // Rich blue
-    vec3 col3 = vec3(0.10, 0.55, 0.45); // Vibrant teal
-    vec3 col4 = vec3(0.65, 0.20, 0.35); // Rich magenta
+    // SAFE triadic palette - these colors CANNOT mix into fuchsia
+    vec3 col1 = vec3(0.02, 0.08, 0.35); // Deep sapphire blue
+    vec3 col2 = vec3(0.02, 0.30, 0.22); // Deep emerald green
+    vec3 col3 = vec3(0.38, 0.25, 0.02); // Deep amber/gold
+    vec3 col4 = vec3(0.02, 0.18, 0.32); // Deep ocean teal (NOT violet)
 
     // Smooth cycling through palette
     float cycle = fract(hue) * 4.0;
@@ -139,21 +171,22 @@ vec3 palette(float t, float angle, float depth) {
         color = mix(col4, col1, cycle - 3.0);
     }
 
-    // Add luminosity variation based on depth
-    color += depth * vec3(0.5, 0.4, 0.6);
+    // Depth adds subtle brightness, not wash-out
+    color += depth * vec3(0.10, 0.12, 0.08);
 
     return color;
 }
 
-// Secondary organic color - vibrant cosine palette
+// Secondary organic color - DARK cosine palette for LED sync (no fuchsia)
 vec3 organicColor(float val, float t) {
-    vec3 a = vec3(0.6, 0.6, 0.6);
-    vec3 b = vec3(0.5, 0.5, 0.5);
+    // Shifted to blue-green-gold range, avoiding red channel dominance
+    vec3 a = vec3(0.12, 0.18, 0.20); // Dark teal-ish base
+    vec3 b = vec3(0.12, 0.18, 0.15); // Small amplitude, more G/B
     vec3 c = vec3(1.0, 1.0, 1.0);
-    vec3 d = vec3(0.00, 0.15, 0.30);
+    vec3 d = vec3(0.25, 0.15, 0.35); // Phase offsets keep us in safe hue range
 
     // Slow color drift
-    d += vec3(sin(t * 0.02) * 0.15, cos(t * 0.017) * 0.15, sin(t * 0.013) * 0.15);
+    d += vec3(sin(t * 0.02) * 0.1, cos(t * 0.017) * 0.12, sin(t * 0.013) * 0.1);
 
     return a + b * cos(TAU * (c * val + d));
 }
@@ -176,7 +209,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     warpedUV = rot(t * 0.02 + warp * 0.2) * warpedUV;
 
     // Subtle audio-reactive zoom (very gentle)
-    float zoom = 1.0 + (bassZScore * 0.02);
+    float zoom = 1.0 + ZOOM_REACT;
     warpedUV *= zoom;
 
     // Primary fractal layer
@@ -203,14 +236,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     color = mix(color, color2, blend2 * 0.6);
     color = mix(color, color3, blend3 * 0.3);
 
-    // Add glow from orbit traps - brighter accents
-    float glow1 = exp(-fractal1.z * 1.5) * 0.7;
-    float glow2 = exp(-fractal2.z * 1.5) * 0.5;
-    float trapGlow = exp(-mandelData.y * 8.0) * 0.6;
+    // Add glow from orbit traps - DARK saturated accents (no fuchsia)
+    float glow1 = exp(-fractal1.z * 2.0) * 0.4;
+    float glow2 = exp(-fractal2.z * 2.0) * 0.3;
+    float trapGlow = exp(-mandelData.y * 10.0) * 0.35;
 
-    color += vec3(0.4, 0.5, 0.8) * glow1;
-    color += vec3(0.7, 0.4, 0.5) * glow2;
-    color += vec3(0.5, 0.7, 0.4) * trapGlow;
+    // Glow colors: blues, teals, ambers - NO pink/magenta
+    color += vec3(0.08, 0.12, 0.32) * glow1;  // Deep blue accent
+    color += vec3(0.28, 0.18, 0.02) * glow2;  // Amber/gold accent
+    color += vec3(0.04, 0.22, 0.18) * trapGlow; // Teal accent
 
     // Feedback from previous frame - very slow blend for evolution
     vec3 prev = getLastFrameColor(uvNorm).rgb;
@@ -222,32 +256,38 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     );
     vec3 prevWarped = getLastFrameColor(fbUV).rgb;
 
-    // Slow color evolution in feedback - maintain brightness
+    // Slow color evolution in feedback - maintain DARK richness for LED sync
     vec3 prevHSL = rgb2hsl(prevWarped);
     prevHSL.x = fract(prevHSL.x + 0.001); // Slow hue drift
-    prevHSL.y = mix(prevHSL.y, 0.7, 0.02); // Pull saturation to vibrant
-    prevHSL.z = mix(prevHSL.z, 0.5, 0.01); // Pull lightness to mid (prevents fade to black)
+    prevHSL.y = mix(prevHSL.y, 0.85, 0.03); // Pull saturation HIGH for LEDs
+    prevHSL.z = mix(prevHSL.z, 0.25, 0.02); // Pull lightness LOW - jewel tones are DARK
     vec3 evolvedPrev = hsl2rgb(prevHSL);
 
     // Blend new with evolved previous - more new color for visibility
-    color = mix(evolvedPrev, color, 0.15 + spectralFluxNormalized * 0.1);
+    color = mix(evolvedPrev, color, FLUX_BLEND);
 
     // Subtle beat response - gentle brightening, not flash
     if (beat) {
         color *= 1.05;
     }
 
-    // Subtle vignette - just darken edges slightly
-    float vignette = 1.0 - dot(uv * 0.3, uv * 0.3);
-    vignette = smoothstep(0.0, 1.0, vignette);
-    color *= 0.85 + vignette * 0.15;
+    // Stronger vignette for LED contrast - dark edges help screen scraping
+    float vignette = 1.0 - dot(uv * 0.4, uv * 0.4);
+    vignette = smoothstep(-0.2, 0.8, vignette);
+    color *= vignette;
 
-    // Gentle tone mapping - preserve brightness
-    color = color / (1.0 + color * 0.15);
+    // More aggressive tone mapping - compress highlights, preserve darks
+    color = color / (1.0 + color * 0.4);
+
+    // Boost saturation in final output for LED vibrancy
+    vec3 finalHSL = rgb2hsl(color);
+    finalHSL.y = min(finalHSL.y * 1.3, 1.0); // Boost saturation
+    finalHSL.z = min(finalHSL.z, 0.55); // Cap lightness to prevent wash-out
+    color = hsl2rgb(finalHSL);
 
     // Very slight film grain for organic feel
-    float grain = hash(fragCoord + fract(iTime) * 100.0) * 0.02;
-    color += grain - 0.01;
+    float grain = hash(fragCoord + fract(iTime) * 100.0) * 0.015;
+    color += grain - 0.0075;
 
     fragColor = vec4(clamp(color, 0.0, 1.0), 1.0);
 }

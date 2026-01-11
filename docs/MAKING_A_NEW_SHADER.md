@@ -586,6 +586,91 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
 ---
 
+## Knob-to-Audio Workflow (Recommended Development Pattern)
+
+The most effective way to develop audio-reactive shaders is to **start with knobs, then switch to audio**. This pattern is used throughout the codebase.
+
+### Why This Pattern Works
+
+1. **Testable states** - Use query params to test specific parameter combinations
+2. **No microphone needed** - Develop without audio setup
+3. **Reproducible** - Same URL = same visual state for debugging
+4. **Playwright-friendly** - Automated visual testing with different knob values
+5. **Easy transition** - Just flip a `#define` to switch to audio mode
+
+### The Pattern
+
+```glsl
+// ============================================================================
+// KNOB MODE: Use query params to test different states
+// Example: ?shader=my-shader&knob_1=0.5&knob_2=0.8
+// ============================================================================
+
+// Uncomment to enable knob testing mode
+// #define KNOB_MODE
+
+#ifdef KNOB_MODE
+    // Knob declarations
+    uniform float knob_1; // PARAM_A: describe what 0 and 1 mean
+    uniform float knob_2; // PARAM_B: describe what 0 and 1 mean
+
+    // Map knobs to aesthetic ranges
+    #define PARAM_A mapValue(knob_1, 0., 1., 0.3, 0.8)
+    #define PARAM_B mapValue(knob_2, 0., 1., 1.0, 3.0)
+#else
+    // AUDIO MODE: Map audio features to the same parameters
+    #define PARAM_A mapValue(bassNormalized, 0., 1., 0.3, 0.8)
+    #define PARAM_B mapValue(spectralCentroidNormalized, 0., 1., 1.0, 3.0)
+#endif
+```
+
+### Development Steps
+
+1. **Start with `#define KNOB_MODE` uncommented**
+2. **Test via URL**: `?shader=my-shader&knob_1=0.2&knob_2=0.8&noaudio=true`
+3. **Find aesthetic ranges** by adjusting knob values
+4. **Document each knob** with comments explaining what low/high values produce
+5. **Switch to audio** by commenting out `#define KNOB_MODE`
+6. **Choose appropriate audio features** from different domains (see Feature Domains in CLAUDE.md)
+
+### Testing with Playwright
+
+Use Playwright to capture different states for visual comparison:
+
+```javascript
+// Navigate with specific knob values
+await page.goto('http://localhost:6969/?shader=my-shader&knob_1=0.0&knob_2=0.5&noaudio=true');
+await page.screenshot({ path: 'state-low.png' });
+
+await page.goto('http://localhost:6969/?shader=my-shader&knob_1=1.0&knob_2=0.5&noaudio=true');
+await page.screenshot({ path: 'state-high.png' });
+```
+
+### Example: fractal-abyss.frag
+
+```glsl
+#ifdef KNOB_MODE
+    uniform float knob_1; // WARP_DEPTH: 0=subtle, 1=heavy warping
+    uniform float knob_2; // SPIRAL_TIGHTNESS: 0=loose, 1=tight spirals
+
+    #define WARP_DEPTH mapValue(knob_1, 0., 1., 0.3, 0.8)
+    #define SPIRAL_TIGHTNESS mapValue(knob_2, 0., 1., 1.2, 3.5)
+#else
+    #define WARP_DEPTH mapValue(bassNormalized, 0., 1., 0.3, 0.8)
+    #define SPIRAL_TIGHTNESS mapValue(spectralCentroidNormalized, 0., 1., 1.2, 3.5)
+#endif
+```
+
+### Common Knob Assignments
+
+| Knob Range | Typical Use |
+|------------|-------------|
+| `knob_1-7` | Primary shader parameters |
+| `knob_70-79` | Secondary/fine-tune parameters |
+| `knob_14-22` | MIDI controller banks |
+
+---
+
 ## Tips for LED Light Sync
 
 When creating shaders for driving Hue/Nanoleaf lights via screen scraping:
