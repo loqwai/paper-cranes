@@ -1,5 +1,5 @@
-// @favorite: true
 #version 300 es
+// @favorite: true
 precision mediump float;
 // Assuming these uniforms are passed to the shader
 uniform float time;                      // iTime equivalent        // Normalized energy
