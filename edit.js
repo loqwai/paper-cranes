@@ -1,22 +1,67 @@
 import { render, Fragment } from 'preact'
 import { useState, useEffect, useRef } from 'preact/hooks'
 import { html } from 'htm/preact'
-import debounce from 'debounce'
 import { getRelativeOrAbsoluteShaderUrl } from './src/utils.js'
+import { createParamsManager } from './src/params/ParamsManager.js'
 
-const updateUrl = (params) => {
-    const currentUrl = new URL(window.location)
-    Object.entries(params).forEach(([paramName, paramValue]) => {
-        if (paramValue !== null && paramValue !== undefined) {
-            currentUrl.searchParams.set(paramName, paramValue)
-        } else {
-            currentUrl.searchParams.delete(paramName)
-        }
-    })
-    window.history.replaceState({}, '', currentUrl.toString())
+// Check if we're in remote control mode
+const searchParams = new URLSearchParams(window.location.search)
+const isRemoteControlMode = searchParams.get('remote') === 'control'
+
+// Create params manager - single source of truth for all params
+// Handles URL sync and remote sync automatically
+const paramsManager = createParamsManager({
+    syncToUrl: true,
+    remoteMode: isRemoteControlMode,
+    onRemoteStatusChange: (status, info) => {
+        console.log('[Edit] Remote status:', status, info)
+        updateRemoteStatusIndicator(status, info)
+    }
+})
+
+// Remote status indicator
+const updateRemoteStatusIndicator = (status, info) => {
+    let indicator = document.getElementById('remote-control-indicator')
+
+    if (!indicator) {
+        indicator = document.createElement('div')
+        indicator.id = 'remote-control-indicator'
+        indicator.style.cssText = `
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-family: system-ui, sans-serif;
+            font-size: 12px;
+            z-index: 10000;
+            pointer-events: none;
+            transition: opacity 0.3s, background-color 0.3s;
+        `
+        document.body.appendChild(indicator)
+    }
+
+    const statusConfig = {
+        connected: { bg: '#22c55e', text: `Remote: ${info?.connectedClients || 0} displays`, opacity: 0.9 },
+        disconnected: { bg: '#ef4444', text: 'Remote: Disconnected', opacity: 1 },
+        reconnecting: { bg: '#eab308', text: 'Remote: Reconnecting...', opacity: 1 },
+        error: { bg: '#ef4444', text: 'Remote: Error', opacity: 1 },
+    }
+
+    const config = statusConfig[status] || statusConfig.disconnected
+    indicator.style.backgroundColor = config.bg
+    indicator.style.color = 'white'
+    indicator.style.opacity = config.opacity
+    indicator.textContent = config.text
 }
 
-const updateUrlDebounced = debounce(updateUrl, 50)
+// Show remote indicator immediately if in remote mode
+if (isRemoteControlMode) {
+    updateRemoteStatusIndicator('reconnecting', {})
+}
+
+// Expose paramsManager globally for monaco.js and other scripts
+window.paramsManager = paramsManager
 
 const FeatureEditor = ({ name, feature, onChange, onDelete }) => {
     const handleValueChange = (e) => onChange(name, { ...feature, value: parseFloat(e.target.value) })
@@ -127,17 +172,17 @@ const FeatureEditor = ({ name, feature, onChange, onDelete }) => {
     }
 
     const handleCommitValue = () => {
-        updateUrlDebounced({ [name]: feature.value })
+        paramsManager.set(name, feature.value)
     }
 
     useEffect(() => {
         if (feature.min !== '' && feature.max !== '' && !isNaN(feature.min) && !isNaN(feature.max)) {
-            updateUrlDebounced({
+            // Use paramsManager - handles URL sync, remote sync, and cranes.manualFeatures
+            paramsManager.setMany({
                 [name]: feature.value,
                 [`${name}.min`]: feature.min,
                 [`${name}.max`]: feature.max,
             })
-            window.cranes.manualFeatures[name] = feature.value
         }
     }, [feature])
 
@@ -399,8 +444,10 @@ const FeatureAdder = () => {
     const deleteFeature = (name) => {
         const { [name]: _, ...rest } = features
         setFeatures(rest)
-        updateUrl({ [name]: null, [`${name}.min`]: null, [`${name}.max`]: null })
-        delete window.cranes?.manualFeatures[name]
+        // paramsManager handles URL sync, remote sync, and cranes.manualFeatures cleanup
+        paramsManager.delete(name)
+        paramsManager.delete(`${name}.min`)
+        paramsManager.delete(`${name}.max`)
     }
 
     const handleNewFeatureKeyDown = (e) => {

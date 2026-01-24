@@ -56,7 +56,20 @@ const applyParams = async (data) => {
   window.cranes = window.cranes || {}
   window.cranes.messageParams = window.cranes.messageParams || {}
 
-  // Handle shader switching dynamically (no page reload)
+  // Handle raw shader code (from edit page remote mode)
+  if (data.shaderCode) {
+    console.log('[Remote Display] Received shader code update')
+    window.cranes.shader = data.shaderCode
+
+    // Check for fullscreen metadata in the shader code
+    const fullscreen = data.shaderCode.includes('@fullscreen: true')
+    const canvas = document.getElementById('visualizer')
+    if (canvas) {
+      canvas.classList.toggle('fullscreen', fullscreen)
+    }
+  }
+
+  // Handle shader switching by path (from list page remote mode)
   if (data.shader) {
     console.log('[Remote Display] Switching shader to:', data.shader)
     try {
@@ -66,7 +79,7 @@ const applyParams = async (data) => {
     }
   }
 
-  // Handle fullscreen param explicitly
+  // Handle fullscreen param explicitly (overrides metadata-based fullscreen)
   if (data.fullscreen !== undefined) {
     const canvas = document.getElementById('visualizer')
     if (canvas) {
@@ -76,9 +89,9 @@ const applyParams = async (data) => {
 
   // Apply all other params to messageParams (highest precedence)
   for (const [key, value] of Object.entries(data)) {
-    if (key === 'shader') continue // Already handled above
+    // Skip already handled keys
+    if (key === 'shader' || key === 'shaderCode' || key === 'fullscreen') continue
     window.cranes.messageParams[key] = value
-    console.log(`[Remote Display] Set ${key} = ${value}`)
   }
 }
 

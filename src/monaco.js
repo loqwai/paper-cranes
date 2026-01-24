@@ -536,8 +536,17 @@ async function init() {
 
     const save = () => {
         editor.pushUndoStop()
-        window.cranes.shader = editor.getValue()
-        localStorage.setItem('cranes-manual-code', editor.getValue())
+        const code = editor.getValue()
+
+        // Use paramsManager if available (edit page with unified params)
+        // This handles: window.cranes.shader, localStorage, and remote sync
+        if (window.paramsManager) {
+            window.paramsManager.setShader(code)
+        } else {
+            // Fallback for non-edit pages
+            window.cranes.shader = code
+            localStorage.setItem('cranes-manual-code', code)
+        }
         editor.pushUndoStop()
     }
 

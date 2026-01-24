@@ -256,12 +256,64 @@ Replace audio features with knob controls:
 - `noaudio` - Disable audio input (for testing)
 - `embed` - Embed mode (disables audio)
 - `fullscreen` - Start in fullscreen
+- `remote` - Remote mode: `display` (receive commands) or `control` (send commands)
 
 ### Dynamic Override
 All parameters can be overridden at runtime via:
 ```javascript
 window.cranes.manualFeatures.smoothing = 0.2
 window.cranes.manualFeatures.fft_size = 8192
+```
+
+## Remote Control Mode
+
+The system supports controlling a remote display from another device (phone, laptop, etc.) via WebSocket.
+
+### Setup
+1. Start the dev server with WebSocket support: `npm run dev`
+2. Open the **display** (TV/projector): `http://localhost:6969/?remote=display`
+3. Open the **controller** (phone/laptop):
+   - List page: `http://localhost:6969/list.html?remote=control`
+   - Edit page: `http://localhost:6969/edit.html?remote=control`
+
+### How It Works
+- **Display mode** (`?remote=display`): Listens for commands via WebSocket
+- **Control mode** (`?remote=control`): Sends commands to all connected displays
+
+### List Page Remote Control
+- Tapping a shader sends it to all connected displays
+- Fullscreen button sends shader with fullscreen flag
+
+### Edit Page Remote Control
+- Saving shader code sends it to all connected displays in real-time
+- Knob/slider changes are synced to displays automatically
+- Shows connection status indicator (green = connected, displays count)
+
+### Architecture
+```
+Controller (edit.html?remote=control)
+    ↓ WebSocket
+Dev Server (esbuild.dev.js WebSocket server)
+    ↓ Broadcast
+Display (index.html?remote=display)
+```
+
+### ParamsManager
+The `ParamsManager` (`src/params/ParamsManager.js`) is the unified system for handling all shader parameters:
+- Single source of truth for knobs, settings, and shader code
+- Automatically syncs to URL (debounced)
+- Automatically syncs to remote displays (when in control mode)
+- Maintains compatibility with `window.cranes.manualFeatures`
+
+```javascript
+// Usage in edit.js
+const paramsManager = createParamsManager({
+    syncToUrl: true,
+    remoteMode: true,  // Enable WebSocket sync
+})
+
+paramsManager.set('knob_71', 0.5)  // Syncs to URL + remote
+paramsManager.setShader(code)      // Syncs shader to remote
 ```
 
 ## File Structure
@@ -272,7 +324,14 @@ window.cranes.manualFeatures.fft_size = 8192
 │   │   ├── AudioProcessor.js    # Main audio processing
 │   │   ├── WorkerRPC.js        # Worker communication
 │   │   └── analyzer.js         # Worker analyzer loader
+│   ├── params/
+│   │   └── ParamsManager.js    # Unified params (URL, remote, features)
+│   ├── remote/
+│   │   ├── RemoteController.js # Sends commands to displays
+│   │   ├── RemoteDisplay.js    # Receives commands from controllers
+│   │   └── WebSocketClient.js  # WebSocket client wrapper
 │   ├── Visualizer.js           # WebGL rendering
+│   ├── shaderLoader.js         # Centralized shader loading
 │   └── shader-transformers/     # Shader preprocessing
 ├── shaders/                     # GLSL visualization shaders
 │   ├── wip/claude/             # Claude-created shaders go here
@@ -281,7 +340,7 @@ window.cranes.manualFeatures.fft_size = 8192
 ├── index.js                     # Main entry point
 ├── edit.js                      # Editor interface
 ├── list.js                      # Shader list/gallery page
-└── esbuild.dev.js              # Build configuration
+└── esbuild.dev.js              # Build configuration (includes WebSocket server)
 ```
 
 ## Development Workflow
