@@ -134,12 +134,25 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
     <path d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9.75 9.75M20.25 3.75v4.5m0-4.5h-4.5m4.5 0L14.25 9.75M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9.75 14.25m10.5 6v-4.5m0 4.5h-4.5m4.5 0L14.25 14.25" />
   </svg>`
 
+  const handleMainLinkClick = (e) => {
+    e.preventDefault()
+    if (hasPresets) {
+      // If has presets, just expand/collapse the list
+      setIsExpanded(!isExpanded)
+    } else {
+      // If no presets, copy and navigate
+      const fullscreenUrl = buildFullscreenUrl(getFullUrl(targetUrl))
+      navigator.clipboard.writeText(fullscreenUrl)
+      window.location.href = fullscreenUrl
+    }
+  }
+
   return html`
     <li>
-      <div class="main-link" onClick=${hasPresets ? () => setIsExpanded(!isExpanded) : undefined}>
+      <div class="main-link">
         <a
           href="${targetUrl}"
-          onClick=${hasPresets ? (e) => e.preventDefault() : undefined}
+          onClick=${handleMainLinkClick}
         >
           <span>${name}</span>
         </a>
@@ -173,7 +186,12 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
         <ul>
           ${(filterText ? filteredPresets : presets).map((preset, index) => html`
             <li>
-              <a class="preset-link" href="${preset}">
+              <a class="preset-link" href="${preset}" onClick=${(e) => {
+                e.preventDefault()
+                const fullscreenUrl = buildFullscreenUrl(getFullUrl(preset))
+                navigator.clipboard.writeText(fullscreenUrl)
+                window.location.href = fullscreenUrl
+              }}>
                 <span>${getPresetName(preset, index)}</span>
                 <div class="preset-link-actions">
                   <button
@@ -240,6 +258,31 @@ const filterPresetProps = ([key]) => {
   if (key.endsWith('.max')) return false
   if (key === 'name') return false
   return true
+}
+
+/**
+ * Builds a fullscreen URL with knob parameters stripped
+ * @param {string} url - The URL to process
+ * @returns {string} The fullscreen URL
+ */
+const buildFullscreenUrl = (url) => {
+  const originalUrl = new URL(url, window.location.origin)
+  const newParams = new URLSearchParams()
+
+  for (const [key, value] of originalUrl.searchParams) {
+    if (key.toLowerCase().includes('knob')) continue
+    newParams.set(key, value)
+  }
+
+  newParams.set('fullscreen', 'true')
+
+  if (!newParams.has('image')) {
+    newParams.set('image', 'images/rezz-full-lips-cropped.png')
+  }
+
+  const finalUrl = new URL(originalUrl.pathname || '/', window.location.origin)
+  finalUrl.search = newParams.toString()
+  return finalUrl.toString()
 }
 
 /**
@@ -346,14 +389,54 @@ const getInitialFilter = () => {
   return url.searchParams.get('filter') || ''
 }
 
+/**
+ * Gets initial filter states from URL
+ * @returns {Object} Filter states
+ */
+const getInitialFilters = () => {
+  const url = new URL(window.location)
+  return {
+    fullscreenOnly: url.searchParams.get('fullscreenOnly') === 'true',
+    favoritesOnly: url.searchParams.get('favoritesOnly') === 'true'
+  }
+}
+
+/**
+ * Updates URL with filter states
+ * @param {string} key - Filter key
+ * @param {boolean} value - Filter value
+ */
+const updateUrlFilter = (key, value) => {
+  const url = new URL(window.location)
+  if (value) {
+    url.searchParams.set(key, 'true')
+  } else {
+    url.searchParams.delete(key)
+  }
+  window.history.replaceState({}, '', url)
+}
+
 const List = () => {
+  const initialFilters = getInitialFilters()
   const [filterText, setFilterText] = useState(getInitialFilter())
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1200)
+  const [fullscreenOnly, setFullscreenOnly] = useState(initialFilters.fullscreenOnly)
+  const [favoritesOnly, setFavoritesOnly] = useState(initialFilters.favoritesOnly)
 
   // Update URL when filter changes
   useEffect(() => {
     updateUrlWithFilter(filterText)
   }, [filterText])
+
+  // Update URL when fullscreen filter changes
+  useEffect(() => {
+    updateUrlFilter('fullscreenOnly', fullscreenOnly)
+  }, [fullscreenOnly])
+
+  // Update URL when favorites filter changes
+  useEffect(() => {
+    updateUrlFilter('favoritesOnly', favoritesOnly)
+  }, [favoritesOnly])
 
   // Update isDesktop state when window resizes
   useEffect(() => {
@@ -369,11 +452,39 @@ const List = () => {
   // Show all shaders if show=all is present in URL or if on desktop
   const showAll = new URL(window.location).searchParams.get('show') === 'all' || isDesktop
   const filteredPaths = ['wip', 'knobs', 'static']
-  const filteredShaders = showAll ? shaders : shaders.filter(shader => !filteredPaths.some(path => shader.name.includes(path)))
+  let filteredShaders = showAll ? shaders : shaders.filter(shader => !filteredPaths.some(path => shader.name.includes(path)))
+
+  // Filter to fullscreen-compatible shaders (hide explicitly marked as false)
+  if (fullscreenOnly) {
+    filteredShaders = filteredShaders.filter(shader => shader.fullscreen !== false)
+  }
+
+  // Filter to favorites only
+  if (favoritesOnly) {
+    filteredShaders = filteredShaders.filter(shader => shader.favorite === true)
+  }
 
   return html`
     <div>
       <${SearchInput} value=${filterText} onChange=${handleFilterChange} />
+      <div class="filter-toggles">
+        <label class="filter-toggle">
+          <input
+            type="checkbox"
+            checked=${favoritesOnly}
+            onChange=${(e) => setFavoritesOnly(e.target.checked)}
+          />
+          Favorites only
+        </label>
+        <label class="filter-toggle">
+          <input
+            type="checkbox"
+            checked=${fullscreenOnly}
+            onChange=${(e) => setFullscreenOnly(e.target.checked)}
+          />
+          Fullscreen-compatible
+        </label>
+      </div>
       <ul class="shader-list">
         ${filteredShaders.map(shader => html`
           <${MusicVisual}

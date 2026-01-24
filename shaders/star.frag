@@ -1,3 +1,7 @@
+// @fullscreen: true
+// @mobile: true
+// @favorite: true
+// @tags: rave, classic
 #version 300 es
 precision highp float;
 

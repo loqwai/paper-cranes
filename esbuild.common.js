@@ -1,17 +1,43 @@
 import { join } from 'path'
 import { readdir, stat, mkdir, rm } from 'fs/promises'
-import { writeFile } from 'fs/promises'
+import { writeFile, readFile } from 'fs/promises'
 import { relative } from 'path'
 
+/**
+ * Extracts metadata from shader comments
+ * Looks for // @key: value patterns
+ * @param {string} content - Shader source code
+ * @returns {Object} Extracted metadata
+ */
+const extractMetadata = (content) => {
+    const meta = {}
+    const metaRegex = /\/\/\s*@(\w+):\s*(.+)/g
+    let match
+    while ((match = metaRegex.exec(content)) !== null) {
+        const [, key, value] = match
+        const trimmedValue = value.trim()
+        // Parse booleans
+        if (trimmedValue === 'true') meta[key] = true
+        else if (trimmedValue === 'false') meta[key] = false
+        // Parse comma-separated lists
+        else if (trimmedValue.includes(',')) meta[key] = trimmedValue.split(',').map(s => s.trim())
+        else meta[key] = trimmedValue
+    }
+    return meta
+}
+
 const generateShadersJson = async (shaderFiles) => {
-    const shaders = shaderFiles.sort().map(file => {
+    const shaders = await Promise.all(shaderFiles.sort().map(async file => {
         const relativePath = relative('shaders', file)
+        const content = await readFile(file, 'utf-8')
+        const meta = extractMetadata(content)
         return {
             name: relativePath.replace(/\\/g, '/').replace('.frag', ''),
             fileUrl: `shaders/${relativePath}`,
-            visualizerUrl: `/?shader=${relativePath.replace(/\\/g, '/').replace('.frag', '')}`
+            visualizerUrl: `/?shader=${relativePath.replace(/\\/g, '/').replace('.frag', '')}`,
+            ...meta
         }
-    })
+    }))
 
     await writeFile(
         join('dist', 'shaders.json'),
