@@ -16,9 +16,9 @@ export class WebSocketClient {
 
     this.isIntentionallyClosed = false
 
-    // Connect to same origin WebSocket
+    // Connect to same origin WebSocket at /ws path
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsUrl = `${protocol}//${window.location.host}`
+    const wsUrl = `${protocol}//${window.location.host}/ws`
 
     try {
       this.socket = new WebSocket(wsUrl)
