@@ -1,4 +1,4 @@
-// Add service worker registration
+// Service worker registration - Vite migration
 window.addEventListener('load', async () => {
   const { serviceWorker } = navigator
   if (!serviceWorker) {
@@ -48,19 +48,3 @@ export const receive = async (event) => {
 }
 // Add listener for messages from parent window
 window.addEventListener('message', receive)
-
-// Add listener for esbuild reload events
-if (process.env.LIVE_RELOAD) {
-  try {
-    const eventSource = new EventSource('/esbuild')
-    eventSource.addEventListener('change', () => {
-      window.stop()
-      window.location.reload()
-    })
-    eventSource.addEventListener('error', (err) => {
-      console.error('Error with esbuild EventSource:', err)
-    })
-  } catch (error) {
-    console.error('Failed to set up esbuild live reload listener:', error)
-  }
-}

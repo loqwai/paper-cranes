@@ -105,7 +105,7 @@ export class AudioProcessor {
     }
 
     start = async () => {
-        await this.audioContext.audioWorklet.addModule('src/window-processor.js')
+        await this.audioContext.audioWorklet.addModule('/window-processor.js')
         const windowNode = new AudioWorkletNode(this.audioContext, 'window-processor')
 
         this.sourceNode.connect(windowNode)
