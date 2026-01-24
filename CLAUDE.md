@@ -448,6 +448,7 @@ This will check for:
 3. **Not handling aspect ratio**: Use `uv.x *= iResolution.x / iResolution.y` for non-square viewports
 4. **Too much feedback**: `mix(prev, new, 0.1)` can accumulate to white - use `mix(prev * 0.99, new, 0.1)`
 5. **Hardcoded resolution**: Always use `iResolution`, never hardcode 1920x1080
+6. **Metadata before #version**: If your shader has `#version 300 es`, it MUST be the first line. Put metadata comments (`// @fullscreen: true`) on line 2, not line 1. Shaders without `#version` (ShaderToy-style) can have metadata on line 1.
 
 ## Misc Notes
 - Use far less time when running sleep than you ordinarily would; if it were 5 seconds, do 1 instead.
