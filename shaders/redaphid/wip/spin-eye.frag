@@ -1,3 +1,4 @@
+// @fullscreen: true
 //http://localhost:6969/?shader=redaphid%2Fwip%2Fmelted-satin-4&fullscreen=true&knob_70=0.57&knob_70.min=0&knob_70.max=3&knob_71=1.34&knob_71.min=0&knob_71.max=3&knob_72=75.97&knob_72.min=0&knob_72.max=100&knob_73=1.04&knob_73.min=0&knob_73.max=3&knob_74=0.03&knob_74.min=-0.8&knob_74.max=3&knob_75=0.07&knob_75.min=0&knob_75.max=1&knob_76=0.11&knob_76.min=-0.1&knob_76.max=1&knob_77=0.61&knob_77.min=-1&knob_77.max=5.5&image=images%2Feye1.png
 #define t (iTime*0.05 + energyZScore*0.01)  // Even less energy influence
 

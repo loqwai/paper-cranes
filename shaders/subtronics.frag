@@ -1,3 +1,4 @@
+// @fullscreen: true
 // http://localhost:6969/edit.html?fullscreen=true&image=images%2Fsubtronics.jpg
 #define ZOOM_LEVEL mapValue(energyZScore, -1., 1., 0.5, 2.5)
 #define WAVES_STRENGTH spectralCrestZScore

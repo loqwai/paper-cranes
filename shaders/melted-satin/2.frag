@@ -1,3 +1,4 @@
+// @fullscreen: true
 //https://visuals.beadfamous.com/edit?fullscreen=true
 #define t (iTime*0.2 )
 

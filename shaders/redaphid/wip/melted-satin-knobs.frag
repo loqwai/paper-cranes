@@ -1,3 +1,4 @@
+// @fullscreen: true
 //http://localhost:6969/edit.html?shader=redaphid%2Fwip%2Fmelted-satin-4&fullscreen=true&knob_70=1.45&knob_70.min=0&knob_70.max=3&knob_71=1.45&knob_71.min=0&knob_71.max=3&knob_72=48.44&knob_72.min=0&knob_72.max=100&knob_73=1.22&knob_73.min=0&knob_73.max=3&knob_74=3&knob_74.min=-0.8&knob_74.max=3&knob_75=0.8&knob_75.min=0&knob_75.max=1&knob_76=0.03&knob_76.min=-0.1&knob_76.max=1&knob_77=2.4&knob_77.min=-1&knob_77.max=5.5
 uniform float knob_70;
 uniform float knob_71;
