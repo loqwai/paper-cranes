@@ -1,5 +1,5 @@
 import { join, relative } from 'path'
-import { readdir, stat, readFile, writeFile, mkdir } from 'fs/promises'
+import { readdir, readFile, writeFile, mkdir, cp } from 'fs/promises'
 import chokidar from 'chokidar'
 import { extractMetadata } from '../scripts/shader-utils.js'
 
@@ -81,9 +81,13 @@ export function shaderPlugin() {
       watcher.on('unlink', (path) => regenerate('removed', path))
     },
 
-    async buildStart() {
-      // Regenerate for production build
-      await generateShadersJson('dist')
+    async writeBundle(options) {
+      // Copy shaders directory and generate shaders.json after build
+      const outDir = options.dir || 'dist'
+      await cp(SHADER_DIR, join(outDir, SHADER_DIR), { recursive: true })
+      console.log(`[shaders] Copied ${SHADER_DIR}/ to ${outDir}/`)
+      const count = await generateShadersJson(outDir)
+      console.log(`[shaders] Generated ${outDir}/shaders.json with ${count} shaders`)
     },
 
     closeBundle() {
