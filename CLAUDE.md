@@ -330,12 +330,14 @@ precision highp float;
 ```
 
 **Metadata tags:**
-- `@fullscreen: true/false` - Does shader handle rectangular (non-square) viewports?
+- `@fullscreen: true/false` - Shader handles non-square aspect ratios. When `true`, the shader **automatically stretches to fill the screen** without needing `?fullscreen=true` in the URL.
 - `@mobile: true/false` - Is shader performant on mobile?
 - `@favorite: true` - Mark as a favorite for quick access
 - `@tags: tag1, tag2` - Categorization tags
 
 Metadata is extracted at build time and included in `dist/shaders.json`.
+
+**Important:** The `@fullscreen: true` metadata is the recommended way to enable fullscreen for shaders that support non-square viewports. It works in both normal mode and remote display mode.
 
 ### List Page Features
 The list page (`/list.html`) has:
