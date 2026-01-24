@@ -1,3 +1,4 @@
+// @favorite: true
 #version 300 es
 precision mediump float;
 // Assuming these uniforms are passed to the shader

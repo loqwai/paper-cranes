@@ -1,3 +1,4 @@
+// @favorite: true
 /*
 by Dom Mandy in 2024
 */

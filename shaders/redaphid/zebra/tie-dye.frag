@@ -1,3 +1,4 @@
+// @favorite: true
 // @fullscreen: true
 //http://localhost:6969/edit.html?knob_32=0.24&knob_32.min=0&knob_32.max=1&knob_31=0.76&knob_31.min=0&knob_31.max=1&knob_30=0.02&knob_30.min=0&knob_30.max=1&knob_34=0.71&knob_34.min=0&knob_34.max=1&knob_35=0.63&knob_35.min=0&knob_35.max=1&knob_36=0.7&knob_36.min=0&knob_36.max=1&knob_37=0.58&knob_37.min=0&knob_37.max=1&knob_33=0.75&knob_33.min=0&knob_33.max=1&knob_40=0.5&knob_40.min=0&knob_40.max=1&fullscreen=true
 #define PI 3.14159265359

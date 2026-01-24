@@ -1,3 +1,4 @@
+// @favorite: true
 // Ether by nimitz 2014 (twitter: @stormoid)
 // https://www.shadertoy.com/view/MsjSW3
 // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License

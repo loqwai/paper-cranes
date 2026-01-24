@@ -1,3 +1,4 @@
+// @favorite: true
 
 #define EPSILON 0.0000001
 //https://visuals.beadfamous.com/edit?knob_30=1.268&knob_42=0.024&knob_44=0&knob_47=7.9&knob_37=3.071&knob_34=0.32

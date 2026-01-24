@@ -1,3 +1,4 @@
+// @favorite: true
 // Function to check if pixel and surrounding area is solid white
 float getWhiteAmount(vec2 uv, vec2 pixelSize) {
     vec3 center = getLastFrameColor(uv).rgb;

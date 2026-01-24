@@ -1,3 +1,4 @@
+// @favorite: true
 float getGrayPercent(vec4 color){
     return(color.r+color.g+color.b)/3.f;
 }

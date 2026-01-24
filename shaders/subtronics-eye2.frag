@@ -1,3 +1,4 @@
+// @favorite: true
 //https://visuals.beadfamous.com/edit?image=images%2Fsubtronics.jpg&history_size=1000&history_size.min=-3&history_size.max=3
 #define ZOOM_LEVEL frame < 50 ? 1. : mapValue(energyNormalized, 0.0, 1., 0.6, 3.5)
 #define WAVES_STRENGTH (spectralCrestNormalized + bassNormalized)/2.

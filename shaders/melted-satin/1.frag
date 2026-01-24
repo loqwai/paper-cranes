@@ -1,3 +1,4 @@
+// @favorite: true
 uniform float knob_71;
 
 #define PROBE_A 0.13
