@@ -1,3 +1,4 @@
+// @fullscreen: true
 #define TWO_PI 6.28318530718
 //--------------------------------------------------------------
 // ⬆️  put these above mainImage()

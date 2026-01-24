@@ -1,3 +1,4 @@
+// @fullscreen: true
 // Basic 2D pseudo-fractal (FBM) noise
 float simpleNoise(vec2 p) {
     // Replace with your preferred noise function.

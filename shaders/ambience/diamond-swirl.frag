@@ -1,3 +1,4 @@
+// @fullscreen: true
 //https://visuals.beadfamous.com/edit?knob_14.min=-1&knob_14.max=1&knob_15=0.22&knob_15.min=-1&knob_15.max=1&knob_71=0.2&knob_71.min=0&knob_71.max=1&knob_72=10.3&knob_72.min=0&knob_72.max=10.3&knob_73=1.05&knob_73.min=0&knob_73.max=3&knob_74=0.46&knob_74.min=0.1&knob_74.max=2.5&knob_76=0.55&knob_76.min=0&knob_76.max=1&knob_75=0.98&knob_75.min=0&knob_75.max=2.8&knob_77=1.743&knob_77.min=0.1&knob_77.max=3.2&knob_78=4.06&knob_78.min=0.1&knob_78.max=10&knob_79=0.55&knob_79.min=0&knob_79.max=1&knob_14=0.1
 // Constants
 #define MAX_RIPPLES 12

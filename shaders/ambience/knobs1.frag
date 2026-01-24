@@ -1,3 +1,4 @@
+// @fullscreen: true
 // https://visuals.beadfamous.com/edit?knob_1=0.26&knob_1.min=0&knob_1.max=1&knob_0=0.504&knob_0.min=0&knob_0.max=1&knob_2=0.52&knob_2.min=0&knob_2.max=1&knob_3=0.669&knob_3.min=0&knob_3.max=1&knob_4=1&knob_4.min=0&knob_4.max=1&knob_5=0.433&knob_5.min=0&knob_5.max=1&knob_6=0.402&knob_6.min=0&knob_6.max=1&knob_7=1&knob_7.min=0&knob_7.max=1&knob_8=0&knob_8.min=0&knob_8.max=1&knob_9=0.984&knob_9.min=0&knob_9.max=1&knob_10=0.252&knob_10.min=0&knob_10.max=1&knob_11=0&knob_11.min=0&knob_11.max=1&knob_15=0.669&knob_15.min=0&knob_15.max=1&knob_14=0.992&knob_14.min=0&knob_14.max=1&knob_13=0.433&knob_13.min=0&knob_13.max=1&knob_12=0.315&knob_12.min=0&knob_12.max=1
 // --- Constants & Helpers ---
 #define TWO_PI 6.28318530718
