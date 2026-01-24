@@ -1,0 +1,9 @@
+https://visuals.beadfamous.com/?shader=configurable-test
+https://visuals.beadfamous.com/?shader=controller-mandala
+https://visuals.beadfamous.com/?shader=graph/texture-weave
+https://visuals.beadfamous.com/?shader=hearts
+https://visuals.beadfamous.com/?shader=graph/holistic-organism
+https://visuals.beadfamous.com/?shader=shape-emitter
+https://visuals.beadfamous.com/?shader=star
+https://visuals.beadfamous.com/?knob_71=0.27&knob_71.min=0&knob_71.max=1&knob_72=0.36&knob_72.min=0&knob_72.max=1&knob_73=0.68&knob_73.min=0&knob_73.max=1&knob_74=1&knob_74.min=0&knob_74.max=1&knob_75=0.13&knob_75.min=0&knob_75.max=1&knob_76=0.79&knob_76.min=0&knob_76.max=1&knob_77=0.09&knob_77.min=0&knob_77.max=1&knob_78=0.05&knob_78.min=0&knob_78.max=1&knob_79=0.04&knob_79.min=0&knob_79.max=1&knob_19=0.543&knob_19.min=0&knob_19.max=1&knob_14=0.496&knob_14.min=0&knob_14.max=1&image=images%5Crezz-full-lips-cropped.png&knob_22=0.409&knob_22.min=0&knob_22.max=1&knob_21=0.898&knob_21.min=0&knob_21.max=1&knob_20=0.976&knob_20.min=0&knob_20.max=1&knob_18=0.622&knob_18.min=0&knob_18.max=1&shader=sus%2Fgoggles-background-warped-face
+https://visuals.beadfamous.com/?shader=sus/goggles2

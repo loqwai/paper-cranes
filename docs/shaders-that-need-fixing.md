@@ -1,0 +1,11 @@
+https://visuals.beadfamous.com/?shader=glassy-field
+https://visuals.beadfamous.com/?shader=interdimensional-crystal
+https://visuals.beadfamous.com/?shader=graph/energy-pulse
+https://visuals.beadfamous.com/?shader=graph/texture-weave
+https://visuals.beadfamous.com/?shader=play-doh/1
+https://visuals.beadfamous.com/?shader=redaphid/sdf-fractal
+https://visuals.beadfamous.com/?shader=redaphid/tie-dye
+https://visuals.beadfamous.com/?shader=sus/goggles-recursive-2
+https://visuals.beadfamous.com/?image=images%5Crezz-full-lips-cropped.png&shader=sus%2Fgoggles
+https://visuals.beadfamous.com/?shader=synthwave
+https://visuals.beadfamous.com/?shader=tooshel/littleboxes
