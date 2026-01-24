@@ -1,6 +1,6 @@
 import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { makeVisualizer } from './src/Visualizer.js'
-import { getRelativeOrAbsoluteShaderUrl } from './src/utils.js'
+import { getInitialShader } from './src/shaderLoader.js'
 
 // Add service worker registration
 window.addEventListener('load', async () => {
@@ -258,17 +258,6 @@ const loadController = async () => {
     }
 }
 
-const getFragmentShader = async () => {
-    const shaderUrl = params.get('shader')
-    let fragmentShader
-
-    if(params.get('shaderCode')) return decodeURIComponent(params.get('shaderCode'))
-
-    if (shaderUrl) fragmentShader = await getRelativeOrAbsoluteShaderUrl(shaderUrl)
-    if (!fragmentShader) fragmentShader = localStorage.getItem('cranes-manual-code')
-    if (!fragmentShader) fragmentShader = await getRelativeOrAbsoluteShaderUrl('default')
-    return fragmentShader
-}
 
 if(navigator.connection) {
     navigator.connection.addEventListener('change', () => {
@@ -300,8 +289,14 @@ const main = async () => {
     setupCranesState()
     startTime = performance.now()
 
+    // Initialize remote display mode if ?remote=display
+    if (params.get('remote') === 'display') {
+        const { initRemoteDisplay } = await import('./src/remote/RemoteDisplay.js')
+        initRemoteDisplay()
+    }
+
     // Load shader and audio
-    const fragmentShader = await getFragmentShader()
+    const { code: fragmentShader, fullscreen: shaderFullscreen } = await getInitialShader()
     const audio = await setupAudio()
     const canvas = getVisualizerDOMElement()
 
@@ -313,7 +308,7 @@ const main = async () => {
     const visualizerConfig = {
         canvas,
         initialImageUrl: params.get('image') ?? 'images/placeholder-image.png',
-        fullscreen: (params.get('fullscreen') ?? false) === 'true'
+        fullscreen: params.get('fullscreen') === 'true' || shaderFullscreen
     }
 
     // Load and initialize controller if specified

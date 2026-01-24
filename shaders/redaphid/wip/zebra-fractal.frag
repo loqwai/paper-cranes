@@ -1,3 +1,4 @@
+// @fullscreen: true
 //http://localhost:6969/edit.html?shader=redaphid%2Fwip%2Fzebra-fractal&knob_72=-2&knob_72.min=-2&knob_72.max=1&knob_71=-0.913&knob_71.min=-2&knob_71.max=1&knob_70=-0.772&knob_70.min=-2&knob_70.max=1&knob_74=-0.984&knob_74.min=-2&knob_74.max=1&knob_75=-0.606&knob_75.min=-2&knob_75.max=1&knob_76=-0.583&knob_76.min=-2&knob_76.max=1&knob_77=-0.488&knob_77.min=-2&knob_77.max=1&knob_73=0.126&knob_73.min=-2&knob_73.max=1
 #define PI  3.141592654
 #define TAU (2.0*PI)
