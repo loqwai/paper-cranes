@@ -32,6 +32,7 @@
     "esbuild-plugin-css-modules": "^0.3.0",
     "esbuild-plugin-html": "^1.0.0",
     "eslint": "^8.57.1",
+    "glslang-validator-prebuilt": "^0.0.7",
     "mini-css-extract-plugin": "^2.9.2",
     "prettier": "^3.4.2"
   },
