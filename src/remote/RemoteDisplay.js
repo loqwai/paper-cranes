@@ -66,6 +66,14 @@ const applyParams = async (data) => {
     }
   }
 
+  // Handle fullscreen param explicitly
+  if (data.fullscreen !== undefined) {
+    const canvas = document.getElementById('visualizer')
+    if (canvas) {
+      canvas.classList.toggle('fullscreen', data.fullscreen === true || data.fullscreen === 'true')
+    }
+  }
+
   // Apply all other params to messageParams (highest precedence)
   for (const [key, value] of Object.entries(data)) {
     if (key === 'shader') continue // Already handled above
