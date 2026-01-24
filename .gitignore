@@ -148,3 +148,4 @@ yarn-error.log*
 !**/.yarn/sdks/
 .playwright-mcp
 shaders.json
+test-screenshots/
