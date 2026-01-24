@@ -1,6 +1,13 @@
 import { render } from 'preact'
-import { useState, useEffect } from 'preact/hooks'
+import { useState, useEffect, useRef } from 'preact/hooks'
 import { html } from 'htm/preact'
+
+// Check if we're in remote control mode
+const params = new URLSearchParams(window.location.search)
+const isRemoteControlMode = params.get('remote') === 'control'
+
+// Remote controller instance (initialized in List component)
+let remoteController = null
 
 /**
  * @typedef {Object} Shader
@@ -139,6 +146,12 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
     if (hasPresets) {
       // If has presets, just expand/collapse the list
       setIsExpanded(!isExpanded)
+    } else if (isRemoteControlMode && remoteController) {
+      // In remote control mode, send command instead of navigating
+      const shaderName = new URL(targetUrl, window.location.origin).searchParams.get('shader')
+      if (shaderName) {
+        remoteController.sendShader(shaderName)
+      }
     } else {
       // If no presets, copy and navigate
       const fullscreenUrl = buildFullscreenUrl(getFullUrl(targetUrl))
@@ -168,12 +181,24 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
           >${linkIcon}</button>
           <button
             class="copy-link"
-            onClick=${(e) => {
+            onClick=${async (e) => {
               e.preventDefault()
               e.stopPropagation()
-              copyUrl(getFullUrl(targetUrl), { stripKnobs: true, addFullscreen: true })
+              if (isRemoteControlMode && remoteController) {
+                // In remote control mode, send shader with fullscreen param
+                const shaderName = new URL(targetUrl, window.location.origin).searchParams.get('shader')
+                if (shaderName) {
+                  remoteController.sendParams({ shader: shaderName, fullscreen: true })
+                }
+              } else {
+                // Copy URL and enter browser fullscreen
+                const fullscreenUrl = buildFullscreenUrl(getFullUrl(targetUrl))
+                await navigator.clipboard.writeText(fullscreenUrl)
+                document.documentElement.requestFullscreen?.()
+                window.location.href = fullscreenUrl
+              }
             }}
-            title="Copy fullscreen link (no knobs)"
+            title=${isRemoteControlMode ? "Open fullscreen on display" : "Open in fullscreen"}
           >${fullscreenIcon}</button>
           <a
             class="edit-link"
@@ -188,9 +213,16 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
             <li>
               <a class="preset-link" href="${preset}" onClick=${(e) => {
                 e.preventDefault()
-                const fullscreenUrl = buildFullscreenUrl(getFullUrl(preset))
-                navigator.clipboard.writeText(fullscreenUrl)
-                window.location.href = fullscreenUrl
+                if (isRemoteControlMode && remoteController) {
+                  // In remote control mode, send all params from the preset URL
+                  const presetUrl = new URL(getFullUrl(preset))
+                  const params = Object.fromEntries(presetUrl.searchParams.entries())
+                  remoteController.sendParams(params)
+                } else {
+                  const fullscreenUrl = buildFullscreenUrl(getFullUrl(preset))
+                  navigator.clipboard.writeText(fullscreenUrl)
+                  window.location.href = fullscreenUrl
+                }
               }}>
                 <span>${getPresetName(preset, index)}</span>
                 <div class="preset-link-actions">
@@ -205,12 +237,28 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
                   >${linkIcon}</button>
                   <button
                     class="copy-link"
-                    onClick=${(e) => {
+                    onClick=${async (e) => {
                       e.preventDefault()
                       e.stopPropagation()
-                      copyUrl(getFullUrl(preset), { stripKnobs: true, addFullscreen: true })
+                      if (isRemoteControlMode && remoteController) {
+                        // In remote control mode, send all params with fullscreen
+                        const presetUrl = new URL(getFullUrl(preset))
+                        const params = Object.fromEntries(presetUrl.searchParams.entries())
+                        // Strip knob params
+                        Object.keys(params).forEach(key => {
+                          if (key.toLowerCase().includes('knob')) delete params[key]
+                        })
+                        params.fullscreen = true
+                        remoteController.sendParams(params)
+                      } else {
+                        // Copy URL and enter browser fullscreen
+                        const fullscreenUrl = buildFullscreenUrl(getFullUrl(preset))
+                        await navigator.clipboard.writeText(fullscreenUrl)
+                        document.documentElement.requestFullscreen?.()
+                        window.location.href = fullscreenUrl
+                      }
                     }}
-                    title="Copy fullscreen link (no knobs)"
+                    title=${isRemoteControlMode ? "Open fullscreen on display" : "Open in fullscreen"}
                   >${fullscreenIcon}</button>
                   <a class="edit-link" href="${getEditUrl(preset)}" onClick=${(e) => e.stopPropagation()}>edit</a>
                 </div>
@@ -338,6 +386,43 @@ const getPresetUrl = (visualizerUrl, line) => {
 const shaders = await fetch('/shaders.json').then(res => res.json())
 
 /**
+ * Connection status banner for remote control mode
+ */
+const ConnectionStatus = ({ status, connectedClients, onRetry }) => {
+  if (!isRemoteControlMode) return null
+
+  const statusConfig = {
+    connected: { bg: '#22c55e', text: `Connected (${connectedClients} clients)`, icon: '🟢' },
+    disconnected: { bg: '#ef4444', text: 'Disconnected - tap to retry', icon: '🔴' },
+    reconnecting: { bg: '#eab308', text: 'Reconnecting...', icon: '🟡' },
+    error: { bg: '#ef4444', text: 'Connection error', icon: '🔴' },
+  }
+
+  const config = statusConfig[status] || statusConfig.disconnected
+  const isClickable = status === 'disconnected' || status === 'error'
+
+  return html`
+    <div
+      class="connection-status"
+      style=${{
+        backgroundColor: config.bg,
+        color: 'white',
+        padding: '12px 16px',
+        textAlign: 'center',
+        cursor: isClickable ? 'pointer' : 'default',
+        fontWeight: 'bold',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+      }}
+      onClick=${isClickable ? onRetry : null}
+    >
+      ${config.icon} Remote Control: ${config.text}
+    </div>
+  `
+}
+
+/**
  * Search input component
  * @param {Object} props
  * @param {string} props.value - Current filter value
@@ -422,6 +507,31 @@ const List = () => {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1200)
   const [fullscreenOnly, setFullscreenOnly] = useState(initialFilters.fullscreenOnly)
   const [favoritesOnly, setFavoritesOnly] = useState(initialFilters.favoritesOnly)
+  const [connectionStatus, setConnectionStatus] = useState('disconnected')
+  const [connectedClients, setConnectedClients] = useState(0)
+  const controllerRef = useRef(null)
+
+  // Initialize remote controller
+  useEffect(() => {
+    if (!isRemoteControlMode) return
+
+    const initController = async () => {
+      const { initRemoteController } = await import('./src/remote/RemoteController.js')
+      controllerRef.current = initRemoteController((status, data) => {
+        setConnectionStatus(status)
+        if (data?.connectedClients !== undefined) {
+          setConnectedClients(data.connectedClients)
+        }
+      })
+      remoteController = controllerRef.current
+    }
+
+    initController()
+
+    return () => {
+      controllerRef.current?.disconnect()
+    }
+  }, [])
 
   // Update URL when filter changes
   useEffect(() => {
@@ -464,8 +574,17 @@ const List = () => {
     filteredShaders = filteredShaders.filter(shader => shader.favorite === true)
   }
 
+  const handleRetry = () => {
+    controllerRef.current?.reconnect()
+  }
+
   return html`
     <div>
+      <${ConnectionStatus}
+        status=${connectionStatus}
+        connectedClients=${connectedClients}
+        onRetry=${handleRetry}
+      />
       <${SearchInput} value=${filterText} onChange=${handleFilterChange} />
       <div class="filter-toggles">
         <label class="filter-toggle">

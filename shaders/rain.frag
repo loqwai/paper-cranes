@@ -1,4 +1,4 @@
-
+// @fullscreen: true
 #define S(a,b,t)smoothstep(a,b,t)
 
 
