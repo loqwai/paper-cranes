@@ -91,7 +91,7 @@ export class WorkerRPC {
     }
 
     initialize = async () => {
-        this.worker = new Worker(`/src/audio/analyzer.js`, { type: "module" });
+        this.worker = new Worker(new URL('./analyzer.js', import.meta.url), { type: "module" })
         this.worker.onmessage = this.handleMessage
         this.worker.onerror = this.handleError
         this.worker.postMessage({

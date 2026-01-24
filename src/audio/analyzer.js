@@ -18,7 +18,7 @@ async function setupAnalyzer() {
   if(!analyzerName) throw new Error('Analyzer name is required')
   if(!historySize) throw new Error('History size is required')
 
-  const {default: analyzer} = await import(`https://esm.sh/hypnosound@1.9.0/src/audio/${analyzerName}.js`)
+  const {default: analyzer} = await import(/* @vite-ignore */ `https://esm.sh/hypnosound@1.9.0/src/audio/${analyzerName}.js`)
 
   if (!analyzer) throw new Error(`Analyzer ${analyzerName} not found`)
 

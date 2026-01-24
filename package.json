@@ -7,8 +7,9 @@
   "scripts": {
     "start": "npm run dev",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "node esbuild.build.js",
-    "dev": "node esbuild.dev.js",
+    "build": "vite build",
+    "dev": "vite",
+    "preview": "vite preview",
     "format": "eslint --fix ."
   },
   "author": "hypnodroid",
@@ -26,14 +27,11 @@
   "devDependencies": {
     "@types/serviceworker": "^0.0.122",
     "@types/vscode": "^1.96.0",
-    "esbuild": "^0.25.0",
-    "esbuild-plugin-copy": "^2.1.1",
-    "esbuild-plugin-css-modules": "^0.3.0",
-    "esbuild-plugin-html": "^1.0.0",
+    "chokidar": "^4.0.3",
     "eslint": "^8.57.1",
     "glslang-validator-prebuilt": "^0.0.7",
-    "mini-css-extract-plugin": "^2.9.2",
-    "prettier": "^3.4.2"
+    "prettier": "^3.4.2",
+    "vite": "^6.0.0"
   },
   "languages": [
     {
