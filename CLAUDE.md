@@ -275,11 +275,12 @@ window.cranes.manualFeatures.fft_size = 8192
 │   ├── Visualizer.js           # WebGL rendering
 │   └── shader-transformers/     # Shader preprocessing
 ├── shaders/                     # GLSL visualization shaders
-│   ├── star.frag
+│   ├── wip/claude/             # Claude-created shaders go here
 │   ├── plasma.frag
-│   └── graph/drop-detector/paint.frag
+│   └── melted-satin/2.frag
 ├── index.js                     # Main entry point
 ├── edit.js                      # Editor interface
+├── list.js                      # Shader list/gallery page
 └── esbuild.dev.js              # Build configuration
 ```
 
@@ -301,6 +302,54 @@ npm run dev  # Serves on localhost:6969
 - Auto-deploys to visuals.beadfamous.com
 - PRs to `shaders/<github-username>/` auto-merge
 - No backend required (static hosting)
+
+## Claude-Specific Instructions
+
+### Where to Put Your Shaders
+**Always create shaders in `shaders/wip/claude/`**
+
+```bash
+shaders/wip/claude/my-shader.frag      # Good
+shaders/wip/claude/experiment-1.frag   # Good
+shaders/my-shader.frag                  # Bad - don't put in root
+```
+
+The `wip/` directory is filtered from the mobile list by default, so experimental shaders won't clutter the production list.
+
+### Shader Metadata System
+Add metadata comments at the top of shader files to control list page behavior:
+
+```glsl
+// @fullscreen: true    // Shader handles non-square aspect ratios well
+// @mobile: true        // Shader performs well on mobile devices
+// @favorite: true      // Show in favorites filter
+// @tags: rave, ambient // Comma-separated tags
+#version 300 es
+precision highp float;
+...
+```
+
+**Metadata tags:**
+- `@fullscreen: true/false` - Does shader handle rectangular (non-square) viewports?
+- `@mobile: true/false` - Is shader performant on mobile?
+- `@favorite: true` - Mark as a favorite for quick access
+- `@tags: tag1, tag2` - Categorization tags
+
+Metadata is extracted at build time and included in `dist/shaders.json`.
+
+### List Page Features
+The list page (`/list.html`) has:
+- **Tap-to-copy-and-navigate**: Tapping a shader copies the fullscreen URL and navigates to it
+- **Favorites filter**: Toggle to show only `@favorite: true` shaders
+- **Fullscreen filter**: Toggle to hide `@fullscreen: false` shaders
+- **Search**: Filter shaders by name or preset parameters
+
+### Good Example Shaders to Study
+Look at these for reference:
+- `melted-satin/2.frag` - Clean structure, good audio reactivity
+- `plasma.frag` - Simple but effective
+- `subtronics.frag` - Image-based with audio modulation
+- `redaphid/zebra/tie-dye.frag` - Complex knob-based control
 
 ## Code Style Guidelines
 - Use arrow functions
@@ -330,13 +379,13 @@ npm run dev  # Serves on localhost:6969
 ## Testing Different Configurations
 
 ### Ultra-responsive (more jittery)
-`?shader=star&fft_size=2048&smoothing=0.3`
+`?shader=plasma&fft_size=2048&smoothing=0.3`
 
 ### Ultra-smooth (more latency)
-`?shader=star&fft_size=8192&smoothing=0.08`
+`?shader=plasma&fft_size=8192&smoothing=0.08`
 
 ### Balanced (default)
-`?shader=star&fft_size=4096&smoothing=0.15`
+`?shader=plasma&fft_size=4096&smoothing=0.15`
 
 ## Advanced Topics
 
@@ -377,4 +426,26 @@ float complexity = spectralEntropyNormalized * spectralFluxZScore;
 5. **Worker Architecture**: Parallel processing via Web Workers is essential for real-time performance with 15+ audio features.
 
 6. **Shader Philosophy**: Shaders should be artistic, reactive, and performant - avoiding dead zones while maintaining visual coherence.
-- use far less time when running sleep than you ordinarily would; If it were 5 seconds, do 1 instead.
+
+## Shader Validation
+
+Use the CLI to validate shader syntax before committing:
+```bash
+node scripts/validate-shader.js shaders/wip/claude/my-shader.frag
+```
+
+This will check for:
+- GLSL syntax errors
+- Missing required uniforms
+- Common mistakes
+
+## Common Shader Mistakes to Avoid
+
+1. **Dividing by zero**: Always add small epsilon `max(value, 0.001)`
+2. **White-out on loud audio**: Clamp values `clamp(intensity, 0.0, 1.0)`
+3. **Not handling aspect ratio**: Use `uv.x *= iResolution.x / iResolution.y` for non-square viewports
+4. **Too much feedback**: `mix(prev, new, 0.1)` can accumulate to white - use `mix(prev * 0.99, new, 0.1)`
+5. **Hardcoded resolution**: Always use `iResolution`, never hardcode 1920x1080
+
+## Misc Notes
+- Use far less time when running sleep than you ordinarily would; if it were 5 seconds, do 1 instead.

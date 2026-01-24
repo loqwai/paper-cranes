@@ -2,29 +2,7 @@ import { join } from 'path'
 import { readdir, stat, mkdir, rm } from 'fs/promises'
 import { writeFile, readFile } from 'fs/promises'
 import { relative } from 'path'
-
-/**
- * Extracts metadata from shader comments
- * Looks for // @key: value patterns
- * @param {string} content - Shader source code
- * @returns {Object} Extracted metadata
- */
-const extractMetadata = (content) => {
-    const meta = {}
-    const metaRegex = /\/\/\s*@(\w+):\s*(.+)/g
-    let match
-    while ((match = metaRegex.exec(content)) !== null) {
-        const [, key, value] = match
-        const trimmedValue = value.trim()
-        // Parse booleans
-        if (trimmedValue === 'true') meta[key] = true
-        else if (trimmedValue === 'false') meta[key] = false
-        // Parse comma-separated lists
-        else if (trimmedValue.includes(',')) meta[key] = trimmedValue.split(',').map(s => s.trim())
-        else meta[key] = trimmedValue
-    }
-    return meta
-}
+import { extractMetadata } from './scripts/shader-utils.js'
 
 const generateShadersJson = async (shaderFiles) => {
     const shaders = await Promise.all(shaderFiles.sort().map(async file => {
