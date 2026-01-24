@@ -34,8 +34,15 @@ export const validateShader = (content) => {
   const errors = []
   const warnings = []
 
-  // Check for mainImage function
-  if (!content.includes('mainImage')) {
+  // Check for mainImage function OR standalone main() with #version
+  // Two valid formats:
+  // 1. ShaderToy-style with mainImage (gets wrapped)
+  // 2. Standalone with #version and main() (used as-is)
+  const hasMainImage = content.includes('mainImage')
+  const hasVersion = content.includes('#version')
+  const hasMain = /void\s+main\s*\(/.test(content)
+
+  if (!hasMainImage && !(hasVersion && hasMain)) {
     errors.push('Missing mainImage function. Shader must contain: void mainImage(out vec4 fragColor, in vec2 fragCoord)')
   }
 
@@ -76,9 +83,13 @@ export const validateShader = (content) => {
     }
   })
 
-  // Check for fragColor output
-  if (content.includes('mainImage') && !content.includes('fragColor')) {
-    errors.push('mainImage should write to fragColor parameter')
+  // Check for output parameter usage in mainImage (only for ShaderToy-style shaders)
+  // Standalone shaders with #version have their own main() and don't need ShaderToy signature
+  if (hasMainImage && !hasVersion) {
+    const mainImageMatch = content.match(/void\s+mainImage\s*\(\s*out\s+vec4\s+(\w+)/i)
+    if (!mainImageMatch) {
+      errors.push('mainImage should have out vec4 parameter: void mainImage(out vec4 fragColor, in vec2 fragCoord)')
+    }
   }
 
   // Check for gl_FragCoord usage pattern
