@@ -1,5 +1,19 @@
 // @fullscreen: true
-// Chromatic Flow - Audio-reactive Mandelbox fractal for Chromadepth
+// Chromadepth Mandelbox - Audio-reactive fractal for chromadepth 3D glasses
+//
+// STATUS: Exploring smoothness vs audio-reactivity
+// - Switched from z-scores to hybrid approach (normalized * sign(zScore))
+//   for smoother modulation while preserving directionality
+// - Added CLOSENESS param to control chromadepth depth perception
+//   Higher = warmer/closer feel, Lower = more depth layering
+// - Camera positioned at symmetric corner (2.5, 2.5, -2.5) looking at origin
+//   for clear central focal point
+// - All params exposed as URL uniforms for exploration (?param=value)
+//
+// NEXT: Wire CLOSENESS to audio (bass → closeness UP = punch forward)
+//
+// Test URL (explore mode):
+// ?shader=wip/chromadepth/2&noaudio=true&time_val=0&closeness=1.0&cam_x=2.5&cam_y=2.5&cam_z=-2.5&look_at_x=0&look_at_y=0&look_at_z=0
 
 #define MAX_STEPS 50
 #define MAX_DIST 20.0
