@@ -236,15 +236,60 @@ vec3 position = vec3(CIRCLE_RADIUS, 0.1, 0.1);
 - `knob_60`
 - `knob_71` to `knob_79`
 
+### The #define Swap Pattern (Recommended)
+
+Use `#define` to alias audio parameters so you can easily swap between audio-reactive and constant values during development:
+
+```glsl
+// ============================================================================
+// AUDIO-REACTIVE PARAMETERS (swap constants for audio uniforms)
+// ============================================================================
+
+// Active: audio-reactive
+#define SCALE_MOD (-spectralEntropyZScore * 0.08)
+// #define SCALE_MOD 0.0
+
+// Active: audio-reactive
+#define HUE_SHIFT (pitchClassNormalized * 0.3)
+// #define HUE_SHIFT 0.0
+
+// Active: constant (for testing)
+// #define BRIGHTNESS (1.0 + bassZScore * 0.12)
+#define BRIGHTNESS 1.0
+```
+
+**Benefits:**
+- Comment/uncomment to switch between audio and static
+- Test visuals without audio enabled (`?noaudio=true`)
+- Tune constant values before mapping to audio
+- Keep audio mapping documentation inline with the code
+
 ### Switching to Knob Mode
 Replace audio features with knob controls:
 ```glsl
 // Audio mode
 #define PARAM (spectralFluxZScore)
 
-// Knob mode  
+// Knob mode
 #define PARAM (knob_71)
 ```
+
+### URL Parameters as Uniforms
+
+Any numeric query parameter automatically becomes a float uniform:
+
+```
+?shader=my-shader&my_param=0.5&another=1.2
+```
+
+These are available in your shader as:
+```glsl
+// Automatically injected as uniforms
+uniform float my_param;  // = 0.5
+uniform float another;   // = 1.2
+```
+
+**Note:** Only numeric values work. Known params (`shader`, `noaudio`, `fft_size`, etc.) and `knob_*` params are excluded.
 
 ## Query Parameters
 
@@ -407,7 +452,8 @@ The list page (`/list.html`) has:
 
 ### Good Example Shaders to Study
 Look at these for reference:
-- `melted-satin/2.frag` - Clean structure, good audio reactivity
+- `melted-satin/1.frag` - #define swap pattern, frame feedback, HSL manipulation
+- `wip/chromatic-flow.frag` - Mobile-optimized raymarching, #define pattern, zoom camera
 - `plasma.frag` - Simple but effective
 - `subtronics.frag` - Image-based with audio modulation
 - `redaphid/zebra/tie-dye.frag` - Complex knob-based control
@@ -499,6 +545,59 @@ This will check for:
 - GLSL syntax errors
 - Missing required uniforms
 - Common mistakes
+
+## Mobile Optimization for Raymarching Shaders
+
+Raymarching (fractals, SDFs) is expensive. Use these limits for mobile:
+
+| Parameter | Desktop | Mobile |
+|-----------|---------|--------|
+| Raymarch steps | 100+ | 50 max |
+| Fractal iterations | 15+ | 8 max |
+| Surface threshold | 0.0005 | 0.002 |
+| Max distance | 30+ | 20 |
+| Normal epsilon | 0.0005 | 0.003 |
+
+**Expensive operations to avoid/simplify on mobile:**
+- Soft shadows (32 iterations) → remove or use 1-sample hack
+- Ambient occlusion (5 samples) → reduce to 2 samples
+- Multiple specular lights → single light
+- High-precision normals → larger epsilon
+
+**Example cheap AO (2 samples instead of 5):**
+```glsl
+float cheapAO(vec3 p, vec3 n) {
+    float d1 = sdf(p + n * 0.1);
+    float d2 = sdf(p + n * 0.3);
+    return clamp(0.5 + (d1 + d2) * 2.0, 0.0, 1.0);
+}
+```
+
+## Camera Movement Patterns
+
+### Lateral Movement (drifting left/right/up/down)
+```glsl
+vec3 camOffset = vec3(
+    spectralCentroidZScore * 0.04,  // X: left/right
+    midsZScore * 0.02,               // Y: up/down
+    0.0
+);
+vec3 ro = basePosition + camOffset;
+```
+
+### Zoom Effect (push in/pull out)
+Move along the view direction, not world axes:
+```glsl
+vec3 toTarget = normalize(lookAt - baseRo);
+float zoomAmount = spectralFluxZScore * 0.15;
+vec3 ro = baseRo + toTarget * zoomAmount;  // Moves toward/away from target
+```
+
+### FOV Zoom (feels like zooming without moving)
+```glsl
+float fov = 1.8 * (1.0 - energyZScore * 0.1);  // Lower = zoomed in
+vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
+```
 
 ## Common Shader Mistakes to Avoid
 
