@@ -103,8 +103,25 @@ vec3 cyclopsEffect(vec2 uv) {
     return hsl2rgb(hsl);
 }
 
+// Adjust UV to maintain image aspect ratio (cover mode)
+vec2 adjustForAspect(vec2 uv, vec2 resolution) {
+    float screenAspect = resolution.x / resolution.y;
+    float imageAspect = 1.0; // Assume square image, adjust if needed
+
+    vec2 adjusted = uv - 0.5;
+    if (screenAspect > imageAspect) {
+        // Screen is wider than image - scale height
+        adjusted.y *= screenAspect / imageAspect;
+    } else {
+        // Screen is taller than image - scale width
+        adjusted.x *= imageAspect / screenAspect;
+    }
+    return adjusted + 0.5;
+}
+
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec2 uv = fragCoord / iResolution.xy;
+    vec2 rawUv = fragCoord / iResolution.xy;
+    vec2 uv = adjustForAspect(rawUv, iResolution.xy);
     vec2 center = CENTER;
 
     // **Apply seamless zoom**

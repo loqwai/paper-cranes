@@ -4,6 +4,7 @@ import {
     createProgramInfo,
     createBufferInfoFromArrays,
     resizeCanvasToDisplaySize,
+    resizeFramebufferInfo,
     setBuffersAndAttributes,
     setUniforms,
     drawBufferInfo,
@@ -135,6 +136,9 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
     let lastFragmentShader
     let renderTimes = []
     let lastResolutionRatio = 1
+    let lastCanvasWidth = gl.canvas.width
+    let lastCanvasHeight = gl.canvas.height
+    let useInitialTextureAsPrev = false
 
     const render = ({ time, features, fragmentShader: newFragmentShader }) => {
         if (newFragmentShader !== lastFragmentShader) {
@@ -159,12 +163,45 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         const currentTime = performance.now()
         const frameTime = currentTime - lastRender
 
-        const  resolutionRatio = calculateResolutionRatio(frameTime, renderTimes, lastResolutionRatio)
+        const resolutionRatio = calculateResolutionRatio(frameTime, renderTimes, lastResolutionRatio)
+
+        // Check if canvas display size changed (window resize)
+        resizeCanvasToDisplaySize(gl.canvas, lastResolutionRatio)
 
         if (resolutionRatio !== lastResolutionRatio) {
             resizeCanvasToDisplaySize(gl.canvas, resolutionRatio)
             lastResolutionRatio = resolutionRatio
             renderTimes = []
+        }
+
+        // Resize framebuffers if canvas size changed
+        if (gl.canvas.width !== lastCanvasWidth || gl.canvas.height !== lastCanvasHeight) {
+            // Unbind framebuffers before resizing
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+
+            const newWidth = gl.canvas.width
+            const newHeight = gl.canvas.height
+            frameBuffers.forEach(fb => {
+                resizeFramebufferInfo(gl, fb, undefined, newWidth, newHeight)
+                // Restore texture parameters after resize
+                const texture = fb.attachments[0]
+                gl.bindTexture(gl.TEXTURE_2D, texture)
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
+
+                // Clear the framebuffer to prevent undefined content
+                gl.bindFramebuffer(gl.FRAMEBUFFER, fb.framebuffer)
+                gl.clearColor(0, 0, 0, 1)
+                gl.clear(gl.COLOR_BUFFER_BIT)
+            })
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+
+            gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
+            lastCanvasWidth = gl.canvas.width
+            lastCanvasHeight = gl.canvas.height
+            useInitialTextureAsPrev = true
         }
 
         lastRender = currentTime
@@ -173,12 +210,17 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         const prevFrame = frameBuffers[(frameNumber + 1) % 2]
 
         gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, frame.framebuffer)
+        gl.viewport(0, 0, frame.width, frame.height)
+
+        const usePrevTexture = frameNumber === 0 || useInitialTextureAsPrev
+        const prevTexture = usePrevTexture ? initialTexture : prevFrame.attachments[0]
+        useInitialTextureAsPrev = false
 
         let uniforms = {
             iTime: time,
             iFrame: frameNumber,
             time,
-            prevFrame: frameNumber === 0 ? initialTexture : prevFrame.attachments[0],
+            prevFrame: prevTexture,
             initialFrame: initialTexture,
             resolution: [frame.width, frame.height],
             frame: frameNumber,
@@ -186,9 +228,9 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
             iResolution: [frame.width, frame.height, 0],
             iMouse: [features.touchX, features.touchY, features.touched ? 1: 0, 0],
             iChannel0: initialTexture,
-            iChannel1: prevFrame.attachments[0],
+            iChannel1: prevTexture,
             iChannel2: initialTexture,
-            iChannel3: prevFrame.attachments[0],
+            iChannel3: prevTexture,
             ...features,
         }
         // filter out null, undefined, and NaN values
