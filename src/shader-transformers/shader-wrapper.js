@@ -10,15 +10,22 @@ const getKnownUniforms = () => {
 }
 
 // Generate uniform declarations for query params (excluding known params)
-const getQueryParamUniforms = () => {
+const getQueryParamUniforms = (shader, otherUniforms = '') => {
     if (typeof window === 'undefined') return ''
     const params = new URLSearchParams(window.location.search)
     const knownParams = new Set(['shader', 'noaudio', 'embed', 'fullscreen', 'remote', 'fft_size', 'smoothing', 'history_size'])
     const knownUniforms = getKnownUniforms()
+
+    // Combine shader and other uniform declarations, strip whitespace for matching
+    const allCode = (shader + otherUniforms).replace(/\s+/g, ' ')
+
     const uniforms = []
     for (const [key, value] of params) {
         if (knownParams.has(key)) continue
         if (key.startsWith('knob_')) continue  // Already handled
+        // Check if uniform is already declared
+        const declaration = `uniform float ${key};`.replace(/\s+/g, ' ')
+        if (allCode.includes(declaration)) continue
         // Create uniform if value is numeric OR references a known uniform
         if (!isNaN(parseFloat(value)) || knownUniforms.has(value)) {
             uniforms.push(`uniform float ${key};`)
@@ -45,14 +52,19 @@ export const shaderWrapper = (shader) => {
         return lines.join('\n')
     }
     if (shader.includes('mainImage')) {
+        const compatUniforms = shaderToyCompatibilityUniforms()
+        const audioUniforms = getAudioUniforms()
+        const knobUniforms = getKnobUniforms(shader)
+        const otherUniforms = compatUniforms + audioUniforms + knobUniforms
+        const queryUniforms = getQueryParamUniforms(shader, otherUniforms)
         return /* glsl */ `#version 300 es
 precision highp float;
 
 out vec4 fragColor;
-${shaderToyCompatibilityUniforms()}
-${getAudioUniforms()}
-${getKnobUniforms(shader)}
-${getQueryParamUniforms()}
+${compatUniforms}
+${audioUniforms}
+${knobUniforms}
+${queryUniforms}
 
 ${paperCranes()}
 vec4 getLastFrameColor(vec2 uv){
