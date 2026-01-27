@@ -23,6 +23,7 @@ const getQueryParamUniforms = (shader, otherUniforms = '') => {
     for (const [key, value] of params) {
         if (knownParams.has(key)) continue
         if (key.startsWith('knob_')) continue  // Already handled
+        if (key.includes('.')) continue  // Skip metadata params like param.min, param.max
         // Check if uniform is already declared
         const declaration = `uniform float ${key};`.replace(/\s+/g, ' ')
         if (allCode.includes(declaration)) continue
