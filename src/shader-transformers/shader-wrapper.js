@@ -1,16 +1,26 @@
 import { getFlatAudioFeatures } from '../audio/AudioProcessor.js'
 
+// All uniforms that can be referenced by string params
+const getKnownUniforms = () => {
+    const audioFeatures = Object.keys(getFlatAudioFeatures())
+    const builtins = ['time', 'iTime', 'frame', 'iFrame', 'iRandom', 'beat']
+    // Include knob_1 through knob_200
+    const knobs = Array.from({ length: 200 }, (_, i) => `knob_${i + 1}`)
+    return new Set([...audioFeatures, ...builtins, ...knobs])
+}
+
 // Generate uniform declarations for query params (excluding known params)
 const getQueryParamUniforms = () => {
     if (typeof window === 'undefined') return ''
     const params = new URLSearchParams(window.location.search)
     const knownParams = new Set(['shader', 'noaudio', 'embed', 'fullscreen', 'remote', 'fft_size', 'smoothing', 'history_size'])
+    const knownUniforms = getKnownUniforms()
     const uniforms = []
     for (const [key, value] of params) {
         if (knownParams.has(key)) continue
         if (key.startsWith('knob_')) continue  // Already handled
-        // Only create uniform if value looks numeric
-        if (!isNaN(parseFloat(value))) {
+        // Create uniform if value is numeric OR references a known uniform
+        if (!isNaN(parseFloat(value)) || knownUniforms.has(value)) {
             uniforms.push(`uniform float ${key};`)
         }
     }

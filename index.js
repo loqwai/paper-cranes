@@ -163,7 +163,7 @@ export const getCranesState = () => {
     return {
         ...window.cranes.measuredAudioFeatures, // Audio features (lowest precedence)
         ...window.cranes.controllerFeatures,    // Controller-computed features
-        ...parseUrlParams(params),              // URL parameters (parsed as numbers)
+        ...parseUrlParams(params),              // URL parameters (parsed as numbers or strings)
         ...window.cranes.manualFeatures,        // Manual features
         ...window.cranes.messageParams,         // Message parameters (highest precedence)
         touch: [coordsHandler.coords.x, coordsHandler.coords.y],

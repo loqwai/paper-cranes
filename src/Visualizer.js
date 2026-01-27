@@ -195,7 +195,7 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         uniforms = Object.fromEntries(
             Object.entries(uniforms).filter(([, value]) => value !== null && value !== undefined && !Number.isNaN(value))
         )
-        // resolve uniform references;
+        // resolve string references to other uniforms (e.g., time_val=time)
         uniforms = resolveReferences(uniforms)
 
         setBuffersAndAttributes(gl, programInfo, bufferInfo)
@@ -212,16 +212,14 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
     return render
 }
 
+// Resolve string references to other uniforms (e.g., ?time_val=time, ?knob_71=bassNormalized)
 const resolveReferences = (uniforms) => {
-    uniforms = { ...uniforms }
-    // resolve references to other uniforms
-    // if the value of a uniform is a string, find the value of that uniform and replace the string with the value
-    for (const [key, value] of Object.entries(uniforms)) {
-        if(typeof value !== 'string') continue
-
-        const resolvedValue = uniforms[value]
-        if(resolvedValue === undefined) continue
-        uniforms[key] = resolvedValue
+    const result = { ...uniforms }
+    for (const [key, value] of Object.entries(result)) {
+        if (typeof value !== 'string') continue
+        if (result[value] === undefined) continue
+        result[key] = result[value]
     }
-    return uniforms
+    return result
 }
+
