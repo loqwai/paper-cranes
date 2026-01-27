@@ -14,11 +14,11 @@
 //
 // PRESETS:
 // Default symmetric view - good starting point
-// https://visuals.beadfamous.com/?shader=wip/chromadepth/2&noaudio=true&time_val=0&closeness=1.0&cam_x=2.5&cam_y=2.5&cam_z=-2.5&look_at_x=0&look_at_y=0&look_at_z=0&hue_near=0.0&hue_far=0.7&trap_scale=1.5&scale_mod=0&brightness=1.0&zoom=0&fov_mod=1.0&look_x=0&look_y=0&feedback=0.15&hue_shift=0
+//https://visuals.beadfamous.com/?shader=wip/chromadepth/freeze&noaudio=true&time_val=0&closeness=1.0&cam_x=2.5&cam_y=2.5&cam_z=-2.5&look_at_x=0&look_at_y=0&look_at_z=0&hue_near=0.0&hue_far=0.7&trap_scale=1.5&scale_mod=0&brightness=1.0&zoom=0&fov_mod=1.0&look_x=0&look_y=0&feedback=0.15&hue_shift=0
 // Deep layered depth - more chromadepth separation
-// https://visuals.beadfamous.com/?shader=wip/chromadepth/2&noaudio=true&time_val=0&closeness=0.4&cam_x=2.5&cam_y=2.5&cam_z=-2.5&look_at_x=0&look_at_y=0&look_at_z=0&hue_near=0.0&hue_far=0.75&trap_scale=2.0&scale_mod=-0.05&brightness=1.1&zoom=0.1&fov_mod=0.95&look_x=0&look_y=0&feedback=0.1&hue_shift=0
+//https://visuals.beadfamous.com/?shader=wip/chromadepth/freeze&noaudio=true&time_val=0&closeness=0.4&cam_x=2.5&cam_y=2.5&cam_z=-2.5&look_at_x=0&look_at_y=0&look_at_z=0&hue_near=0.0&hue_far=0.75&trap_scale=2.0&scale_mod=-0.05&brightness=1.1&zoom=0.1&fov_mod=0.95&look_x=0&look_y=0&feedback=0.1&hue_shift=0
 // Close warm feel - everything pops forward
-// https://visuals.beadfamous.com/?shader=wip/chromadepth/2&noaudio=true&time_val=0&closeness=2.5&cam_x=2.0&cam_y=2.0&cam_z=-2.0&look_at_x=0&look_at_y=0&look_at_z=0&hue_near=0.0&hue_far=0.5&trap_scale=1.0&scale_mod=0.05&brightness=1.2&zoom=0.2&fov_mod=1.1&look_x=0&look_y=0&feedback=0.2&hue_shift=0.05
+//https://visuals.beadfamous.com/?shader=wip/chromadepth/freeze&noaudio=true&time_val=0&closeness=2.5&cam_x=2.0&cam_y=2.0&cam_z=-2.0&look_at_x=0&look_at_y=0&look_at_z=0&hue_near=0.0&hue_far=0.5&trap_scale=1.0&scale_mod=0.05&brightness=1.2&zoom=0.2&fov_mod=1.1&look_x=0&look_y=0&feedback=0.2&hue_shift=0.05
 
 #define MAX_STEPS 50
 #define MAX_DIST 20.0
