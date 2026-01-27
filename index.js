@@ -149,11 +149,21 @@ const setupAudio = async () => {
     }
 };
 
+// Parse URL params as numbers when possible
+const parseUrlParams = (searchParams) => {
+    const result = {}
+    for (const [key, value] of searchParams) {
+        const num = parseFloat(value)
+        result[key] = !isNaN(num) ? num : value
+    }
+    return result
+}
+
 export const getCranesState = () => {
     return {
         ...window.cranes.measuredAudioFeatures, // Audio features (lowest precedence)
         ...window.cranes.controllerFeatures,    // Controller-computed features
-        ...Object.fromEntries(params),          // URL parameters
+        ...parseUrlParams(params),              // URL parameters (parsed as numbers)
         ...window.cranes.manualFeatures,        // Manual features
         ...window.cranes.messageParams,         // Message parameters (highest precedence)
         touch: [coordsHandler.coords.x, coordsHandler.coords.y],

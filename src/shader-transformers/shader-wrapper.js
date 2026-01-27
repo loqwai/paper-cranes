@@ -1,5 +1,22 @@
 import { getFlatAudioFeatures } from '../audio/AudioProcessor.js'
 
+// Generate uniform declarations for query params (excluding known params)
+const getQueryParamUniforms = () => {
+    if (typeof window === 'undefined') return ''
+    const params = new URLSearchParams(window.location.search)
+    const knownParams = new Set(['shader', 'noaudio', 'embed', 'fullscreen', 'remote', 'fft_size', 'smoothing', 'history_size'])
+    const uniforms = []
+    for (const [key, value] of params) {
+        if (knownParams.has(key)) continue
+        if (key.startsWith('knob_')) continue  // Already handled
+        // Only create uniform if value looks numeric
+        if (!isNaN(parseFloat(value))) {
+            uniforms.push(`uniform float ${key};`)
+        }
+    }
+    return uniforms.join('\n')
+}
+
 const getKnobUniforms = (shader) => {
     const existingKnobs = new Set(
         [...shader.matchAll(/uniform\s+float\s+knob_(\d+)/g)].map(m => parseInt(m[1]))
@@ -25,6 +42,7 @@ out vec4 fragColor;
 ${shaderToyCompatibilityUniforms()}
 ${getAudioUniforms()}
 ${getKnobUniforms(shader)}
+${getQueryParamUniforms()}
 
 ${paperCranes()}
 vec4 getLastFrameColor(vec2 uv){
