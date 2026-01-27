@@ -26,6 +26,8 @@ This project is deployed at [visuals.beadfamous.com](https://visuals.beadfamous.
 Making your own visualization is easy, but requires some knowledge of GLSL shading language.
 Lucky for you, I'm hosting a hackathon with HeatSync Labs next month, in which we go from nothing to a working visualization and bracelet in a couple of hours next month! Stay tuned for more details.
 
+**See [docs/MAKING_A_NEW_SHADER.md](docs/MAKING_A_NEW_SHADER.md) for the full guide** - covers audio features, utility functions, design patterns, and common pitfalls.
+
 To make your own visualizations, you can create a new file in the `shaders/` directory, and then load it by specifying the 'shader' query param in the url. For example, to view the 'my_new_shader' visualization, you would go to [localhost:6969/?shader=my_new_shader](http://localhost:6969/?shader=my_new_shader)
 
 You can copy and paste any of the existing files in the `shaders/` directory to get started. Or ya know, wait until the Hackathon and I'll walk you through it.

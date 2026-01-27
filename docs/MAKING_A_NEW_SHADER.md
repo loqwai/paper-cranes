@@ -517,6 +517,53 @@ prevHSL.z *= 0.995;  // Slight darkening to prevent white-out
 fragColor = vec4(energy, spectralFlux, bass, 1.0);
 ```
 
+### 7. Everything is the Same Color (Depth-Based Coloring)
+
+**Problem:** Using distance/depth for color but it's all one hue.
+
+**Causes:**
+- Visible surfaces are at similar distances from camera
+- Depth range parameters don't match visible range
+- Using ray distance when world position would work better
+
+**Debug approach:**
+```glsl
+// Output raw depth as grayscale to see if it varies
+float normDist = result.dist / MAX_DIST;
+fragColor = vec4(vec3(normDist), 1.0);  // Should show gradient
+```
+
+**Solutions:**
+
+1. **Tighten the depth range** to match what's visible:
+```glsl
+#define DEPTH_MIN 1.5   // Start of visible range
+#define DEPTH_MAX 4.0   // End of visible range
+float normDist = (dist - DEPTH_MIN) / (DEPTH_MAX - DEPTH_MIN);
+```
+
+2. **Try different depth sources** - ray distance isn't always best:
+```glsl
+// Ray distance (from camera)
+float depth = result.dist / MAX_DIST;
+
+// World Z position (depth into scene)
+float depth = (p.z - Z_MIN) / (Z_MAX - Z_MIN);
+
+// Orbit trap (varies with fractal structure!)
+float depth = sqrt(trap.trapMin) * TRAP_SCALE;
+
+// Distance from world origin
+float depth = length(p) / MAX_RADIUS;
+```
+
+3. **Mix multiple sources** for richer variation:
+```glsl
+float hue = depthHue * 0.5 + trapHue * 0.3 + normalHue * 0.2;
+```
+
+**Key insight:** If your camera sees a "flat" view of a fractal (all surfaces at similar ray distances), use orbit traps or world position instead of ray distance for color variation.
+
 ---
 
 ## Example Shaders to Study
@@ -586,9 +633,65 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
 ---
 
-## Knob-to-Audio Workflow (Recommended Development Pattern)
+## The #define Swap Pattern (Simplest Approach)
 
-The most effective way to develop audio-reactive shaders is to **start with knobs, then switch to audio**. This pattern is used throughout the codebase.
+The easiest way to toggle between constant values and audio-reactive uniforms is the **comment swap pattern**:
+
+```glsl
+// ============================================================================
+// TUNABLE PARAMETERS - swap constants for audio uniforms
+// ============================================================================
+
+// Active: audio-reactive
+#define SCALE_MOD (-spectralEntropyZScore * 0.08)
+// #define SCALE_MOD 0.0
+
+// Active: constant (for testing)
+// #define HUE_SHIFT (pitchClassNormalized * 0.3)
+#define HUE_SHIFT 0.0
+
+// Active: audio-reactive
+#define BRIGHTNESS (1.0 + bassZScore * 0.15)
+// #define BRIGHTNESS 1.0
+```
+
+**Why this works:**
+- Comment/uncomment one line to toggle
+- Test without audio: `?noaudio=true`
+- Tune constant values before mapping to audio
+- Documentation stays inline with the code
+- Easy to see what's currently active at a glance
+
+### Grouping Parameters
+
+Organize by function for clarity:
+
+```glsl
+// ============================================================================
+// COLOR PARAMETERS
+// ============================================================================
+#define HUE_BASE 0.0
+#define HUE_RANGE 0.7
+#define SATURATION 0.95
+
+// ============================================================================
+// STRUCTURE PARAMETERS
+// ============================================================================
+#define DEPTH_MIN 1.5
+#define DEPTH_MAX 6.0
+
+// ============================================================================
+// AUDIO-REACTIVE PARAMETERS
+// ============================================================================
+#define ZOOM (spectralFluxZScore * 0.18)
+// #define ZOOM 0.0
+```
+
+---
+
+## Knob-to-Audio Workflow (Alternative Pattern)
+
+For more complex parameter relationships, use `#ifdef` blocks to switch entire parameter sets:
 
 ### Why This Pattern Works
 

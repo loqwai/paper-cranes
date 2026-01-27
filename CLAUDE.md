@@ -195,6 +195,8 @@ Group features by domain and pick from DIFFERENT domains for variety:
 
 ## Shader Development
 
+> **Full tutorial:** See [docs/MAKING_A_NEW_SHADER.md](docs/MAKING_A_NEW_SHADER.md) for the complete guide including utility functions, design patterns, and common pitfalls.
+
 ### Shader Structure
 ```glsl
 // Use #define for audio-reactive parameters
