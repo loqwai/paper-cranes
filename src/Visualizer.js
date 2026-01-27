@@ -130,6 +130,10 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
 
     const bufferInfo = createBufferInfoFromArrays(gl, { position: positions })
 
+    // Resize canvas to display size before capturing initial dimensions
+    // This prevents the first frame from triggering resize logic and causing a black flash
+    resizeCanvasToDisplaySize(gl.canvas, 1)
+
     let frameNumber = 0
     let lastRender = performance.now()
     let programInfo

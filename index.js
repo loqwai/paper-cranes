@@ -2,19 +2,6 @@ import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { makeVisualizer } from './src/Visualizer.js'
 import { getInitialShader } from './src/shaderLoader.js'
 
-// Add service worker registration
-window.addEventListener('load', async () => {
-    const { serviceWorker } = navigator
-    if(!serviceWorker) {
-        return
-    }
-    serviceWorker.addEventListener('message', processServiceWorkerMessage)
-    // Add cache version to URL to force update when version changes
-    const registration = await serviceWorker.register(`/service-worker.js`)
-    registration.addEventListener('statechange', (e) => {})
-    registration.addEventListener('message', processServiceWorkerMessage)
-})
-
 /**
  * Process messages from the service worker
  * @param {MessageEvent} event
@@ -25,6 +12,23 @@ const processServiceWorkerMessage = (event) => {
         return window.location.reload()
     }
 }
+
+// Add service worker message listener immediately (before load)
+// This ensures we catch reload messages from the SW even during initial page load
+if (navigator.serviceWorker) {
+    navigator.serviceWorker.addEventListener('message', processServiceWorkerMessage)
+}
+
+// Add service worker registration
+window.addEventListener('load', async () => {
+    const { serviceWorker } = navigator
+    if(!serviceWorker) {
+        return
+    }
+    // Add cache version to URL to force update when version changes
+    const registration = await serviceWorker.register(`/service-worker.js`)
+    registration.addEventListener('statechange', (e) => {})
+})
 
 const events = ['touchstart', 'touchmove', 'touchstop', 'keydown', 'mousedown', 'resize']
 let ranMain = false
