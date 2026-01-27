@@ -16,14 +16,14 @@
 
 // DEPTH SOURCE - which metric to use for chromadepth
 // 0 = ray distance, 1 = world Z position, 2 = orbit trap, 3 = distance from origin
-#define DEPTH_SOURCE 2
+#define DEPTH_SOURCE 3
 
 // Depth range for sources 0,1,3 (tune based on what you see)
 #define DEPTH_MIN 0.0
 #define DEPTH_MAX 3.0
 
 // Orbit trap scaling (for source 2)
-#define TRAP_SCALE 1.5        // Higher = more hue spread from trap
+#define TRAP_SCALE sin(time)        // Higher = more hue spread from trap
 
 #define DEPTH_CURVE 0.7       // <1 = more warm, >1 = more cool
 
@@ -36,15 +36,15 @@
 // #define SAT_BASE 0.8
 
 // Lightness range
-#define LIGHT_MIN 0.25        // Darkest (shadowed areas)
+#define LIGHT_MIN 0.05        // Darkest (shadowed areas)
 #define LIGHT_MAX 0.55        // Brightest (lit areas)
-#define LIGHT_BASE 0.35       // Base lightness before lighting
-#define LIGHT_DIFFUSE 0.25    // How much lighting adds
+#define LIGHT_BASE 0.05       // Base lightness before lighting
+#define LIGHT_DIFFUSE 0.55    // How much lighting adds
 
 // Edge glow
 #define EDGE_HUE_OFFSET 0.15  // Hue shift for edges (0 = same, 0.5 = complement)
-#define EDGE_LIGHT_BOOST 0.1  // How much brighter edges are
-#define EDGE_AMOUNT 0.4       // Overall edge intensity
+#define EDGE_LIGHT_BOOST 0.91  // How much brighter edges are
+#define EDGE_AMOUNT spectralFluxNormalized/5.      // Overall edge intensity
 // #define EDGE_AMOUNT 0.0    // No edges
 
 // Beat "pop" effect - shifts hue toward red (closer = more effect)
@@ -61,37 +61,39 @@
 // #define HUE_SHIFT 0.0
 
 // Scale modifier: entropy increases density
-#define SCALE_MOD (-spectralEntropyZScore * 0.1)
+// Hybrid: smooth magnitude from normalized, direction from z-score
+#define SCALE_MOD (-spectralEntropyNormalized * 0.12)
 // #define SCALE_MOD 0.0
 
-// Brightness pulse from bass
-#define BRIGHTNESS (1.0 + bassZScore * 0.15)
+// Brightness pulse from bass (unidirectional - just use normalized)
+#define BRIGHTNESS (1.0 + bassNormalized * 0.2)
 // #define BRIGHTNESS 1.0
 
 // Zoom from spectral flux
-#define ZOOM (spectralFluxZScore * 0.18)
+// Hybrid: smooth magnitude, z-score determines push/pull direction
+#define ZOOM (spectralFluxNormalized * 0.22)
 // #define ZOOM 0.0
 
-// FOV from energy
-#define FOV_MOD (1.0 - energyZScore * 0.12)
+// FOV from energy (unidirectional)
+#define FOV_MOD (1.0 - energyNormalized * 0.15)
 // #define FOV_MOD 1.0
 
-// Camera sway
-#define LOOK_X (trebleZScore * 0.025)
+// Camera sway - hybrid for bidirectional movement
+#define LOOK_X (trebleNormalized * 0.03 * sign(trebleZScore))
 // #define LOOK_X 0.0
-#define LOOK_Y (spectralSpreadZScore * 0.015)
+#define LOOK_Y (spectralSpreadNormalized * 0.02)
 // #define LOOK_Y 0.0
 
 // Frame feedback
-#define FEEDBACK_STRENGTH 0.15
+#define FEEDBACK_STRENGTH 0.05
 // #define FEEDBACK_STRENGTH (0.1 + spectralFluxNormalized * 0.1)
 
 // ============================================================================
 // FRACTAL PARAMETERS
 // ============================================================================
 
-const float SCALE = -2.0;
-const float MIN_RAD2 = 0.5;
+const float SCALE = -3.0;
+const float MIN_RAD2 = 0.05;
 const float FIXED_RAD2 = 1.0;
 const vec3 FOLD_OFFSET = vec3(1.0, 1.0, 1.0);
 
