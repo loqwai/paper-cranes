@@ -29,26 +29,8 @@ const perfConfig = {
   }
 }
 
-// Get device performance level - default to medium
 function getPerformanceLevel() {
-  // Check for URL parameter
-  const urlParams = new URLSearchParams(window.location.search)
-  const perfParam = urlParams.get('performance')
-
-  if (perfParam === 'high') return 'highPerformance'
-  if (perfParam === 'low') return 'lowPerformance'
-  if (perfParam === 'medium') return 'mediumPerformance'
-
-  // Try to detect based on hardware
-  const isHighEnd = window.navigator.hardwareConcurrency >= 8
-  const isLowEnd = window.navigator.hardwareConcurrency <= 2 ||
-                  /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-
   return 'highPerformance'
-  if (isHighEnd) return 'highPerformance'
-  if (isLowEnd) return 'lowPerformance'
-
-  return 'mediumPerformance'
 }
 
 // Get the performance configuration
