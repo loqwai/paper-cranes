@@ -13,7 +13,7 @@ const getKnownUniforms = () => {
 const getQueryParamUniforms = (shader, otherUniforms = '') => {
     if (typeof window === 'undefined') return ''
     const params = new URLSearchParams(window.location.search)
-    const knownParams = new Set(['shader', 'noaudio', 'embed', 'fullscreen', 'remote', 'fft_size', 'smoothing', 'history_size'])
+    const knownParams = new Set(['shader', 'noaudio', 'embed', 'fullscreen', 'remote', 'fft_size', 'smoothing', 'history_size', 'controller', 'performance'])
     const knownUniforms = getKnownUniforms()
 
     // Combine shader and other uniform declarations, strip whitespace for matching

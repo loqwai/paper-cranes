@@ -61,11 +61,11 @@ Decimal.config({
   precisionTolerance: 1e-30
 })
 
-// Interesting Julia set coordinates
-let centerXDecimal = new Decimal('-0.945428')
-let centerYDecimal = new Decimal('0.13009')
-let centerX = -0.845428
-let centerY = 0.13009
+// Center at origin - always on/near the Julia set boundary
+let centerXDecimal = new Decimal('0')
+let centerYDecimal = new Decimal('0')
+let centerX = 0
+let centerY = 0
 
 // Enhanced split function for better precision
 function splitDouble(value) {
