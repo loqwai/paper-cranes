@@ -1,43 +1,60 @@
 // @fullscreen: true
 // @mobile: true
-// @tags: south-park, characters, fun, cartoon
+// @tags: south-park, characters, fun, cartoon, colorful
 // South Park - Audio-reactive construction paper town
+// Optimized for LED screen-scraping: large saturated color regions, strong reactivity
 
 // ============================================================================
 // AUDIO-REACTIVE PARAMETERS
 // ============================================================================
 
 // Character bounce: bass makes them hop
-#define BOUNCE_AMOUNT (bassZScore * 0.025)
-// #define BOUNCE_AMOUNT 0.01
+#define BOUNCE_AMOUNT (bassZScore * 0.06)
+// #define BOUNCE_AMOUNT 0.02
 
-// Sky hue shift: pitch class rotates sunset palette
-#define SKY_HUE (pitchClassNormalized * 0.15)
+// Sky hue shift: pitch class rotates the palette dramatically
+#define SKY_HUE (pitchClassNormalized * 0.5)
 // #define SKY_HUE 0.0
 
-// Aurora glow intensity: energy drives the sky glow
-#define GLOW_INTENSITY (energyNormalized * 0.4)
-// #define GLOW_INTENSITY 0.2
+// Sky saturation pulse: energy drives color intensity
+#define SKY_SAT (0.7 + energyNormalized * 0.3)
+// #define SKY_SAT 0.85
+
+// Aurora glow intensity: treble drives sky glow
+#define GLOW_INTENSITY (0.3 + trebleNormalized * 0.7)
+// #define GLOW_INTENSITY 0.5
 
 // Snow speed: spectral flux drives snowfall
-#define SNOW_SPEED (0.4 + spectralFluxNormalized * 0.6)
-// #define SNOW_SPEED 0.6
+#define SNOW_SPEED (0.3 + spectralFluxNormalized * 0.7)
+// #define SNOW_SPEED 0.5
 
 // Color vibrance: spectral centroid shifts warmth
-#define VIBRANCE (0.8 + spectralCentroidNormalized * 0.3)
+#define VIBRANCE (0.85 + spectralCentroidNormalized * 0.15)
 // #define VIBRANCE 1.0
 
-// Beat flash
-#define BEAT_PULSE (beat ? 1.15 : 1.0)
+// Beat flash: strong color wash on beat
+#define BEAT_PULSE (beat ? 1.3 : 1.0)
 // #define BEAT_PULSE 1.0
 
 // Mountain wobble from mids
-#define MOUNTAIN_WOBBLE (midsZScore * 0.008)
+#define MOUNTAIN_WOBBLE (midsZScore * 0.015)
 // #define MOUNTAIN_WOBBLE 0.0
 
 // Treble sparkle on snow
-#define SPARKLE (trebleNormalized * 0.6)
-// #define SPARKLE 0.2
+#define SPARKLE (trebleNormalized * 0.8)
+// #define SPARKLE 0.3
+
+// Color wash hue from spectral entropy - big ambient color shifts
+#define COLOR_WASH_HUE (spectralEntropyNormalized * 0.3)
+// #define COLOR_WASH_HUE 0.0
+
+// Bass throb: scales up the whole scene brightness
+#define BASS_THROB (0.85 + bassNormalized * 0.25)
+// #define BASS_THROB 1.0
+
+// Ground hue shift from spectral roughness
+#define GROUND_HUE (spectralRoughnessNormalized * 0.15)
+// #define GROUND_HUE 0.0
 
 // ============================================================================
 // HELPERS
@@ -49,100 +66,87 @@ float hash21(vec2 p) {
     return fract(p.x * p.y);
 }
 
-// Rounded rectangle SDF
 float sdRoundBox(vec2 p, vec2 b, float r) {
     vec2 q = abs(p) - b + r;
     return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
 }
 
-// Circle SDF
 float sdCircle(vec2 p, float r) {
     return length(p) - r;
 }
 
-// Triangle SDF (isoceles)
-float sdTriangle(vec2 p, vec2 a, vec2 b, vec2 c) {
-    vec2 e0 = b - a, e1 = c - b, e2 = a - c;
-    vec2 v0 = p - a, v1 = p - b, v2 = p - c;
-    vec2 pq0 = v0 - e0 * clamp(dot(v0, e0) / dot(e0, e0), 0.0, 1.0);
-    vec2 pq1 = v1 - e1 * clamp(dot(v1, e1) / dot(e1, e1), 0.0, 1.0);
-    vec2 pq2 = v2 - e2 * clamp(dot(v2, e2) / dot(e2, e2), 0.0, 1.0);
-    float s = sign(e0.x * e2.y - e0.y * e2.x);
-    vec2 d = min(min(vec2(dot(pq0, pq0), s * (v0.x * e0.y - v0.y * e0.x)),
-                     vec2(dot(pq1, pq1), s * (v1.x * e1.y - v1.y * e1.x))),
-                     vec2(dot(pq2, pq2), s * (v2.x * e2.y - v2.y * e2.x)));
-    return -sqrt(d.x) * sign(d.y);
-}
-
-// Smooth fill
 float fill(float d, float aa) {
     return 1.0 - smoothstep(0.0, aa, d);
 }
 
-// Stroke
 float stroke(float d, float w, float aa) {
     return 1.0 - smoothstep(w - aa, w + aa, abs(d));
 }
 
 // ============================================================================
-// SOUTH PARK SKY
+// SOUTH PARK SKY - Bold, saturated, reactive
 // ============================================================================
 
 vec3 southParkSky(vec2 uv, float t) {
-    // Classic South Park sky gradient: blue to orange/pink sunset
     float skyGrad = uv.y;
 
-    // Base sky colors
-    vec3 topColor = vec3(0.15, 0.25, 0.55);    // Deep blue
-    vec3 midColor = vec3(0.4, 0.5, 0.75);      // Light blue
-    vec3 horizonColor = vec3(0.85, 0.55, 0.35); // Orange horizon
+    // Vivid, saturated sky colors
+    vec3 topColor = hsl2rgb(vec3(fract(0.6 + SKY_HUE + COLOR_WASH_HUE), SKY_SAT, 0.25));
+    vec3 midColor = hsl2rgb(vec3(fract(0.55 + SKY_HUE + COLOR_WASH_HUE), SKY_SAT, 0.45));
+    vec3 horizonColor = hsl2rgb(vec3(fract(0.08 + SKY_HUE + COLOR_WASH_HUE), SKY_SAT, 0.55));
 
     vec3 sky = mix(horizonColor, midColor, smoothstep(0.3, 0.55, skyGrad));
     sky = mix(sky, topColor, smoothstep(0.55, 0.85, skyGrad));
 
-    // Hue shift from audio
-    vec3 skyHSL = rgb2hsl(sky);
-    skyHSL.x = fract(skyHSL.x + SKY_HUE);
-    skyHSL.y *= VIBRANCE;
-    sky = hsl2rgb(skyHSL);
+    // Bold aurora bands - large saturated color regions great for LEDs
+    float aurora1 = smoothstep(0.55, 0.7, uv.y) * smoothstep(0.9, 0.7, uv.y);
+    aurora1 *= 0.5 + 0.5 * sin(uv.x * 4.0 + t * 0.8);
+    vec3 auroraCol1 = hsl2rgb(vec3(fract(0.3 + SKY_HUE), 0.9, 0.5));
+    sky += auroraCol1 * aurora1 * GLOW_INTENSITY;
 
-    // Subtle aurora/glow near top from energy
-    float auroraShape = smoothstep(0.6, 0.85, uv.y) * sin(uv.x * 6.0 + t * 0.5) * 0.5 + 0.5;
-    vec3 auroraColor = hsl2rgb(vec3(fract(0.45 + SKY_HUE), 0.6, 0.4));
-    sky += auroraColor * auroraShape * GLOW_INTENSITY;
+    float aurora2 = smoothstep(0.65, 0.8, uv.y) * smoothstep(0.95, 0.8, uv.y);
+    aurora2 *= 0.5 + 0.5 * sin(uv.x * 3.0 - t * 0.6 + 2.0);
+    vec3 auroraCol2 = hsl2rgb(vec3(fract(0.75 + SKY_HUE), 0.85, 0.45));
+    sky += auroraCol2 * aurora2 * GLOW_INTENSITY * 0.7;
+
+    // Big color pulse on beat - washes the whole sky
+    if (beat) {
+        vec3 beatColor = hsl2rgb(vec3(fract(SKY_HUE + 0.15), 0.95, 0.6));
+        sky = mix(sky, beatColor, 0.25);
+    }
 
     return sky;
 }
 
 // ============================================================================
-// MOUNTAINS
+// MOUNTAINS - More colorful, saturated
 // ============================================================================
 
 vec3 drawMountains(vec2 uv, float t) {
     vec3 col = vec3(0.0);
     float aa = 2.0 / iResolution.y;
 
-    // Back mountains (darker, taller)
+    // Back mountains - purple/blue, saturated
     float m1 = 0.45 + 0.12 * sin(uv.x * 3.5 + 1.0) + 0.06 * sin(uv.x * 7.0 + 2.0);
     m1 += MOUNTAIN_WOBBLE * sin(uv.x * 10.0 + t * 2.0);
     float backMtn = fill(uv.y - m1, aa);
-    vec3 backColor = vec3(0.35, 0.4, 0.55); // Blue-grey
+    vec3 backColor = hsl2rgb(vec3(fract(0.72 + COLOR_WASH_HUE * 0.5), 0.5, 0.35));
 
-    // Snow caps on back mountains
+    // Snow caps - tinted with sky color
     float snowLine1 = m1 - 0.025;
     float snowCap1 = fill(uv.y - snowLine1, aa * 3.0) * step(m1 - 0.04, uv.y);
-    backColor = mix(backColor, vec3(0.92, 0.95, 1.0), snowCap1 * 0.7);
+    vec3 snowTint = hsl2rgb(vec3(fract(0.55 + SKY_HUE), 0.2, 0.85));
+    backColor = mix(backColor, snowTint, snowCap1 * 0.7);
 
-    // Front mountains (green, shorter)
+    // Front mountains - rich green, reactive
     float m2 = 0.35 + 0.08 * sin(uv.x * 4.2 + 0.5) + 0.04 * sin(uv.x * 9.0);
     m2 += MOUNTAIN_WOBBLE * sin(uv.x * 8.0 + t * 1.5 + 1.0);
     float frontMtn = fill(uv.y - m2, aa);
-    vec3 frontColor = vec3(0.3, 0.5, 0.35); // Forest green
+    vec3 frontColor = hsl2rgb(vec3(fract(0.38 + COLOR_WASH_HUE * 0.3), 0.55, 0.3));
 
-    // Snow caps on front mountains
     float snowLine2 = m2 - 0.015;
     float snowCap2 = fill(uv.y - snowLine2, aa * 2.0) * step(m2 - 0.03, uv.y);
-    frontColor = mix(frontColor, vec3(0.92, 0.95, 1.0), snowCap2 * 0.5);
+    frontColor = mix(frontColor, snowTint, snowCap2 * 0.5);
 
     col = mix(col, backColor, backMtn);
     col = mix(col, frontColor, frontMtn);
@@ -151,74 +155,82 @@ vec3 drawMountains(vec2 uv, float t) {
 }
 
 // ============================================================================
-// GROUND / TOWN
+// GROUND - Colorful, reactive snow
 // ============================================================================
 
-vec3 drawGround(vec2 uv) {
+vec3 drawGround(vec2 uv, float t) {
     vec3 col = vec3(0.0);
     float aa = 2.0 / iResolution.y;
 
-    // Snowy ground
     float groundLevel = 0.22;
     float ground = fill(uv.y - groundLevel, aa);
-    vec3 groundColor = vec3(0.88, 0.92, 0.96); // Snow white
 
-    // Road
+    // Snow that picks up color from the sky - great for LED scraping
+    vec3 groundColor = hsl2rgb(vec3(fract(0.55 + SKY_HUE + GROUND_HUE), 0.25, 0.8));
+
+    // Road - darker, more saturated
     float roadCenter = 0.13;
     float roadHalf = 0.025;
     float road = fill(abs(uv.y - roadCenter) - roadHalf, aa);
-    vec3 roadColor = vec3(0.3, 0.3, 0.32);
+    vec3 roadColor = vec3(0.2, 0.2, 0.25);
 
-    // Road line (dashed yellow center)
+    // Road line - bold yellow
     float lineY = abs(uv.y - roadCenter);
     float dashX = step(0.5, fract(uv.x * 12.0));
-    float centerLine = fill(lineY - 0.002, aa) * dashX;
+    float centerLine = fill(lineY - 0.003, aa) * dashX;
 
     col = mix(col, groundColor, ground);
     col = mix(col, roadColor, road);
-    col = mix(col, vec3(0.9, 0.8, 0.1), centerLine);
+    col = mix(col, vec3(1.0, 0.85, 0.0), centerLine);
 
     return col;
 }
 
 // ============================================================================
-// BUILDINGS (simple South Park style)
+// BUILDINGS - Bigger, bolder colors
 // ============================================================================
 
 vec3 drawBuildings(vec2 uv) {
     vec3 col = vec3(0.0);
     float aa = 2.0 / iResolution.y;
 
-    // Simple rectangular buildings behind characters
-    // Building 1 - left
+    // Building 1 - left, bold red
     vec2 b1 = uv - vec2(0.12, 0.28);
-    float bld1 = fill(sdRoundBox(b1, vec2(0.05, 0.06), 0.002), aa);
-    col = mix(col, vec3(0.65, 0.35, 0.3), bld1);
+    float bld1 = fill(sdRoundBox(b1, vec2(0.06, 0.07), 0.003), aa);
+    vec3 bld1Color = hsl2rgb(vec3(0.02, 0.7, 0.4));
+    col = mix(col, bld1Color, bld1);
 
-    // Window on building 1
-    float w1 = fill(sdRoundBox(b1 - vec2(0.0, 0.02), vec2(0.015, 0.015), 0.001), aa);
-    col = mix(col, vec3(0.9, 0.85, 0.5), w1);
+    // Window - warm glow
+    float w1 = fill(sdRoundBox(b1 - vec2(0.0, 0.02), vec2(0.018, 0.018), 0.002), aa);
+    vec3 winGlow = hsl2rgb(vec3(fract(0.12 + SKY_HUE * 0.3), 0.9, 0.65));
+    col = mix(col, winGlow, w1);
 
-    // Building 2 - right
+    // Building 2 - right, bold blue
     vec2 b2 = uv - vec2(0.88, 0.3);
-    float bld2 = fill(sdRoundBox(b2, vec2(0.06, 0.08), 0.002), aa);
-    col = mix(col, vec3(0.5, 0.55, 0.7), bld2);
+    float bld2 = fill(sdRoundBox(b2, vec2(0.07, 0.09), 0.003), aa);
+    vec3 bld2Color = hsl2rgb(vec3(0.6, 0.65, 0.4));
+    col = mix(col, bld2Color, bld2);
 
-    // Windows on building 2
-    float w2a = fill(sdRoundBox(b2 - vec2(-0.02, 0.03), vec2(0.012, 0.012), 0.001), aa);
-    float w2b = fill(sdRoundBox(b2 - vec2(0.02, 0.03), vec2(0.012, 0.012), 0.001), aa);
-    col = mix(col, vec3(0.9, 0.85, 0.5), max(w2a, w2b));
+    // Windows on building 2 - glowing
+    float w2a = fill(sdRoundBox(b2 - vec2(-0.025, 0.03), vec2(0.015, 0.015), 0.002), aa);
+    float w2b = fill(sdRoundBox(b2 - vec2(0.025, 0.03), vec2(0.015, 0.015), 0.002), aa);
+    col = mix(col, winGlow, max(w2a, w2b));
 
-    // Building 3 - center back (taller)
+    // Building 3 - center back, taller, bold green
     vec2 b3 = uv - vec2(0.5, 0.32);
-    float bld3 = fill(sdRoundBox(b3, vec2(0.04, 0.1), 0.002), aa);
-    col = mix(col, vec3(0.6, 0.6, 0.55), bld3);
+    float bld3 = fill(sdRoundBox(b3, vec2(0.05, 0.11), 0.003), aa);
+    vec3 bld3Color = hsl2rgb(vec3(0.35, 0.55, 0.35));
+    col = mix(col, bld3Color, bld3);
+
+    // Window on building 3
+    float w3 = fill(sdRoundBox(b3 - vec2(0.0, 0.04), vec2(0.015, 0.015), 0.002), aa);
+    col = mix(col, winGlow, w3);
 
     return col;
 }
 
 // ============================================================================
-// SOUTH PARK CHARACTER
+// SOUTH PARK CHARACTER - Bigger, bolder
 // ============================================================================
 
 vec3 drawCharacter(vec2 uv, vec2 pos, vec3 hatColor, vec3 coatColor, float bounce, float aa) {
@@ -228,52 +240,52 @@ vec3 drawCharacter(vec2 uv, vec2 pos, vec3 hatColor, vec3 coatColor, float bounc
     vec2 p = uv - pos;
     p.y -= bounce;
 
-    // Body (rectangle) - construction paper style
-    float body = fill(sdRoundBox(p - vec2(0.0, 0.015), vec2(0.016, 0.022), 0.003), aa);
+    // Body - bigger for better LED pickup
+    float body = fill(sdRoundBox(p - vec2(0.0, 0.018), vec2(0.02, 0.028), 0.004), aa);
     col = mix(col, coatColor, body);
     alpha = max(alpha, body);
 
-    // Head (circle) - South Park's round heads
-    float head = fill(sdCircle(p - vec2(0.0, 0.05), 0.022), aa);
-    vec3 skinColor = vec3(0.95, 0.82, 0.7); // Peach skin
+    // Head - bigger round head
+    float head = fill(sdCircle(p - vec2(0.0, 0.058), 0.028), aa);
+    vec3 skinColor = vec3(0.96, 0.82, 0.68);
     col = mix(col, skinColor, head);
     alpha = max(alpha, head);
 
-    // Hat (varies per character)
-    float hat = fill(sdRoundBox(p - vec2(0.0, 0.068), vec2(0.024, 0.012), 0.003), aa);
+    // Hat - bigger, bolder
+    float hat = fill(sdRoundBox(p - vec2(0.0, 0.08), vec2(0.03, 0.015), 0.004), aa);
     col = mix(col, hatColor, hat);
     alpha = max(alpha, hat);
 
-    // Eyes (two dots) - the classic South Park look
-    float eyeL = fill(sdCircle(p - vec2(-0.008, 0.052), 0.006), aa);
-    float eyeR = fill(sdCircle(p - vec2(0.008, 0.052), 0.006), aa);
+    // Eyes
+    float eyeL = fill(sdCircle(p - vec2(-0.01, 0.06), 0.008), aa);
+    float eyeR = fill(sdCircle(p - vec2(0.01, 0.06), 0.008), aa);
     col = mix(col, vec3(1.0), max(eyeL, eyeR));
 
-    // Pupils (smaller dots)
-    float pupilL = fill(sdCircle(p - vec2(-0.007, 0.052), 0.003), aa);
-    float pupilR = fill(sdCircle(p - vec2(0.009, 0.052), 0.003), aa);
+    // Pupils
+    float pupilL = fill(sdCircle(p - vec2(-0.009, 0.06), 0.004), aa);
+    float pupilR = fill(sdCircle(p - vec2(0.011, 0.06), 0.004), aa);
     col = mix(col, vec3(0.05), max(pupilL, pupilR));
 
-    // Mouth (small line)
-    float mouth = fill(sdRoundBox(p - vec2(0.0, 0.04), vec2(0.006, 0.0015), 0.001), aa);
+    // Mouth
+    float mouth = fill(sdRoundBox(p - vec2(0.0, 0.045), vec2(0.008, 0.002), 0.001), aa);
     col = mix(col, vec3(0.15), mouth);
 
-    // Legs (two small rectangles)
-    float legL = fill(sdRoundBox(p - vec2(-0.008, -0.008), vec2(0.005, 0.012), 0.001), aa);
-    float legR = fill(sdRoundBox(p - vec2(0.008, -0.008), vec2(0.005, 0.012), 0.001), aa);
-    vec3 legColor = vec3(0.15, 0.15, 0.18);
+    // Legs
+    float legL = fill(sdRoundBox(p - vec2(-0.01, -0.01), vec2(0.006, 0.015), 0.002), aa);
+    float legR = fill(sdRoundBox(p - vec2(0.01, -0.01), vec2(0.006, 0.015), 0.002), aa);
+    vec3 legColor = vec3(0.12, 0.12, 0.18);
     col = mix(col, legColor, max(legL, legR));
     alpha = max(alpha, max(legL, legR));
 
     // Shoes
-    float shoeL = fill(sdRoundBox(p - vec2(-0.008, -0.022), vec2(0.007, 0.004), 0.002), aa);
-    float shoeR = fill(sdRoundBox(p - vec2(0.008, -0.022), vec2(0.007, 0.004), 0.002), aa);
-    col = mix(col, vec3(0.1), max(shoeL, shoeR));
+    float shoeL = fill(sdRoundBox(p - vec2(-0.01, -0.027), vec2(0.009, 0.005), 0.002), aa);
+    float shoeR = fill(sdRoundBox(p - vec2(0.01, -0.027), vec2(0.009, 0.005), 0.002), aa);
+    col = mix(col, vec3(0.08), max(shoeL, shoeR));
     alpha = max(alpha, max(shoeL, shoeR));
 
-    // Outline (construction paper look)
-    float outline = stroke(sdCircle(p - vec2(0.0, 0.05), 0.023), 0.002, aa);
-    outline = max(outline, stroke(sdRoundBox(p - vec2(0.0, 0.015), vec2(0.017, 0.023), 0.003), 0.002, aa));
+    // Bold outline
+    float outline = stroke(sdCircle(p - vec2(0.0, 0.058), 0.029), 0.003, aa);
+    outline = max(outline, stroke(sdRoundBox(p - vec2(0.0, 0.018), vec2(0.021, 0.029), 0.004), 0.003, aa));
     col = mix(col, vec3(0.0), outline * alpha);
 
     return col * alpha;
@@ -286,47 +298,46 @@ vec3 drawCharacter(vec2 uv, vec2 pos, vec3 hatColor, vec3 coatColor, float bounc
 vec3 drawBusStop(vec2 uv, float aa) {
     vec3 col = vec3(0.0);
 
-    // Post
     vec2 postP = uv - vec2(0.58, 0.2);
-    float post = fill(sdRoundBox(postP, vec2(0.003, 0.04), 0.001), aa);
-    col = mix(col, vec3(0.4, 0.4, 0.4), post);
+    float post = fill(sdRoundBox(postP, vec2(0.004, 0.045), 0.001), aa);
+    col = mix(col, vec3(0.5, 0.5, 0.5), post);
 
-    // Sign
-    vec2 signP = uv - vec2(0.58, 0.25);
-    float sign = fill(sdRoundBox(signP, vec2(0.025, 0.012), 0.002), aa);
-    col = mix(col, vec3(0.8, 0.15, 0.1), sign);
+    vec2 signP = uv - vec2(0.58, 0.26);
+    float sign = fill(sdRoundBox(signP, vec2(0.03, 0.015), 0.003), aa);
+    col = mix(col, vec3(0.9, 0.1, 0.05), sign);
 
-    // "BUS" text approximation (3 small dots)
-    float dot1 = fill(sdCircle(signP - vec2(-0.01, 0.0), 0.003), aa);
-    float dot2 = fill(sdCircle(signP - vec2(0.0, 0.0), 0.003), aa);
-    float dot3 = fill(sdCircle(signP - vec2(0.01, 0.0), 0.003), aa);
+    float dot1 = fill(sdCircle(signP - vec2(-0.012, 0.0), 0.004), aa);
+    float dot2 = fill(sdCircle(signP - vec2(0.0, 0.0), 0.004), aa);
+    float dot3 = fill(sdCircle(signP - vec2(0.012, 0.0), 0.004), aa);
     col = mix(col, vec3(1.0), max(dot1, max(dot2, dot3)));
 
     return col;
 }
 
 // ============================================================================
-// SNOWFALL
+// SNOWFALL - Colored, reactive
 // ============================================================================
 
 vec3 drawSnow(vec2 uv, float t) {
     vec3 col = vec3(0.0);
 
-    for (int i = 0; i < 40; i++) {
+    for (int i = 0; i < 50; i++) {
         float fi = float(i);
-        float seed = fi * 0.137;
 
-        float x = fract(hash21(vec2(fi, 0.0)) + sin(t * 0.3 + fi) * 0.05);
-        float y = fract(hash21(vec2(fi, 1.0)) - t * SNOW_SPEED * (0.03 + hash21(vec2(fi, 2.0)) * 0.02));
+        float x = fract(hash21(vec2(fi, 0.0)) + sin(t * 0.3 + fi) * 0.06);
+        float y = fract(hash21(vec2(fi, 1.0)) - t * SNOW_SPEED * (0.03 + hash21(vec2(fi, 2.0)) * 0.025));
 
-        float size = 0.002 + hash21(vec2(fi, 3.0)) * 0.003;
-        float brightness = 0.6 + hash21(vec2(fi, 4.0)) * 0.4;
+        float size = 0.003 + hash21(vec2(fi, 3.0)) * 0.004;
+        float brightness = 0.7 + hash21(vec2(fi, 4.0)) * 0.3;
 
         // Sparkle from treble
-        brightness += SPARKLE * sin(t * 8.0 + fi * 3.0) * 0.3;
+        brightness += SPARKLE * sin(t * 10.0 + fi * 3.0) * 0.4;
 
-        float flake = fill(sdCircle(uv - vec2(x, y), size), 0.002);
-        col += vec3(brightness) * flake;
+        // Tint snow with sky color for cohesive LED look
+        vec3 snowColor = hsl2rgb(vec3(fract(0.55 + SKY_HUE * 0.5 + fi * 0.02), 0.15, brightness));
+
+        float flake = fill(sdCircle(uv - vec2(x, y), size), 0.003);
+        col += snowColor * flake;
     }
 
     return col;
@@ -338,21 +349,19 @@ vec3 drawSnow(vec2 uv, float t) {
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord.xy / iResolution.xy;
-    float aspect = iResolution.x / iResolution.y;
-    vec2 uvA = vec2(uv.x * aspect, uv.y); // Aspect-corrected for shapes
     float aa = 2.0 / iResolution.y;
     float t = iTime;
 
-    // --- Sky ---
+    // --- Sky (largest color region - dominates LED scraping) ---
     vec3 col = southParkSky(uv, t);
 
     // --- Mountains ---
-    vec3 mtns = drawMountains(vec2(uv.x, uv.y), t);
+    vec3 mtns = drawMountains(uv, t);
     float mtnMask = step(0.001, mtns.r + mtns.g + mtns.b);
     col = mix(col, mtns, mtnMask);
 
-    // --- Buildings (behind characters) ---
-    vec3 bldgs = drawBuildings(vec2(uv.x, uv.y));
+    // --- Buildings ---
+    vec3 bldgs = drawBuildings(uv);
     float bldgMask = step(0.001, bldgs.r + bldgs.g + bldgs.b);
     col = mix(col, bldgs, bldgMask);
 
@@ -361,27 +370,31 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float busMask = step(0.001, busStop.r + busStop.g + busStop.b);
     col = mix(col, busStop, busMask);
 
-    // --- Characters at bus stop ---
-    // Each character bounces with a phase offset from the bass
-    float b1 = max(0.0, BOUNCE_AMOUNT * sin(t * 4.0));
-    float b2 = max(0.0, BOUNCE_AMOUNT * sin(t * 4.0 + 1.5));
-    float b3 = max(0.0, BOUNCE_AMOUNT * sin(t * 4.0 + 3.0));
-    float b4 = max(0.0, BOUNCE_AMOUNT * sin(t * 4.0 + 4.5));
+    // --- Characters at bus stop - bigger bounces ---
+    float b1 = max(0.0, BOUNCE_AMOUNT * sin(t * 5.0));
+    float b2 = max(0.0, BOUNCE_AMOUNT * sin(t * 5.0 + 1.5));
+    float b3 = max(0.0, BOUNCE_AMOUNT * sin(t * 5.0 + 3.0));
+    float b4 = max(0.0, BOUNCE_AMOUNT * sin(t * 5.0 + 4.5));
 
-    // Stan - blue hat, brown coat
-    vec3 stan = drawCharacter(uv, vec2(0.38, 0.18), vec3(0.2, 0.3, 0.7), vec3(0.45, 0.25, 0.15), b1, aa);
+    // Stan - vivid blue hat, brown coat
+    vec3 stan = drawCharacter(uv, vec2(0.36, 0.18),
+        vec3(0.15, 0.25, 0.85), vec3(0.55, 0.28, 0.12), b1, aa);
 
-    // Kyle - green hat, orange coat
-    vec3 kyle = drawCharacter(uv, vec2(0.44, 0.18), vec3(0.2, 0.6, 0.2), vec3(0.85, 0.5, 0.15), b2, aa);
+    // Kyle - vivid green hat, bright orange coat
+    vec3 kyle = drawCharacter(uv, vec2(0.43, 0.18),
+        vec3(0.1, 0.75, 0.15), vec3(0.95, 0.55, 0.1), b2, aa);
 
-    // Cartman - yellow/teal hat, red coat
-    vec3 cartman = drawCharacter(uv, vec2(0.50, 0.18), vec3(0.3, 0.7, 0.7), vec3(0.75, 0.15, 0.1), b3, aa);
+    // Cartman - teal hat, bold red coat
+    vec3 cartman = drawCharacter(uv, vec2(0.50, 0.18),
+        vec3(0.2, 0.8, 0.8), vec3(0.85, 0.1, 0.05), b3, aa);
 
-    // Kenny - orange hood
-    vec3 kenny = drawCharacter(uv, vec2(0.56, 0.18), vec3(0.9, 0.55, 0.1), vec3(0.9, 0.55, 0.1), b4, aa);
+    // Kenny - bright orange hood
+    vec3 kenny = drawCharacter(uv, vec2(0.57, 0.18),
+        vec3(1.0, 0.6, 0.05), vec3(1.0, 0.6, 0.05), b4, aa);
 
     // Composite characters
-    float charMask = step(0.001, stan.r + stan.g + stan.b);
+    float charMask;
+    charMask = step(0.001, stan.r + stan.g + stan.b);
     col = mix(col, stan, charMask);
     charMask = step(0.001, kyle.r + kyle.g + kyle.b);
     col = mix(col, kyle, charMask);
@@ -391,28 +404,42 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     col = mix(col, kenny, charMask);
 
     // --- Ground / Road ---
-    vec3 ground = drawGround(uv);
+    vec3 ground = drawGround(uv, t);
     float groundMask = step(0.001, ground.r + ground.g + ground.b);
     col = mix(col, ground, groundMask);
 
     // --- Snow ---
-    vec3 snow = drawSnow(uv, t);
-    col += snow;
+    col += drawSnow(uv, t);
+
+    // Bass throb - whole scene brightness pulse
+    col *= BASS_THROB;
 
     // Beat pulse flash
     col *= BEAT_PULSE;
 
-    // Construction paper texture - subtle noise
-    float paper = hash21(fragCoord.xy * 0.5) * 0.04 - 0.02;
+    // Construction paper texture - subtle
+    float paper = hash21(fragCoord.xy * 0.5) * 0.03 - 0.015;
     col += paper;
 
-    // Light vignette
+    // Soft vignette
     vec2 vc = uv - 0.5;
-    col *= 1.0 - dot(vc, vc) * 0.3;
+    col *= 1.0 - dot(vc, vc) * 0.25;
 
-    // Slight frame feedback for smoothness
+    // Gentle frame feedback - careful not to wash out
     vec4 prev = getLastFrameColor(uv);
-    col = mix(prev.rgb * 0.97, col, 0.4);
+    vec3 prevHSL = rgb2hsl(prev.rgb);
+    prevHSL.z *= 0.93; // Prevent white accumulation
+    vec3 prevCorrected = hsl2rgb(prevHSL);
+    col = mix(prevCorrected, col, 0.35);
+
+    // Tone mapping to prevent blow-out
+    col = col / (col + vec3(0.15));
+    col = pow(col, vec3(0.85));
+
+    // Boost saturation for LEDs
+    vec3 colHSL = rgb2hsl(col);
+    colHSL.y = min(colHSL.y * 1.3, 1.0);
+    col = hsl2rgb(colHSL);
 
     col = clamp(col, 0.0, 1.0);
     fragColor = vec4(col, 1.0);
