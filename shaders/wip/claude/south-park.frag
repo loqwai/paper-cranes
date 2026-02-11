@@ -425,20 +425,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 vc = uv - 0.5;
     col *= 1.0 - dot(vc, vc) * 0.25;
 
-    // Gentle frame feedback - careful not to wash out
+    // Light frame feedback for smooth transitions
     vec4 prev = getLastFrameColor(uv);
-    vec3 prevHSL = rgb2hsl(prev.rgb);
-    prevHSL.z *= 0.93; // Prevent white accumulation
-    vec3 prevCorrected = hsl2rgb(prevHSL);
-    col = mix(prevCorrected, col, 0.35);
-
-    // Tone mapping to prevent blow-out
-    col = col / (col + vec3(0.15));
-    col = pow(col, vec3(0.85));
+    col = mix(prev.rgb * 0.9, col, 0.5);
 
     // Boost saturation for LEDs
     vec3 colHSL = rgb2hsl(col);
-    colHSL.y = min(colHSL.y * 1.3, 1.0);
+    colHSL.y = min(colHSL.y * 1.4, 1.0);
+    colHSL.z = min(colHSL.z, 0.75); // Cap brightness to prevent white-out
     col = hsl2rgb(colHSL);
 
     col = clamp(col, 0.0, 1.0);
