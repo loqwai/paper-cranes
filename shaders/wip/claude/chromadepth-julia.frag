@@ -47,6 +47,49 @@
 #define MAX_ITER 128
 
 // ============================================================================
+// EXTERIOR DEPTH MAPPING
+// ============================================================================
+
+// Exterior hue range: near boundary → far away (0=red, 0.75=violet)
+#define EXTERIOR_HUE_NEAR 0.45
+// #define EXTERIOR_HUE_NEAR 0.45
+
+#define EXTERIOR_HUE_FAR 0.85
+// #define EXTERIOR_HUE_FAR 0.85
+
+// Fade-to-black curve (higher = faster falloff)
+#define FADE_POWER 0.6
+// #define FADE_POWER 0.6
+
+// ============================================================================
+// INTERIOR ORBIT TRAP TUNING
+// ============================================================================
+
+// Origin trap sensitivity
+#define TRAP_ORIGIN_SCALE 0.8
+// #define TRAP_ORIGIN_SCALE 0.8
+
+// Line trap (x/y axis) sensitivity
+#define TRAP_LINE_SCALE 2.0
+// #define TRAP_LINE_SCALE 2.0
+
+// Angle banding frequency
+#define ANGLE_BAND_FREQ 0.05
+// #define ANGLE_BAND_FREQ 0.05
+
+// Blend: origin trap vs line trap detail (0=all origin, 1=all line)
+#define TRAP_BLEND 0.5
+// #define TRAP_BLEND 0.5
+
+// Blend: combined trap vs angle banding (0=all trap, 1=all angle)
+#define ANGLE_BLEND 0.2
+// #define ANGLE_BLEND 0.2
+
+// Interior hue range (0=red, 0.35=yellow-green)
+#define INTERIOR_HUE_RANGE 0.35
+// #define INTERIOR_HUE_RANGE 0.35
+
+// ============================================================================
 // CHROMADEPTH COLOR MAPPING
 // ============================================================================
 // Maps a 0-1 value to the chromadepth rainbow:
@@ -120,29 +163,20 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float fadeToBlack = 1.0; // 1.0 = full color, 0.0 = black
 
     if (escaped) {
-        // Exterior: near boundary = blue, far away = fade to black
         float escapeFraction = smooth_iter / float(MAX_ITER);
-        // Near boundary (high escapeFraction) → blue/cyan, far (low) → deep blue
-        t = mix(0.85, 0.45, escapeFraction);
-        // Fade to black as distance from set increases (fast escape = far = dark)
-        fadeToBlack = pow(escapeFraction, 0.6);
+        t = mix(EXTERIOR_HUE_FAR, EXTERIOR_HUE_NEAR, escapeFraction);
+        fadeToBlack = pow(escapeFraction, FADE_POWER);
     } else {
-        // Interior: combine multiple orbit traps for fractal texture
-        // Each trap reveals different structure inside the set
-        float trapOrigin = clamp(minDist * 0.8, 0.0, 1.0);
-        float trapX = clamp(minDistX * 2.0, 0.0, 1.0);
-        float trapY = clamp(minDistY * 2.0, 0.0, 1.0);
-        float angleTex = fract(orbitAngle * 0.05);  // wrapping angle creates bands
+        float trapOrigin = clamp(minDist * TRAP_ORIGIN_SCALE, 0.0, 1.0);
+        float trapX = clamp(minDistX * TRAP_LINE_SCALE, 0.0, 1.0);
+        float trapY = clamp(minDistY * TRAP_LINE_SCALE, 0.0, 1.0);
+        float angleTex = fract(orbitAngle * ANGLE_BAND_FREQ);
 
-        // Combine traps — this creates visible fractal structure inside
-        float detail = min(trapX, trapY);  // cross-shaped trap = sharp features
-        float blend = mix(trapOrigin, detail, 0.5);
-        // Add angle banding for extra texture
-        blend = mix(blend, angleTex, 0.2);
+        float detail = min(trapX, trapY);
+        float blend = mix(trapOrigin, detail, TRAP_BLEND);
+        blend = mix(blend, angleTex, ANGLE_BLEND);
 
-        // Map to red→yellow→green range (0.0 → 0.35)
-        // Deep structure (low blend) = red, surface structure = yellow-green
-        t = blend * 0.35;
+        t = blend * INTERIOR_HUE_RANGE;
     }
 
     t = fract(t + HUE_OFFSET);
