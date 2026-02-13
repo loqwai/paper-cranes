@@ -15,10 +15,14 @@ window.addEventListener('load', async () => {
  * Process messages from the service worker
  * @param {MessageEvent} event
  */
+let reloadTimeout = null
 const processServiceWorkerMessage = (event) => {
   if (event.data === 'reload') {
-      window.stop()
-      return window.location.reload()
+      if (reloadTimeout) return
+      reloadTimeout = setTimeout(() => {
+          window.stop()
+          window.location.reload()
+      }, 100)
   }
 }
 
