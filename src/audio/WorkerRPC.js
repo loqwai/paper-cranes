@@ -22,6 +22,9 @@ export class WorkerRPC {
             standardDeviation: 0,
             zScore: 0,
             normalized: 0,
+            slope: 0,
+            intercept: 0,
+            rSquared: 0,
         },
     })
 
@@ -35,6 +38,9 @@ export class WorkerRPC {
         standardDeviation: isFinite(stats.standardDeviation) ? stats.standardDeviation : 0,
         zScore: isFinite(stats.zScore) ? stats.zScore : 0,
         normalized: isFinite(stats.normalized) ? stats.normalized : 0,
+        slope: isFinite(stats.slope) ? stats.slope : 0,
+        intercept: isFinite(stats.intercept) ? stats.intercept : 0,
+        rSquared: isFinite(stats.rSquared) ? stats.rSquared : 0,
     })
 
     validateMessage = (message) => ({
