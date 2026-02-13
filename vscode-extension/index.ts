@@ -231,7 +231,7 @@ export function activate(context: vscode.ExtensionContext) {
                 ]
 
                 // Paper Cranes Helper Functions
-                const helperFunctions = ["getLastFrameColor", "rgb2hsl", "hsl2rgb", "hslmix", "map"]
+                const helperFunctions = ["getLastFrameColor", "rgb2hsl", "hsl2rgb", "hslmix", "rgb2oklab", "oklab2rgb", "oklabmix", "map"]
 
                 // Paper Cranes Constants
                 const constants = ["PI", "TAU", "EPSILON", "resolution", "time", "random"]
@@ -424,7 +424,10 @@ export function activate(context: vscode.ExtensionContext) {
                         "Returns the color from the previous frame at the given UV coordinate.\nUsage: getLastFrameColor(vec2 uv)",
                     rgb2hsl: "Converts RGB color to HSL color space.\nUsage: rgb2hsl(vec3 rgb)",
                     hsl2rgb: "Converts HSL color to RGB color space.\nUsage: hsl2rgb(vec3 hsl)",
-                    hslmix: "Mixes two colors in HSL space.\nUsage: hslmix(vec3 col1, vec3 col2, float t)",
+                    hslmix: "Mixes two colors in HSL space.\nUsage: hslmix(vec3 col1, vec3 col2, float t)\nAlso accepts vec4 (alpha passed through).",
+                    rgb2oklab: "Converts RGB color to Oklab perceptual color space.\nUsage: rgb2oklab(vec3 rgb) or rgb2oklab(vec4 rgba)",
+                    oklab2rgb: "Converts Oklab color back to RGB.\nUsage: oklab2rgb(vec3 lab) or oklab2rgb(vec4 laba)",
+                    oklabmix: "Mixes two colors in Oklab perceptual space. Produces more natural gradients than HSL or RGB.\nUsage: oklabmix(vec3 col1, vec3 col2, float t)\nAlso accepts vec4 (alpha interpolated).",
                     map: "Maps a value from one range to another.\nUsage: map(float value, float inMin, float inMax, float outMin, float outMax)",
 
                     // Constants

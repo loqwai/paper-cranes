@@ -25,7 +25,7 @@
           },
           {
             "name": "support.function.paper-cranes",
-            "match": "\\b(rgb2hsl|hsl2rgb|getLastFrameColor|mapValue)\\b"
+            "match": "\\b(rgb2hsl|hsl2rgb|hslmix|rgb2oklab|oklab2rgb|oklabmix|getLastFrameColor|mapValue)\\b"
           },
           {
             "name": "support.constant.paper-cranes",
