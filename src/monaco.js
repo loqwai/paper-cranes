@@ -146,6 +146,9 @@ async function init() {
         'hslmix',
         'hsl2rgb',
         'rgb2hsl',
+        'rgb2oklab',
+        'oklab2rgb',
+        'oklabmix',
         'map',
         'centerUv',
         'animateSmooth',
@@ -671,6 +674,9 @@ async function init() {
                 animateEaseOutElastic: 'Elastic easing that creates a bouncy effect with overshoot at the end.',
                 animateEaseInOutElastic: 'Elastic easing that creates a bouncy effect with overshoot at both start and end.',
                 animateSmoothBounce: 'Creates a smoother bouncing effect that decreases in amplitude over time.',
+                rgb2oklab: 'Converts RGB color to Oklab perceptual color space. Accepts vec3 or vec4 (alpha passed through).',
+                oklab2rgb: 'Converts Oklab color back to RGB. Accepts vec3 or vec4 (alpha passed through).',
+                oklabmix: 'Mixes two colors in Oklab perceptual space. Produces more natural gradients than HSL or RGB. Accepts vec3 or vec4.',
             }
 
             const description = audioFeatureDescriptions[word.word]
