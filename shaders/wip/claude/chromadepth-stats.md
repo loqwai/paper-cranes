@@ -7,26 +7,20 @@ Scrolling line graph of audio statistics, colored for chromadepth 3D glasses.
 
 ## Lines
 
-### Z-Scores (warm colors — pop forward)
-
-- **Red** — `energyZScore` — overall loudness anomalies
-- **Red-orange** — `bassZScore` — low-end anomalies
-- **Orange** — `trebleZScore` — high frequency anomalies
-- **Yellow** — `spectralFluxZScore` — timbral change rate
-- **Chartreuse** — `spectralCentroidZScore` — brightness/pitch center
-- **Green** — `spectralEntropyZScore` — chaos/unpredictability
-
-### Slopes (mid colors — mid-depth)
-
-- **Spring green** — `energySlope` — is energy rising or falling?
-- **Mint** — `bassSlope` — is bass rising or falling?
-- **Cyan** — `spectralCentroidSlope` — is brightness trending?
-- **Sky blue** — `spectralFluxSlope` — is flux trending?
-
-### R-Squared (cool colors — recede back)
-
-- **Blue** — `energyRSquared` — how steady is the energy trend?
-- **Violet** — `bassRSquared` — how steady is the bass trend?
+| Depth | Color | Uniform | Shows |
+|-------|-------|---------|-------|
+| Closest | Red | `energyZScore` | Loudness anomalies |
+| | Red-orange | `bassZScore` | Bass anomalies |
+| | Orange | `trebleZScore` | Treble anomalies |
+| | Yellow | `spectralFluxZScore` | Timbral change rate |
+| | Chartreuse | `spectralCentroidZScore` | Brightness/pitch center |
+| | Green | `spectralEntropyZScore` | Chaos/unpredictability |
+| Mid | Spring green | `energySlope` | Energy rising or falling? |
+| | Mint | `bassSlope` | Bass rising or falling? |
+| | Cyan | `spectralCentroidSlope` | Brightness trending? |
+| | Sky blue | `spectralFluxSlope` | Flux trending? |
+| Far | Blue | `energyRSquared` | Energy trend confidence |
+| Farthest | Violet | `bassRSquared` | Bass trend confidence |
 
 ## Effects
 

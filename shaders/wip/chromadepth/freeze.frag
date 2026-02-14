@@ -39,6 +39,11 @@
 // 0 = ray distance, 1 = world Z position, 2 = orbit trap, 3 = distance from origin
 #define DEPTH_SOURCE 2
 
+// COLOR MODE - how to map depth to color
+// 0 = HSL hue interpolation (original)
+// 1 = Piecewise RGB spectrum (Mike Bailey's ChromaDepth function - more accurate)
+#define COLOR_MODE 1
+
 // Depth range for sources 0,1,3 (tune based on what you see)
 #define DEPTH_MIN 0.0
 #define DEPTH_MAX 3.0
