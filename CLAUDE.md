@@ -37,7 +37,7 @@ Microphone → MediaStream → AudioContext → WindowNode (Hanning) → FFT Ana
 
 ## Audio Features Available
 
-Each feature has 8 statistical variations:
+Each feature has 11 statistical variations:
 - **Current value** (e.g., `bass`)
 - **Normalized** (0-1 range, e.g., `bassNormalized`)
 - **Mean** (historical average)
@@ -45,6 +45,9 @@ Each feature has 8 statistical variations:
 - **Min/Max** (historical range)
 - **StandardDeviation** (variability)
 - **ZScore** (-1 to 1, for detecting anomalies/drops)
+- **Slope** (linear regression slope over history window — is the feature rising or falling?)
+- **Intercept** (predicted value at start of history window)
+- **RSquared** (0-1, how well a linear trend fits — 1.0 = perfect trend, 0 = no trend)
 
 ### Core Features:
 - SpectralCentroid, SpectralFlux, SpectralSpread, SpectralRolloff
@@ -75,9 +78,9 @@ Each feature has 8 statistical variations:
 | **spectralEntropy** | 0-1+ | Unpredictability | Chaos vs order | Independent from most |
 | **spectralCrest** | 0-1+ | Peak/mean ratio | Spiky vs smooth | Independent from others |
 
-### Statistical Variations (8 per feature)
+### Statistical Variations (11 per feature)
 
-Each audio feature provides 8 statistical variations calculated over a rolling window (default 500 frames):
+Each audio feature provides 11 statistical variations calculated over a rolling window (default 500 frames):
 
 1. **value** - Raw current value from the analyzer
 2. **normalized** - Min-max normalized to 0-1 range (relative to history)
@@ -87,6 +90,9 @@ Each audio feature provides 8 statistical variations calculated over a rolling w
 6. **max** - Historical maximum (upper bound)
 7. **standardDeviation** - Variability measure
 8. **zScore** - Standardized score: `(value - mean) / (stdDev * 2.5)` → roughly -1 to 1
+9. **slope** - Linear regression slope over history window (rate of change of the trend)
+10. **intercept** - Y-intercept of the regression line (predicted value at window start)
+11. **rSquared** - Coefficient of determination (0-1, how well a linear trend fits the data)
 
 ### When to Use Each Statistical Variation
 
@@ -95,6 +101,9 @@ Each audio feature provides 8 statistical variations calculated over a rolling w
 - **mean/median**: Baseline behavior, slow changes - "what's the average character?"
 - **min/max**: Historical context - "what are the extremes?"
 - **standardDeviation**: Detect stability vs volatility
+- **slope**: Detect trends - "is this feature rising or falling over time?" Positive = rising, negative = falling
+- **intercept**: Predict baseline - "where was this feature heading from?" Useful with slope for extrapolation
+- **rSquared**: Detect confidence in trends - "is the change steady or chaotic?" High rSquared + high slope = confident build/drop
 - **value**: Raw analysis (less common in shaders)
 
 ### Feature Independence Matrix
@@ -162,6 +171,25 @@ Group features by domain and pick from DIFFERENT domains for variety:
 #define IS_DROP (energyZScore > 0.5)
 #define IS_BUILDING (spectralFluxZScore > 0.3)
 #define TIMBRAL_SHIFT (spectralFluxZScore)
+```
+
+#### Trend Detection with Linear Regression
+```glsl
+// Slope tells you WHERE the music is heading
+#define BASS_RISING (bassSlope > 0.0)
+#define ENERGY_TREND (energySlope)           // Positive = building, negative = dropping
+#define BRIGHTNESS_TREND (spectralCentroidSlope)  // Rising = getting brighter
+
+// rSquared tells you HOW CONFIDENT that trend is
+#define TREND_CONFIDENCE (energyRSquared)     // 1.0 = steady build/drop, 0.0 = chaotic
+#define STEADY_BUILD (energySlope > 0.0 && energyRSquared > 0.5)  // Confident build-up
+
+// Combine slope + rSquared for musical awareness
+#define CONFIDENT_RISE(feature) (feature##Slope * feature##RSquared)
+// High when rising steadily, low when chaotic or falling
+
+// Intercept provides the trend's baseline
+#define PREDICTED_BASELINE (energyIntercept)  // Where the trend started from
 ```
 
 #### Creating Visual Variety

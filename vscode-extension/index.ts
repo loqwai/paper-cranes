@@ -97,6 +97,9 @@ export function activate(context: vscode.ExtensionContext) {
                     "spectralCentroidZScore",
                     "spectralCentroidMin",
                     "spectralCentroidMax",
+                    "spectralCentroidSlope",
+                    "spectralCentroidIntercept",
+                    "spectralCentroidRSquared",
 
                     // Spectral Flux
                     "spectralFlux",
@@ -107,6 +110,9 @@ export function activate(context: vscode.ExtensionContext) {
                     "spectralFluxZScore",
                     "spectralFluxMin",
                     "spectralFluxMax",
+                    "spectralFluxSlope",
+                    "spectralFluxIntercept",
+                    "spectralFluxRSquared",
 
                     // Spectral Spread
                     "spectralSpread",
@@ -117,6 +123,9 @@ export function activate(context: vscode.ExtensionContext) {
                     "spectralSpreadZScore",
                     "spectralSpreadMin",
                     "spectralSpreadMax",
+                    "spectralSpreadSlope",
+                    "spectralSpreadIntercept",
+                    "spectralSpreadRSquared",
 
                     // Spectral Rolloff
                     "spectralRolloff",
@@ -127,6 +136,9 @@ export function activate(context: vscode.ExtensionContext) {
                     "spectralRolloffZScore",
                     "spectralRolloffMin",
                     "spectralRolloffMax",
+                    "spectralRolloffSlope",
+                    "spectralRolloffIntercept",
+                    "spectralRolloffRSquared",
 
                     // Spectral Roughness
                     "spectralRoughness",
@@ -137,6 +149,9 @@ export function activate(context: vscode.ExtensionContext) {
                     "spectralRoughnessZScore",
                     "spectralRoughnessMin",
                     "spectralRoughnessMax",
+                    "spectralRoughnessSlope",
+                    "spectralRoughnessIntercept",
+                    "spectralRoughnessRSquared",
 
                     // Spectral Kurtosis
                     "spectralKurtosis",
@@ -147,6 +162,9 @@ export function activate(context: vscode.ExtensionContext) {
                     "spectralKurtosisZScore",
                     "spectralKurtosisMin",
                     "spectralKurtosisMax",
+                    "spectralKurtosisSlope",
+                    "spectralKurtosisIntercept",
+                    "spectralKurtosisRSquared",
 
                     // Energy
                     "energy",
@@ -157,6 +175,9 @@ export function activate(context: vscode.ExtensionContext) {
                     "energyZScore",
                     "energyMin",
                     "energyMax",
+                    "energySlope",
+                    "energyIntercept",
+                    "energyRSquared",
 
                     // Spectral Entropy
                     "spectralEntropy",
@@ -167,6 +188,9 @@ export function activate(context: vscode.ExtensionContext) {
                     "spectralEntropyZScore",
                     "spectralEntropyMin",
                     "spectralEntropyMax",
+                    "spectralEntropySlope",
+                    "spectralEntropyIntercept",
+                    "spectralEntropyRSquared",
 
                     // Spectral Crest
                     "spectralCrest",
@@ -177,6 +201,9 @@ export function activate(context: vscode.ExtensionContext) {
                     "spectralCrestZScore",
                     "spectralCrestMin",
                     "spectralCrestMax",
+                    "spectralCrestSlope",
+                    "spectralCrestIntercept",
+                    "spectralCrestRSquared",
 
                     // Spectral Skew
                     "spectralSkew",
@@ -187,6 +214,9 @@ export function activate(context: vscode.ExtensionContext) {
                     "spectralSkewZScore",
                     "spectralSkewMin",
                     "spectralSkewMax",
+                    "spectralSkewSlope",
+                    "spectralSkewIntercept",
+                    "spectralSkewRSquared",
 
                     // Pitch Class
                     "pitchClass",
@@ -197,6 +227,9 @@ export function activate(context: vscode.ExtensionContext) {
                     "pitchClassZScore",
                     "pitchClassMin",
                     "pitchClassMax",
+                    "pitchClassSlope",
+                    "pitchClassIntercept",
+                    "pitchClassRSquared",
 
                     // Frequency Bands
                     "bass",
@@ -207,6 +240,9 @@ export function activate(context: vscode.ExtensionContext) {
                     "bassZScore",
                     "bassMin",
                     "bassMax",
+                    "bassSlope",
+                    "bassIntercept",
+                    "bassRSquared",
 
                     "mids",
                     "midsNormalized",
@@ -216,6 +252,9 @@ export function activate(context: vscode.ExtensionContext) {
                     "midsZScore",
                     "midsMin",
                     "midsMax",
+                    "midsSlope",
+                    "midsIntercept",
+                    "midsRSquared",
 
                     "treble",
                     "trebleNormalized",
@@ -225,6 +264,9 @@ export function activate(context: vscode.ExtensionContext) {
                     "trebleZScore",
                     "trebleMin",
                     "trebleMax",
+                    "trebleSlope",
+                    "trebleIntercept",
+                    "trebleRSquared",
 
                     // Beat Detection
                     "beat"
@@ -283,6 +325,9 @@ export function activate(context: vscode.ExtensionContext) {
                         "How many standard deviations from mean (-1 to 1). Good for detecting dramatic timbral changes.",
                     spectralCentroidMin: "Minimum spectral centroid value observed.",
                     spectralCentroidMax: "Maximum spectral centroid value observed.",
+                    spectralCentroidSlope: "Linear regression slope of spectral centroid over history. Positive = getting brighter, negative = getting darker.",
+                    spectralCentroidIntercept: "Regression intercept for spectral centroid. Predicted value at start of history window.",
+                    spectralCentroidRSquared: "How well a linear trend fits the spectral centroid (0-1). High = steady trend, low = chaotic.",
 
                     // Spectral Flux
                     spectralFlux: "Rate of change of the spectrum. Higher values = more dramatic changes.",
@@ -293,6 +338,9 @@ export function activate(context: vscode.ExtensionContext) {
                     spectralFluxZScore: "How many standard deviations from mean (-1 to 1). Good for detecting drops.",
                     spectralFluxMin: "Minimum spectral flux value observed.",
                     spectralFluxMax: "Maximum spectral flux value observed.",
+                    spectralFluxSlope: "Linear regression slope of spectral flux. Positive = increasing rate of change, negative = stabilizing.",
+                    spectralFluxIntercept: "Regression intercept for spectral flux.",
+                    spectralFluxRSquared: "How well a linear trend fits the spectral flux (0-1).",
 
                     // Spectral Spread
                     spectralSpread:
@@ -304,6 +352,9 @@ export function activate(context: vscode.ExtensionContext) {
                     spectralSpreadZScore: "How many standard deviations from mean (-1 to 1).",
                     spectralSpreadMin: "Minimum spectral spread value observed.",
                     spectralSpreadMax: "Maximum spectral spread value observed.",
+                    spectralSpreadSlope: "Linear regression slope of spectral spread. Positive = widening spectrum, negative = narrowing.",
+                    spectralSpreadIntercept: "Regression intercept for spectral spread.",
+                    spectralSpreadRSquared: "How well a linear trend fits the spectral spread (0-1).",
 
                     // Spectral Rolloff
                     spectralRolloff:
@@ -315,6 +366,9 @@ export function activate(context: vscode.ExtensionContext) {
                     spectralRolloffZScore: "How many standard deviations from mean (-1 to 1).",
                     spectralRolloffMin: "Minimum spectral rolloff value observed.",
                     spectralRolloffMax: "Maximum spectral rolloff value observed.",
+                    spectralRolloffSlope: "Linear regression slope of spectral rolloff. Positive = more high frequency content, negative = less.",
+                    spectralRolloffIntercept: "Regression intercept for spectral rolloff.",
+                    spectralRolloffRSquared: "How well a linear trend fits the spectral rolloff (0-1).",
 
                     // Spectral Roughness
                     spectralRoughness:
@@ -326,6 +380,9 @@ export function activate(context: vscode.ExtensionContext) {
                     spectralRoughnessZScore: "How many standard deviations from mean (-1 to 1).",
                     spectralRoughnessMin: "Minimum spectral roughness value observed.",
                     spectralRoughnessMax: "Maximum spectral roughness value observed.",
+                    spectralRoughnessSlope: "Linear regression slope of spectral roughness. Positive = getting rougher/more dissonant.",
+                    spectralRoughnessIntercept: "Regression intercept for spectral roughness.",
+                    spectralRoughnessRSquared: "How well a linear trend fits the spectral roughness (0-1).",
 
                     // Spectral Kurtosis
                     spectralKurtosis: "Measure of 'peakedness' of spectrum. Higher values = more defined peaks.",
@@ -336,6 +393,9 @@ export function activate(context: vscode.ExtensionContext) {
                     spectralKurtosisZScore: "How many standard deviations from mean (-1 to 1).",
                     spectralKurtosisMin: "Minimum spectral kurtosis value observed.",
                     spectralKurtosisMax: "Maximum spectral kurtosis value observed.",
+                    spectralKurtosisSlope: "Linear regression slope of spectral kurtosis. Positive = spectrum getting peakier.",
+                    spectralKurtosisIntercept: "Regression intercept for spectral kurtosis.",
+                    spectralKurtosisRSquared: "How well a linear trend fits the spectral kurtosis (0-1).",
 
                     // Energy
                     energy: "Overall audio energy across all frequencies.",
@@ -347,6 +407,9 @@ export function activate(context: vscode.ExtensionContext) {
                         "How many standard deviations from mean (-1 to 1). Good for detecting intense moments.",
                     energyMin: "Minimum energy value observed.",
                     energyMax: "Maximum energy value observed.",
+                    energySlope: "Linear regression slope of energy. Positive = building up, negative = dropping. Great for detecting builds and drops.",
+                    energyIntercept: "Regression intercept for energy. Where the energy trend started from.",
+                    energyRSquared: "How well a linear trend fits the energy (0-1). High + positive slope = confident build-up.",
 
                     // Spectral Entropy
                     spectralEntropy: "Measure of spectrum disorder. Higher values = more noise-like.",
@@ -357,6 +420,9 @@ export function activate(context: vscode.ExtensionContext) {
                     spectralEntropyZScore: "How many standard deviations from mean (-1 to 1).",
                     spectralEntropyMin: "Minimum spectral entropy value observed.",
                     spectralEntropyMax: "Maximum spectral entropy value observed.",
+                    spectralEntropySlope: "Linear regression slope of spectral entropy. Positive = getting more chaotic, negative = getting more ordered.",
+                    spectralEntropyIntercept: "Regression intercept for spectral entropy.",
+                    spectralEntropyRSquared: "How well a linear trend fits the spectral entropy (0-1).",
 
                     // Spectral Crest
                     spectralCrest: "Ratio of max to mean spectrum magnitude. Higher values = more tonal sounds.",
@@ -367,6 +433,9 @@ export function activate(context: vscode.ExtensionContext) {
                     spectralCrestZScore: "How many standard deviations from mean (-1 to 1).",
                     spectralCrestMin: "Minimum spectral crest value observed.",
                     spectralCrestMax: "Maximum spectral crest value observed.",
+                    spectralCrestSlope: "Linear regression slope of spectral crest. Positive = getting more tonal, negative = getting noisier.",
+                    spectralCrestIntercept: "Regression intercept for spectral crest.",
+                    spectralCrestRSquared: "How well a linear trend fits the spectral crest (0-1).",
 
                     // Spectral Skew
                     spectralSkew: "Measure of spectrum asymmetry. Higher values = more energy in high frequencies.",
@@ -377,6 +446,9 @@ export function activate(context: vscode.ExtensionContext) {
                     spectralSkewZScore: "How many standard deviations from mean (-1 to 1).",
                     spectralSkewMin: "Minimum spectral skew value observed.",
                     spectralSkewMax: "Maximum spectral skew value observed.",
+                    spectralSkewSlope: "Linear regression slope of spectral skew. Positive = tilting brighter, negative = tilting darker.",
+                    spectralSkewIntercept: "Regression intercept for spectral skew.",
+                    spectralSkewRSquared: "How well a linear trend fits the spectral skew (0-1).",
 
                     // Pitch Class
                     pitchClass: "Dominant pitch class (0-11, where 0=C, 1=C#, etc).",
@@ -387,6 +459,9 @@ export function activate(context: vscode.ExtensionContext) {
                     pitchClassZScore: "How many standard deviations from mean (-1 to 1).",
                     pitchClassMin: "Minimum pitch class value observed.",
                     pitchClassMax: "Maximum pitch class value observed.",
+                    pitchClassSlope: "Linear regression slope of pitch class. Indicates if pitch is trending up or down.",
+                    pitchClassIntercept: "Regression intercept for pitch class.",
+                    pitchClassRSquared: "How well a linear trend fits the pitch class (0-1).",
 
                     // Frequency Bands
                     bass: "Low frequency energy (20-250Hz).",
@@ -397,6 +472,9 @@ export function activate(context: vscode.ExtensionContext) {
                     bassZScore: "How many standard deviations from mean (-1 to 1). Good for detecting bass drops.",
                     bassMin: "Minimum bass energy observed.",
                     bassMax: "Maximum bass energy observed.",
+                    bassSlope: "Linear regression slope of bass energy. Positive = bass building up, negative = bass dropping.",
+                    bassIntercept: "Regression intercept for bass energy.",
+                    bassRSquared: "How well a linear trend fits the bass energy (0-1).",
 
                     mids: "Mid frequency energy (250-2000Hz).",
                     midsNormalized: "Normalized mids energy (0-1). Good for melody-driven effects.",
@@ -406,6 +484,9 @@ export function activate(context: vscode.ExtensionContext) {
                     midsZScore: "How many standard deviations from mean (-1 to 1).",
                     midsMin: "Minimum mids energy observed.",
                     midsMax: "Maximum mids energy observed.",
+                    midsSlope: "Linear regression slope of mids energy. Positive = mids building, negative = mids dropping.",
+                    midsIntercept: "Regression intercept for mids energy.",
+                    midsRSquared: "How well a linear trend fits the mids energy (0-1).",
 
                     treble: "High frequency energy (2000-20000Hz).",
                     trebleNormalized: "Normalized treble energy (0-1). Good for cymbal/hi-hat driven effects.",
@@ -415,6 +496,9 @@ export function activate(context: vscode.ExtensionContext) {
                     trebleZScore: "How many standard deviations from mean (-1 to 1).",
                     trebleMin: "Minimum treble energy observed.",
                     trebleMax: "Maximum treble energy observed.",
+                    trebleSlope: "Linear regression slope of treble energy. Positive = treble building, negative = treble dropping.",
+                    trebleIntercept: "Regression intercept for treble energy.",
+                    trebleRSquared: "How well a linear trend fits the treble energy (0-1).",
 
                     // Beat Detection
                     beat: "Boolean indicating if current frame is on a beat.",

@@ -21,7 +21,7 @@
           },
           {
             "name": "support.variable.uniform.stats.paper-cranes",
-            "match": "\\b(\\w+)(Mean|Median|Min|Max|StandardDeviation|ZScore|Normalized)\\b"
+            "match": "\\b(\\w+)(Mean|Median|Min|Max|StandardDeviation|ZScore|Normalized|Slope|Intercept|RSquared)\\b"
           },
           {
             "name": "support.function.paper-cranes",

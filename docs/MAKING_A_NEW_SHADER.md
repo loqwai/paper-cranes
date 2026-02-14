@@ -86,7 +86,7 @@ vec2 aspectCorrected = (fragCoord * 2.0 - iResolution.xy) / iResolution.y;
 
 ### Audio Feature Uniforms
 
-Each of the 14 audio features has 8 statistical variations, giving 112 audio uniforms total. See [Audio Feature Deep Dive](#audio-feature-deep-dive) for details.
+Each of the 14 audio features has 11 statistical variations, giving 154 audio uniforms total. See [Audio Feature Deep Dive](#audio-feature-deep-dive) for details.
 
 **The 14 core features:**
 - `bass`, `mids`, `treble` (frequency bands)
@@ -107,6 +107,9 @@ Each of the 14 audio features has 8 statistical variations, giving 112 audio uni
 - `bassMin`, `bassMax` - historical range
 - `bassStandardDeviation` - variability
 - `bassZScore` - standardized (-1 to 1 roughly), detects anomalies
+- `bassSlope` - linear regression slope (is bass rising or falling over the history window?)
+- `bassIntercept` - regression intercept (predicted value at start of window)
+- `bassRSquared` - regression fit (0-1, how steady/linear the trend is)
 
 ### Special Uniforms
 
@@ -200,6 +203,9 @@ float animateEaseInOutElastic(float t)
 | `Mean/Median` | Baseline behavior, slow changes | Background color based on `spectralCentroidMean` |
 | `Min/Max` | Historical context | Scale effects relative to `bassMax` |
 | `StandardDeviation` | Detect stability vs volatility | More chaos when `energyStandardDeviation` high |
+| `Slope` | Detect rising/falling trends | `energySlope > 0.0` = energy building up over time |
+| `Intercept` | Trend baseline/extrapolation | Use with slope to predict where a feature is heading |
+| `RSquared` | Trend confidence (0-1) | `energyRSquared > 0.5` = steady trend, not chaotic noise |
 | Raw value | Direct analysis (less common) | Usually prefer Normalized |
 
 ### Feature Independence
@@ -273,7 +279,39 @@ if (energyZScore > 0.5) {
 float radius = 0.5 + spectralCentroidNormalized * 0.3;
 ```
 
-### Pattern 4: Incommensurate Frequencies for Aperiodic Motion
+### Pattern 4: Trend-Aware Evolution with Linear Regression
+
+Use `Slope`, `Intercept`, and `RSquared` to make visuals that respond to *where the music is heading*, not just where it is now:
+
+```glsl
+// Slope: positive = rising, negative = falling
+// Use it to drive evolution direction
+#define EVOLVE_DIRECTION (energySlope * 10.0)  // Scale up — raw slope values are small
+
+// RSquared: 0 = chaotic, 1 = steady trend
+// Use it to control confidence/stability of the visual response
+#define TREND_CONFIDENCE (energyRSquared)
+
+// Combine: only evolve strongly when trend is confident
+#define CONFIDENT_EVOLUTION (energySlope * energyRSquared * 10.0)
+
+// Detect musical sections:
+// Confident build = positive slope + high rSquared
+// Confident drop = negative slope + high rSquared
+// Chaos/transition = low rSquared (any slope)
+#define IS_BUILDING (energySlope > 0.001 && energyRSquared > 0.4)
+#define IS_DROPPING (energySlope < -0.001 && energyRSquared > 0.4)
+#define IS_CHAOTIC (energyRSquared < 0.2)
+
+// Different features have different trend meanings:
+#define GETTING_BRIGHTER (spectralCentroidSlope > 0.0)   // Timbre brightening
+#define BASS_BUILDING (bassSlope > 0.0)                  // Low-end building
+#define TEXTURE_EVOLVING (spectralEntropySlope)           // Complexity changing
+```
+
+**Key insight:** `Slope` values are small (they represent change per history-window index), so multiply by 5-20 to get useful visual ranges. `RSquared` is already 0-1 and works well as a confidence gate.
+
+### Pattern 5: Incommensurate Frequencies for Aperiodic Motion
 
 Use irrational ratios (golden ratio, sqrt(2), etc.) to prevent repetitive loops:
 
@@ -286,7 +324,7 @@ float y = cos(iTime * 0.17 * PHI);
 float z = sin(iTime * 0.11 * sqrt(2.0));
 ```
 
-### Pattern 5: Layered Fractals
+### Pattern 6: Layered Fractals
 
 Combine multiple fractal calculations at different scales:
 
