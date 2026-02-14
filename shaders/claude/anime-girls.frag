@@ -5,9 +5,9 @@
 // Red = nearest, Green = mid, Blue/Violet = farthest
 // Designed for ChromaDepth 3D glasses
 
-#define MAX_STEPS 50
-#define MAX_DIST 25.0
-#define SURF_DIST 0.002
+#define MAX_STEPS 40
+#define MAX_DIST 20.0
+#define SURF_DIST 0.003
 
 // ============================================================================
 // AUDIO-REACTIVE PARAMETERS
@@ -158,10 +158,9 @@ Hit animeGirl(vec3 p, float bounce, float sway, float time_offset, float girlId)
 
     // Chest - under the shirt, same material as torso
     float jiggle = sin(t * 7.0 + bounce * 20.0) * 0.004;
-    float jiggleDelay = sin(t * 7.0 + bounce * 20.0 - 0.3) * 0.003;
     float boobL = sdSphere(p - vec3(-0.1, 1.95 + jiggle, 0.14), 0.09);
-    float boobR = sdSphere(p - vec3(0.1, 1.95 + jiggleDelay, 0.14), 0.09);
-    float chest = smin(boobL, boobR, 0.06);
+    float boobR = sdSphere(p - vec3(0.1, 1.95 + jiggle, 0.14), 0.09);
+    float chest = min(boobL, boobR);
     result = sminH(result, Hit(chest, 10.0 + girlId), 0.1);
 
     // Neck - blends smoothly into head and torso
@@ -181,14 +180,10 @@ Hit animeGirl(vec3 p, float bounce, float sway, float time_offset, float girlId)
     float legR = sdCapsule(p, vec3(0.12, 0.0, 0.0), vec3(0.1, 0.95, 0.0), 0.065);
     result = sminH(result, Hit(min(legL, legR), 1.0), 0.06);
 
-    // Shoes - rounded with slight heel and toe
-    float shoeL = sdEllipsoid(p - vec3(-0.12, 0.03, 0.04), vec3(0.07, 0.04, 0.12));
-    float shoeR = sdEllipsoid(p - vec3(0.12, 0.03, 0.04), vec3(0.07, 0.04, 0.12));
-    // Small heel bump
-    float heelL = sdSphere(p - vec3(-0.12, 0.02, -0.06), 0.04);
-    float heelR = sdSphere(p - vec3(0.12, 0.02, -0.06), 0.04);
-    float shoes = min(smin(shoeL, heelL, 0.03), smin(shoeR, heelR, 0.03));
-    result = sminH(result, Hit(shoes, 3.0), 0.04);
+    // Shoes - simple ellipsoids
+    float shoeL = sdEllipsoid(p - vec3(-0.12, 0.03, 0.02), vec3(0.07, 0.05, 0.13));
+    float shoeR = sdEllipsoid(p - vec3(0.12, 0.03, 0.02), vec3(0.07, 0.05, 0.13));
+    result = sminH(result, Hit(min(shoeL, shoeR), 3.0), 0.04);
 
     // Arms - capsules, smooth blend at shoulders
     float armL = sdCapsule(p, vec3(-0.24, 2.0, 0.0), vec3(-0.28, 1.4, 0.05), 0.05);
@@ -252,18 +247,15 @@ Hit cherryTree(vec3 p, vec3 pos) {
     result = hMin(result, Hit(trunk, 3.0));
 
     // Main branches
-    float b1 = sdCapsule(p, vec3(0.0, 2.0, 0.0), vec3(-0.8, 3.0, 0.3), 0.06);
-    float b2 = sdCapsule(p, vec3(0.0, 2.2, 0.0), vec3(0.7, 3.2, -0.2), 0.06);
-    float b3 = sdCapsule(p, vec3(0.0, 1.8, 0.0), vec3(0.3, 2.8, 0.5), 0.05);
-    result = sminH(result, Hit(min(b1, min(b2, b3)), 3.0), 0.1);
+    float b1 = sdCapsule(p, vec3(0.0, 2.0, 0.0), vec3(-0.8, 3.0, 0.3), 0.07);
+    float b2 = sdCapsule(p, vec3(0.0, 2.2, 0.0), vec3(0.7, 3.2, -0.2), 0.07);
+    result = sminH(result, Hit(min(b1, b2), 3.0), 0.1);
 
-    // Blossom clusters - spheres
-    float bl1 = sdSphere(p - vec3(-0.8, 3.1, 0.3), 0.45);
-    float bl2 = sdSphere(p - vec3(0.7, 3.3, -0.2), 0.4);
-    float bl3 = sdSphere(p - vec3(0.3, 2.9, 0.5), 0.35);
-    float bl4 = sdSphere(p - vec3(-0.3, 3.3, 0.0), 0.38);
-    float bl5 = sdSphere(p - vec3(0.0, 3.5, 0.1), 0.42);
-    float blossoms = min(bl1, min(bl2, min(bl3, min(bl4, bl5))));
+    // Blossom clusters - spheres (reduced for mobile)
+    float bl1 = sdSphere(p - vec3(-0.8, 3.1, 0.3), 0.5);
+    float bl2 = sdSphere(p - vec3(0.7, 3.3, -0.2), 0.45);
+    float bl3 = sdSphere(p - vec3(0.0, 3.4, 0.2), 0.48);
+    float blossoms = min(bl1, min(bl2, bl3));
     // Material 6 = blossom (pink-ish, mid depth)
     result = hMin(result, Hit(blossoms, 6.0));
 
@@ -278,7 +270,7 @@ float sakuraPetals(vec3 p) {
     float d = MAX_DIST;
     float t = iTime * PETAL_SPEED;
 
-    for (int i = 0; i < 12; i++) {
+    for (int i = 0; i < 6; i++) {
         float fi = float(i);
         float px = hash(fi * 13.7) * 12.0 - 6.0;
         float pz = hash(fi * 27.3) * 10.0 - 5.0;
@@ -353,7 +345,7 @@ Hit sceneSDF(vec3 p) {
 // ============================================================================
 
 vec3 getNormal(vec3 p) {
-    vec2 e = vec2(0.003, 0.0);
+    vec2 e = vec2(0.005, 0.0);
     return normalize(vec3(
         sceneSDF(p + e.xyy).d - sceneSDF(p - e.xyy).d,
         sceneSDF(p + e.yxy).d - sceneSDF(p - e.yxy).d,
@@ -388,7 +380,7 @@ Hit raymarch(vec3 ro, vec3 rd) {
             return Hit(t, h.mat);
         }
         if (t > MAX_DIST) break;
-        t += h.d * 0.8;
+        t += h.d * 0.9;
     }
 
     return Hit(MAX_DIST, 0.0);
@@ -564,7 +556,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Building silhouettes - two parallax layers
     // Back layer: tall buildings, slow scroll
-    for (int i = 0; i < 12; i++) {
+    for (int i = 0; i < 8; i++) {
         float fi = float(i);
         float scrollSpeed = 0.015;
         float bx = fract(hash(fi * 3.17) + iTime * scrollSpeed) * 1.4 - 0.2;
@@ -584,7 +576,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         }
     }
     // Front layer: shorter buildings, faster scroll
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 6; i++) {
         float fi = float(i) + 20.0;
         float scrollSpeed = 0.03;
         float bx = fract(hash(fi * 3.17) + iTime * scrollSpeed) * 1.4 - 0.2;
@@ -606,7 +598,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     col = skyCol;
 
     // Sparkles / neon stars at various depths
-    for (int i = 0; i < 30; i++) {
+    for (int i = 0; i < 15; i++) {
         float fi = float(i);
         float sx = hash(fi * 7.13);
         float sy = 0.55 + hash(fi * 11.37) * 0.42;
