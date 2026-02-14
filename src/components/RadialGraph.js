@@ -2,7 +2,7 @@ import { html } from 'htm/preact'
 import { useState } from 'preact/hooks'
 import { AudioFeatures } from 'hypnosound'
 
-const FEATURE_SUFFIXES = ['Normalized', 'ZScore', 'Mean', 'StandardDeviation', 'Median', 'Min', 'Max']
+const FEATURE_SUFFIXES = ['Normalized', 'ZScore', 'Mean', 'StandardDeviation', 'Median', 'Min', 'Max', 'Slope', 'Intercept', 'RSquared']
 
 const RadialGraph = ({ features }) => {
     const [selectedFeature, setSelectedFeature] = useState('all')
