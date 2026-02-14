@@ -44,7 +44,7 @@
 // #define BEAT_PULSE 1.0
 
 // Max iterations
-#define MAX_ITER 128
+#define MAX_ITER 64
 
 // ============================================================================
 // CHROMADEPTH COLOR MAPPING

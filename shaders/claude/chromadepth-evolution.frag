@@ -56,7 +56,7 @@
 // #define CONFIDENCE 0.5
 
 // --- CONSTANTS ---
-#define MAX_ITER 100
+#define MAX_ITER 64
 #define PHI 1.61803398875
 
 // ============================================================================
