@@ -17,6 +17,7 @@ export default defineConfig({
   server: {
     port: parseInt(process.env.PORT) || branchToPort(gitBranch),
     host: '0.0.0.0',
+    allowedHosts: true,
   },
   build: {
     target: 'esnext',
