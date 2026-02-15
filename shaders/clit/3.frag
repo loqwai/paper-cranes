@@ -296,9 +296,9 @@ void mainImage(out vec4 P, vec2 V) {
     // Internal color — prismatic refraction, intensity scales with energy
     vec3 gem_interior = gem_prism * gem_base * gem_pulse * gem_depth_shade;
 
-    // Facet specular — energy makes highlights sharper
-    float facet_str = mix(0.4, 0.9, glow_energy);
-    vec3 gem_specular = gem_white * facets * focal * facet_str * GEM_BRILLIANCE;
+    // Specular highlights — energy makes them sharper
+    float sparkle_str = mix(0.4, 0.9, glow_energy);
+    vec3 gem_specular = gem_white * gem_sparkle * sparkle_str * GEM_BRILLIANCE;
 
     // Gem rim light
     vec3 rim_inner = vec3(1.0, 0.25, 0.45);
