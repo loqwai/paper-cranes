@@ -245,6 +245,49 @@ vec4 oklabmix(vec4 c1, vec4 c2, float t) {
     return vec4(oklabmix(c1.rgb, c2.rgb, t), mix(c1.a, c2.a, t));
 }
 
+// Oklch color space — polar form of Oklab
+// vec3(L, C, h) where L=lightness(0-1), C=chroma(0-~0.37), h=hue angle(radians)
+// Hue rotation is just adding to h — perceptually uniform color wheel
+vec3 oklab2oklch(vec3 lab) {
+    float C = length(lab.yz);
+    float h = atan(lab.z, lab.y);
+    return vec3(lab.x, C, h);
+}
+
+vec3 oklch2oklab(vec3 lch) {
+    return vec3(lch.x, lch.y * cos(lch.z), lch.y * sin(lch.z));
+}
+
+vec3 rgb2oklch(vec3 c) {
+    return oklab2oklch(rgb2oklab(c));
+}
+
+vec3 oklch2rgb(vec3 lch) {
+    return oklab2rgb(oklch2oklab(lch));
+}
+
+vec4 rgb2oklch(vec4 c) { return vec4(rgb2oklch(c.rgb), c.a); }
+vec4 oklch2rgb(vec4 lch) { return vec4(oklch2rgb(lch.xyz), lch.w); }
+
+vec3 oklchmix(vec3 c1, vec3 c2, float t) {
+    vec3 lch1 = rgb2oklch(c1);
+    vec3 lch2 = rgb2oklch(c2);
+    // Shortest-path hue interpolation
+    float dh = lch2.z - lch1.z;
+    if (dh > 3.14159265) dh -= 6.28318530;
+    if (dh < -3.14159265) dh += 6.28318530;
+    vec3 lch = vec3(
+        mix(lch1.x, lch2.x, t),
+        mix(lch1.y, lch2.y, t),
+        lch1.z + dh * t
+    );
+    return oklch2rgb(lch);
+}
+
+vec4 oklchmix(vec4 c1, vec4 c2, float t) {
+    return vec4(oklchmix(c1.rgb, c2.rgb, t), mix(c1.a, c2.a, t));
+}
+
 // Utility to make any value pingpong (go forward then backward)
 float pingpong(float t) {
     return 0.5 + 0.5 * sin(3.14159265359 * t);
