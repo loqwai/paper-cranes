@@ -130,9 +130,57 @@ These are auto-injected and available in all shaders:
 ### Color Conversion
 
 ```glsl
+// HSL
 vec3 hsl2rgb(vec3 hsl)           // HSL to RGB
 vec3 rgb2hsl(vec3 rgb)           // RGB to HSL
 vec3 hslmix(vec3 c1, vec3 c2, float t)  // Mix colors in HSL space
+
+// Oklab — perceptual color space, better gradients than HSL or RGB
+vec3 rgb2oklab(vec3 c)           // RGB to Oklab (L, a, b)
+vec3 oklab2rgb(vec3 lab)         // Oklab to RGB
+vec3 oklabmix(vec3 c1, vec3 c2, float t)  // Mix in Oklab space
+
+// Oklch — polar form of Oklab, best for hue rotation
+// vec3(L, C, h) where L=lightness(0-1), C=chroma(0-~0.37), h=hue(radians)
+vec3 rgb2oklch(vec3 c)           // RGB to Oklch
+vec3 oklch2rgb(vec3 lch)         // Oklch to RGB
+vec3 oklab2oklch(vec3 lab)       // Oklab to Oklch
+vec3 oklch2oklab(vec3 lch)       // Oklch to Oklab
+vec3 oklchmix(vec3 c1, vec3 c2, float t)  // Mix with shortest-path hue interpolation
+```
+
+All color functions have vec4 overloads that pass alpha through.
+
+#### When to Use Which Color Space
+
+| Task | Best Space | Why |
+|------|-----------|-----|
+| Hue rotation | Oklch | Just add to `h` — perceptually uniform |
+| Color mixing/gradients | Oklch or Oklab | No unexpected dark bands like HSL |
+| Boost saturation | Oklch | Scale `C` without affecting lightness |
+| Brighten without washing out | Oklch | Change `L` only |
+| Create a color from L/C/hue | Oklch | `oklch2rgb(vec3(0.7, 0.15, angle))` |
+| Quick additive glow | RGB | `col += glow` (oklch breaks with additive) |
+| Simple lerp (mask on/off) | RGB | `mix(bg, col, mask)` is fine |
+
+#### Oklch Quick Reference
+```glsl
+// Rotate hue
+vec3 lch = rgb2oklch(color);
+lch.z += 1.0;  // rotate ~57 degrees
+color = oklch2rgb(lch);
+
+// Boost saturation
+lch.y *= 1.5;
+
+// Brighten
+lch.x = min(lch.x + 0.1, 1.0);
+
+// Create vivid color from scratch
+vec3 col = oklch2rgb(vec3(0.7, 0.15, 1.0));  // bright, vivid, yellow-green hue
+
+// Mix two colors with proper hue interpolation
+vec3 result = oklchmix(red, blue, 0.5);  // goes through purple, not grey
 ```
 
 ### Previous Frame Access
