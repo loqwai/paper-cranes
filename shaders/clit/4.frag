@@ -195,12 +195,11 @@ void mainImage(out vec4 P, vec2 V) {
 
         // Soft accumulated proximity — each close pass adds glow, not just the closest
         float fd = length(V - focal_center);
-        float prox = exp(-fd * 3.0);  // soft gaussian falloff
-        float iter_fade = 1.0 - float(k) / 50.0;  // early iterations contribute more
-        focal_trap += prox * iter_fade;
-        focal_weight += iter_fade;
+        float prox = exp(-fd * 8.0);  // tight gaussian — only very close passes matter
+        focal_trap += prox;
+        focal_weight += 1.0;
     }
-    focal_trap /= max(focal_weight, 1.0);  // normalize to 0-1ish range
+    focal_trap /= max(focal_weight, 1.0);  // normalize
 
     // Base fractal value
     z = 1. - smoothstep(1., -6., log(max(y, 1e-10))) * smoothstep(1., -6., log(max(x, 1e-10)));
@@ -224,17 +223,17 @@ void mainImage(out vec4 P, vec2 V) {
     // FOCAL POINT detection — gem-like brilliance
     // ========================================================================
 
-    // Focal glow — smooth organic heat from accumulated proximity
-    float focal_glow = smoothstep(0.05, 0.4, focal_trap);
-    focal_glow = pow(max(focal_glow, 0.0), 1.5);
+    // Focal glow — smooth organic heat, but concentrated not diffuse
+    float focal_glow = smoothstep(0.02, 0.25, focal_trap);
+    focal_glow = pow(max(focal_glow, 0.0), 3.0);  // cubic kills the diffuse horizon haze
 
     vec2 uv = (gl_FragCoord.xy - 0.5 * iResolution.xy) / iResolution.y;
 
     float focal = focal_glow;
 
     // Gem rim — soft organic edge glow, not a hard ring
-    float focal_inner = smoothstep(0.08, 0.5, focal_trap);
-    float gem_rim = focal * (1.0 - pow(max(focal_inner, 0.0), 2.0));
+    float focal_inner = smoothstep(0.05, 0.3, focal_trap);
+    float gem_rim = focal * (1.0 - pow(max(focal_inner, 0.0), 1.5));
     gem_rim = max(gem_rim, 0.0) * 2.0;
 
     // Gem specular — fractal structure creates natural highlight variation
@@ -365,7 +364,8 @@ void mainImage(out vec4 P, vec2 V) {
     col = mix(col, gem_col, focal * 0.85);
 
     float glow_str = mix(0.08, 0.25, glow_energy);
-    float outer_glow = smoothstep(0.02, 0.25, focal_trap) * (1.0 - focal);
+    float outer_glow = smoothstep(0.01, 0.15, focal_trap) * (1.0 - focal);
+    outer_glow = pow(max(outer_glow, 0.0), 2.0);  // concentrate the glow, no horizon band
     col += gem_base * outer_glow * glow_str * GEM_BRILLIANCE;
 
     // ========================================================================
