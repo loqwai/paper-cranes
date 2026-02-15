@@ -33,8 +33,13 @@
 #define FEEDBACK_MIX (0.25 + energyNormalized * 0.1)
 // #define FEEDBACK_MIX 0.3
 
-// Rim lighting amplitude: energy drives the pastel edge glow
-// (used inline as energyZScore)
+// Rim lighting: treble drives the body edge glow
+#define RIM_INTENSITY (0.4 + trebleNormalized * 0.6)
+// #define RIM_INTENSITY 0.7
+
+// Rim color warmth: spectral roughness shifts rim from cool violet to warm pink
+#define RIM_WARMTH (0.3 + spectralRoughnessNormalized * 0.4)
+// #define RIM_WARMTH 0.5
 
 // ============================================================================
 // CHROMADEPTH COLOR — red closest, blue farthest
@@ -102,12 +107,16 @@ void mainImage(out vec4 P, vec2 V) {
     // Base fractal value
     z = 1. - smoothstep(1., -6., log(y)) * smoothstep(1., -6., log(x));
 
-    // Lace detection using screen-space derivatives — only actual sharp edges glow
-    float edge = abs(dFdx(z)) + abs(dFdy(z));
-    float lace = smoothstep(0.02, 0.15, edge * 15.0);
-    // Cross-reference with orbit traps for the finest filigree only
-    float trap_detail = smoothstep(-4.0, -7.0, log(x)) * smoothstep(-4.0, -7.0, log(y));
-    float lace_fine = trap_detail;
+    // Lace/filigree lines from orbit traps — this is the fairy-like patterning
+    // Very tight thresholds: only the finest lines, not broad body mass
+    float lace_x = smoothstep(-2.0, -5.0, log(x));  // fine vertical-ish lines
+    float lace_y = smoothstep(-2.0, -5.0, log(y));  // fine horizontal-ish lines
+    float lace = max(lace_x, lace_y);                // combined lace pattern
+    float lace_fine = lace_x * lace_y;               // extra-fine intersection detail
+    // Sharpen hard: make lace binary (on/off)
+    lace = pow(lace, 3.0);
+
+    // No spine masking — don't draw a line through the anatomy
 
     // Fractal structure for depth mapping
     vec4 rainbow = sqrt(z + (z - z * z * z) * cos(atan(Z.y, Z.x) - vec4(0, 2.1, 4.2, 0)));
@@ -176,18 +185,19 @@ void mainImage(out vec4 P, vec2 V) {
     // Pearly filigree highlights on the finest lace intersections
     col += vec3(0.7, 0.5, 0.65) * lace_fine * 0.25;
 
-    // Rim lighting — pastel glow on body edges, driven by energyZScore
-    float rim = smoothstep(0.05, 0.3, edge * 15.0);
-    // Pastel rim colors — soft lavender to warm peach
-    vec3 rim_col1 = vec3(0.7, 0.5, 0.9);   // lavender
-    vec3 rim_col2 = vec3(0.95, 0.7, 0.6);  // peach
-    vec3 rim_col3 = vec3(0.5, 0.8, 0.85);  // mint
-    // Cycle through pastels based on position
-    float rim_phase = atan(C.x, C.y) * 0.5 + 0.5;
-    vec3 rim_col = mix(mix(rim_col1, rim_col2, rim_phase), rim_col3, sin(rim_phase * 3.14) * 0.5 + 0.5);
-    // Amplitude driven by energyZScore
-    float rim_amp = 0.15 + clamp(energyZScore, 0.0, 1.0) * 0.5;
-    col += rim_col * rim * rim_amp * (1.0 - lace * 0.5);
+    // Rim detection — edges of body silhouette
+    // Tighter threshold so only sharp edges glow, not broad gradients
+    float rim = abs(dFdx(z)) + abs(dFdy(z));
+    rim = smoothstep(0.1, 0.5, rim * 20.0);
+    // Rim fades near center to avoid "spinal column" look
+    float center_fade = smoothstep(0.0, 0.15, abs(C.y));
+    rim *= center_fade;
+    vec3 rim_cool = vec3(0.3, 0.15, 0.65);   // violet
+    vec3 rim_warm = vec3(0.8, 0.3, 0.5);     // pink
+    vec3 rim_col = mix(rim_cool, rim_warm, RIM_WARMTH);
+
+    // Add rim glow on top — soft party lights on legs/hips
+    col += rim_col * rim * RIM_INTENSITY * 0.3;
 
     // Focal point — shifts toward red for chromadepth pop
     col = mix(col, chromadepth(depth) * 1.2, focal * 0.3);
@@ -204,9 +214,10 @@ void mainImage(out vec4 P, vec2 V) {
 
     // Hot focal glow — always a subtle ember, blazing on drops
     vec3 hot_red = vec3(1.0, 0.15, 0.05);
-    float ember = focal * 0.15;
-    float blaze = focal * focal_boost * 0.5 * drop;
+    float ember = focal * 0.2;                          // always glowing faintly
+    float blaze = focal * focal_boost * 0.5 * drop;    // blazing on drops
     col += hot_red * (ember + blaze);
+    // Extra white-hot core on drops
     col += vec3(1.0, 0.7, 0.4) * pow(focal, 3.0) * drop * 0.6;
 
     // ========================================================================
@@ -233,10 +244,9 @@ void mainImage(out vec4 P, vec2 V) {
     vign = mix(vign, pow(vign, 1.0 + drop * 2.0), drop);
     col *= max(vign, 0.02);
 
-    // Final darkness enforcement: only lace and focal get to be bright
-    // Rim adds soft edge glow but doesn't override darkness
-    float bright_allowed = max(lace, focal);
-    col *= mix(0.12, 1.0, bright_allowed);
+    // Final darkness enforcement: only lace, rim, and focal get to be bright
+    float bright_allowed = max(max(lace, rim * 0.5), focal);
+    col *= mix(0.15, 1.0, bright_allowed);
 
     // Tone mapping
     col = col / (col + vec3(0.7));
