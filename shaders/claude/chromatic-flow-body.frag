@@ -108,10 +108,13 @@ void mainImage(out vec4 P, vec2 V) {
     z = 1. - smoothstep(1., -6., log(y)) * smoothstep(1., -6., log(x));
 
     // Lace/filigree lines from orbit traps — this is the fairy-like patterning
-    float lace_x = smoothstep(0.0, -4.0, log(x));  // fine vertical-ish lines
-    float lace_y = smoothstep(0.0, -4.0, log(y));  // fine horizontal-ish lines
-    float lace = max(lace_x, lace_y);               // combined lace pattern
-    float lace_fine = lace_x * lace_y;              // extra-fine intersection detail
+    // Very tight thresholds: only the finest lines, not broad body mass
+    float lace_x = smoothstep(-2.0, -5.0, log(x));  // fine vertical-ish lines
+    float lace_y = smoothstep(-2.0, -5.0, log(y));  // fine horizontal-ish lines
+    float lace = max(lace_x, lace_y);                // combined lace pattern
+    float lace_fine = lace_x * lace_y;               // extra-fine intersection detail
+    // Sharpen hard: make lace binary (on/off)
+    lace = pow(lace, 3.0);
 
     // Fractal structure for depth mapping
     vec4 rainbow = sqrt(z + (z - z * z * z) * cos(atan(Z.y, Z.x) - vec4(0, 2.1, 4.2, 0)));
@@ -122,18 +125,13 @@ void mainImage(out vec4 P, vec2 V) {
     // ========================================================================
 
     // Orbit trap glow — where the fractal naturally converges
-    float focal_glow = smoothstep(1.5, 0.01, focal_trap);
-    focal_glow = pow(focal_glow, 1.5);
+    // Tight falloff so it's a small hot spot, not a broad wash
+    float focal_glow = smoothstep(0.5, 0.01, focal_trap);
+    focal_glow = pow(focal_glow, 3.0);
 
-    // Screen-space focal — tight spot at the anatomical center (top of V)
     vec2 uv = (gl_FragCoord.xy - 0.5 * iResolution.xy) / iResolution.y;
-    vec2 focal_pos = vec2(0.0, 0.18);
-    float screen_focal_dist = length(uv - focal_pos);
-    // Tight inner core + softer outer halo
-    float focal_core = smoothstep(0.06, 0.0, screen_focal_dist);
-    float focal_halo = smoothstep(0.18, 0.02, screen_focal_dist) * 0.4;
 
-    float focal = max(focal_glow * 0.6, focal_core + focal_halo);
+    float focal = focal_glow;
 
     // ========================================================================
     // CHROMADEPTH MAPPING — focal=red(close), background=blue(far)
@@ -166,26 +164,38 @@ void mainImage(out vec4 P, vec2 V) {
     depth = mix(depth, 0.0, drop * focal);                    // focal pulls to red
     depth = clamp(depth, 0.0, 1.0);
 
-    // Background: cold deep purple
-    vec3 bg_col = vec3(0.05, 0.02, 0.10);
+    // ========================================================================
+    // SEXY/1 GENERATIVE COLOR — the magical panties palette
+    // ========================================================================
 
-    // Lace: sexy/1's original rainbow coloring — the pastel bands
-    vec3 lace_col = rainbow.rgb;
+    // This IS the magic — sexy/1's original output formula
+    vec3 sexy_col = rainbow.rgb;  // sqrt(z + (z-z³)*cos(...))
 
-    // How much fractal structure is here? Invert z so 1=detail, 0=empty
-    float structure = 1.0 - z;
+    // Deep velvety purple background — cold warehouse party darkness
+    vec3 bg_purple = vec3(0.04, 0.015, 0.08);
 
-    // Blend: deep purple everywhere, rainbow ONLY on lace lines
-    vec3 col = bg_col;
-    col = mix(col, bg_col * 1.5, structure * 0.3);     // body mass — barely lighter purple
-    col = mix(col, lace_col, lace * 0.85);             // lace lines — full sexy rainbow
-    col += vec3(0.85, 0.65, 0.8) * lace_fine * 0.35;  // pearly filigree highlights
+    // Lace lines are the ONLY thing that gets sexy/1's color
+    // Everything else is deep purple darkness
+    // lace is already sharpened with pow(,2.0) above
+    float visibility = lace;
 
-    // Crush smooth areas to dark — only lace and focal survive bright
-    col *= 0.3 + lace * 0.7 + focal * 0.6;
+    vec3 col = mix(bg_purple, sexy_col, visibility);
 
-    // Focal point shifts toward red for chromadepth pop
-    col = mix(col, chromadepth(depth) * 1.3, focal * 0.6);
+    // Pearly filigree highlights on the finest lace intersections
+    col += vec3(0.7, 0.5, 0.65) * lace_fine * 0.25;
+
+    // Rim detection — edges of body silhouette
+    float rim = abs(dFdx(z)) + abs(dFdy(z));
+    rim = smoothstep(0.0, 0.3, rim * 20.0);
+    vec3 rim_cool = vec3(0.3, 0.15, 0.65);   // violet
+    vec3 rim_warm = vec3(0.8, 0.3, 0.5);     // pink
+    vec3 rim_col = mix(rim_cool, rim_warm, RIM_WARMTH);
+
+    // Add rim glow on top — soft party lights on legs/hips
+    col += rim_col * rim * RIM_INTENSITY * 0.3;
+
+    // Focal point — shifts toward red for chromadepth pop
+    col = mix(col, chromadepth(depth) * 1.2, focal * 0.3);
 
     // ========================================================================
     // DROP SPOTLIGHT — dim bg, boost focal
