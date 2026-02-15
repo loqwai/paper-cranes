@@ -7,6 +7,20 @@ let ranMain = false
 let startTime = 0
 const params = new URLSearchParams(window.location.search)
 
+const getSeed = () => {
+    const paramSeed = params.get('seed')
+    if (paramSeed !== null) return parseFloat(paramSeed)
+
+    const stored = localStorage.getItem('seed')
+    if (stored !== null) return parseFloat(stored)
+
+    const seed = Math.random()
+    localStorage.setItem('seed', seed.toString())
+    return seed
+}
+
+const seed = getSeed()
+
 const getVisualizerDOMElement = () => {
     if (!window.visualizer) {
         window.visualizer = document.getElementById('visualizer')
@@ -137,7 +151,8 @@ const parseUrlParams = (searchParams) => {
 
 export const getCranesState = () => {
     return {
-        ...window.cranes.measuredAudioFeatures, // Audio features (lowest precedence)
+        seed,                                   // Persistent per-user seed (lowest precedence)
+        ...window.cranes.measuredAudioFeatures, // Audio features
         ...window.cranes.controllerFeatures,    // Controller-computed features
         ...parseUrlParams(params),              // URL parameters (parsed as numbers or strings)
         ...window.cranes.manualFeatures,        // Manual features

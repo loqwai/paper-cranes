@@ -236,6 +236,7 @@ vec3 position = vec3(CIRCLE_RADIUS, 0.1, 0.1);
 ```
 
 ### Available Uniforms
+- `seed` - Persistent per-user random float (0-1), stored in localStorage. Override with `?seed=0.42`
 - All audio features (see above)
 - `iTime` - Time in seconds
 - `iResolution` - Screen resolution
