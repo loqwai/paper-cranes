@@ -1,6 +1,7 @@
 import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { makeVisualizer } from './src/Visualizer.js'
 import { getInitialShader } from './src/shaderLoader.js'
+import { seed } from './src/seed.js'
 
 const events = ['touchstart', 'touchmove', 'touchstop', 'keydown', 'mousedown', 'resize']
 let ranMain = false
@@ -137,7 +138,8 @@ const parseUrlParams = (searchParams) => {
 
 export const getCranesState = () => {
     return {
-        ...window.cranes.measuredAudioFeatures, // Audio features (lowest precedence)
+        seed,                                   // Persistent per-user seed (lowest precedence)
+        ...window.cranes.measuredAudioFeatures, // Audio features
         ...window.cranes.controllerFeatures,    // Controller-computed features
         ...parseUrlParams(params),              // URL parameters (parsed as numbers or strings)
         ...window.cranes.manualFeatures,        // Manual features
