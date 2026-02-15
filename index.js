@@ -160,6 +160,10 @@ const setupCranesState = () => {
     }
 
     window.c = window.cranes
+
+    window.cranes.updateFeature = (name, value) => {
+        window.cranes.manualFeatures[name] = value
+    }
 }
 
 // Animation function for the shader rendering

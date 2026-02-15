@@ -11,6 +11,9 @@
 <body class="ready">
     <canvas id="visualizer" width="2160" height="1920"></canvas>
     <script type="module" src="./index.js"></script>
+    <script type="module">
+        if (new URLSearchParams(window.location.search).has('midi')) import('./src/midi.js')
+    </script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-4BWWJ5ZPHY"></script>
 </body>
 

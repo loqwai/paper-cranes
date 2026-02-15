@@ -6,40 +6,40 @@
 // Based on Dom Mandy's complex power fractal
 
 // ============================================================================
-// AUDIO-REACTIVE PARAMETERS
+// KNOB-CONTROLLED PARAMETERS (knob range: 0.0 – 1.0)
 // ============================================================================
 
-// Shape complexity: centroid controls fractal power
-#define A mapValue(spectralCentroidZScore, 0., 1., 1.2, 1.8) + 0.1
-// #define A 1.5
+// Shape complexity: fractal power (knob_14: 0→1.2, 1→1.9)
+#define A mix(1.2, 1.9, knob_14)
+// #define A mapValue(spectralCentroidZScore, 0., 1., 1.2, 1.8) + 0.1
 
-// Body offset: energy shifts the form
-#define B (0.55 + energyZScore * 0.15)
-// #define B 0.55
+// Body offset: shifts the form (knob_15: 0→0.4, 1→0.7)
+#define B mix(0.4, 0.7, knob_15)
+// #define B (0.55 + energyZScore * 0.15)
 
-// Drop detection: confident energy drop = negative slope + high rSquared
-#define DROP_INTENSITY clamp(-energySlope * energyRSquared * 15.0, 0.0, 1.0)
-// #define DROP_INTENSITY 0.8
+// Drop intensity (knob_16: 0→none, 1→full)
+#define DROP_INTENSITY knob_16
+// #define DROP_INTENSITY clamp(-energySlope * energyRSquared * 15.0, 0.0, 1.0)
 
-// Build detection: confident energy rise
-#define BUILD_INTENSITY clamp(energySlope * energyRSquared * 10.0, 0.0, 1.0)
-// #define BUILD_INTENSITY 0.0
+// Build intensity (knob_17: 0→none, 1→full)
+#define BUILD_INTENSITY knob_17
+// #define BUILD_INTENSITY clamp(energySlope * energyRSquared * 10.0, 0.0, 1.0)
 
-// Bass pulse
-#define PULSE (1.0 + bassZScore * 0.06)
-// #define PULSE 1.0
+// Bass pulse (knob_18: 0→0.94, 1→1.06)
+#define PULSE mix(0.94, 1.06, knob_18)
+// #define PULSE (1.0 + bassZScore * 0.06)
 
-// Feedback
-#define FEEDBACK_MIX (0.25 + energyNormalized * 0.1)
-// #define FEEDBACK_MIX 0.3
+// Feedback mix (knob_19: 0→0.1, 1→0.5)
+#define FEEDBACK_MIX mix(0.1, 0.5, knob_19)
+// #define FEEDBACK_MIX (0.25 + energyNormalized * 0.1)
 
-// Rim lighting: treble drives the body edge glow
-#define RIM_INTENSITY (0.4 + trebleNormalized * 0.6)
-// #define RIM_INTENSITY 0.7
+// Rim lighting intensity (knob_20: 0→0.0, 1→1.0)
+#define RIM_INTENSITY knob_20
+// #define RIM_INTENSITY (0.4 + trebleNormalized * 0.6)
 
-// Rim color warmth: spectral roughness shifts rim from cool violet to warm pink
-#define RIM_WARMTH (0.3 + spectralRoughnessNormalized * 0.4)
-// #define RIM_WARMTH 0.5
+// Rim color warmth: cool violet → warm pink (knob_21: 0→0.0, 1→1.0)
+#define RIM_WARMTH knob_21
+// #define RIM_WARMTH (0.3 + spectralRoughnessNormalized * 0.4)
 
 // ============================================================================
 // CHROMADEPTH COLOR — red closest, blue farthest
