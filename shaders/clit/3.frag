@@ -11,8 +11,7 @@
 // Default 0.0 = original look. Try ?variation=0.3, 0.5, 0.7, etc.
 // ============================================================================
 
-// Wrap via #define so you can swap the source (knob, audio feature, etc.)
-// Use ?variation=0.5 in URL to inject the uniform at runtime
+// Source of variation — swap to drive from different inputs
 // #define VARIATION variation
 #define VARIATION 0.0
 // #define VARIATION knob_71
@@ -26,17 +25,84 @@
 #define VAR_D (cos(VARIATION * 6.2832 * 3.0) - 1.0)
 
 // ============================================================================
+// VARIATION OFFSETS — how much variation affects each parameter
+// Each is its own #define so you can swap/disable independently
+// ============================================================================
+
+// Fractal power offset — changes tendril density
+#define VAR_POWER (VAR_A * 0.15)
+// #define VAR_POWER 0.0
+
+// Body offset — changes body proportions
+#define VAR_BODY (VAR_B * 0.08)
+// #define VAR_BODY 0.0
+
+// Camera offset — shifts framing
+#define VAR_CAM_X (VAR_C * 0.06)
+// #define VAR_CAM_X 0.0
+#define VAR_CAM_Y (VAR_D * 0.04)
+// #define VAR_CAM_Y 0.0
+
+// Lace threshold offset — thicker/thinner threads
+#define VAR_LACE_LO (VAR_A * 0.4)
+// #define VAR_LACE_LO 0.0
+#define VAR_LACE_HI (VAR_B * 0.5)
+// #define VAR_LACE_HI 0.0
+
+// Lace sharpness offset — softer or crisper
+#define VAR_LACE_SHARP (VAR_D * 0.8)
+// #define VAR_LACE_SHARP 0.0
+
+// Rainbow phase — rotates color palette on the lace
+#define VAR_PHASE (VAR_C * 1.2)
+// #define VAR_PHASE 0.0
+
+// Background hue offset
+#define VAR_BG_R (VAR_D * 0.015)
+// #define VAR_BG_R 0.0
+#define VAR_BG_G (VAR_A * 0.01)
+// #define VAR_BG_G 0.0
+#define VAR_BG_B (VAR_B * 0.02)
+// #define VAR_BG_B 0.0
+
+// Filigree highlight tint offset
+#define VAR_FIL_R (VAR_B * 0.1)
+// #define VAR_FIL_R 0.0
+#define VAR_FIL_G (VAR_C * 0.1)
+// #define VAR_FIL_G 0.0
+#define VAR_FIL_B (VAR_A * 0.1)
+// #define VAR_FIL_B 0.0
+
+// Rim color offset — shifts cool/warm rim endpoints
+#define VAR_RIM_COOL_R (VAR_D * 0.1)
+// #define VAR_RIM_COOL_R 0.0
+#define VAR_RIM_COOL_B (VAR_A * 0.1)
+// #define VAR_RIM_COOL_B 0.0
+#define VAR_RIM_WARM_G (VAR_C * 0.1)
+// #define VAR_RIM_WARM_G 0.0
+#define VAR_RIM_WARM_B (VAR_B * 0.1)
+// #define VAR_RIM_WARM_B 0.0
+
+// Gem color offset — shifts between ruby, garnet, amethyst
+#define VAR_GEM_G (VAR_C * 0.15)
+// #define VAR_GEM_G 0.0
+#define VAR_GEM_B (VAR_D * 0.2)
+// #define VAR_GEM_B 0.0
+#define VAR_FIRE_G (VAR_A * 0.1)
+// #define VAR_FIRE_G 0.0
+#define VAR_FIRE_B (VAR_B * 0.1)
+// #define VAR_FIRE_B 0.0
+
+// ============================================================================
 // AUDIO-REACTIVE PARAMETERS
 // ============================================================================
 
 // Shape complexity: centroid controls fractal power
-// variation shifts the base power (1.3–1.7 range) — changes tendril density
-#define A mapValue(spectralCentroidZScore, 0., 1., 1.2, 1.8) + 0.1 + VAR_A * 0.15
+#define A (mapValue(spectralCentroidZScore, 0., 1., 1.2, 1.8) + 0.1 + VAR_POWER)
 // #define A 1.5
 
 // Body offset: energy shifts the form
-// variation shifts the base offset — changes body proportions
-#define B (0.55 + VAR_B * 0.08 + energyZScore * 0.15)
+#define B (0.55 + VAR_BODY + energyZScore * 0.15)
 // #define B 0.55
 
 // Drop detection: confident energy drop = negative slope + high rSquared
@@ -76,6 +142,10 @@
 #define TENDRIL_CURL (sin(iTime * 0.3) * 0.5 + sin(iTime * 0.17) * 0.3 + spectralCentroidSlope * 0.3)
 // #define TENDRIL_CURL 0.0
 
+// Cross-axis curl: independent flap axis for asymmetry
+#define TENDRIL_CROSS (sin(iTime * 0.23) * 0.4 + sin(iTime * 0.13 + 1.0) * 0.25 + spectralSpreadSlope * 0.2)
+// #define TENDRIL_CROSS 0.0
+
 // Flow drift: slopes drive feedback UV offset for flowing trail motion
 #define FLOW_X (spectralCentroidSlope * 0.003)
 // #define FLOW_X 0.0
@@ -83,17 +153,13 @@
 // #define FLOW_Y 0.0
 
 // Drop trigger: multiple z-scores spiking + confident energy drop = drop event
-// Sum absolute z-scores across domains — when many features shift at once, something happened
 #define ZSCORE_TURBULENCE (abs(bassZScore) + abs(trebleZScore) + abs(spectralCentroidZScore) + abs(spectralFluxZScore) + abs(spectralEntropyZScore))
 // #define ZSCORE_TURBULENCE 3.0
 
 // Calm heuristic: how "normal" is the audio right now?
-// Mix of: low z-scores + low slopes + low rSquared = audio is settled
-// Each term is 0 when active, 1 when calm — multiply them for "all calm"
 #define ZSCORE_CALM mix(1.0, 0.0, clamp(ZSCORE_TURBULENCE / 3.0, 0.0, 1.0))
 #define SLOPE_CALM mix(1.0, 0.0, clamp((abs(energySlope) + abs(bassSlope) + abs(spectralFluxSlope)) * 5.0, 0.0, 1.0))
 #define TREND_CALM mix(1.0, 0.0, clamp((energyRSquared + bassRSquared + spectralFluxRSquared) / 1.5, 0.0, 1.0))
-// Combined: all three must be calm for full settle signal
 #define AUDIO_SETTLED (ZSCORE_CALM * SLOPE_CALM * TREND_CALM)
 // #define AUDIO_SETTLED 0.0
 
@@ -107,11 +173,9 @@
 // ============================================================================
 
 vec3 chromadepth(float t) {
-    // t=0 → red (closest), t=1 → blue/violet (farthest)
     t = clamp(t, 0.0, 1.0);
     float hue = t * 0.82;
     float chromaBoost = 1.0 + 0.2 * sin(t * 3.14159 * 2.0);
-    // Darken significantly as depth increases — deep violet bg
     float L = 0.7 - t * 0.45;
     float C = 0.25 * chromaBoost * (1.0 - t * 0.3);
     float h = hue * 6.28318;
@@ -119,13 +183,11 @@ vec3 chromadepth(float t) {
     return clamp(oklab2rgb(lab), 0.0, 1.0);
 }
 
-// Warm chromadepth — deep dark violet background, hot reds up front
 vec3 warmChromadepth(float depth, float warmth) {
     vec3 cd = chromadepth(depth);
-    // Zorn-inspired: deep violet-black bg, warm ochre-red foreground
     vec3 warm_tint = mix(
-        vec3(0.95, 0.3, 0.15),   // hot red-ochre for close
-        vec3(0.04, 0.01, 0.06),  // near-black violet for far
+        vec3(0.95, 0.3, 0.15),
+        vec3(0.04, 0.01, 0.06),
         depth
     );
     return mix(cd, warm_tint, warmth);
@@ -138,12 +200,11 @@ vec3 warmChromadepth(float depth, float warmth) {
 void mainImage(out vec4 P, vec2 V) {
     vec2 Z = iResolution.xy,
          C = 0.6 * (Z - V - V).yx / Z.y;
-    C.x += 0.77 + VAR_C * 0.06;
-    C.y += VAR_D * 0.04;
+    C.x += 0.77 + VAR_CAM_X;
+    C.y += VAR_CAM_Y;
+
     // Time-driven curl flaps the wings — X and Y at different phases for asymmetry
-    float curl = TENDRIL_CURL;
-    float curl_cross = sin(iTime * 0.23) * 0.4 + sin(iTime * 0.13 + 1.0) * 0.25 + spectralSpreadSlope * 0.2;
-    V = C + vec2(curl * 0.02, curl_cross * 0.015);
+    V = C + vec2(TENDRIL_CURL * 0.02, TENDRIL_CROSS * 0.015);
 
     float v, x, y,
           z = y = x = 9.;
@@ -155,8 +216,8 @@ void mainImage(out vec4 P, vec2 V) {
     for (int k = 0; k < 50; k++) {
         float a = atan(V.y, V.x),
         d = dot(V, V) * A;
-        float c = dot(V, vec2(a, log(d) / 2.));
-        V = exp(-a * V.y) * pow(d, V.x / 2.) * vec2(cos(c), sin(c));
+        float c = dot(V, vec2(a, log(max(d, 1e-10)) / 2.));
+        V = exp(-a * V.y) * pow(max(d, 1e-10), V.x / 2.) * vec2(cos(c), sin(c));
         V = vec2(V.x * V.x - V.y * V.y, dot(V, V.yx));
         V -= C * B;
 
@@ -170,79 +231,65 @@ void mainImage(out vec4 P, vec2 V) {
     }
 
     // Base fractal value
-    z = 1. - smoothstep(1., -6., log(y)) * smoothstep(1., -6., log(x));
+    z = 1. - smoothstep(1., -6., log(max(y, 1e-10))) * smoothstep(1., -6., log(max(x, 1e-10)));
 
-    // Lace/filigree lines from orbit traps — this is the fairy-like patterning
-    // variation shifts lace fineness — some variants have thicker/thinner threads
-    float lace_lo = -2.0 + VAR_A * 0.4;
-    float lace_hi = -5.0 + VAR_B * 0.5;
-    float lace_x = smoothstep(lace_lo, lace_hi, log(x));
-    float lace_y = smoothstep(lace_lo, lace_hi, log(y));
-    float lace = max(lace_x, lace_y);                // combined lace pattern
-    float lace_fine = lace_x * lace_y;               // extra-fine intersection detail
-    // Sharpen lace — variation controls crispness (2.0 softer → 4.0 sharper)
-    lace = pow(lace, 3.0 + VAR_D * 0.8);
-
-    // No spine masking — don't draw a line through the anatomy
+    // Lace/filigree lines from orbit traps
+    float lace_x = smoothstep(-2.0 + VAR_LACE_LO, -5.0 + VAR_LACE_HI, log(max(x, 1e-10)));
+    float lace_y = smoothstep(-2.0 + VAR_LACE_LO, -5.0 + VAR_LACE_HI, log(max(y, 1e-10)));
+    float lace = max(lace_x, lace_y);
+    float lace_fine = lace_x * lace_y;
+    lace = pow(max(lace, 0.0), max(3.0 + VAR_LACE_SHARP, 0.5));
 
     // Fractal structure for depth mapping
-    // variation rotates the rainbow phase — different color palettes on the lace
-    float phase_shift = VAR_C * 1.2;
-    vec4 rainbow = sqrt(z + (z - z * z * z) * cos(atan(Z.y, Z.x) - vec4(0, 2.1, 4.2, 0) + phase_shift));
+    vec4 rainbow = sqrt(max(z + (z - z * z * z) * cos(atan(Z.y, Z.x) - vec4(0, 2.1, 4.2, 0) + VAR_PHASE), vec4(0.0)));
     float luma = dot(rainbow.rgb, vec3(0.299, 0.587, 0.114));
 
     // ========================================================================
     // FOCAL POINT detection — gem-like brilliance
     // ========================================================================
 
-    // Orbit trap glow — where the fractal naturally converges
     float focal_glow = smoothstep(0.5, 0.01, focal_trap);
-    focal_glow = pow(focal_glow, 2.0);  // softer falloff for larger gem body
+    focal_glow = pow(max(focal_glow, 0.0), 2.0);
 
     vec2 uv = (gl_FragCoord.xy - 0.5 * iResolution.xy) / iResolution.y;
 
     float focal = focal_glow;
 
-    // Gem rim — bright ring at the edge of the focal region (like light
-    // refracting around a cut gemstone's girdle)
+    // Gem rim — bright ring at the focal region's edge
     float focal_inner = smoothstep(0.35, 0.02, focal_trap);
-    float gem_rim = focal - pow(focal_inner, 1.5);
+    float gem_rim = focal - pow(max(focal_inner, 0.0), 1.5);
     gem_rim = max(gem_rim, 0.0);
-    gem_rim = pow(gem_rim, 0.6) * 2.5;  // sharpen and boost the rim ring
+    gem_rim = pow(gem_rim, 0.6) * 2.5;
 
-    // Gem specular — use the fractal's own orbit trap structure, not radial spokes
-    // The fractal detail inside the focal zone creates natural highlight variation
+    // Gem specular — fractal structure creates natural highlight variation
     float gem_detail = smoothstep(0.3, 0.8, z) * focal;
-    float gem_sparkle = pow(gem_detail, 3.0);  // sharp highlights where fractal has structure
+    float gem_sparkle = pow(gem_detail, 3.0);
 
-    // Internal brilliance — slow breathing pulse from inside the gem
+    // Internal brilliance — slow breathing pulse
     float gem_pulse = 0.85 + 0.15 * sin(iTime * 0.7);
 
-    // Prismatic dispersion — different colors refract at different angles
+    // Prismatic dispersion
     float disp = GEM_DISPERSION;
+    float f_safe = max(focal, 0.0);
     vec3 gem_prism = vec3(
-        pow(focal, 1.8 - disp * 0.3),   // red refracts least
-        pow(focal, 2.0),                  // green center
-        pow(focal, 1.8 + disp * 0.3)    // blue refracts most
+        pow(f_safe, 1.8 - disp * 0.3),
+        pow(f_safe, 2.0),
+        pow(f_safe, 1.8 + disp * 0.3)
     );
 
-    // Gem depth shading — darker at the deep center, bright at the crown
+    // Gem depth shading
     float gem_depth_shade = mix(0.4, 1.0, smoothstep(0.0, 0.7, gem_rim + gem_sparkle * 0.3));
 
     // ========================================================================
-    // CHROMADEPTH MAPPING — focal=red(close), background=blue(far)
+    // CHROMADEPTH MAPPING
     // ========================================================================
 
-    // Depth: 0=closest(red), 1=farthest(blue)
-    // Background → deep blue/violet, fractal detail → green/yellow, focal → red
-    float base_depth = mix(0.6, 0.95, 1.0 - luma);  // bg maps to far blue/violet
-    float detail_depth = mix(0.2, 0.5, luma);         // fractal ridges = mid (green/yellow)
-    // Use fractal edge detection to show detail at mid-depth
+    float base_depth = mix(0.6, 0.95, 1.0 - luma);
+    float detail_depth = mix(0.2, 0.5, luma);
     float edge = abs(dFdx(z)) + abs(dFdy(z));
     float is_detail = smoothstep(0.0, 0.5, edge * 30.0);
     base_depth = mix(base_depth, detail_depth, is_detail * 0.6);
-    // Focal override to pure red
-    float focal_strength = pow(focal, 1.5);  // sharpen the focal falloff
+    float focal_strength = pow(max(focal, 0.0), 1.5);
     float depth = mix(base_depth, 0.0, focal_strength);
 
     // ========================================================================
@@ -252,36 +299,25 @@ void mainImage(out vec4 P, vec2 V) {
     float drop_trigger = DROP_INTENSITY;
     float build = BUILD_INTENSITY;
 
-    // Multi-feature turbulence: when many z-scores spike at once, it's a real event
     float turbulence = ZSCORE_TURBULENCE;
-    // Trigger: confident energy drop AND high turbulence across features
     float drop_signal = clamp(drop_trigger * smoothstep(2.0, 4.0, turbulence), 0.0, 1.0);
 
-    // Read previous drop state from alpha channel of feedback frame
     vec2 state_uv = gl_FragCoord.xy / iResolution.xy;
     float prev_drop_state = getLastFrameColor(state_uv).a;
 
-    // How settled is the audio? 0 = active/chaotic, 1 = everything back to normal
     float settled = AUDIO_SETTLED;
-
-    // Decay rate adapts: slow decay while audio is still active, faster as it settles
     float decay_rate = mix(DROP_DECAY_MIN, DROP_DECAY_MAX, settled);
 
-    // Accumulator: ramps up fast when triggered, decays based on how settled audio is
     float drop_state = prev_drop_state;
-    drop_state = mix(drop_state, 1.0, drop_signal * DROP_RAMP);  // ramp toward 1
-    drop_state = mix(drop_state, 0.0, decay_rate);                // decay toward 0, speed adapts
+    drop_state = mix(drop_state, 1.0, drop_signal * DROP_RAMP);
+    drop_state = mix(drop_state, 0.0, decay_rate);
     drop_state = clamp(drop_state, 0.0, 1.0);
 
-    // Smooth the state through easing so transitions never look abrupt
     float drop = animateEaseInOutCubic(drop_state);
 
-    // During build: depth compresses (everything shifts greener/closer)
     depth = mix(depth, depth * 0.7, build * 0.3);
-
-    // During drop: focal goes PURE RED, background goes DEEP BLUE
-    depth = mix(depth, depth * 1.3, drop * (1.0 - focal));  // bg pushes further
-    depth = mix(depth, 0.0, drop * focal);                    // focal pulls to red
+    depth = mix(depth, depth * 1.3, drop * (1.0 - focal));
+    depth = mix(depth, 0.0, drop * focal);
     depth = clamp(depth, 0.0, 1.0);
 
     // ========================================================================
@@ -290,77 +326,56 @@ void mainImage(out vec4 P, vec2 V) {
 
     vec3 sexy_col = rainbow.rgb;
 
-    // Background: deep velvety darkness — variation shifts the hue
-    vec3 bg_purple = vec3(
-        0.04 + VAR_D * 0.015,
-        0.015 + VAR_A * 0.01,
-        0.08 + VAR_B * 0.02
-    );
+    vec3 bg_purple = max(vec3(0.04 + VAR_BG_R, 0.015 + VAR_BG_G, 0.08 + VAR_BG_B), vec3(0.0));
 
-    // Lace is the only thing that gets color — everything else is darkness
     vec3 col = mix(bg_purple, sexy_col, lace);
 
-    // Pearly filigree highlights — variation tints them
-    col += vec3(0.7 + VAR_B * 0.1, 0.5 + VAR_C * 0.1, 0.65 + VAR_A * 0.1) * lace_fine * 0.25;
+    col += vec3(0.7 + VAR_FIL_R, 0.5 + VAR_FIL_G, 0.65 + VAR_FIL_B) * lace_fine * 0.25;
 
-    // Rim detection — edges of body silhouette
+    // Rim detection
     float rim = abs(dFdx(z)) + abs(dFdy(z));
     rim = smoothstep(0.1, 0.5, rim * 20.0);
     float center_fade = smoothstep(0.0, 0.15, abs(C.y));
     rim *= center_fade;
-    // Rim colors — variation shifts the cool/warm endpoints
-    vec3 rim_cool = vec3(0.3 + VAR_D * 0.1, 0.15, 0.65 + VAR_A * 0.1);
-    vec3 rim_warm = vec3(0.8, 0.3 + VAR_C * 0.1, 0.5 + VAR_B * 0.1);
+    vec3 rim_cool = vec3(0.3 + VAR_RIM_COOL_R, 0.15, 0.65 + VAR_RIM_COOL_B);
+    vec3 rim_warm = vec3(0.8, 0.3 + VAR_RIM_WARM_G, 0.5 + VAR_RIM_WARM_B);
     vec3 rim_col = mix(rim_cool, rim_warm, RIM_WARMTH);
 
     col += rim_col * rim * RIM_INTENSITY * 0.3;
 
     // ========================================================================
-    // GEM FOCAL — brilliance driven by energy, not just drop state
+    // GEM FOCAL — brilliance driven by energy
     // ========================================================================
 
-    // Energy drives how intensely the gem glows right now
     float glow_energy = clamp(energyNormalized + energyZScore * 0.3, 0.0, 1.0);
 
-    // Gem color — variation shifts between ruby, garnet, amethyst tones
-    vec3 gem_base = vec3(
-        1.0,
-        max(0.02, 0.08 + VAR_C * 0.15),
-        max(0.02, 0.12 + VAR_D * 0.2)
-    );
-    vec3 gem_fire = vec3(1.0, 0.4 + VAR_A * 0.1, 0.15 + VAR_B * 0.1);
+    vec3 gem_base = vec3(1.0, max(0.02, 0.08 + VAR_GEM_G), max(0.02, 0.12 + VAR_GEM_B));
+    vec3 gem_fire = vec3(1.0, 0.4 + VAR_FIRE_G, 0.15 + VAR_FIRE_B);
     vec3 gem_white = vec3(1.0, 0.85, 0.95);
 
-    // Internal color — prismatic refraction, intensity scales with energy
     vec3 gem_interior = gem_prism * gem_base * gem_pulse * gem_depth_shade;
 
-    // Specular highlights — energy makes them sharper
     float sparkle_str = mix(0.4, 0.9, glow_energy);
     vec3 gem_specular = gem_white * gem_sparkle * sparkle_str * GEM_BRILLIANCE;
 
-    // Gem rim light
     vec3 rim_inner = vec3(1.0, 0.25, 0.45);
     vec3 rim_outer = vec3(0.5, 0.2, 0.9);
     vec3 gem_rim_col = mix(rim_outer, rim_inner, smoothstep(0.0, 1.0, gem_rim));
     vec3 gem_rim_light = gem_rim_col * gem_rim * GEM_BRILLIANCE;
 
-    // Compose gem — brilliance scales with energy
     float gem_energy_boost = mix(0.7, 1.3, glow_energy);
     vec3 gem_col = gem_interior * GEM_BRILLIANCE * gem_energy_boost
                  + gem_specular
                  + gem_rim_light;
 
-    // Blend gem onto scene
     col = mix(col, gem_col, focal * 0.85);
 
-    // Outer glow — energy widens and intensifies the gem's cast light
     float glow_str = mix(0.08, 0.25, glow_energy);
     float outer_glow = smoothstep(0.8, 0.0, focal_trap) * (1.0 - focal);
     col += gem_base * outer_glow * glow_str * GEM_BRILLIANCE;
 
     // ========================================================================
     // DROP MODE — sustained spotlight, not color replacement
-    // During drop: bg dims, gem blazes, rim intensifies — but lace stays rainbow
     // ========================================================================
 
     float bg_dim = mix(1.0, 0.2, drop);
@@ -369,51 +384,40 @@ void mainImage(out vec4 P, vec2 V) {
     float spotlight = mix(bg_dim, 1.0, focal);
     col *= spotlight;
 
-    // Rim gets hotter during drop — additive, not replacing lace color
     vec3 rim_hot = vec3(1.0, 0.5, 0.2);
     col += rim_hot * rim * drop * 0.2;
 
-    // Gem blazes during sustained drop — energy drives intensity
     float blaze = focal * focal_boost * drop * glow_energy;
     col += gem_fire * blaze * 0.5;
-    col += gem_white * pow(focal, 2.5) * drop * glow_energy * 0.4;
+    col += gem_white * pow(f_safe, 2.5) * drop * glow_energy * 0.4;
     col += gem_prism * vec3(0.4, 0.8, 1.0) * gem_rim * drop * 0.3;
 
     // ========================================================================
     // FINISHING
     // ========================================================================
 
-    // Beat flash
     if (beat) {
         col += vec3(0.15, 0.04, 0.02) * focal;
         col *= 1.05;
     }
 
-    // Bass pulse
     col *= PULSE;
 
-    // Frame feedback — flowing trails with slope-driven drift
     vec2 fbUv = gl_FragCoord.xy / iResolution.xy;
     vec2 flow_drift = vec2(FLOW_X, FLOW_Y);
     vec4 prev = getLastFrameColor(fbUv + flow_drift);
     col = mix(col, prev.rgb * 0.95, FEEDBACK_MIX);
 
-    // Vignette — deep black/violet edges for clean chromadepth
     float vign = 1.0 - pow(length(uv) * 0.65, 1.8);
-    // On drops, vignette gets tighter (more dramatic spotlight)
-    vign = mix(vign, pow(vign, 1.0 + drop * 2.0), drop);
+    vign = mix(vign, pow(max(vign, 0.0), 1.0 + drop * 2.0), drop);
     col *= max(vign, 0.02);
 
-    // Final darkness enforcement: only lace, rim, gem, and focal get to be bright
     float bright_allowed = max(max(lace, rim * 0.5), max(focal, gem_rim * 0.7));
     col *= mix(0.15, 1.0, bright_allowed);
 
-    // Tone mapping
     col = col / (col + vec3(0.7));
 
-    // Gamma — slightly warm
     col = pow(max(col, vec3(0.0)), vec3(0.88, 0.9, 0.95));
 
-    // Store drop accumulator in alpha for next frame's state read
     P = vec4(col, drop_state);
 }
