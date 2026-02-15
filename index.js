@@ -1,25 +1,12 @@
 import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { makeVisualizer } from './src/Visualizer.js'
 import { getInitialShader } from './src/shaderLoader.js'
+import { seed } from './src/seed.js'
 
 const events = ['touchstart', 'touchmove', 'touchstop', 'keydown', 'mousedown', 'resize']
 let ranMain = false
 let startTime = 0
 const params = new URLSearchParams(window.location.search)
-
-const getSeed = () => {
-    const paramSeed = params.get('seed')
-    if (paramSeed !== null) return parseFloat(paramSeed)
-
-    const stored = localStorage.getItem('seed')
-    if (stored !== null) return parseFloat(stored)
-
-    const seed = Math.random()
-    localStorage.setItem('seed', seed.toString())
-    return seed
-}
-
-const seed = getSeed()
 
 const getVisualizerDOMElement = () => {
     if (!window.visualizer) {
