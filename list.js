@@ -482,7 +482,8 @@ const getInitialFilters = () => {
   const url = new URL(window.location)
   return {
     fullscreenOnly: url.searchParams.get('fullscreenOnly') === 'true',
-    favoritesOnly: url.searchParams.get('favoritesOnly') === 'true'
+    favoritesOnly: url.searchParams.get('favoritesOnly') === 'true',
+    showWip: url.searchParams.get('wip') === 'true'
   }
 }
 
@@ -504,9 +505,9 @@ const updateUrlFilter = (key, value) => {
 const List = () => {
   const initialFilters = getInitialFilters()
   const [filterText, setFilterText] = useState(getInitialFilter())
-  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1200)
   const [fullscreenOnly, setFullscreenOnly] = useState(initialFilters.fullscreenOnly)
   const [favoritesOnly, setFavoritesOnly] = useState(initialFilters.favoritesOnly)
+  const [showWip, setShowWip] = useState(initialFilters.showWip)
   const [connectionStatus, setConnectionStatus] = useState('disconnected')
   const [connectedClients, setConnectedClients] = useState(0)
   const controllerRef = useRef(null)
@@ -548,21 +549,17 @@ const List = () => {
     updateUrlFilter('favoritesOnly', favoritesOnly)
   }, [favoritesOnly])
 
-  // Update isDesktop state when window resizes
+  // Update URL when WIP filter changes
   useEffect(() => {
-    const handleResize = () => setIsDesktop(window.innerWidth >= 1200)
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
+    updateUrlFilter('wip', showWip)
+  }, [showWip])
 
   const handleFilterChange = (value) => {
     setFilterText(value)
   }
 
-  // Show all shaders if show=all is present in URL or if on desktop
-  const showAll = new URL(window.location).searchParams.get('show') === 'all' || isDesktop
-  const filteredPaths = ['wip', 'knobs', 'static']
-  let filteredShaders = showAll ? shaders : shaders.filter(shader => !filteredPaths.some(path => shader.name.includes(path)))
+  const filteredPaths = showWip ? ['knobs', 'static'] : ['wip', 'knobs', 'static']
+  let filteredShaders = shaders.filter(shader => !filteredPaths.some(path => shader.name.includes(path)))
 
   // Filter to fullscreen-compatible shaders (hide explicitly marked as false)
   if (fullscreenOnly) {
@@ -602,6 +599,14 @@ const List = () => {
             onChange=${(e) => setFullscreenOnly(e.target.checked)}
           />
           Fullscreen-compatible
+        </label>
+        <label class="filter-toggle">
+          <input
+            type="checkbox"
+            checked=${showWip}
+            onChange=${(e) => setShowWip(e.target.checked)}
+          />
+          Show WIP
         </label>
       </div>
       <ul class="shader-list">
