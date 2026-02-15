@@ -4,6 +4,12 @@
 // Chromatic Flow (Body) — Chromadepth anatomy with drop-reactive focus
 // Red = closest (clitoris pops out), Blue = farthest (background recedes)
 // Based on Dom Mandy's complex power fractal
+//
+//https://visuals.beadfamous.com/?shader=clit/3&name=Emerald%20Fairy&wing_speed=0.2&glow_hue=0.4&warmth=0.3&lace_density=0.3&wing_span=0.6&trail_amount=0.4&complexity=0.4&vignette_size=0.4
+//https://visuals.beadfamous.com/?shader=clit/3&name=Sapphire%20Ghost&wing_speed=0.9&glow_hue=0.6&warmth=0.8&trail_amount=0.8&wing_span=0.7&lace_density=0.5&complexity=0.6&vignette_size=0.5
+//https://visuals.beadfamous.com/?shader=clit/3&name=Ruby%20Moth&complexity=0.9&lace_density=0.8&vignette_size=0.7&glow_hue=0.0&wing_speed=0.4&wing_span=0.8&warmth=0.6&trail_amount=0.5
+//https://visuals.beadfamous.com/?shader=clit/3&name=Amethyst%20Wisp&wing_speed=0.6&glow_hue=0.67&warmth=0.2&lace_density=0.2&wing_span=0.5&trail_amount=0.9&complexity=0.3&vignette_size=0.6
+//https://visuals.beadfamous.com/?shader=clit/3&name=Amber%20Phoenix&wing_speed=0.8&glow_hue=0.15&warmth=0.9&lace_density=0.6&wing_span=0.9&trail_amount=0.3&complexity=0.7&vignette_size=0.3
 
 // ============================================================================
 // CREATURE TRAITS — independent URL params that make each instance unique
