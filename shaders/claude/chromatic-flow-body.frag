@@ -6,16 +6,21 @@
 // Based on Dom Mandy's complex power fractal
 
 // ============================================================================
-// AUDIO-REACTIVE PARAMETERS
+// AUDIO-REACTIVE PARAMETERS — smooth flow via slopes, subtle zScore accents
 // ============================================================================
 
-// Shape complexity: centroid controls fractal power
-#define A mapValue(spectralCentroidZScore, 0., 1., 1.2, 1.8) + 0.1
+// Shape complexity: use slope for smooth drift, tiny zScore for sparkle
+// Slope = trend direction, intercept = current baseline
+#define A (1.5 + spectralCentroidSlope * 0.8 + spectralCentroidZScore * 0.05)
 // #define A 1.5
 
-// Body offset: energy shifts the form
-#define B (0.55 + energyZScore * 0.15)
+// Body offset: smooth energy trend shifts the form slowly
+#define B (0.55 + energySlope * 0.4 + energyZScore * 0.03)
 // #define B 0.55
+
+// Lace flow: spectral centroid slope gently shifts the fractal exploration
+#define LACE_FLOW (spectralCentroidSlope * 0.3)
+// #define LACE_FLOW 0.0
 
 // Drop detection: confident energy drop = negative slope + high rSquared
 #define DROP_INTENSITY clamp(-energySlope * energyRSquared * 15.0, 0.0, 1.0)
@@ -25,16 +30,17 @@
 #define BUILD_INTENSITY clamp(energySlope * energyRSquared * 10.0, 0.0, 1.0)
 // #define BUILD_INTENSITY 0.0
 
-// Bass pulse
-#define PULSE (1.0 + bassZScore * 0.06)
+// Bass pulse — gentler, slope-smoothed
+#define PULSE (1.0 + bassSlope * 0.15 + bassZScore * 0.02)
 // #define PULSE 1.0
 
-// Feedback
-#define FEEDBACK_MIX (0.25 + energyNormalized * 0.1)
-// #define FEEDBACK_MIX 0.3
+// Feedback — slightly more for smoother trails
+#define FEEDBACK_MIX (0.3 + energyNormalized * 0.1)
+// #define FEEDBACK_MIX 0.35
 
-// Rim lighting amplitude: energy drives the pastel edge glow
-// (used inline as energyZScore)
+// Pitch class for rim color modulation (0-1, which note is playing)
+#define PITCH_HUE (pitchClassNormalized)
+// #define PITCH_HUE 0.5
 
 // ============================================================================
 // CHROMADEPTH COLOR — red closest, blue farthest
@@ -73,7 +79,8 @@ void mainImage(out vec4 P, vec2 V) {
     vec2 Z = iResolution.xy,
          C = 0.6 * (Z - V - V).yx / Z.y;
     C.x += 0.77;
-    V = C;
+    // Gentle flow offset — slopes create smooth drifting, not jumping
+    V = C + vec2(LACE_FLOW * 0.02, LACE_FLOW * 0.015);
 
     float v, x, y,
           z = y = x = 9.;
@@ -110,7 +117,9 @@ void mainImage(out vec4 P, vec2 V) {
     float lace_fine = trap_detail;
 
     // Fractal structure for depth mapping
-    vec4 rainbow = sqrt(z + (z - z * z * z) * cos(atan(Z.y, Z.x) - vec4(0, 2.1, 4.2, 0)));
+    // Phase offset flows with spectral slope — colors drift through the lace
+    float color_flow = spectralFluxSlope * 0.5;
+    vec4 rainbow = sqrt(z + (z - z * z * z) * cos(atan(Z.y, Z.x) - vec4(0, 2.1, 4.2, 0) + color_flow));
     float luma = dot(rainbow.rgb, vec3(0.299, 0.587, 0.114));
 
     // ========================================================================
@@ -175,17 +184,21 @@ void mainImage(out vec4 P, vec2 V) {
     // Pearly filigree highlights on the finest lace intersections
     col += vec3(0.7, 0.5, 0.65) * lace_fine * 0.25;
 
-    // Rim lighting — pastel glow on body edges, driven by energyZScore
+    // Rim lighting — pastel glow on body edges
     float rim = smoothstep(0.05, 0.3, edge * 15.0);
-    // Pastel rim colors — soft lavender to warm peach
-    vec3 rim_col1 = vec3(0.7, 0.5, 0.9);   // lavender
-    vec3 rim_col2 = vec3(0.95, 0.7, 0.6);  // peach
-    vec3 rim_col3 = vec3(0.5, 0.8, 0.85);  // mint
-    // Cycle through pastels based on position
-    float rim_phase = atan(C.x, C.y) * 0.5 + 0.5;
-    vec3 rim_col = mix(mix(rim_col1, rim_col2, rim_phase), rim_col3, sin(rim_phase * 3.14) * 0.5 + 0.5);
-    // Amplitude driven by energyZScore
-    float rim_amp = 0.15 + clamp(energyZScore, 0.0, 1.0) * 0.5;
+
+    // Pastel colors modulated by pitchClass — each note shifts the hue
+    // Use HSL-style rotation: pitchClass rotates through pastel wheel
+    float hue_base = PITCH_HUE * 6.28318;  // full rotation across pitch classes
+    float rim_phase = atan(C.x, C.y);       // spatial variation
+    vec3 rim_col = vec3(
+        0.65 + 0.3 * sin(hue_base + rim_phase),
+        0.55 + 0.3 * sin(hue_base + rim_phase + 2.094),  // +120°
+        0.7  + 0.25 * sin(hue_base + rim_phase + 4.189)  // +240°
+    );
+
+    // Amplitude: smooth baseline from slope, subtle accent from zScore
+    float rim_amp = 0.12 + clamp(energySlope * 2.0, 0.0, 0.3) + clamp(energyZScore, 0.0, 1.0) * 0.15;
     col += rim_col * rim * rim_amp * (1.0 - lace * 0.5);
 
     // Focal point — shifts toward red for chromadepth pop
@@ -221,10 +234,15 @@ void mainImage(out vec4 P, vec2 V) {
     // Bass pulse
     col *= PULSE;
 
-    // Frame feedback — subtle trails
+    // Frame feedback — flowing trails with slope-driven drift
     vec2 fbUv = gl_FragCoord.xy / iResolution.xy;
-    vec4 prev = getLastFrameColor(fbUv);
-    col = mix(col, prev.rgb * 0.95, FEEDBACK_MIX);
+    // Gentle UV drift based on spectral slopes — creates flowing motion
+    vec2 flow_drift = vec2(
+        spectralCentroidSlope * 0.003,
+        spectralSpreadSlope * 0.002
+    );
+    vec4 prev = getLastFrameColor(fbUv + flow_drift);
+    col = mix(col, prev.rgb * 0.94, FEEDBACK_MIX);
 
     // Vignette — deep black/violet edges for clean chromadepth
     float vign = 1.0 - pow(length(uv) * 0.65, 1.8);
