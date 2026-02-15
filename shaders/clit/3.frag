@@ -6,15 +6,37 @@
 // Based on Dom Mandy's complex power fractal
 
 // ============================================================================
+// VARIATION — ?variation=0.0-1.0 in URL, auto-injected as uniform
+// Each value creates a unique but beautiful variant of the fractal
+// Default 0.0 = original look. Try ?variation=0.3, 0.5, 0.7, etc.
+// ============================================================================
+
+// Wrap via #define so you can swap the source (knob, audio feature, etc.)
+// Use ?variation=0.5 in URL to inject the uniform at runtime
+// #define VARIATION variation
+#define VARIATION 0.0
+// #define VARIATION knob_71
+// #define VARIATION pitchClassNormalized
+
+// Derive several independent offsets from the single value
+// All zero when VARIATION=0.0 so default matches clit/2's palette exactly
+#define VAR_A sin(VARIATION * 6.2832)
+#define VAR_B (cos(VARIATION * 6.2832) - 1.0)
+#define VAR_C sin(VARIATION * 6.2832 * 2.0)
+#define VAR_D (cos(VARIATION * 6.2832 * 3.0) - 1.0)
+
+// ============================================================================
 // AUDIO-REACTIVE PARAMETERS
 // ============================================================================
 
 // Shape complexity: centroid controls fractal power
-#define A mapValue(spectralCentroidZScore, 0., 1., 1.2, 1.8) + 0.1
+// variation shifts the base power (1.3–1.7 range) — changes tendril density
+#define A mapValue(spectralCentroidZScore, 0., 1., 1.2, 1.8) + 0.1 + VAR_A * 0.15
 // #define A 1.5
 
 // Body offset: energy shifts the form
-#define B (0.55 + energyZScore * 0.15)
+// variation shifts the base offset — changes body proportions
+#define B (0.55 + VAR_B * 0.08 + energyZScore * 0.15)
 // #define B 0.55
 
 // Drop detection: confident energy drop = negative slope + high rSquared
@@ -49,9 +71,9 @@
 #define GEM_DISPERSION (0.3 + spectralSpreadNormalized * 0.4)
 // #define GEM_DISPERSION 0.5
 
-// Tendril curl: slope shifts the fractal exploration point, curling the tendrils
-// spectralCentroidSlope = smooth pitch drift → organic reshaping of fractal arms
-#define TENDRIL_CURL (spectralCentroidSlope * 0.4)
+// Tendril curl: slow time-based flapping + audio slope adds on top
+// Two sine waves at different rates = asymmetric wing-like curl and flap
+#define TENDRIL_CURL (sin(iTime * 0.3) * 0.5 + sin(iTime * 0.17) * 0.3 + spectralCentroidSlope * 0.3)
 // #define TENDRIL_CURL 0.0
 
 // Flow drift: slopes drive feedback UV offset for flowing trail motion
@@ -116,10 +138,12 @@ vec3 warmChromadepth(float depth, float warmth) {
 void mainImage(out vec4 P, vec2 V) {
     vec2 Z = iResolution.xy,
          C = 0.6 * (Z - V - V).yx / Z.y;
-    C.x += 0.77;
-    // Slope-driven drift shifts the fractal exploration point
-    // This curls the tendrils organically — the fractal reshapes, not just thresholds
-    V = C + vec2(TENDRIL_CURL * 0.02, TENDRIL_CURL * 0.015);
+    C.x += 0.77 + VAR_C * 0.06;
+    C.y += VAR_D * 0.04;
+    // Time-driven curl flaps the wings — X and Y at different phases for asymmetry
+    float curl = TENDRIL_CURL;
+    float curl_cross = sin(iTime * 0.23) * 0.4 + sin(iTime * 0.13 + 1.0) * 0.25 + spectralSpreadSlope * 0.2;
+    V = C + vec2(curl * 0.02, curl_cross * 0.015);
 
     float v, x, y,
           z = y = x = 9.;
@@ -149,18 +173,22 @@ void mainImage(out vec4 P, vec2 V) {
     z = 1. - smoothstep(1., -6., log(y)) * smoothstep(1., -6., log(x));
 
     // Lace/filigree lines from orbit traps — this is the fairy-like patterning
-    // Fixed thresholds — motion comes from fractal input shifting, not threshold wobble
-    float lace_x = smoothstep(-2.0, -5.0, log(x));  // fine vertical-ish lines
-    float lace_y = smoothstep(-2.0, -5.0, log(y));  // fine horizontal-ish lines
+    // variation shifts lace fineness — some variants have thicker/thinner threads
+    float lace_lo = -2.0 + VAR_A * 0.4;
+    float lace_hi = -5.0 + VAR_B * 0.5;
+    float lace_x = smoothstep(lace_lo, lace_hi, log(x));
+    float lace_y = smoothstep(lace_lo, lace_hi, log(y));
     float lace = max(lace_x, lace_y);                // combined lace pattern
     float lace_fine = lace_x * lace_y;               // extra-fine intersection detail
-    // Sharpen hard: make lace binary (on/off)
-    lace = pow(lace, 3.0);
+    // Sharpen lace — variation controls crispness (2.0 softer → 4.0 sharper)
+    lace = pow(lace, 3.0 + VAR_D * 0.8);
 
     // No spine masking — don't draw a line through the anatomy
 
     // Fractal structure for depth mapping
-    vec4 rainbow = sqrt(z + (z - z * z * z) * cos(atan(Z.y, Z.x) - vec4(0, 2.1, 4.2, 0)));
+    // variation rotates the rainbow phase — different color palettes on the lace
+    float phase_shift = VAR_C * 1.2;
+    vec4 rainbow = sqrt(z + (z - z * z * z) * cos(atan(Z.y, Z.x) - vec4(0, 2.1, 4.2, 0) + phase_shift));
     float luma = dot(rainbow.rgb, vec3(0.299, 0.587, 0.114));
 
     // ========================================================================
@@ -262,22 +290,27 @@ void mainImage(out vec4 P, vec2 V) {
 
     vec3 sexy_col = rainbow.rgb;
 
-    // Background: deep velvety purple, untouched by drop state
-    vec3 bg_purple = vec3(0.04, 0.015, 0.08);
+    // Background: deep velvety darkness — variation shifts the hue
+    vec3 bg_purple = vec3(
+        0.04 + VAR_D * 0.015,
+        0.015 + VAR_A * 0.01,
+        0.08 + VAR_B * 0.02
+    );
 
     // Lace is the only thing that gets color — everything else is darkness
     vec3 col = mix(bg_purple, sexy_col, lace);
 
-    // Pearly filigree highlights on finest intersections
-    col += vec3(0.7, 0.5, 0.65) * lace_fine * 0.25;
+    // Pearly filigree highlights — variation tints them
+    col += vec3(0.7 + VAR_B * 0.1, 0.5 + VAR_C * 0.1, 0.65 + VAR_A * 0.1) * lace_fine * 0.25;
 
     // Rim detection — edges of body silhouette
     float rim = abs(dFdx(z)) + abs(dFdy(z));
     rim = smoothstep(0.1, 0.5, rim * 20.0);
     float center_fade = smoothstep(0.0, 0.15, abs(C.y));
     rim *= center_fade;
-    vec3 rim_cool = vec3(0.3, 0.15, 0.65);   // violet
-    vec3 rim_warm = vec3(0.8, 0.3, 0.5);     // pink
+    // Rim colors — variation shifts the cool/warm endpoints
+    vec3 rim_cool = vec3(0.3 + VAR_D * 0.1, 0.15, 0.65 + VAR_A * 0.1);
+    vec3 rim_warm = vec3(0.8, 0.3 + VAR_C * 0.1, 0.5 + VAR_B * 0.1);
     vec3 rim_col = mix(rim_cool, rim_warm, RIM_WARMTH);
 
     col += rim_col * rim * RIM_INTENSITY * 0.3;
@@ -289,9 +322,14 @@ void mainImage(out vec4 P, vec2 V) {
     // Energy drives how intensely the gem glows right now
     float glow_energy = clamp(energyNormalized + energyZScore * 0.3, 0.0, 1.0);
 
-    vec3 gem_base = vec3(1.0, 0.08, 0.12);           // deep ruby red
-    vec3 gem_fire = vec3(1.0, 0.4, 0.15);             // orange fire
-    vec3 gem_white = vec3(1.0, 0.85, 0.95);           // near-white specular
+    // Gem color — variation shifts between ruby, garnet, amethyst tones
+    vec3 gem_base = vec3(
+        1.0,
+        max(0.02, 0.08 + VAR_C * 0.15),
+        max(0.02, 0.12 + VAR_D * 0.2)
+    );
+    vec3 gem_fire = vec3(1.0, 0.4 + VAR_A * 0.1, 0.15 + VAR_B * 0.1);
+    vec3 gem_white = vec3(1.0, 0.85, 0.95);
 
     // Internal color — prismatic refraction, intensity scales with energy
     vec3 gem_interior = gem_prism * gem_base * gem_pulse * gem_depth_shade;
