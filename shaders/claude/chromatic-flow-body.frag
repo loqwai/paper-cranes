@@ -135,7 +135,6 @@ void mainImage(out vec4 P, vec2 V) {
     float base_depth = mix(0.6, 0.95, 1.0 - luma);  // bg maps to far blue/violet
     float detail_depth = mix(0.2, 0.5, luma);         // fractal ridges = mid (green/yellow)
     // Use fractal edge detection to show detail at mid-depth
-    float edge = abs(dFdx(z)) + abs(dFdy(z));
     float is_detail = smoothstep(0.0, 0.5, edge * 30.0);
     base_depth = mix(base_depth, detail_depth, is_detail * 0.6);
     // Focal override to pure red
