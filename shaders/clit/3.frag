@@ -6,103 +6,62 @@
 // Based on Dom Mandy's complex power fractal
 
 // ============================================================================
-// VARIATION — ?variation=0.0-1.0 in URL, auto-injected as uniform
-// Each value creates a unique but beautiful variant of the fractal
-// Default 0.0 = original look. Try ?variation=0.3, 0.5, 0.7, etc.
+// CREATURE TRAITS — independent URL params that make each instance unique
+// Like pokemon stats: same species, different individual
+// Usage: ?shader=clit/3&wing_speed=0.7&glow_hue=0.4&lace_density=0.3
+// All default to 0.5 (neutral). Range 0.0-1.0.
 // ============================================================================
 
-// Source of variation — swap to drive from different inputs
-// #define VARIATION variation
-#define VARIATION 0.0
-// #define VARIATION knob_71
-// #define VARIATION pitchClassNormalized
+// Wing flap speed — lazy moth (0) vs hummingbird (1)
+// #define WING_SPEED wing_speed
+#define WING_SPEED 0.5
+// #define WING_SPEED knob_71
 
-// Derive several independent offsets from the single value
-// All zero when VARIATION=0.0 so default matches clit/2's palette exactly
-#define VAR_A sin(VARIATION * 6.2832)
-#define VAR_B (cos(VARIATION * 6.2832) - 1.0)
-#define VAR_C sin(VARIATION * 6.2832 * 2.0)
-#define VAR_D (cos(VARIATION * 6.2832 * 3.0) - 1.0)
+// Wing span — tight subtle flutter (0) vs dramatic sweeping flap (1)
+// #define WING_SPAN wing_span
+#define WING_SPAN 0.5
+// #define WING_SPAN knob_72
 
-// ============================================================================
-// VARIATION OFFSETS — how much variation affects each parameter
-// Each is its own #define so you can swap/disable independently
-// ============================================================================
+// Gem hue — ruby(0) → amber(0.2) → emerald(0.4) → sapphire(0.6) → amethyst(0.8) → ruby(1)
+// #define GLOW_HUE glow_hue
+#define GLOW_HUE 0.0
+// #define GLOW_HUE knob_73
 
-// Fractal power offset — changes tendril density
-#define VAR_POWER (VAR_A * 0.15)
-// #define VAR_POWER 0.0
+// Lace density — delicate fairy threads (0) vs bold moth wings (1)
+// #define LACE_DENSITY lace_density
+#define LACE_DENSITY 0.5
+// #define LACE_DENSITY knob_74
 
-// Body offset — changes body proportions
-#define VAR_BODY (VAR_B * 0.08)
-// #define VAR_BODY 0.0
+// Vignette tightness — wide open view (0) vs intimate close spotlight (1)
+// #define VIGNETTE_SIZE vignette_size
+#define VIGNETTE_SIZE 0.5
+// #define VIGNETTE_SIZE knob_75
 
-// Camera offset — shifts framing
-#define VAR_CAM_X (VAR_C * 0.06)
-// #define VAR_CAM_X 0.0
-#define VAR_CAM_Y (VAR_D * 0.04)
-// #define VAR_CAM_Y 0.0
+// Feedback/trails — crisp and sharp (0) vs ethereal ghosting (1)
+// #define TRAIL_AMOUNT trail_amount
+#define TRAIL_AMOUNT 0.5
+// #define TRAIL_AMOUNT knob_76
 
-// Lace threshold offset — thicker/thinner threads
-#define VAR_LACE_LO (VAR_A * 0.4)
-// #define VAR_LACE_LO 0.0
-#define VAR_LACE_HI (VAR_B * 0.5)
-// #define VAR_LACE_HI 0.0
+// Color temperature — cool violet-blue tones (0) vs warm pink-amber (1)
+// #define WARMTH warmth
+#define WARMTH 0.5
+// #define WARMTH knob_77
 
-// Lace sharpness offset — softer or crisper
-#define VAR_LACE_SHARP (VAR_D * 0.8)
-// #define VAR_LACE_SHARP 0.0
-
-// Rainbow phase — rotates color palette on the lace
-#define VAR_PHASE (VAR_C * 1.2)
-// #define VAR_PHASE 0.0
-
-// Background hue offset
-#define VAR_BG_R (VAR_D * 0.015)
-// #define VAR_BG_R 0.0
-#define VAR_BG_G (VAR_A * 0.01)
-// #define VAR_BG_G 0.0
-#define VAR_BG_B (VAR_B * 0.02)
-// #define VAR_BG_B 0.0
-
-// Filigree highlight tint offset
-#define VAR_FIL_R (VAR_B * 0.1)
-// #define VAR_FIL_R 0.0
-#define VAR_FIL_G (VAR_C * 0.1)
-// #define VAR_FIL_G 0.0
-#define VAR_FIL_B (VAR_A * 0.1)
-// #define VAR_FIL_B 0.0
-
-// Rim color offset — shifts cool/warm rim endpoints
-#define VAR_RIM_COOL_R (VAR_D * 0.1)
-// #define VAR_RIM_COOL_R 0.0
-#define VAR_RIM_COOL_B (VAR_A * 0.1)
-// #define VAR_RIM_COOL_B 0.0
-#define VAR_RIM_WARM_G (VAR_C * 0.1)
-// #define VAR_RIM_WARM_G 0.0
-#define VAR_RIM_WARM_B (VAR_B * 0.1)
-// #define VAR_RIM_WARM_B 0.0
-
-// Gem color offset — shifts between ruby, garnet, amethyst
-#define VAR_GEM_G (VAR_C * 0.15)
-// #define VAR_GEM_G 0.0
-#define VAR_GEM_B (VAR_D * 0.2)
-// #define VAR_GEM_B 0.0
-#define VAR_FIRE_G (VAR_A * 0.1)
-// #define VAR_FIRE_G 0.0
-#define VAR_FIRE_B (VAR_B * 0.1)
-// #define VAR_FIRE_B 0.0
+// Fractal complexity — simple smooth forms (0) vs intricate dense detail (1)
+// #define COMPLEXITY complexity
+#define COMPLEXITY 0.5
+// #define COMPLEXITY knob_78
 
 // ============================================================================
 // AUDIO-REACTIVE PARAMETERS
 // ============================================================================
 
-// Shape complexity: centroid controls fractal power
-#define A (mapValue(spectralCentroidZScore, 0., 1., 1.2, 1.8) + 0.1 + VAR_POWER)
+// Shape complexity: centroid controls fractal power, complexity trait sets baseline
+#define A (mapValue(spectralCentroidZScore, 0., 1., 1.2, 1.8) + 0.1 + (COMPLEXITY - 0.5) * 0.3)
 // #define A 1.5
 
 // Body offset: energy shifts the form
-#define B (0.55 + VAR_BODY + energyZScore * 0.15)
+#define B (0.55 + energyZScore * 0.15)
 // #define B 0.55
 
 // Drop detection: confident energy drop = negative slope + high rSquared
@@ -117,16 +76,16 @@
 #define PULSE (1.0 + bassZScore * 0.06)
 // #define PULSE 1.0
 
-// Feedback
-#define FEEDBACK_MIX (0.25 + energyNormalized * 0.1)
+// Feedback — trail_amount shifts the base level
+#define FEEDBACK_MIX (mapValue(TRAIL_AMOUNT, 0.0, 1.0, 0.1, 0.5) + energyNormalized * 0.1)
 // #define FEEDBACK_MIX 0.3
 
 // Rim lighting: treble drives the body edge glow
 #define RIM_INTENSITY (0.4 + trebleNormalized * 0.6)
 // #define RIM_INTENSITY 0.7
 
-// Rim color warmth: spectral roughness shifts rim from cool violet to warm pink
-#define RIM_WARMTH (0.3 + spectralRoughnessNormalized * 0.4)
+// Rim color warmth: warmth trait sets baseline, spectral roughness adds audio reactivity
+#define RIM_WARMTH (mapValue(WARMTH, 0.0, 1.0, 0.1, 0.7) + spectralRoughnessNormalized * 0.2)
 // #define RIM_WARMTH 0.5
 
 // Gem brilliance: how intensely the focal gem glows
@@ -137,13 +96,15 @@
 #define GEM_DISPERSION (0.3 + spectralSpreadNormalized * 0.4)
 // #define GEM_DISPERSION 0.5
 
-// Tendril curl: slow time-based flapping + audio slope adds on top
+// Tendril curl: wing_speed controls flap rate, wing_span controls amplitude
 // Two sine waves at different rates = asymmetric wing-like curl and flap
-#define TENDRIL_CURL (sin(iTime * 0.3) * 0.5 + sin(iTime * 0.17) * 0.3 + spectralCentroidSlope * 0.3)
+#define FLAP_RATE mapValue(WING_SPEED, 0.0, 1.0, 0.08, 0.6)
+#define FLAP_AMP mapValue(WING_SPAN, 0.0, 1.0, 0.15, 0.9)
+#define TENDRIL_CURL (sin(iTime * FLAP_RATE) * FLAP_AMP + sin(iTime * FLAP_RATE * 0.57) * FLAP_AMP * 0.6 + spectralCentroidSlope * 0.3)
 // #define TENDRIL_CURL 0.0
 
 // Cross-axis curl: independent flap axis for asymmetry
-#define TENDRIL_CROSS (sin(iTime * 0.23) * 0.4 + sin(iTime * 0.13 + 1.0) * 0.25 + spectralSpreadSlope * 0.2)
+#define TENDRIL_CROSS (sin(iTime * FLAP_RATE * 0.77) * FLAP_AMP * 0.8 + sin(iTime * FLAP_RATE * 0.43 + 1.0) * FLAP_AMP * 0.5 + spectralSpreadSlope * 0.2)
 // #define TENDRIL_CROSS 0.0
 
 // Flow drift: slopes drive feedback UV offset for flowing trail motion
@@ -200,8 +161,8 @@ vec3 warmChromadepth(float depth, float warmth) {
 void mainImage(out vec4 P, vec2 V) {
     vec2 Z = iResolution.xy,
          C = 0.6 * (Z - V - V).yx / Z.y;
-    C.x += 0.77 + VAR_CAM_X;
-    C.y += VAR_CAM_Y;
+    C.x += 0.77;
+    C.y += 0.0;
 
     // Time-driven curl flaps the wings — X and Y at different phases for asymmetry
     V = C + vec2(TENDRIL_CURL * 0.02, TENDRIL_CROSS * 0.015);
@@ -233,15 +194,19 @@ void mainImage(out vec4 P, vec2 V) {
     // Base fractal value
     z = 1. - smoothstep(1., -6., log(max(y, 1e-10))) * smoothstep(1., -6., log(max(x, 1e-10)));
 
-    // Lace/filigree lines from orbit traps
-    float lace_x = smoothstep(-2.0 + VAR_LACE_LO, -5.0 + VAR_LACE_HI, log(max(x, 1e-10)));
-    float lace_y = smoothstep(-2.0 + VAR_LACE_LO, -5.0 + VAR_LACE_HI, log(max(y, 1e-10)));
+    // Lace/filigree lines from orbit traps — lace_density controls thread thickness
+    float lace_lo = mapValue(LACE_DENSITY, 0.0, 1.0, -1.5, -2.5);
+    float lace_hi = mapValue(LACE_DENSITY, 0.0, 1.0, -4.5, -5.5);
+    float lace_x = smoothstep(lace_lo, lace_hi, log(max(x, 1e-10)));
+    float lace_y = smoothstep(lace_lo, lace_hi, log(max(y, 1e-10)));
     float lace = max(lace_x, lace_y);
     float lace_fine = lace_x * lace_y;
-    lace = pow(max(lace, 0.0), max(3.0 + VAR_LACE_SHARP, 0.5));
+    float lace_sharp = mapValue(LACE_DENSITY, 0.0, 1.0, 2.0, 4.0);
+    lace = pow(max(lace, 0.0), lace_sharp);
 
-    // Fractal structure for depth mapping
-    vec4 rainbow = sqrt(max(z + (z - z * z * z) * cos(atan(Z.y, Z.x) - vec4(0, 2.1, 4.2, 0) + VAR_PHASE), vec4(0.0)));
+    // Fractal structure for depth mapping — warmth shifts the rainbow phase
+    float color_phase = (WARMTH - 0.5) * 1.5;
+    vec4 rainbow = sqrt(max(z + (z - z * z * z) * cos(atan(Z.y, Z.x) - vec4(0, 2.1, 4.2, 0) + color_phase), vec4(0.0)));
     float luma = dot(rainbow.rgb, vec3(0.299, 0.587, 0.114));
 
     // ========================================================================
@@ -326,19 +291,25 @@ void mainImage(out vec4 P, vec2 V) {
 
     vec3 sexy_col = rainbow.rgb;
 
-    vec3 bg_purple = max(vec3(0.04 + VAR_BG_R, 0.015 + VAR_BG_G, 0.08 + VAR_BG_B), vec3(0.0));
+    // Background: warmth shifts from cool violet to warm dark amber
+    vec3 bg_cool = vec3(0.02, 0.015, 0.08);
+    vec3 bg_warm = vec3(0.06, 0.02, 0.04);
+    vec3 bg_purple = mix(bg_cool, bg_warm, WARMTH);
 
     vec3 col = mix(bg_purple, sexy_col, lace);
 
-    col += vec3(0.7 + VAR_FIL_R, 0.5 + VAR_FIL_G, 0.65 + VAR_FIL_B) * lace_fine * 0.25;
+    // Filigree highlights — warmth shifts from pearly cool to golden
+    vec3 fil_cool = vec3(0.6, 0.5, 0.75);
+    vec3 fil_warm = vec3(0.8, 0.6, 0.45);
+    col += mix(fil_cool, fil_warm, WARMTH) * lace_fine * 0.25;
 
     // Rim detection
     float rim = abs(dFdx(z)) + abs(dFdy(z));
     rim = smoothstep(0.1, 0.5, rim * 20.0);
     float center_fade = smoothstep(0.0, 0.15, abs(C.y));
     rim *= center_fade;
-    vec3 rim_cool = vec3(0.3 + VAR_RIM_COOL_R, 0.15, 0.65 + VAR_RIM_COOL_B);
-    vec3 rim_warm = vec3(0.8, 0.3 + VAR_RIM_WARM_G, 0.5 + VAR_RIM_WARM_B);
+    vec3 rim_cool = vec3(0.3, 0.15, 0.65);
+    vec3 rim_warm = vec3(0.8, 0.3, 0.5);
     vec3 rim_col = mix(rim_cool, rim_warm, RIM_WARMTH);
 
     col += rim_col * rim * RIM_INTENSITY * 0.3;
@@ -349,8 +320,20 @@ void mainImage(out vec4 P, vec2 V) {
 
     float glow_energy = clamp(energyNormalized + energyZScore * 0.3, 0.0, 1.0);
 
-    vec3 gem_base = vec3(1.0, max(0.02, 0.08 + VAR_GEM_G), max(0.02, 0.12 + VAR_GEM_B));
-    vec3 gem_fire = vec3(1.0, 0.4 + VAR_FIRE_G, 0.15 + VAR_FIRE_B);
+    // Gem base color — glow_hue rotates through gem types
+    // 0=ruby, 0.15=amber, 0.33=emerald, 0.5=sapphire, 0.67=amethyst, 0.83=rose, 1=ruby
+    float gem_h = GLOW_HUE * 6.2832;
+    vec3 gem_base = vec3(
+        0.6 + 0.4 * cos(gem_h),
+        0.15 + 0.35 * cos(gem_h + 2.094),
+        0.15 + 0.35 * cos(gem_h + 4.189)
+    );
+    gem_base = max(gem_base, vec3(0.05));
+    vec3 gem_fire = vec3(
+        0.7 + 0.3 * cos(gem_h),
+        0.3 + 0.2 * cos(gem_h + 2.094),
+        0.2 + 0.2 * cos(gem_h + 4.189)
+    );
     vec3 gem_white = vec3(1.0, 0.85, 0.95);
 
     vec3 gem_interior = gem_prism * gem_base * gem_pulse * gem_depth_shade;
@@ -408,7 +391,10 @@ void mainImage(out vec4 P, vec2 V) {
     vec4 prev = getLastFrameColor(fbUv + flow_drift);
     col = mix(col, prev.rgb * 0.95, FEEDBACK_MIX);
 
-    float vign = 1.0 - pow(length(uv) * 0.65, 1.8);
+    // Vignette — vignette_size controls how tight the frame is
+    float vign_power = mapValue(VIGNETTE_SIZE, 0.0, 1.0, 1.2, 2.8);
+    float vign_scale = mapValue(VIGNETTE_SIZE, 0.0, 1.0, 0.5, 0.85);
+    float vign = 1.0 - pow(length(uv) * vign_scale, vign_power);
     vign = mix(vign, pow(max(vign, 0.0), 1.0 + drop * 2.0), drop);
     col *= max(vign, 0.02);
 
