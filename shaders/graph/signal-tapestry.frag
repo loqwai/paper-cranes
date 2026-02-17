@@ -10,17 +10,17 @@
 //
 // Temporal signatures:
 //   bass:        slow heavy swells (kicks, sub-bass)
-//   treble:      fast jittery spikes (hi-hats, cymbals)
+//   rolloff:     high-freq cutoff (bright vs muffled, WHERE energy lives)
 //   flux:        sharp transient bursts (any timbral change)
 //   entropy:     smooth slow wandering (noise vs tone)
 //   roughness:   gritty mid-speed (dissonance, distortion)
 //   crest:       peaky inverse-of-entropy (pure tones spike it)
 //   pitchClass:  discrete note steps (quantized jumps)
-//   skew:        asymmetric drift (dark vs bright tilt)
+//   mids:        mid-range body/warmth (vocals, instruments)
 
 // ============================================================================
 // FEATURE DEFINITIONS (8 independent features, each visually distinct)
-// Z=zScore, S=slope, R=rSquared, N=normalized, W=width, G=glow (median)
+// Z=zScore, S=slope, R=rSquared, N=normalized, W=width, G=glow, H=hue shift
 // ============================================================================
 
 // --- Energy-correlated: subtract energyZScore to show CHARACTER not volume ---
@@ -32,14 +32,16 @@
 #define F0_N bassNormalized
 #define F0_W spectralRoughnessNormalized
 #define F0_G energyMedian
+#define F0_H spectralCentroidNormalized  // pitch center tints bass hue
 
-// Fast jittery spikes — width: crest, glow: centroid median
-#define F1_Z (trebleZScore - energyZScore)
-#define F1_S trebleSlope
-#define F1_R trebleRSquared
-#define F1_N trebleNormalized
+// High-freq cutoff point — width: crest, glow: centroid median
+#define F1_Z spectralRolloffZScore
+#define F1_S spectralRolloffSlope
+#define F1_R spectralRolloffRSquared
+#define F1_N spectralRolloffNormalized
 #define F1_W spectralCrestNormalized
 #define F1_G spectralCentroidMedian
+#define F1_H pitchClassNormalized        // which note tints rolloff hue
 
 // Sharp transient bursts — width: energy, glow: mids median
 #define F2_Z (spectralFluxZScore - energyZScore * 0.5)
@@ -48,6 +50,7 @@
 #define F2_N spectralFluxNormalized
 #define F2_W energyNormalized
 #define F2_G midsMedian
+#define F2_H spectralKurtosisNormalized  // peakedness tints flux hue
 
 // Gritty mid-speed — width: treble, glow: bass median
 #define F4_Z (spectralRoughnessZScore - energyZScore * 0.3)
@@ -56,6 +59,7 @@
 #define F4_N spectralRoughnessNormalized
 #define F4_W trebleNormalized
 #define F4_G bassMedian
+#define F4_H spectralFluxNormalized      // change rate tints roughness hue
 
 // --- Energy-independent: measure shape/quality, not magnitude ---
 
@@ -66,6 +70,7 @@
 #define F3_N spectralEntropyNormalized
 #define F3_W bassNormalized
 #define F3_G spectralSpreadMedian
+#define F3_H trebleNormalized            // brightness tints entropy hue
 
 // Peaky inverse-of-entropy — width: entropy, glow: kurtosis median
 #define F5_Z spectralCrestZScore
@@ -74,22 +79,25 @@
 #define F5_N spectralCrestNormalized
 #define F5_W spectralEntropyNormalized
 #define F5_G spectralKurtosisMedian
+#define F5_H spectralSkewNormalized      // harmonic tilt tints crest hue
 
-// Discrete note steps — width: rolloff, glow: rolloff median
+// Discrete note steps — width: kurtosis, glow: rolloff median
 #define F6_Z pitchClassZScore
 #define F6_S pitchClassSlope
 #define F6_R pitchClassRSquared
 #define F6_N pitchClassNormalized
-#define F6_W spectralRolloffNormalized
+#define F6_W spectralKurtosisNormalized
 #define F6_G spectralRolloffMedian
+#define F6_H midsNormalized              // mid-range warmth tints pitch hue
 
-// Asymmetric drift — width: centroid, glow: treble median
-#define F7_Z spectralSkewZScore
-#define F7_S spectralSkewSlope
-#define F7_R spectralSkewRSquared
-#define F7_N spectralSkewNormalized
+// Mid-range body/warmth — width: centroid, glow: treble median
+#define F7_Z (midsZScore - energyZScore * 0.5)
+#define F7_S midsSlope
+#define F7_R midsRSquared
+#define F7_N midsNormalized
 #define F7_W spectralCentroidNormalized
 #define F7_G trebleMedian
+#define F7_H spectralSpreadNormalized    // harmonic width tints mids hue
 
 // --- Globals ---
 #define BEAT_PULSE (beat ? 1.0 : 0.0)
@@ -131,7 +139,12 @@ float vnoise(vec2 p) {
 
 vec3 chromadepth(float t) {
     t = clamp(t, 0.0, 1.0);
-    return hsl2rgb(vec3(t * 0.82, 0.92 - t * 0.08, 0.52 - t * 0.1));
+    // Oklch: perceptually uniform hue wheel — no teal clumping
+    // Hue sweeps red(0) → orange → yellow → green → blue → violet(~4.5 rad)
+    float hue = t * 4.5 + 0.4;  // 0.4 rad (red) → 4.9 rad (violet)
+    float L = 0.72 - t * 0.12;  // slightly darker toward violet
+    float C = 0.18 - t * 0.02;  // slightly less chroma toward violet
+    return oklch2rgb(vec3(L, C, hue));
 }
 
 // ============================================================================
@@ -139,7 +152,8 @@ vec3 chromadepth(float t) {
 // ============================================================================
 
 vec4 drawRow(vec2 fc, vec2 res, float zScore, float slope, float rSq,
-             float norm, float widthMod, float glowMod, float rowCenter, float idx) {
+             float norm, float widthMod, float glowMod, float hueMod,
+             float rowCenter, float idx) {
     float pixY = fc.y / res.y;
     float halfH = ROW_H * 0.5;
 
@@ -154,10 +168,13 @@ vec4 drawRow(vec2 fc, vec2 res, float zScore, float slope, float rSq,
     // Stipple seed unique per row and pixel
     float stip = hash21(fc + idx * 137.0);
 
-    // --- Row color (chromadepth, shifted by slope direction) ---
+    // --- Row color (chromadepth, shifted by slope + audio-driven hue) ---
     float depth = idx / NUM_ROWS;
     float sShift = clamp(-slope * 8.0, -0.12, 0.12) * rSq;
-    vec3 rc = chromadepth(clamp(depth + sShift, 0.0, 1.0));
+    // Each row's hue nudged by a unique audio feature (±0.08 range)
+    float hShift = (hueMod - 0.5) * 0.16;
+    float depthFinal = clamp(depth + sShift + hShift, 0.0, 1.0);
+    vec3 rc = chromadepth(depthFinal);
 
     // --- Soft row boundary (gradient fade instead of hard line) ---
     float edgeDist = (0.5 - abs(localY)) * ROW_H * res.y;
@@ -193,8 +210,8 @@ vec4 drawRow(vec2 fc, vec2 res, float zScore, float slope, float rSq,
         float slopeStip = step(1.0 - slopeDensity, stip);
         float sa = slopeStip * 0.2;
         vec3 sc = (sv > 0.0)
-            ? chromadepth(max(depth - 0.12, 0.0))
-            : chromadepth(min(depth + 0.12, 1.0));
+            ? chromadepth(max(depthFinal - 0.12, 0.0))
+            : chromadepth(min(depthFinal + 0.12, 1.0));
         col += sc * sa;
         a = max(a, sa);
     }
@@ -233,7 +250,7 @@ vec4 drawRow(vec2 fc, vec2 res, float zScore, float slope, float rSq,
 
     // Glow color: shifts toward white when sustained, with slight hue variation per particle
     float hueJitter = (stip - 0.5) * 0.06;
-    vec3 glowColor = chromadepth(clamp(depth + sShift + hueJitter, 0.0, 1.0));
+    vec3 glowColor = chromadepth(clamp(depthFinal + hueJitter, 0.0, 1.0));
     glowColor = mix(glowColor, vec3(1.0), glowMod * 0.3);
 
     // Core line color
@@ -269,12 +286,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         // Trail decay
         prev.rgb *= 0.9985;
 
-        // Hue aging: as pixels scroll left, shift hue slightly toward cool
-        // This creates a warm→cool time gradient across the screen
-        vec3 prevHSL = rgb2hsl(prev.rgb);
-        prevHSL.x = fract(prevHSL.x + 0.0006); // tiny hue drift per frame
-        prevHSL.y *= 0.9997;                     // very slowly desaturate
-        prev.rgb = hsl2rgb(prevHSL);
+        // Hue aging in oklch: perceptually uniform drift toward cool
+        vec3 prevLCH = rgb2oklch(max(prev.rgb, 0.001));
+        prevLCH.z += 0.003;    // tiny hue drift per frame (perceptually even)
+        prevLCH.y *= 0.9997;   // very slowly desaturate
+        prev.rgb = oklch2rgb(prevLCH);
 
         prev.rgb *= 1.0 + BEAT_PULSE * 0.004;
 
@@ -290,28 +306,28 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec4 r;
 
-    r = drawRow(fragCoord, res, F0_Z, F0_S, F0_R, F0_N, F0_W, F0_G, ROW_Y(0.0), 0.0);
+    r = drawRow(fragCoord, res, F0_Z, F0_S, F0_R, F0_N, F0_W, F0_G, F0_H, ROW_Y(0.0), 0.0);
     fragColor.rgb = mix(fragColor.rgb, r.rgb, r.a);
 
-    r = drawRow(fragCoord, res, F1_Z, F1_S, F1_R, F1_N, F1_W, F1_G, ROW_Y(1.0), 1.0);
+    r = drawRow(fragCoord, res, F1_Z, F1_S, F1_R, F1_N, F1_W, F1_G, F1_H, ROW_Y(1.0), 1.0);
     fragColor.rgb = mix(fragColor.rgb, r.rgb, r.a);
 
-    r = drawRow(fragCoord, res, F2_Z, F2_S, F2_R, F2_N, F2_W, F2_G, ROW_Y(2.0), 2.0);
+    r = drawRow(fragCoord, res, F2_Z, F2_S, F2_R, F2_N, F2_W, F2_G, F2_H, ROW_Y(2.0), 2.0);
     fragColor.rgb = mix(fragColor.rgb, r.rgb, r.a);
 
-    r = drawRow(fragCoord, res, F3_Z, F3_S, F3_R, F3_N, F3_W, F3_G, ROW_Y(3.0), 3.0);
+    r = drawRow(fragCoord, res, F3_Z, F3_S, F3_R, F3_N, F3_W, F3_G, F3_H, ROW_Y(3.0), 3.0);
     fragColor.rgb = mix(fragColor.rgb, r.rgb, r.a);
 
-    r = drawRow(fragCoord, res, F4_Z, F4_S, F4_R, F4_N, F4_W, F4_G, ROW_Y(4.0), 4.0);
+    r = drawRow(fragCoord, res, F4_Z, F4_S, F4_R, F4_N, F4_W, F4_G, F4_H, ROW_Y(4.0), 4.0);
     fragColor.rgb = mix(fragColor.rgb, r.rgb, r.a);
 
-    r = drawRow(fragCoord, res, F5_Z, F5_S, F5_R, F5_N, F5_W, F5_G, ROW_Y(5.0), 5.0);
+    r = drawRow(fragCoord, res, F5_Z, F5_S, F5_R, F5_N, F5_W, F5_G, F5_H, ROW_Y(5.0), 5.0);
     fragColor.rgb = mix(fragColor.rgb, r.rgb, r.a);
 
-    r = drawRow(fragCoord, res, F6_Z, F6_S, F6_R, F6_N, F6_W, F6_G, ROW_Y(6.0), 6.0);
+    r = drawRow(fragCoord, res, F6_Z, F6_S, F6_R, F6_N, F6_W, F6_G, F6_H, ROW_Y(6.0), 6.0);
     fragColor.rgb = mix(fragColor.rgb, r.rgb, r.a);
 
-    r = drawRow(fragCoord, res, F7_Z, F7_S, F7_R, F7_N, F7_W, F7_G, ROW_Y(7.0), 7.0);
+    r = drawRow(fragCoord, res, F7_Z, F7_S, F7_R, F7_N, F7_W, F7_G, F7_H, ROW_Y(7.0), 7.0);
     fragColor.rgb = mix(fragColor.rgb, r.rgb, r.a);
 
     // --- GLOBAL STORY DETECTION ---

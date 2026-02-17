@@ -9,7 +9,8 @@ This guide explains how to create music-reactive WebGL visualizations for the Pa
 3. [Available Uniforms](#available-uniforms)
 4. [Utility Functions](#utility-functions)
 5. [Audio Feature Deep Dive](#audio-feature-deep-dive)
-6. [Design Patterns](#design-patterns)
+6. [Choosing Unique Features](unique-feature-guide.md) — how to pick independent features for multi-element shaders
+7. [Design Patterns](#design-patterns)
 7. [Common Techniques](#common-techniques)
 8. [Testing Your Shader](#testing-your-shader)
 9. [Common Pitfalls](#common-pitfalls)
@@ -269,6 +270,8 @@ float animateEaseInOutElastic(float t)
 - `energy` + `bass` (both increase with loud low frequencies)
 - `spectralCentroid` + `pitchClass` (both relate to pitch)
 - `spectralSpread` + `spectralEntropy` (wider = more complex)
+
+> For a deeper guide on choosing unique features, energy decorrelation, hidden correlations, and a proven 8-feature set, see **[Choosing Unique Features](unique-feature-guide.md)**.
 
 ### Feature Domains
 
