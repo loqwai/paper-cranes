@@ -35,6 +35,14 @@
 #define BLUR_AMOUNT (2.0 + spectralCrestNormalized * 2.0)
 // #define BLUR_AMOUNT 3.0
 
+// Julia distortion / rim — features not used elsewhere
+#define JULIA_DISTORT (0.005 + spectralFluxNormalized * 0.015)
+// #define JULIA_DISTORT 0.01
+#define SPIRAL_DRIFT (0.002 + midsNormalized * 0.004)
+// #define SPIRAL_DRIFT 0.004
+#define RIM_INTENSITY (0.08 + trebleNormalized * 0.25)
+// #define RIM_INTENSITY 0.2
+
 #define BUILD_DROP (energySlope * energyRSquared * 8.0)
 #define IS_DROPPING clamp(-BUILD_DROP, 0.0, 1.0)
 
@@ -90,15 +98,15 @@ void mainImage(out vec4 fragColor, vec2 fragCoord) {
     // Stable audio features (median/slope) control the depth separation.
     // ========================================================================
 
-    // Julia c — evolves independently through interesting region near Mandelbrot boundary
-    // Time orbits on their own incommensurate frequencies (never repeats)
-    float jt1 = time * 0.0071 * PHI;
-    float jt2 = time * 0.0053 * SQRT2;
-    float jt3 = time * 0.0037 * SQRT3;
-    // Base orbit traces a lissajous near the main cardioid/bulb boundary
+    // Julia c — evolves independently, snaking through interesting regions
+    // Faster frequencies + higher harmonics = sinuous, snake-like path
+    float jt1 = time * 0.013 * PHI;
+    float jt2 = time * 0.011 * SQRT2;
+    float jt3 = time * 0.0079 * SQRT3;
+    // Lissajous with 3rd-harmonic "kinks" for snake quality
     vec2 jc = vec2(
-        -0.75 + sin(jt1) * 0.18 + sin(jt2 * 1.3) * 0.07,
-         0.10 + cos(jt2) * 0.25 + cos(jt3 * 0.9) * 0.08
+        -0.75 + sin(jt1) * 0.20 + sin(jt2 * 1.3) * 0.09 + sin(jt1 * 2.7 + jt3) * 0.04,
+         0.10 + cos(jt2) * 0.28 + cos(jt3 * 0.9) * 0.10 + cos(jt2 * 2.3 + jt1) * 0.05
     );
     // Stable audio nudges c into different Julia families
     jc.x += spectralRoughnessMedian * 0.12 - 0.06;  // dissonance explores real axis
@@ -118,16 +126,32 @@ void mainImage(out vec4 fragColor, vec2 fragCoord) {
     // Median-driven offset for audio depth shift
     juliaC += vec2(spectralSpreadMedian * 0.05 - 0.025, spectralFluxMedian * 0.04 - 0.02);
 
+    // Tentacle independence: spatially vary jc so each arm evolves on its own
+    // Angle from Julia origin determines which tentacle you're in
+    float armAngle = atan(juliaC.y, juliaC.x);
+    float armDist = length(juliaC);
+    // 3-fold and 5-fold angular harmonics — like real tentacle symmetries
+    // Each harmonic evolves at its own speed so arms diverge and reconverge
+    vec2 tentacleWave = vec2(
+        sin(armAngle * 3.0 + jt1 * 1.5) + sin(armAngle * 5.0 - jt2 * 1.2),
+        cos(armAngle * 3.0 - jt2 * 1.5) + cos(armAngle * 5.0 + jt3 * 1.2)
+    ) * 0.02 * smoothstep(0.0, 0.3, armDist);
+    // Per-tentacle jc — center stays coherent, arms each get their own c
+    vec2 jcLocal = jc + tentacleWave;
+
     // 8 Julia iterations — evolving bailout shapes the warp character
     vec2 jz = juliaC;
     for (int i = 0; i < 8; i++) {
-        jz = vec2(jz.x * jz.x - jz.y * jz.y, 2.0 * jz.x * jz.y) + jc;
+        jz = vec2(jz.x * jz.x - jz.y * jz.y, 2.0 * jz.x * jz.y) + jcLocal;
         if (dot(jz, jz) > jBailout) break;
     }
 
     // Strong warp — 12-18% — enough to fully break banding everywhere
     float warpStrength = 0.12 + energyRSquared * 0.06;
     C += (jz - juliaC) * warpStrength;
+
+    // Julia magnitude — used for rim lighting and dark-area distortion
+    float jMag = length(jz);
 
     // ========================================================================
     // DOM MANDY FRACTAL — 150 iterations with per-step micro-perturbation
@@ -169,11 +193,21 @@ void mainImage(out vec4 fragColor, vec2 fragCoord) {
     ));
 
     // ========================================================================
-    // REFRACTION — fractal gradient bends the blurred previous frame
+    // REFRACTION — fractal + Julia gradients bend the blurred previous frame
     // ========================================================================
 
     float here = dot(base, vec3(0.3, 0.6, 0.1));
     vec2 n = vec2(dFdx(here), dFdy(here)) * REFRACT_STRENGTH;
+
+    // Julia gradient provides distortion in dark areas where fractal is flat
+    // This is what keeps dark regions alive and moving
+    float dark = 1.0 - here;
+    vec2 jGrad = vec2(dFdx(jMag), dFdy(jMag));
+    n += jGrad * JULIA_DISTORT * dark;
+
+    // Slow spiral drift in dark areas — trails always flow, never stagnate
+    vec2 fromCenter = UV - 0.5;
+    n += vec2(-fromCenter.y, fromCenter.x) * SPIRAL_DRIFT * dark;
 
     // Blur: dark areas = dreamy blur, bright areas = sharp
     float focus = mix(BLUR_AMOUNT, 0.5, here);
@@ -201,6 +235,16 @@ void mainImage(out vec4 fragColor, vec2 fragCoord) {
 
     float fractal_presence = smoothstep(0.1, 0.6, here);
     vec3 col = mix(prev, fractal_col, fractal_presence);
+
+    // Water-like rim lighting from Julia edges
+    // The Julia gradient catches light like water surface tension
+    float juliaRim = length(jGrad);
+    juliaRim = smoothstep(0.0, 2.5, juliaRim);
+    juliaRim = pow(juliaRim, 2.5); // sharpen to thin caustic lines
+    // Rim color — cool-white with slight warmth, like light through water
+    vec3 rimLch = vec3(0.85, 0.04, jMag * 0.5 + time * 0.02 * PHI);
+    vec3 rimCol = clamp(oklch2rgb(rimLch), 0.0, 1.0);
+    col += rimCol * juliaRim * RIM_INTENSITY;
 
     // Drop contrast + beat
     col = mix(col, pow(max(col, vec3(0.0)), vec3(1.3)), IS_DROPPING * 0.3);
