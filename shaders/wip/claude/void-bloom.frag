@@ -1,252 +1,222 @@
 // @fullscreen: true
 // @tags: fractal, nebula, space, ambient
-// Void Bloom — Fractal-driven feedback nebula
-// The fractal isn't drawn directly — it drives distortion and color evolution
-// of the previous frame, like beat-trip but with fractal structure.
-// Designed for powerful GPUs (150 iterations).
+// Void Bloom — sexy/2 fractal with Julia parallax warp, continuous zoom,
+// and dreamy blurred feedback in dark regions.
 
 #define PI 3.14159265
-#define TAU 6.28318530
 #define PHI 1.61803398
 #define SQRT2 1.41421356
 #define SQRT3 1.73205080
 
 // ============================================================================
-// AUDIO-REACTIVE PARAMETERS (8 independent features)
+// AUDIO — mix of reactive (zScore/normalized) and stable (median/slope)
 // ============================================================================
 
-// 1. Bass (decorrelated) → Fractal power breathing
-#define BASS_DEC (bassZScore - energyZScore)
-#define POWER_MOD (BASS_DEC * 0.15)
-// #define POWER_MOD 0.0
+// Reactive: shape responds to the moment
+#define A_MOD (bassNormalized * 0.5)
+// #define A_MOD 0.25
+#define B_MOD (spectralRolloffNormalized * 0.04)
+// #define B_MOD 0.02
 
-// 2. Mids (decorrelated) → Scale breathing
-#define MIDS_DEC (midsZScore - energyZScore * 0.5)
-#define SCALE_MOD (MIDS_DEC * 0.02)
-// #define SCALE_MOD 0.0
+// Stable: parallax + zoom driven by musical character, not transients
+#define PARALLAX_AUDIO (bassMedian * 0.06 + spectralCentroidMedian * 0.04)
+#define TREND_PARALLAX (energySlope * energyRSquared * 0.4)
+#define ZOOM_AUDIO (energyMedian * 0.1)
 
-// 3. Spectral Rolloff → Fractal offset shift
-#define OFFSET_MOD (spectralRolloffNormalized * 0.03)
-// #define OFFSET_MOD 0.015
+// Reactive color
+#define HUE_ROT (pitchClassNormalized)
+// #define HUE_ROT 0.0
+#define COLOR_TEMP (spectralEntropyNormalized)
+// #define COLOR_TEMP 0.5
 
-// 4. Spectral Roughness → Distortion intensity
-#define DISTORT_MOD (spectralRoughnessNormalized * 0.008)
-// #define DISTORT_MOD 0.004
+// Reactive feedback
+#define REFRACT_STRENGTH (0.02 + spectralRoughnessNormalized * 0.02)
+// #define REFRACT_STRENGTH 0.03
+#define BLUR_AMOUNT (2.0 + spectralCrestNormalized * 2.0)
+// #define BLUR_AMOUNT 3.0
 
-// 5. Spectral Crest → Color injection brightness
-#define INJECT_BRIGHT (0.03 + spectralCrestNormalized * 0.04)
-// #define INJECT_BRIGHT 0.05
-
-// 6. Pitch Class → Hue rotation speed
-#define HUE_ROT (pitchClassNormalized * 0.02)
-// #define HUE_ROT 0.01
-
-// 7. Spectral Entropy → Color warmth (order=warm, chaos=cool)
-#define WARMTH (1.0 - spectralEntropyNormalized)
-// #define WARMTH 0.5
-
-// 8. Spectral Flux (decorrelated) → Feedback decay rate
-#define FLUX_DEC (spectralFluxZScore - energyZScore * 0.5)
-#define DECAY_RATE (0.006 + clamp(FLUX_DEC, -0.3, 0.5) * 0.004)
-// #define DECAY_RATE 0.008
-
-// Secondary
 #define BUILD_DROP (energySlope * energyRSquared * 8.0)
 #define IS_DROPPING clamp(-BUILD_DROP, 0.0, 1.0)
 
 // ============================================================================
-// 3D ORBIT — camera orbits through parameter space
+// TIME ORBITS
 // ============================================================================
 
-#define ORBIT_A (time * 0.0047 * PHI)
-#define ORBIT_B (time * 0.0031 * SQRT2)
-#define ORBIT_C (time * 0.0023 * SQRT3)
+#define OA (time * 0.0047 * PHI)
+#define OB (time * 0.0031 * SQRT2)
+#define OC (time * 0.0023 * SQRT3)
 
-#define ORB_X (sin(ORBIT_A) * cos(ORBIT_B) * 0.5 + sin(ORBIT_C * 0.7) * 0.2)
-#define ORB_Y (cos(ORBIT_A) * sin(ORBIT_C) * 0.4 + cos(ORBIT_B * 1.3) * 0.2)
-#define ORB_Z (sin(ORBIT_B) * cos(ORBIT_C) * 0.3)
-
-#define CENTER_X (ORB_X)
-#define CENTER_Y (ORB_Y)
-#define VIEW_ROT (ORBIT_A * 0.4 + ORBIT_B * 0.3)
-#define ZOOM_BASE (0.45 + ORB_Z * 0.15)
-#define POWER_BASE (2.5 + sin(ORBIT_C * 1.1) * 0.4)
-#define OFFSET_BASE (0.12 + sin(ORBIT_A * 0.8) * 0.02)
+// Fractal params — ranges that keep the fractal interesting
+#define A_BASE (3.0 + sin(OC * 1.1) * 1.5)
+#define B_BASE (0.12 + sin(OA * 0.8) * 0.03)
+#define D_BASE (-0.55 + sin(OB * 0.9) * 0.15)
 
 // ============================================================================
 // MAIN
 // ============================================================================
 
 void mainImage(out vec4 fragColor, vec2 fragCoord) {
-    vec2 uv = fragCoord / iResolution.xy;
-
-    // Symmetric centered coordinates
-    vec2 C = (2.0 * fragCoord - iResolution.xy) / iResolution.y;
-
-    // 3D orbit rotation
-    float rot = VIEW_ROT;
-    float cr = cos(rot), sr = sin(rot);
-    C = mat2(cr, -sr, sr, cr) * C;
-
-    // Drift through fractal space
-    C += vec2(CENTER_X, CENTER_Y);
-
-    // Scale
-    float zoom = ZOOM_BASE + SCALE_MOD;
-    vec2 V = C * zoom;
-
-    // Fractal parameters
-    float A = POWER_BASE + POWER_MOD;
-    float B = OFFSET_BASE + OFFSET_MOD;
+    vec2 UV = fragCoord / iResolution.xy;
+    vec2 res = iResolution.xy;
 
     // ========================================================================
-    // DOM MANDY COMPLEX POWER FRACTAL — 150 iterations
-    // Computed for structure data, NOT drawn directly
+    // NAVIGATION — continuous zoom + drift + rotation
     // ========================================================================
 
-    float ox = 9.0, oy = 9.0, oz = 9.0;
+    // Sexy/2 coordinate base
+    vec2 C = 0.6 * (res - fragCoord - fragCoord).yx / res.y;
+    C.x += 0.77;
+
+    // Drift through space
+    C.x += cos(time * 0.03 * PHI) * 0.15 + sin(time * 0.017 * SQRT3) * 0.08;
+    C.y += sin(time * 0.023 * SQRT2) * 0.12 + cos(time * 0.013) * 0.06;
+
+    // CONTINUOUS ZOOM — always moving inward, breathing on top
+    // The base zoom trends inward over time, with slow oscillation
+    float zoomTime = time * 0.003; // Continuous inward progression
+    float zoomBreath = sin(time * 0.008 * PHI) * 0.25 + sin(time * 0.005 * SQRT2) * 0.15;
+    float zoom = exp(-fract(zoomTime) * 0.5) * (1.0 + zoomBreath) + ZOOM_AUDIO;
+    C *= zoom;
+
+    // Gentle rotation
+    float vr = time * 0.004 * PHI;
+    float cv = cos(vr), sv = sin(vr);
+    vec2 pivot = vec2(0.77 * zoom, 0.0);
+    C = pivot + mat2(cv, -sv, sv, cv) * (C - pivot);
+
+    // ========================================================================
+    // JULIA PARALLAX WARP — foreground layer at different depth
+    // Strong enough to break all banding. Drifts independently for parallax.
+    // Stable audio features (median/slope) control the depth separation.
+    // ========================================================================
+
+    // Julia c — evolves independently through interesting region near Mandelbrot boundary
+    // Time orbits on their own incommensurate frequencies (never repeats)
+    float jt1 = time * 0.0071 * PHI;
+    float jt2 = time * 0.0053 * SQRT2;
+    float jt3 = time * 0.0037 * SQRT3;
+    // Base orbit traces a lissajous near the main cardioid/bulb boundary
+    vec2 jc = vec2(
+        -0.75 + sin(jt1) * 0.18 + sin(jt2 * 1.3) * 0.07,
+         0.10 + cos(jt2) * 0.25 + cos(jt3 * 0.9) * 0.08
+    );
+    // Stable audio nudges c into different Julia families
+    jc.x += spectralRoughnessMedian * 0.12 - 0.06;  // dissonance explores real axis
+    jc.y += spectralKurtosisMedian * 0.10 - 0.05;    // peakedness explores imaginary axis
+    // Slow trend-driven wander — confident energy trends push c further out
+    jc += vec2(cos(jt3), sin(jt1)) * TREND_PARALLAX * 0.3;
+
+    // Julia bailout evolves — tighter = more detail, looser = smoother
+    float jBailout = 6.0 + sin(jt3 * 1.7) * 2.0 + spectralEntropyMedian * 2.0;
+
+    // Parallax: Julia layer drifts at 1.8x rate — stable features set separation
+    float parallax = 0.1 + PARALLAX_AUDIO + TREND_PARALLAX;
+    vec2 juliaC = C + vec2(
+        cos(time * 0.03 * PHI * 1.8) * parallax,
+        sin(time * 0.023 * SQRT2 * 1.8) * parallax * 0.8
+    );
+    // Median-driven offset for audio depth shift
+    juliaC += vec2(spectralSpreadMedian * 0.05 - 0.025, spectralFluxMedian * 0.04 - 0.02);
+
+    // 8 Julia iterations — evolving bailout shapes the warp character
+    vec2 jz = juliaC;
+    for (int i = 0; i < 8; i++) {
+        jz = vec2(jz.x * jz.x - jz.y * jz.y, 2.0 * jz.x * jz.y) + jc;
+        if (dot(jz, jz) > jBailout) break;
+    }
+
+    // Strong warp — 12-18% — enough to fully break banding everywhere
+    float warpStrength = 0.12 + energyRSquared * 0.06;
+    C += (jz - juliaC) * warpStrength;
+
+    // ========================================================================
+    // DOM MANDY FRACTAL — 150 iterations with per-step micro-perturbation
+    // ========================================================================
+
+    float D = D_BASE;
+    vec2 V = C * D;
+    float A = A_BASE + A_MOD;
+    float B = B_BASE + B_MOD;
+
+    float v, ox, oy,
+          z = oy = ox = 9.0;
     vec2 Zt = V;
+
+    // Micro-perturbation seed from Julia — breaks residual banding inside the loop
+    vec2 microSeed = jz * 0.001;
 
     for (int k = 0; k < 150; k++) {
         float a = atan(V.y, V.x);
         float d = dot(V, V) * A;
-        float ld = log(max(d, 1e-8));
-        float c = dot(V, vec2(a, ld * 0.5));
-        V = exp(-a * V.y) * pow(max(d, 1e-8), V.x * 0.5) * vec2(cos(c), sin(c));
+        float c = dot(V, vec2(a, log(max(d, 1e-8)) / 2.0));
+        V = exp(-a * V.y) * pow(max(d, 1e-8), V.x / 2.0) * vec2(cos(c), sin(c));
         V = vec2(V.x * V.x - V.y * V.y, dot(V, V.yx));
         V -= C * B;
 
+        // Tiny per-step Julia perturbation — breaks banding at its source
+        V += microSeed * float(k % 7 == 0 ? 1 : 0);
+
         ox = min(ox, abs(V.x));
         oy = min(oy, abs(V.y));
-        float vv = dot(V, V);
-        if (vv < oz) { oz = vv; Zt = V; }
+        z > (v = dot(V, V)) ? z = v, Zt = V : Zt;
     }
 
-    // Fractal structure values — used to DRIVE feedback, not drawn
-    float z = 1.0 - smoothstep(1.0, -6.0, log(max(oy, 1e-8)))
-                   * smoothstep(1.0, -6.0, log(max(ox, 1e-8)));
-    float angle = atan(Zt.y, Zt.x);
+    // Sexy/2 coloring
+    z = 1.0 - smoothstep(1.0, -6.0, log(max(oy, 1e-8))) * smoothstep(1.0, -6.0, log(max(ox, 1e-8)));
+    vec3 base = sqrt(max(
+        z + (z - z * z * z) * cos(atan(Zt.y, Zt.x) - vec3(0.0, 2.1, 4.2)),
+        vec3(0.0)
+    ));
 
     // ========================================================================
-    // FEEDBACK-DRIVEN VISUALS (beat-trip / carpet style)
-    // The fractal modulates how the previous frame is sampled and recolored.
-    // Camera panning: orbit velocity offsets feedback UV so trails flow
-    // across the screen like we're flying through the nebula.
+    // REFRACTION — fractal gradient bends the blurred previous frame
     // ========================================================================
 
-    // Orbit velocity — derivative of orbit position creates camera pan
-    // cos/sin derivatives of the orbit, scaled to UV space
-    float dt = 0.016; // ~1 frame at 60fps
-    float panScale = 0.3; // How much orbit motion translates to screen pan
-    vec2 orbitVel = vec2(
-        cos(ORBIT_A) * cos(ORBIT_B) * 0.5 * 0.0047 * PHI
-      - sin(ORBIT_A) * sin(ORBIT_B) * 0.5 * 0.0031 * SQRT2
-      + cos(ORBIT_C * 0.7) * 0.2 * 0.0023 * SQRT3 * 0.7,
-        -sin(ORBIT_A) * sin(ORBIT_C) * 0.4 * 0.0047 * PHI
-      + cos(ORBIT_A) * cos(ORBIT_C) * 0.4 * 0.0023 * SQRT3
-      - sin(ORBIT_B * 1.3) * 0.2 * 0.0031 * SQRT2 * 1.3
-    );
-    // Apply view rotation to velocity so pan direction matches visual rotation
-    vec2 panVel = mat2(cr, -sr, sr, cr) * orbitVel * panScale;
+    float here = dot(base, vec3(0.3, 0.6, 0.1));
+    vec2 n = vec2(dFdx(here), dFdy(here)) * REFRACT_STRENGTH;
 
-    // Slow rotation like carpet: rotate feedback UV over time
-    vec2 ctr = vec2(0.5);
-    vec2 fbOff = uv - ctr;
-    float fbRot = 0.001; // Slow spin of the feedback field
-    float fbc = cos(fbRot), fbs = sin(fbRot);
-    vec2 baseUv = ctr + mat2(fbc, -fbs, fbs, fbc) * fbOff;
+    // Blur: dark areas = dreamy blur, bright areas = sharp
+    float focus = mix(BLUR_AMOUNT, 0.5, here);
+    vec3 prev = textureLod(prevFrame, UV + n, focus).rgb;
 
-    // Add camera pan + fractal-driven distortion
-    float distort = 0.003 + DISTORT_MOD;
-    float waveX = sin(uv.y * 15.0 + time * 0.5 + z * 8.0) * distort;
-    float waveY = cos(uv.x * 15.0 + time * 0.7 + z * 8.0) * distort;
-
-    // Fractal structure adds directional pull
-    waveX += (z - 0.5) * 0.004;
-    waveY += (angle / PI) * 0.002;
-
-    if (beat) {
-        waveX *= 2.5;
-        waveY *= 2.5;
-    }
-
-    // Camera pan + rotation + fractal distortion combined
-    vec2 distortedUv = baseUv + panVel + vec2(waveX, waveY);
-    // Clamp to edges instead of wrapping (fract creates hard seams)
-    distortedUv = clamp(distortedUv, 0.001, 0.999);
-
-    // Sample previous frame
-    vec4 prev = getLastFrameColor(distortedUv);
-
-    // Diffusion kernel — airy softness
-    float sp = 0.001;
-    vec3 prevBlur = prev.rgb * 0.5
-                  + getLastFrameColor(distortedUv + vec2(sp, 0.0)).rgb * 0.125
-                  + getLastFrameColor(distortedUv - vec2(sp, 0.0)).rgb * 0.125
-                  + getLastFrameColor(distortedUv + vec2(0.0, sp)).rgb * 0.125
-                  + getLastFrameColor(distortedUv - vec2(0.0, sp)).rgb * 0.125;
+    // Age trails: hue drift in oklch
+    vec3 plch = rgb2oklch(max(prev, vec3(0.001)));
+    plch.z += 0.004;
+    plch.x *= 0.995;
+    prev = clamp(oklch2rgb(plch), 0.0, 1.0);
 
     // ========================================================================
-    // COLOR EVOLUTION in oklch — hue rotates, lightness breathes
+    // PASTEL OKLCH TINT
     // ========================================================================
 
-    vec3 lch = rgb2oklch(max(prevBlur, vec3(0.001)));
-
-    // Hue rotation — fractal angle + time + pitchClass
-    lch.z += HUE_ROT + angle * 0.003 + time * 0.005;
-
-    // Warmth shifts the hue bias
-    lch.z += mix(-0.003, 0.003, WARMTH);
-
-    // Gentle lightness decay — prevents accumulation to white
-    lch.x -= DECAY_RATE;
-
-    // Chroma slowly decays — keeps pastels from oversaturating
-    lch.y *= 0.995;
-
-    // Drop: boost contrast by pushing lights lighter, darks darker
-    lch.x = mix(lch.x, lch.x * (0.7 + lch.x * 0.6), IS_DROPPING * 0.3);
-
-    vec3 col = clamp(oklch2rgb(lch), 0.0, 1.0);
+    vec3 lch = rgb2oklch(max(base, vec3(0.001)));
+    lch.z += HUE_ROT * 0.5 + time * 0.01 * PHI + mix(-0.3, 0.3, COLOR_TEMP);
+    lch.x = mix(lch.x, 0.7, 0.15);
+    lch.y = mix(lch.y, 0.08, 0.15);
+    vec3 fractal_col = clamp(oklch2rgb(lch), 0.0, 1.0);
 
     // ========================================================================
-    // COLOR INJECTION — fractal seeds new color into the feedback loop
-    // Without this, everything would fade to black
+    // BLEND — fractal over dreamy refracted feedback
     // ========================================================================
 
-    // Injection color from fractal structure — the "seed"
-    float seed_hue = angle + time * 0.03 * PHI + mix(-0.5, 0.5, WARMTH);
-    float seed_L = 0.6 + z * 0.2;
-    float seed_C = 0.06 + (1.0 - z) * 0.06;
-    vec3 seed_col = clamp(oklch2rgb(vec3(seed_L, seed_C, seed_hue)), 0.0, 1.0);
+    float fractal_presence = smoothstep(0.1, 0.6, here);
+    vec3 col = mix(prev, fractal_col, fractal_presence);
 
-    // Inject where the fractal has structure AND previous frame is dark
-    // This seeds new patterns without overwriting existing trails
-    float prev_luma = dot(col, vec3(0.2, 0.7, 0.1));
-    float inject = INJECT_BRIGHT * (1.0 - prev_luma);
-
-    // Fractal edges get more injection — seeds the nebula filaments
-    float edge = abs(dFdx(z)) + abs(dFdy(z));
-    inject += smoothstep(0.0, 0.3, edge * 10.0) * 0.04;
-
-    // Focal points get bright injection
-    float focal = exp(-oz * 2.0);
-    inject += focal * 0.06;
-
-    col = mix(col, seed_col, clamp(inject, 0.0, 0.15));
-
-    // Beat flash
+    // Drop contrast + beat
+    col = mix(col, pow(max(col, vec3(0.0)), vec3(1.3)), IS_DROPPING * 0.3);
     if (beat) col *= 1.04;
 
     // ========================================================================
     // FINISHING
     // ========================================================================
 
-    // Gentle vignette
-    float vign = 1.0 - pow(length(uv - 0.5) * 0.85, 2.2);
-    col *= max(vign, 0.005);
+    vec3 hsl = rgb2hsl(col);
+    hsl.y = clamp(hsl.y, 0.15, 0.85);
+    hsl.z = clamp(hsl.z, 0.15, 0.75);
+    col = hsl2rgb(hsl);
 
-    col = clamp(col, 0.0, 1.0);
+    float vign = 1.0 - pow(length(UV - 0.5) * 0.85, 2.2);
+    col *= max(vign, 0.005);
 
     fragColor = vec4(col, 1.0);
 }
