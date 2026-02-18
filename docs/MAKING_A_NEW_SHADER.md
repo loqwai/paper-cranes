@@ -130,24 +130,28 @@ These are auto-injected and available in all shaders:
 
 ### Color Conversion
 
-```glsl
-// HSL
-vec3 hsl2rgb(vec3 hsl)           // HSL to RGB
-vec3 rgb2hsl(vec3 rgb)           // RGB to HSL
-vec3 hslmix(vec3 c1, vec3 c2, float t)  // Mix colors in HSL space
+> **Prefer Oklch/Oklab over HSL.** Oklch produces perceptually uniform gradients — no unexpected dark bands between hues, no brightness shifts when rotating hue. HSL is available for compatibility but Oklch is the better default for new shaders.
 
-// Oklab — perceptual color space, better gradients than HSL or RGB
+```glsl
+// Oklch — polar perceptual color space (RECOMMENDED)
+// vec3(L, C, h) where L=lightness(0-1), C=chroma(0-~0.37), h=hue(radians)
+vec3 rgb2oklch(vec3 c)           // RGB to Oklch
+vec3 oklch2rgb(vec3 lch)         // Oklch to RGB
+vec3 oklchmix(vec3 c1, vec3 c2, float t)  // Mix with shortest-path hue interpolation
+
+// Oklab — cartesian perceptual color space
 vec3 rgb2oklab(vec3 c)           // RGB to Oklab (L, a, b)
 vec3 oklab2rgb(vec3 lab)         // Oklab to RGB
 vec3 oklabmix(vec3 c1, vec3 c2, float t)  // Mix in Oklab space
 
-// Oklch — polar form of Oklab, best for hue rotation
-// vec3(L, C, h) where L=lightness(0-1), C=chroma(0-~0.37), h=hue(radians)
-vec3 rgb2oklch(vec3 c)           // RGB to Oklch
-vec3 oklch2rgb(vec3 lch)         // Oklch to RGB
+// Conversions between Oklab and Oklch
 vec3 oklab2oklch(vec3 lab)       // Oklab to Oklch
 vec3 oklch2oklab(vec3 lch)       // Oklch to Oklab
-vec3 oklchmix(vec3 c1, vec3 c2, float t)  // Mix with shortest-path hue interpolation
+
+// HSL (legacy — prefer Oklch for new shaders)
+vec3 hsl2rgb(vec3 hsl)           // HSL to RGB
+vec3 rgb2hsl(vec3 rgb)           // RGB to HSL
+vec3 hslmix(vec3 c1, vec3 c2, float t)  // Mix colors in HSL space
 ```
 
 All color functions have vec4 overloads that pass alpha through.
@@ -156,13 +160,16 @@ All color functions have vec4 overloads that pass alpha through.
 
 | Task | Best Space | Why |
 |------|-----------|-----|
-| Hue rotation | Oklch | Just add to `h` — perceptually uniform |
-| Color mixing/gradients | Oklch or Oklab | No unexpected dark bands like HSL |
-| Boost saturation | Oklch | Scale `C` without affecting lightness |
-| Brighten without washing out | Oklch | Change `L` only |
-| Create a color from L/C/hue | Oklch | `oklch2rgb(vec3(0.7, 0.15, angle))` |
+| Hue rotation | **Oklch** | Just add to `h` — perceptually uniform |
+| Color mixing/gradients | **Oklch** or **Oklab** | No unexpected dark bands like HSL |
+| Boost saturation | **Oklch** | Scale `C` without affecting lightness |
+| Brighten without washing out | **Oklch** | Change `L` only |
+| Create a color from L/C/hue | **Oklch** | `oklch2rgb(vec3(0.7, 0.15, angle))` |
 | Quick additive glow | RGB | `col += glow` (oklch breaks with additive) |
 | Simple lerp (mask on/off) | RGB | `mix(bg, col, mask)` is fine |
+| Porting a ShaderToy shader | HSL | Match the original; convert to Oklch later if needed |
+
+**Rule of thumb:** Start with Oklch. Fall back to RGB for additive blending. Use HSL only when porting existing code that already uses it.
 
 #### Oklch Quick Reference
 ```glsl
@@ -522,14 +529,60 @@ Access your shader: `http://localhost:6969/?shader=your-shader-name`
 |-----------|-------------|---------|
 | `shader` | Shader file to load | `?shader=fractal-abyss` |
 | `noaudio` | Disable audio (use defaults) | `?shader=test&noaudio` |
+| `fullscreen` | Fullscreen mode | `?fullscreen=true` |
 | `fft_size` | FFT window size | `?fft_size=2048` |
 | `smoothing` | Audio smoothing factor | `?smoothing=0.2` |
+| Any numeric param | Becomes a float uniform | `?bassMedian=0.5` |
+
+### Simulating Audio with Query Params
+
+Any numeric query parameter automatically becomes a shader uniform, and **query params override measured audio values**. This means you can test exactly how your shader responds to different musical conditions without a microphone:
+
+```
+?shader=my-shader&noaudio=true&fullscreen=true&bassMedian=0.5&energyMedian=0.7
+```
+
+Test your shader against these profiles to catch issues like washout, dead zones, or lack of visual variety:
+
+#### Suggested Test Profiles
+
+**Silent (baseline)** — verify the shader looks good with no audio at all:
+```
+?shader=my-shader&noaudio=true&fullscreen=true
+```
+
+**Heavy bass** — deep, bassy music:
+```
+?shader=my-shader&noaudio=true&fullscreen=true&bassMedian=0.8&energyMedian=0.7&spectralCentroidMedian=0.2&spectralEntropyMedian=0.3&spectralRoughnessMedian=0.6
+```
+
+**Bright / chaotic** — busy, high-frequency content:
+```
+?shader=my-shader&noaudio=true&fullscreen=true&spectralCentroidMedian=0.8&spectralEntropyMedian=0.9&trebleSlope=0.5&trebleRSquared=0.8&energyMedian=0.5
+```
+
+**Confident energy build** — a steady crescendo:
+```
+?shader=my-shader&noaudio=true&fullscreen=true&energySlope=0.6&energyRSquared=0.9&energyMedian=0.6&bassMedian=0.5&bassSlope=0.4&bassRSquared=0.85&spectralCentroidMedian=0.5&spectralFluxZScore=1.5
+```
+
+**Energy drop** — fading out or post-drop:
+```
+?shader=my-shader&noaudio=true&fullscreen=true&energySlope=-0.5&energyRSquared=0.8&energyMedian=0.3&spectralCentroidMedian=0.6&spectralEntropyMedian=0.7
+```
+
+#### What to Look For
+
+- **Washout**: Do bright regions blow out to white? If so, reduce additive luminance terms or tighten your clamp.
+- **Dead zones**: Are there profiles where the shader looks nearly identical to silence? Your audio mapping may be too subtle.
+- **Color variety**: Does the shader look meaningfully different across profiles? If heavy bass and bright chaotic look the same, your color mapping may depend on too few features.
+- **Contrast**: Every profile should have visible dark regions. If you lose all contrast, your luminance contributions are stacking up.
 
 ### Debug Tips
 
 1. **Check browser console** for shader compilation errors
 2. **Start simple** - get basic output before adding complexity
-3. **Test without audio** first using `?noaudio`
+3. **Test with audio profiles** (above) - don't just test with `?noaudio` and call it done
 4. **Visualize individual features** to understand their behavior:
 
 ```glsl
@@ -584,11 +637,12 @@ float safeLog = log(max(value, 0.0001));
 
 **Problem:** Colors drift toward white or black over time with feedback.
 
-**Solution:** Gently pull toward target values:
+**Solution:** Gently pull toward target values (Oklch keeps lightness and chroma independent):
 ```glsl
-vec3 prevHSL = rgb2hsl(prev);
-prevHSL.y = mix(prevHSL.y, 0.6, 0.01);  // Pull saturation to 0.6
-prevHSL.z *= 0.995;  // Slight darkening to prevent white-out
+vec3 prevLch = rgb2oklch(prev);
+prevLch.y = mix(prevLch.y, 0.12, 0.01);  // Pull chroma toward vivid
+prevLch.x *= 0.995;  // Slight darkening to prevent white-out
+prev = oklch2rgb(prevLch);
 ```
 
 ### 6. Audio Features Not Varying
@@ -703,8 +757,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = (fragCoord * 2.0 - iResolution.xy) / iResolution.y;
     float t = iTime * 0.3;  // Slow time
 
-    // Your visualization here
-    vec3 color = vec3(0.0);
+    // Your visualization here — build color in Oklch for perceptual uniformity
+    float hue = t * 0.5;                        // Hue in radians
+    float chroma = 0.12 + bassNormalized * 0.05; // Saturation
+    float lightness = 0.5 + energy * 0.2;        // Brightness
+    vec3 color = oklch2rgb(vec3(lightness, chroma, hue));
 
     // Feedback for smooth evolution
     vec3 prev = getLastFrameColor(fragCoord / iResolution.xy).rgb;

@@ -20,7 +20,8 @@ const getQueryParamUniforms = (shader, otherUniforms = '') => {
     const allCode = (shader + otherUniforms).replace(/\s+/g, ' ')
 
     const uniforms = []
-    for (const [key, value] of params) {
+    for (let [key, value] of params) {
+        key = key.replace(/-/g, '_')
         if (knownParams.has(key)) continue
         if (key.startsWith('knob_')) continue  // Already handled
         if (key.includes('.')) continue  // Skip metadata params like param.min, param.max
