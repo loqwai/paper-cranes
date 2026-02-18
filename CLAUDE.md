@@ -433,9 +433,33 @@ npm run dev  # Serves on localhost:6969
 4. Test with different music styles
 
 ### Deployment
-- Auto-deploys to visuals.beadfamous.com
+- Auto-deploys to visuals.beadfamous.com via Cloudflare Pages
 - PRs to `shaders/<github-username>/` auto-merge
 - No backend required (static hosting)
+
+### Branch Preview URLs
+Every branch gets a Cloudflare Pages preview deployment at:
+```
+https://<branch-name>.paper-cranes-visuals.pages.dev/
+```
+
+For example, a branch called `webcam-background` is accessible at:
+```
+https://webcam-background.paper-cranes-visuals.pages.dev/?shader=my-shader
+```
+
+Use this to link to specific shaders: append `?shader=<path>` (without `.frag`).
+
+### PR Shader Links
+When creating a PR that adds shaders, **always include preview links** in the PR body using the branch preview URL convention. For example:
+
+```markdown
+| Shader | Link |
+|--------|------|
+| my-shader | [preview](https://<branch>.paper-cranes-visuals.pages.dev/?shader=path/to/my-shader) |
+```
+
+This lets reviewers click through and test each shader directly.
 
 ## Claude-Specific Instructions
 
