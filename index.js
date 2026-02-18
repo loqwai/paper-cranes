@@ -86,25 +86,25 @@ const setupCanvasEvents = (canvas) => {
     canvas.addEventListener('mouseleave', resetTouch);
 };
 
+const noAudio = { getFeatures: () => ({}) }
+
 const setupAudio = async () => {
     // if we have a query param that says 'noaudio=true', just return a dummy audio processor
     if (params.get('noaudio') === 'true' || params.get('embed') === 'true') {
-        return {
-            getFeatures: () => ({
-            })
-        }
+        return noAudio
     }
-    // get the default audio input
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const audioInputs = devices.filter(device => device.kind === 'audioinput');
-    const defaultAudioInput = audioInputs[0].deviceId
 
     try {
+        // get the default audio input
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const audioInputs = devices.filter(device => device.kind === 'audioinput');
+        const defaultAudioInput = audioInputs[0]?.deviceId
+
         // Get microphone access first
         await navigator.mediaDevices.getUserMedia({
             audio: {
                 ...audioConfig,
-                ...(audioInputs.length > 1 ? { deviceId: { exact: defaultAudioInput } } : {})
+                ...(audioInputs.length > 1 && defaultAudioInput ? { deviceId: { exact: defaultAudioInput } } : {})
             }
         });
         const audioContext = new AudioContext();
@@ -122,6 +122,7 @@ const setupAudio = async () => {
         return audioProcessor;
     } catch (err) {
         console.error('Audio initialization failed:', err);
+        return noAudio
     }
 };
 
