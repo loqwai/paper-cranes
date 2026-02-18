@@ -4,127 +4,133 @@
 
 // ============================================================================
 // TREND-DRIVEN PARAMETERS
-// Uses median for stable baselines, slope*rSquared for confident trend
-// evolution. The visual breathes with the music's character over time
-// rather than jittering on every transient.
+// Median = stable baseline. Slope * rSquared = confident trend direction.
+// The visual evolves with the music's character, not its transients.
 // ============================================================================
 
-// --- Shape & Scale (bass domain) ---
-#define BASE_SCALE (1.8 + bassMedian * 0.6)
-#define SCALE_TREND (bassSlope * bassRSquared * 0.4)
+// --- Shape (bass domain) ---
+#define WARP_STRENGTH (0.8 + bassMedian * 1.2 + bassSlope * bassRSquared * 0.6)
 
-// --- Color hue (spectral centroid - where the "center" of the sound is) ---
-#define HUE_BASE (spectralCentroidMedian * 0.8)
-#define HUE_DRIFT (spectralCentroidSlope * spectralCentroidRSquared * 0.3)
+// --- Color (spectral centroid - brightness center of the sound) ---
+#define HUE_BASE (0.55 + spectralCentroidMedian * 0.7)
+#define HUE_DRIFT (spectralCentroidSlope * spectralCentroidRSquared * 0.25)
 
-// --- Complexity (entropy domain - chaos vs order) ---
-#define COMPLEXITY_BASE (spectralEntropyMedian)
-#define COMPLEXITY_TREND (spectralEntropySlope * spectralEntropyRSquared * 0.5)
+// --- Detail (entropy - chaos vs order) ---
+#define CHAOS (spectralEntropyMedian)
+#define CHAOS_TREND (spectralEntropySlope * spectralEntropyRSquared * 0.3)
 
-// --- Intensity (energy domain) ---
-#define INTENSITY_TREND (energySlope * energyRSquared)
-#define ENERGY_LEVEL (energyMedian)
+// --- Energy ---
+#define ENERGY_TREND (energySlope * energyRSquared)
+#define ENERGY_BASE (energyMedian)
 
-// --- Texture grain (roughness domain - dissonance) ---
-#define GRAIN (spectralRoughnessMedian * 0.3)
+// --- Texture (roughness - dissonance) ---
+#define ROUGHNESS (spectralRoughnessMedian * 0.4)
 
-// --- High frequency detail (treble domain) ---
-#define DETAIL_TREND (trebleSlope * trebleRSquared * 0.2)
+// --- Treble sparkle ---
+#define TREBLE_TREND (trebleSlope * trebleRSquared * 0.3)
 
-// --- Immediate reactivity (small amount, layered on top) ---
-#define FLUX_KICK (spectralFluxZScore * 0.15)
-#define BASS_PULSE (bassZScore * 0.08)
+// --- Immediate reactivity (small) ---
+#define FLUX_KICK (spectralFluxZScore * 0.12)
+#define BASS_PULSE (bassZScore * 0.1)
+
+// Simple hash-based noise
+float noise(vec2 p) {
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+// Smooth value noise
+float vnoise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+
+    float a = noise(i);
+    float b = noise(i + vec2(1.0, 0.0));
+    float c = noise(i + vec2(0.0, 1.0));
+    float d = noise(i + vec2(1.0, 1.0));
+
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+
+// FBM with variable octaves
+float fbm(vec2 p, int octaves) {
+    float v = 0.0;
+    float a = 0.5;
+    mat2 rot = mat2(0.8, 0.6, -0.6, 0.8);
+    for (int i = 0; i < 7; i++) {
+        if (i >= octaves) break;
+        v += a * vnoise(p);
+        p = rot * p * 2.0 + 0.5;
+        a *= 0.5;
+    }
+    return v;
+}
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = (fragCoord - 0.5 * iResolution.xy) / min(iResolution.x, iResolution.y);
 
-    // Slow time that drifts with energy trends
-    float t = iTime * 0.08 + INTENSITY_TREND * 0.5;
+    float t = iTime * 0.1 + ENERGY_TREND * 0.4;
+    int oct = int(clamp(4.0 + CHAOS * 3.0 + CHAOS_TREND, 4.0, 7.0));
 
-    // --- Layered noise (fbm) for nebula structure ---
-    float scale = BASE_SCALE + SCALE_TREND;
-    float complexity = 3.0 + COMPLEXITY_BASE * 4.0 + COMPLEXITY_TREND * 2.0;
-    int octaves = int(clamp(complexity, 3.0, 7.0));
+    // === Domain warping: warp coordinates through noise layers ===
+    // This creates organic, flowing structure
+    vec2 p = uv * 3.0;
 
-    vec2 p = uv * scale;
-
-    // Drift the noise space slowly based on trends
-    p += vec2(
-        sin(t * 1.1) * 0.3 + HUE_DRIFT * 0.5,
-        cos(t * 0.9) * 0.3 + DETAIL_TREND * 0.5
+    // First warp layer - slow, broad shapes
+    vec2 q = vec2(
+        fbm(p + vec2(0.0, 0.0) + t * 0.4, oct),
+        fbm(p + vec2(5.2, 1.3) - t * 0.3, oct)
     );
 
-    // FBM with trend-driven rotation per octave
-    float f = 0.0;
-    float amp = 0.5;
-    float freq = 1.0;
-    mat2 rot = mat2(cos(0.5 + t * 0.1), sin(0.5 + t * 0.1),
-                    -sin(0.5 + t * 0.1), cos(0.5 + t * 0.1));
+    // Second warp layer - finer detail, influenced by trends
+    vec2 r = vec2(
+        fbm(p + q * WARP_STRENGTH + vec2(1.7, 9.2) + t * 0.2, oct),
+        fbm(p + q * WARP_STRENGTH + vec2(8.3, 2.8) - t * 0.15, oct)
+    );
 
-    for (int i = 0; i < 7; i++) {
-        if (i >= octaves) break;
-        // Grain adds high-frequency jitter to the noise lookup
-        vec2 np = p * freq + float(i) * 1.7 + GRAIN * 0.5;
-        float n = sin(np.x + sin(np.y + t)) * cos(np.y - cos(np.x - t * 0.7));
-        f += n * amp;
-        amp *= 0.5 + DETAIL_TREND * 0.1;
-        freq *= 2.0 + GRAIN * 0.3;
-        p = rot * p;
-    }
+    // Final noise value from warped coordinates
+    float f = fbm(p + r * (1.5 + ROUGHNESS), oct);
 
-    f = f * 0.5 + 0.5; // normalize to 0-1
+    // Sharpen contrast
+    f = smoothstep(0.15, 0.85, f);
 
-    // --- Color from spectral centroid trend ---
-    float hue = HUE_BASE + HUE_DRIFT + f * 0.15 + t * 0.05;
-    float sat = 0.5 + ENERGY_LEVEL * 0.4;
-    float lum = f * (0.3 + ENERGY_LEVEL * 0.25);
+    // === Color ===
+    float hue = HUE_BASE + HUE_DRIFT + r.x * 0.12 + t * 0.02;
 
-    // Brighten on confident energy rises
-    lum += max(0.0, INTENSITY_TREND) * 0.15;
+    // Use the warp displacement for hue variation across space
+    float hueSpread = length(r - q) * 0.3;
+    hue += hueSpread;
 
-    // Subtle immediate pulse on flux spikes
-    lum += max(0.0, FLUX_KICK) * f;
+    float sat = 0.55 + ENERGY_BASE * 0.3 + f * 0.15;
+    float lum = 0.05 + f * 0.5 + ENERGY_BASE * 0.15;
 
-    vec3 col = hsl2rgb(vec3(fract(hue), clamp(sat, 0.0, 1.0), clamp(lum, 0.0, 0.85)));
+    // Confident energy rise brightens
+    lum += max(0.0, ENERGY_TREND) * 0.2;
+    // Flux kicks add sparkle
+    lum += max(0.0, FLUX_KICK) * f * f;
 
-    // Add subtle warm highlights on bass pulses
-    float highlight = smoothstep(0.6, 0.9, f) * max(0.0, BASS_PULSE);
-    col += vec3(0.3, 0.15, 0.05) * highlight;
+    vec3 col = hsl2rgb(vec3(fract(hue), clamp(sat, 0.0, 1.0), clamp(lum, 0.0, 0.8)));
 
-    // --- Frame feedback: slow trails that evolve with trends ---
+    // Warm highlights on bass pulses
+    col += vec3(0.25, 0.1, 0.03) * smoothstep(0.5, 0.9, f) * max(0.0, BASS_PULSE);
+
+    // Treble trend adds a cool rim on edges
+    float edge = abs(f - 0.5) * 2.0;
+    col += vec3(0.05, 0.1, 0.2) * edge * max(0.0, TREBLE_TREND);
+
+    // === Subtle feedback for persistence, not dominance ===
     vec2 fbUv = fragCoord / iResolution.xy;
+    vec2 toCenter = (vec2(0.5) - fbUv) * 0.001;
+    vec4 prev = getLastFrameColor(fbUv + toCenter);
 
-    // Feedback UV drifts with trends (not random - directional)
-    vec2 fbOffset = vec2(
-        SCALE_TREND * 0.003,
-        HUE_DRIFT * 0.003
-    );
-    // Gentle zoom toward center based on energy trend
-    vec2 center = vec2(0.5);
-    vec2 toCenter = (center - fbUv) * 0.002 * (1.0 + INTENSITY_TREND * 0.5);
+    // Light blend - feedback adds memory, not blur
+    float feedback = 0.2 + CHAOS * 0.15;
+    col = mix(col, prev.rgb * 0.95, clamp(feedback, 0.1, 0.35));
 
-    vec4 prev = getLastFrameColor(fbUv + fbOffset + toCenter);
-    vec3 prevCol = prev.rgb;
-
-    // Decay rate adapts: stable music = longer trails, chaotic = shorter
-    float stability = clamp(1.0 - COMPLEXITY_BASE, 0.0, 1.0);
-    float decay = 0.88 + stability * 0.08; // 0.88 to 0.96
-
-    // Fade previous frame slightly to prevent white accumulation
-    prevCol *= decay;
-
-    // Mix: favor new content when there's a confident trend change
-    float trendStrength = clamp(
-        abs(INTENSITY_TREND) + abs(SCALE_TREND) + abs(HUE_DRIFT),
-        0.0, 1.0
-    );
-    float mixAmt = 0.12 + trendStrength * 0.15 + max(0.0, FLUX_KICK) * 0.2;
-
-    col = mix(prevCol, col, clamp(mixAmt, 0.05, 0.4));
-
-    // Subtle vignette
-    float vig = 1.0 - 0.4 * dot(uv, uv);
-    col *= vig;
+    // Vignette
+    col *= 1.0 - 0.4 * dot(uv, uv);
 
     fragColor = vec4(col, 1.0);
 }
