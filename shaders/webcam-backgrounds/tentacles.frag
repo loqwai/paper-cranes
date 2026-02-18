@@ -228,9 +228,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Mix with background
     vec3 col = mix(bg, tentacle, smoothstep(0.0, 0.02, intensity));
 
-    // --- Frame feedback for smoothness ---
-    vec4 prev = getLastFrameColor(uv);
-    col = mix(prev.rgb * 0.99, col, 0.22);
+    // No frame feedback — keep it sharp
 
     // Gentle vignette
     float vign = 1.0 - r * 0.15;
