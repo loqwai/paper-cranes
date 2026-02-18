@@ -10,8 +10,11 @@
 // Number of tentacle arms
 #define NUM_ARMS (6.0 + spectralEntropyMedian * 6.0)
 
-// Undulation speed — constant slow rotation
+// Undulation speed for wiggle/drift oscillations
 #define UNDULATE_SPEED 0.15
+
+// Continuous rotation speed (radians per second)
+#define ROTATION_SPEED 0.08
 
 // How far tentacles extend (0 = center, 1 = edge)
 #define REACH (0.5 + bassMedian * 0.3)
@@ -118,8 +121,8 @@ vec2 tentacleField(vec2 p, float t) {
     for (float i = 0.0; i < 18.0; i += 1.0) {
         if (i >= numArms) break;
 
-        // Each arm has a base angle, evenly spaced
-        float armAngle = i / numArms * 6.2832;
+        // Each arm has a base angle, evenly spaced + continuous rotation
+        float armAngle = i / numArms * 6.2832 + time * ROTATION_SPEED;
 
         // Slow organic drift per arm
         armAngle += sin(t * 0.3 + i * 2.3) * 0.15;
