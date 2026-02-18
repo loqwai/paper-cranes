@@ -2,6 +2,21 @@ import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { makeVisualizer } from './src/Visualizer.js'
 import { getInitialShader } from './src/shaderLoader.js'
 
+const SEED_KEY = 'paperCranes.seeds'
+
+const loadOrCreateSeeds = () => {
+    const stored = localStorage.getItem(SEED_KEY)
+    if (stored) {
+        try {
+            const parsed = JSON.parse(stored)
+            if (Array.isArray(parsed) && parsed.length === 4 && parsed.every(n => typeof n === 'number')) return parsed
+        } catch { /* regenerate */ }
+    }
+    const seeds = Array.from({ length: 4 }, () => Math.random())
+    localStorage.setItem(SEED_KEY, JSON.stringify(seeds))
+    return seeds
+}
+
 const events = ['touchstart', 'touchmove', 'touchstop', 'keydown', 'mousedown', 'resize']
 let ranMain = false
 let startTime = 0
@@ -137,7 +152,12 @@ const parseUrlParams = (searchParams) => {
 }
 
 export const getCranesState = () => {
+    const [s1, s2, s3, s4] = window.cranes.seeds
     return {
+        seed: s1,
+        seed2: s2,
+        seed3: s3,
+        seed4: s4,
         ...window.cranes.measuredAudioFeatures, // Audio features (lowest precedence)
         ...window.cranes.controllerFeatures,    // Controller-computed features
         ...parseUrlParams(params),              // URL parameters (parsed as numbers or strings)
@@ -151,6 +171,7 @@ export const getCranesState = () => {
 // Set up the application state management
 const setupCranesState = () => {
     window.cranes = {
+        seeds: loadOrCreateSeeds(),
         measuredAudioFeatures: {},  // Audio features (lowest precedence)
         controllerFeatures: {},     // Controller-computed features
         manualFeatures: {},         // Manual features
