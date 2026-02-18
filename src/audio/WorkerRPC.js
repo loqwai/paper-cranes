@@ -1,10 +1,7 @@
 export class WorkerRPC {
-    constructor(workerName, historySize, timeout = 30) {
+    constructor(workerName, historySize) {
         this.workerName = workerName
         this.historySize = historySize
-        this.timeout = timeout
-        this.currentMessageId = 0
-        this.resolveMessage = null
         this.lastMessage = this.createDefaultMessage()
     }
 
@@ -28,63 +25,40 @@ export class WorkerRPC {
         },
     })
 
-    validateStats = (stats = {}) => ({
-        current: isFinite(stats.current) ? stats.current : 0,
-        mean: isFinite(stats.mean) ? stats.mean : 0,
-        median: isFinite(stats.median) ? stats.median : 0,
-        min: isFinite(stats.min) ? stats.min : 0,
-        max: isFinite(stats.max) ? stats.max : 0,
-        variance: isFinite(stats.variance) ? stats.variance : 0,
-        standardDeviation: isFinite(stats.standardDeviation) ? stats.standardDeviation : 0,
-        zScore: isFinite(stats.zScore) ? stats.zScore : 0,
-        normalized: isFinite(stats.normalized) ? stats.normalized : 0,
-        slope: isFinite(stats.slope) ? stats.slope : 0,
-        intercept: isFinite(stats.intercept) ? stats.intercept : 0,
-        rSquared: isFinite(stats.rSquared) ? stats.rSquared : 0,
-    })
-
-    validateMessage = (message) => ({
-        ...message,
-        workerName: this.workerName,
-        value: isFinite(message.value) ? message.value : 0,
-        stats: this.validateStats(message.stats),
-    })
+    validateMessage = (message) => {
+        message.workerName = this.workerName
+        if (!isFinite(message.value)) message.value = 0
+        const stats = message.stats
+        if (!isFinite(stats.current)) stats.current = 0
+        if (!isFinite(stats.mean)) stats.mean = 0
+        if (!isFinite(stats.median)) stats.median = 0
+        if (!isFinite(stats.min)) stats.min = 0
+        if (!isFinite(stats.max)) stats.max = 0
+        if (!isFinite(stats.variance)) stats.variance = 0
+        if (!isFinite(stats.standardDeviation)) stats.standardDeviation = 0
+        if (!isFinite(stats.zScore)) stats.zScore = 0
+        if (!isFinite(stats.normalized)) stats.normalized = 0
+        if (!isFinite(stats.slope)) stats.slope = 0
+        if (!isFinite(stats.intercept)) stats.intercept = 0
+        if (!isFinite(stats.rSquared)) stats.rSquared = 0
+        return message
+    }
 
     handleMessage = (event) => {
         if (event.data.type === 'computedValue') {
-            const validatedMessage = this.validateMessage(event.data)
-            this.lastMessage = validatedMessage
-
-            if (event.data.id === this.currentMessageId) {
-                this.resolveMessage?.(validatedMessage)
-                this.resolveMessage = null
-            }
+            this.lastMessage = this.validateMessage(event.data)
         }
     }
 
-    processData = async (fftData) => {
-        this.resolveMessage?.()
-
-        const messageId = (this.currentMessageId = performance.now())
-
-        const messagePromise = Promise.race([
-            new Promise((resolve) => {
-                this.resolveMessage = resolve
-            }),
-            new Promise(resolve => setTimeout(() => {
-                if (this.currentMessageId === messageId) this.resolveMessage = null
-                resolve(this.lastMessage)
-            }, this.timeout))
-        ])
-
+    sendData = (fftData) => {
         this.worker.postMessage({
             type: 'fftData',
-            id: messageId,
+            id: performance.now(),
             data: { fft: fftData },
         })
-
-        return messagePromise
     }
+
+    getResult = () => this.lastMessage
 
     setHistorySize = (historySize) => {
         if(this.historySize !== historySize) {

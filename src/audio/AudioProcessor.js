@@ -1,7 +1,6 @@
 import { StatTypes, AudioFeatures } from 'hypnosound'
 import { WorkerRPC } from './WorkerRPC.js'
 
-let noResultCount = 0
 export const getFlatAudioFeatures = (audioFeatures = AudioFeatures, rawFeatures = {}) => {
     const features = {}
     for (const feature of audioFeatures) {
@@ -44,34 +43,21 @@ export class AudioProcessor {
         const worker = new WorkerRPC(name, this.historySize)
         await worker.initialize()
         this.workers.set(name, worker)
-        this.runWorkerLoop(worker)
-    }
-
-    runWorkerLoop = async (worker) => {
-        worker.setHistorySize(this.historySize)
-        const result = await worker.processData(this.fftData)
-        if(!result) {
-            noResultCount++
-            console.error(`worker returned no result`)
-            if(noResultCount > 150) {
-                noResultCount = -Infinity
-                window.location.reload()
-                return
-            }
-            requestAnimationFrame(() => this.runWorkerLoop(worker))
-            return
-        }
-        this.rawFeatures[result.workerName] = result
-        requestAnimationFrame(() => this.runWorkerLoop(worker))
     }
 
     updateCurrentFeatures = () => {
         requestAnimationFrame(this.updateCurrentFeatures)
+
+        // Pull latest results from workers (no allocations, just reference swaps)
+        this.workers.forEach((worker, name) => {
+            this.rawFeatures[name] = worker.getResult()
+        })
+
         const newFeatures = getFlatAudioFeatures(AudioFeatures, this.rawFeatures)
-        
+
         // Check for manual override of smoothing factor
         const currentSmoothing = window.cranes?.manualFeatures?.smoothing ?? this.smoothingFactor
-        
+
         // Apply exponential smoothing to reduce jitter
         for (const key in newFeatures) {
             if (typeof newFeatures[key] === 'number' && isFinite(newFeatures[key])) {
@@ -79,22 +65,22 @@ export class AudioProcessor {
                 if (!(key in this.smoothedFeatures)) {
                     this.smoothedFeatures[key] = newFeatures[key]
                 }
-                
+
                 // Exponential smoothing formula
                 // For z-scores and normalized values, use less smoothing to maintain responsiveness
                 const smoothingFactor = key.includes('ZScore') || key.includes('Normalized')
                     ? currentSmoothing * 1.5
                     : currentSmoothing
-                    
-                this.smoothedFeatures[key] = this.smoothedFeatures[key] * (1 - smoothingFactor) + 
+
+                this.smoothedFeatures[key] = this.smoothedFeatures[key] * (1 - smoothingFactor) +
                                              newFeatures[key] * smoothingFactor
-                
+
                 this.currentFeatures[key] = this.smoothedFeatures[key]
             } else {
                 this.currentFeatures[key] = newFeatures[key]
             }
         }
-        
+
         this.historySize = window.cranes?.manualFeatures?.history_size ?? this.historySize
         this.currentFeatures.beat = this.isBeat()
     }
@@ -110,8 +96,7 @@ export class AudioProcessor {
 
         this.sourceNode.connect(windowNode)
         windowNode.connect(this.fftAnalyzer)
-        AudioFeatures.map(this.initializeWorker)
-        // await new Promise(resolve => setTimeout(resolve, 100))
+        await Promise.all(AudioFeatures.map(name => this.initializeWorker(name)))
 
         this.updateCurrentFeatures()
         this.updateFftData()
@@ -131,6 +116,11 @@ export class AudioProcessor {
     updateFftData = () => {
         requestAnimationFrame(this.updateFftData)
         this.fftAnalyzer.getByteFrequencyData(this.fftData)
+        // Broadcast FFT data to all workers (fire-and-forget)
+        this.workers.forEach(worker => {
+            worker.setHistorySize(this.historySize)
+            worker.sendData(this.fftData)
+        })
     }
 
     getFeatures = () => this.currentFeatures
