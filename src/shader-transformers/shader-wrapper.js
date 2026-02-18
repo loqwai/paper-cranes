@@ -115,6 +115,11 @@ uniform sampler2D initialFrame;
 
 uniform float iRandom;
 
+uniform float seed;
+uniform float seed2;
+uniform float seed3;
+uniform float seed4;
+
 uniform vec2 touch;
 uniform bool touched;
 
