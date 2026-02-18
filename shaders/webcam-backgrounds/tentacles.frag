@@ -8,7 +8,7 @@
 // ============================================================================
 
 // Number of tentacle arms
-#define NUM_ARMS (6.0 + spectralEntropyMedian * 6.0)
+#define NUM_ARMS 8.0
 
 // Undulation speed for wiggle/drift oscillations
 #define UNDULATE_SPEED 0.15
