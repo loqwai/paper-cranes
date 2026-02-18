@@ -12,8 +12,9 @@
 #define WARP_STRENGTH (0.8 + bassMedian * 1.2 + bassSlope * bassRSquared * 0.6)
 
 // --- Color (spectral centroid - brightness center of the sound) ---
-#define HUE_BASE (0.55 + spectralCentroidMedian * 0.7)
-#define HUE_DRIFT (spectralCentroidSlope * spectralCentroidRSquared * 0.25)
+// Oklch hue is in radians (0 to ~6.28)
+#define HUE_BASE (3.5 + spectralCentroidMedian * 4.4)
+#define HUE_DRIFT (spectralCentroidSlope * spectralCentroidRSquared * 1.6)
 
 // --- Detail (entropy - chaos vs order) ---
 #define CHAOS (spectralEntropyMedian)
@@ -96,29 +97,33 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Sharpen contrast
     f = smoothstep(0.15, 0.85, f);
 
-    // === Color ===
-    float hue = HUE_BASE + HUE_DRIFT + r.x * 0.12 + t * 0.02;
+    // === Color (Oklch for perceptually uniform gradients) ===
+    float hue = HUE_BASE + HUE_DRIFT + r.x * 0.75 + t * 0.12;
 
-    // Use the warp displacement for hue variation across space
-    float hueSpread = length(r - q) * 0.3;
+    // Warp displacement drives hue variation across space
+    float hueSpread = length(r - q) * 1.9;
     hue += hueSpread;
 
-    float sat = 0.55 + ENERGY_BASE * 0.3 + f * 0.15;
-    float lum = 0.05 + f * 0.45 + ENERGY_BASE * 0.1;
+    float chroma = 0.08 + ENERGY_BASE * 0.06 + f * 0.04;
+    float lightness = 0.08 + f * 0.5 + ENERGY_BASE * 0.1;
 
-    // Confident energy rise brightens (capped contribution)
-    lum += clamp(ENERGY_TREND, 0.0, 0.5) * 0.15;
+    // Confident energy rise brightens (capped)
+    lightness += clamp(ENERGY_TREND, 0.0, 0.5) * 0.12;
     // Flux kicks add sparkle only in bright regions
-    lum += max(0.0, FLUX_KICK) * f * f * 0.8;
+    lightness += max(0.0, FLUX_KICK) * f * f * 0.6;
 
-    vec3 col = hsl2rgb(vec3(fract(hue), clamp(sat, 0.0, 1.0), clamp(lum, 0.0, 0.65)));
+    // Bass pulses boost chroma in bright areas
+    chroma += smoothstep(0.5, 0.9, f) * max(0.0, BASS_PULSE) * 0.06;
 
-    // Warm highlights on bass pulses
-    col += vec3(0.25, 0.1, 0.03) * smoothstep(0.5, 0.9, f) * max(0.0, BASS_PULSE);
-
-    // Treble trend adds a cool rim on edges
+    // Treble trend shifts hue on edges for cool rims
     float edge = abs(f - 0.5) * 2.0;
-    col += vec3(0.05, 0.1, 0.2) * edge * max(0.0, TREBLE_TREND);
+    hue += edge * max(0.0, TREBLE_TREND) * 2.0;
+
+    vec3 col = oklch2rgb(vec3(
+        clamp(lightness, 0.0, 0.75),
+        clamp(chroma, 0.0, 0.2),
+        hue
+    ));
 
     // === Subtle feedback for persistence, not dominance ===
     vec2 fbUv = fragCoord / iResolution.xy;
@@ -126,8 +131,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec4 prev = getLastFrameColor(fbUv + toCenter);
 
     // Light blend - feedback adds memory, not blur
+    // Decay previous frame in Oklch to prevent chroma drift
+    vec3 prevLch = rgb2oklch(prev.rgb);
+    prevLch.x *= 0.97;  // Slight lightness decay prevents white accumulation
+    prevLch.y = min(prevLch.y, 0.2);  // Cap chroma to prevent oversaturation
+    vec3 prevDecayed = oklch2rgb(prevLch);
+
     float feedback = 0.2 + CHAOS * 0.15;
-    col = mix(col, prev.rgb * 0.95, clamp(feedback, 0.1, 0.35));
+    col = mix(col, prevDecayed, clamp(feedback, 0.1, 0.35));
 
     // Vignette
     col *= 1.0 - 0.4 * dot(uv, uv);
