@@ -117,16 +117,21 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
 
     const initialTexture = await getTexture(gl, initialImageUrl)
     const frameBuffers = [createFramebufferInfo(gl), createFramebufferInfo(gl)]
+    // Transition framebuffer captures the last frame when switching shaders
+    const transitionFramebuffer = createFramebufferInfo(gl)
 
-    // Set texture parameters for both framebuffers
-    frameBuffers.forEach(fb => {
+    const setFramebufferTexParams = (fb) => {
         const texture = fb.attachments[0]
         gl.bindTexture(gl.TEXTURE_2D, texture)
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
-    })
+    }
+
+    // Set texture parameters for all framebuffers
+    frameBuffers.forEach(setFramebufferTexParams)
+    setFramebufferTexParams(transitionFramebuffer)
 
     const bufferInfo = createBufferInfoFromArrays(gl, { position: positions })
 
@@ -143,9 +148,25 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
     let lastCanvasWidth = gl.canvas.width
     let lastCanvasHeight = gl.canvas.height
     let useInitialTextureAsPrev = false
+    let currentInitialTexture = initialTexture
 
     const render = ({ time, features, fragmentShader: newFragmentShader }) => {
         if (newFragmentShader !== lastFragmentShader) {
+            // Capture the previous shader's last frame as the transition/initial texture
+            if (frameNumber > 0) {
+                const prevFrame = frameBuffers[(frameNumber + 1) % 2]
+                gl.bindFramebuffer(gl.READ_FRAMEBUFFER, prevFrame.framebuffer)
+                gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, transitionFramebuffer.framebuffer)
+                gl.blitFramebuffer(
+                    0, 0, prevFrame.width, prevFrame.height,
+                    0, 0, transitionFramebuffer.width, transitionFramebuffer.height,
+                    gl.COLOR_BUFFER_BIT, gl.LINEAR
+                )
+                gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null)
+                gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null)
+                currentInitialTexture = transitionFramebuffer.attachments[0]
+            }
+
             const wrappedFragmentShader = shaderWrapper(newFragmentShader)
 
             const newProgramInfo = createProgramInfo(gl, [defaultVertexShader, wrappedFragmentShader])
@@ -188,15 +209,10 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
 
             const newWidth = gl.canvas.width
             const newHeight = gl.canvas.height
-            frameBuffers.forEach(fb => {
+            const allBuffers = [...frameBuffers, transitionFramebuffer]
+            allBuffers.forEach(fb => {
                 resizeFramebufferInfo(gl, fb, undefined, newWidth, newHeight)
-                // Restore texture parameters after resize
-                const texture = fb.attachments[0]
-                gl.bindTexture(gl.TEXTURE_2D, texture)
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
+                setFramebufferTexParams(fb)
 
                 // Clear the framebuffer to prevent undefined content
                 gl.bindFramebuffer(gl.FRAMEBUFFER, fb.framebuffer)
@@ -227,7 +243,7 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
             iFrame: frameNumber,
             time,
             prevFrame: prevTexture,
-            initialFrame: initialTexture,
+            initialFrame: currentInitialTexture,
             resolution: [frame.width, frame.height],
             frame: frameNumber,
             iRandom: Math.random(),
