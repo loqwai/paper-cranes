@@ -48,6 +48,30 @@
 #define GRIT (spectralRoughnessZScore * 0.008)
 
 // ============================================================================
+// EXTREME Z-SCORE DRAMA (only fires at extreme levels)
+// ============================================================================
+
+// How extreme the z-scores are — smoothstep gates so nothing happens below ~0.6
+#define EXTREME_ENERGY smoothstep(0.6, 1.0, energyZScore)
+#define EXTREME_FLUX smoothstep(0.6, 1.0, spectralFluxZScore)
+#define EXTREME_BASS smoothstep(0.6, 1.0, bassZScore)
+
+// Extra reach when energy is extreme — tentacles lunge outward
+#define REACH_SURGE (EXTREME_ENERGY * 0.3)
+
+// Violent twist at tips when flux is extreme
+#define TWIST_SURGE (EXTREME_FLUX * 2.5)
+
+// Rim lighting pumps up dramatically
+#define RIM_SURGE (max(EXTREME_ENERGY, EXTREME_FLUX) * 0.6)
+
+// Tentacles thicken when bass is extreme
+#define THICKNESS_SURGE (EXTREME_BASS * 0.04)
+
+// Chroma boost — colors become vivid during extremes
+#define CHROMA_SURGE (max(EXTREME_ENERGY, EXTREME_BASS) * 0.08)
+
+// ============================================================================
 // NOISE
 // ============================================================================
 
@@ -107,21 +131,25 @@ vec2 tentacleField(vec2 p, float t) {
         // Curl on energy zscore — tentacles curve more at the tips
         float curl = CURL_AMOUNT * r * r * sin(r * 8.0 + t * 2.0 + i * 0.9);
 
-        float targetAngle = armAngle + wiggle * 0.3 + curl * 0.4;
+        // Extreme twist — violent spiraling at tips during flux spikes
+        float twist = TWIST_SURGE * r * r * r * sin(r * 15.0 + time * 4.0 + i * 1.3);
+
+        float targetAngle = armAngle + wiggle * 0.3 + curl * 0.4 + twist * 0.5;
 
         // Angular distance to this arm (wrapping)
         float angleDist = abs(mod(angle - targetAngle + 3.1416, 6.2832) - 3.1416);
 
-        // Tentacle width tapers as it extends
-        float width = THICKNESS * (1.0 - r * 0.6);
+        // Tentacle width tapers as it extends — surges thicker on extreme bass
+        float width = (THICKNESS + THICKNESS_SURGE) * (1.0 - r * 0.6);
         width = max(width, 0.01);
 
         // Soft tentacle shape
         float arm = smoothstep(width, width * 0.3, angleDist);
 
-        // Fade: start after small radius (face area), extend to REACH
+        // Fade: start after small radius (face area), extend to REACH + surge
+        float totalReach = REACH + REACH_SURGE;
         float innerFade = smoothstep(0.08, 0.18, r);
-        float outerFade = 1.0 - smoothstep(REACH - 0.1, REACH + 0.15, r);
+        float outerFade = 1.0 - smoothstep(totalReach - 0.1, totalReach + 0.15, r);
         arm *= innerFade * outerFade;
 
         // Rim lighting: bright at edges of tentacle (where angleDist ~ width)
@@ -169,13 +197,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Vary hue slightly by angle and radius
     float hue = HUE_CENTER + angle * 0.05 + r * 0.2;
 
-    // Core tentacle color
-    float chroma = CHROMA * (0.4 + intensity * 1.5);
+    // Core tentacle color — chroma surges during extremes
+    float chroma = (CHROMA + CHROMA_SURGE) * (0.4 + intensity * 1.5);
     float lightness = mix(0.0, LIGHTNESS, intensity) + rim * 0.2 + shimmer + grit;
 
-    // Rim lighting: brighter, slightly shifted hue at edges
+    // Rim lighting: brighter, slightly shifted hue at edges — pumps up during extremes
     float rimHue = hue + 0.3; // Shift toward blue for rim
-    float rimLight = rim * 0.35;
+    float rimLight = rim * (0.35 + RIM_SURGE);
 
     // Background: very dark indigo
     vec3 bg = oklch2rgb(vec3(0.08, 0.03, 4.8));
@@ -187,10 +215,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         hue
     ));
 
-    // Rim highlight (brighter, bluer)
+    // Rim highlight (brighter, bluer) — clamp raised for surge headroom
     vec3 rimColor = oklch2rgb(vec3(
-        clamp(rimLight + 0.15, 0.1, 0.7),
-        clamp(CHROMA * 1.5, 0.04, 0.20),
+        clamp(rimLight + 0.15, 0.1, 0.85),
+        clamp((CHROMA + CHROMA_SURGE) * 1.5, 0.04, 0.25),
         rimHue
     ));
 
