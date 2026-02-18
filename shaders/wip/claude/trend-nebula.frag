@@ -104,14 +104,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     hue += hueSpread;
 
     float sat = 0.55 + ENERGY_BASE * 0.3 + f * 0.15;
-    float lum = 0.05 + f * 0.5 + ENERGY_BASE * 0.15;
+    float lum = 0.05 + f * 0.45 + ENERGY_BASE * 0.1;
 
-    // Confident energy rise brightens
-    lum += max(0.0, ENERGY_TREND) * 0.2;
-    // Flux kicks add sparkle
-    lum += max(0.0, FLUX_KICK) * f * f;
+    // Confident energy rise brightens (capped contribution)
+    lum += clamp(ENERGY_TREND, 0.0, 0.5) * 0.15;
+    // Flux kicks add sparkle only in bright regions
+    lum += max(0.0, FLUX_KICK) * f * f * 0.8;
 
-    vec3 col = hsl2rgb(vec3(fract(hue), clamp(sat, 0.0, 1.0), clamp(lum, 0.0, 0.8)));
+    vec3 col = hsl2rgb(vec3(fract(hue), clamp(sat, 0.0, 1.0), clamp(lum, 0.0, 0.65)));
 
     // Warm highlights on bass pulses
     col += vec3(0.25, 0.1, 0.03) * smoothstep(0.5, 0.9, f) * max(0.0, BASS_PULSE);
