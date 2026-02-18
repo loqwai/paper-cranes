@@ -13,11 +13,17 @@
 // Undulation speed for wiggle/drift oscillations
 #define UNDULATE_SPEED 0.15
 
-// Continuous rotation speed (radians per second)
-#define ROTATION_SPEED 0.08
+// Continuous rotation speed (radians per second) — ~4 minutes per revolution
+#define ROTATION_SPEED 0.025
 
 // How far tentacles extend (0 = center, 1 = edge)
 #define REACH (0.5 + bassMedian * 0.3)
+
+// Grow/shrink breathing speed — each arm breathes at its own rate
+#define BREATH_SPEED 0.07
+
+// How much tentacles grow and shrink (fraction of REACH)
+#define BREATH_AMOUNT 0.25
 
 // Wiggle amplitude — how wavy the arms are
 #define WIGGLE (0.3 + spectralSpreadMedian * 0.4)
@@ -121,15 +127,18 @@ vec2 tentacleField(vec2 p, float t) {
     for (float i = 0.0; i < 18.0; i += 1.0) {
         if (i >= numArms) break;
 
-        // Each arm has a base angle, evenly spaced + continuous rotation
+        // Each arm has a base angle, evenly spaced + slow global rotation
         float armAngle = i / numArms * 6.2832 + time * ROTATION_SPEED;
 
-        // Slow organic drift per arm
-        armAngle += sin(t * 0.3 + i * 2.3) * 0.15;
+        // Independent undulation per arm — each has its own speed and phase
+        float armSpeed = 0.15 + sin(i * 3.71) * 0.08; // 0.07–0.23 per arm
+        float armPhase = i * 2.3 + sin(i * 5.13) * 1.5;
+        armAngle += sin(time * armSpeed + armPhase) * 0.25;
+        armAngle += sin(time * armSpeed * 0.6 + armPhase * 1.7) * 0.12;
 
         // Wiggle: the arm's angle offset varies with radius
         // This makes tentacles wavy as they extend outward
-        float wiggle = sin(r * 12.0 - t * 1.5 + i * 1.7) * WIGGLE * (0.3 + r);
+        float wiggle = sin(r * 12.0 - time * armSpeed * 2.0 + i * 1.7) * WIGGLE * (0.3 + r);
 
         // Curl on energy zscore — tentacles curve more at the tips
         float curl = CURL_AMOUNT * r * r * sin(r * 8.0 + t * 2.0 + i * 0.9);
@@ -149,8 +158,13 @@ vec2 tentacleField(vec2 p, float t) {
         // Soft tentacle shape
         float arm = smoothstep(width, width * 0.3, angleDist);
 
-        // Fade: start after small radius (face area), extend to REACH + surge
-        float totalReach = REACH + REACH_SURGE;
+        // Per-arm breathing — each tentacle slowly grows and shrinks independently
+        float breathSpeed = BREATH_SPEED * (0.7 + sin(i * 4.37) * 0.5); // 0.035–0.105 per arm
+        float breathPhase = i * 1.9 + sin(i * 6.29) * 2.0;
+        float breath = sin(time * breathSpeed + breathPhase) * BREATH_AMOUNT;
+
+        // Fade: start after small radius (face area), extend to REACH + surge + breath
+        float totalReach = REACH + REACH_SURGE + breath * REACH;
         float innerFade = smoothstep(0.08, 0.18, r);
         float outerFade = 1.0 - smoothstep(totalReach - 0.1, totalReach + 0.15, r);
         arm *= innerFade * outerFade;
