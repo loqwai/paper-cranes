@@ -578,6 +578,27 @@ Test your shader against these profiles to catch issues like washout, dead zones
 - **Color variety**: Does the shader look meaningfully different across profiles? If heavy bass and bright chaotic look the same, your color mapping may depend on too few features.
 - **Contrast**: Every profile should have visible dark regions. If you lose all contrast, your luminance contributions are stacking up.
 
+### Freezing Time with `?time=`
+
+Since `time` is just a uniform, you can override it with a query param to freeze the shader at a specific moment in seconds:
+
+```
+?shader=my-shader&noaudio=true&time=12.5
+```
+
+This renders the shader as if 12.5 seconds have elapsed — time stops advancing. Useful for:
+
+- **Debugging time-dependent effects** — freeze at the exact moment something looks wrong
+- **Comparing states** — screenshot at `time=5`, `time=30`, `time=120` to see how the shader evolves
+- **Testing periodicity** — check if your shader loops cleanly by comparing `time=0` with `time=6.283` (2π)
+- **Tuning constants** — freeze time and adjust other params to isolate time-dependent behavior from audio-dependent behavior
+
+Combine with audio overrides to test a specific shader state completely:
+
+```
+?shader=my-shader&noaudio=true&time=60&bassNormalized=0.8&energyZScore=0.5
+```
+
 ### Debug Tips
 
 1. **Check browser console** for shader compilation errors
