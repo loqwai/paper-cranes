@@ -75,7 +75,7 @@ const calculateResolutionRatio = (frameTime, renderTimes, lastResolutionRatio) =
     const avgFrameTime = renderTimes.reduce((a, b) => a + b) / renderTimes.length
 
     if (avgFrameTime > 50) return Math.max(0.5, lastResolutionRatio - 0.5)
-    if (avgFrameTime < 20 && lastResolutionRatio < 1) return Math.min(1, lastResolutionRatio + 0.1)
+    if (avgFrameTime < 20 && lastResolutionRatio < 1) return Math.min(1, lastResolutionRatio + 0.25)
     return lastResolutionRatio
 }
 
@@ -167,7 +167,10 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         const currentTime = performance.now()
         const frameTime = currentTime - lastRender
 
-        const resolutionRatio = calculateResolutionRatio(frameTime, renderTimes, lastResolutionRatio)
+        // Skip resolution scaling during warmup to avoid shader compilation skewing the average
+        const resolutionRatio = frameNumber < 60
+            ? lastResolutionRatio
+            : calculateResolutionRatio(frameTime, renderTimes, lastResolutionRatio)
 
         // Check if canvas display size changed (window resize)
         resizeCanvasToDisplaySize(gl.canvas, lastResolutionRatio)
@@ -205,7 +208,6 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
             gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
             lastCanvasWidth = gl.canvas.width
             lastCanvasHeight = gl.canvas.height
-            useInitialTextureAsPrev = true
         }
 
         lastRender = currentTime
