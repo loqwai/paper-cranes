@@ -10,8 +10,8 @@
 // Number of tentacle arms
 #define NUM_ARMS (6.0 + spectralEntropyMedian * 6.0)
 
-// Undulation speed — deliberately slow
-#define UNDULATE_SPEED (0.15 + energySlope * 0.05)
+// Undulation speed — constant slow rotation
+#define UNDULATE_SPEED 0.15
 
 // How far tentacles extend (0 = center, 1 = edge)
 #define REACH (0.5 + bassMedian * 0.3)
