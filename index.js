@@ -176,7 +176,7 @@ const animateShader = ({ render, audio, fragmentShader }) => {
         window.cranes.frameCount++
         // Render the shader
         render({
-            time: (performance.now() - startTime) / 1000,
+            time: ((performance.now() - startTime) / 1000) % 1000,
             features,
             fragmentShader: window.cranes?.shader ?? fragmentShader,
         })
