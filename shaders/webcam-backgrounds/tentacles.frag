@@ -1,0 +1,214 @@
+// @fullscreen: true
+// @mobile: true
+// @tags: ambient, background, webcam
+// Purple/indigo tentacles radiating outward from center — webcam background
+
+// ============================================================================
+// SLOW PARAMETERS (medians, means, regression — changes over seconds)
+// ============================================================================
+
+// Number of tentacle arms
+#define NUM_ARMS (6.0 + spectralEntropyMedian * 6.0)
+
+// Undulation speed — deliberately slow
+#define UNDULATE_SPEED (0.15 + energySlope * 0.05)
+
+// How far tentacles extend (0 = center, 1 = edge)
+#define REACH (0.5 + bassMedian * 0.3)
+
+// Wiggle amplitude — how wavy the arms are
+#define WIGGLE (0.3 + spectralSpreadMedian * 0.4)
+
+// Hue wanders within purple-indigo (Oklch radians ~4.4–5.6)
+#define HUE_CENTER (4.9 + pitchClassMedian * 0.5 + spectralCentroidSlope * 0.2)
+
+// Chroma — vivid when trend is steady
+#define CHROMA (0.10 + energyRSquared * 0.06)
+
+// Base lightness from energy median
+#define LIGHTNESS (0.50 + energyMedian * 0.15)
+
+// Tentacle thickness
+#define THICKNESS (0.06 + spectralCentroidMedian * 0.03)
+
+// ============================================================================
+// FAST PARAMETERS (small accents only)
+// ============================================================================
+
+// Curl factor — tentacles curl when energy spikes
+#define CURL_AMOUNT (max(energyZScore, 0.0) * 0.8)
+
+// Brightness pulse on flux spikes
+#define FLUX_PULSE (max(spectralFluxZScore, 0.0) * 0.06)
+
+// Edge shimmer from treble
+#define EDGE_SHIMMER (max(trebleZScore, 0.0) * 0.04)
+
+// Roughness grit
+#define GRIT (spectralRoughnessZScore * 0.008)
+
+// ============================================================================
+// NOISE
+// ============================================================================
+
+vec3 mod289(vec3 x) { return x - floor(x / 289.0) * 289.0; }
+vec2 mod289(vec2 x) { return x - floor(x / 289.0) * 289.0; }
+vec3 permute(vec3 x) { return mod289((x * 34.0 + 1.0) * x); }
+
+float snoise(vec2 v) {
+    const vec4 C = vec4(0.211324865405187, 0.366025403784439,
+                       -0.577350269189626, 0.024390243902439);
+    vec2 i  = floor(v + dot(v, C.yy));
+    vec2 x0 = v - i + dot(i, C.xx);
+    vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+    vec4 x12 = x0.xyxy + C.xxzz;
+    x12.xy -= i1;
+    i = mod289(i);
+    vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0)) + i.x + vec3(0.0, i1.x, 1.0));
+    vec3 m = max(0.5 - vec3(dot(x0, x0), dot(x12.xy, x12.xy), dot(x12.zw, x12.zw)), 0.0);
+    m = m * m;
+    m = m * m;
+    vec3 x = 2.0 * fract(p * C.www) - 1.0;
+    vec3 h = abs(x) - 0.5;
+    vec3 ox = floor(x + 0.5);
+    vec3 a0 = x - ox;
+    m *= 1.79284291400159 - 0.85373472095314 * (a0 * a0 + h * h);
+    vec3 g;
+    g.x = a0.x * x0.x + h.x * x0.y;
+    g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+    return 130.0 * dot(m, g);
+}
+
+// ============================================================================
+// TENTACLE FIELD (polar, radiating outward)
+// ============================================================================
+
+// Returns vec2(intensity, rim) where rim is edge proximity for rim lighting
+vec2 tentacleField(vec2 p, float t) {
+    float r = length(p);
+    float angle = atan(p.y, p.x);
+    float numArms = NUM_ARMS;
+    float bestIntensity = 0.0;
+    float bestRim = 0.0;
+
+    for (float i = 0.0; i < 18.0; i += 1.0) {
+        if (i >= numArms) break;
+
+        // Each arm has a base angle, evenly spaced
+        float armAngle = i / numArms * 6.2832;
+
+        // Slow organic drift per arm
+        armAngle += sin(t * 0.3 + i * 2.3) * 0.15;
+
+        // Wiggle: the arm's angle offset varies with radius
+        // This makes tentacles wavy as they extend outward
+        float wiggle = sin(r * 12.0 - t * 1.5 + i * 1.7) * WIGGLE * (0.3 + r);
+
+        // Curl on energy zscore — tentacles curve more at the tips
+        float curl = CURL_AMOUNT * r * r * sin(r * 8.0 + t * 2.0 + i * 0.9);
+
+        float targetAngle = armAngle + wiggle * 0.3 + curl * 0.4;
+
+        // Angular distance to this arm (wrapping)
+        float angleDist = abs(mod(angle - targetAngle + 3.1416, 6.2832) - 3.1416);
+
+        // Tentacle width tapers as it extends
+        float width = THICKNESS * (1.0 - r * 0.6);
+        width = max(width, 0.01);
+
+        // Soft tentacle shape
+        float arm = smoothstep(width, width * 0.3, angleDist);
+
+        // Fade: start after small radius (face area), extend to REACH
+        float innerFade = smoothstep(0.08, 0.18, r);
+        float outerFade = 1.0 - smoothstep(REACH - 0.1, REACH + 0.15, r);
+        arm *= innerFade * outerFade;
+
+        // Rim lighting: bright at edges of tentacle (where angleDist ~ width)
+        float rim = smoothstep(width * 0.1, width * 0.8, angleDist)
+                  * smoothstep(width * 1.2, width, angleDist);
+        rim *= innerFade * outerFade;
+
+        if (arm > bestIntensity) {
+            bestIntensity = arm;
+            bestRim = rim;
+        }
+    }
+
+    return vec2(bestIntensity, bestRim);
+}
+
+// ============================================================================
+// MAIN
+// ============================================================================
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 uv = fragCoord.xy / iResolution.xy;
+    vec2 p = (fragCoord.xy - 0.5 * iResolution.xy) / iResolution.y;
+
+    float t = time * UNDULATE_SPEED;
+
+    // --- Tentacle field ---
+    vec2 field = tentacleField(p, t);
+    float intensity = field.x;
+    float rim = field.y;
+
+    // Subtle noise texture on tentacles
+    float nz = snoise(p * 15.0 + t * 0.3) * 0.5 + 0.5;
+    intensity *= 0.85 + nz * 0.15;
+
+    // --- Fast accents ---
+    intensity += FLUX_PULSE * intensity;
+    float shimmer = snoise(p * 30.0 + time * 1.5) * EDGE_SHIMMER * rim;
+    float grit = snoise(p * 45.0 + time * 2.0) * GRIT;
+
+    // --- Color in Oklch: purple/indigo ---
+    float angle = atan(p.y, p.x);
+    float r = length(p);
+
+    // Vary hue slightly by angle and radius
+    float hue = HUE_CENTER + angle * 0.05 + r * 0.2;
+
+    // Core tentacle color
+    float chroma = CHROMA * (0.4 + intensity * 1.5);
+    float lightness = mix(0.0, LIGHTNESS, intensity) + rim * 0.2 + shimmer + grit;
+
+    // Rim lighting: brighter, slightly shifted hue at edges
+    float rimHue = hue + 0.3; // Shift toward blue for rim
+    float rimLight = rim * 0.35;
+
+    // Background: very dark indigo
+    vec3 bg = oklch2rgb(vec3(0.08, 0.03, 4.8));
+
+    // Tentacle body
+    vec3 bodyColor = oklch2rgb(vec3(
+        clamp(lightness, 0.05, 0.65),
+        clamp(chroma, 0.02, 0.18),
+        hue
+    ));
+
+    // Rim highlight (brighter, bluer)
+    vec3 rimColor = oklch2rgb(vec3(
+        clamp(rimLight + 0.15, 0.1, 0.7),
+        clamp(CHROMA * 1.5, 0.04, 0.20),
+        rimHue
+    ));
+
+    // Combine: body + rim
+    vec3 tentacle = bodyColor + rimColor * rim;
+
+    // Mix with background
+    vec3 col = mix(bg, tentacle, smoothstep(0.0, 0.02, intensity));
+
+    // --- Frame feedback for smoothness ---
+    vec4 prev = getLastFrameColor(uv);
+    col = mix(prev.rgb, col, 0.12);
+
+    // Gentle vignette
+    float vign = 1.0 - r * 0.15;
+    col *= vign;
+
+    col = clamp(col, 0.0, 1.0);
+
+    fragColor = vec4(col, 1.0);
+}
