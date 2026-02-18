@@ -230,7 +230,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // --- Frame feedback for smoothness ---
     vec4 prev = getLastFrameColor(uv);
-    col = mix(prev.rgb, col, 0.12);
+    col = mix(prev.rgb * 0.99, col, 0.22);
 
     // Gentle vignette
     float vign = 1.0 - r * 0.15;
