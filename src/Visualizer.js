@@ -106,6 +106,19 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         }
     })
 
+    if (!gl) {
+        console.error('WebGL2 not available')
+        return () => {}
+    }
+
+    // Recover from GPU context loss (common on mobile)
+    canvas.addEventListener('webglcontextlost', (e) => {
+        e.preventDefault()
+    })
+    canvas.addEventListener('webglcontextrestored', () => {
+        window.location.reload()
+    })
+
     if (fullscreen) {
         const width = window.innerWidth
         const height = window.innerHeight
