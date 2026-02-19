@@ -57,7 +57,8 @@ export const shaderWrapper = (shader) => {
         const compatUniforms = shaderToyCompatibilityUniforms()
         const audioUniforms = getAudioUniforms()
         const knobUniforms = getKnobUniforms(shader)
-        const otherUniforms = compatUniforms + audioUniforms + knobUniforms
+        const pcUniforms = paperCranes()
+        const otherUniforms = compatUniforms + audioUniforms + knobUniforms + pcUniforms
         const queryUniforms = getQueryParamUniforms(shader, otherUniforms)
         return /* glsl */ `#version 300 es
 precision highp float;
