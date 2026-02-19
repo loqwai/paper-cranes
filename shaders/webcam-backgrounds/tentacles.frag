@@ -28,8 +28,8 @@
 // ============================================================================
 
 // How far tentacles extend (0 = center, 1 = edge)
-#define REACH (0.5 + bassMedian * 0.3)
-// #define REACH 0.6
+#define REACH (0.65 + bassMedian * 0.25)
+// #define REACH 0.7
 
 // Wiggle amplitude — how wavy the arms are
 #define WIGGLE (0.3 + spectralSpreadMedian * 0.4)
@@ -171,8 +171,8 @@ vec2 tentacleField(vec2 p, float t) {
         float angleDist = abs(mod(angle - targetAngle + 3.1416, 6.2832) - 3.1416);
 
         // Tentacle width tapers as it extends — surges thicker on extreme bass
-        float width = (THICKNESS + THICKNESS_SURGE) * (1.0 - r * 0.6);
-        width = max(width, 0.01);
+        float width = (THICKNESS + THICKNESS_SURGE) * (1.0 - r * 0.35);
+        width = max(width, 0.015);
 
         // Soft tentacle shape
         float arm = smoothstep(width, width * 0.3, angleDist);
@@ -185,7 +185,7 @@ vec2 tentacleField(vec2 p, float t) {
         // Fade: start after small radius (face area), extend to REACH + surge + breath
         float totalReach = REACH + REACH_SURGE + breath * REACH;
         float innerFade = smoothstep(0.08, 0.18, r);
-        float outerFade = 1.0 - smoothstep(totalReach - 0.1, totalReach + 0.15, r);
+        float outerFade = 1.0 - smoothstep(totalReach - 0.05, totalReach + 0.05, r);
         arm *= innerFade * outerFade;
 
         // Rim lighting: bright at edges of tentacle (where angleDist ~ width)
