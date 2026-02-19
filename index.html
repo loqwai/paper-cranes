@@ -42,7 +42,7 @@
       var now = Date.now()
       __tapTimes.push(now)
       __tapTimes = __tapTimes.filter(function(t) { return now - t < 1000 })
-      if (__tapTimes.length >= 5) {
+      if (__tapTimes.length >= 7) {
         __tapTimes = []
         __pwaPrompt.prompt()
         __pwaPrompt.userChoice.then(function() { __pwaPrompt = null })
