@@ -26,28 +26,34 @@
     })()
     </script>
     <script>
-    // Capture beforeinstallprompt so we can show a persistent install button.
-    // Chrome's mini-infobar appears briefly and is easy to miss on mobile.
+    // Capture beforeinstallprompt so we can trigger it later.
+    // 5 taps within 1 second triggers the install prompt — no visible UI.
     var __pwaPrompt = null
+    var __tapTimes = []
     window.addEventListener('beforeinstallprompt', function(e) {
       e.preventDefault()
       __pwaPrompt = e
-      var btn = document.getElementById('pwa-install')
-      if (btn) btn.style.display = 'block'
     })
     window.addEventListener('appinstalled', function() {
       __pwaPrompt = null
-      var btn = document.getElementById('pwa-install')
-      if (btn) btn.style.display = 'none'
+    })
+    document.addEventListener('click', function() {
+      if (!__pwaPrompt) return
+      var now = Date.now()
+      __tapTimes.push(now)
+      // Keep only taps within the last 1 second
+      __tapTimes = __tapTimes.filter(function(t) { return now - t < 1000 })
+      if (__tapTimes.length >= 5) {
+        __tapTimes = []
+        __pwaPrompt.prompt()
+        __pwaPrompt.userChoice.then(function() { __pwaPrompt = null })
+      }
     })
     </script>
     <script type="module" src="./src/worker-communication.js"></script>
 </head>
 
 <body class="ready">
-    <button id="pwa-install" style="display:none; position:fixed; bottom:20px; right:20px; z-index:9999; background:#222; color:#fff; border:1px solid #555; border-radius:8px; padding:10px 16px; font-size:14px; cursor:pointer; font-family:sans-serif;" onclick="if(__pwaPrompt){__pwaPrompt.prompt();__pwaPrompt.userChoice.then(function(){__pwaPrompt=null;this.style.display='none'}.bind(this))}">
-      Install App
-    </button>
     <canvas id="visualizer" width="2160" height="1920"></canvas>
     <script type="module" src="./index.js"></script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-4BWWJ5ZPHY"></script>
