@@ -89,7 +89,7 @@ export class AudioProcessor {
     }
 
     isBeat = () => {
-        const spectralFlux = this.rawFeatures.SpectralFlux
+        const spectralFlux = this.rawFeatures.spectralFlux
         return spectralFlux?.stats.zScore > 0.9 || false
     }
 

@@ -18,11 +18,11 @@ async function setupAnalyzer() {
   if(!analyzerName) throw new Error('Analyzer name is required')
   if(!historySize) throw new Error('History size is required')
 
-  const {default: analyzer} = await import(/* @vite-ignore */ `https://esm.sh/hypnosound@1.10.2/src/audio/${analyzerName}.js`)
+  const {default: analyzer} = await import(/* @vite-ignore */ `https://esm.sh/hypnosound@1.13.0/src/audio/${analyzerName}.js`)
 
   if (!analyzer) throw new Error(`Analyzer ${analyzerName} not found`)
 
-  const { makeCalculateStats } = await import('https://esm.sh/hypnosound@1.10.2/src/utils/calculateStats.js')
+  const { makeCalculateStats } = await import('https://esm.sh/hypnosound@1.13.0/src/utils/calculateStats.js')
 
   self.calculateStats = makeCalculateStats(historySize)
   self.analyzer = analyzer
@@ -37,7 +37,10 @@ async function configure(e) {
 function processFftData(e) {
   if(!self.analyzer) return
 
-  const value = self.analyzer(e.data.fft, self.previousSignal)
+  const args = self.analyzerName === 'spectralFlux'
+    ? [e.data.fft, self.previousSignal]
+    : [e.data.fft]
+  const value = self.analyzer(...args)
   self.previousSignal = e.data.fft
 
   self.postMessage({

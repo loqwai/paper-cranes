@@ -92,7 +92,7 @@ const Analyzer = () => {
                     setProgress(Math.min(progress * 100, 100))
                     setTimeInfo(prev => ({ ...prev, current: formatTime(currentTime) }))
 
-                    const features = await processor.current.getFeatures()
+                    const features = { ...processor.current.getFeatures() }
                     analysisResults.current.push({ timestamp: currentTime, features })
                     setCurrentFeatures(features)
 
