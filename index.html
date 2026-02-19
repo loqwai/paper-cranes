@@ -37,18 +37,20 @@
     window.addEventListener('appinstalled', function() {
       __pwaPrompt = null
     })
-    document.addEventListener('click', function() {
+    function __pwaTap() {
       if (!__pwaPrompt) return
       var now = Date.now()
       __tapTimes.push(now)
-      // Keep only taps within the last 1 second
       __tapTimes = __tapTimes.filter(function(t) { return now - t < 1000 })
       if (__tapTimes.length >= 5) {
         __tapTimes = []
         __pwaPrompt.prompt()
         __pwaPrompt.userChoice.then(function() { __pwaPrompt = null })
       }
-    })
+    }
+    // click works on desktop, touchend works on mobile (click is delayed/swallowed on canvas)
+    document.addEventListener('click', __pwaTap)
+    document.addEventListener('touchend', __pwaTap)
     </script>
     <script type="module" src="./src/worker-communication.js"></script>
 </head>
