@@ -20,7 +20,7 @@
 #define BREATH_SPEED 0.07
 
 // How much tentacles grow and shrink (fraction of REACH)
-#define BREATH_AMOUNT 0.25
+#define BREATH_AMOUNT 0.2
 
 // ============================================================================
 // SLOW PARAMETERS — swap constants for audio uniforms
@@ -28,8 +28,9 @@
 // ============================================================================
 
 // How far tentacles extend (0 = center, 1 = edge)
-#define REACH (0.65 + bassMedian * 0.25)
-// #define REACH 0.7
+// viewport is ±0.5 vertically, so keep tips under ~0.45
+#define REACH (0.35 + bassMedian * 0.1)
+// #define REACH 0.38
 
 // Wiggle amplitude — how wavy the arms are
 #define WIGGLE (0.3 + spectralSpreadMedian * 0.4)
