@@ -9,7 +9,22 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <link rel="apple-touch-icon" href="/icons/icon-192.png">
-    <script type="module" src="./src/pwa-manifest.js"></script>
+    <script>
+    // Must be inline + synchronous (not type="module") so the manifest link
+    // exists in the DOM before Chrome's early installability check.
+    (function() {
+      var shader = new URLSearchParams(window.location.search).get('shader')
+      var safe = shader ? shader.replace(/\//g, '--') : 'default'
+      var link = document.createElement('link')
+      link.rel = 'manifest'
+      link.href = '/manifests/' + safe + '.json'
+      document.head.appendChild(link)
+      if (shader) {
+        var last = shader.indexOf('/') !== -1 ? shader.split('/').pop() : shader
+        document.title = 'Paper Cranes - ' + last.replace(/[-_]/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase() })
+      }
+    })()
+    </script>
     <script type="module" src="./src/worker-communication.js"></script>
 </head>
 
