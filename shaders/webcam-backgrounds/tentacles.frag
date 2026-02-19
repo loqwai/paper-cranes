@@ -4,20 +4,17 @@
 // Purple/indigo tentacles radiating outward from center — webcam background
 
 // ============================================================================
-// SLOW PARAMETERS (medians, means, regression — changes over seconds)
+// STRUCTURE — constants that define the tentacle shape
 // ============================================================================
 
 // Number of tentacle arms
 #define NUM_ARMS 8.0
 
-// Undulation speed for wiggle/drift oscillations
-#define UNDULATE_SPEED 0.15
-
 // Continuous rotation speed (radians per second) — ~4 minutes per revolution
 #define ROTATION_SPEED 0.025
 
-// How far tentacles extend (0 = center, 1 = edge)
-#define REACH (0.5 + bassMedian * 0.3)
+// Undulation speed for wiggle/drift oscillations
+#define UNDULATE_SPEED 0.15
 
 // Grow/shrink breathing speed — each arm breathes at its own rate
 #define BREATH_SPEED 0.07
@@ -25,45 +22,67 @@
 // How much tentacles grow and shrink (fraction of REACH)
 #define BREATH_AMOUNT 0.25
 
+// ============================================================================
+// SLOW PARAMETERS — swap constants for audio uniforms
+// (medians, means, regression — changes over seconds)
+// ============================================================================
+
+// How far tentacles extend (0 = center, 1 = edge)
+#define REACH (0.5 + bassMedian * 0.3)
+// #define REACH 0.6
+
 // Wiggle amplitude — how wavy the arms are
 #define WIGGLE (0.3 + spectralSpreadMedian * 0.4)
+// #define WIGGLE 0.5
 
 // Hue wanders within purple-indigo (Oklch radians ~4.4–5.6)
 #define HUE_CENTER (4.9 + pitchClassMedian * 0.5 + spectralCentroidSlope * 0.2)
+// #define HUE_CENTER 5.0
 
 // Chroma — vivid when trend is steady
 #define CHROMA (0.10 + energyRSquared * 0.06)
+// #define CHROMA 0.13
 
 // Base lightness from energy median
 #define LIGHTNESS (0.50 + energyMedian * 0.15)
+// #define LIGHTNESS 0.55
 
 // Tentacle thickness
 #define THICKNESS (0.06 + spectralCentroidMedian * 0.03)
+// #define THICKNESS 0.07
 
 // ============================================================================
-// FAST PARAMETERS (small accents only)
+// FAST PARAMETERS — swap constants for audio uniforms
+// (z-scores — small accents only)
 // ============================================================================
 
 // Curl factor — tentacles curl when energy spikes
 #define CURL_AMOUNT (max(energyZScore, 0.0) * 0.8)
+// #define CURL_AMOUNT 0.0
 
 // Brightness pulse on flux spikes
 #define FLUX_PULSE (max(spectralFluxZScore, 0.0) * 0.06)
+// #define FLUX_PULSE 0.0
 
 // Edge shimmer from treble
 #define EDGE_SHIMMER (max(trebleZScore, 0.0) * 0.04)
+// #define EDGE_SHIMMER 0.0
 
 // Roughness grit
 #define GRIT (spectralRoughnessZScore * 0.008)
+// #define GRIT 0.0
 
 // ============================================================================
-// EXTREME Z-SCORE DRAMA (only fires at extreme levels)
+// EXTREME Z-SCORE DRAMA — only fires at extreme levels
+// (smoothstep gates so nothing happens below ~0.6)
 // ============================================================================
 
-// How extreme the z-scores are — smoothstep gates so nothing happens below ~0.6
 #define EXTREME_ENERGY smoothstep(0.6, 1.0, energyZScore)
 #define EXTREME_FLUX smoothstep(0.6, 1.0, spectralFluxZScore)
 #define EXTREME_BASS smoothstep(0.6, 1.0, bassZScore)
+// #define EXTREME_ENERGY 0.0
+// #define EXTREME_FLUX 0.0
+// #define EXTREME_BASS 0.0
 
 // Extra reach when energy is extreme — tentacles lunge outward
 #define REACH_SURGE (EXTREME_ENERGY * 0.3)
