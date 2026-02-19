@@ -64,6 +64,12 @@ export class AudioProcessor {
         // Apply exponential smoothing to reduce jitter
         for (const key in newFeatures) {
             if (typeof newFeatures[key] === 'number' && isFinite(newFeatures[key])) {
+                // pitchClass is categorical (which note) — smoothing it is meaningless
+                if (key.startsWith('pitchClass')) {
+                    this.currentFeatures[key] = newFeatures[key]
+                    continue
+                }
+
                 // Initialize smoothed value if it doesn't exist
                 if (!(key in this.smoothedFeatures)) {
                     this.smoothedFeatures[key] = newFeatures[key]
