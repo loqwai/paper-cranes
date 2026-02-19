@@ -5,6 +5,53 @@
     <link rel="stylesheet" href="index.css" />
     <title>Paper Cranes</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <script>
+    // Must be inline + synchronous (not type="module") so the manifest link
+    // exists in the DOM before Chrome's early installability check.
+    (function() {
+      var shader = new URLSearchParams(window.location.search).get('shader')
+      var safe = shader ? shader.replace(/\//g, '--') : 'default'
+      var link = document.createElement('link')
+      link.rel = 'manifest'
+      link.href = '/manifests/' + safe + '.json'
+      document.head.appendChild(link)
+      if (shader) {
+        var last = shader.indexOf('/') !== -1 ? shader.split('/').pop() : shader
+        document.title = 'Paper Cranes - ' + last.replace(/[-_]/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase() })
+      }
+    })()
+    </script>
+    <script>
+    // Capture beforeinstallprompt so we can trigger it later.
+    // 5 taps within 1 second triggers the install prompt — no visible UI.
+    var __pwaPrompt = null
+    var __tapTimes = []
+    window.addEventListener('beforeinstallprompt', function(e) {
+      e.preventDefault()
+      __pwaPrompt = e
+    })
+    window.addEventListener('appinstalled', function() {
+      __pwaPrompt = null
+    })
+    function __pwaTap() {
+      if (!__pwaPrompt) return
+      var now = Date.now()
+      __tapTimes.push(now)
+      __tapTimes = __tapTimes.filter(function(t) { return now - t < 1000 })
+      if (__tapTimes.length >= 7) {
+        __tapTimes = []
+        __pwaPrompt.prompt()
+        __pwaPrompt.userChoice.then(function() { __pwaPrompt = null })
+      }
+    }
+    // click works on desktop, touchend works on mobile (click is delayed/swallowed on canvas)
+    document.addEventListener('click', __pwaTap)
+    document.addEventListener('touchend', __pwaTap)
+    </script>
     <script type="module" src="./src/worker-communication.js"></script>
 </head>
 
