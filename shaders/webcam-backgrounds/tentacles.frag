@@ -135,13 +135,14 @@ float snoise(vec2 v) {
 // TENTACLE FIELD (polar, radiating outward)
 // ============================================================================
 
-// Returns vec2(intensity, rim) where rim is edge proximity for rim lighting
-vec2 tentacleField(vec2 p, float t) {
+// Returns vec3(intensity, rim, tipGlow)
+vec3 tentacleField(vec2 p, float t) {
     float r = length(p);
     float angle = atan(p.y, p.x);
     float numArms = NUM_ARMS;
     float bestIntensity = 0.0;
     float bestRim = 0.0;
+    float bestTip = 0.0;
 
     for (float i = 0.0; i < 18.0; i += 1.0) {
         if (i >= numArms) break;
@@ -170,23 +171,29 @@ vec2 tentacleField(vec2 p, float t) {
         // Angular distance to this arm (wrapping)
         float angleDist = abs(mod(angle - targetAngle + 3.1416, 6.2832) - 3.1416);
 
-        // Tentacle width tapers as it extends — surges thicker on extreme bass
-        float width = (THICKNESS + THICKNESS_SURGE) * (1.0 - r * 0.35);
+        // Per-arm breathing — each tentacle slowly grows and shrinks independently
+        float breathSpeed = BREATH_SPEED * (0.7 + sin(i * 4.37) * 0.5);
+        float breathPhase = i * 1.9 + sin(i * 6.29) * 2.0;
+        float breath = sin(time * breathSpeed + breathPhase) * BREATH_AMOUNT;
+        float totalReach = REACH + REACH_SURGE + breath * REACH;
+
+        // Tentacle width: tapers toward tip, then bulges at the very end
+        float tipProximity = smoothstep(totalReach - 0.12, totalReach, r);
+        float taper = 1.0 - r * 0.35;
+        float tipBulge = 1.0 + tipProximity * 0.8; // widen at tip
+        float width = (THICKNESS + THICKNESS_SURGE) * taper * tipBulge;
         width = max(width, 0.015);
 
         // Soft tentacle shape
         float arm = smoothstep(width, width * 0.3, angleDist);
 
-        // Per-arm breathing — each tentacle slowly grows and shrinks independently
-        float breathSpeed = BREATH_SPEED * (0.7 + sin(i * 4.37) * 0.5); // 0.035–0.105 per arm
-        float breathPhase = i * 1.9 + sin(i * 6.29) * 2.0;
-        float breath = sin(time * breathSpeed + breathPhase) * BREATH_AMOUNT;
-
-        // Fade: start after small radius (face area), extend to REACH + surge + breath
-        float totalReach = REACH + REACH_SURGE + breath * REACH;
+        // Fade: start after small radius (face area), extend to REACH
         float innerFade = smoothstep(0.08, 0.18, r);
-        float outerFade = 1.0 - smoothstep(totalReach - 0.05, totalReach + 0.05, r);
+        float outerFade = 1.0 - smoothstep(totalReach - 0.02, totalReach + 0.03, r);
         arm *= innerFade * outerFade;
+
+        // Bright tip glow — concentrated at the end of the tentacle
+        float tipGlow = tipProximity * arm * 1.5;
 
         // Rim lighting: bright at edges of tentacle (where angleDist ~ width)
         float rim = smoothstep(width * 0.1, width * 0.8, angleDist)
@@ -196,10 +203,11 @@ vec2 tentacleField(vec2 p, float t) {
         if (arm > bestIntensity) {
             bestIntensity = arm;
             bestRim = rim;
+            bestTip = tipGlow;
         }
     }
 
-    return vec2(bestIntensity, bestRim);
+    return vec3(bestIntensity, bestRim, bestTip);
 }
 
 // ============================================================================
@@ -213,9 +221,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float t = time * UNDULATE_SPEED;
 
     // --- Tentacle field ---
-    vec2 field = tentacleField(p, t);
+    vec3 field = tentacleField(p, t);
     float intensity = field.x;
     float rim = field.y;
+    float tipGlow = field.z;
 
     // Subtle noise texture on tentacles
     float nz = snoise(p * 15.0 + t * 0.3) * 0.5 + 0.5;
@@ -236,6 +245,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Core tentacle color — chroma surges during extremes
     float chroma = (CHROMA + CHROMA_SURGE) * (0.4 + intensity * 1.5);
     float lightness = mix(0.0, LIGHTNESS, intensity) + rim * 0.2 + shimmer + grit;
+
+    // Tip glow — bright spot at tentacle ends
+    lightness += tipGlow * 0.25;
+    chroma += tipGlow * 0.04;
 
     // Rim lighting: brighter, slightly shifted hue at edges — pumps up during extremes
     float rimHue = hue + 0.3; // Shift toward blue for rim
