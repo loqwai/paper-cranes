@@ -25,10 +25,29 @@
       }
     })()
     </script>
+    <script>
+    // Capture beforeinstallprompt so we can show a persistent install button.
+    // Chrome's mini-infobar appears briefly and is easy to miss on mobile.
+    var __pwaPrompt = null
+    window.addEventListener('beforeinstallprompt', function(e) {
+      e.preventDefault()
+      __pwaPrompt = e
+      var btn = document.getElementById('pwa-install')
+      if (btn) btn.style.display = 'block'
+    })
+    window.addEventListener('appinstalled', function() {
+      __pwaPrompt = null
+      var btn = document.getElementById('pwa-install')
+      if (btn) btn.style.display = 'none'
+    })
+    </script>
     <script type="module" src="./src/worker-communication.js"></script>
 </head>
 
 <body class="ready">
+    <button id="pwa-install" style="display:none; position:fixed; bottom:20px; right:20px; z-index:9999; background:#222; color:#fff; border:1px solid #555; border-radius:8px; padding:10px 16px; font-size:14px; cursor:pointer; font-family:sans-serif;" onclick="if(__pwaPrompt){__pwaPrompt.prompt();__pwaPrompt.userChoice.then(function(){__pwaPrompt=null;this.style.display='none'}.bind(this))}">
+      Install App
+    </button>
     <canvas id="visualizer" width="2160" height="1920"></canvas>
     <script type="module" src="./index.js"></script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-4BWWJ5ZPHY"></script>
