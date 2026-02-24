@@ -264,7 +264,7 @@ vec3 renderRay(vec3 ro, vec3 rd, float scaleMod, float hueShift) {
 // ============================================================================
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec2 uv = (fragCoord - 0.5 * iResolution.xy) / iResolution.y;
+    vec2 uv = (fragCoord - 0.5 * iResolution.xy) / min(iResolution.x, iResolution.y);
 
     float scaleMod = sin(iTime * 0.1) * 0.05 + SCALE_MOD;
     float hueShift = iTime * 0.025 + HUE_SHIFT;
