@@ -10,7 +10,9 @@
     "build": "vite build",
     "dev": "vite",
     "preview": "vite preview",
-    "format": "eslint --fix ."
+    "format": "eslint --fix .",
+    "delete": "node scripts/delete-shader.js",
+    "delete:interactive": "node scripts/delete-shader.js --interactive"
   },
   "author": "hypnodroid",
   "license": "UNLICENSED",

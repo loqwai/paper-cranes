@@ -150,3 +150,4 @@ yarn-error.log*
 shaders.json
 manifests/
 test-screenshots/
+screenshots/
