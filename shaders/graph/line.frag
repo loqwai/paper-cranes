@@ -2,7 +2,7 @@
 #define SMOOTH_WIDTH 0.25
 #define ULTRA_DROP_COUNT 5
 #define PROBE_A 0.3
-#define PROBE_B knob_14
+#define PROBE_B knob_1
 #define SMOOTHING_FACTOR 0.151  // Lower = smoother, but more latency
 #define VERTICAL_OFFSET 0.5  // Centered in screen
 #define SCALE 0.4  // Scale factor that keeps graph visible

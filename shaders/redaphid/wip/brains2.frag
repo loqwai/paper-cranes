@@ -4,9 +4,9 @@
 
 #define MAXDIST 20.
 #define GIFLENGTH 3.570795
-//https://visuals.beadfamous.com/edit?knob_30=0.205&knob_30.min=0&knob_30.max=1&knob_40=1.528&knob_40.min=0&knob_40.max=2&knob_31=0.157&knob_31.min=0&knob_31.max=1&knob_41=0.535&knob_41.min=0&knob_41.max=1
-#define A mapValue(spectralCentroidNormalized, -1., 1., knob_30, knob_40)
-#define C mapValue(energyZScore, -1., 1., knob_31, knob_41)
+//https://visuals.beadfamous.com/edit?knob_1=0.205&knob_1.min=0&knob_1.max=1&knob_3=1.528&knob_3.min=0&knob_3.max=2&knob_2=0.157&knob_2.min=0&knob_2.max=1&knob_4=0.535&knob_4.min=0&knob_4.max=1
+#define A mapValue(spectralCentroidNormalized, -1., 1., knob_1, knob_3)
+#define C mapValue(energyZScore, -1., 1., knob_2, knob_4)
 #define D mapValue(pitchClassMean, 0., 1., 0.1, 0.5)
 struct Ray {
 	vec3 ro;

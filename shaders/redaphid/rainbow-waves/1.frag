@@ -1,38 +1,41 @@
 // @fullscreen: true
-//http://localhost:6969/edit.html?knob_14=7.583&knob_14.min=0&knob_14.max=10.7&knob_15=1.257&knob_15.min=0&knob_15.max=8.4&knob_16=0.198&knob_16.min=0&knob_16.max=0.6&knob_17=3.928&knob_17.min=0&knob_17.max=4.3&knob_18=0.228&knob_18.min=0&knob_18.max=1&knob_19=0.559&knob_19.min=0&knob_19.max=1&knob_20=11.024&knob_20.min=0&knob_20.max=11.2&knob_21=0&knob_21.min=0&knob_21.max=1&knob_8=1&knob_8.min=0&knob_8.max=1&knob_11=0.63&knob_11.min=0&knob_11.max=1&knob_6=0.291&knob_6.min=0&knob_6.max=1&knob_22=0.866&knob_22.min=0&knob_22.max=10&knob_3=3.583&knob_3.min=0&knob_3.max=11.1&knob_4=2.796&knob_4.min=0&knob_4.max=5.3&knob_7=1&knob_7.min=0&knob_7.max=1&knob_5=0.591&knob_5.min=0&knob_5.max=1&knob_26=0&knob_26.min=0&knob_26.max=1&knob_27=0&knob_27.min=0&knob_27.max=1&knob_9=0.795&knob_9.min=0&knob_9.max=1&knob_10=0.469&knob_10.min=0&knob_10.max=11.9
-//http://localhost:6969/edit.html?knob_14=0.59&knob_14.min=0&knob_14.max=10.7&knob_15=0&knob_15.min=0&knob_15.max=19.2&knob_16=0.397&knob_16.min=0&knob_16.max=0.6&knob_17=3.487&knob_17.min=0&knob_17.max=4.3&knob_18=0.717&knob_18.min=0&knob_18.max=1&knob_19=0.583&knob_19.min=0&knob_19.max=1&knob_20=1.676&knob_20.min=0&knob_20.max=11.2&knob_21=1&knob_21.min=0&knob_21.max=1&knob_8=1&knob_8.min=0&knob_8.max=1&knob_11=0.496&knob_11.min=0&knob_11.max=1&knob_6=0.417&knob_6.min=0&knob_6.max=1&knob_22=34.3&knob_22.min=0&knob_22.max=34.3&knob_3=5.943&knob_3.min=0&knob_3.max=11.1&knob_4=1.878&knob_4.min=0&knob_4.max=5.3&knob_7=1&knob_7.min=0&knob_7.max=1&knob_5=0.583&knob_5.min=0&knob_5.max=1&knob_26=0&knob_26.min=0&knob_26.max=1&knob_27=0&knob_27.min=0&knob_27.max=1&knob_9=0.866&knob_9.min=0&knob_9.max=1&knob_10=5.528&knob_10.min=0&knob_10.max=11.9&knob_23=0&knob_23.min=0&knob_23.max=1
-//http://localhost:6969/edit.html?knob_14=-0.48&knob_14.min=-1&knob_14.max=1&knob_15=-0.228&knob_15.min=-1&knob_15.max=1&knob_16=0.085&knob_16.min=0&knob_16.max=0.6&knob_17=0.609&knob_17.min=0&knob_17.max=4.3&knob_18=0.559&knob_18.min=0&knob_18.max=1&knob_19=0.85&knob_19.min=0&knob_19.max=1&knob_20=11.2&knob_20.min=0&knob_20.max=11.2&knob_21=0.819&knob_21.min=0&knob_21.max=1&knob_8=0.74&knob_8.min=0&knob_8.max=1&knob_11=0.409&knob_11.min=0&knob_11.max=1&knob_6=0.339&knob_6.min=0&knob_6.max=1&knob_22=4.861&knob_22.min=0&knob_22.max=34.3&knob_3=2.972&knob_3.min=0&knob_3.max=11.1&knob_4=1.586&knob_4.min=0&knob_4.max=5.3&knob_7=0.031&knob_7.min=0.01&knob_7.max=1&knob_5=0.52&knob_5.min=0&knob_5.max=1&knob_26=0&knob_26.min=0&knob_26.max=1&knob_27=0&knob_27.min=0&knob_27.max=1&knob_9=0.622&knob_9.min=0&knob_9.max=1&knob_10=4.31&knob_10.min=0&knob_10.max=11.9&knob_23=0&knob_23.min=0&knob_23.max=1&knob_46=0&knob_46.min=0&knob_46.max=1&knob_48=0&knob_48.min=0&knob_48.max=1&knob_47=0&knob_47.min=0&knob_47.max=1&knob_60=0.433&knob_60.min=0&knob_60.max=1&knob_1=0&knob_1.min=0&knob_1.max=1
+//http://localhost:6969/edit.html?knob_11=7.583&knob_11.min=0&knob_11.max=10.7&knob_12=1.257&knob_12.min=0&knob_12.max=8.4&knob_13=0.198&knob_13.min=0&knob_13.max=0.6&knob_14=3.928&knob_14.min=0&knob_14.max=4.3&knob_15=0.228&knob_15.min=0&knob_15.max=1&knob_16=0.559&knob_16.min=0&knob_16.max=1&knob_17=11.024&knob_17.min=0&knob_17.max=11.2&knob_18=0&knob_18.min=0&knob_18.max=1&knob_7=1&knob_7.min=0&knob_7.max=1&knob_10=0.63&knob_10.min=0&knob_10.max=1&knob_5=0.291&knob_5.min=0&knob_5.max=1&knob_19=0.866&knob_19.min=0&knob_19.max=10&knob_2=3.583&knob_2.min=0&knob_2.max=11.1&knob_3=2.796&knob_3.min=0&knob_3.max=5.3&knob_6=1&knob_6.min=0&knob_6.max=1&knob_4=0.591&knob_4.min=0&knob_4.max=1&knob_21=0&knob_21.min=0&knob_21.max=1&knob_22=0&knob_22.min=0&knob_22.max=1&knob_8=0.795&knob_8.min=0&knob_8.max=1&knob_9=0.469&knob_9.min=0&knob_9.max=11.9
+//http://localhost:6969/edit.html?knob_11=0.59&knob_11.min=0&knob_11.max=10.7&knob_12=0&knob_12.min=0&knob_12.max=19.2&knob_13=0.397&knob_13.min=0&knob_13.max=0.6&knob_14=3.487&knob_14.min=0&knob_14.max=4.3&knob_15=0.717&knob_15.min=0&knob_15.max=1&knob_16=0.583&knob_16.min=0&knob_16.max=1&knob_17=1.676&knob_17.min=0&knob_17.max=11.2&knob_18=1&knob_18.min=0&knob_18.max=1&knob_7=1&knob_7.min=0&knob_7.max=1&knob_10=0.496&knob_10.min=0&knob_10.max=1&knob_5=0.417&knob_5.min=0&knob_5.max=1&knob_19=34.3&knob_19.min=0&knob_19.max=34.3&knob_2=5.943&knob_2.min=0&knob_2.max=11.1&knob_3=1.878&knob_3.min=0&knob_3.max=5.3&knob_6=1&knob_6.min=0&knob_6.max=1&knob_4=0.583&knob_4.min=0&knob_4.max=1&knob_21=0&knob_21.min=0&knob_21.max=1&knob_22=0&knob_22.min=0&knob_22.max=1&knob_8=0.866&knob_8.min=0&knob_8.max=1&knob_9=5.528&knob_9.min=0&knob_9.max=11.9&knob_20=0&knob_20.min=0&knob_20.max=1
+//http://localhost:6969/edit.html?knob_11=-0.48&knob_11.min=-1&knob_11.max=1&knob_12=-0.228&knob_12.min=-1&knob_12.max=1&knob_13=0.085&knob_13.min=0&knob_13.max=0.6&knob_14=0.609&knob_14.min=0&knob_14.max=4.3&knob_15=0.559&knob_15.min=0&knob_15.max=1&knob_16=0.85&knob_16.min=0&knob_16.max=1&knob_17=11.2&knob_17.min=0&knob_17.max=11.2&knob_18=0.819&knob_18.min=0&knob_18.max=1&knob_7=0.74&knob_7.min=0&knob_7.max=1&knob_10=0.409&knob_10.min=0&knob_10.max=1&knob_5=0.339&knob_5.min=0&knob_5.max=1&knob_19=4.861&knob_19.min=0&knob_19.max=34.3&knob_2=2.972&knob_2.min=0&knob_2.max=11.1&knob_3=1.586&knob_3.min=0&knob_3.max=5.3&knob_6=0.031&knob_6.min=0.01&knob_6.max=1&knob_4=0.52&knob_4.min=0&knob_4.max=1&knob_21=0&knob_21.min=0&knob_21.max=1&knob_22=0&knob_22.min=0&knob_22.max=1&knob_8=0.622&knob_8.min=0&knob_8.max=1&knob_9=4.31&knob_9.min=0&knob_9.max=11.9&knob_20=0&knob_20.min=0&knob_20.max=1&knob_23=0&knob_23.min=0&knob_23.max=1&knob_25=0&knob_25.min=0&knob_25.max=1&knob_24=0&knob_24.min=0&knob_24.max=1&knob_26=0.433&knob_26.min=0&knob_26.max=1&knob_1=0&knob_1.min=0&knob_1.max=1
 // Constants
 #define MAX_RIPPLES 12
 #define PI 3.14159265359
 #define TIME (iTime/10.)
-#define BEAT knob_23 > 50.
+#define BEAT knob_20 > 50.
 
 // Audio reactive parameters
-#define WAVE_SPEED knob_3
-#define PATTERN_SCALE knob_4
-#define RIPPLE_CHAOS knob_5      // How randomly ripples are placed
-#define RIPPLE_SPREAD knob_6      // How far from center ripples appear
-#define RIPPLE_STRENGTH knob_7      // How strong ripples are
-#define COLOR_SHIFT knob_8       // Base color shift
-#define BEAT_INTENSITY knob_9
+#define WAVE_SPEED knob_2
+#define PATTERN_SCALE knob_3
+#define RIPPLE_CHAOS knob_4      // How randomly ripples are placed
+#define RIPPLE_SPREAD knob_5      // How far from center ripples appear
+#define RIPPLE_STRENGTH knob_6      // How strong ripples are
+#define COLOR_SHIFT knob_7       // Base color shift
+#define BEAT_INTENSITY knob_8
 
 // Ripple characteristics
-#define RIPPLE_SPEED knob_20
+#define RIPPLE_SPEED knob_17
 #define RIPPLE_THICKNESS mapValue(spectralCrestNormalized, 0., 1., 0., sin(time/100.))
-#define RIPPLE_DISTANCE_DECAY knob_17
-#define RIPPLE_AGE_DECAY mapValue(energyZScore, -1.,1., knob_14, knob_15)
-#define RIPPLE_BIRTH_STAGGER knob_16
-#define RIPPLE_LIFE_DURATION knob_10
-#define RIPPLE_BASE_STRENGTH knob_22
+#define RIPPLE_DISTANCE_DECAY knob_14
+#define RIPPLE_AGE_DECAY mapValue(energyZScore, -1.,1., knob_11, knob_12)
+#define RIPPLE_BIRTH_STAGGER knob_13
+#define RIPPLE_LIFE_DURATION knob_9
+#define RIPPLE_BASE_STRENGTH knob_19
 
 // Color and blending
-#define COLOR_PERSISTENCE knob_19
-#define COLOR_SATURATION knob_21
-#define COLOR_BRIGHTNESS_SCALE knob_18
+#define COLOR_PERSISTENCE knob_16
+#define COLOR_SATURATION knob_18
+#define COLOR_BRIGHTNESS_SCALE knob_15
 
 
 // Knob controls
+uniform float knob_11;
+uniform float knob_12;
+uniform float knob_13;
 uniform float knob_14;
 uniform float knob_15;
 uniform float knob_16;
@@ -40,10 +43,8 @@ uniform float knob_17;
 uniform float knob_18;
 uniform float knob_19;
 uniform float knob_20;
-uniform float knob_21;
-uniform float knob_22;
-uniform float knob_23;
 
+uniform float knob_2;
 uniform float knob_3;
 uniform float knob_4;
 uniform float knob_5;
@@ -51,7 +52,6 @@ uniform float knob_6;
 uniform float knob_7;
 uniform float knob_8;
 uniform float knob_9;
-uniform float knob_10;
 
 // Ripple structure
 struct Ripple {

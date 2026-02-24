@@ -1,4 +1,4 @@
-//http://localhost:6969/edit.html?knob_30=0.118&knob_30.min=0&knob_30.max=1&knob_35=0.575&knob_35.min=0&knob_35.max=1&knob_36=0.165&knob_36.min=0&knob_36.max=1&knob_31=0.417&knob_31.min=0&knob_31.max=1&knob_44=0.094&knob_44.min=0&knob_44.max=1&knob_34=0.307&knob_34.min=0&knob_34.max=1&knob_37=0.071&knob_37.min=0&knob_37.max=1&knob_47=0&knob_47.min=0&knob_47.max=1&knob_46=0.961&knob_46.min=0&knob_46.max=1&knob_45=0.268&knob_45.min=0&knob_45.max=1&knob_32=0&knob_32.min=0&knob_32.max=1&knob_33=0.756&knob_33.min=0&knob_33.max=1&knob_40=1&knob_40.min=0&knob_40.max=1&knob_41=0.5&knob_41.min=0&knob_41.max=1&knob_43=0.5&knob_43.min=0&knob_43.max=1&knob_44=0.5&knob_44.min=0&knob_44.max=1
+//http://localhost:6969/edit.html?knob_1=0.118&knob_1.min=0&knob_1.max=1&knob_6=0.575&knob_6.min=0&knob_6.max=1&knob_7=0.165&knob_7.min=0&knob_7.max=1&knob_2=0.417&knob_2.min=0&knob_2.max=1&knob_12=0.094&knob_12.min=0&knob_12.max=1&knob_5=0.307&knob_5.min=0&knob_5.max=1&knob_8=0.071&knob_8.min=0&knob_8.max=1&knob_15=0&knob_15.min=0&knob_15.max=1&knob_14=0.961&knob_14.min=0&knob_14.max=1&knob_13=0.268&knob_13.min=0&knob_13.max=1&knob_3=0&knob_3.min=0&knob_3.max=1&knob_4=0.756&knob_4.min=0&knob_4.max=1&knob_9=1&knob_9.min=0&knob_9.max=1&knob_10=0.5&knob_10.min=0&knob_10.max=1&knob_11=0.5&knob_11.min=0&knob_11.max=1&knob_12=0.5&knob_12.min=0&knob_12.max=1
 #define LOOP_FRAMES 1000  // Number of frames in one complete loop
 #define CURRENT_FRAME (iFrame % LOOP_FRAMES)  // Current frame in the loop
 #define PI 3.14159265359
@@ -10,19 +10,19 @@
 // #define PROBE_5 fract(iTime * 0.2)
 // #define PROBE_6 fract(iTime * 0.05)
 
-#define PROBE_2 mix(0.55, 2., animateEaseInOutQuad(knob_34))
-#define PROBE_3 mix(-1.7, 10., knob_36)
+#define PROBE_2 mix(0.55, 2., animateEaseInOutQuad(knob_5))
+#define PROBE_3 mix(-1.7, 10., knob_7)
 
 // Add frame-based probes for 4 and 5
 #define PROBE_4 (0.5 + 0.5 * sin(FRAME_ANGLE * 3.0)) // Example: cyclical value between 0 and 1
 #define PROBE_5 (0.5 + 0.5 * cos(FRAME_ANGLE * 2.0)) // Example: another cyclical value between 0 and 1
 
-#define AA_RADIUS knob_30
+#define AA_RADIUS knob_1
 #define MAX_ITER 100
-#define INNER_CIRCLE_BLEND knob_40
-#define ZOOM_SPEED knob_41    // Controls how many zoom cycles happen per loop (use integer values for perfect loops)
-#define ROTATION_SPEED knob_70 // Controls how many rotations happen per loop (use integer values for perfect loops)
-#define CENTER_SMOOTHING knob_44 // Controls how much to smooth the fractal result near the center
+#define INNER_CIRCLE_BLEND knob_9
+#define ZOOM_SPEED knob_10    // Controls how many zoom cycles happen per loop (use integer values for perfect loops)
+#define ROTATION_SPEED knob_16 // Controls how many rotations happen per loop (use integer values for perfect loops)
+#define CENTER_SMOOTHING knob_12 // Controls how much to smooth the fractal result near the center
 #define EPSILON 0.00001
 #define PATTERN_SCALE 1.5
 #define CENTER_DETAIL_BOOST sin(FRAME_ANGLE)*10. // Keep this for now, might adjust later
@@ -132,7 +132,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Use cosine for zoom: 0->1->0 ensures zoom in and out symmetrically over the loop
     // Add PI/2 to start fully zoomed out (cos(PI/2) = 0) or adjust phase as needed
     // The exponent controls the zoom intensity range
-    float zoomFactor = pow(2.0, (0.5 + 0.5 * cos(FRAME_ANGLE * ZOOM_SPEED + PI)) * mix(1.0, 5.0, knob_45)); // Knob 45 controls zoom intensity
+    float zoomFactor = pow(2.0, (0.5 + 0.5 * cos(FRAME_ANGLE * ZOOM_SPEED + PI)) * mix(1.0, 5.0, knob_13)); // Knob 45 controls zoom intensity
     // Apply rotation based on FRAME_ANGLE
     float currentRotation = FRAME_ANGLE * ROTATION_SPEED;
     uv = rotate(uv, currentRotation);

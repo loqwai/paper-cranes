@@ -1,20 +1,20 @@
 
-uniform float knob_22;
-uniform float knob_11;
-uniform float knob_21;
-uniform float knob_10;
-uniform float knob_20;
-uniform float knob_9;
-uniform float knob_19;
+uniform float knob_7;
+uniform float knob_3;
+uniform float knob_6;
+uniform float knob_2;
+uniform float knob_5;
+uniform float knob_1;
+uniform float knob_4;
 #define EPSILON 0.0001
 
 #define PROBE_A spectralCentroid + EPSILON
 #define PROBE_B mix(0.3,0.46,spectralKurtosisMedian) + EPSILON
-#define PROBE_C  mix(0.7,0.8,energyMedian) + EPSILON /*knob_21 + EPSILON*/
+#define PROBE_C  mix(0.7,0.8,energyMedian) + EPSILON /*knob_6 + EPSILON*/
 #define PROBE_D spectralCrestMedian + EPSILON
 #define PROBE_E bassMedian + EPSILON
 #define PROBE_F mix(0.16,0.25,spectralRoughness)
-#define PROBE_G knob_19 + EPSILON
+#define PROBE_G knob_4 + EPSILON
 
 
 #define max_iter 31

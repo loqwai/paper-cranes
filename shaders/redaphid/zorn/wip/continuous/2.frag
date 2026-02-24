@@ -1,15 +1,15 @@
-//http://localhost:6969/edit.html?knob_41=0.11&knob_41.min=0&knob_41.max=1&knob_40=0.502&knob_40.min=0&knob_40.max=1&knob_32=0&knob_32.min=0&knob_32.max=1&knob_43=0.15&knob_43.min=0&knob_43.max=1&knob_30=0.213&knob_30.min=0&knob_30.max=1&knob_35=0.488&knob_35.min=0&knob_35.max=1&knob_36=0.142&knob_36.min=0&knob_36.max=1&knob_33=0.992&knob_33.min=0&knob_33.max=1&knob_31=0&knob_31.min=0&knob_31.max=1&knob_44=0.094&knob_44.min=0&knob_44.max=1&knob_34=0.591&knob_34.min=0&knob_34.max=1&knob_37=0.205&knob_37.min=0&knob_37.max=1&knob_47=0.543&knob_47.min=0&knob_47.max=1&knob_46=0.961&knob_46.min=0&knob_46.max=1&knob_45=0.268&knob_45.min=0&knob_45.max=1
-#define PROBE_1 mix(1., 1.4, knob_34)
-#define PROBE_2 mix(0.55, 2., knob_35)    // 'fan out' swirls -> multiple squares
-#define PROBE_3 mix(-1.7, 10., knob_36)    // color
+//http://localhost:6969/edit.html?knob_10=0.11&knob_10.min=0&knob_10.max=1&knob_9=0.502&knob_9.min=0&knob_9.max=1&knob_3=0&knob_3.min=0&knob_3.max=1&knob_11=0.15&knob_11.min=0&knob_11.max=1&knob_1=0.213&knob_1.min=0&knob_1.max=1&knob_6=0.488&knob_6.min=0&knob_6.max=1&knob_7=0.142&knob_7.min=0&knob_7.max=1&knob_4=0.992&knob_4.min=0&knob_4.max=1&knob_2=0&knob_2.min=0&knob_2.max=1&knob_12=0.094&knob_12.min=0&knob_12.max=1&knob_5=0.591&knob_5.min=0&knob_5.max=1&knob_8=0.205&knob_8.min=0&knob_8.max=1&knob_15=0.543&knob_15.min=0&knob_15.max=1&knob_14=0.961&knob_14.min=0&knob_14.max=1&knob_13=0.268&knob_13.min=0&knob_13.max=1
+#define PROBE_1 mix(1., 1.4, knob_5)
+#define PROBE_2 mix(0.55, 2., knob_6)    // 'fan out' swirls -> multiple squares
+#define PROBE_3 mix(-1.7, 10., knob_7)    // color
 #define PROBE_4 mod(float(frame), 310.15)/100.
-#define PROBE_5 mix(0.47, 0.97, knob_34)    // complexity + zoom
-#define PROBE_6 mix(0.1, 0.3, knob_35)      // zoom speed
-#define RESET_PERIOD mix(10.0, 30.0, knob_36) // seconds between zoom resets
+#define PROBE_5 mix(0.47, 0.97, knob_5)    // complexity + zoom
+#define PROBE_6 mix(0.1, 0.3, knob_6)      // zoom speed
+#define RESET_PERIOD mix(10.0, 30.0, knob_7) // seconds between zoom resets
 #define TRANSITION_LENGTH 1.1  // Portion of cycle dedicated to transition (0.0-1.0)
-#define AA_RADIUS knob_30         // Radius for center anti-aliasing
+#define AA_RADIUS knob_1         // Radius for center anti-aliasing
 #define MAX_ITER 10           // Maximum iterations for fractal generation
-#define INNER_CIRCLE_BLEND knob_40 // Controls how much the center circle blends (0.0-1.0)
+#define INNER_CIRCLE_BLEND knob_9 // Controls how much the center circle blends (0.0-1.0)
 #define ZOOM_SPEED 0.08       // Base zoom speed - REDUCED to make zoom smoother
 #define EPSILON 0.00001        // Small value to prevent division by zero
 #define PATTERN_SCALE 1.5     // Base pattern scale

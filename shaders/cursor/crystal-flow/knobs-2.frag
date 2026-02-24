@@ -1,50 +1,50 @@
-//http://localhost:6969/edit.html?shader=cursor%2Fcrystal-flow%2F2&knob_76=-0.346&knob_76.min=-2&knob_76.max=1&knob_70=0.496&knob_70.min=0&knob_70.max=1&knob_71=-1.575&knob_71.min=-2&knob_71.max=1&knob_72=-2&knob_72.min=-2&knob_72.max=1&knob_73=-0.819&knob_73.min=-2&knob_73.max=1&knob_74=-0.937&knob_74.min=-2&knob_74.max=1&knob_75=-1.787&knob_75.min=-2&knob_75.max=2.5&knob_77=-1.693&knob_77.min=-2&knob_77.max=1
-//http://localhost:6969/edit.html?shader=cursor%2Fcrystal-flow%2F2&knob_76=-1.102&knob_76.min=-2&knob_76.max=1&knob_70=0.693&knob_70.min=0&knob_70.max=1&knob_71=-0.016&knob_71.min=-2&knob_71.max=1&knob_72=1&knob_72.min=-2&knob_72.max=1&knob_73=0.339&knob_73.min=-2&knob_73.max=1&knob_74=-0.11&knob_74.min=-2&knob_74.max=1&knob_75=0.078&knob_75.min=0&knob_75.max=0.1&knob_77=-1.693&knob_77.min=-2&knob_77.max=1
-//http://localhost:6969/edit.html?shader=cursor%2Fcrystal-flow%2Fknobs&knob_76=-1.031&knob_76.min=-2&knob_76.max=1&knob_70=0.724&knob_70.min=0&knob_70.max=1&knob_71=7.638&knob_71.min=-2&knob_71.max=10&knob_72=1&knob_72.min=-2&knob_72.max=1&knob_73=-1.22&knob_73.min=-2&knob_73.max=1&knob_74=-1.362&knob_74.min=-2&knob_74.max=1&knob_75=0.082&knob_75.min=0&knob_75.max=0.1&knob_77=-2&knob_77.min=-2&knob_77.max=1
-//http://localhost:6969/edit.html?shader=cursor%2Fcrystal-flow%2Fknobs&knob_76=-0.488&knob_76.min=-2&knob_76.max=1&knob_70=0&knob_70.min=0&knob_70.max=10&knob_71=5.37&knob_71.min=-2&knob_71.max=10&knob_72=1&knob_72.min=-2&knob_72.max=1&knob_73=0.079&knob_73.min=-2&knob_73.max=1&knob_74=0.685&knob_74.min=0&knob_74.max=1&knob_75=0.051&knob_75.min=0&knob_75.max=0.1&knob_77=-2&knob_77.min=-2&knob_77.max=1
+//http://localhost:6969/edit.html?shader=cursor%2Fcrystal-flow%2F2&knob_7=-0.346&knob_7.min=-2&knob_7.max=1&knob_1=0.496&knob_1.min=0&knob_1.max=1&knob_2=-1.575&knob_2.min=-2&knob_2.max=1&knob_3=-2&knob_3.min=-2&knob_3.max=1&knob_4=-0.819&knob_4.min=-2&knob_4.max=1&knob_5=-0.937&knob_5.min=-2&knob_5.max=1&knob_6=-1.787&knob_6.min=-2&knob_6.max=2.5&knob_8=-1.693&knob_8.min=-2&knob_8.max=1
+//http://localhost:6969/edit.html?shader=cursor%2Fcrystal-flow%2F2&knob_7=-1.102&knob_7.min=-2&knob_7.max=1&knob_1=0.693&knob_1.min=0&knob_1.max=1&knob_2=-0.016&knob_2.min=-2&knob_2.max=1&knob_3=1&knob_3.min=-2&knob_3.max=1&knob_4=0.339&knob_4.min=-2&knob_4.max=1&knob_5=-0.11&knob_5.min=-2&knob_5.max=1&knob_6=0.078&knob_6.min=0&knob_6.max=0.1&knob_8=-1.693&knob_8.min=-2&knob_8.max=1
+//http://localhost:6969/edit.html?shader=cursor%2Fcrystal-flow%2Fknobs&knob_7=-1.031&knob_7.min=-2&knob_7.max=1&knob_1=0.724&knob_1.min=0&knob_1.max=1&knob_2=7.638&knob_2.min=-2&knob_2.max=10&knob_3=1&knob_3.min=-2&knob_3.max=1&knob_4=-1.22&knob_4.min=-2&knob_4.max=1&knob_5=-1.362&knob_5.min=-2&knob_5.max=1&knob_6=0.082&knob_6.min=0&knob_6.max=0.1&knob_8=-2&knob_8.min=-2&knob_8.max=1
+//http://localhost:6969/edit.html?shader=cursor%2Fcrystal-flow%2Fknobs&knob_7=-0.488&knob_7.min=-2&knob_7.max=1&knob_1=0&knob_1.min=0&knob_1.max=10&knob_2=5.37&knob_2.min=-2&knob_2.max=10&knob_3=1&knob_3.min=-2&knob_3.max=1&knob_4=0.079&knob_4.min=-2&knob_4.max=1&knob_5=0.685&knob_5.min=0&knob_5.max=1&knob_6=0.051&knob_6.min=0&knob_6.max=0.1&knob_8=-2&knob_8.min=-2&knob_8.max=1
 // Modify knob purposes
-uniform float knob_70; // Wave speed
-uniform float knob_71; // Wave scale
-uniform float knob_72; // Wave coherence
-uniform float knob_73; // Flow strength
-uniform float knob_74; // Mandelbrot scale
-uniform float knob_75; // Mandelbrot influence
-uniform float knob_76; // Edge sharpness
-uniform float knob_77; // Color evolution
+uniform float knob_1; // Wave speed
+uniform float knob_2; // Wave scale
+uniform float knob_3; // Wave coherence
+uniform float knob_4; // Flow strength
+uniform float knob_5; // Mandelbrot scale
+uniform float knob_6; // Mandelbrot influence
+uniform float knob_7; // Edge sharpness
+uniform float knob_8; // Color evolution
 
 // First all the #defines
 #define MANUAL_MODE
 #define TIME (time)
-#define MUTATION_RATE (knob_71)
+#define MUTATION_RATE (knob_2)
 
 // Then all the knob-based defines
 #ifdef MANUAL_MODE
-#define WAVE_SPEED (knob_70 * 0.05)
+#define WAVE_SPEED (knob_1 * 0.05)
 #define WAVE_SCALE (2.0)
-#define WAVE_COHERENCE (0.5 + knob_72 * 0.5)
-#define FLOW_STRENGTH (knob_73 * 0.15)
-#define MANDEL_SCALE (1.0 + knob_74 * 2.0)
-#define MANDEL_INFLUENCE (knob_75 * 0.3)
-#define EDGE_SHARPNESS (0.1 + knob_76 * 0.4)
-#define COLOR_EVOLUTION (knob_77 * 0.2)
-#define BASE_HUE (knob_74)
-#define HUE_VARIATION (knob_75)
-#define ENERGY (knob_72)
+#define WAVE_COHERENCE (0.5 + knob_3 * 0.5)
+#define FLOW_STRENGTH (knob_4 * 0.15)
+#define MANDEL_SCALE (1.0 + knob_5 * 2.0)
+#define MANDEL_INFLUENCE (knob_6 * 0.3)
+#define EDGE_SHARPNESS (0.1 + knob_7 * 0.4)
+#define COLOR_EVOLUTION (knob_8 * 0.2)
+#define BASE_HUE (knob_5)
+#define HUE_VARIATION (knob_6)
+#define ENERGY (knob_3)
 #define EVOLUTION_RATE (COLOR_EVOLUTION)
-#define DISPLACEMENT (knob_77)
+#define DISPLACEMENT (knob_8)
 #endif
 
 // Color control defines
-#define COLOR_SPREAD (0.2 + knob_71 * 2.0)                  // How different the colors are
-#define SATURATION_FACTOR (0.5 + knob_72)                   // Overall color saturation
-#define BRIGHTNESS_FACTOR (0.5 + knob_73)                   // Overall brightness
+#define COLOR_SPREAD (0.2 + knob_2 * 2.0)                  // How different the colors are
+#define SATURATION_FACTOR (0.5 + knob_3)                   // Overall color saturation
+#define BRIGHTNESS_FACTOR (0.5 + knob_4)                   // Overall brightness
 
 // Effect control defines
-#define RIPPLE_SPEED (knob_74 * 2.0)                        // Speed of color ripples
-#define SWIRL_INTENSITY (knob_75)                           // Intensity of swirl effect
-#define EDGE_GLOW (knob_76)                                 // Intensity of edge glow
-#define COLOR_BLEND (knob_77)                               // How colors mix together
-#define FRACTAL_INTENSITY (0.2 + knob_75 * 2.0)  // Controls both swirl and tendril intensity
+#define RIPPLE_SPEED (knob_5 * 2.0)                        // Speed of color ripples
+#define SWIRL_INTENSITY (knob_6)                           // Intensity of swirl effect
+#define EDGE_GLOW (knob_7)                                 // Intensity of edge glow
+#define COLOR_BLEND (knob_8)                               // How colors mix together
+#define FRACTAL_INTENSITY (0.2 + knob_6 * 2.0)  // Controls both swirl and tendril intensity
 
 // Then helper functions that don't depend on other functions
 mat2 rotate2D(float angle) {

@@ -1,40 +1,40 @@
 // @fullscreen: true
-//http://localhost:6969/edit.html?knob_32=0.24&knob_32.min=0&knob_32.max=1&knob_31=0.76&knob_31.min=0&knob_31.max=1&knob_30=0.02&knob_30.min=0&knob_30.max=1&knob_34=0.71&knob_34.min=0&knob_34.max=1&knob_35=0.63&knob_35.min=0&knob_35.max=1&knob_36=0.7&knob_36.min=0&knob_36.max=1&knob_37=0.58&knob_37.min=0&knob_37.max=1&knob_33=0.75&knob_33.min=0&knob_33.max=1&knob_40=0.5&knob_40.min=0&knob_40.max=1&fullscreen=true
+//http://localhost:6969/edit.html?knob_3=0.24&knob_3.min=0&knob_3.max=1&knob_2=0.76&knob_2.min=0&knob_2.max=1&knob_1=0.02&knob_1.min=0&knob_1.max=1&knob_5=0.71&knob_5.min=0&knob_5.max=1&knob_6=0.63&knob_6.min=0&knob_6.max=1&knob_7=0.7&knob_7.min=0&knob_7.max=1&knob_8=0.58&knob_8.min=0&knob_8.max=1&knob_4=0.75&knob_4.min=0&knob_4.max=1&knob_9=0.5&knob_9.min=0&knob_9.max=1&fullscreen=true
 #define PI 3.14159265359
 #define TAU (2.0*PI)
 
 // Core control knobs
-#define KNOB_ZOOM_SPEED knob_30       // Controls zoom speed
-#define KNOB_SPIN_SPEED knob_31       // Controls rotation speed
-#define KNOB_SPIN_RADIUS knob_32      // Controls offset from center
-#define KNOB_WARP_AMOUNT knob_33      // Controls distortion amount
-#define KNOB_SWIRL_INTENSITY knob_34  // Controls swirl effect strength
-#define KNOB_FRAME_BLEND knob_35      // Controls motion trail amount
-#define KNOB_COLOR_SPEED knob_36      // Controls color cycling speed
-#define KNOB_COLOR_INTENSITY knob_37  // Controls color vibrancy
-#define KNOB_VIGNETTE_STRENGTH knob_40 // Controls edge darkening
+#define KNOB_ZOOM_SPEED knob_1       // Controls zoom speed
+#define KNOB_SPIN_SPEED knob_2       // Controls rotation speed
+#define KNOB_SPIN_RADIUS knob_3      // Controls offset from center
+#define KNOB_WARP_AMOUNT knob_4      // Controls distortion amount
+#define KNOB_SWIRL_INTENSITY knob_5  // Controls swirl effect strength
+#define KNOB_FRAME_BLEND knob_6      // Controls motion trail amount
+#define KNOB_COLOR_SPEED knob_7      // Controls color cycling speed
+#define KNOB_COLOR_INTENSITY knob_8  // Controls color vibrancy
+#define KNOB_VIGNETTE_STRENGTH knob_9 // Controls edge darkening
 
 // Fractal arm controls
-#define KNOB_FRACTAL_X knob_41        // Controls fractal center X position (-1 to 1)
-#define KNOB_FRACTAL_Y knob_42        // Controls fractal center Y position (-1 to 1)
-#define KNOB_ARM_DETAIL knob_43       // Controls detail in fractal arms
-#define KNOB_ARM_FILAMENT knob_44     // Controls filament strength in arms
-#define KNOB_ARM_WIDTH knob_45        // Controls width of fractal arms
-#define KNOB_BULB_BRIGHTNESS knob_46  // Controls brightness of mini bulbs
-#define KNOB_ENGINE_CORE knob_47      // Controls center energy core brightness
-#define KNOB_FRACTAL_BLEND knob_48    // Controls blend between Mandelbrot and Julia
+#define KNOB_FRACTAL_X knob_10        // Controls fractal center X position (-1 to 1)
+#define KNOB_FRACTAL_Y knob_11        // Controls fractal center Y position (-1 to 1)
+#define KNOB_ARM_DETAIL knob_12       // Controls detail in fractal arms
+#define KNOB_ARM_FILAMENT knob_13     // Controls filament strength in arms
+#define KNOB_ARM_WIDTH knob_14        // Controls width of fractal arms
+#define KNOB_BULB_BRIGHTNESS knob_15  // Controls brightness of mini bulbs
+#define KNOB_ENGINE_CORE knob_16      // Controls center energy core brightness
+#define KNOB_FRACTAL_BLEND knob_17    // Controls blend between Mandelbrot and Julia
 
 // Detail control knobs
-#define KNOB_DETAIL_BANDS knob_50     // Controls swirling detail bands
-#define KNOB_RIPPLE_STRENGTH knob_51  // Controls ripple effect intensity
-#define KNOB_SPIRAL_STRENGTH knob_52  // Controls spiral pattern strength
-#define KNOB_ORBIT_TRAP knob_53       // Controls orbit trap influence
-#define KNOB_MINI_MANDEL knob_54      // Controls number of mini mandelbrots
-#define KNOB_MINI_SIZE knob_55        // Controls size of mini mandelbrots
-#define KNOB_MINI_DETAIL knob_56      // Controls detail of mini mandelbrots
+#define KNOB_DETAIL_BANDS knob_18     // Controls swirling detail bands
+#define KNOB_RIPPLE_STRENGTH knob_19  // Controls ripple effect intensity
+#define KNOB_SPIRAL_STRENGTH knob_20  // Controls spiral pattern strength
+#define KNOB_ORBIT_TRAP knob_21       // Controls orbit trap influence
+#define KNOB_MINI_MANDEL knob_22      // Controls number of mini mandelbrots
+#define KNOB_MINI_SIZE knob_23        // Controls size of mini mandelbrots
+#define KNOB_MINI_DETAIL knob_24      // Controls detail of mini mandelbrots
 
 // Add more detailed center control
-#define KNOB_CENTER_DETAIL knob_57       // Controls detail level in center of fractals
+#define KNOB_CENTER_DETAIL knob_25       // Controls detail level in center of fractals
 
 // Parameter calculations
 #define ZOOM_SPEED (KNOB_ZOOM_SPEED * 0.15)  // Moderate zoom speed

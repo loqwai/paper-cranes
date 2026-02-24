@@ -1,20 +1,20 @@
 // @favorite: true
 // @fullscreen: true
-//http://localhost:6969/edit.html?knob_32=0.24&knob_32.min=0&knob_32.max=1&knob_31=0.76&knob_31.min=0&knob_31.max=1&knob_30=0.02&knob_30.min=0&knob_30.max=1&knob_34=0.71&knob_34.min=0&knob_34.max=1&knob_35=0.63&knob_35.min=0&knob_35.max=1&knob_36=0.7&knob_36.min=0&knob_36.max=1&knob_37=0.58&knob_37.min=0&knob_37.max=1&knob_33=0.75&knob_33.min=0&knob_33.max=1&knob_40=0.5&knob_40.min=0&knob_40.max=1&fullscreen=true
+//http://localhost:6969/edit.html?knob_3=0.24&knob_3.min=0&knob_3.max=1&knob_2=0.76&knob_2.min=0&knob_2.max=1&knob_1=0.02&knob_1.min=0&knob_1.max=1&knob_5=0.71&knob_5.min=0&knob_5.max=1&knob_6=0.63&knob_6.min=0&knob_6.max=1&knob_7=0.7&knob_7.min=0&knob_7.max=1&knob_8=0.58&knob_8.min=0&knob_8.max=1&knob_4=0.75&knob_4.min=0&knob_4.max=1&knob_9=0.5&knob_9.min=0&knob_9.max=1&fullscreen=true
 #define PI 3.14159265359
 #define TAU (2.0*PI)
 
 // Control knobs using implicit uniforms
-#define KNOB_ZOOM_SPEED knob_30
-#define KNOB_SPIN_SPEED knob_31
-#define KNOB_SPIN_RADIUS knob_32
-#define KNOB_WARP_AMOUNT knob_33
-#define KNOB_SWIRL_INTENSITY knob_34
-#define KNOB_FRAME_BLEND knob_35
-#define KNOB_COLOR_SPEED knob_36
-#define KNOB_BEAT_INTENSITY knob_37
-#define KNOB_VIGNETTE_STRENGTH knob_40
-#define KNOB_ENERGY_BOOST knob_44
+#define KNOB_ZOOM_SPEED knob_1
+#define KNOB_SPIN_SPEED knob_2
+#define KNOB_SPIN_RADIUS knob_3
+#define KNOB_WARP_AMOUNT knob_4
+#define KNOB_SWIRL_INTENSITY knob_5
+#define KNOB_FRAME_BLEND knob_6
+#define KNOB_COLOR_SPEED knob_7
+#define KNOB_BEAT_INTENSITY knob_8
+#define KNOB_VIGNETTE_STRENGTH knob_9
+#define KNOB_ENERGY_BOOST knob_10
 
 // Improved zoom parameters
 #define ZOOM_SPEED (KNOB_ZOOM_SPEED * 0.05 * (1.0 + 0.3 * bassNormalized))

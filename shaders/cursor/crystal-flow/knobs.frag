@@ -1,43 +1,43 @@
-//http://localhost:6969/edit.html?shader=cursor%2Fcrystal-flow%2F2&knob_76=-0.346&knob_76.min=-2&knob_76.max=1&knob_70=0.496&knob_70.min=0&knob_70.max=1&knob_71=-1.575&knob_71.min=-2&knob_71.max=1&knob_72=-2&knob_72.min=-2&knob_72.max=1&knob_73=-0.819&knob_73.min=-2&knob_73.max=1&knob_74=-0.937&knob_74.min=-2&knob_74.max=1&knob_75=-1.787&knob_75.min=-2&knob_75.max=2.5&knob_77=-1.693&knob_77.min=-2&knob_77.max=1
-//http://localhost:6969/edit.html?shader=cursor%2Fcrystal-flow%2F2&knob_76=-1.102&knob_76.min=-2&knob_76.max=1&knob_70=0.693&knob_70.min=0&knob_70.max=1&knob_71=-0.016&knob_71.min=-2&knob_71.max=1&knob_72=1&knob_72.min=-2&knob_72.max=1&knob_73=0.339&knob_73.min=-2&knob_73.max=1&knob_74=-0.11&knob_74.min=-2&knob_74.max=1&knob_75=0.078&knob_75.min=0&knob_75.max=0.1&knob_77=-1.693&knob_77.min=-2&knob_77.max=1
-//http://localhost:6969/edit.html?shader=cursor%2Fcrystal-flow%2Fknobs&knob_76=-1.031&knob_76.min=-2&knob_76.max=1&knob_70=0.724&knob_70.min=0&knob_70.max=1&knob_71=7.638&knob_71.min=-2&knob_71.max=10&knob_72=1&knob_72.min=-2&knob_72.max=1&knob_73=-1.22&knob_73.min=-2&knob_73.max=1&knob_74=-1.362&knob_74.min=-2&knob_74.max=1&knob_75=0.082&knob_75.min=0&knob_75.max=0.1&knob_77=-2&knob_77.min=-2&knob_77.max=1
-//http://localhost:6969/edit.html?shader=cursor%2Fcrystal-flow%2Fknobs&knob_76=-0.488&knob_76.min=-2&knob_76.max=1&knob_70=0&knob_70.min=0&knob_70.max=10&knob_71=5.37&knob_71.min=-2&knob_71.max=10&knob_72=1&knob_72.min=-2&knob_72.max=1&knob_73=0.079&knob_73.min=-2&knob_73.max=1&knob_74=0.685&knob_74.min=0&knob_74.max=1&knob_75=0.051&knob_75.min=0&knob_75.max=0.1&knob_77=-2&knob_77.min=-2&knob_77.max=1
+//http://localhost:6969/edit.html?shader=cursor%2Fcrystal-flow%2F2&knob_7=-0.346&knob_7.min=-2&knob_7.max=1&knob_1=0.496&knob_1.min=0&knob_1.max=1&knob_2=-1.575&knob_2.min=-2&knob_2.max=1&knob_3=-2&knob_3.min=-2&knob_3.max=1&knob_4=-0.819&knob_4.min=-2&knob_4.max=1&knob_5=-0.937&knob_5.min=-2&knob_5.max=1&knob_6=-1.787&knob_6.min=-2&knob_6.max=2.5&knob_8=-1.693&knob_8.min=-2&knob_8.max=1
+//http://localhost:6969/edit.html?shader=cursor%2Fcrystal-flow%2F2&knob_7=-1.102&knob_7.min=-2&knob_7.max=1&knob_1=0.693&knob_1.min=0&knob_1.max=1&knob_2=-0.016&knob_2.min=-2&knob_2.max=1&knob_3=1&knob_3.min=-2&knob_3.max=1&knob_4=0.339&knob_4.min=-2&knob_4.max=1&knob_5=-0.11&knob_5.min=-2&knob_5.max=1&knob_6=0.078&knob_6.min=0&knob_6.max=0.1&knob_8=-1.693&knob_8.min=-2&knob_8.max=1
+//http://localhost:6969/edit.html?shader=cursor%2Fcrystal-flow%2Fknobs&knob_7=-1.031&knob_7.min=-2&knob_7.max=1&knob_1=0.724&knob_1.min=0&knob_1.max=1&knob_2=7.638&knob_2.min=-2&knob_2.max=10&knob_3=1&knob_3.min=-2&knob_3.max=1&knob_4=-1.22&knob_4.min=-2&knob_4.max=1&knob_5=-1.362&knob_5.min=-2&knob_5.max=1&knob_6=0.082&knob_6.min=0&knob_6.max=0.1&knob_8=-2&knob_8.min=-2&knob_8.max=1
+//http://localhost:6969/edit.html?shader=cursor%2Fcrystal-flow%2Fknobs&knob_7=-0.488&knob_7.min=-2&knob_7.max=1&knob_1=0&knob_1.min=0&knob_1.max=10&knob_2=5.37&knob_2.min=-2&knob_2.max=10&knob_3=1&knob_3.min=-2&knob_3.max=1&knob_4=0.079&knob_4.min=-2&knob_4.max=1&knob_5=0.685&knob_5.min=0&knob_5.max=1&knob_6=0.051&knob_6.min=0&knob_6.max=0.1&knob_8=-2&knob_8.min=-2&knob_8.max=1
 // Modify knob purposes
-uniform float knob_70; // Evolution rate - how much previous frame influences the next
-uniform float knob_71; // Fractal scale
-uniform float knob_72; // Pattern complexity
-uniform float knob_73; // Flow strength
-uniform float knob_74; // Shape morphing speed
-uniform float knob_75; // Tendril detail
-uniform float knob_76; // Edge sharpness
-uniform float knob_77; // Mutation rate - how often pixels randomly change
+uniform float knob_1; // Evolution rate - how much previous frame influences the next
+uniform float knob_2; // Fractal scale
+uniform float knob_3; // Pattern complexity
+uniform float knob_4; // Flow strength
+uniform float knob_5; // Shape morphing speed
+uniform float knob_6; // Tendril detail
+uniform float knob_7; // Edge sharpness
+uniform float knob_8; // Mutation rate - how often pixels randomly change
 
 #define MANUAL_MODE
 #ifdef MANUAL_MODE
 // Evolution controls
-#define EVOLUTION_RATE (0.1 + knob_70 * 0.4)        // How much previous frame affects next
-#define FRACTAL_SCALE (1.0 + knob_71 * 2.0)         // Overall scale of fractal elements
-#define PATTERN_COMPLEXITY (1.0 + knob_72)           // Number of layers/detail
-#define FLOW_STRENGTH (knob_73 * 0.3)               // How much the pattern flows
-#define MORPH_SPEED (knob_74 * 0.2)                 // Speed of shape changes
-#define TENDRIL_DETAIL (0.2 + knob_75 * 0.8)        // Amount of tendril detail
-#define EDGE_SHARPNESS (0.1 + knob_76 * 0.4)        // Sharpness of pattern edges
-#define COLOR_EVOLUTION (knob_77 * 0.3)             // How colors evolve over time
-#define MUTATION_RATE (knob_77 * 0.2)             // How likely pixels are to mutate
+#define EVOLUTION_RATE (0.1 + knob_1 * 0.4)        // How much previous frame affects next
+#define FRACTAL_SCALE (1.0 + knob_2 * 2.0)         // Overall scale of fractal elements
+#define PATTERN_COMPLEXITY (1.0 + knob_3)           // Number of layers/detail
+#define FLOW_STRENGTH (knob_4 * 0.3)               // How much the pattern flows
+#define MORPH_SPEED (knob_5 * 0.2)                 // Speed of shape changes
+#define TENDRIL_DETAIL (0.2 + knob_6 * 0.8)        // Amount of tendril detail
+#define EDGE_SHARPNESS (0.1 + knob_7 * 0.4)        // Sharpness of pattern edges
+#define COLOR_EVOLUTION (knob_8 * 0.3)             // How colors evolve over time
+#define MUTATION_RATE (knob_8 * 0.2)             // How likely pixels are to mutate
 #endif
 
 // Color control defines
-#define BASE_COLOR_1 vec3(knob_70, knob_71, knob_72)        // Primary color control
-#define COLOR_SPREAD (0.2 + knob_71 * 2.0)                  // How different the colors are
-#define SATURATION_FACTOR (0.5 + knob_72)                   // Overall color saturation
-#define BRIGHTNESS_FACTOR (0.5 + knob_73)                   // Overall brightness
+#define BASE_COLOR_1 vec3(knob_1, knob_2, knob_3)        // Primary color control
+#define COLOR_SPREAD (0.2 + knob_2 * 2.0)                  // How different the colors are
+#define SATURATION_FACTOR (0.5 + knob_3)                   // Overall color saturation
+#define BRIGHTNESS_FACTOR (0.5 + knob_4)                   // Overall brightness
 
 // Effect control defines
-#define RIPPLE_SPEED (knob_74 * 2.0)                        // Speed of color ripples
-#define SWIRL_INTENSITY (knob_75)                           // Intensity of swirl effect
-#define EDGE_GLOW (knob_76)                                 // Intensity of edge glow
-#define COLOR_BLEND (knob_77)                               // How colors mix together
-#define FRACTAL_INTENSITY (0.2 + knob_75 * 2.0)  // Controls both swirl and tendril intensity
+#define RIPPLE_SPEED (knob_5 * 2.0)                        // Speed of color ripples
+#define SWIRL_INTENSITY (knob_6)                           // Intensity of swirl effect
+#define EDGE_GLOW (knob_7)                                 // Intensity of edge glow
+#define COLOR_BLEND (knob_8)                               // How colors mix together
+#define FRACTAL_INTENSITY (0.2 + knob_6 * 2.0)  // Controls both swirl and tendril intensity
 
 // Original audio defines (keep these)
 #ifndef MANUAL_MODE
@@ -45,19 +45,19 @@ uniform float knob_77; // Mutation rate - how often pixels randomly change
 #define CRYSTAL_SCALE (spectralCentroidZScore)
 #define ENERGY (energyNormalized)
 #define ROUGHNESS (spectralRoughnessNormalized)
-#define BASE_HUE (spectralCentroidMedian + knob_70)         // Now influenced by knob_70
-#define HUE_VARIATION (spectralSpreadZScore * knob_71)      // Now influenced by knob_71
+#define BASE_HUE (spectralCentroidMedian + knob_1)         // Now influenced by knob_1
+#define HUE_VARIATION (spectralSpreadZScore * knob_2)      // Now influenced by knob_2
 #define COLOR_INTENSITY (spectralKurtosisMedian)
 #define DISPLACEMENT (spectralFluxNormalized)
 #else
-#define FLOW_SPEED (knob_70)
-#define CRYSTAL_SCALE (knob_71)
-#define ENERGY (knob_72)
-#define ROUGHNESS (knob_73)
-#define BASE_HUE (knob_74)
-#define HUE_VARIATION (knob_75)
-#define COLOR_INTENSITY (knob_76)
-#define DISPLACEMENT (knob_77)
+#define FLOW_SPEED (knob_1)
+#define CRYSTAL_SCALE (knob_2)
+#define ENERGY (knob_3)
+#define ROUGHNESS (knob_4)
+#define BASE_HUE (knob_5)
+#define HUE_VARIATION (knob_6)
+#define COLOR_INTENSITY (knob_7)
+#define DISPLACEMENT (knob_8)
 
 #endif
 

@@ -1,6 +1,6 @@
 // @fullscreen: true
-//https://visuals.beadfamous.com/edit?VARIETY=0.119&VARIETY.min=0.1&VARIETY.max=0.2&knob_36=0.276&knob_36.min=0&knob_36.max=1&knob_37=-0.236&knob_37.min=-10&knob_37.max=10&knob_45=0.882&knob_45.min=0&knob_45.max=1&knob_34=0.165&knob_34.min=0&knob_34.max=1&knob_30=1&knob_30.min=0&knob_30.max=1&knob_33=0.583&knob_33.min=0&knob_33.max=1&knob_47=0.504&knob_47.min=0&knob_47.max=1&knob_46=0.205&knob_46.min=0&knob_46.max=1&knob_44=1.701&knob_44.min=0&knob_44.max=3&knob_32=0.055&knob_32.min=0&knob_32.max=1&knob_27=0&knob_27.min=0&knob_27.max=1&knob_43=0.543&knob_43.min=0&knob_43.max=1&knob_42=0.638&knob_42.min=0&knob_42.max=1&knob_31=0.189&knob_31.min=0&knob_31.max=1&knob_41=0.354&knob_41.min=0&knob_41.max=1
-//https://visuals.beadfamous.com/edit?VARIETY=0.2&VARIETY.min=0.1&VARIETY.max=0.2&knob_36=0.803&knob_36.min=0&knob_36.max=1&knob_37=-9.843&knob_37.min=-10&knob_37.max=10&knob_45=1&knob_45.min=0&knob_45.max=1&knob_34=0.638&knob_34.min=0&knob_34.max=1&knob_30=0.055&knob_30.min=0&knob_30.max=1&knob_33=0.63&knob_33.min=0&knob_33.max=1&knob_47=0.953&knob_47.min=0&knob_47.max=1&knob_46=0&knob_46.min=0&knob_46.max=1&knob_44=2.126&knob_44.min=0&knob_44.max=3&knob_32=0.409&knob_32.min=0&knob_32.max=1&knob_27=0&knob_27.min=0&knob_27.max=1&knob_43=0.535&knob_43.min=0&knob_43.max=1&knob_42=0.339&knob_42.min=0&knob_42.max=1&knob_31=0.417&knob_31.min=0&knob_31.max=1&knob_41=0.819&knob_41.min=0&knob_41.max=1&fullscreen=true&knob_40=0.748&knob_40.min=0&knob_40.max=1&knob_62=0&knob_62.min=0&knob_62.max=1
+//https://visuals.beadfamous.com/edit?VARIETY=0.119&VARIETY.min=0.1&VARIETY.max=0.2&knob_8=0.276&knob_8.min=0&knob_8.max=1&knob_9=-0.236&knob_9.min=-10&knob_9.max=10&knob_15=0.882&knob_15.min=0&knob_15.max=1&knob_6=0.165&knob_6.min=0&knob_6.max=1&knob_2=1&knob_2.min=0&knob_2.max=1&knob_5=0.583&knob_5.min=0&knob_5.max=1&knob_17=0.504&knob_17.min=0&knob_17.max=1&knob_16=0.205&knob_16.min=0&knob_16.max=1&knob_14=1.701&knob_14.min=0&knob_14.max=3&knob_4=0.055&knob_4.min=0&knob_4.max=1&knob_1=0&knob_1.min=0&knob_1.max=1&knob_13=0.543&knob_13.min=0&knob_13.max=1&knob_12=0.638&knob_12.min=0&knob_12.max=1&knob_3=0.189&knob_3.min=0&knob_3.max=1&knob_11=0.354&knob_11.min=0&knob_11.max=1
+//https://visuals.beadfamous.com/edit?VARIETY=0.2&VARIETY.min=0.1&VARIETY.max=0.2&knob_8=0.803&knob_8.min=0&knob_8.max=1&knob_9=-9.843&knob_9.min=-10&knob_9.max=10&knob_15=1&knob_15.min=0&knob_15.max=1&knob_6=0.638&knob_6.min=0&knob_6.max=1&knob_2=0.055&knob_2.min=0&knob_2.max=1&knob_5=0.63&knob_5.min=0&knob_5.max=1&knob_17=0.953&knob_17.min=0&knob_17.max=1&knob_16=0&knob_16.min=0&knob_16.max=1&knob_14=2.126&knob_14.min=0&knob_14.max=3&knob_4=0.409&knob_4.min=0&knob_4.max=1&knob_1=0&knob_1.min=0&knob_1.max=1&knob_13=0.535&knob_13.min=0&knob_13.max=1&knob_12=0.339&knob_12.min=0&knob_12.max=1&knob_3=0.417&knob_3.min=0&knob_3.max=1&knob_11=0.819&knob_11.min=0&knob_11.max=1&fullscreen=true&knob_10=0.748&knob_10.min=0&knob_10.max=1&knob_18=0&knob_18.min=0&knob_18.max=1
 #define SMOOTHING 0.8
 #define SPEED 0.5
 // Drop detection using multiple features
@@ -11,26 +11,26 @@
 #define PATTERN_SCALE (1.0 + spectralSpreadStandardDeviation * (1./1000.))
 #define FLOW_SPEED (0.2 + energyStandardDeviation * (1./1000.))
 #define INTENSITY (0.5 + energyStandardDeviation * (1./1000.))
-#define PATTERN_DISTORTION 1. + (spectralEntropyStandardDeviation / (knob_30*1000.))
+#define PATTERN_DISTORTION 1. + (spectralEntropyStandardDeviation / (knob_2*1000.))
 
 uniform float variety;
-uniform float knob_35;
-#define VARIETY (knob_35 > 0.01 ? knob_35 : variety > 0.01 ? variety: 0.51)
+uniform float knob_7;
+#define VARIETY (knob_7 > 0.01 ? knob_7 : variety > 0.01 ? variety: 0.51)
 
 
-uniform float knob_47;
-uniform float knob_46;
-uniform float knob_36;
+uniform float knob_17;
+uniform float knob_16;
+uniform float knob_8;
 
-#define PROBE_A knob_36
-uniform float knob_34;
-uniform float knob_44;
-uniform float knob_32;
-uniform float knob_42;
-uniform float knob_31;
+#define PROBE_A knob_8
+uniform float knob_6;
+uniform float knob_14;
+uniform float knob_4;
+uniform float knob_12;
+uniform float knob_3;
 
-uniform float knob_30;
-uniform float knob_40;
+uniform float knob_2;
+uniform float knob_10;
 #define PROBE_C mapValue(0.,1.,1.,5., bassZScore)
 #define PROBE_D mapValue(0.,1.,1.,5., spectralEntropyNormalized)
 #define PROBE_B mix(0.,0.1,energyZScore)
@@ -90,7 +90,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 lastColor = rgb2hsl(getLastFrameColor(sin(olc).xy).rgb);
 
     // Create flowing pattern
-    float t = iTime * FLOW_SPEED * knob_44;
+    float t = iTime * FLOW_SPEED * knob_14;
     float n1 = noise(p + vec2(t, -t));
     float n2 = noise(p * 2.0 + vec2(-t, t * 0.5));
     float pattern = (n1 + n2) * 0.5;
@@ -111,14 +111,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     color.y = fract(color.y * PROBE_A + (sin(random(color.yz, color.x))/1000.));
     if(bassZScore > 0.2) color.y = clamp(color.y *1.1, 0.,1.);
     color = mix(lastColor, color, smoothing);
-    // if(random(vec2(0.), bassMax) > knob_34) {
+    // if(random(vec2(0.), bassMax) > knob_6) {
     //     if(color.z > lastColor.z) discard;
     //     color = mix(lastColor, color, spectralCentroidStandardDeviation);
     // }
     if(color.y < 0.3) {
         color = mix(color, olc, PROBE_B);
         // color.x = fract(olc.x + abs(spectralCentroidZScore/100.));
-        color.y = sin(color.y + knob_42);
+        color.y = sin(color.y + knob_12);
     }
     // Convert back to RGB
     fragColor = vec4(hsl2rgb(color), 1.0);

@@ -1,9 +1,9 @@
-uniform float knob_71;
-uniform float knob_72;
-uniform float knob_73;
-uniform float knob_74;
-uniform float knob_75;
-uniform float knob_76;
+uniform float knob_1;
+uniform float knob_2;
+uniform float knob_3;
+uniform float knob_4;
+uniform float knob_5;
+uniform float knob_6;
 
 #define LINE_WIDTH 0.5
 #define SMOOTH_WIDTH 0.25
@@ -37,12 +37,12 @@ float decorrelateFromEnergy(float zScore, float correlation) {
 
 
 // Use knobs for correlation control and visibility
-#define RED_KNOB knob_71
-#define GREEN_KNOB knob_72
-#define BLUE_KNOB knob_73
-#define TEAL_KNOB knob_74
-#define YELLOW_KNOB knob_75
-#define GRAYISH_GREEN_KNOB knob_76
+#define RED_KNOB knob_1
+#define GREEN_KNOB knob_2
+#define BLUE_KNOB knob_3
+#define TEAL_KNOB knob_4
+#define YELLOW_KNOB knob_5
+#define GRAYISH_GREEN_KNOB knob_6
 
 
 // Smooth value transitions between frames

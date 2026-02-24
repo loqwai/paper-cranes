@@ -1,33 +1,33 @@
-//http://localhost:6969/edit.html?knob_0=0.354&knob_0.min=0&knob_0.max=1&knob_1=0.449&knob_1.min=0&knob_1.max=1&knob_2=0&knob_2.min=0&knob_2.max=1&knob_3=0.315&knob_3.min=0&knob_3.max=1&knob_8=0.488&knob_8.min=0&knob_8.max=1&knob_4=0.811&knob_4.min=0&knob_4.max=1&knob_5=0.094&knob_5.min=0&knob_5.max=1&knob_6=0.362&knob_6.min=0&knob_6.max=1&knob_7=0.323&knob_7.min=0&knob_7.max=1&knob_9=0.669&knob_9.min=0&knob_9.max=1&knob_10=0.598&knob_10.min=0&knob_10.max=1&knob_11=0.803&knob_11.min=0&knob_11.max=1&knob_15=0.189&knob_15.min=0&knob_15.max=1&knob_14=0.709&knob_14.min=0&knob_14.max=1&knob_12=0.677&knob_12.min=0&knob_12.max=1&knob_31=0.394&knob_31.min=0&knob_31.max=1&knob_30=0.48&knob_30.min=0&knob_30.max=1&knob_29=0&knob_29.min=0&knob_29.max=1&knob_28=0.913&knob_28.min=0&knob_28.max=1&knob_24=0.591&knob_24.min=0&knob_24.max=1&knob_25=1&knob_25.min=0&knob_25.max=1&knob_27=0.748&knob_27.min=0&knob_27.max=1&knob_23=0.638&knob_23.min=0&knob_23.max=1&knob_22=0.787&knob_22.min=0&knob_22.max=1&knob_21=0.315&knob_21.min=0&knob_21.max=1&knob_20=0.071&knob_20.min=0&knob_20.max=1&knob_16=0&knob_16.min=0&knob_16.max=1&knob_17=0.394&knob_17.min=0&knob_17.max=1&knob_18=0.795&knob_18.min=0&knob_18.max=1&knob_19=0.78&knob_19.min=0&knob_19.max=1&knob_47=0.567&knob_47.min=0&knob_47.max=1&knob_43=0.449&knob_43.min=0&knob_43.max=1&knob_42=0.402&knob_42.min=0&knob_42.max=1&knob_39=0.315&knob_39.min=0&knob_39.max=1&knob_38=0.307&knob_38.min=0&knob_38.max=1&knob_32=0.386&knob_32.min=0&knob_32.max=1&knob_33=0.315&knob_33.min=0&knob_33.max=1&knob_36=0.276&knob_36.min=0&knob_36.max=1&knob_44=0.409&knob_44.min=0&knob_44.max=1&knob_13=1&knob_13.min=0&knob_13.max=1&knob_26=1&knob_26.min=0&knob_26.max=1&knob_63=0.496&knob_63.min=0&knob_63.max=1&knob_48=0.008&knob_48.min=0&knob_48.max=1&knob_49=0.134&knob_49.min=0&knob_49.max=1&knob_52=0.008&knob_52.min=0&knob_52.max=1&knob_53=0.315&knob_53.min=0&knob_53.max=1&knob_35=0.252&knob_35.min=0&knob_35.max=1
+//http://localhost:6969/edit.html?knob_1=0.354&knob_1.min=0&knob_1.max=1&knob_2=0.449&knob_2.min=0&knob_2.max=1&knob_3=0&knob_3.min=0&knob_3.max=1&knob_4=0.315&knob_4.min=0&knob_4.max=1&knob_9=0.488&knob_9.min=0&knob_9.max=1&knob_5=0.811&knob_5.min=0&knob_5.max=1&knob_6=0.094&knob_6.min=0&knob_6.max=1&knob_7=0.362&knob_7.min=0&knob_7.max=1&knob_8=0.323&knob_8.min=0&knob_8.max=1&knob_10=0.669&knob_10.min=0&knob_10.max=1&knob_11=0.598&knob_11.min=0&knob_11.max=1&knob_12=0.803&knob_12.min=0&knob_12.max=1&knob_16=0.189&knob_16.min=0&knob_16.max=1&knob_15=0.709&knob_15.min=0&knob_15.max=1&knob_13=0.677&knob_13.min=0&knob_13.max=1&knob_32=0.394&knob_32.min=0&knob_32.max=1&knob_31=0.48&knob_31.min=0&knob_31.max=1&knob_30=0&knob_30.min=0&knob_30.max=1&knob_29=0.913&knob_29.min=0&knob_29.max=1&knob_25=0.591&knob_25.min=0&knob_25.max=1&knob_26=1&knob_26.min=0&knob_26.max=1&knob_28=0.748&knob_28.min=0&knob_28.max=1&knob_24=0.638&knob_24.min=0&knob_24.max=1&knob_23=0.787&knob_23.min=0&knob_23.max=1&knob_22=0.315&knob_22.min=0&knob_22.max=1&knob_21=0.071&knob_21.min=0&knob_21.max=1&knob_17=0&knob_17.min=0&knob_17.max=1&knob_18=0.394&knob_18.min=0&knob_18.max=1&knob_19=0.795&knob_19.min=0&knob_19.max=1&knob_20=0.78&knob_20.min=0&knob_20.max=1&knob_42=0.567&knob_42.min=0&knob_42.max=1&knob_40=0.449&knob_40.min=0&knob_40.max=1&knob_39=0.402&knob_39.min=0&knob_39.max=1&knob_38=0.315&knob_38.min=0&knob_38.max=1&knob_37=0.307&knob_37.min=0&knob_37.max=1&knob_33=0.386&knob_33.min=0&knob_33.max=1&knob_34=0.315&knob_34.min=0&knob_34.max=1&knob_36=0.276&knob_36.min=0&knob_36.max=1&knob_41=0.409&knob_41.min=0&knob_41.max=1&knob_14=1&knob_14.min=0&knob_14.max=1&knob_27=1&knob_27.min=0&knob_27.max=1&knob_47=0.496&knob_47.min=0&knob_47.max=1&knob_43=0.008&knob_43.min=0&knob_43.max=1&knob_44=0.134&knob_44.min=0&knob_44.max=1&knob_45=0.008&knob_45.min=0&knob_45.max=1&knob_46=0.315&knob_46.min=0&knob_46.max=1&knob_35=0.252&knob_35.min=0&knob_35.max=1
 // Constants
 #define MAX_RIPPLES 12
 #define PI 3.14159265359
 #define TIME (iTime/1000.)
-#define BEAT knob_20 > 0.50
+#define BEAT knob_21 > 0.50
 
 // Audio reactive parameters
 #define WAVE_SPEED sin(float(frame)/6000.)*100. /*bassZScore*10.*/
-#define PATTERN_SCALE knob_2
-#define RIPPLE_CHAOS knob_3      // How randomly ripples are placed
-#define RIPPLE_SPREAD knob_4      // How far from center ripples appear
+#define PATTERN_SCALE knob_3
+#define RIPPLE_CHAOS knob_4      // How randomly ripples are placed
+#define RIPPLE_SPREAD knob_5      // How far from center ripples appear
 #define RIPPLE_STRENGTH sin(float(frame)/1200.)     // How strong ripples are
 #define COLOR_SHIFT mix(0.,1., animatePulse(time/1000.))       // Base color shift
-#define BEAT_INTENSITY knob_7
+#define BEAT_INTENSITY knob_8
 
 // Ripple characteristics
-#define RIPPLE_SPEED knob_8
-#define RIPPLE_THICKNESS mapValue(knob_9, 0., 1., 0.01, fract(time/1000.))
-#define RIPPLE_DISTANCE_DECAY knob_10
-#define RIPPLE_AGE_DECAY mapValue(knob_11, -1.,1., knob_12, knob_13)
-#define RIPPLE_BIRTH_STAGGER knob_14
-#define RIPPLE_LIFE_DURATION knob_15
-#define RIPPLE_BASE_STRENGTH knob_16
+#define RIPPLE_SPEED knob_9
+#define RIPPLE_THICKNESS mapValue(knob_10, 0., 1., 0.01, fract(time/1000.))
+#define RIPPLE_DISTANCE_DECAY knob_11
+#define RIPPLE_AGE_DECAY mapValue(knob_12, -1.,1., knob_13, knob_14)
+#define RIPPLE_BIRTH_STAGGER knob_15
+#define RIPPLE_LIFE_DURATION knob_16
+#define RIPPLE_BASE_STRENGTH knob_17
 
 // Color and blending
-#define COLOR_PERSISTENCE knob_17
-#define COLOR_SATURATION knob_18
-#define COLOR_BRIGHTNESS_SCALE knob_19
-#define DISTORTION_SCALE knob_21
+#define COLOR_PERSISTENCE knob_18
+#define COLOR_SATURATION knob_19
+#define COLOR_BRIGHTNESS_SCALE knob_20
+#define DISTORTION_SCALE knob_22
 
 // Ripple structure
 struct Ripple {
@@ -129,7 +129,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     plasma = plasma * 0.5 + 0.5;
 
     // Add stronger ripple influence
-    plasma += interference * knob_75;
+    plasma += interference * knob_48;
     plasma = plasma * 0.5 + 0.25;
 
     // Create base color from plasma
@@ -166,7 +166,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Blend with previous frame for smooth trails
     float trailStrength = 0.7 + interference * 0.02; // Dynamic trail strength
     vec3 color = hslmix(baseColor, prevColor.rgb, trailStrength);
-    color = mix(color, prevColor.rgb, knob_15);
+    color = mix(color, prevColor.rgb, knob_16);
     // Apply vignette
     float vignette = smoothstep(1.1, 0.3, length(uv));
     // color *= vignette;

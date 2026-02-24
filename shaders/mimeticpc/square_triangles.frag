@@ -1,14 +1,14 @@
-uniform float knob_60;
+uniform float knob_5;
+uniform float knob_1;
+uniform float knob_2;
 uniform float knob_3;
 uniform float knob_4;
-uniform float knob_5;
-uniform float knob_6;
 
-// #define PROBE_A knob_60
-// #define PROBE_B knob_3
-// #define PROBE_C knob_4
-// #define PROBE_D knob_5
-// #define PROBE_E knob_6
+// #define PROBE_A knob_5
+// #define PROBE_B knob_1
+// #define PROBE_C knob_2
+// #define PROBE_D knob_3
+// #define PROBE_E knob_4
 
 #define PROBE_A max(mix(0.2, 0.8, treble), 0.2)
 #define PROBE_B max(mix(0.7, 1.0, mids), 0.7)

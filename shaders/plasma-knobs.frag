@@ -1,31 +1,31 @@
-// http://localhost:6969/edit.html?knob_14=0&knob_14.min=0&knob_14.max=1.4&knob_15=19&knob_15.min=0&knob_15.max=19&knob_16=0.764&knob_16.min=0&knob_16.max=1&knob_17=0&knob_17.min=0&knob_17.max=1&knob_18=34.646&knob_18.min=0&knob_18.max=100&knob_20=1&knob_20.min=0&knob_20.max=1&knob_19=0.488&knob_19.min=0&knob_19.max=1&knob_3=0.299&knob_3.min=0&knob_3.max=1&knob_4=0.724&knob_4.min=0&knob_4.max=1&knob_5=0.646&knob_5.min=-1.5&knob_5.max=1&knob_22=0.496&knob_22.min=0&knob_22.max=1&knob_11=0.441&knob_11.min=0&knob_11.max=1&knob_10=30.709&knob_10.min=0&knob_10.max=100&knob_21=0.11&knob_21.min=0&knob_21.max=1&knob_6=0.331&knob_6.min=0&knob_6.max=1&knob_7=0.142&knob_7.min=0&knob_7.max=1&knob_8=0&knob_8.min=0&knob_8.max=1&knob_9=0.299&knob_9.min=0&knob_9.max=1&knob_60=0.669&knob_60.min=0&knob_60.max=0.6&knob_72=1.95&knob_72.min=0&knob_72.max=2.5&knob_71=0.72&knob_71.min=0&knob_71.max=0.8&knob_73=1.5&knob_73.min=-1.6&knob_73.max=1.5&knob_74=1.025&knob_74.min=1&knob_74.max=1.1&knob_75=0.41&knob_75.min=0&knob_75.max=1&knob_76=0.66&knob_76.min=0&knob_76.max=1&knob_77=1&knob_77.min=0&knob_77.max=1&knob_79=5.5&knob_79.min=0&knob_79.max=10&knob_78=0.11&knob_78.min=0&knob_78.max=1
-#define TIME (iTime/knob_74)
+// http://localhost:6969/edit.html?knob_10=0&knob_10.min=0&knob_10.max=1.4&knob_11=19&knob_11.min=0&knob_11.max=19&knob_12=0.764&knob_12.min=0&knob_12.max=1&knob_13=0&knob_13.min=0&knob_13.max=1&knob_14=34.646&knob_14.min=0&knob_14.max=100&knob_16=1&knob_16.min=0&knob_16.max=1&knob_15=0.488&knob_15.min=0&knob_15.max=1&knob_1=0.299&knob_1.min=0&knob_1.max=1&knob_2=0.724&knob_2.min=0&knob_2.max=1&knob_3=0.646&knob_3.min=-1.5&knob_3.max=1&knob_18=0.496&knob_18.min=0&knob_18.max=1&knob_9=0.441&knob_9.min=0&knob_9.max=1&knob_8=30.709&knob_8.min=0&knob_8.max=100&knob_17=0.11&knob_17.min=0&knob_17.max=1&knob_4=0.331&knob_4.min=0&knob_4.max=1&knob_5=0.142&knob_5.min=0&knob_5.max=1&knob_6=0&knob_6.min=0&knob_6.max=1&knob_7=0.299&knob_7.min=0&knob_7.max=1&knob_19=0.669&knob_19.min=0&knob_19.max=0.6&knob_21=1.95&knob_21.min=0&knob_21.max=2.5&knob_20=0.72&knob_20.min=0&knob_20.max=0.8&knob_22=1.5&knob_22.min=-1.6&knob_22.max=1.5&knob_23=1.025&knob_23.min=1&knob_23.max=1.1&knob_24=0.41&knob_24.min=0&knob_24.max=1&knob_25=0.66&knob_25.min=0&knob_25.max=1&knob_26=1&knob_26.min=0&knob_26.max=1&knob_28=5.5&knob_28.min=0&knob_28.max=10&knob_27=0.11&knob_27.min=0&knob_27.max=1
+#define TIME (iTime/knob_23)
 #define ROTATION_SPEED_X (0.2)
 #define ROTATION_SPEED_Y (0.2)
-#define PLASMA_SCALE (1.5 + knob_73)
-#define PLASMA_DETAIL (0.5 + knob_14 * 1.5)
-#define WAVE_INTENSITY (0.5 + knob_15 * 2.0)
-#define COLOR_MIX_FACTOR (0.3 + knob_76 * 0.7)
-#define COLOR_INTENSITY (0.3 + knob_20 * 0.7)
-#define COLOR_SHIFT_SPEED (0.5 + knob_71 * 1.5)
-#define SATURATION_BASE (0.7 + knob_72)
-#define LIGHTNESS_FACTOR (0.2 + knob_79 * 0.6)
+#define PLASMA_SCALE (1.5 + knob_22)
+#define PLASMA_DETAIL (0.5 + knob_10 * 1.5)
+#define WAVE_INTENSITY (0.5 + knob_11 * 2.0)
+#define COLOR_MIX_FACTOR (0.3 + knob_25 * 0.7)
+#define COLOR_INTENSITY (0.3 + knob_16 * 0.7)
+#define COLOR_SHIFT_SPEED (0.5 + knob_20 * 1.5)
+#define SATURATION_BASE (0.7 + knob_21)
+#define LIGHTNESS_FACTOR (0.2 + knob_28 * 0.6)
 
-uniform float knob_74;
-uniform float knob_71;
-uniform float knob_72;
-uniform float knob_73;
-uniform float knob_14;
-uniform float knob_15;
-uniform float knob_76;
+uniform float knob_23;
 uniform float knob_20;
 uniform float knob_21;
 uniform float knob_22;
-uniform float knob_79;
+uniform float knob_10;
+uniform float knob_11;
+uniform float knob_25;
+uniform float knob_16;
+uniform float knob_17;
+uniform float knob_18;
+uniform float knob_28;
 
 
-uniform float knob_77;
-uniform float knob_78;
+uniform float knob_26;
+uniform float knob_27;
 
 mat2 m(float a){float c=cos(a), s=sin(a);return mat2(c,-s,s,c);}
 
@@ -117,9 +117,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Convert to HSL for final adjustments
     cl = rgb2hsl(cl);
 
-    float hueShift = knob_78 * COLOR_SHIFT_SPEED;
-    float saturationMod = mix(SATURATION_BASE, 1.0, knob_74);
-    float lightnessMod = mix(LIGHTNESS_FACTOR, 1.0, knob_77);
+    float hueShift = knob_27 * COLOR_SHIFT_SPEED;
+    float saturationMod = mix(SATURATION_BASE, 1.0, knob_23);
+    float lightnessMod = mix(LIGHTNESS_FACTOR, 1.0, knob_26);
 
     // Preserve color contouring while preventing oversaturation
     cl.x = fract(cl.x + hueShift);

@@ -1,14 +1,14 @@
-#define PROBE_1 mix(1., 1.4, knob_34)
-#define PROBE_2 mix(0.55, 2., knob_35)    // 'fan out' swirls -> multiple squares
-#define PROBE_3 mix(-1.7, 10., knob_36)    // color
+#define PROBE_1 mix(1., 1.4, knob_1)
+#define PROBE_2 mix(0.55, 2., knob_2)    // 'fan out' swirls -> multiple squares
+#define PROBE_3 mix(-1.7, 10., knob_3)    // color
 #define PROBE_4 mod(float(frame), 310.15)/100.
-#define PROBE_5 mix(0.47, 0.97, knob_34)    // complexity + zoom
-#define PROBE_6 mix(0.1, 0.3, knob_35)      // zoom speed
-#define RESET_PERIOD mix(10.0, 30.0, knob_36) // seconds between zoom resets
+#define PROBE_5 mix(0.47, 0.97, knob_1)    // complexity + zoom
+#define PROBE_6 mix(0.1, 0.3, knob_2)      // zoom speed
+#define RESET_PERIOD mix(10.0, 30.0, knob_3) // seconds between zoom resets
 #define TRANSITION_LENGTH 0.6  // Portion of cycle dedicated to transition (0.0-1.0)
 #define AA_RADIUS 0.2         // Radius for center anti-aliasing
 #define MAX_ITER 10           // Maximum iterations for fractal generation
-#define INNER_CIRCLE_BLEND knob_40 // Controls how much the center circle blends (0.0-1.0)
+#define INNER_CIRCLE_BLEND knob_4 // Controls how much the center circle blends (0.0-1.0)
 #define ZOOM_SPEED 0.15       // Base zoom speed (reduced to prevent panning sensation)
 #define EPSILON 0.0001        // Small value to prevent division by zero
 #define PATTERN_CHANGE_SCALE 3.5 // How much pattern changes between cycles

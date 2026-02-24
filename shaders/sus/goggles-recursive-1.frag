@@ -1,36 +1,36 @@
-#define BACKGROUND_OFFSET_X knob_71
-#define BACKGROUND_OFFSET_Y knob_72
-#define BACKGROUND_STRETCH_X knob_73
-#define BACKGROUND_ZOOM_Y knob_74
-#define ZOOM (mix(1.,2.4,knob_75))     // Controls overall scale/zoom
-#define PROBE_B (knob_22)     // Controls spiral rotation speed
-#define PROBE_C (knob_19)     // Controls fractal influence on spiral (0 = rigid, 1 = very warped)
-#define PROBE_D (knob_18)     // Controls color intensity and variation
-#define PROBE_E (knob_76)     // Controls spiral thickness
-#define PROBE_G (knob_77)     // Controls the balance between spiral and fractal
-#define PROBE_H (knob_80)     // Controls background warping intensity
-#define GLASSES_SPIN_SPEED (knob_91 * 3.0 + 0.5)  // Controls the speed of spinning inside glasses (0.5-3.5)
+#define BACKGROUND_OFFSET_X knob_11
+#define BACKGROUND_OFFSET_Y knob_12
+#define BACKGROUND_STRETCH_X knob_13
+#define BACKGROUND_ZOOM_Y knob_14
+#define ZOOM (mix(1.,2.4,knob_15))     // Controls overall scale/zoom
+#define PROBE_B (knob_10)     // Controls spiral rotation speed
+#define PROBE_C (knob_8)     // Controls fractal influence on spiral (0 = rigid, 1 = very warped)
+#define PROBE_D (knob_7)     // Controls color intensity and variation
+#define PROBE_E (knob_16)     // Controls spiral thickness
+#define PROBE_G (knob_17)     // Controls the balance between spiral and fractal
+#define PROBE_H (knob_20)     // Controls background warping intensity
+#define GLASSES_SPIN_SPEED (knob_26 * 3.0 + 0.5)  // Controls the speed of spinning inside glasses (0.5-3.5)
 
 // Recursive scaling parameters
-#define RECURSIVE_SCALE_AMOUNT (knob_14)   // Controls intensity of recursive scaling (0-1)
-#define RECURSIVE_ITERATIONS (knob_15 * 3.0 + 1.0) // Number of recursive samples (1-4)
+#define RECURSIVE_SCALE_AMOUNT (knob_5)   // Controls intensity of recursive scaling (0-1)
+#define RECURSIVE_ITERATIONS (knob_6 * 3.0 + 1.0) // Number of recursive samples (1-4)
 #define RECURSIVE_SCALE_FACTOR (sin(time) * 0.4 + 0.4) // Scale factor for each iteration (0.4-0.8)
 
 // Spiral position controls
-#define EYE_DISTANCE (knob_78 * 0.6 + 0.25)   // Controls horizontal distance between spirals (0.25-0.85)
-#define EYE_Y_OFFSET (knob_79 * 0.2 - 0.1)    // Controls vertical position of both spirals (-0.1-0.1)
-#define LEFT_X_ADJUST (knob_3 * 0.1)        // Fine adjustment of left spiral X position
-#define RIGHT_X_ADJUST (knob_11 * 0.1)       // Fine adjustment of right spiral X position
-#define SPIRAL_DENSITY (knob_12 * 8.0 + 4.0) // Controls spiral density/tightness (4.0-12.0)
-#define SPIRAL_ITERATIONS (knob_13 * 5.0 + 3.0) // Controls number of spiral iterations (3.0-8.0)
+#define EYE_DISTANCE (knob_18 * 0.6 + 0.25)   // Controls horizontal distance between spirals (0.25-0.85)
+#define EYE_Y_OFFSET (knob_19 * 0.2 - 0.1)    // Controls vertical position of both spirals (-0.1-0.1)
+#define LEFT_X_ADJUST (knob_1 * 0.1)        // Fine adjustment of left spiral X position
+#define RIGHT_X_ADJUST (knob_2 * 0.1)       // Fine adjustment of right spiral X position
+#define SPIRAL_DENSITY (knob_3 * 8.0 + 4.0) // Controls spiral density/tightness (4.0-12.0)
+#define SPIRAL_ITERATIONS (knob_4 * 5.0 + 3.0) // Controls number of spiral iterations (3.0-8.0)
 
 // Additional distortion controls
-#define DISTORTION_RADIUS (knob_84 * 2.0 + 0.5)  // Controls radius of distortion effect (0.5-2.5)
-#define SPIRAL_DISTORTION_BOOST (knob_85 * 5.0 + 1.0)  // Extra distortion in spiral areas (1.0-6.0)
-#define FRACTAL_COMPLEXITY (knob_86 * 24.0 + 8.0)  // Controls Julia set complexity (8-32 iterations)
-#define TIME_SCALE (knob_88 * 0.2 + 0.05)  // Controls overall animation speed (0.05-0.25)
-#define RED_TINT_AMOUNT (knob_21 * 0.6)  // Controls amount of red tinting in distortion (0.2-0.8)
-#define JULIA_VARIATION (knob_90 * 0.3)  // Controls variation in Julia set constants (0.0-0.3)
+#define DISTORTION_RADIUS (knob_21 * 2.0 + 0.5)  // Controls radius of distortion effect (0.5-2.5)
+#define SPIRAL_DISTORTION_BOOST (knob_22 * 5.0 + 1.0)  // Extra distortion in spiral areas (1.0-6.0)
+#define FRACTAL_COMPLEXITY (knob_23 * 24.0 + 8.0)  // Controls Julia set complexity (8-32 iterations)
+#define TIME_SCALE (knob_24 * 0.2 + 0.05)  // Controls overall animation speed (0.05-0.25)
+#define RED_TINT_AMOUNT (knob_9 * 0.6)  // Controls amount of red tinting in distortion (0.2-0.8)
+#define JULIA_VARIATION (knob_25 * 0.3)  // Controls variation in Julia set constants (0.0-0.3)
 
 // Function to rotate a point around an origin
 vec2 rotatePoint(vec2 point, vec2 origin, float angle) {
@@ -283,7 +283,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     baseColor = mix(baseColor, darkRed, sin(atan(distortedUv.y, distortedUv.x) * 3.0) * 0.5 + 0.5);
 
     // Blend fractal color with distorted texture
-    baseColor = mix(baseColor, distortedTexture, knob_22 * 0.7);
+    baseColor = mix(baseColor, distortedTexture, knob_10 * 0.7);
 
     // Apply color intensity from PROBE_D
     float colorIntensity = mix(0.7, 1.2, PROBE_D);
@@ -415,7 +415,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     vec3 color = mix(fractalColor, spiralColor, mixRatio);
 
     // Final blend with the distorted texture - reduced blend in spiral areas to preserve spiral visual
-    float textureBlend = knob_22 * (1.0 - combinedSpiralMask * 0.8);
+    float textureBlend = knob_10 * (1.0 - combinedSpiralMask * 0.8);
     color = mix(color, distortedTexture, textureBlend);
 
     fragColor = vec4(color, 1.0);

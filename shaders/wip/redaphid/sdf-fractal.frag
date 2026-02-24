@@ -5,7 +5,7 @@
  * - Make one of the lights pulse by having its intensity vary over time
  * - Add a third light to the scene
  */
-uniform float knob_0;
+uniform float knob_1;
 const int MAX_MARCHING_STEPS = 5;
 #define MIN_DIST -650.
 #define MAX_DIST 55.

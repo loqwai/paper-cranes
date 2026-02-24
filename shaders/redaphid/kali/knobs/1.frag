@@ -1,18 +1,18 @@
 
-uniform float knob_22;
-uniform float knob_11;
-uniform float knob_21;
-uniform float knob_10;
-uniform float knob_20;
-uniform float knob_9;
+uniform float knob_6;
+uniform float knob_3;
+uniform float knob_5;
+uniform float knob_2;
+uniform float knob_4;
+uniform float knob_1;
 
 #define EPSILON 0.0001
-#define PROBE_A knob_22 + EPSILON
-#define PROBE_B knob_11 + EPSILON
-#define PROBE_C knob_21 + EPSILON
-#define PROBE_D knob_10 + EPSILON
-#define PROBE_E knob_20 + EPSILON
-#define PROBE_F knob_9 + EPSILON
+#define PROBE_A knob_6 + EPSILON
+#define PROBE_B knob_3 + EPSILON
+#define PROBE_C knob_5 + EPSILON
+#define PROBE_D knob_2 + EPSILON
+#define PROBE_E knob_4 + EPSILON
+#define PROBE_F knob_1 + EPSILON
 
 
 #define max_iter 31

@@ -1,18 +1,18 @@
 // @fullscreen: true
-//https://visuals.beadfamous.com/edit?knob_11=0.591&knob_11.min=0&knob_11.max=1&knob_9=0.803&knob_9.min=0&knob_9.max=1&knob_14=0.976&knob_14.min=0&knob_14.max=1&knob_13=0&knob_13.min=0&knob_13.max=1&knob_12=0&knob_12.min=0&knob_12.max=1&knob_10=0.071&knob_10.min=0&knob_10.max=1&knob_5=0.079&knob_5.min=0&knob_5.max=1&knob_4=1&knob_4.min=0&knob_4.max=1&knob_3=0.071&knob_3.min=0&knob_3.max=1&knob_2=0&knob_2.min=0&knob_2.max=1&knob_1=0.039&knob_1.min=0&knob_1.max=1&knob_6=0.843&knob_6.min=0&knob_6.max=1&knob_7=0&knob_7.min=0&knob_7.max=1&knob_0=0.268&knob_0.min=0&knob_0.max=1&knob_8=0.772&knob_8.min=0&knob_8.max=1&knob_15_2=0&knob_15_2.min=0&knob_15_2.max=1&knob_15=0.701&knob_15.min=0&knob_15.max=1&knob_10_2=0&knob_10_2.min=0&knob_10_2.max=1&knob_1_2=0&knob_1_2.min=0&knob_1_2.max=1&knob_1_4=0&knob_1_4.min=0&knob_1_4.max=1&knob_23=0.898&knob_23.min=0&knob_23.max=1&knob_16=0.386&knob_16.min=0&knob_16.max=1&knob_17=0.26&knob_17.min=0&knob_17.max=1&knob_18=0&knob_18.min=0&knob_18.max=1&knob_19=0.843&knob_19.min=0&knob_19.max=1&knob_22=0.016&knob_22.min=0&knob_22.max=1&knob_20=0.126&knob_20.min=0&knob_20.max=1&knob_24=0.701&knob_24.min=0&knob_24.max=1&knob_21=0.394&knob_21.min=0&knob_21.max=1&knob_0_4=0&knob_0_4.min=0&knob_0_4.max=1&knob_0_2=0&knob_0_2.min=0&knob_0_2.max=1&knob_0_5=0.89&knob_0_5.min=0&knob_0_5.max=1&knob_1_5=0.669&knob_1_5.min=0&knob_1_5.max=1&knob_2_2=0&knob_2_2.min=0&knob_2_2.max=1&knob_3_2=0&knob_3_2.min=0&knob_3_2.max=1&knob_4_2=0&knob_4_2.min=0&knob_4_2.max=1&knob_14_2=0&knob_14_2.min=0&knob_14_2.max=1&knob_31=0.252&knob_31.min=0&knob_31.max=1&knob_19_2=0&knob_19_2.min=0&knob_19_2.max=1&knob_7_2=0&knob_7_2.min=0&knob_7_2.max=1&knob_8_2=0&knob_8_2.min=0&knob_8_2.max=1
+//https://visuals.beadfamous.com/edit?knob_12=0.591&knob_12.min=0&knob_12.max=1&knob_10=0.803&knob_10.min=0&knob_10.max=1&knob_15=0.976&knob_15.min=0&knob_15.max=1&knob_14=0&knob_14.min=0&knob_14.max=1&knob_13=0&knob_13.min=0&knob_13.max=1&knob_11=0.071&knob_11.min=0&knob_11.max=1&knob_6=0.079&knob_6.min=0&knob_6.max=1&knob_5=1&knob_5.min=0&knob_5.max=1&knob_4=0.071&knob_4.min=0&knob_4.max=1&knob_3=0&knob_3.min=0&knob_3.max=1&knob_2=0.039&knob_2.min=0&knob_2.max=1&knob_7=0.843&knob_7.min=0&knob_7.max=1&knob_8=0&knob_8.min=0&knob_8.max=1&knob_1=0.268&knob_1.min=0&knob_1.max=1&knob_9=0.772&knob_9.min=0&knob_9.max=1&knob_16_2=0&knob_16_2.min=0&knob_16_2.max=1&knob_16=0.701&knob_16.min=0&knob_16.max=1&knob_11_2=0&knob_11_2.min=0&knob_11_2.max=1&knob_2_2=0&knob_2_2.min=0&knob_2_2.max=1&knob_2_4=0&knob_2_4.min=0&knob_2_4.max=1&knob_24=0.898&knob_24.min=0&knob_24.max=1&knob_17=0.386&knob_17.min=0&knob_17.max=1&knob_18=0.26&knob_18.min=0&knob_18.max=1&knob_19=0&knob_19.min=0&knob_19.max=1&knob_20=0.843&knob_20.min=0&knob_20.max=1&knob_23=0.016&knob_23.min=0&knob_23.max=1&knob_21=0.126&knob_21.min=0&knob_21.max=1&knob_25=0.701&knob_25.min=0&knob_25.max=1&knob_22=0.394&knob_22.min=0&knob_22.max=1&knob_1_4=0&knob_1_4.min=0&knob_1_4.max=1&knob_1_2=0&knob_1_2.min=0&knob_1_2.max=1&knob_1_5=0.89&knob_1_5.min=0&knob_1_5.max=1&knob_2_5=0.669&knob_2_5.min=0&knob_2_5.max=1&knob_3_2=0&knob_3_2.min=0&knob_3_2.max=1&knob_4_2=0&knob_4_2.min=0&knob_4_2.max=1&knob_5_2=0&knob_5_2.min=0&knob_5_2.max=1&knob_15_2=0&knob_15_2.min=0&knob_15_2.max=1&knob_26=0.252&knob_26.min=0&knob_26.max=1&knob_20_2=0&knob_20_2.min=0&knob_20_2.max=1&knob_8_2=0&knob_8_2.min=0&knob_8_2.max=1&knob_9_2=0&knob_9_2.min=0&knob_9_2.max=1
 #define TWO_PI 6.28318530718
 
-uniform float knob_1;
-uniform float knob_0_5;
+uniform float knob_2;
 uniform float knob_1_5;
+uniform float knob_2_5;
 
 //--------------------------------------------------------------
 // ⬆️  put these above mainImage()
 //--------------------------------------------------------------
 mat2  rot(float a){ return mat2(cos(a),-sin(a),sin(a),cos(a)); }
 
-#define PAN_X mix(-0.5, 0.5, knob_0_5)
-#define PAN_Y mix(-0.5, 0.5, knob_1_5)
+#define PAN_X mix(-0.5, 0.5, knob_1_5)
+#define PAN_Y mix(-0.5, 0.5, knob_2_5)
 // A little spiral‑ish helper to keep the flow alive
 float spiralNoise(vec2 p){
     float a = 0.0, f = 2.0;
@@ -53,7 +53,7 @@ vec2 domainWarp(vec2 p, float warp, float offset) {
 float deepFractal(vec2 p){
     float amp = 0.5, sum = 0.0;
     for(int i=0;i<4;i++){
-        vec2 q = domainWarp(p, knob_11*0.35*amp, time*0.03*float(i));
+        vec2 q = domainWarp(p, knob_12*0.35*amp, time*0.03*float(i));
         sum   += amp * fbm(q);
         p     *= 2.0;
         amp   *= 0.55;
@@ -94,8 +94,8 @@ float varied(vec2 p,float t){
     float a = deepFractal(q*1.2);
     float b = cell(q*4.0+vec2(t*0.1,0.0));
     float c = sin(q.x*8.0+t)+cos(q.y*8.0-t);
-    float m = knob_21;                        // morph
-    return mix( mix(a,b,m), c, knob_71 );     // 2‑stage blend
+    float m = knob_22;                        // morph
+    return mix( mix(a,b,m), c, knob_27 );     // 2‑stage blend
 }
 
 
@@ -112,22 +112,22 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 prevRGB = getLastFrameColor(uv).rgb;
     vec3 lastCol = rgb2hsl(prevRGB);
     // Time factor
-    float t = time * (0.05 + 0.05 * knob_72); // knob_10 -> overall speed
+    float t = time * (0.05 + 0.05 * knob_28); // knob_11 -> overall speed
 
-    // Combine scale from knob_12 and knob_13
-    float baseScale = 1.0 + knob_12 * 2.0; // knob_12 -> base scale
-    float extraScale = 1.0 + knob_13 * 2.0; // knob_13 -> additional scale
+    // Combine scale from knob_13 and knob_14
+    float baseScale = 1.0 + knob_13 * 2.0; // knob_13 -> base scale
+    float extraScale = 1.0 + knob_14 * 2.0; // knob_14 -> additional scale
     p *= baseScale;
 
     // Warp pass #1
-    p = domainWarp(p, knob_15 * 0.4, t * 0.1);  // knob_11 -> warp strength
+    p = domainWarp(p, knob_16 * 0.4, t * 0.1);  // knob_12 -> warp strength
 
-    // Warp pass #2, let knob_0 intensify
-    p = domainWarp(p, knob_10 * 0.3, -t * 0.07);
+    // Warp pass #2, let knob_1 intensify
+    p = domainWarp(p, knob_11 * 0.3, -t * 0.07);
 
-    // Add an extra "wave" distortion with knob_6
-    float wave = animateEaseInOutSine(t * 0.1 + knob_6 * 0.3);
-    p += wave * knob_6 * 0.3 * vec2(sin(p.y * 2.0), cos(p.x * 2.0));
+    // Add an extra "wave" distortion with knob_7
+    float wave = animateEaseInOutSine(t * 0.1 + knob_7 * 0.3);
+    p += wave * knob_7 * 0.3 * vec2(sin(p.y * 2.0), cos(p.x * 2.0));
 
     // Fractal noise final pattern
     //--------------------------------------------------------------
@@ -136,46 +136,46 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float base = fbm(p * extraScale + t * 0.2);          // old look
     float f = deepFractal(p * extraScale);           // new depth
 // ─── inside mainImage(), replace pattern calc ───────────────
-    float pattern = varied(p*mix(1.0,4.0,knob_8)+t*0.2, t);
-    pattern = mix(pattern, pattern*pattern, knob_9); // contrast warp
+    float pattern = varied(p*mix(1.0,4.0,knob_9)+t*0.2, t);
+    pattern = mix(pattern, pattern*pattern, knob_10); // contrast warp
 
-    // Hue shift: slow drift plus knob_14
-    float hueShift = t * (0.1 + knob_14 * 0.2);
+    // Hue shift: slow drift plus knob_15
+    float hueShift = t * (0.1 + knob_15 * 0.2);
 
-    // Use knob_1, knob_1, knob_4, knob_7 as extra color offsets
-    float cOffset1 = knob_1 * 0.2;
-    float cOffset2 = knob_1 * 0.3;
-    float cOffset3 = knob_4 * 0.25;
-    float cOffset4 = knob_7 * 0.2;
+    // Use knob_2, knob_2, knob_5, knob_8 as extra color offsets
+    float cOffset1 = knob_2 * 0.2;
+    float cOffset2 = knob_2 * 0.3;
+    float cOffset3 = knob_5 * 0.25;
+    float cOffset4 = knob_8 * 0.2;
     float totalOffset = cOffset1 + cOffset2 + cOffset3 + cOffset4;
 
     // Build final HSL color
     float hue = fract(hueShift + pattern * sin(uv.y)/cos(uv.x) + totalOffset + lastCol.z);
-    float sat = 0.8 + knob_16 * 0.2; // knob_16 -> saturation
+    float sat = 0.8 + knob_17 * 0.2; // knob_17 -> saturation
     float lit = 0.4 + pattern * 0.3;
 
-    // Extra color inversion effect if knob_1 is large
-    // (Just a fun example – try turning knob_1 up or down)
-    if (knob_1 > 0.5) {
+    // Extra color inversion effect if knob_2 is large
+    // (Just a fun example – try turning knob_2 up or down)
+    if (knob_2 > 0.5) {
         hue = 1.0 - hue;
     }
 
-    // Use knob_1 to shift brightness up/down
-    lit += knob_1 * 0.1;
-    // Use knob_15 as overall brightness multiplier
-    lit *= (1.0 + knob_3 * 1.0);
+    // Use knob_2 to shift brightness up/down
+    lit += knob_2 * 0.1;
+    // Use knob_16 as overall brightness multiplier
+    lit *= (1.0 + knob_4 * 1.0);
 
-    // Extra hack: knob_6 can also push saturation for a "pop" effect
-    sat += knob_6 * 0.1;
+    // Extra hack: knob_7 can also push saturation for a "pop" effect
+    sat += knob_7 * 0.1;
 
     // Convert HSL -> RGB
     vec3 colorHSL = vec3(hue, clamp(sat, 0.0, 1.0), clamp(lit, 0.0, 1.0));
     vec3 newColor = hsl2rgb(colorHSL);
 
     // Optionally mix in the initial frame for texture-based effects
-    // Let's just do a subtle blend with knob_5 for demonstration
+    // Let's just do a subtle blend with knob_6 for demonstration
     vec3 initTex = getInitialFrameColor(uv).rgb;
-    newColor = mix(newColor, initTex, 0.05 * knob_5);
+    newColor = mix(newColor, initTex, 0.05 * knob_6);
 
     // --- Artificial Life Simulation ---
     vec2 pixel = 1.0 / iResolution.xy;
@@ -208,15 +208,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // --- Define Animal-like Behaviors using Knobs 3-11 ---
     #define GROUPING_STRENGTH (sin(time) * 0.55)     // Slightly stronger base grouping
     #define HUE_VARIATION (sin(time/1000.) * length(uv))
-    #define HUNGER_DRIVE (knob_13)       // How strongly creatures seek luminance (energy)
+    #define HUNGER_DRIVE (knob_14)       // How strongly creatures seek luminance (energy)
     #define FEEDING_EFFICIENCY (0.01) // How much saturation increases upon feeding
-    #define METABOLISM (knob_17)        // Natural rate of luminance (energy) decay
+    #define METABOLISM (knob_18)        // Natural rate of luminance (energy) decay
     #define SATURATION_DECAY (animateEaseInOutExpo(time) * 0.15)    // Natural rate of saturation decay
-    #define PHEROMONE_STRENGTH (knob_16)   // Attraction/Repulsion based on avg neighbor hue
-    #define BLOB_THRESHOLD (knob_22)    // Luminance threshold below which feeding/strong grouping occurs
-    #define ENVIRONMENT_FOOD (knob_18)  // Ambient energy available
-    #define HUE_DAMPING (0.75 + knob_19) // Constrained damping factor [0.75, 0.95]
-    #define MAX_HUE_CHANGE knob_20 // Limit max hue shift per frame
+    #define PHEROMONE_STRENGTH (knob_17)   // Attraction/Repulsion based on avg neighbor hue
+    #define BLOB_THRESHOLD (knob_23)    // Luminance threshold below which feeding/strong grouping occurs
+    #define ENVIRONMENT_FOOD (knob_19)  // Ambient energy available
+    #define HUE_DAMPING (0.75 + knob_20) // Constrained damping factor [0.75, 0.95]
+    #define MAX_HUE_CHANGE knob_21 // Limit max hue shift per frame
 
     // --- Apply Behaviors to currentHSL ---
     vec3 lifeAdjustedHSL = currentHSL;
@@ -279,16 +279,16 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     lifeAdjustedHSL.y = clamp(lifeAdjustedHSL.y, 0.0, 1.0);
     lifeAdjustedHSL.z = clamp(lifeAdjustedHSL.z, 0.0, 1.0);
 
-    // Feedback blending with knob_17 (using the life-adjusted color)
-    // Lower knob_17 -> stronger feedback from last frame
+    // Feedback blending with knob_18 (using the life-adjusted color)
+    // Lower knob_18 -> stronger feedback from last frame
     float feedbackFactor = clamp(length(uv), 0.0, 1.0);
     vec3 finalHSL = fract(mix(lastCol, lifeAdjustedHSL, feedbackFactor)); // Use life-adjusted color
 
-    // Another small twist: knob_1 can also shift hue a bit in feedback
-    finalHSL.x = fract(finalHSL.x + knob_7 * 0.15);
+    // Another small twist: knob_2 can also shift hue a bit in feedback
+    finalHSL.x = fract(finalHSL.x + knob_8 * 0.15);
 
     // Convert final HSL back to RGB
     vec3 finalRGB = hsl2rgb(finalHSL);
-    finalRGB = mix(prevRGB, finalRGB, knob_23);
+    finalRGB = mix(prevRGB, finalRGB, knob_24);
     fragColor = vec4(finalRGB, 1.0);
 }
