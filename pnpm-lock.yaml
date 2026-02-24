@@ -18,8 +18,8 @@ importers:
         specifier: ^3.1.1
         version: 3.1.1
       hypnosound:
-        specifier: ^1.10.2
-        version: 1.12.0
+        specifier: ^1.14.0
+        version: 1.14.0
       playwright:
         specifier: ^1.55.1
         version: 1.58.2
@@ -846,8 +846,8 @@ packages:
   http-cache-semantics@3.8.1:
     resolution: {integrity: sha512-5ai2iksyV8ZXmnZhHH4rWPoxxistEexSi5936zIQ1bnNTW5VnA85B6P/VpXiRM017IgRvb2kKo1a//y+0wSp3w==}
 
-  hypnosound@1.12.0:
-    resolution: {integrity: sha512-wiZt6gfjUgE9bKEsgzuvhxRl+yTgZ5RP/QiA5czAYHvIrEHlNfNKfZEX01hYalXFM4oJ0kkv43Hw9zcde1I/6w==}
+  hypnosound@1.14.0:
+    resolution: {integrity: sha512-vR10pOzX/AJkANWfVsRJF4ydw7R3HwOB6fY0+MrIz9SNSKeQyydLZerJfXx2IAf7QDaFHx+3PD9d1R6KUfF5dQ==}
 
   ieee754@1.2.1:
     resolution: {integrity: sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA==}
@@ -2135,7 +2135,7 @@ snapshots:
 
   http-cache-semantics@3.8.1: {}
 
-  hypnosound@1.12.0: {}
+  hypnosound@1.14.0: {}
 
   ieee754@1.2.1: {}
 
