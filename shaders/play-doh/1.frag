@@ -1,4 +1,4 @@
-uniform float knob_1;
+uniform float knob_14;
 #define A 1.66 + spectralRoughnessZScore != 0. ? 1.66 + spectralRoughnessZScore: 0.25
 #define B (energyZScore * .05 + 1.)
 #define C (spectralRoughnessZScore > -.2 ? 1. : -1.)
@@ -54,7 +54,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
 
     vec3 hsl = rgb2hsl(col);
     hsl.x = fract(hsl.x + spectralCentroidMedian);
-    hsl.x = fract(hsl.x + knob_1);
+    hsl.x = fract(hsl.x + knob_14);
     col = hsl2rgb(hsl);
     fragColor = vec4(col,1.0);
 }

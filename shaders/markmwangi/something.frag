@@ -6,8 +6,8 @@
 #define TIME iTime * 2.
 mat2 m(float a){float c=cos(a), s=sin(a);return mat2(c,-s,s,c);}
 
-uniform float knob_1;
-#define KNOB_A knob_1
+uniform float knob_77;
+#define KNOB_A knob_77
 
 #define PROBE_B bass * 3.
 #define PROBE_C treble * 2.

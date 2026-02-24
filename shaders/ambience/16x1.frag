@@ -1,33 +1,33 @@
 // @fullscreen: true
-//https://visuals.beadfamous.com/edit?knob_15.min=-1&knob_15.max=1&knob_16=-0.339&knob_16.min=-1&knob_16.max=1&knob_19=0.88&knob_19.min=0&knob_19.max=1&knob_20=8.961&knob_20.min=0&knob_20.max=10.3&knob_21=0.51&knob_21.min=0&knob_21.max=3&knob_22=1.372&knob_22.min=0.1&knob_22.max=2.5&knob_24=0.55&knob_24.min=0&knob_24.max=1&knob_23=2.072&knob_23.min=0&knob_23.max=2.8&knob_25=3.169&knob_25.min=0.1&knob_25.max=3.2&knob_26=2.476&knob_26.min=0.1&knob_26.max=10&knob_27=0.55&knob_27.min=0&knob_27.max=1&knob_15=1&knob_4=0.646&knob_4.min=0&knob_4.max=1&knob_8=0&knob_8.min=0&knob_8.max=1&knob_1=0&knob_1.min=0&knob_1.max=1&knob_5=0.276&knob_5.min=0&knob_5.max=1&knob_12=1&knob_12.min=0&knob_12.max=1&knob_13=0&knob_13.min=0&knob_13.max=1&knob_14=0.252&knob_14.min=0&knob_14.max=1&knob_2=3.139&knob_2.min=0&knob_2.max=3.1386&knob_9=0.291&knob_9.min=0&knob_9.max=1&knob_3=1&knob_3.min=0&knob_3.max=1&knob_7=0.504&knob_7.min=0&knob_7.max=1&knob_6=0.614&knob_6.min=0&knob_6.max=1&knob_10=0.543&knob_10.min=0&knob_10.max=1&knob_11=0.228&knob_11.min=0&knob_11.max=1
+//https://visuals.beadfamous.com/edit?knob_14.min=-1&knob_14.max=1&knob_15=-0.339&knob_15.min=-1&knob_15.max=1&knob_71=0.88&knob_71.min=0&knob_71.max=1&knob_72=8.961&knob_72.min=0&knob_72.max=10.3&knob_73=0.51&knob_73.min=0&knob_73.max=3&knob_74=1.372&knob_74.min=0.1&knob_74.max=2.5&knob_76=0.55&knob_76.min=0&knob_76.max=1&knob_75=2.072&knob_75.min=0&knob_75.max=2.8&knob_77=3.169&knob_77.min=0.1&knob_77.max=3.2&knob_78=2.476&knob_78.min=0.1&knob_78.max=10&knob_79=0.55&knob_79.min=0&knob_79.max=1&knob_14=1&knob_3=0.646&knob_3.min=0&knob_3.max=1&knob_7=0&knob_7.min=0&knob_7.max=1&knob_0=0&knob_0.min=0&knob_0.max=1&knob_4=0.276&knob_4.min=0&knob_4.max=1&knob_11=1&knob_11.min=0&knob_11.max=1&knob_12=0&knob_12.min=0&knob_12.max=1&knob_13=0.252&knob_13.min=0&knob_13.max=1&knob_1=3.139&knob_1.min=0&knob_1.max=3.1386&knob_8=0.291&knob_8.min=0&knob_8.max=1&knob_2=1&knob_2.min=0&knob_2.max=1&knob_6=0.504&knob_6.min=0&knob_6.max=1&knob_5=0.614&knob_5.min=0&knob_5.max=1&knob_9=0.543&knob_9.min=0&knob_9.max=1&knob_10=0.228&knob_10.min=0&knob_10.max=1
 // Constants
 #define MAX_RIPPLES 12
 #define PI 3.14159265359
 #define TIME (iTime/1000.)
-#define BEAT knob_18 > 0.50
+#define BEAT knob_23 > 0.50
 
 // Audio reactive parameters
-#define WAVE_SPEED knob_2
-#define PATTERN_SCALE knob_3
-#define RIPPLE_CHAOS knob_4      // How randomly ripples are placed
-#define RIPPLE_SPREAD knob_5      // How far from center ripples appear
-#define RIPPLE_STRENGTH knob_6     // How strong ripples are
-#define COLOR_SHIFT knob_6       // Base color shift
-#define BEAT_INTENSITY knob_7
+#define WAVE_SPEED knob_1
+#define PATTERN_SCALE knob_2
+#define RIPPLE_CHAOS knob_3      // How randomly ripples are placed
+#define RIPPLE_SPREAD knob_4      // How far from center ripples appear
+#define RIPPLE_STRENGTH knob_5     // How strong ripples are
+#define COLOR_SHIFT knob_5       // Base color shift
+#define BEAT_INTENSITY knob_6
 
 // Ripple characteristics
-#define RIPPLE_SPEED knob_8
-#define RIPPLE_THICKNESS mapValue(knob_22, 0., 1., 0.01, fract(time/1000.))
-#define RIPPLE_DISTANCE_DECAY knob_12
-#define RIPPLE_AGE_DECAY mapValue(knob_27, -1.,1., knob_15, knob_16)
-#define RIPPLE_BIRTH_STAGGER knob_17
-#define RIPPLE_LIFE_DURATION knob_22
-#define RIPPLE_BASE_STRENGTH knob_25
+#define RIPPLE_SPEED knob_7
+#define RIPPLE_THICKNESS mapValue(knob_74, 0., 1., 0.01, fract(time/1000.))
+#define RIPPLE_DISTANCE_DECAY knob_11
+#define RIPPLE_AGE_DECAY mapValue(knob_79, -1.,1., knob_14, knob_15)
+#define RIPPLE_BIRTH_STAGGER knob_16
+#define RIPPLE_LIFE_DURATION knob_74
+#define RIPPLE_BASE_STRENGTH knob_77
 
 // Color and blending
-#define COLOR_PERSISTENCE knob_9
-#define COLOR_SATURATION knob_7
-#define COLOR_BRIGHTNESS_SCALE knob_24
+#define COLOR_PERSISTENCE knob_8
+#define COLOR_SATURATION knob_6
+#define COLOR_BRIGHTNESS_SCALE knob_76
 
 // Ripple structure
 struct Ripple {
@@ -129,7 +129,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     plasma = plasma * 0.5 + 0.5;
 
     // Add stronger ripple influence
-    plasma += interference * knob_23;
+    plasma += interference * knob_75;
     plasma = plasma * 0.5 + 0.25;
 
     // Create base color from plasma
@@ -166,7 +166,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Blend with previous frame for smooth trails
     float trailStrength = 0.7 + interference * 0.02; // Dynamic trail strength
     vec3 color = hslmix(baseColor, prevColor.rgb, trailStrength);
-    color = mix(color, prevColor.rgb, knob_16);
+    color = mix(color, prevColor.rgb, knob_15);
     // Apply vignette
     float vignette = smoothstep(1.1, 0.3, length(uv));
     // color *= vignette;

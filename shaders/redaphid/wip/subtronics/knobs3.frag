@@ -1,9 +1,9 @@
-#define ZOOM_LEVEL mapValue(knob_2, 0., 1., 0.9, 2.5)
-#define RIPPLE_SPEED knob_1
-#define RIPPLE_FREQUENCY knob_1
-#define RIPPLE_STRENGTH knob_5 * 2.5  // Controls wave thickness
-#define COLOR_SHIFT knob_4
-#define INFINITY_ZOOM knob_3
+#define ZOOM_LEVEL mapValue(knob_40, 0., 1., 0.9, 2.5)
+#define RIPPLE_SPEED knob_31
+#define RIPPLE_FREQUENCY knob_31
+#define RIPPLE_STRENGTH knob_47 * 2.5  // Controls wave thickness
+#define COLOR_SHIFT knob_45
+#define INFINITY_ZOOM knob_44
 #define CENTER vec2(0.46, 0.65)
 
 // Retrieve last frame safely

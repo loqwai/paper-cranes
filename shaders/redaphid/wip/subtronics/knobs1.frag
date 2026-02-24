@@ -1,10 +1,10 @@
-#define ZOOM_LEVEL knob_5
+#define ZOOM_LEVEL knob_40
 #define DISOLVE_FACTOR mapValue(spectralRoughnessZScore, -1., 1.,0.,1. )
-#define BLEND_STRENGTH knob_5
-#define ROUGHNESS_FACTOR knob_6
-#define PULSE knob_8
-#define RIPPLE_SPEED knob_10
-#define RIPPLE_FREQUENCY knob_1
+#define BLEND_STRENGTH knob_40
+#define ROUGHNESS_FACTOR knob_41
+#define PULSE knob_45
+#define RIPPLE_SPEED knob_47
+#define RIPPLE_FREQUENCY knob_31
 vec3 last(vec2 uv) {
     vec4 initial = getInitialFrameColor(uv);
     vec4 last = getLastFrameColor(uv);
@@ -157,14 +157,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float cyclopsBody = checkNeighborsCyclops(uv);
     float waves = checkNeighborsWaves(uv);
 
-    // Enhanced blending effect using knob_5
+    // Enhanced blending effect using knob_40
     float blendFactor = smoothstep(0.0, 1.0, BLEND_STRENGTH);
 
     // Create a more vibrant base color using audio features
     vec3 blendColor = vec3(
-        knob_7 * 1.8,
-        knob_8 * 1.3,
-        knob_9 * 1.1
+        knob_44 * 1.8,
+        knob_45 * 1.3,
+        knob_46 * 1.1
     );
 
     // Apply trippy color transformation
@@ -180,9 +180,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // **Knob-controlled parameters**
     float rippleSpeed = RIPPLE_SPEED * 3.0;
     float rippleFrequency = 10.0 + RIPPLE_FREQUENCY * 20.0;
-    float distortionAmount = 0.5 + knob_2;
-    float colorShift = 1.0 - knob_3;
-    float rippleFade = 1.5 + knob_4 * 2.0;
+    float distortionAmount = 0.5 + knob_32;
+    float colorShift = 1.0 - knob_33;
+    float rippleFade = 1.5 + knob_34 * 2.0;
 
     vec2 delta = uv - center;
     float distFromCenter = length(delta);

@@ -1,14 +1,14 @@
-uniform float knob_1;
-uniform float knob_2;
-uniform float knob_3;
-uniform float knob_4;
-uniform float knob_5;
-#define PROBE_1 mix(1.,1.4,knob_2)
-#define PROBE_2 mix(0.55,2.,knob_3) /* 'fan out' swirls -> multiple squares */
-#define PROBE_3 mix(-1.7,10.,knob_4) /* color */
-#define PROBE_4 mix(1.,11.,knob_5)
-#define PROBE_5 mix(0.47,0.97,knob_2) /* complexity + zoom */
-#define PROBE_6 mix(0.2,0.1,knob_1) /*zoom */
+uniform float knob_13;
+uniform float knob_14;
+uniform float knob_15;
+uniform float knob_16;
+uniform float knob_17;
+#define PROBE_1 mix(1.,1.4,knob_14)
+#define PROBE_2 mix(0.55,2.,knob_15) /* 'fan out' swirls -> multiple squares */
+#define PROBE_3 mix(-1.7,10.,knob_16) /* color */
+#define PROBE_4 mix(1.,11.,knob_17)
+#define PROBE_5 mix(0.47,0.97,knob_14) /* complexity + zoom */
+#define PROBE_6 mix(0.2,0.1,knob_13) /*zoom */
 
 // Descriptive function to apply periodic transformation and trap calculations
 vec2 applyPeriodicTransformationAndTraps(vec2 position, vec2 multiplier) {

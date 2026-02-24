@@ -1,41 +1,41 @@
 #define PI 3.14159265359
 
-// http://localhost:6969/edit.html?knob_9=3&knob_9.min=-2&knob_9.max=3&knob_3=10&knob_3.min=0&knob_3.max=10&knob_4=-20&knob_4.min=-20&knob_4.max=10&knob_5=0.976&knob_5.min=-2&knob_5.max=1&knob_6=0.551&knob_6.min=-2&knob_6.max=1&knob_7=0.102&knob_7.min=0&knob_7.max=1&knob_8=5.197&knob_8.min=0&knob_8.max=10&knob_1=-2&knob_1.min=-2&knob_1.max=1&knob_10=9.843&knob_10.min=0&knob_10.max=10&knob_13=0&knob_13.min=0&knob_13.max=1&knob_11=0.205&knob_11.min=0&knob_11.max=1&knob_14=0&knob_14.min=0&knob_14.max=1&knob_12=0.228&knob_12.min=0&knob_12.max=1
+// http://localhost:6969/edit.html?knob_36=3&knob_36.min=-2&knob_36.max=3&knob_30=10&knob_30.min=0&knob_30.max=10&knob_31=-20&knob_31.min=-20&knob_31.max=10&knob_32=0.976&knob_32.min=-2&knob_32.max=1&knob_33=0.551&knob_33.min=-2&knob_33.max=1&knob_34=0.102&knob_34.min=0&knob_34.max=1&knob_35=5.197&knob_35.min=0&knob_35.max=10&knob_3=-2&knob_3.min=-2&knob_3.max=1&knob_37=9.843&knob_37.min=0&knob_37.max=10&knob_45=0&knob_45.min=0&knob_45.max=1&knob_40=0.205&knob_40.min=0&knob_40.max=1&knob_46=0&knob_46.min=0&knob_46.max=1&knob_41=0.228&knob_41.min=0&knob_41.max=1
 
 // Evolution controls
-#define EVOLUTION_RATE (0.1 + knob_2 * 0.4)        // How much previous frame affects next
-#define FRACTAL_SCALE (1.0 + knob_4 * 2.0)         // Overall scale of fractal elements
-#define PATTERN_COMPLEXITY (1.0 + knob_5)           // Number of layers/detail
-#define FLOW_STRENGTH (knob_6 * 0.3)               // How much the pattern flows
-#define MORPH_SPEED (knob_7 * 0.2)                 // Speed of shape changes
-#define TENDRIL_DETAIL (0.2 + knob_8 * 0.8)        // Amount of tendril detail
-#define EDGE_SHARPNESS (0.1 + knob_9)        // Sharpness of pattern edges
-#define COLOR_EVOLUTION (knob_10 * 0.3)             // How colors evolve over time
-#define MUTATION_RATE (knob_10 * 0.2)             // How likely pixels are to mutate
+#define EVOLUTION_RATE (0.1 + knob_5 * 0.4)        // How much previous frame affects next
+#define FRACTAL_SCALE (1.0 + knob_31 * 2.0)         // Overall scale of fractal elements
+#define PATTERN_COMPLEXITY (1.0 + knob_32)           // Number of layers/detail
+#define FLOW_STRENGTH (knob_33 * 0.3)               // How much the pattern flows
+#define MORPH_SPEED (knob_34 * 0.2)                 // Speed of shape changes
+#define TENDRIL_DETAIL (0.2 + knob_35 * 0.8)        // Amount of tendril detail
+#define EDGE_SHARPNESS (0.1 + knob_36)        // Sharpness of pattern edges
+#define COLOR_EVOLUTION (knob_37 * 0.3)             // How colors evolve over time
+#define MUTATION_RATE (knob_37 * 0.2)             // How likely pixels are to mutate
 
 
 // Color control defines
-#define BASE_COLOR_1 vec3(knob_3, knob_9, knob_10)        // Primary color control
-#define COLOR_SPREAD (0.2 + knob_4 * 2.0)                  // How different the colors are
-#define SATURATION_FACTOR (0.5 + knob_5)                   // Overall color saturation
-#define BRIGHTNESS_FACTOR (0.5 + knob_6)                   // Overall brightness
+#define BASE_COLOR_1 vec3(knob_30, knob_36, knob_37)        // Primary color control
+#define COLOR_SPREAD (0.2 + knob_31 * 2.0)                  // How different the colors are
+#define SATURATION_FACTOR (0.5 + knob_32)                   // Overall color saturation
+#define BRIGHTNESS_FACTOR (0.5 + knob_33)                   // Overall brightness
 
 // Effect control defines
-#define RIPPLE_SPEED (knob_7 * 2.0)                        // Speed of color ripples
-#define SWIRL_INTENSITY (knob_8)                           // Intensity of swirl effect
-#define EDGE_GLOW (knob_9)                                 // Intensity of edge glow
-#define COLOR_BLEND (knob_10)                               // How colors mix together
-#define FRACTAL_INTENSITY (10.2 + knob_8 * 2.0)  // Controls both swirl and tendril intensity
+#define RIPPLE_SPEED (knob_34 * 2.0)                        // Speed of color ripples
+#define SWIRL_INTENSITY (knob_35)                           // Intensity of swirl effect
+#define EDGE_GLOW (knob_36)                                 // Intensity of edge glow
+#define COLOR_BLEND (knob_37)                               // How colors mix together
+#define FRACTAL_INTENSITY (10.2 + knob_35 * 2.0)  // Controls both swirl and tendril intensity
 
 
-#define FLOW_SPEED (knob_3)
-#define CRYSTAL_SCALE (knob_4)
-#define ENERGY (knob_5)
-#define ROUGHNESS (knob_6)
-#define BASE_HUE (knob_7)
-#define HUE_VARIATION (knob_8)
-#define COLOR_INTENSITY (knob_9)
-#define DISPLACEMENT (knob_10)
+#define FLOW_SPEED (knob_30)
+#define CRYSTAL_SCALE (knob_31)
+#define ENERGY (knob_32)
+#define ROUGHNESS (knob_33)
+#define BASE_HUE (knob_34)
+#define HUE_VARIATION (knob_35)
+#define COLOR_INTENSITY (knob_36)
+#define DISPLACEMENT (knob_37)
 
 // Rotation matrix helper
 mat2 rotate2D(float angle) {

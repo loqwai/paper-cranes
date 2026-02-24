@@ -1,53 +1,53 @@
-//http://localhost:6969/edit.html?knob_10=7.583&knob_10.min=0&knob_10.max=10.7&knob_11=1.257&knob_11.min=0&knob_11.max=8.4&knob_12=0.198&knob_12.min=0&knob_12.max=0.6&knob_13=3.928&knob_13.min=0&knob_13.max=4.3&knob_14=0.228&knob_14.min=0&knob_14.max=1&knob_15=0.559&knob_15.min=0&knob_15.max=1&knob_16=11.024&knob_16.min=0&knob_16.max=11.2&knob_17=0&knob_17.min=0&knob_17.max=1&knob_6=1&knob_6.min=0&knob_6.max=1&knob_9=0.63&knob_9.min=0&knob_9.max=1&knob_4=0.291&knob_4.min=0&knob_4.max=1&knob_18=0.866&knob_18.min=0&knob_18.max=10&knob_1=3.583&knob_1.min=0&knob_1.max=11.1&knob_2=2.796&knob_2.min=0&knob_2.max=5.3&knob_5=1&knob_5.min=0&knob_5.max=1&knob_3=0.591&knob_3.min=0&knob_3.max=1&knob_20=0&knob_20.min=0&knob_20.max=1&knob_21=0&knob_21.min=0&knob_21.max=1&knob_7=0.795&knob_7.min=0&knob_7.max=1&knob_8=0.469&knob_8.min=0&knob_8.max=11.9
-//http://localhost:6969/edit.html?knob_10=0.59&knob_10.min=0&knob_10.max=10.7&knob_11=0&knob_11.min=0&knob_11.max=19.2&knob_12=0.397&knob_12.min=0&knob_12.max=0.6&knob_13=3.487&knob_13.min=0&knob_13.max=4.3&knob_14=0.717&knob_14.min=0&knob_14.max=1&knob_15=0.583&knob_15.min=0&knob_15.max=1&knob_16=1.676&knob_16.min=0&knob_16.max=11.2&knob_17=1&knob_17.min=0&knob_17.max=1&knob_6=1&knob_6.min=0&knob_6.max=1&knob_9=0.496&knob_9.min=0&knob_9.max=1&knob_4=0.417&knob_4.min=0&knob_4.max=1&knob_18=34.3&knob_18.min=0&knob_18.max=34.3&knob_1=5.943&knob_1.min=0&knob_1.max=11.1&knob_2=1.878&knob_2.min=0&knob_2.max=5.3&knob_5=1&knob_5.min=0&knob_5.max=1&knob_3=0.583&knob_3.min=0&knob_3.max=1&knob_20=0&knob_20.min=0&knob_20.max=1&knob_21=0&knob_21.min=0&knob_21.max=1&knob_7=0.866&knob_7.min=0&knob_7.max=1&knob_8=5.528&knob_8.min=0&knob_8.max=11.9&knob_19=0&knob_19.min=0&knob_19.max=1
-// http://localhost:6969/edit.html?knob_10=0&knob_10.min=0&knob_10.max=10.7&knob_11=0&knob_11.min=0&knob_11.max=2&knob_12=0&knob_12.min=0&knob_12.max=0.6&knob_13=1.287&knob_13.min=0&knob_13.max=4.3&knob_14=0.78&knob_14.min=0&knob_14.max=1&knob_15=0.85&knob_15.min=0&knob_15.max=1&knob_16=1.058&knob_16.min=0&knob_16.max=11.2&knob_17=1&knob_17.min=0&knob_17.max=1&knob_6=1&knob_6.min=0&knob_6.max=1&knob_9=0.409&knob_9.min=0&knob_9.max=1&knob_4=0.417&knob_4.min=0&knob_4.max=1&knob_18=5.131&knob_18.min=0&knob_18.max=34.3&knob_1=5.594&knob_1.min=0&knob_1.max=11.1&knob_2=2.295&knob_2.min=0&knob_2.max=5.3&knob_5=1&knob_5.min=0&knob_5.max=1&knob_3=0.575&knob_3.min=0&knob_3.max=1&knob_20=0&knob_20.min=0&knob_20.max=1&knob_21=0&knob_21.min=0&knob_21.max=1&knob_7=0.622&knob_7.min=0&knob_7.max=1&knob_8=4.31&knob_8.min=0&knob_8.max=11.9&knob_19=0&knob_19.min=0&knob_19.max=1
+//http://localhost:6969/edit.html?knob_14=7.583&knob_14.min=0&knob_14.max=10.7&knob_15=1.257&knob_15.min=0&knob_15.max=8.4&knob_16=0.198&knob_16.min=0&knob_16.max=0.6&knob_17=3.928&knob_17.min=0&knob_17.max=4.3&knob_18=0.228&knob_18.min=0&knob_18.max=1&knob_19=0.559&knob_19.min=0&knob_19.max=1&knob_20=11.024&knob_20.min=0&knob_20.max=11.2&knob_21=0&knob_21.min=0&knob_21.max=1&knob_8=1&knob_8.min=0&knob_8.max=1&knob_11=0.63&knob_11.min=0&knob_11.max=1&knob_6=0.291&knob_6.min=0&knob_6.max=1&knob_22=0.866&knob_22.min=0&knob_22.max=10&knob_3=3.583&knob_3.min=0&knob_3.max=11.1&knob_4=2.796&knob_4.min=0&knob_4.max=5.3&knob_7=1&knob_7.min=0&knob_7.max=1&knob_5=0.591&knob_5.min=0&knob_5.max=1&knob_26=0&knob_26.min=0&knob_26.max=1&knob_27=0&knob_27.min=0&knob_27.max=1&knob_9=0.795&knob_9.min=0&knob_9.max=1&knob_10=0.469&knob_10.min=0&knob_10.max=11.9
+//http://localhost:6969/edit.html?knob_14=0.59&knob_14.min=0&knob_14.max=10.7&knob_15=0&knob_15.min=0&knob_15.max=19.2&knob_16=0.397&knob_16.min=0&knob_16.max=0.6&knob_17=3.487&knob_17.min=0&knob_17.max=4.3&knob_18=0.717&knob_18.min=0&knob_18.max=1&knob_19=0.583&knob_19.min=0&knob_19.max=1&knob_20=1.676&knob_20.min=0&knob_20.max=11.2&knob_21=1&knob_21.min=0&knob_21.max=1&knob_8=1&knob_8.min=0&knob_8.max=1&knob_11=0.496&knob_11.min=0&knob_11.max=1&knob_6=0.417&knob_6.min=0&knob_6.max=1&knob_22=34.3&knob_22.min=0&knob_22.max=34.3&knob_3=5.943&knob_3.min=0&knob_3.max=11.1&knob_4=1.878&knob_4.min=0&knob_4.max=5.3&knob_7=1&knob_7.min=0&knob_7.max=1&knob_5=0.583&knob_5.min=0&knob_5.max=1&knob_26=0&knob_26.min=0&knob_26.max=1&knob_27=0&knob_27.min=0&knob_27.max=1&knob_9=0.866&knob_9.min=0&knob_9.max=1&knob_10=5.528&knob_10.min=0&knob_10.max=11.9&knob_23=0&knob_23.min=0&knob_23.max=1
+// http://localhost:6969/edit.html?knob_14=0&knob_14.min=0&knob_14.max=10.7&knob_15=0&knob_15.min=0&knob_15.max=2&knob_16=0&knob_16.min=0&knob_16.max=0.6&knob_17=1.287&knob_17.min=0&knob_17.max=4.3&knob_18=0.78&knob_18.min=0&knob_18.max=1&knob_19=0.85&knob_19.min=0&knob_19.max=1&knob_20=1.058&knob_20.min=0&knob_20.max=11.2&knob_21=1&knob_21.min=0&knob_21.max=1&knob_8=1&knob_8.min=0&knob_8.max=1&knob_11=0.409&knob_11.min=0&knob_11.max=1&knob_6=0.417&knob_6.min=0&knob_6.max=1&knob_22=5.131&knob_22.min=0&knob_22.max=34.3&knob_3=5.594&knob_3.min=0&knob_3.max=11.1&knob_4=2.295&knob_4.min=0&knob_4.max=5.3&knob_7=1&knob_7.min=0&knob_7.max=1&knob_5=0.575&knob_5.min=0&knob_5.max=1&knob_26=0&knob_26.min=0&knob_26.max=1&knob_27=0&knob_27.min=0&knob_27.max=1&knob_9=0.622&knob_9.min=0&knob_9.max=1&knob_10=4.31&knob_10.min=0&knob_10.max=11.9&knob_23=0&knob_23.min=0&knob_23.max=1
 // Knob controls
-uniform float knob_22;
-uniform float knob_23;
-uniform float knob_24;
-uniform float knob_25;
-uniform float knob_26;
-uniform float knob_27;
-uniform float knob_28;
-uniform float knob_29;
 uniform float knob_30;
 uniform float knob_31;
+uniform float knob_32;
+uniform float knob_33;
+uniform float knob_34;
+uniform float knob_35;
+uniform float knob_36;
+uniform float knob_37;
+uniform float knob_38;
+uniform float knob_39;
 
-uniform float knob_2;
-uniform float knob_3;
 uniform float knob_4;
 uniform float knob_5;
 uniform float knob_6;
 uniform float knob_7;
 uniform float knob_8;
+uniform float knob_9;
+uniform float knob_10;
 // Constants
 #define MAX_RIPPLES 12
 #define PI 3.14159265359
 #define TIME (iTime/10.)
-#define BEAT knob_31 > 50.
+#define BEAT knob_39 > 50.
 
 // Audio reactive parameters
-#define WAVE_SPEED knob_22
-#define PATTERN_SCALE knob_23
-#define RIPPLE_CHAOS knob_24      // How randomly ripples are placed
-#define RIPPLE_SPREAD knob_25      // How far from center ripples appear
-#define RIPPLE_STRENGTH knob_26      // How strong ripples are
-#define COLOR_SHIFT knob_27       // Base color shift
-#define BEAT_INTENSITY knob_28
+#define WAVE_SPEED knob_30
+#define PATTERN_SCALE knob_31
+#define RIPPLE_CHAOS knob_32      // How randomly ripples are placed
+#define RIPPLE_SPREAD knob_33      // How far from center ripples appear
+#define RIPPLE_STRENGTH knob_34      // How strong ripples are
+#define COLOR_SHIFT knob_35       // Base color shift
+#define BEAT_INTENSITY knob_36
 
 // Ripple characteristics
-#define RIPPLE_SPEED knob_29
-#define RIPPLE_THICKNESS knob_22
-#define RIPPLE_DISTANCE_DECAY knob_23
-#define RIPPLE_AGE_DECAY knob_24
-#define RIPPLE_BIRTH_STAGGER knob_25
-#define RIPPLE_LIFE_DURATION knob_26
-#define RIPPLE_BASE_STRENGTH knob_27
+#define RIPPLE_SPEED knob_37
+#define RIPPLE_THICKNESS knob_30
+#define RIPPLE_DISTANCE_DECAY knob_31
+#define RIPPLE_AGE_DECAY knob_32
+#define RIPPLE_BIRTH_STAGGER knob_33
+#define RIPPLE_LIFE_DURATION knob_34
+#define RIPPLE_BASE_STRENGTH knob_35
 
 // Color and blending
-#define COLOR_PERSISTENCE knob_28
-#define COLOR_SATURATION knob_29
-#define COLOR_BRIGHTNESS_SCALE knob_30
+#define COLOR_PERSISTENCE knob_36
+#define COLOR_SATURATION knob_37
+#define COLOR_BRIGHTNESS_SCALE knob_38
 
 // Ripple structure
 struct Ripple {

@@ -1,5 +1,5 @@
 // High-precision Julia set shader using CPU-calculated screen origin and pixel span (double-float emulation)
-// http://localhost:6969/edit.html?controller=mandelbrot&knob_1=0.22&knob_1.min=-3&knob_1.max=3
+// http://localhost:6969/edit.html?controller=mandelbrot&knob_50=0.22&knob_50.min=-3&knob_50.max=3
 uniform float cameraScreenOriginX;
 uniform float cameraScreenOriginXLow;
 uniform float cameraScreenOriginY;

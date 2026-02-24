@@ -94,7 +94,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     color.y = fract(color.y + (sin(random(color.yz, color.x))/1000.));
     if(bassZScore > 0.2) color.y = clamp(color.y *1.1, 0.,1.);
     color = mix(lastColor, color, smoothing);
-    // if(random(vec2(0.), bassMax) > knob_1) {
+    // if(random(vec2(0.), bassMax) > knob_34) {
     //     if(color.z > lastColor.z) discard;
     //     color = mix(lastColor, color, spectralCentroidStandardDeviation);npm run de
     // }

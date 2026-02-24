@@ -1,29 +1,29 @@
 // @fullscreen: true
-//http://localhost:6969/edit.html?shader=redaphid%2Fwip%2Fmelted-satin-4&fullscreen=true&knob_1=1.45&knob_1.min=0&knob_1.max=3&knob_2=1.45&knob_2.min=0&knob_2.max=3&knob_3=48.44&knob_3.min=0&knob_3.max=100&knob_4=1.22&knob_4.min=0&knob_4.max=3&knob_5=3&knob_5.min=-0.8&knob_5.max=3&knob_6=0.8&knob_6.min=0&knob_6.max=1&knob_7=0.03&knob_7.min=-0.1&knob_7.max=1&knob_8=2.4&knob_8.min=-1&knob_8.max=5.5
-uniform float knob_1;
-uniform float knob_2;
-uniform float knob_3;
-uniform float knob_4;
-uniform float knob_5;
-uniform float knob_6;
-uniform float knob_7;
-uniform float knob_8;
+//http://localhost:6969/edit.html?shader=redaphid%2Fwip%2Fmelted-satin-4&fullscreen=true&knob_70=1.45&knob_70.min=0&knob_70.max=3&knob_71=1.45&knob_71.min=0&knob_71.max=3&knob_72=48.44&knob_72.min=0&knob_72.max=100&knob_73=1.22&knob_73.min=0&knob_73.max=3&knob_74=3&knob_74.min=-0.8&knob_74.max=3&knob_75=0.8&knob_75.min=0&knob_75.max=1&knob_76=0.03&knob_76.min=-0.1&knob_76.max=1&knob_77=2.4&knob_77.min=-1&knob_77.max=5.5
+uniform float knob_70;
+uniform float knob_71;
+uniform float knob_72;
+uniform float knob_73;
+uniform float knob_74;
+uniform float knob_75;
+uniform float knob_76;
+uniform float knob_77;
 
 // User-controlled parameters
-#define COLOR_CYCLE_SPEED (knob_1 * 0.4)           // Speed of color cycling
+#define COLOR_CYCLE_SPEED (knob_70 * 0.4)           // Speed of color cycling
 #define COLOR_SHARPNESS (16.0)            // Sharpness of color transitions
-#define SATURATION_LEVEL (knob_4 * 0.98)           // Base saturation
-#define CONTRAST_LEVEL (knob_5 * 2.0)              // Overall contrast (reduced from 3.0)
-#define DARKNESS_LEVEL (knob_6 * 0.8)              // How dark the dark areas get
-#define RIPPLE_AMOUNT (knob_3)               // Strength of ripple effect
+#define SATURATION_LEVEL (knob_73 * 0.98)           // Base saturation
+#define CONTRAST_LEVEL (knob_74 * 2.0)              // Overall contrast (reduced from 3.0)
+#define DARKNESS_LEVEL (knob_75 * 0.8)              // How dark the dark areas get
+#define RIPPLE_AMOUNT (knob_72)               // Strength of ripple effect
 #define BEAT_INTENSITY (1.2)                        // How strong beat reactions are (reduced from 1.4)
 
 // Fixed constants
 #define t (iTime*0.2 + energyZScore*0.1)
-#define PALETTE_DEPTH_INFLUENCE knob_2
-#define PALETTE_POSITION_INFLUENCE knob_8
+#define PALETTE_DEPTH_INFLUENCE knob_71
+#define PALETTE_POSITION_INFLUENCE knob_77
 #define SATURATION_BOOST (bassZScore + 1.0)/2.0
-#define MAX_HUE_CHANGE knob_7    // Maximum hue change per frame (0.0 to 1.0)
+#define MAX_HUE_CHANGE knob_76    // Maximum hue change per frame (0.0 to 1.0)
 
 // Add the mainImage function declaration at the top
 void mainImage(out vec4 fragColor, in vec2 fragCoord);

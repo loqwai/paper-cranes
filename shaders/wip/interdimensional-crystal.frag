@@ -1,8 +1,8 @@
-uniform float knob_2;
-uniform float knob_1;
+uniform float knob_22;
+uniform float knob_10;
 #define A spectralRoughness * 100.
 #define T iTime/100.
-#define B knob_1
+#define B knob_10
 float fractHash(vec2 p) {
   p = fract(p * vec2(123.34, 456.21));
   p += dot(p, p+45.32);

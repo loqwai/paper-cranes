@@ -1,9 +1,9 @@
-uniform float knob_6;
-uniform float knob_7;
-uniform float knob_8;
-uniform float knob_9;
-uniform float knob_10;
-uniform float knob_11;
+uniform float knob_71;
+uniform float knob_72;
+uniform float knob_73;
+uniform float knob_74;
+uniform float knob_75;
+uniform float knob_76;
 
 #define LINE_WIDTH 25.5
 #define SMOOTH_WIDTH 2.0
@@ -14,12 +14,12 @@ uniform float knob_11;
 #define VERTICAL_OFFSET 0.5  // Middle of screen
 #define SCALE 3.5  // Keeping the scale that works well
 
-uniform float knob_1;
-uniform float knob_3;
-uniform float knob_5;
-uniform float knob_4;
-uniform float knob_2;
-#define COLOR_SHIFT mix(0., knob_5/4., knob_3)
+uniform float knob_27;
+uniform float knob_37;
+uniform float knob_47;
+uniform float knob_46;
+uniform float knob_36;
+#define COLOR_SHIFT mix(0., knob_47/4., knob_37)
 // Core feature definitions - define the relationship between colors and values once
 #define BLUE_FEATURE bassZScore
 #define GREEN_FEATURE spectralKurtosisZScore
@@ -38,12 +38,12 @@ uniform float knob_2;
 
 
 // Use knobs for correlation control and visibility
-#define RED_KNOB knob_6
-#define GREEN_KNOB knob_7
-#define BLUE_KNOB knob_8
-#define TEAL_KNOB knob_9
-#define YELLOW_KNOB knob_10
-#define GRAYISH_GREEN_KNOB knob_11
+#define RED_KNOB knob_71
+#define GREEN_KNOB knob_72
+#define BLUE_KNOB knob_73
+#define TEAL_KNOB knob_74
+#define YELLOW_KNOB knob_75
+#define GRAYISH_GREEN_KNOB knob_76
 
 
 // Smooth value transitions between frames
@@ -85,7 +85,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     if (uv.x < 0.99) {
         vec2 prevUV = uv + vec2(1.0/resolution.x, 0.0);
         vec3 color = rgb2hsl(getLastFrameColor(prevUV).rgb);
-        if(knob_1 > 0.5) {
+        if(knob_27 > 0.5) {
              color.x = fract(color.x + COLOR_SHIFT);
          }
         fragColor = vec4(hsl2rgb(color), 1.);

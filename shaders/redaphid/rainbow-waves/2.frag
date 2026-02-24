@@ -1,12 +1,12 @@
 // @fullscreen: true
-//http://localhost:6969/edit.html?knob_12=7.583&knob_12.min=0&knob_12.max=10.7&knob_13=1.257&knob_13.min=0&knob_13.max=8.4&knob_14=0.198&knob_14.min=0&knob_14.max=0.6&knob_15=3.928&knob_15.min=0&knob_15.max=4.3&knob_16=PROBE_B28&knob_16.min=0&knob_16.max=1&knob_17=0.559&knob_17.min=0&knob_17.max=1&knob_18=11.024&knob_18.min=0&knob_18.max=11.2&knob_19=0&knob_19.min=0&knob_19.max=1&knob_8=1&knob_8.min=0&knob_8.max=1&knob_11=0.63&knob_11.min=0&knob_11.max=1&knob_6=PROBE_B91&knob_6.min=0&knob_6.max=1&knob_20=0.866&knob_20.min=0&knob_20.max=10&knob_3=3.583&knob_3.min=0&knob_3.max=11.1&knob_4=2.796&knob_4.min=0&knob_4.max=5.3&knob_7=1&knob_7.min=0&knob_7.max=1&knob_5=0.591&knob_5.min=0&knob_5.max=1&knob_24=0&knob_24.min=0&knob_24.max=1&knob_25=0&knob_25.min=0&knob_25.max=1&knob_9=0.795&knob_9.min=0&knob_9.max=1&knob_10=0.469&knob_10.min=0&knob_10.max=11.9
-//http://localhost:6969/edit.html?knob_12=0.59&knob_12.min=0&knob_12.max=10.7&knob_13=0&knob_13.min=0&knob_13.max=19.2&knob_14=0.397&knob_14.min=0&knob_14.max=0.6&knob_15=3.487&knob_15.min=0&knob_15.max=4.3&knob_16=0.717&knob_16.min=0&knob_16.max=1&knob_17=0.583&knob_17.min=0&knob_17.max=1&knob_18=1.676&knob_18.min=0&knob_18.max=11.2&knob_19=1&knob_19.min=0&knob_19.max=1&knob_8=1&knob_8.min=0&knob_8.max=1&knob_11=0.496&knob_11.min=0&knob_11.max=1&knob_6=0.417&knob_6.min=0&knob_6.max=1&knob_20=34.3&knob_20.min=0&knob_20.max=34.3&knob_3=5.943&knob_3.min=0&knob_3.max=11.1&knob_4=1.878&knob_4.min=0&knob_4.max=5.3&knob_7=1&knob_7.min=0&knob_7.max=1&knob_5=0.583&knob_5.min=0&knob_5.max=1&knob_24=0&knob_24.min=0&knob_24.max=1&knob_25=0&knob_25.min=0&knob_25.max=1&knob_9=0.866&knob_9.min=0&knob_9.max=1&knob_10=5.528&knob_10.min=0&knob_10.max=11.9&knob_21=0&knob_21.min=0&knob_21.max=1
-//https://visuals.beadfamous.com/edit?knob_12=1&knob_12.min=0&knob_12.max=1&knob_13=1.101&knob_13.min=-1&knob_13.max=8.2&knob_14=0.529&knob_14.min=0&knob_14.max=3.2&knob_15=20.1&knob_15.min=0&knob_15.max=20.1&knob_16=0.346&knob_16.min=0&knob_16.max=1&knob_17=1.669&knob_17.min=-2.3&knob_17.max=4.9&knob_18=23.872&knob_18.min=0&knob_18.max=32.6&knob_19=0.74&knob_19.min=0&knob_19.max=1&knob_8=0.362&knob_8.min=0&knob_8.max=1&knob_11=0.447&knob_11.min=0&knob_11.max=0.8&knob_6=0.346&knob_6.min=0&knob_6.max=1&knob_20=24.994&knob_20.min=0&knob_20.max=53.8&knob_3=7.517&knob_3.min=0&knob_3.max=11.1&knob_4=0.118&knob_4.min=0&knob_4.max=1&knob_7=0.265&knob_7.min=0.01&knob_7.max=0.5&knob_5=2.055&knob_5.min=0&knob_5.max=14.5&knob_24=0&knob_24.min=0&knob_24.max=1&knob_25=0.49&knob_25.min=0&knob_25.max=1&knob_9=0.535&knob_9.min=0&knob_9.max=1&knob_10=0.482&knob_10.min=0&knob_10.max=5.1&knob_21=0&knob_21.min=0&knob_21.max=1&knob_29=0.37&knob_29.min=0&knob_29.max=1&knob_31=0&knob_31.min=0&knob_31.max=1&knob_30=0&knob_30.min=0&knob_30.max=1&knob_33=0.403&knob_33.min=0&knob_33.max=6.4&knob_1=0&knob_1.min=0&knob_1.max=1&knob_26=0&knob_26.min=0&knob_26.max=1&knob_35=0&knob_35.min=0&knob_35.max=1&knob_34=0&knob_34.min=0&knob_34.max=1&knob_32=0&knob_32.min=0&knob_32.max=1&knob_2=0&knob_2.min=0&knob_2.max=1&knob_28=0&knob_28.min=0&knob_28.max=1&knob_22=0&knob_22.min=0&knob_22.max=1&knob_27=0&knob_27.min=0&knob_27.max=1&knob_23=0&knob_23.min=0&knob_23.max=1
+//http://localhost:6969/edit.html?knob_14=7.583&knob_14.min=0&knob_14.max=10.7&knob_15=1.257&knob_15.min=0&knob_15.max=8.4&knob_16=0.198&knob_16.min=0&knob_16.max=0.6&knob_17=3.928&knob_17.min=0&knob_17.max=4.3&knob_18=PROBE_B28&knob_18.min=0&knob_18.max=1&knob_19=0.559&knob_19.min=0&knob_19.max=1&knob_20=11.024&knob_20.min=0&knob_20.max=11.2&knob_21=0&knob_21.min=0&knob_21.max=1&knob_8=1&knob_8.min=0&knob_8.max=1&knob_11=0.63&knob_11.min=0&knob_11.max=1&knob_6=PROBE_B91&knob_6.min=0&knob_6.max=1&knob_22=0.866&knob_22.min=0&knob_22.max=10&knob_3=3.583&knob_3.min=0&knob_3.max=11.1&knob_4=2.796&knob_4.min=0&knob_4.max=5.3&knob_7=1&knob_7.min=0&knob_7.max=1&knob_5=0.591&knob_5.min=0&knob_5.max=1&knob_26=0&knob_26.min=0&knob_26.max=1&knob_27=0&knob_27.min=0&knob_27.max=1&knob_9=0.795&knob_9.min=0&knob_9.max=1&knob_10=0.469&knob_10.min=0&knob_10.max=11.9
+//http://localhost:6969/edit.html?knob_14=0.59&knob_14.min=0&knob_14.max=10.7&knob_15=0&knob_15.min=0&knob_15.max=19.2&knob_16=0.397&knob_16.min=0&knob_16.max=0.6&knob_17=3.487&knob_17.min=0&knob_17.max=4.3&knob_18=0.717&knob_18.min=0&knob_18.max=1&knob_19=0.583&knob_19.min=0&knob_19.max=1&knob_20=1.676&knob_20.min=0&knob_20.max=11.2&knob_21=1&knob_21.min=0&knob_21.max=1&knob_8=1&knob_8.min=0&knob_8.max=1&knob_11=0.496&knob_11.min=0&knob_11.max=1&knob_6=0.417&knob_6.min=0&knob_6.max=1&knob_22=34.3&knob_22.min=0&knob_22.max=34.3&knob_3=5.943&knob_3.min=0&knob_3.max=11.1&knob_4=1.878&knob_4.min=0&knob_4.max=5.3&knob_7=1&knob_7.min=0&knob_7.max=1&knob_5=0.583&knob_5.min=0&knob_5.max=1&knob_26=0&knob_26.min=0&knob_26.max=1&knob_27=0&knob_27.min=0&knob_27.max=1&knob_9=0.866&knob_9.min=0&knob_9.max=1&knob_10=5.528&knob_10.min=0&knob_10.max=11.9&knob_23=0&knob_23.min=0&knob_23.max=1
+//https://visuals.beadfamous.com/edit?knob_14=1&knob_14.min=0&knob_14.max=1&knob_15=1.101&knob_15.min=-1&knob_15.max=8.2&knob_16=0.529&knob_16.min=0&knob_16.max=3.2&knob_17=20.1&knob_17.min=0&knob_17.max=20.1&knob_18=0.346&knob_18.min=0&knob_18.max=1&knob_19=1.669&knob_19.min=-2.3&knob_19.max=4.9&knob_20=23.872&knob_20.min=0&knob_20.max=32.6&knob_21=0.74&knob_21.min=0&knob_21.max=1&knob_8=0.362&knob_8.min=0&knob_8.max=1&knob_11=0.447&knob_11.min=0&knob_11.max=0.8&knob_6=0.346&knob_6.min=0&knob_6.max=1&knob_22=24.994&knob_22.min=0&knob_22.max=53.8&knob_3=7.517&knob_3.min=0&knob_3.max=11.1&knob_4=0.118&knob_4.min=0&knob_4.max=1&knob_7=0.265&knob_7.min=0.01&knob_7.max=0.5&knob_5=2.055&knob_5.min=0&knob_5.max=14.5&knob_26=0&knob_26.min=0&knob_26.max=1&knob_27=0.49&knob_27.min=0&knob_27.max=1&knob_9=0.535&knob_9.min=0&knob_9.max=1&knob_10=0.482&knob_10.min=0&knob_10.max=5.1&knob_23=0&knob_23.min=0&knob_23.max=1&knob_46=0.37&knob_46.min=0&knob_46.max=1&knob_48=0&knob_48.min=0&knob_48.max=1&knob_47=0&knob_47.min=0&knob_47.max=1&knob_60=0.403&knob_60.min=0&knob_60.max=6.4&knob_1=0&knob_1.min=0&knob_1.max=1&knob_28=0&knob_28.min=0&knob_28.max=1&knob_67=0&knob_67.min=0&knob_67.max=1&knob_64=0&knob_64.min=0&knob_64.max=1&knob_49=0&knob_49.min=0&knob_49.max=1&knob_2=0&knob_2.min=0&knob_2.max=1&knob_45=0&knob_45.min=0&knob_45.max=1&knob_24=0&knob_24.min=0&knob_24.max=1&knob_31=0&knob_31.min=0&knob_31.max=1&knob_25=0&knob_25.min=0&knob_25.max=1
 // Constants
 #define MAX_RIPPLES 12
 #define PI 3.14159265359
 #define TIME (iTime/1000.)
-#define BEAT knob_21 > .5
+#define BEAT knob_23 > .5
 
 // Audio reactive parameters
 #define WAVE_SPEED knob_3
@@ -18,26 +18,24 @@
 #define BEAT_INTENSITY knob_9
 
 // Ripple characteristics
-#define RIPPLE_SPEED knob_18
-#define RIPPLE_THICKNESS knob_33
-#define RIPPLE_DISTANCE_DECAY knob_15
+#define RIPPLE_SPEED knob_20
+#define RIPPLE_THICKNESS knob_60
+#define RIPPLE_DISTANCE_DECAY knob_17
 #define RIPPLE_AGE_DECAY knob_9
-#define RIPPLE_BIRTH_STAGGER knob_14
+#define RIPPLE_BIRTH_STAGGER knob_16
 #define RIPPLE_LIFE_DURATION knob_10
-#define RIPPLE_BASE_STRENGTH knob_20
+#define RIPPLE_BASE_STRENGTH knob_22
 
 // Color and blending
-#define COLOR_PERSISTENCE knob_17
-#define COLOR_SATURATION knob_19
-#define COLOR_BRIGHTNESS_SCALE knob_16
+#define COLOR_PERSISTENCE knob_19
+#define COLOR_SATURATION knob_21
+#define COLOR_BRIGHTNESS_SCALE knob_18
 #define COLOR_MAX_DIFF knob_4
 
-#define PROBE_A knob_12
-#define PROBE_B knob_13
-#define PROBE_C knob_33
+#define PROBE_A knob_14
+#define PROBE_B knob_15
+#define PROBE_C knob_60
 // Knob controls
-uniform float knob_12;
-uniform float knob_13;
 uniform float knob_14;
 uniform float knob_15;
 uniform float knob_16;
@@ -46,6 +44,8 @@ uniform float knob_18;
 uniform float knob_19;
 uniform float knob_20;
 uniform float knob_21;
+uniform float knob_22;
+uniform float knob_23;
 
 uniform float knob_3;
 uniform float knob_4;
@@ -56,8 +56,8 @@ uniform float knob_8;
 uniform float knob_9;
 uniform float knob_10;
 uniform float knob_11;
-uniform float knob_34;
-uniform float knob_33;
+uniform float knob_64;
+uniform float knob_60;
 // Ripple structure
 struct Ripple {
     vec2 center;
@@ -155,11 +155,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     }
 
     float colorDiff = abs(blendedHSL.x - prevHSL.x);
-    if(colorDiff > COLOR_MAX_DIFF && knob_34 < 0.2) {
+    if(colorDiff > COLOR_MAX_DIFF && knob_64 < 0.2) {
         blendedHSL = mix(prevHSL, blendedHSL, colorDiff/10.);
         blendedHSL.z *= 0.9;
     }
-    if(knob_34 > 0.5) {
+    if(knob_64 > 0.5) {
       blendedHSL.x = fract(blendedHSL.x + 0.1);
     }
 

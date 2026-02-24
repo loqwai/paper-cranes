@@ -29,7 +29,7 @@ vec2 domainWarp(vec2 p, float warp, float offset) {
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Normalize coordinates
     vec2 uv = fragCoord.xy / iResolution.xy;
-    vec2 uvOffset = vec2(knob_10-0.5,knob_11-0.5)/400. + (vec2(random(uv)-0.5, random(uv.yx)-0.5)/1000.);
+    vec2 uvOffset = vec2(knob_14-0.5,knob_15-0.5)/400. + (vec2(random(uv)-0.5, random(uv.yx)-0.5)/1000.);
     // Calculate aspect-corrected coordinates, centered and scaled by the shorter dimension
     vec2 p = (2.0 * fragCoord.xy - iResolution.xy) / min(iResolution.x, iResolution.y);
 
@@ -37,66 +37,66 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 lastCol = rgb2hsl(getLastFrameColor(uv+uvOffset).rgb);
 
     // Time factor
-    float t = time * (0.05 + 0.05 * knob_13); // knob_13 -> overall speed
+    float t = time * (0.05 + 0.05 * knob_30); // knob_30 -> overall speed
 
-    // Combine scale from knob_15 and knob_16
-    float baseScale = 1.0 + knob_15 * 2.0; // knob_15 -> base scale
-    float extraScale = 1.0 + knob_16 * 2.0; // knob_16 -> additional scale
+    // Combine scale from knob_32 and knob_33
+    float baseScale = 1.0 + knob_32 * 2.0; // knob_32 -> base scale
+    float extraScale = 1.0 + knob_33 * 2.0; // knob_33 -> additional scale
     p *= baseScale;
 
     // Warp pass #1
-    p = domainWarp(p, knob_14 * 0.4, t * 0.1);  // knob_14 -> warp strength
+    p = domainWarp(p, knob_31 * 0.4, t * 0.1);  // knob_31 -> warp strength
 
-    // Warp pass #2, let knob_21 intensify
-    p = domainWarp(p, knob_21 * 0.3, -t * 0.07);
+    // Warp pass #2, let knob_40 intensify
+    p = domainWarp(p, knob_40 * 0.3, -t * 0.07);
 
-    // Add an extra "wave" distortion with knob_26
-    float wave = animateEaseInOutSine(t * 0.1 + knob_26 * 0.3);
-    p += wave * knob_26 * 0.3 * vec2(sin(p.y * 2.0), cos(p.x * 2.0));
+    // Add an extra "wave" distortion with knob_46
+    float wave = animateEaseInOutSine(t * 0.1 + knob_46 * 0.3);
+    p += wave * knob_46 * 0.3 * vec2(sin(p.y * 2.0), cos(p.x * 2.0));
 
     // Fractal noise final pattern
     float pattern = fbm(p * extraScale + t * 0.2);
 
-    // Make pattern more interesting with knob_25
-    pattern *= (1.0 + knob_25 * 2.0);
+    // Make pattern more interesting with knob_45
+    pattern *= (1.0 + knob_45 * 2.0);
 
-    // Hue shift: slow drift plus knob_17
-    float hueShift = t * (0.1 + knob_17 * 0.2);
+    // Hue shift: slow drift plus knob_34
+    float hueShift = t * (0.1 + knob_34 * 0.2);
 
-    // Use knob_22, knob_23, knob_24, knob_27 as extra color offsets
-    float cOffset1 = knob_22 * 0.2;
-    float cOffset2 = knob_23 * 0.3;
-    float cOffset3 = knob_24 * 0.25;
-    float cOffset4 = knob_27 * 0.2;
+    // Use knob_41, knob_43, knob_44, knob_47 as extra color offsets
+    float cOffset1 = knob_41 * 0.2;
+    float cOffset2 = knob_43 * 0.3;
+    float cOffset3 = knob_44 * 0.25;
+    float cOffset4 = knob_47 * 0.2;
     float totalOffset = cOffset1 + cOffset2 + cOffset3 + cOffset4;
 
     // Build final HSL color
     float hue = fract(hueShift + pattern * 0.15 + totalOffset);
-    float sat = 0.8 + knob_19 * 0.2; // knob_19 -> saturation
+    float sat = 0.8 + knob_36 * 0.2; // knob_36 -> saturation
     float lit = 0.4 + pattern * 0.3;
 
-    // Extra color inversion effect if knob_23 is large
-    // (Just a fun example – try turning knob_23 up or down)
-    if (knob_23 > 0.5) {
+    // Extra color inversion effect if knob_43 is large
+    // (Just a fun example – try turning knob_43 up or down)
+    if (knob_43 > 0.5) {
         hue = 1.0 - hue;
     }
 
-    // Use knob_22 to shift brightness up/down
-    lit += knob_22 * 0.1;
-    // Use knob_18 as overall brightness multiplier
-    lit *= (1.0 + knob_18 * 1.0);
+    // Use knob_41 to shift brightness up/down
+    lit += knob_41 * 0.1;
+    // Use knob_35 as overall brightness multiplier
+    lit *= (1.0 + knob_35 * 1.0);
 
-    // Extra hack: knob_26 can also push saturation for a "pop" effect
-    sat += knob_26 * 0.1;
+    // Extra hack: knob_46 can also push saturation for a "pop" effect
+    sat += knob_46 * 0.1;
 
     // Convert HSL -> RGB
     vec3 colorHSL = vec3(hue, clamp(sat, 0.0, 1.0), clamp(lit, 0.0, 1.0));
     vec3 newColor = hsl2rgb(colorHSL);
 
     // Optionally mix in the initial frame for texture-based effects
-    // Let's just do a subtle blend with knob_25 for demonstration
+    // Let's just do a subtle blend with knob_45 for demonstration
     vec3 initTex = getInitialFrameColor(uv).rgb;
-    newColor = mix(newColor, initTex, 0.05 * knob_25);
+    newColor = mix(newColor, initTex, 0.05 * knob_45);
 
     // --- Artificial Life Simulation ---
     vec2 pixel = 1.0 / iResolution.xy;
@@ -127,16 +127,16 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float avgLum = (n1_hsl.z + n2_hsl.z + n3_hsl.z + n4_hsl.z) / 4.0;
 
     // --- Define Animal-like Behaviors using Knobs 3-11 ---
-    #define GROUPING_STRENGTH (knob_1 * 0.55)     // Slightly stronger base grouping
-    #define HUE_VARIATION (knob_2 * 0.015)     // Further reduced base random hue shifts
-    #define HUNGER_DRIVE (knob_3 * 0.1)       // How strongly creatures seek luminance (energy)
-    #define FEEDING_EFFICIENCY (knob_4 * 0.2) // How much saturation increases upon feeding
-    #define METABOLISM (knob_5 * 0.02)        // Natural rate of luminance (energy) decay
-    #define SATURATION_DECAY (knob_6 * 0.015)    // Natural rate of saturation decay
-    #define PHEROMONE_STRENGTH (knob_7 * 0.2)   // Attraction/Repulsion based on avg neighbor hue
-    #define BLOB_THRESHOLD (knob_8 * 0.5)    // Luminance threshold below which feeding/strong grouping occurs
-    #define ENVIRONMENT_FOOD (knob_9 * 0.1)  // Ambient energy available
-    #define HUE_DAMPING (0.75 + knob_12 * 0.20) // Constrained damping factor [0.75, 0.95]
+    #define GROUPING_STRENGTH (knob_3 * 0.55)     // Slightly stronger base grouping
+    #define HUE_VARIATION (knob_4 * 0.015)     // Further reduced base random hue shifts
+    #define HUNGER_DRIVE (knob_5 * 0.1)       // How strongly creatures seek luminance (energy)
+    #define FEEDING_EFFICIENCY (knob_6 * 0.2) // How much saturation increases upon feeding
+    #define METABOLISM (knob_7 * 0.02)        // Natural rate of luminance (energy) decay
+    #define SATURATION_DECAY (knob_8 * 0.015)    // Natural rate of saturation decay
+    #define PHEROMONE_STRENGTH (knob_9 * 0.2)   // Attraction/Repulsion based on avg neighbor hue
+    #define BLOB_THRESHOLD (knob_10 * 0.5)    // Luminance threshold below which feeding/strong grouping occurs
+    #define ENVIRONMENT_FOOD (knob_11 * 0.1)  // Ambient energy available
+    #define HUE_DAMPING (0.75 + knob_22 * 0.20) // Constrained damping factor [0.75, 0.95]
     #define MAX_HUE_CHANGE 0.08 // Limit max hue shift per frame
 
     // --- Apply Behaviors to currentHSL ---
@@ -200,13 +200,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     lifeAdjustedHSL.y = clamp(lifeAdjustedHSL.y, 0.0, 1.0);
     lifeAdjustedHSL.z = clamp(lifeAdjustedHSL.z, 0.0, 1.0);
 
-    // Feedback blending with knob_20 (using the life-adjusted color)
-    // Lower knob_20 -> stronger feedback from last frame
-    float feedbackFactor = clamp(1.0 - knob_20, 0.0, 1.0);
+    // Feedback blending with knob_37 (using the life-adjusted color)
+    // Lower knob_37 -> stronger feedback from last frame
+    float feedbackFactor = clamp(1.0 - knob_37, 0.0, 1.0);
     vec3 finalHSL = mix(lastCol, lifeAdjustedHSL, feedbackFactor); // Use life-adjusted color
 
-    // Another small twist: knob_22 can also shift hue a bit in feedback
-    finalHSL.x = fract(finalHSL.x + knob_22 * 0.05);
+    // Another small twist: knob_41 can also shift hue a bit in feedback
+    finalHSL.x = fract(finalHSL.x + knob_41 * 0.05);
 
     // Convert final HSL back to RGB
     vec3 finalRGB = hsl2rgb(finalHSL);

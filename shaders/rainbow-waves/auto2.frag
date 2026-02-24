@@ -1,33 +1,33 @@
 // @fullscreen: true
-//https://visuals.beadfamous.com/edit?knob_1.min=-1&knob_1.max=1&knob_2=0.22&knob_2.min=-1&knob_2.max=1&knob_5=0.2&knob_5.min=0&knob_5.max=1&knob_6=10.3&knob_6.min=0&knob_6.max=10.3&knob_7=1.05&knob_7.min=0&knob_7.max=3&knob_8=0.46&knob_8.min=0.1&knob_8.max=2.5&knob_10=0.55&knob_10.min=0&knob_10.max=1&knob_9=0.98&knob_9.min=0&knob_9.max=2.8&knob_11=1.743&knob_11.min=0.1&knob_11.max=3.2&knob_12=4.06&knob_12.min=0.1&knob_12.max=10&knob_13=0.55&knob_13.min=0&knob_13.max=1&knob_1=0.1
+//https://visuals.beadfamous.com/edit?knob_14.min=-1&knob_14.max=1&knob_15=0.22&knob_15.min=-1&knob_15.max=1&knob_71=0.2&knob_71.min=0&knob_71.max=1&knob_72=10.3&knob_72.min=0&knob_72.max=10.3&knob_73=1.05&knob_73.min=0&knob_73.max=3&knob_74=0.46&knob_74.min=0.1&knob_74.max=2.5&knob_76=0.55&knob_76.min=0&knob_76.max=1&knob_75=0.98&knob_75.min=0&knob_75.max=2.8&knob_77=1.743&knob_77.min=0.1&knob_77.max=3.2&knob_78=4.06&knob_78.min=0.1&knob_78.max=10&knob_79=0.55&knob_79.min=0&knob_79.max=1&knob_14=0.1
 // Constants
 #define MAX_RIPPLES 12
 #define PI 3.14159265359
 #define TIME (iTime/1000.)
-#define BEAT knob_4 > 0.50
+#define BEAT knob_23 > 0.50
 
 // Audio reactive parameters
-#define WAVE_SPEED knob_5
+#define WAVE_SPEED knob_71
 #define PATTERN_SCALE mix(0.1,100., sin(animateEaseInExpo(time/1000.)))
-#define RIPPLE_CHAOS knob_7      // How randomly ripples are placed
-#define RIPPLE_SPREAD knob_7      // How far from center ripples appear
-#define RIPPLE_STRENGTH knob_12      // How strong ripples are
+#define RIPPLE_CHAOS knob_73      // How randomly ripples are placed
+#define RIPPLE_SPREAD knob_73      // How far from center ripples appear
+#define RIPPLE_STRENGTH knob_78      // How strong ripples are
 #define COLOR_SHIFT animatePulse(time/10000.)       // Base color shift
 #define BEAT_INTENSITY mix(0.,100., animateEaseInExpo(cos(time*3.14*2.)))
 
 // Ripple characteristics
-#define RIPPLE_SPEED knob_6
-#define RIPPLE_THICKNESS mapValue(knob_8, 0., 1., 0.01, fract(time/1000.))
+#define RIPPLE_SPEED knob_72
+#define RIPPLE_THICKNESS mapValue(knob_74, 0., 1., 0.01, fract(time/1000.))
 #define RIPPLE_DISTANCE_DECAY mix(0.98, 1.1, animateEaseInOutCubic(sin(time)))
-#define RIPPLE_AGE_DECAY mapValue(knob_13, -1.,1., knob_1, knob_2)
-#define RIPPLE_BIRTH_STAGGER knob_3
-#define RIPPLE_LIFE_DURATION knob_8
+#define RIPPLE_AGE_DECAY mapValue(knob_79, -1.,1., knob_14, knob_15)
+#define RIPPLE_BIRTH_STAGGER knob_16
+#define RIPPLE_LIFE_DURATION knob_74
 #define RIPPLE_BASE_STRENGTH mix(0.12,0.14,animateSmooth(cos(time/10.)))
 
 // Color and blending
-#define COLOR_PERSISTENCE knob_5
-#define COLOR_SATURATION knob_10
-#define COLOR_BRIGHTNESS_SCALE knob_10
+#define COLOR_PERSISTENCE knob_71
+#define COLOR_SATURATION knob_76
+#define COLOR_BRIGHTNESS_SCALE knob_76
 
 // Ripple structure
 struct Ripple {
@@ -129,7 +129,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     plasma = plasma * 0.5 + 0.5;
 
     // Add stronger ripple influence
-    plasma += interference * knob_9;
+    plasma += interference * knob_75;
     plasma = plasma * 0.5 + 0.25;
 
     // Create base color from plasma
@@ -166,7 +166,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Blend with previous frame for smooth trails
     float trailStrength = 0.7 + interference * 0.02; // Dynamic trail strength
     vec3 color = hslmix(baseColor, prevColor.rgb, trailStrength);
-    color = mix(color, prevColor.rgb, knob_2);
+    color = mix(color, prevColor.rgb, knob_15);
     // Apply vignette
     float vignette = smoothstep(1.1, 0.3, length(uv));
     // color *= vignette;

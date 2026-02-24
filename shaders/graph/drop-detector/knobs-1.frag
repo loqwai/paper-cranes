@@ -1,16 +1,16 @@
-uniform float knob_2;
-uniform float knob_3;
-uniform float knob_4;
-uniform float knob_5;
-uniform float knob_6;
-uniform float knob_7;
-uniform float knob_1; // Solo control: 0 = show all, 1-6 for individual lines
+uniform float knob_71;
+uniform float knob_72;
+uniform float knob_73;
+uniform float knob_74;
+uniform float knob_75;
+uniform float knob_76;
+uniform float knob_14; // Solo control: 0 = show all, 1-6 for individual lines
 
 // Decorrelate a z-score from energy influence
 float decorrelateFromEnergy(float zScore, float correlation) {
     return zScore - (energyZScore * correlation);
 }
-#define SOLO_KNOB knob_1
+#define SOLO_KNOB knob_14
 // Core feature definitions - define the relationship between colors and values once
 #define BLUE_FEATURE spectralCrestZScore
 #define GREEN_FEATURE spectralKurtosisZScore
@@ -37,12 +37,12 @@ float decorrelateFromEnergy(float zScore, float correlation) {
 #define SCALE 0.25  // Scale factor for visibility (using 25% of screen height each direction)
 
 // Use knobs for correlation control and visibility
-#define RED_KNOB knob_2
-#define GREEN_KNOB knob_3
-#define BLUE_KNOB knob_4
-#define TEAL_KNOB knob_5
-#define YELLOW_KNOB knob_6
-#define GRAYISH_GREEN_KNOB knob_7
+#define RED_KNOB knob_71
+#define GREEN_KNOB knob_72
+#define BLUE_KNOB knob_73
+#define TEAL_KNOB knob_74
+#define YELLOW_KNOB knob_75
+#define GRAYISH_GREEN_KNOB knob_76
 
 // Core feature definitions - define the relationship between colors and values once
 #define BLUE_FEATURE spectralCrestZScore

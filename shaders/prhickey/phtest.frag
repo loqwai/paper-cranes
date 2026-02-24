@@ -6,12 +6,12 @@
 // Simplex(ish) Noise
 // Shane https://www.shadertoy.com/view/ldscWH
 // --------------------------------------------------------
-uniform float knob_1;
-uniform float knob_2;
 uniform float knob_3;
-#define PROBE_A knob_1
-#define PROBE_B knob_2
-#define PROBE_C knob_3
+uniform float knob_4;
+uniform float knob_5;
+#define PROBE_A knob_3
+#define PROBE_B knob_4
+#define PROBE_C knob_5
 
 vec3 hash33(vec3 p) { 
     float n = sin(dot(p, vec3(7, 157, 113)));    

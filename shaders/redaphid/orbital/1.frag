@@ -1,6 +1,6 @@
-uniform float knob_1;
+uniform float knob_14;
 #define PROBE_A mix(-2.,-1.14,energyZScore)
-#define PROBE_B knob_1
+#define PROBE_B knob_14
 #define rot(a) mat2(cos(a + vec4(0,33,11,0)))
 #define CS(a)  cos(a + vec2(0,11) )
 #define D(r)   abs( sin(2.*length(p + r* CS( radians(360./7.) * i ) ) - cos(t*2.)/2.) )

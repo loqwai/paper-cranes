@@ -1,12 +1,12 @@
 // @favorite: true
 
 #define EPSILON 0.0000001
-//https://visuals.beadfamous.com/edit?knob_1=1.268&knob_4=0.024&knob_5=0&knob_6=7.9&knob_3=3.071&knob_2=0.32
-#define PROBE_1 mix(knob_3,knob_6,energyZScore)+(energyMedian/knob_1)
+//https://visuals.beadfamous.com/edit?knob_30=1.268&knob_42=0.024&knob_44=0&knob_47=7.9&knob_37=3.071&knob_34=0.32
+#define PROBE_1 mix(knob_37,knob_47,energyZScore)+(energyMedian/knob_30)
 #define PROBE_2 mix(1.8, 5.,spectralRoughnessMedian)+EPSILON /* 'fan out' swirls -> multiple squares */
-#define PROBE_3 mix(-1.5,10.,knob_4)+EPSILON /* color */
-#define PROBE_4 mix(trebleZScore,knob_2,midsZScore)+EPSILON
-#define PROBE_5 mix(0.47,10.97,knob_5)+EPSILON /* complexity + zoom */
+#define PROBE_3 mix(-1.5,10.,knob_42)+EPSILON /* color */
+#define PROBE_4 mix(trebleZScore,knob_34,midsZScore)+EPSILON
+#define PROBE_5 mix(0.47,10.97,knob_44)+EPSILON /* complexity + zoom */
 #define PROBE_6 mix(0.18,0.47, (bassZScore + 1.)/3.)+EPSILON /*zoom */
 
 // Descriptive function to apply periodic transformation and trap calculations

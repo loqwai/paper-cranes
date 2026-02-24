@@ -1,27 +1,27 @@
 // @fullscreen: true
-//http://localhost:6969/edit.html?shader=redaphid%2Fwip%2Fzebra-fractal&knob_3=-2&knob_3.min=-2&knob_3.max=1&knob_2=-0.913&knob_2.min=-2&knob_2.max=1&knob_1=-0.772&knob_1.min=-2&knob_1.max=1&knob_5=-0.984&knob_5.min=-2&knob_5.max=1&knob_6=-0.606&knob_6.min=-2&knob_6.max=1&knob_7=-0.583&knob_7.min=-2&knob_7.max=1&knob_8=-0.488&knob_8.min=-2&knob_8.max=1&knob_4=0.126&knob_4.min=-2&knob_4.max=1
+//http://localhost:6969/edit.html?shader=redaphid%2Fwip%2Fzebra-fractal&knob_72=-2&knob_72.min=-2&knob_72.max=1&knob_71=-0.913&knob_71.min=-2&knob_71.max=1&knob_70=-0.772&knob_70.min=-2&knob_70.max=1&knob_74=-0.984&knob_74.min=-2&knob_74.max=1&knob_75=-0.606&knob_75.min=-2&knob_75.max=1&knob_76=-0.583&knob_76.min=-2&knob_76.max=1&knob_77=-0.488&knob_77.min=-2&knob_77.max=1&knob_73=0.126&knob_73.min=-2&knob_73.max=1
 #define PI  3.141592654
 #define TAU (2.0*PI)
 
 // Knob mappings for manual control
-uniform float knob_1; // Base rotation (-1 to 1)
-uniform float knob_2; // Color intensity (-1 to 1)
-uniform float knob_3; // Pattern scale (-1 to 1)
-uniform float knob_4; // Fractal detail (-1 to 1)
-uniform float knob_5; // Color blend (-1 to 1)
-uniform float knob_6; // Pattern evolution (-1 to 1)
-uniform float knob_7; // Pattern intensity (-1 to 1)
+uniform float knob_70; // Base rotation (-1 to 1)
+uniform float knob_71; // Color intensity (-1 to 1)
+uniform float knob_72; // Pattern scale (-1 to 1)
+uniform float knob_73; // Fractal detail (-1 to 1)
+uniform float knob_74; // Color blend (-1 to 1)
+uniform float knob_75; // Pattern evolution (-1 to 1)
+uniform float knob_76; // Pattern intensity (-1 to 1)
 
 #define EPSILON 0.0001
 
 // Map PROBEs to knobs initially
-#define PROBE_A (knob_1) // Base rotation
-#define PROBE_B (/*knob_2*/ spectralCentroid) // Color intensity
-#define PROBE_C (knob_3) // Pattern scale
-#define PROBE_D (knob_4) // Fractal detail
-#define PROBE_E (knob_5) // Color blend
-#define PROBE_F (knob_6) // Pattern evolution
-#define PROBE_G (knob_7)
+#define PROBE_A (knob_70) // Base rotation
+#define PROBE_B (/*knob_71*/ spectralCentroid) // Color intensity
+#define PROBE_C (knob_72) // Pattern scale
+#define PROBE_D (knob_73) // Fractal detail
+#define PROBE_E (knob_74) // Color blend
+#define PROBE_F (knob_75) // Pattern evolution
+#define PROBE_G (knob_76)
 
 
 vec3 palette(in float t)

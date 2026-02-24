@@ -3,21 +3,21 @@
 
 
 #define RESOLUTION      iResolution
-//https://visuals.beadfamous.com/edit?knob_2=0.433&knob_2.min=0&knob_2.max=1&knob_3=0.52&knob_3.min=0&knob_3.max=1&knob_4=2.8&knob_4.min=-2&knob_4.max=2.8&knob_7=-0.512&knob_7.min=-2&knob_7.max=1&knob_1=0.394&knob_1.min=-2&knob_1.max=1&knob_5=-0.063&knob_5.min=-2&knob_5.max=1&knob_6=-1.386&knob_6.min=-2&knob_6.max=1
+//https://visuals.beadfamous.com/edit?knob_14=0.433&knob_14.min=0&knob_14.max=1&knob_15=0.52&knob_15.min=0&knob_15.max=1&knob_16=2.8&knob_16.min=-2&knob_16.max=2.8&knob_22=-0.512&knob_22.min=-2&knob_22.max=1&knob_4=0.394&knob_4.min=-2&knob_4.max=1&knob_17=-0.063&knob_17.min=-2&knob_17.max=1&knob_18=-1.386&knob_18.min=-2&knob_18.max=1
 #define TAU             (2.0*PI)
 #define L2(x)           dot(x, x)
 #define ROT(a)          mat2(cos(a), sin(a), -sin(a), cos(a))
 #define PSIN(x)         (0.5+0.5*sin(x))
-uniform float knob_2;
-uniform float knob_3;
-uniform float knob_4;
-uniform float knob_5;
+uniform float knob_14;
+uniform float knob_15;
+uniform float knob_16;
+uniform float knob_17;
 #define PI 3.1415926535897932384626433832795
 #define B mix(0.68,1.,energyZScore)
 #define A 15.841
 #define C 1.0
-#define D knob_2
-#define E knob_4
+#define D knob_14
+#define E knob_16
 
 #define TIME 0.
 vec3 hsv2rgb(vec3 c) {

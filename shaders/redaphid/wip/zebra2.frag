@@ -1,11 +1,11 @@
 // @fullscreen: true
-//http://localhost:6969/edit.html?knob_3=-1.471&knob_3.min=-2&knob_3.max=7.6&knob_2=-1.929&knob_2.min=-2&knob_2.max=1&knob_1=0.008&knob_1.min=-2&knob_1.max=1&knob_5=3.244&knob_5.min=-2&knob_5.max=4&knob_6=-2&knob_6.min=-2&knob_6.max=1&knob_7=-1.079&knob_7.min=-2&knob_7.max=1&knob_8=0.976&knob_8.min=-2&knob_8.max=1&knob_4=6.22&knob_4.min=0&knob_4.max=10&knob_9=0.307&knob_9.min=0&knob_9.max=1&variety=0.3&variety.min=-3&variety.max=3&knob_13=0.567&knob_13.min=0&knob_13.max=1&knob_12=0.992&knob_12.min=0&knob_12.max=1&knob_11=0.339&knob_11.min=0&knob_11.max=1&knob_10=0.567&knob_10.min=0&knob_10.max=1
+//http://localhost:6969/edit.html?knob_32=-1.471&knob_32.min=-2&knob_32.max=7.6&knob_31=-1.929&knob_31.min=-2&knob_31.max=1&knob_30=0.008&knob_30.min=-2&knob_30.max=1&knob_34=3.244&knob_34.min=-2&knob_34.max=4&knob_35=-2&knob_35.min=-2&knob_35.max=1&knob_36=-1.079&knob_36.min=-2&knob_36.max=1&knob_37=0.976&knob_37.min=-2&knob_37.max=1&knob_33=6.22&knob_33.min=0&knob_33.max=10&knob_40=0.307&knob_40.min=0&knob_40.max=1&variety=0.3&variety.min=-3&variety.max=3&knob_47=0.567&knob_47.min=0&knob_47.max=1&knob_46=0.992&knob_46.min=0&knob_46.max=1&knob_45=0.339&knob_45.min=0&knob_45.max=1&knob_44=0.567&knob_44.min=0&knob_44.max=1
 #define PI  3.141592654
 #define TAU (2.0*PI)
 
 #define EPSILON 0.0001
 
-#define variety knob_2
+#define variety knob_31
 // Map PROBEs to knobs initially
 #define PROBE_A (time) // Base rotation
 #define PROBE_B (mapValue(pitchClassMedian,0.,1.,0.1,.32)) // Color intensity
@@ -13,8 +13,8 @@
 #define PROBE_D (1. - spectralRoughness) // Fractal detail
 #define PROBE_E (1.) // Color blend
 #define PROBE_F (energy/10.) // Pattern evolution
-#define PROBE_G (knob_1)
-#define PROBE_H knob_5
+#define PROBE_G (knob_30)
+#define PROBE_H knob_34
 
 
 vec3 palette(in float t)
