@@ -1,3 +1,24 @@
+const DEFAULT_RELAY_HOST = 'paper-cranes-remote.redaphid.workers.dev'
+
+/**
+ * Get the WebSocket URL for remote control.
+ * Uses the Cloudflare relay when a `room` param is present,
+ * otherwise falls back to the local dev server.
+ */
+const getWsUrl = () => {
+  const params = new URLSearchParams(window.location.search)
+  const room = params.get('room')
+
+  if (room) {
+    const relayHost = params.get('relay') || DEFAULT_RELAY_HOST
+    return `wss://${relayHost}/ws/${encodeURIComponent(room)}`
+  }
+
+  // Fallback: local dev server (existing behavior)
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  return `${protocol}//${window.location.host}/ws`
+}
+
 /**
  * Robust WebSocket client with auto-reconnect
  */
@@ -16,9 +37,8 @@ export class WebSocketClient {
 
     this.isIntentionallyClosed = false
 
-    // Connect to same origin WebSocket at /ws path
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsUrl = `${protocol}//${window.location.host}/ws`
+    const wsUrl = getWsUrl()
+    console.log('[Remote] Connecting to', wsUrl)
 
     try {
       this.socket = new WebSocket(wsUrl)
