@@ -247,7 +247,7 @@ const loadController = async () => {
             controllerUrl = `/controllers/${controllerPath}`
         }
 
-        const controllerModule = await import(controllerUrl)
+        const controllerModule = await import(/* @vite-ignore */ controllerUrl)
 
         // Handle different module formats:
         // 1. Module exports a function directly - use it as the controller
