@@ -264,22 +264,22 @@ vec3 renderRay(vec3 ro, vec3 rd, float scaleMod, float hueShift) {
 // ============================================================================
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec2 uv = (fragCoord - 0.5 * iResolution.xy) / min(iResolution.x, iResolution.y);
+    vec2 uv = (fragCoord - 0.5 * resolution) / min(resolution.x, resolution.y);
 
-    float scaleMod = sin(iTime * 0.1) * 0.05 + SCALE_MOD;
-    float hueShift = iTime * 0.025 + HUE_SHIFT;
+    float scaleMod = sin(time * 0.1) * 0.05 + SCALE_MOD;
+    float hueShift = time * 0.025 + HUE_SHIFT;
 
     // Camera
     vec3 baseRo = vec3(2.2, 1.4, -2.3);
     vec3 baseLookAt = vec3(-0.1, 0.2, 0.4);
     vec3 lookOffset = vec3(
-        sin(iTime * 0.2) * 0.025 + LOOK_X,
-        cos(iTime * 0.17) * 0.018 + LOOK_Y,
+        sin(time * 0.2) * 0.025 + LOOK_X,
+        cos(time * 0.17) * 0.018 + LOOK_Y,
         0.0
     );
     vec3 lookAt = baseLookAt + lookOffset;
     vec3 toTarget = normalize(lookAt - baseRo);
-    float zoomAmount = sin(iTime * 0.1) * 0.12 + ZOOM;
+    float zoomAmount = sin(time * 0.1) * 0.12 + ZOOM;
     vec3 ro = baseRo + toTarget * zoomAmount;
 
     vec3 forward = normalize(lookAt - ro);
@@ -292,10 +292,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 col = renderRay(ro, rd, scaleMod, hueShift);
 
     // Feedback (optional - can disable for pure chromadepth)
-    vec2 feedbackUV = fragCoord / iResolution.xy;
+    vec2 feedbackUV = fragCoord / resolution;
     vec2 center = vec2(0.5);
     vec2 fbOffset = (feedbackUV - center) * 0.997 + center;
-    fbOffset += vec2(sin(iTime * 0.15), cos(iTime * 0.15)) * 0.003;
+    fbOffset += vec2(sin(time * 0.15), cos(time * 0.15)) * 0.003;
     vec4 prev = getLastFrameColor(fbOffset);
 
     vec3 colHSL = rgb2hsl(col);

@@ -29,9 +29,9 @@ float mandelbulbDE(vec3 pos) {
     return 0.5 * log(r) * r / dr;
 }
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec2 uv = (fragCoord - 0.5 * iResolution.xy) / min(iResolution.x, iResolution.y);
+    vec2 uv = (fragCoord - 0.5 * resolution) / min(resolution.x, resolution.y);
     vec3 camPos = vec3(0.0, 0.0, -2.0);
-    camPos.xz = mat2(cos(iTime), sin(iTime), -sin(iTime), cos(iTime)) * camPos.xz;
+    camPos.xz = mat2(cos(time), sin(time), -sin(time), cos(time)) * camPos.xz;
     vec3 camTarget = vec3(0.0, 0.0, 0.0);
     vec3 camDir = normalize(camTarget - camPos);
     vec3 camUp = vec3(0.0, 1.0, 0.0);
