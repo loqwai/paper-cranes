@@ -369,6 +369,38 @@ input[type="number"] {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
+/* MIDI learn button */
+.midi-learn-btn {
+  flex: 0 0 auto;
+  background: rgba(100, 150, 255, 0.15);
+  border: 1px solid rgba(100, 150, 255, 0.3);
+  color: rgba(180, 210, 255, 0.8);
+  cursor: pointer;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 0.7em;
+  font-family: monospace;
+  transition: all 0.2s;
+  margin-left: 4px;
+}
+
+.midi-learn-btn:hover {
+  background: rgba(100, 150, 255, 0.3);
+  color: white;
+}
+
+.midi-learn-btn.learning {
+  background: rgba(255, 180, 50, 0.3);
+  border-color: rgba(255, 180, 50, 0.6);
+  color: rgba(255, 220, 150, 0.9);
+  animation: midi-pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes midi-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
 #existing-features-editor {
   margin-top: 6px;
 }
