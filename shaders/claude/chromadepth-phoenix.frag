@@ -15,43 +15,43 @@
 #define WANDER_SPEED (1.0 + spectralEntropyNormalized * 0.6)
 // #define WANDER_SPEED 1.0
 
-// --- PHOENIX INERTIA p: spectralFlux slope gated by rSquared ---
+// --- PHOENIX INERTIA p: spectralFlux normalized gated by rSquared ---
 // Steady spectral flux trends = confident inertia changes
-// spectralFluxZScore gives direction, gated by how linear the trend is
-#define P_INERTIA (spectralFluxZScore * 0.12 * smoothstep(0.2, 0.7, energyRSquared))
+// Use Normalized (smooth) instead of ZScore (spiky) for continuous modulation
+#define P_INERTIA ((spectralFluxNormalized - 0.5) * 0.12 * smoothstep(0.2, 0.7, energyRSquared))
 // #define P_INERTIA 0.0
 
 // Base inertia offset (phoenix fractal needs nonzero p for interesting shapes)
 #define P_BASE 0.32
 // #define P_BASE 0.32
 
-// --- ZOOM: energy drives zoom ---
-#define ZOOM_MOD (energyZScore * 0.15)
+// --- ZOOM: energy drives zoom (Normalized for smooth, not ZScore) ---
+#define ZOOM_MOD ((energyNormalized - 0.5) * 0.2)
 // #define ZOOM_MOD 0.0
 
 // --- ROTATION: pitchClass rotates view ---
 #define ROTATION_AUDIO (pitchClassNormalized * 0.4)
 // #define ROTATION_AUDIO 0.0
 
-// --- BEAT: triggers p-space jump ---
-#define BEAT_JUMP (beat ? 1.0 : 0.0)
+// --- BEAT: triggers p-space jump (scaled down for subtlety) ---
+#define BEAT_JUMP (beat ? 0.4 : 0.0)
 // #define BEAT_JUMP 0.0
 
-// --- DROP DETECTION ---
-#define DROP_INTENSITY (max(-energyZScore, 0.0))
+// --- DROP DETECTION (use slope+rSquared for confident drops, not raw ZScore) ---
+#define DROP_INTENSITY (max(-energySlope * 8.0, 0.0) * smoothstep(0.3, 0.7, energyRSquared))
 // #define DROP_INTENSITY 0.0
 
-// --- INSTANT REACTIVITY ---
-#define BASS_PUNCH (bassZScore)
-// #define BASS_PUNCH 0.0
+// --- SMOOTH REACTIVITY (Normalized for continuous, not ZScore) ---
+#define BASS_PUNCH (bassNormalized)
+// #define BASS_PUNCH 0.5
 
-#define TREBLE_EDGE (max(trebleZScore, 0.0))
-// #define TREBLE_EDGE 0.0
+#define TREBLE_EDGE (trebleNormalized)
+// #define TREBLE_EDGE 0.5
 
 #define ENERGY_LEVEL (energyNormalized)
 // #define ENERGY_LEVEL 0.5
 
-#define MIDS_MOD (midsZScore)
+#define MIDS_MOD (midsNormalized - 0.5)
 // #define MIDS_MOD 0.0
 
 // --- TREND CONFIDENCE ---
@@ -253,20 +253,20 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         brightness = 0.4 + tAngle * 0.2 + (1.0 - tOrigin) * 0.2 + tWing * 0.1 + contrast * 0.1;
     }
 
-    // --- DROP EFFECT on depth ---
-    depth = mix(depth, 0.0, DROP_INTENSITY * 0.45);
+    // --- DROP EFFECT on depth (gentle) ---
+    depth = mix(depth, 0.0, DROP_INTENSITY * 0.2);
 
     // --- CHROMADEPTH COLOR ---
     vec3 col = chromadepth(depth);
 
-    // Brightness modulation
+    // Brightness modulation (subtle, using Normalized values)
     col *= brightness;
-    col *= 1.0 + BASS_PUNCH * 0.08;
+    col *= 0.92 + BASS_PUNCH * 0.16;
     col = clamp(col, 0.0, 1.0);
 
-    // Edge glow from treble on fractal boundaries
+    // Edge glow from treble on fractal boundaries (subtle)
     float edge = length(vec2(dFdx(depth), dFdy(depth)));
-    float edgeGlow = smoothstep(0.0, 0.05, edge) * TREBLE_EDGE * 0.25;
+    float edgeGlow = smoothstep(0.0, 0.05, edge) * TREBLE_EDGE * 0.15;
     col += edgeGlow * vec3(1.0, 0.95, 0.85);
 
     // --- FEEDBACK: previous frame through orbit-warped UV ---
@@ -276,8 +276,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         ? 0.035 * pow(iterNorm, 0.3)
         : 0.05 * (1.0 - trapMin * 0.5);
 
-    fbStrength *= 1.0 + DROP_INTENSITY * 1.8;
-    fbStrength += BEAT_JUMP * 0.015;
+    fbStrength *= 1.0 + DROP_INTENSITY * 0.5;
+    fbStrength += BEAT_JUMP * 0.008;
 
     // Use orbit positions z1, z2 to warp feedback UV
     vec2 orbitWarp = vec2(
@@ -303,11 +303,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     prevOk.x *= 0.97;
     prevOk.yz *= 0.99;
 
-    // New frame dominates - we want sharp fractal detail
-    float newAmount = 0.72;
-    newAmount += DROP_INTENSITY * 0.12;
-    newAmount -= CONFIDENCE * 0.08;
-    newAmount = clamp(newAmount, 0.55, 0.9);
+    // Previous frame dominates for smooth evolution (docs: 90%+ prev)
+    float newAmount = 0.15;
+    newAmount += DROP_INTENSITY * 0.08;
+    newAmount -= CONFIDENCE * 0.04;
+    newAmount = clamp(newAmount, 0.08, 0.3);
 
     vec3 blended = mix(prevOk, colOk, newAmount);
 
@@ -320,9 +320,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     col = oklab2rgb(blended);
 
-    // --- BEAT FLASH ---
-    col *= 1.0 + BEAT_JUMP * 0.12;
-    col = mix(col, col * vec3(1.3, 0.8, 0.7), DROP_INTENSITY * 0.2);
+    // --- BEAT FLASH (subtle) ---
+    col *= 1.0 + BEAT_JUMP * 0.06;
+    col = mix(col, col * vec3(1.15, 0.9, 0.85), DROP_INTENSITY * 0.12);
 
     // --- VIGNETTE ---
     vec2 vc = screenUV - 0.5;
