@@ -132,22 +132,19 @@ export function shaderPlugin() {
 
     configureServer(server) {
       // Watch shader directory for changes
-      watcher = chokidar.watch(`${SHADER_DIR}/**/*.frag`, {
+      // NOTE: chokidar v4 on macOS doesn't detect events with glob patterns,
+      // so we watch the directory and filter for .frag files in the callback.
+      watcher = chokidar.watch(SHADER_DIR, {
         ignoreInitial: true,
-        awaitWriteFinish: { stabilityThreshold: 100, pollInterval: 50 },
       })
 
       const regenerate = async (eventType, path) => {
+        if (!path.endsWith('.frag')) return
         const count = await generateShadersJson()
         await generateManifests()
         console.log(`[shaders] ${eventType}: ${path} (${count} total)`)
 
-        // Send HMR event for shader updates
-        server.ws.send({
-          type: 'custom',
-          event: 'shaders-updated',
-          data: { count, path },
-        })
+        server.ws.send({ type: 'full-reload' })
       }
 
       watcher.on('add', (path) => regenerate('added', path))
