@@ -345,7 +345,7 @@ window.cranes.manualFeatures.fft_size = 8192
 The system supports controlling a remote display from another device (phone, laptop, etc.) via WebSocket.
 
 ### Setup
-1. Start the dev server with WebSocket support: `npm run dev`
+1. Start the dev server with WebSocket support: `pnpm dev`
 2. Open the **display** (TV/projector): `http://localhost:6969/?remote=display`
 3. Open the **controller** (phone/laptop):
    - List page: `http://localhost:6969/list.html?remote=control`
@@ -422,8 +422,8 @@ paramsManager.setShader(code)      // Syncs shader to remote
 
 ### Local Development
 ```bash
-npm install
-npm run dev  # Serves on localhost:6969
+pnpm install
+pnpm dev  # Serves on localhost:6969
 ```
 
 ### Creating Visualizations
