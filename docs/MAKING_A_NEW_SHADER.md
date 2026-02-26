@@ -518,7 +518,7 @@ float smin(float a, float b, float k) {
 ### Local Development
 
 ```bash
-npm run dev  # Starts server on localhost:6969
+pnpm dev  # Starts server on localhost:6969
 ```
 
 Access your shader: `http://localhost:6969/?shader=your-shader-name`

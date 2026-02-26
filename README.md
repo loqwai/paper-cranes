@@ -8,8 +8,8 @@ The other half of the project is a sort of "art project" where you make bead bra
 
 If you've done web development before, the following steps should be pretty familiar.
 
-1. `npm install`
-2. `npm run dev`
+1. `pnpm install`
+2. `pnpm dev`
 
 This will serve beadfamous on localhost:6969
 
