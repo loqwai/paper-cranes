@@ -12,22 +12,23 @@
 // AUDIO PARAMETERS (#define swap pattern)
 // ============================================================================
 
-// Julia set shape — bass morphs the fractal
-#define J_REAL (-0.745 + bassZScore * 0.05 + sin(iTime * 0.011 * PHI) * 0.04)
-#define J_IMAG (0.186 + spectralCentroidZScore * 0.03 + cos(iTime * 0.008 * SQRT2) * 0.03)
+// Julia set shape — seed picks a unique fractal family; bass morphs it live
+// sin/cos of seed traces a circle around the Douady rabbit region
+#define J_REAL (-0.745 + sin(seed * PI * 2.0) * 0.06 + bassZScore * 0.05 + sin(iTime * 0.011 * PHI) * 0.04)
+#define J_IMAG (0.186 + cos(seed * PI * 2.0) * 0.05 + spectralCentroidZScore * 0.03 + cos(iTime * 0.008 * SQRT2) * 0.03)
 // #define J_REAL -0.745
 // #define J_IMAG 0.186
 
-// Zoom — slowly oscillates + energy pushes in
-#define ZOOM_LVL (1.5 + sin(iTime * 0.004 * PHI) * 0.5 + sin(iTime * 0.003 * SQRT2) * 0.3 + energyNormalized * 0.4)
+// Zoom — seed3 offsets the oscillation phase so each device zooms out of sync
+#define ZOOM_LVL (1.5 + sin(iTime * 0.004 * PHI + seed3 * PI * 2.0) * 0.5 + sin(iTime * 0.003 * SQRT2 + seed3 * 4.0) * 0.3 + energyNormalized * 0.4)
 // #define ZOOM_LVL 2.0
 
-// Rotation
-#define ROT_ANGLE (iTime * 0.012 + spectralFluxZScore * 0.06)
+// Rotation — seed3 gives each device a different starting angle
+#define ROT_ANGLE (seed3 * PI * 2.0 + iTime * 0.012 + spectralFluxZScore * 0.06)
 // #define ROT_ANGLE 0.0
 
-// Drift through fractal space
-#define DRIFT vec2(sin(iTime * 0.007 * PHI) * 0.25, cos(iTime * 0.006 * SQRT2) * 0.2)
+// Drift — seed3 offsets the Lissajous path so each device explores different regions
+#define DRIFT vec2(sin(iTime * 0.007 * PHI + seed3 * PI * 2.0) * 0.25, cos(iTime * 0.006 * SQRT2 + seed3 * 4.7) * 0.2)
 
 // Edge glow
 #define GLOW_BASE (0.6 + bassNormalized * 0.8)
@@ -35,8 +36,8 @@
 // #define GLOW_BASE 0.8
 // #define GLOW_PULSE 1.0
 
-// Color
-#define HUE_SHIFT (pitchClassNormalized * 0.12 + iTime * 0.005)
+// Color — seed2 gives each device a unique hue personality (stays in cool range)
+#define HUE_SHIFT (seed2 * 0.25 + pitchClassNormalized * 0.12 + iTime * 0.005)
 #define SAT_BOOST (1.0 + energyZScore * 0.2)
 // #define HUE_SHIFT 0.0
 // #define SAT_BOOST 1.0
@@ -104,7 +105,8 @@ float tendrilFractal(vec2 p) {
     vec2 z = p;
     float v = 0.0;
     float t = iTime * 0.15;
-    vec2 c = vec2(1.2 + sin(t) * 0.15, 0.9 + cos(t * PHI) * 0.1);
+    // seed4 shifts the fold constant — different tendril branching per device
+    vec2 c = vec2(1.2 + sin(t + seed4 * PI * 2.0) * 0.15, 0.9 + cos(t * PHI + seed4 * 4.0) * 0.1);
     for (int i = 0; i < 6; i++) {
         z = abs(z) / max(dot(z, z), 0.001) - c;
         v += exp(-abs(z.x) * 4.0);
@@ -205,8 +207,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     juliaSet(p, jc, tO, tX, tY, tC, sIter);
     vec3 fracCol = icyColor(tO, tX, tY, tC, sIter);
 
-    // ---- EDGE GLOW COLOR ----
-    vec3 glowCol = vec3(0.0, 0.88, 1.0);
+    // ---- EDGE GLOW COLOR ---- seed2 tints the glow hue
+    vec3 glowCol = hsl2rgb(vec3(fract(0.52 + seed2 * 0.2), 0.95, 0.6));
     float wave = sin(uv.x * 25.0 + uv.y * 18.0 - iTime * 2.5) * 0.5 + 0.5;
     wave *= sin(uv.y * 12.0 - iTime * 1.8 * PHI) * 0.5 + 0.5;
     vec3 edgeLight = glowCol * edgeGlow * GLOW_BASE * GLOW_PULSE * mix(0.6, 1.3, wave);
@@ -221,7 +223,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 bgCol = vec3(0.0);
     float bgVis = BG_VIS;
     if (bgVis > 0.01) {
-        float ba = iTime * 0.025;
+        float ba = seed4 * PI * 2.0 + iTime * 0.025;
         vec2 bgUV = uv - 0.5;
         bgUV = mat2(cos(ba), -sin(ba), sin(ba), cos(ba)) * bgUV;
         bgUV *= 1.0 + sin(iTime * 0.08) * 0.15;
@@ -238,9 +240,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float lum = dot(fracCol, vec3(0.3, 0.6, 0.1));
     vec2 refr = vec2(dFdx(lum), dFdy(lum)) * REFRACT_STR;
     vec3 prev = getLastFrameColor(uv + refr).rgb;
-    // Age feedback toward icy blue
+    // Age feedback toward seeded cool tone (seed2 shifts the target hue)
     vec3 ph = rgb2hsl(max(prev, vec3(0.001)));
-    ph.x = mix(ph.x, 0.56, 0.01);
+    ph.x = mix(ph.x, fract(0.52 + seed2 * 0.2), 0.01);
     ph.z *= 0.985;
     prev = hsl2rgb(ph);
 
