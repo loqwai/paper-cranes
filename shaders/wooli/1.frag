@@ -34,13 +34,15 @@
 
 // Edge glow
 #define GLOW_BASE (0.6 + bassNormalized * 0.8)
-#define GLOW_PULSE (1.0 + bassZScore * 0.2)
+#define GLOW_PULSE (1.0 + bassSlope * bassRSquared * 0.6)
 // #define GLOW_BASE 0.8
 // #define GLOW_PULSE 1.0
 
-// Color — seed2 drives the palette directly now; audio + time still modulate live
-#define HUE_SHIFT (pitchClassNormalized * 0.12 + iTime * 0.005 * MOTION)
-#define SAT_BOOST (1.0 + energyNormalized * 0.1)
+// Color — use slopes/rSquared for gradual evolution instead of raw values
+// spectralCentroidSlope: rising = getting brighter, falling = getting darker
+// rSquared gates it so only confident trends shift the hue
+#define HUE_SHIFT (spectralCentroidSlope * spectralCentroidRSquared * 0.4 + iTime * 0.005 * MOTION)
+#define SAT_BOOST (1.0 + energySlope * energyRSquared * 0.3)
 // #define HUE_SHIFT 0.0
 // #define SAT_BOOST 1.0
 
