@@ -1,7 +1,11 @@
 // @fullscreen: true
 // @favorite: true
 // @tags: wooli, mammoth, fractal, dubstep, ice
-// Usage: ?shader=wip/claude/wooli-mammoth&image=images/wooli.png
+// @image: images/wooli.png
+//
+// PRESETS:
+// Default — icy fractal mammoth
+// https://visuals.beadfamous.com/?shader=wooli/1&image=images/wooli.png
 
 #define PI 3.14159265
 #define PHI 1.61803398

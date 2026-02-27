@@ -1,7 +1,11 @@
 // @fullscreen: true
 // @favorite: true
 // @tags: wooli, mammoth, fractal, tapestry, oscilloscope
-// Usage: ?shader=wooli/2&image=images/wooli.png
+// @image: images/wooli.png
+//
+// PRESETS:
+// Default — mammoth with scrolling tapestry line
+// https://visuals.beadfamous.com/?shader=wooli/2&image=images/wooli.png
 
 #define PI 3.14159265
 #define PHI 1.61803398
