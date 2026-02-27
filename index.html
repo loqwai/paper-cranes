@@ -40,7 +40,7 @@
     </script>
     <script>
     // Capture beforeinstallprompt so we can trigger it later.
-    // 5 taps within 1 second triggers the install prompt — no visible UI.
+    // 7 taps within 1 second: install prompt if available, otherwise open Instagram.
     var __pwaPrompt = null
     var __tapTimes = []
     window.addEventListener('beforeinstallprompt', function(e) {
@@ -51,14 +51,18 @@
       __pwaPrompt = null
     })
     function __pwaTap() {
-      if (!__pwaPrompt) return
       var now = Date.now()
       __tapTimes.push(now)
       __tapTimes = __tapTimes.filter(function(t) { return now - t < 1000 })
       if (__tapTimes.length >= 7) {
         __tapTimes = []
-        __pwaPrompt.prompt()
-        __pwaPrompt.userChoice.then(function() { __pwaPrompt = null })
+        var isApp = window.matchMedia('(display-mode: fullscreen)').matches || window.matchMedia('(display-mode: standalone)').matches || navigator.standalone
+        if (isApp) {
+          window.open('https://instagram.com/redaphid', '_blank')
+        } else if (__pwaPrompt) {
+          __pwaPrompt.prompt()
+          __pwaPrompt.userChoice.then(function() { __pwaPrompt = null })
+        }
       }
     }
     // click works on desktop, touchend works on mobile (click is delayed/swallowed on canvas)
