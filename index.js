@@ -269,7 +269,7 @@ const loadController = async () => {
 
 if(navigator.connection) {
     navigator.connection.addEventListener('change', () => {
-        navigator.serviceWorker.controller.postMessage({type:'network-changed'})
+        navigator.serviceWorker.controller?.postMessage({type:'network-changed'})
     })
 }
 
