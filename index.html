@@ -12,6 +12,8 @@
     <script>
     // Must be inline + synchronous (not type="module") so the manifest link
     // exists in the DOM before Chrome's early installability check.
+    // We load the pre-built manifest then override start_url with the current
+    // page URL so the installed PWA preserves all query params (image, etc.).
     (function() {
       var shader = new URLSearchParams(window.location.search).get('shader')
       var safe = shader ? shader.replace(/\//g, '--') : 'default'
@@ -19,9 +21,20 @@
       link.rel = 'manifest'
       link.href = '/manifests/' + safe + '.json'
       document.head.appendChild(link)
+      // Override start_url with current URL so installed app keeps all params
+      fetch('/manifests/' + safe + '.json').then(function(r) { return r.json() }).then(function(manifest) {
+        manifest.start_url = window.location.pathname + window.location.search
+        link.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/json' }))
+      })
       if (shader) {
-        var last = shader.indexOf('/') !== -1 ? shader.split('/').pop() : shader
-        document.title = 'Paper Cranes - ' + last.replace(/[-_]/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase() })
+        var parts = shader.split('/')
+        var last = parts[parts.length - 1]
+        var displayName = last
+        // If last segment is just a number or very short, include parent folder
+        if (parts.length > 1 && (/^\d+$/.test(last) || last.length <= 2)) {
+          displayName = parts[parts.length - 2] + ' ' + last
+        }
+        document.title = 'Paper Cranes - ' + displayName.replace(/[-_]/g, ' ').replace(/\b\w/g, function(c) { return c.toLowerCase() })
       }
     })()
     </script>

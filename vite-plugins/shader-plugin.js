@@ -51,10 +51,24 @@ async function generateShadersJson(outputDir = null) {
 
 function prettifyShaderName(name) {
   // "melted-satin/1" -> "Melted Satin 1", "wip/claude/my-shader" -> "My Shader"
-  const lastPart = name.includes('/') ? name.split('/').pop() : name
-  return lastPart
+  // "wooli/2" -> "Wooli 2" (include parent when last segment is short/numeric)
+  if (name.includes('/')) {
+    const parts = name.split('/')
+    const last = parts[parts.length - 1]
+    // If last segment is just a number or very short, include the parent folder
+    if (/^\d+$/.test(last) || last.length <= 2) {
+      const parent = parts[parts.length - 2]
+      return `${parent} ${last}`
+        .replace(/[-_]/g, ' ')
+        .replace(/\b\w/g, c => c.toLowerCase())
+    }
+    return last
+      .replace(/[-_]/g, ' ')
+      .replace(/\b\w/g, c => c.toLowerCase())
+  }
+  return name
     .replace(/[-_]/g, ' ')
-    .replace(/\b\w/g, c => c.toUpperCase())
+    .replace(/\b\w/g, c => c.toLowerCase())
 }
 
 function shaderNameToFilename(name) {
@@ -97,10 +111,11 @@ async function generateManifests(outputDir = null) {
     const displayName = shader.displayName || prettifyShaderName(shader.name)
     const fullName = `Paper Cranes - ${displayName}`
     const filename = shaderNameToFilename(shader.name)
+    const startUrl = `/?shader=${shader.name}&fullscreen=true`
     const manifest = makeManifest({
       name: fullName,
       shortName: displayName,
-      startUrl: `/?shader=${shader.name}&fullscreen=true`,
+      startUrl,
     })
     await writeFile(join(manifestsDir, `${filename}.json`), JSON.stringify(manifest, null, 2))
   }
