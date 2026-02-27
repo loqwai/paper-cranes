@@ -62,12 +62,12 @@
       tapTimes = tapTimes.filter(function(t) { return now - t < 1000 })
       if (tapTimes.length < 7) return
       tapTimes = []
-      const isApp = window.matchMedia('(display-mode: fullscreen)').matches || window.matchMedia('(display-mode: standalone)').matches || navigator.standalone
-      if (isApp) return window.open('https://instagram.com/redaphid', '_blank')
       if (pwaPrompt) {
         pwaPrompt.prompt()
         pwaPrompt.userChoice.then(function() { pwaPrompt = null })
+        return
       }
+      window.open('https://instagram.com/redaphid', '_blank')
     }
     // click works on desktop, touchend works on mobile (click is delayed/swallowed on canvas)
     document.addEventListener('click', onTap)
