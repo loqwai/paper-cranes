@@ -43,7 +43,6 @@
     // 7 taps within 1 second: opens Instagram in installed app, install prompt on website.
     var pwaPrompt = null
     var tapTimes = []
-    const isApp = window.matchMedia('(display-mode: fullscreen)').matches || window.matchMedia('(display-mode: standalone)').matches || navigator.standalone
     window.addEventListener('beforeinstallprompt', function(e) {
       e.preventDefault()
       pwaPrompt = e
@@ -51,13 +50,16 @@
     window.addEventListener('appinstalled', function() {
       pwaPrompt = null
     })
+    function isApp() {
+      return window.matchMedia('(display-mode: fullscreen)').matches || window.matchMedia('(display-mode: standalone)').matches || navigator.standalone
+    }
     function onTap() {
       var now = Date.now()
       tapTimes.push(now)
       tapTimes = tapTimes.filter(function(t) { return now - t < 1000 })
       if (tapTimes.length < 7) return
       tapTimes = []
-      if (isApp) return window.open('https://instagram.com/redaphid', '_blank')
+      if (isApp()) return window.open('https://instagram.com/redaphid', '_blank')
       if (pwaPrompt) {
         pwaPrompt.prompt()
         pwaPrompt.userChoice.then(function() { pwaPrompt = null })
