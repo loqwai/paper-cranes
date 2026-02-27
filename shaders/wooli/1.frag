@@ -15,18 +15,18 @@
 // Julia set shape — seed picks a unique fractal family; bass morphs it live
 // sin/cos of seed traces a circle around the Douady rabbit region
 // Time wobble and audio modulation both scale with MOTION so it's nearly still at idle
-#define MOTION (0.1 + energyNormalized * 0.9)
-#define J_REAL (-0.745 + sin(seed * PI * 2.0) * 0.06 + bassZScore * 0.05 * MOTION + sin(iTime * 0.011 * PHI) * 0.04 * MOTION)
-#define J_IMAG (0.186 + cos(seed * PI * 2.0) * 0.05 + spectralCentroidZScore * 0.03 * MOTION + cos(iTime * 0.008 * SQRT2) * 0.03 * MOTION)
+#define MOTION smoothstep(0.12, 0.5, energyNormalized)
+#define J_REAL (-0.745 + sin(seed * PI * 2.0) * 0.13 + bassNormalized * 0.01 * MOTION + sin(iTime * 0.011 * PHI) * 0.018 * MOTION)
+#define J_IMAG (0.186 + cos(seed * PI * 2.0) * 0.11 + spectralCentroidNormalized * 0.006 * MOTION + cos(iTime * 0.008 * SQRT2) * 0.012 * MOTION)
 // #define J_REAL -0.745
 // #define J_IMAG 0.186
 
 // Zoom — amplitude and speed both scale with MOTION
-#define ZOOM_LVL (1.8 + sin(iTime * 0.004 * PHI + seed3 * PI * 2.0) * 0.4 * MOTION + sin(iTime * 0.003 * SQRT2 + seed3 * 4.0) * 0.2 * MOTION + energyNormalized * 0.4)
+#define ZOOM_LVL (1.4 + seed3 * 0.8 + sin(iTime * 0.004 * PHI + seed3 * PI * 2.0) * 0.2 * MOTION + sin(iTime * 0.003 * SQRT2 + seed3 * 4.0) * 0.1 * MOTION + energyNormalized * 0.15)
 // #define ZOOM_LVL 2.0
 
 // Rotation — seed3 starting angle; rotation rate scales with MOTION
-#define ROT_ANGLE (seed3 * PI * 2.0 + iTime * 0.008 * MOTION + spectralFluxZScore * 0.06)
+#define ROT_ANGLE (seed3 * PI * 2.0 + iTime * 0.008 * MOTION + spectralFluxNormalized * 0.03)
 // #define ROT_ANGLE 0.0
 
 // Drift — amplitude scales with MOTION so it barely wanders at idle
@@ -39,13 +39,13 @@
 // #define GLOW_PULSE 1.0
 
 // Color — seed2 drives the palette directly now; audio + time still modulate live
-#define HUE_SHIFT (pitchClassNormalized * 0.12 + iTime * 0.005)
-#define SAT_BOOST (1.0 + energyZScore * 0.2)
+#define HUE_SHIFT (pitchClassNormalized * 0.12 + iTime * 0.005 * MOTION)
+#define SAT_BOOST (1.0 + energyNormalized * 0.1)
 // #define HUE_SHIFT 0.0
 // #define SAT_BOOST 1.0
 
-// Feedback — very high at idle (nearly frozen), loosens up with music
-#define FB_BLEND (0.92 - energyNormalized * 0.18 - spectralFluxNormalized * 0.06)
+// Feedback — less blending = sharper fractal; still some trail at idle
+#define FB_BLEND (0.82 - energyNormalized * 0.15 - spectralFluxNormalized * 0.05)
 #define REFRACT_STR ((0.005 + spectralRoughnessNormalized * 0.015) * MOTION)
 
 // Infinity zoom on drops — smoothstep with higher threshold so it only triggers on big drops
@@ -56,8 +56,8 @@
 #define BUILD_DROP (energySlope * energyRSquared * 6.0)
 #define IS_DROPPING clamp(-BUILD_DROP, 0.0, 1.0)
 
-// Mammoth scale — base 1.25 keeps it off edges; grows on bass/energy transients
-#define MAMMOTH_SCALE (1.25 - bassNormalized * 0.12 - clamp(energyZScore, 0.0, 1.0) * 0.06)
+// Mammoth scale — punches outward on bass hits
+#define MAMMOTH_SCALE (1.4 - bassNormalized * 0.3 - clamp(energyZScore, 0.0, 1.0) * 0.15)
 // #define MAMMOTH_SCALE 1.25
 
 // Fractal tendrils from mammoth edges during intense music
@@ -147,36 +147,38 @@ void juliaSet(vec2 p, vec2 jc,
 }
 
 // ============================================================================
-// ICY COLOR PALETTE from orbit traps
+// ICY COLOR PALETTE from orbit traps (oklch color space)
 // ============================================================================
 
 vec3 icyColor(float tO, float tX, float tY, float tC, float iter) {
     tO = sqrt(tO); tX = sqrt(tX); tY = sqrt(tY);
 
-    // seed2 picks a base hue in the cool range: cyan(0.5)→blue(0.67)→purple(0.83)
-    // seed adds variety to the accent color
-    float baseHue = 0.5 + seed2 * 0.33;
-    vec3 deep   = hsl2rgb(vec3(fract(baseHue + 0.05), 0.6,  0.10));
-    vec3 mid    = hsl2rgb(vec3(fract(baseHue),         0.75, 0.35));
-    vec3 bright = hsl2rgb(vec3(fract(baseHue - 0.05),  0.95, 0.50));
-    vec3 ice    = hsl2rgb(vec3(fract(baseHue),         0.25, 0.93));
-    vec3 accent = hsl2rgb(vec3(fract(baseHue + 0.15 + seed * 0.15), 0.85, 0.40));
+    // seed2 picks base hue in oklch: ~3.4(cyan)→4.2(blue)→5.5(purple)
+    // seed varies palette structure (lightness, chroma)
+    float baseHue = 3.4 + seed2 * 2.1;
+    // oklch: (L, C, H) — L=lightness 0-1, C=chroma 0-0.37, H=hue radians
+    vec3 deep   = oklch2rgb(vec3(0.15 + seed * 0.05, 0.06 + seed * 0.03,  baseHue + 0.2));
+    vec3 mid    = oklch2rgb(vec3(0.45 + seed * 0.08, 0.12 + seed * 0.04,  baseHue));
+    vec3 bright = oklch2rgb(vec3(0.60 + seed * 0.06, 0.18 + seed * 0.03,  baseHue - 0.2));
+    vec3 ice    = oklch2rgb(vec3(0.78 + seed * 0.05, 0.06 + seed * 0.03,  baseHue + seed * 0.2));
+    vec3 accent = oklch2rgb(vec3(0.50 + seed * 0.08, 0.20 + seed * 0.04,  baseHue + 0.8 + seed * 1.0));
 
+    // Mix in oklab for perceptually smooth blending
     vec3 col = deep;
-    col = mix(col, mid,    smoothstep(0.0, 0.5, tX));
-    col = mix(col, bright, smoothstep(0.0, 0.35, tY));
-    col = mix(col, ice,    smoothstep(0.0, 0.18, tC));
-    col = mix(col, accent, smoothstep(0.0, 0.2, tO) * 0.3);
+    col = oklabmix(col, mid,    smoothstep(0.0, 0.5, tX));
+    col = oklabmix(col, bright, smoothstep(0.0, 0.35, tY));
+    col = oklabmix(col, ice,    smoothstep(0.0, 0.18, tC));
+    col = oklabmix(col, accent, smoothstep(0.0, 0.2, tO) * 0.3);
 
     // Shimmer from iteration count
-    float shimmer = sin(iter * 0.3 + iTime * 0.5) * 0.5 + 0.5;
-    col = mix(col, bright, shimmer * 0.12);
+    float shimmer = sin(iter * 0.3 + iTime * 0.5 * MOTION) * 0.5 + 0.5;
+    col = oklabmix(col, bright, shimmer * 0.06 * MOTION);
 
-    // Live hue modulation + saturation boost
-    vec3 hsl = rgb2hsl(max(col, vec3(0.001)));
-    hsl.x = fract(hsl.x + HUE_SHIFT);
-    hsl.y = min(hsl.y * SAT_BOOST, 1.0);
-    return hsl2rgb(hsl);
+    // Live hue modulation + chroma boost in oklch
+    vec3 lch = rgb2oklch(max(col, vec3(0.001)));
+    lch.z += HUE_SHIFT * PI * 2.0;
+    lch.y = min(lch.y * SAT_BOOST, 0.32);
+    return oklch2rgb(lch);
 }
 
 // ============================================================================
@@ -213,15 +215,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 fracCol = icyColor(tO, tX, tY, tC, sIter);
 
     // ---- EDGE GLOW COLOR ---- matches seeded palette
-    float baseHue = 0.5 + seed2 * 0.33;
-    vec3 glowCol = hsl2rgb(vec3(fract(baseHue - 0.03), 0.95, 0.6));
+    float glowHue = 3.4 + seed2 * 2.1;
+    vec3 glowCol = oklch2rgb(vec3(0.70, 0.18, glowHue - 0.1));
     float mt = iTime * MOTION;
-    float wave = sin(uv.x * 25.0 + uv.y * 18.0 - mt * 2.5) * 0.5 + 0.5;
-    wave *= sin(uv.y * 12.0 - mt * 1.8 * PHI) * 0.5 + 0.5;
-    vec3 edgeLight = glowCol * edgeGlow * GLOW_BASE * GLOW_PULSE * mix(0.6, 1.3, wave);
+    float wave = sin(uv.x * 8.0 + uv.y * 6.0 - mt * 1.5) * 0.5 + 0.5;
+    wave *= sin(uv.y * 5.0 - mt * 1.0 * PHI) * 0.5 + 0.5;
+    vec3 edgeLight = glowCol * edgeGlow * GLOW_BASE * GLOW_PULSE * mix(0.7, 1.0, wave);
 
     // ---- FRACTAL TENDRILS ----
-    vec2 tp = p * 0.7 + vec2(sin(iTime * 0.05), cos(iTime * 0.04));
+    vec2 tp = p * 0.7 + vec2(sin(iTime * 0.05 * MOTION), cos(iTime * 0.04 * MOTION));
     float tFrac = tendrilFractal(tp);
     vec3 tendrilCol = vec3(0.0, 0.92, 1.0) * tendrilEdge * tFrac * TENDRIL_INTENSITY;
     tendrilCol += vec3(0.3, 0.05, 0.65) * tendrilEdge * tFrac * TENDRIL_INTENSITY * 0.3;
@@ -230,10 +232,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 bgCol = vec3(0.0);
     float bgVis = BG_VIS;
     if (bgVis > 0.01) {
-        float ba = seed4 * PI * 2.0 + iTime * 0.025;
+        float ba = seed4 * PI * 2.0 + iTime * 0.025 * MOTION;
         vec2 bgUV = uv - 0.5;
         bgUV = mat2(cos(ba), -sin(ba), sin(ba), cos(ba)) * bgUV;
-        bgUV *= 1.0 + sin(iTime * 0.08) * 0.15;
+        bgUV *= 1.0 + sin(iTime * 0.08 * MOTION) * 0.15;
         bgUV += 0.5;
         float count = BG_TILES;
         vec2 cell = floor(bgUV * count);
@@ -247,11 +249,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float lum = dot(fracCol, vec3(0.3, 0.6, 0.1));
     vec2 refr = vec2(dFdx(lum), dFdy(lum)) * REFRACT_STR;
     vec3 prev = getLastFrameColor(uv + refr).rgb;
-    // Age feedback toward seeded palette hue — barely drifts at idle
-    vec3 ph = rgb2hsl(max(prev, vec3(0.001)));
-    ph.x = mix(ph.x, fract(0.5 + seed2 * 0.33), 0.003 + MOTION * 0.007);
-    ph.z *= 1.0 - 0.005 * MOTION;
-    prev = hsl2rgb(ph);
+    // Age feedback toward seeded palette hue in oklch
+    vec3 plch = rgb2oklch(max(prev, vec3(0.001)));
+    float targetHue = 3.4 + seed2 * 2.1;
+    plch.z = mix(plch.z, targetHue, 0.003 + MOTION * 0.007);
+    plch.x *= 1.0 - 0.005 * MOTION;
+    prev = oklch2rgb(plch);
 
     // ---- INFINITY ZOOM ON DROPS ----
     float infStr = INFINITY_ZOOM;
@@ -263,28 +266,28 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         mirrorUV = mirrorUV * zf + 0.5;
         mirrorUV = fract(mirrorUV);
         vec3 mirrorCol = getLastFrameColor(mirrorUV).rgb;
-        prev = mix(prev, mirrorCol, infStr * 0.35);
+        prev = mix(prev, mirrorCol, infStr * 0.2);
     }
 
     // ---- COMPOSITE ----
     vec3 interior = mix(prev, fracCol, 1.0 - FB_BLEND);
     vec3 exterior = mix(prev * 0.15, fracCol * 0.06, 0.4);
     vec3 col = mix(exterior, interior, visMask);
-    col += edgeLight + tendrilCol + bgCol;
+    col += min(edgeLight, vec3(0.4)) + min(tendrilCol, vec3(0.3)) + bgCol;
 
     // Beat flash (subtle)
-    if (beat) col *= 1.05;
+    if (beat) col *= 1.03;
     // Drop contrast boost
-    col = mix(col, pow(max(col, vec3(0.0)), vec3(1.2)), IS_DROPPING * 0.15);
+    col = mix(col, pow(max(col, vec3(0.0)), vec3(1.15)), IS_DROPPING * 0.08);
 
     // ---- VIGNETTE + FINAL ----
     float vign = 1.0 - pow(length(uv - 0.5) * 0.85, 2.5);
     col *= max(vign, 0.01);
 
-    vec3 fh = rgb2hsl(max(col, vec3(0.001)));
-    fh.y = clamp(fh.y, 0.15, 0.95);
-    fh.z = clamp(fh.z, 0.0, 0.88);
-    col = hsl2rgb(fh);
+    vec3 flch = rgb2oklch(max(col, vec3(0.001)));
+    flch.y = clamp(flch.y, 0.02, 0.28);
+    flch.x = clamp(flch.x, 0.0, 0.72);
+    col = oklch2rgb(flch);
 
     fragColor = vec4(col, 1.0);
 }
