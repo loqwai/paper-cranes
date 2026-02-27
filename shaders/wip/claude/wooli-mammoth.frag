@@ -53,13 +53,29 @@
 #define BUILD_DROP (energySlope * energyRSquared * 6.0)
 #define IS_DROPPING clamp(-BUILD_DROP, 0.0, 1.0)
 
+// Mammoth scale — base 1.25 keeps it off edges; grows on bass/energy transients
+#define MAMMOTH_SCALE (1.25 - bassNormalized * 0.06 - clamp(energyZScore, 0.0, 1.0) * 0.05)
+// #define MAMMOTH_SCALE 1.25
+
+// Fractal tendrils from mammoth edges during intense music
+#define TENDRIL_REACH (0.05 + bassNormalized * 0.1)
+#define TENDRIL_INTENSITY smoothstep(0.25, 0.7, energyNormalized)
+// #define TENDRIL_REACH 0.08
+// #define TENDRIL_INTENSITY 0.5
+
+// Background mammoth replication — fades in during complex intense parts
+#define BG_VIS (smoothstep(0.3, 0.7, spectralEntropyNormalized) * smoothstep(0.25, 0.55, energyNormalized) * (0.5 + 0.5 * sin(iTime * 0.15)) * 0.2)
+#define BG_TILES (3.0 + floor(energyNormalized * 2.0))
+// #define BG_VIS 0.15
+// #define BG_TILES 4.0
+
 // ============================================================================
 // MAMMOTH MASK from image texture
 // ============================================================================
 
 float getMask(vec2 uv) {
     float screenAspect = iResolution.x / iResolution.y;
-    vec2 c = uv - 0.5;
+    vec2 c = (uv - 0.5) * MAMMOTH_SCALE;
     if (screenAspect > IMG_ASPECT) c.x *= screenAspect / IMG_ASPECT;
     else c.y *= IMG_ASPECT / screenAspect;
     vec2 imgUV = c + 0.5;
@@ -78,6 +94,23 @@ float getEdgeGlow(vec2 uv, float mask, float width) {
         nearMask = max(nearMask, getMask(uv + vec2(cos(a), sin(a)) * width));
     }
     return nearMask * (1.0 - mask);
+}
+
+// ============================================================================
+// FRACTAL TENDRILS — Kleinian fold iteration creates branching filaments
+// ============================================================================
+
+float tendrilFractal(vec2 p) {
+    vec2 z = p;
+    float v = 0.0;
+    float t = iTime * 0.15;
+    vec2 c = vec2(1.2 + sin(t) * 0.15, 0.9 + cos(t * PHI) * 0.1);
+    for (int i = 0; i < 6; i++) {
+        z = abs(z) / max(dot(z, z), 0.001) - c;
+        v += exp(-abs(z.x) * 4.0);
+        v += exp(-abs(z.y) * 4.0) * 0.5;
+    }
+    return v / 9.0;
 }
 
 // ============================================================================
@@ -152,6 +185,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float glowWidth = 0.02 + bassNormalized * 0.04;
     float edgeGlow = getEdgeGlow(uv, mask, glowWidth);
 
+    float tendrilEdge = getEdgeGlow(uv, mask, TENDRIL_REACH);
+
     // Bleed: on bass, fractal leaks outside via expanded mask
     float bleed = smoothstep(0.3, 0.8, bassNormalized) * 0.4;
     float visMask = smoothstep(-bleed * 0.3, 0.45, mask);
@@ -175,6 +210,29 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float wave = sin(uv.x * 25.0 + uv.y * 18.0 - iTime * 2.5) * 0.5 + 0.5;
     wave *= sin(uv.y * 12.0 - iTime * 1.8 * PHI) * 0.5 + 0.5;
     vec3 edgeLight = glowCol * edgeGlow * GLOW_BASE * GLOW_PULSE * mix(0.6, 1.3, wave);
+
+    // ---- FRACTAL TENDRILS ----
+    vec2 tp = p * 0.7 + vec2(sin(iTime * 0.05), cos(iTime * 0.04));
+    float tFrac = tendrilFractal(tp);
+    vec3 tendrilCol = vec3(0.0, 0.92, 1.0) * tendrilEdge * tFrac * TENDRIL_INTENSITY;
+    tendrilCol += vec3(0.3, 0.05, 0.65) * tendrilEdge * tFrac * TENDRIL_INTENSITY * 0.3;
+
+    // ---- BACKGROUND MAMMOTHS ----
+    vec3 bgCol = vec3(0.0);
+    float bgVis = BG_VIS;
+    if (bgVis > 0.01) {
+        float ba = iTime * 0.025;
+        vec2 bgUV = uv - 0.5;
+        bgUV = mat2(cos(ba), -sin(ba), sin(ba), cos(ba)) * bgUV;
+        bgUV *= 1.0 + sin(iTime * 0.08) * 0.15;
+        bgUV += 0.5;
+        float count = BG_TILES;
+        vec2 cell = floor(bgUV * count);
+        vec2 tiled = fract(bgUV * count);
+        float h = fract(sin(dot(cell, vec2(127.1, 311.7))) * 43758.5453);
+        float bgM = (1.0 - getInitialFrameColor(tiled).r) * step(0.3, h) * (1.0 - mask);
+        bgCol = vec3(0.04, 0.22, 0.38) * bgM * bgVis * smoothstep(0.3, 0.7, h);
+    }
 
     // ---- FRAME FEEDBACK ----
     float lum = dot(fracCol, vec3(0.3, 0.6, 0.1));
@@ -201,10 +259,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // ---- COMPOSITE ----
     vec3 interior = mix(prev, fracCol, 1.0 - FB_BLEND);
-    // Subtle fractal bleed in background + dim feedback trails
     vec3 exterior = mix(prev * 0.15, fracCol * 0.06, 0.4);
     vec3 col = mix(exterior, interior, visMask);
-    col += edgeLight;
+    col += edgeLight + tendrilCol + bgCol;
 
     // Beat flash
     if (beat) col *= 1.15;
