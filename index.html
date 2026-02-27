@@ -21,9 +21,15 @@
       link.rel = 'manifest'
       link.href = '/manifests/' + safe + '.json'
       document.head.appendChild(link)
-      // Override start_url with current URL so installed app keeps all params
+      // Override start_url with current URL so installed app keeps all params.
+      // Icon srcs must be absolute since the blob URL has no origin for relative paths.
       fetch('/manifests/' + safe + '.json').then(function(r) { return r.json() }).then(function(manifest) {
         manifest.start_url = window.location.pathname + window.location.search
+        var origin = window.location.origin
+        manifest.icons = manifest.icons.map(function(icon) {
+          icon.src = origin + icon.src
+          return icon
+        })
         link.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/json' }))
       })
       if (shader) {
