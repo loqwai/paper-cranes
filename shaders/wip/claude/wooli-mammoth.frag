@@ -19,16 +19,19 @@
 // #define J_REAL -0.745
 // #define J_IMAG 0.186
 
+// Motion speed — slow crawl at idle, picks up with energy
+#define MOTION (0.15 + energyNormalized * 0.85)
+
 // Zoom — seed3 offsets the oscillation phase so each device zooms out of sync
-#define ZOOM_LVL (1.5 + sin(iTime * 0.004 * PHI + seed3 * PI * 2.0) * 0.5 + sin(iTime * 0.003 * SQRT2 + seed3 * 4.0) * 0.3 + energyNormalized * 0.4)
+#define ZOOM_LVL (1.5 + sin(iTime * 0.004 * MOTION * PHI + seed3 * PI * 2.0) * 0.5 + sin(iTime * 0.003 * MOTION * SQRT2 + seed3 * 4.0) * 0.3 + energyNormalized * 0.4)
 // #define ZOOM_LVL 2.0
 
 // Rotation — seed3 gives each device a different starting angle
-#define ROT_ANGLE (seed3 * PI * 2.0 + iTime * 0.012 + spectralFluxZScore * 0.06)
+#define ROT_ANGLE (seed3 * PI * 2.0 + iTime * 0.012 * MOTION + spectralFluxZScore * 0.06)
 // #define ROT_ANGLE 0.0
 
 // Drift — seed3 offsets the Lissajous path so each device explores different regions
-#define DRIFT vec2(sin(iTime * 0.007 * PHI + seed3 * PI * 2.0) * 0.25, cos(iTime * 0.006 * SQRT2 + seed3 * 4.7) * 0.2)
+#define DRIFT vec2(sin(iTime * 0.007 * MOTION * PHI + seed3 * PI * 2.0) * 0.25, cos(iTime * 0.006 * MOTION * SQRT2 + seed3 * 4.7) * 0.2)
 
 // Edge glow
 #define GLOW_BASE (0.6 + bassNormalized * 0.8)
