@@ -64,8 +64,8 @@
 // #define TENDRIL_REACH 0.08
 // #define TENDRIL_INTENSITY 0.5
 
-// Background mammoth replication — fades in during complex intense parts
-#define BG_VIS (smoothstep(0.3, 0.7, spectralEntropyNormalized) * smoothstep(0.25, 0.55, energyNormalized) * (0.5 + 0.5 * sin(iTime * 0.15)) * 0.2)
+// Background mammoth replication — only appears when music is really going off
+#define BG_VIS (smoothstep(0.55, 0.85, spectralEntropyNormalized) * smoothstep(0.5, 0.8, energyNormalized) * 0.2)
 #define BG_TILES (3.0 + floor(energyNormalized * 2.0))
 // #define BG_VIS 0.15
 // #define BG_TILES 4.0
