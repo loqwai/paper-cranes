@@ -14,24 +14,23 @@
 
 // Julia set shape — seed picks a unique fractal family; bass morphs it live
 // sin/cos of seed traces a circle around the Douady rabbit region
-#define J_REAL (-0.745 + sin(seed * PI * 2.0) * 0.06 + bassZScore * 0.05 + sin(iTime * 0.011 * PHI) * 0.04)
-#define J_IMAG (0.186 + cos(seed * PI * 2.0) * 0.05 + spectralCentroidZScore * 0.03 + cos(iTime * 0.008 * SQRT2) * 0.03)
+// Time wobble and audio modulation both scale with MOTION so it's nearly still at idle
+#define MOTION (0.1 + energyNormalized * 0.9)
+#define J_REAL (-0.745 + sin(seed * PI * 2.0) * 0.06 + bassZScore * 0.05 * MOTION + sin(iTime * 0.011 * PHI) * 0.04 * MOTION)
+#define J_IMAG (0.186 + cos(seed * PI * 2.0) * 0.05 + spectralCentroidZScore * 0.03 * MOTION + cos(iTime * 0.008 * SQRT2) * 0.03 * MOTION)
 // #define J_REAL -0.745
 // #define J_IMAG 0.186
 
-// Motion speed — slow crawl at idle, picks up with energy
-#define MOTION (0.15 + energyNormalized * 0.85)
-
-// Zoom — seed3 offsets the oscillation phase so each device zooms out of sync
-#define ZOOM_LVL (1.5 + sin(iTime * 0.004 * MOTION * PHI + seed3 * PI * 2.0) * 0.5 + sin(iTime * 0.003 * MOTION * SQRT2 + seed3 * 4.0) * 0.3 + energyNormalized * 0.4)
+// Zoom — amplitude and speed both scale with MOTION
+#define ZOOM_LVL (1.8 + sin(iTime * 0.004 * PHI + seed3 * PI * 2.0) * 0.4 * MOTION + sin(iTime * 0.003 * SQRT2 + seed3 * 4.0) * 0.2 * MOTION + energyNormalized * 0.4)
 // #define ZOOM_LVL 2.0
 
-// Rotation — seed3 gives each device a different starting angle
-#define ROT_ANGLE (seed3 * PI * 2.0 + iTime * 0.012 * MOTION + spectralFluxZScore * 0.06)
+// Rotation — seed3 starting angle; rotation rate scales with MOTION
+#define ROT_ANGLE (seed3 * PI * 2.0 + iTime * 0.008 * MOTION + spectralFluxZScore * 0.06)
 // #define ROT_ANGLE 0.0
 
-// Drift — seed3 offsets the Lissajous path so each device explores different regions
-#define DRIFT vec2(sin(iTime * 0.007 * MOTION * PHI + seed3 * PI * 2.0) * 0.25, cos(iTime * 0.006 * MOTION * SQRT2 + seed3 * 4.7) * 0.2)
+// Drift — amplitude scales with MOTION so it barely wanders at idle
+#define DRIFT vec2(sin(iTime * 0.005 * PHI + seed3 * PI * 2.0) * 0.2 * MOTION, cos(iTime * 0.004 * SQRT2 + seed3 * 4.7) * 0.15 * MOTION)
 
 // Edge glow
 #define GLOW_BASE (0.6 + bassNormalized * 0.8)
@@ -58,7 +57,7 @@
 #define IS_DROPPING clamp(-BUILD_DROP, 0.0, 1.0)
 
 // Mammoth scale — base 1.25 keeps it off edges; grows on bass/energy transients
-#define MAMMOTH_SCALE (1.25 - bassNormalized * 0.06 - clamp(energyZScore, 0.0, 1.0) * 0.05)
+#define MAMMOTH_SCALE (1.25 - bassNormalized * 0.12 - clamp(energyZScore, 0.0, 1.0) * 0.06)
 // #define MAMMOTH_SCALE 1.25
 
 // Fractal tendrils from mammoth edges during intense music
