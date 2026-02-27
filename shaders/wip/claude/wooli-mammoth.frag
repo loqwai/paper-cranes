@@ -32,7 +32,7 @@
 
 // Edge glow
 #define GLOW_BASE (0.6 + bassNormalized * 0.8)
-#define GLOW_PULSE (1.0 + bassZScore * 0.4)
+#define GLOW_PULSE (1.0 + bassZScore * 0.2)
 // #define GLOW_BASE 0.8
 // #define GLOW_PULSE 1.0
 
@@ -42,12 +42,12 @@
 // #define HUE_SHIFT 0.0
 // #define SAT_BOOST 1.0
 
-// Feedback — lower = more new fractal, higher = more trails
-#define FB_BLEND (0.72 - spectralFluxNormalized * 0.12)
+// Feedback — higher = more trails = smoother. Flux only nudges it slightly.
+#define FB_BLEND (0.78 - spectralFluxNormalized * 0.08)
 #define REFRACT_STR (0.015 + spectralRoughnessNormalized * 0.015)
 
-// Infinity zoom on drops
-#define INFINITY_ZOOM smoothstep(0.0, 0.6, energyZScore)
+// Infinity zoom on drops — smoothstep with higher threshold so it only triggers on big drops
+#define INFINITY_ZOOM smoothstep(0.2, 0.8, energyZScore)
 // #define INFINITY_ZOOM 0.0
 
 // Build/drop
@@ -265,10 +265,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 col = mix(exterior, interior, visMask);
     col += edgeLight + tendrilCol + bgCol;
 
-    // Beat flash
-    if (beat) col *= 1.15;
+    // Beat flash (subtle)
+    if (beat) col *= 1.05;
     // Drop contrast boost
-    col = mix(col, pow(max(col, vec3(0.0)), vec3(1.35)), IS_DROPPING * 0.25);
+    col = mix(col, pow(max(col, vec3(0.0)), vec3(1.2)), IS_DROPPING * 0.15);
 
     // ---- VIGNETTE + FINAL ----
     float vign = 1.0 - pow(length(uv - 0.5) * 0.85, 2.5);
