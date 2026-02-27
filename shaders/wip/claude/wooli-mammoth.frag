@@ -44,9 +44,9 @@
 // #define HUE_SHIFT 0.0
 // #define SAT_BOOST 1.0
 
-// Feedback — higher = more trails = smoother. Flux only nudges it slightly.
-#define FB_BLEND (0.78 - spectralFluxNormalized * 0.08)
-#define REFRACT_STR (0.015 + spectralRoughnessNormalized * 0.015)
+// Feedback — very high at idle (nearly frozen), loosens up with music
+#define FB_BLEND (0.92 - energyNormalized * 0.18 - spectralFluxNormalized * 0.06)
+#define REFRACT_STR ((0.005 + spectralRoughnessNormalized * 0.015) * MOTION)
 
 // Infinity zoom on drops — smoothstep with higher threshold so it only triggers on big drops
 #define INFINITY_ZOOM smoothstep(0.2, 0.8, energyZScore)
@@ -106,7 +106,7 @@ float getEdgeGlow(vec2 uv, float mask, float width) {
 float tendrilFractal(vec2 p) {
     vec2 z = p;
     float v = 0.0;
-    float t = iTime * 0.15;
+    float t = iTime * 0.15 * MOTION;
     // seed4 shifts the fold constant — different tendril branching per device
     vec2 c = vec2(1.2 + sin(t + seed4 * PI * 2.0) * 0.15, 0.9 + cos(t * PHI + seed4 * 4.0) * 0.1);
     for (int i = 0; i < 6; i++) {
@@ -215,8 +215,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // ---- EDGE GLOW COLOR ---- matches seeded palette
     float baseHue = 0.5 + seed2 * 0.33;
     vec3 glowCol = hsl2rgb(vec3(fract(baseHue - 0.03), 0.95, 0.6));
-    float wave = sin(uv.x * 25.0 + uv.y * 18.0 - iTime * 2.5) * 0.5 + 0.5;
-    wave *= sin(uv.y * 12.0 - iTime * 1.8 * PHI) * 0.5 + 0.5;
+    float mt = iTime * MOTION;
+    float wave = sin(uv.x * 25.0 + uv.y * 18.0 - mt * 2.5) * 0.5 + 0.5;
+    wave *= sin(uv.y * 12.0 - mt * 1.8 * PHI) * 0.5 + 0.5;
     vec3 edgeLight = glowCol * edgeGlow * GLOW_BASE * GLOW_PULSE * mix(0.6, 1.3, wave);
 
     // ---- FRACTAL TENDRILS ----
@@ -246,10 +247,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float lum = dot(fracCol, vec3(0.3, 0.6, 0.1));
     vec2 refr = vec2(dFdx(lum), dFdy(lum)) * REFRACT_STR;
     vec3 prev = getLastFrameColor(uv + refr).rgb;
-    // Age feedback toward seeded palette hue
+    // Age feedback toward seeded palette hue — barely drifts at idle
     vec3 ph = rgb2hsl(max(prev, vec3(0.001)));
-    ph.x = mix(ph.x, fract(0.5 + seed2 * 0.33), 0.01);
-    ph.z *= 0.985;
+    ph.x = mix(ph.x, fract(0.5 + seed2 * 0.33), 0.003 + MOTION * 0.007);
+    ph.z *= 1.0 - 0.005 * MOTION;
     prev = hsl2rgb(ph);
 
     // ---- INFINITY ZOOM ON DROPS ----
