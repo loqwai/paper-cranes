@@ -36,8 +36,8 @@
 // #define GLOW_BASE 0.8
 // #define GLOW_PULSE 1.0
 
-// Color — seed2 gives each device a unique hue personality (stays in cool range)
-#define HUE_SHIFT (seed2 * 0.25 + pitchClassNormalized * 0.12 + iTime * 0.005)
+// Color — seed2 drives the palette directly now; audio + time still modulate live
+#define HUE_SHIFT (pitchClassNormalized * 0.12 + iTime * 0.005)
 #define SAT_BOOST (1.0 + energyZScore * 0.2)
 // #define HUE_SHIFT 0.0
 // #define SAT_BOOST 1.0
@@ -151,23 +151,26 @@ void juliaSet(vec2 p, vec2 jc,
 vec3 icyColor(float tO, float tX, float tY, float tC, float iter) {
     tO = sqrt(tO); tX = sqrt(tX); tY = sqrt(tY);
 
-    vec3 deep   = vec3(0.03, 0.08, 0.18);
-    vec3 blue   = vec3(0.08, 0.35, 0.65);
-    vec3 cyan   = vec3(0.0,  0.85, 1.0);
-    vec3 ice    = vec3(0.88, 0.96, 1.0);
-    vec3 purple = vec3(0.4, 0.1, 0.75);
+    // seed2 picks a base hue in the cool range: cyan(0.5)→blue(0.67)→purple(0.83)
+    // seed adds variety to the accent color
+    float baseHue = 0.5 + seed2 * 0.33;
+    vec3 deep   = hsl2rgb(vec3(fract(baseHue + 0.05), 0.6,  0.10));
+    vec3 mid    = hsl2rgb(vec3(fract(baseHue),         0.75, 0.35));
+    vec3 bright = hsl2rgb(vec3(fract(baseHue - 0.05),  0.95, 0.50));
+    vec3 ice    = hsl2rgb(vec3(fract(baseHue),         0.25, 0.93));
+    vec3 accent = hsl2rgb(vec3(fract(baseHue + 0.15 + seed * 0.15), 0.85, 0.40));
 
     vec3 col = deep;
-    col = mix(col, blue,   smoothstep(0.0, 0.5, tX));
-    col = mix(col, cyan,   smoothstep(0.0, 0.35, tY));
+    col = mix(col, mid,    smoothstep(0.0, 0.5, tX));
+    col = mix(col, bright, smoothstep(0.0, 0.35, tY));
     col = mix(col, ice,    smoothstep(0.0, 0.18, tC));
-    col = mix(col, purple, smoothstep(0.0, 0.2, tO) * 0.3);
+    col = mix(col, accent, smoothstep(0.0, 0.2, tO) * 0.3);
 
     // Shimmer from iteration count
     float shimmer = sin(iter * 0.3 + iTime * 0.5) * 0.5 + 0.5;
-    col = mix(col, cyan, shimmer * 0.12);
+    col = mix(col, bright, shimmer * 0.12);
 
-    // Hue shift + saturation boost
+    // Live hue modulation + saturation boost
     vec3 hsl = rgb2hsl(max(col, vec3(0.001)));
     hsl.x = fract(hsl.x + HUE_SHIFT);
     hsl.y = min(hsl.y * SAT_BOOST, 1.0);
@@ -207,8 +210,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     juliaSet(p, jc, tO, tX, tY, tC, sIter);
     vec3 fracCol = icyColor(tO, tX, tY, tC, sIter);
 
-    // ---- EDGE GLOW COLOR ---- seed2 tints the glow hue
-    vec3 glowCol = hsl2rgb(vec3(fract(0.52 + seed2 * 0.2), 0.95, 0.6));
+    // ---- EDGE GLOW COLOR ---- matches seeded palette
+    float baseHue = 0.5 + seed2 * 0.33;
+    vec3 glowCol = hsl2rgb(vec3(fract(baseHue - 0.03), 0.95, 0.6));
     float wave = sin(uv.x * 25.0 + uv.y * 18.0 - iTime * 2.5) * 0.5 + 0.5;
     wave *= sin(uv.y * 12.0 - iTime * 1.8 * PHI) * 0.5 + 0.5;
     vec3 edgeLight = glowCol * edgeGlow * GLOW_BASE * GLOW_PULSE * mix(0.6, 1.3, wave);
@@ -240,9 +244,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float lum = dot(fracCol, vec3(0.3, 0.6, 0.1));
     vec2 refr = vec2(dFdx(lum), dFdy(lum)) * REFRACT_STR;
     vec3 prev = getLastFrameColor(uv + refr).rgb;
-    // Age feedback toward seeded cool tone (seed2 shifts the target hue)
+    // Age feedback toward seeded palette hue
     vec3 ph = rgb2hsl(max(prev, vec3(0.001)));
-    ph.x = mix(ph.x, fract(0.52 + seed2 * 0.2), 0.01);
+    ph.x = mix(ph.x, fract(0.5 + seed2 * 0.33), 0.01);
     ph.z *= 0.985;
     prev = hsl2rgb(ph);
 
