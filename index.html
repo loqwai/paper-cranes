@@ -67,7 +67,7 @@
         pwaPrompt.userChoice.then(function() { pwaPrompt = null })
         return
       }
-      window.open('https://instagram.com/redaphid', '_blank')
+      window.location.href = 'https://instagram.com/redaphid'
     }
     // click works on desktop, touchend works on mobile (click is delayed/swallowed on canvas)
     document.addEventListener('click', onTap)
