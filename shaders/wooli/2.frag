@@ -256,7 +256,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // ---- COMPOSITE ----
     float visMask = smoothstep(0.1, 0.5, mask);
     vec3 col = mix(lineLayer, interior, visMask);
-    col += min(edgeLight, vec3(0.4));
+    // Edge glow only at the boundary transition — NOT on scrollable exterior
+    col += min(edgeLight, vec3(0.4)) * smoothstep(0.0, 0.3, mask);
 
     // Oklch clamp (idempotent — safe for scrolling)
     vec3 flch = rgb2oklch(max(col, vec3(0.001)));
