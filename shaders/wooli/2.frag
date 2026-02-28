@@ -18,13 +18,13 @@
 
 #define MOTION smoothstep(0.12, 0.5, energyNormalized)
 
-// Julia set — seed picks fractal family
-#define J_REAL (-0.745 + sin(seed * PI * 2.0) * 0.13 + bassNormalized * 0.01 * MOTION + sin(iTime * 0.011 * PHI) * 0.018 * MOTION)
-#define J_IMAG (0.186 + cos(seed * PI * 2.0) * 0.11 + spectralCentroidNormalized * 0.006 * MOTION + cos(iTime * 0.008 * SQRT2) * 0.012 * MOTION)
+// Julia set — seed picks fractal family, always drifts slowly with time
+#define J_REAL (-0.745 + sin(seed * PI * 2.0) * 0.13 + sin(iTime * 0.02 * PHI) * 0.015 + bassNormalized * 0.008 * MOTION)
+#define J_IMAG (0.186 + cos(seed * PI * 2.0) * 0.11 + cos(iTime * 0.015 * SQRT2) * 0.01 + spectralCentroidNormalized * 0.005 * MOTION)
 
-#define ZOOM_LVL (1.4 + seed3 * 0.8 + sin(iTime * 0.004 * PHI + seed3 * PI * 2.0) * 0.2 * MOTION + energyNormalized * 0.15)
-#define ROT_ANGLE (seed3 * PI * 2.0 + iTime * 0.008 * MOTION + spectralFluxNormalized * 0.03)
-#define DRIFT vec2(sin(iTime * 0.005 * PHI + seed3 * PI * 2.0) * 0.2 * MOTION, cos(iTime * 0.004 * SQRT2 + seed3 * 4.7) * 0.15 * MOTION)
+#define ZOOM_LVL (0.7 + seed3 * 0.3 + sin(iTime * 0.008 * PHI + seed3 * PI * 2.0) * 0.15 + energyNormalized * 0.1 * MOTION)
+#define ROT_ANGLE (seed3 * PI * 2.0 + iTime * 0.006 + spectralFluxNormalized * 0.02 * MOTION)
+#define DRIFT vec2(sin(iTime * 0.01 * PHI + seed3 * PI * 2.0) * 0.1 + sin(iTime * 0.005) * 0.04 * MOTION, cos(iTime * 0.008 * SQRT2 + seed3 * 4.7) * 0.08 + cos(iTime * 0.004) * 0.03 * MOTION)
 
 // Edge glow
 #define GLOW_BASE (0.6 + bassNormalized * 0.8)

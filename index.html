@@ -46,9 +46,10 @@
     </script>
     <script>
     // Capture beforeinstallprompt so we can trigger it later.
-    // 7 taps within 1 second: opens Instagram in installed app, install prompt on website.
+    // 9 taps within 2 seconds: install prompt on website, Instagram if already installed.
     var pwaPrompt = null
     var tapTimes = []
+    var lastTapTime = 0
     window.addEventListener('beforeinstallprompt', function(e) {
       e.preventDefault()
       pwaPrompt = e
@@ -58,9 +59,12 @@
     })
     function onTap() {
       var now = Date.now()
+      // Deduplicate touchend+click from the same physical tap
+      if (now - lastTapTime < 50) return
+      lastTapTime = now
       tapTimes.push(now)
-      tapTimes = tapTimes.filter(function(t) { return now - t < 1000 })
-      if (tapTimes.length < 7) return
+      tapTimes = tapTimes.filter(function(t) { return now - t < 2000 })
+      if (tapTimes.length < 9) return
       tapTimes = []
       if (pwaPrompt) {
         pwaPrompt.prompt()
