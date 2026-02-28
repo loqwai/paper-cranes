@@ -18,13 +18,16 @@
 
 #define MOTION smoothstep(0.12, 0.5, energyNormalized)
 
-// Julia set — seed picks fractal family, always drifts slowly with time
-#define J_REAL (-0.745 + sin(seed * PI * 2.0) * 0.13 + sin(iTime * 0.02 * PHI) * 0.015 + bassNormalized * 0.008 * MOTION)
-#define J_IMAG (0.186 + cos(seed * PI * 2.0) * 0.11 + cos(iTime * 0.015 * SQRT2) * 0.01 + spectralCentroidNormalized * 0.005 * MOTION)
+// Julia set — seed picks fractal family, always drifts with time
+// Bass pushes the fractal shape, spectralCentroid shifts the imaginary axis
+#define J_REAL (-0.745 + sin(seed * PI * 2.0) * 0.13 + sin(iTime * 0.04 * PHI) * 0.015 + bassZScore * 0.015)
+#define J_IMAG (0.186 + cos(seed * PI * 2.0) * 0.11 + cos(iTime * 0.03 * SQRT2) * 0.01 + spectralCentroidZScore * 0.01)
 
-#define ZOOM_LVL (0.7 + seed3 * 0.3 + sin(iTime * 0.008 * PHI + seed3 * PI * 2.0) * 0.15 + energyNormalized * 0.1 * MOTION)
-#define ROT_ANGLE (seed3 * PI * 2.0 + iTime * 0.006 + spectralFluxNormalized * 0.02 * MOTION)
-#define DRIFT vec2(sin(iTime * 0.01 * PHI + seed3 * PI * 2.0) * 0.1 + sin(iTime * 0.005) * 0.04 * MOTION, cos(iTime * 0.008 * SQRT2 + seed3 * 4.7) * 0.08 + cos(iTime * 0.004) * 0.03 * MOTION)
+// Energy drives zoom — louder = closer; spectralFlux drives rotation — timbral change = spin
+#define ZOOM_LVL (0.7 + seed3 * 0.3 + sin(iTime * 0.015 * PHI + seed3 * PI * 2.0) * 0.15 + energyNormalized * 0.15)
+#define ROT_ANGLE (seed3 * PI * 2.0 + iTime * 0.012 + spectralFluxNormalized * 0.08)
+// Treble drifts X, mids drift Y — independent frequency bands for organic movement
+#define DRIFT vec2(sin(iTime * 0.02 * PHI + seed3 * PI * 2.0) * 0.1 + trebleZScore * 0.04, cos(iTime * 0.015 * SQRT2 + seed3 * 4.7) * 0.08 + midsZScore * 0.03)
 
 // Edge glow
 #define GLOW_BASE (0.6 + bassNormalized * 0.8)
