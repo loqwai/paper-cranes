@@ -88,10 +88,11 @@ const applyParams = async (data) => {
   }
 
   // Apply all other params to messageParams (highest precedence)
+  // Parse numeric strings to floats so they work as shader uniforms
   for (const [key, value] of Object.entries(data)) {
-    // Skip already handled keys
     if (key === 'shader' || key === 'shaderCode' || key === 'fullscreen') continue
-    window.cranes.messageParams[key] = value
+    const num = parseFloat(value)
+    window.cranes.messageParams[key] = !isNaN(num) ? num : value
   }
 }
 
