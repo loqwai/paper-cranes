@@ -941,6 +941,106 @@ await page.screenshot({ path: 'state-high.png' });
 
 ---
 
+## Creating ChromaDepth Versions of Existing Shaders
+
+ChromaDepth 3D glasses use color to create a depth illusion: red appears closest, green is middle depth, and blue/violet appears farthest. Black is neutral. To create a ChromaDepth version of an existing shader, you replace its color palette with a depth-mapped rainbow while keeping its structure, audio reactivity, and visual effects intact.
+
+### ChromaDepth Color Mapping
+
+The core function maps a 0-1 depth value to the chromadepth rainbow using HSL:
+
+```glsl
+vec3 chromadepthColor(float t, float sat, float lit) {
+    t = clamp(t, 0.0, 1.0);
+    // Hue: 0=red(near) → 0.75=violet(far)
+    float hue = fract(t * 0.75 + seed2 * 0.15);  // seed2 shifts the mapping
+    return hsl2rgb(vec3(hue, sat, lit));
+}
+```
+
+**Use HSL, not Oklch** for chromadepth. The chromadepth glasses work with the physical light spectrum (red→green→blue), so HSL's hue wheel maps directly. Oklch's perceptual uniformity isn't needed here — you want the raw spectral order.
+
+### Depth Mapping Strategy
+
+The key decision is mapping your shader's visual structure to depth (0=near, 1=far):
+
+**For fractals (Julia/Mandelbrot):**
+- Interior (didn't escape) → red/warm (depth 0.0-0.35) = near
+- Boundary (escaped slowly) → green/cyan (depth 0.35-0.55) = middle
+- Exterior (escaped fast) → blue/violet (depth 0.55-0.85) = far
+
+```glsl
+vec3 fractalChromadepth(float tO, float tX, float tY, float tC, float iter, bool escaped) {
+    tO = sqrt(tO); tX = sqrt(tX); tY = sqrt(tY);
+    float depth, brightness;
+
+    if (!escaped) {
+        // Interior — orbit traps create structural detail
+        float trapDetail = min(tX, tY);
+        float trapBlend = mix(tO, trapDetail, 0.5 + seed * 0.3);
+        depth = clamp(trapBlend * (0.35 + seed * 0.1), 0.0, 0.35);
+        brightness = 0.45 + tO * 0.15 + trapDetail * 0.15;
+    } else {
+        // Exterior — iteration count maps to distance
+        float escapeFrac = clamp(iter / 80.0, 0.0, 1.0);
+        depth = mix(0.85, 0.4, pow(escapeFrac, 0.5 + seed * 0.3));
+        brightness = mix(0.1, 0.6, pow(escapeFrac, 0.6));
+    }
+
+    float sat = 0.92 - depth * 0.06;
+    float lit = clamp(brightness * 0.55, 0.05, 0.55);
+    return chromadepthColor(depth, sat, lit);
+}
+```
+
+**For raymarching (3D fractals, SDFs):**
+- Use ray distance, world position, or orbit traps for depth
+- Mix multiple depth sources for richer variation
+- See `shaders/wip/chromadepth/1.frag` for a Mandelbox example
+
+### Making Each Instance Unique with Seeds
+
+Use `seed`, `seed2`, `seed3`, `seed4` uniforms to make each device display a unique variant:
+
+| Seed | Best Use | Example |
+|------|----------|---------|
+| `seed` | Fractal shape, orbit trap weighting | `mix(tO, trapDetail, 0.5 + seed * 0.3)` |
+| `seed2` | Hue offset in depth mapping | `fract(t * 0.75 + seed2 * 0.15)` |
+| `seed3` | Zoom level, rotation angle, drift phase | `seed3 * PI * 2.0 + iTime * 0.008` |
+| `seed4` | Secondary effects (tendrils, background) | `seed4 * PI * 2.0 + iTime * 0.025` |
+
+### Step-by-Step Conversion Checklist
+
+1. **Copy the original shader** and rename it (e.g., `wooli/1.frag` → `wooli/chromadepth-1.frag`)
+2. **Replace the color palette function** (e.g., `icyColor()`) with a `chromadepthColor()` + depth mapping function
+3. **Convert oklch/oklab operations to HSL** — feedback decay, hue aging, etc. should use `rgb2hsl`/`hsl2rgb`
+4. **Make edge glow red/orange** (hue ~0.0-0.1) so it pops forward in chromadepth
+5. **Make background elements blue/violet** (hue ~0.6-0.7) so they recede
+6. **Beat flash: shift toward red** instead of just brightening — `bHSL.x = fract(bHSL.x - 0.05)` makes the beat "pop forward"
+7. **Keep all structural code unchanged** — masks, fractal iteration, feedback, infinity zoom, etc.
+8. **Update metadata tags** — add `chromadepth, 3d` to `@tags`
+9. **Clamp final output** to 0-1 — chromadepth needs clean colors, no HDR blowout
+
+### ChromaDepth Best Practices
+
+- **High saturation** (~0.9+) — desaturated colors lose the depth effect
+- **Moderate lightness** (0.05-0.55) — too bright washes out; too dark loses color
+- **No white** — white has no depth in chromadepth; clamp lightness
+- **Black = neutral** — use black for areas with no depth information (background)
+- **Vignette helps** — darkening edges keeps the depth effect centered
+
+### Reference Shaders
+
+| Shader | Type | Notes |
+|--------|------|-------|
+| `claude/chromadepth-julia.frag` | 2D Julia set | Simple chromadepth, orbit traps |
+| `claude/chromadepth-mandelbrot.frag` | 2D Mandelbrot | Deep zoom, feedback |
+| `wip/chromadepth/1.frag` | 3D Mandelbox | Raymarching, multiple depth sources |
+| `wooli/chromadepth-1.frag` | Seeded Julia + image mask | Full conversion from oklch palette |
+| `wooli/chromadepth-2.frag` | Seeded Julia + scrolling line | Scrolling tapestry with chromadepth |
+
+---
+
 ## Tips for LED Light Sync
 
 When creating shaders for driving Hue/Nanoleaf lights via screen scraping:

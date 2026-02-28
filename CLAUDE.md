@@ -544,6 +544,22 @@ The installed PWA opens with whatever URL the user was on when they installed. F
 - `public/icons/` — shared PWA icons (all shaders use the same set)
 - `service-worker.js` — offline caching
 
+## ChromaDepth Shader Variants
+
+ChromaDepth 3D glasses create depth from color: red=near, green=middle, blue/violet=far. To create a chromadepth version of an existing shader:
+
+1. Replace the color palette with HSL-based depth mapping: `hue = t * 0.75` (0=red, 0.75=violet)
+2. Use `seed2` to shift the hue mapping so each device is unique
+3. Map fractal interior → red (near), boundary → green (mid), exterior → blue (far)
+4. Make edge glow red/orange (pops forward), background elements blue/violet (recedes)
+5. On beat, shift hue toward red (`hue -= 0.05`) for a "pop forward" effect
+6. Use HSL not Oklch — chromadepth needs raw spectral hue order
+7. Keep saturation high (~0.9+), lightness moderate (0.05-0.55), no white
+
+**Full guide:** See [docs/MAKING_A_NEW_SHADER.md](docs/MAKING_A_NEW_SHADER.md#creating-chromadepth-versions-of-existing-shaders)
+
+**Reference shaders:** `wooli/chromadepth-1.frag`, `wooli/chromadepth-2.frag`, `claude/chromadepth-julia.frag`
+
 ## Common Issues & Solutions
 
 ### Audio Not Working
