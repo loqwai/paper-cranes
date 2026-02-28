@@ -28,6 +28,7 @@ export default defineConfig({
         edit: resolve(import.meta.dirname, 'edit.html'),
         list: resolve(import.meta.dirname, 'list.html'),
         analyze: resolve(import.meta.dirname, 'analyze.html'),
+        'editor-popup': resolve(import.meta.dirname, 'editor-popup.html'),
       },
     },
   },
