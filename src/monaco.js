@@ -595,7 +595,7 @@ async function init() {
         editor.pushUndoStop()
     }
 
-    document.querySelector('#save').addEventListener('click', save)
+    document.querySelector('#save')?.addEventListener('click', save)
 
     // Add keyboard event listeners
     document.addEventListener('keydown', (e) => {
@@ -622,7 +622,7 @@ async function init() {
         }
     })
 
-    document.querySelector('#reset').addEventListener('click', () => {
+    document.querySelector('#reset')?.addEventListener('click', () => {
         localStorage.removeItem('cranes-manual-code');
         window.location.reload();
     });
@@ -652,7 +652,7 @@ async function init() {
         return code
     }
 
-    document.querySelector('#publish').addEventListener('click', () => {
+    document.querySelector('#publish')?.addEventListener('click', () => {
         const shaderCode = getShaderWithInstructions(editor.getValue())
         const filename = getFilename(shaderCode)
         const repoName = getRepoName(shaderCode)

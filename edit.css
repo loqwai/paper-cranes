@@ -372,3 +372,16 @@ input[type="number"] {
 #existing-features-editor {
   margin-top: 6px;
 }
+
+/* Editor popped out state */
+body.editor-popped-out #monaco-editor {
+  display: none;
+}
+
+body.editor-popped-out #save-and-publish {
+  display: none;
+}
+
+body.editor-popped-out #visualizer-container {
+  width: 100vw;
+}

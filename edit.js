@@ -63,6 +63,70 @@ if (isRemoteControlMode) {
 // Expose paramsManager globally for monaco.js and other scripts
 window.paramsManager = paramsManager
 
+// Pop-out editor state
+let popoutChannel = null
+let popoutWindow = null
+let popoutCheckInterval = null
+
+const popOutEditor = () => {
+    if (popoutWindow && !popoutWindow.closed) {
+        popoutWindow.focus()
+        return
+    }
+
+    popoutChannel = new BroadcastChannel('paper-cranes-editor')
+    popoutWindow = window.open('editor-popup.html', 'paper-cranes-editor', 'width=800,height=900')
+
+    document.body.classList.add('editor-popped-out')
+
+    popoutChannel.addEventListener('message', (e) => {
+        switch (e.data.type) {
+            case 'popup-ready': {
+                const code = localStorage.getItem('cranes-manual-code') || ''
+                popoutChannel.postMessage({ type: 'editor-sync', code })
+                break
+            }
+            case 'shader-update':
+                paramsManager.setShader(e.data.code)
+                break
+            case 'popup-closed':
+                restoreEditor()
+                break
+        }
+    })
+
+    // Poll for popup close (backup in case beforeunload doesn't fire)
+    popoutCheckInterval = setInterval(() => {
+        if (popoutWindow?.closed) {
+            restoreEditor()
+        }
+    }, 500)
+}
+
+const restoreEditor = () => {
+    if (popoutCheckInterval) {
+        clearInterval(popoutCheckInterval)
+        popoutCheckInterval = null
+    }
+    if (popoutChannel) {
+        popoutChannel.close()
+        popoutChannel = null
+    }
+    popoutWindow = null
+    document.body.classList.remove('editor-popped-out')
+
+    // Sync main editor with latest code from localStorage
+    const code = localStorage.getItem('cranes-manual-code')
+    const editor = window.monaco?.editor?.getEditors?.()?.[0]
+    if (editor && code) {
+        editor.pushUndoStop()
+        editor.setValue(code)
+        editor.pushUndoStop()
+    }
+}
+
+document.getElementById('popout')?.addEventListener('click', popOutEditor)
+
 const FeatureEditor = ({ name, feature, onChange, onDelete }) => {
     const handleValueChange = (e) => onChange(name, { ...feature, value: parseFloat(e.target.value) })
 
@@ -298,10 +362,10 @@ const FeatureAdder = () => {
                 setIsDrawerOpen(!isDrawerOpen) // Toggle drawer state
             }
 
-            // Check for Command/Control + Shift + E (presentation mode)
+            // Check for Command/Control + Shift + E (pop out editor)
             if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === 'e') {
-                event.preventDefault() // Prevent browser default actions
-                openRendererInANewWindowAndControlIt() // Toggle presentation mode
+                event.preventDefault()
+                popOutEditor()
             }
         }
 
@@ -313,19 +377,6 @@ const FeatureAdder = () => {
             document.removeEventListener('keydown', handleGlobalKeyDown)
         }
     }, [isDrawerOpen, isPresentationMode]) // Add dependencies
-
-    const openRendererInANewWindowAndControlIt = () => {
-       // open renderer in a new window
-       const newWindow = window.open(window.location.href.replace('edit', 'index'), '_blank', 'width=1000,height=1000')
-       sendCranesStateToNewWindow(newWindow)
-    }
-
-    const sendCranesStateToNewWindow = (newWindow) => {
-        //get the shaderCode = window.cranes.shader
-        const shaderCode = window.cranes.shader
-        newWindow.postMessage({ type: 'update-params', data: { shaderCode, ...window.cranes.flattenFeatures()}})
-        requestAnimationFrame( () => sendCranesStateToNewWindow(newWindow))
-    }
 
     // Add click outside handler
     useEffect(() => {

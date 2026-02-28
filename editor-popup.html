@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Paper Cranes - Editor</title>
+    <link rel="stylesheet" data-name="vs/editor/editor.main"
+        href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/editor/editor.main.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+            background: #1e1e1e;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        #toolbar {
+            display: flex;
+            gap: 8px;
+            padding: 6px 12px;
+            background: #252526;
+            border-bottom: 1px solid #3c3c3c;
+            align-items: center;
+            height: 24px;
+        }
+
+        #toolbar button {
+            padding: 3px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            background: #0e639c;
+            color: white;
+            border: none;
+            border-radius: 3px;
+        }
+
+        #toolbar button:hover {
+            background: #1177bb;
+        }
+
+        #connection-status {
+            margin-left: auto;
+            font-size: 11px;
+            color: #666;
+        }
+
+        #connection-status.connected {
+            color: #22c55e;
+        }
+
+        #monaco-editor {
+            width: 100%;
+            height: calc(100vh - 36px);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="toolbar">
+        <button id="save">Save (Ctrl+S)</button>
+        <span id="connection-status">Connecting...</span>
+    </div>
+    <div id="monaco-editor"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/loader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/editor/editor.main.js"></script>
+    <script type="module" src="./editor-popup.js"></script>
+    <script type="module" src="./src/monaco.js"></script>
+</body>
+
+</html>
