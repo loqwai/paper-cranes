@@ -1,7 +1,6 @@
 // @fullscreen: true
 // @favorite: true
 // @tags: wooli, mammoth, fractal, dubstep, chromadepth, 3d
-// @image: images/wooli.png
 //
 // ChromaDepth version of wooli/1 — icy fractal mammoth with depth-mapped rainbow
 // Red = foreground (closest), Green = middle, Blue/Violet = farthest

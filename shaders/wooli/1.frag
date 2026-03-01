@@ -1,7 +1,6 @@
 // @fullscreen: true
 // @favorite: true
 // @tags: wooli, mammoth, fractal, dubstep, ice
-// @image: images/wooli.png
 //
 // PRESETS:
 // Default — icy fractal mammoth

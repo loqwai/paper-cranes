@@ -1,7 +1,6 @@
 // @fullscreen: true
 // @favorite: true
 // @tags: wooli, mammoth, fractal, tapestry, oscilloscope
-// @image: images/wooli.png
 //
 // PRESETS:
 // Default — mammoth with scrolling tapestry line
