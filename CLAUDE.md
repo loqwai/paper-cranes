@@ -436,6 +436,7 @@ npm run dev  # Serves on localhost:6969
 - Auto-deploys to visuals.beadfamous.com via Cloudflare Pages
 - PRs to `shaders/<github-username>/` auto-merge
 - No backend required (static hosting)
+- **Images and static assets must go in `public/`** — see [docs/errata.md](docs/errata.md)
 
 ### Branch Preview URLs
 Every branch gets a Cloudflare Pages preview deployment at:
