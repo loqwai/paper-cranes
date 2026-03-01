@@ -340,16 +340,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
                 float hd = sdHeart(hPos);
 
                 if (hd < 0.0) {
-                    // Color: gold/yellow, warmth from roughness
-                    float hue = mix(0.08, 0.18, mix(rnd, 1.0 - HEART_WARMTH, 0.4));
-                    float sat = 0.85 + rnd * 0.1;
+                    // Color in oklab: gold/yellow via oklch hue
+                    // Warm gold ~1.2 rad, cooler yellow ~1.7 rad
+                    float hAngle = mix(1.1, 1.7, mix(rnd, 1.0 - HEART_WARMTH, 0.4));
 
-                    // Per-heart brightness: stagger slightly so they're not uniform
-                    // Larger hearts glow brighter during peaks, smaller stay dimmer
+                    // Per-heart brightness: stagger so they're not uniform
                     float perHeartBright = heartBright * mix(0.7, 1.0, rnd);
-                    float lit = mix(0.08, 0.5, perHeartBright);
+                    float L = mix(0.15, 0.7, perHeartBright);
+                    float C = 0.15 + perHeartBright * 0.08;
 
-                    vec3 hCol = hsl2rgb(vec3(hue, sat, lit));
+                    vec3 hCol = oklab2rgb(vec3(L, C * cos(hAngle), C * sin(hAngle)));
+                    hCol = max(hCol, vec3(0.0));
 
                     // Soft interior fade
                     float fill = smoothstep(0.0, -0.18, hd);
@@ -360,9 +361,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
                     heartCol = max(heartCol, hCol);
                 } else if (hd < 0.05) {
-                    // Warm glow halo — also always present, just dimmer
+                    // Warm glow halo in oklab
                     float glow = smoothstep(0.05, 0.0, hd) * 0.1 * heartBright;
-                    vec3 glowCol = hsl2rgb(vec3(0.1, 0.8, 0.35));
+                    vec3 glowLab = vec3(0.5, 0.12 * cos(1.3), 0.12 * sin(1.3));
+                    vec3 glowCol = max(oklab2rgb(glowLab), vec3(0.0));
                     heartCol = max(heartCol, glowCol * glow);
                 }
             }
