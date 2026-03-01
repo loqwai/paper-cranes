@@ -6,7 +6,7 @@
 // Image-based dancing banana man with scattered Mandelbrot-path bananas
 // ChromaDepth: red=nearest, yellow=near, green=mid, blue=far, violet=farthest
 // http://localhost:6969/?shader=eddie-banana/banana-man&image=images/banana-boy-1.png
-// https://banana-boy.paper-cranes-visuals.pages.dev/?shader=eddie-banana/banana-man&image=images/banana-boy-1.png
+// https://visuals.beadfamous.com/?shader=eddie-banana/banana-man&image=images/banana-boy-1.png
 
 #define PI 3.14159265359
 
