@@ -2,7 +2,6 @@
 // @mobile: true
 // @favorite: true
 // @tags: banana, chromadepth, 3d, eddie, love, image
-// @image: images/banana-boy-1.png
 // Image-based dancing banana man with scattered Mandelbrot-path bananas
 // ChromaDepth: red=nearest, yellow=near, green=mid, blue=far, violet=farthest
 // http://localhost:6969/?shader=eddie-banana/banana-man&image=images/banana-boy-1.png

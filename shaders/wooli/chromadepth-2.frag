@@ -1,7 +1,6 @@
 // @fullscreen: true
 // @favorite: true
 // @tags: wooli, mammoth, fractal, tapestry, oscilloscope, chromadepth, 3d
-// @image: images/wooli.png
 //
 // ChromaDepth version of wooli/2 — mammoth with scrolling tapestry line
 // Red = foreground (closest), Green = middle, Blue/Violet = farthest
