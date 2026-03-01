@@ -72,6 +72,22 @@
 #define PAN_MOD (midsZScore * 0.02)
 // #define PAN_MOD 0.0
 
+// Musical excitement: triggers background hearts during drops, builds, beats
+#define EXCITEMENT (max(energyZScore * 0.4, 0.0) + max(spectralFluxZScore * 0.35, 0.0) + max(bassZScore * 0.25, 0.0))
+// #define EXCITEMENT 0.5
+
+// Background hearts grid density (hearts per screen-width)
+#define BG_HEART_GRID 5.0
+// #define BG_HEART_GRID 5.0
+
+// Background heart max size
+#define BG_HEART_SIZE (0.08 + bassNormalized * 0.03)
+// #define BG_HEART_SIZE 0.1
+
+// Background heart drift speed
+#define BG_DRIFT (0.06 + spectralFluxNormalized * 0.04)
+// #define BG_DRIFT 0.08
+
 #define PI 3.14159265359
 #define KALI_ITER 10
 #define PHI 1.61803398875
@@ -81,6 +97,22 @@
 // ============================================================================
 
 float dot2(vec2 v) { return dot(v, v); }
+
+mat2 rot2(float a) {
+    float s = sin(a), c = cos(a);
+    return mat2(c, -s, s, c);
+}
+
+// Hash for pseudo-random per-cell values
+float hash21(vec2 p) {
+    p = fract(p * vec2(123.34, 456.21));
+    p += dot(p, p + 45.32);
+    return fract(p.x * p.y);
+}
+
+vec2 hash22(vec2 p) {
+    return vec2(hash21(p), hash21(p + 17.3));
+}
 
 float sdHeart(vec2 p) {
     p.x = abs(p.x);
@@ -211,17 +243,76 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         col *= BEAT_FLASH;
 
     } else {
-        // === OUTSIDE THE HEART: dark with red edge glow ===
-        float glowDist = smoothstep(0.15, 0.0, heartD);
-        // Red/orange glow right at the edge (pops forward in chromadepth)
-        col = chromadepth(0.05) * glowDist * EDGE_GLOW_STRENGTH;
+        // === OUTSIDE THE HEART ===
 
-        // Beat makes the glow flare
+        // Edge glow (red/orange, pops forward in chromadepth)
+        float glowDist = smoothstep(0.15, 0.0, heartD);
+        col = chromadepth(0.05) * glowDist * EDGE_GLOW_STRENGTH;
         col *= 1.0 + float(beat) * 0.3;
 
-        // Subtle pulsing ember glow
+        // Subtle pulsing ember near the edge
         float pulse = sin(iTime * 2.0 + heartD * 10.0) * 0.5 + 0.5;
         col += chromadepth(0.1) * glowDist * pulse * 0.08;
+
+        // === BACKGROUND HEARTS during drops/exciting moments ===
+        float excitement = EXCITEMENT;
+
+        if (excitement > 0.05) {
+            // Tile UV into a grid for heart placement
+            float cellSize = 1.0 / max(BG_HEART_GRID, 1.0);
+            // Drift upward slowly for a "rising hearts" feel
+            vec2 driftUV = uv + vec2(0.0, iTime * BG_DRIFT);
+
+            vec2 cellID = floor(driftUV / cellSize);
+            vec2 cellUV = fract(driftUV / cellSize) - 0.5;
+
+            // Check this cell and neighbors for overlap
+            vec3 heartCol = vec3(0.0);
+            for (float dx = -1.0; dx <= 1.0; dx++) {
+                for (float dy = -1.0; dy <= 1.0; dy++) {
+                    vec2 neighbor = cellID + vec2(dx, dy);
+
+                    // Per-heart random properties
+                    float rnd = hash21(neighbor);
+                    vec2 jitter = hash22(neighbor * 7.1) - 0.5;
+                    float hSize = mix(0.3, 0.8, rnd) * BG_HEART_SIZE / max(cellSize, 0.001);
+                    float hRot = (rnd - 0.5) * 1.2 + sin(iTime * 0.5 + rnd * 6.28) * 0.15;
+
+                    // Each heart has an excitement threshold — they cascade in
+                    float threshold = rnd * 0.6 + 0.05;
+                    float visibility = smoothstep(threshold, threshold + 0.15, excitement);
+                    if (visibility < 0.01) continue;
+
+                    // Heart position within cell (jittered)
+                    vec2 hPos = cellUV - vec2(dx, dy) - jitter * 0.6;
+                    hPos = rot2(hRot) * hPos;
+                    hPos /= max(hSize, 0.01);
+
+                    float hd = sdHeart(hPos);
+
+                    if (hd < 0.0) {
+                        // Yellow/gold hearts — chromadepth hue ~0.12-0.18
+                        float hue = mix(0.1, 0.2, rnd);
+                        vec3 hCol = hsl2rgb(vec3(hue, 0.9, 0.5));
+
+                        // Soft interior fade
+                        float fill = smoothstep(0.0, -0.15, hd);
+                        hCol *= fill * visibility;
+
+                        // Beat makes existing hearts flash brighter
+                        hCol *= 1.0 + float(beat) * 0.4;
+
+                        heartCol = max(heartCol, hCol);
+                    } else if (hd < 0.03) {
+                        // Subtle warm glow around each heart
+                        float glow = smoothstep(0.03, 0.0, hd) * 0.15 * visibility;
+                        heartCol = max(heartCol, chromadepth(0.12) * glow);
+                    }
+                }
+            }
+
+            col = max(col, heartCol);
+        }
     }
 
     col = clamp(col, 0.0, 1.0);
