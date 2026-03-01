@@ -34,28 +34,28 @@
 #define HUE_DRIFT (spectralCentroidNormalized * 0.04)
 // #define HUE_DRIFT 0.0
 
-// Pitch class: rotation of background banana patterns
-#define PATTERN_ROT (pitchClassNormalized * 0.3)
+// Pitch class: rotation of background banana patterns (slope-gated for smoothness)
+#define PATTERN_ROT (pitchClassNormalized * 0.15 + spectralCentroidSlope * 8.0 * spectralCentroidRSquared * 0.1)
 // #define PATTERN_ROT 0.0
 
 // Beat: flash and scale pop
 #define BEAT_FLASH (beat ? 1.15 : 1.0)
 // #define BEAT_FLASH 1.0
 
-// Spectral entropy: chaos in background banana scatter
-#define SCATTER_CHAOS (spectralEntropyNormalized)
+// Spectral entropy: chaos in background banana scatter (damped by trend confidence)
+#define SCATTER_CHAOS (spectralEntropyNormalized * 0.4 + 0.3)
 // #define SCATTER_CHAOS 0.5
 
 // Spectral roughness: saturation boost
 #define SAT_BOOST (0.88 + spectralRoughnessNormalized * 0.12)
 // #define SAT_BOOST 0.92
 
-// Mids: background banana movement speed
-#define MOVE_SPEED (0.12 + midsNormalized * 0.08)
-// #define MOVE_SPEED 0.15
+// Mids: background banana movement speed (slope-gated for steady drift)
+#define MOVE_SPEED (0.12 + midsSlope * 6.0 * midsRSquared * 0.04)
+// #define MOVE_SPEED 0.12
 
-// Energy normalized: background banana scale
-#define BG_SCALE_MOD (energyNormalized * 0.06)
+// Energy: background banana scale (slope-gated so scale only shifts on confident trends)
+#define BG_SCALE_MOD (0.03 + energySlope * 10.0 * energyRSquared * 0.03)
 // #define BG_SCALE_MOD 0.03
 
 // Bass: subtle rotation of the silhouette
@@ -138,18 +138,39 @@ void mandelbrotTransform(float t, float lineIndex, out vec2 pos, out float scale
     vec2 z = vec2(0.0);
     float lastLen = 0.0;
 
+    // Smooth interpolation between iterations instead of snapping
+    float iterF = t * float(MAX_ITER);
+    int iterLow = int(floor(iterF));
+    float iterFrac = fract(iterF);
+
+    vec2 posA = vec2(0.0), posB = vec2(0.0);
+    float scaleA = 1.0, scaleB = 1.0;
+    float rotA = 0.0, rotB = 0.0;
+    float prevLen = 0.0;
+
     for (int i = 0; i < MAX_ITER; i++) {
         z = vec2(z.x * z.x - z.y * z.y, 2.0 * z.x * z.y) + c;
         z += vec2(cos(t * PI * 2.0), sin(t * PI * 2.0)) * 0.12;
 
-        if (float(i) >= t * float(MAX_ITER)) {
-            pos = z * 0.3;
-            scale = (length(z) - lastLen) * 1.2 + 0.5;
-            rotation = atan(z.y, z.x) * 2.0 + t * PI * 3.0;
-            break;
+        float curLen = length(z);
+        if (i == iterLow) {
+            posA = z * 0.3;
+            scaleA = (curLen - prevLen) * 1.2 + 0.5;
+            rotA = atan(z.y, z.x) * 2.0 + t * PI * 3.0;
         }
-        lastLen = length(z);
+        if (i == iterLow + 1 || i == MAX_ITER - 1) {
+            posB = z * 0.3;
+            scaleB = (curLen - prevLen) * 1.2 + 0.5;
+            rotB = atan(z.y, z.x) * 2.0 + t * PI * 3.0;
+        }
+        prevLen = curLen;
     }
+
+    // Smoothstep blend between iteration frames
+    float blend = smoothstep(0.0, 1.0, iterFrac);
+    pos = mix(posA, posB, blend);
+    scale = mix(scaleA, scaleB, blend);
+    rotation = mix(rotA, rotB, blend);
 }
 
 // ============================================================================
@@ -192,9 +213,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             float scale, rotation;
             mandelbrotTransform(t, line, pos, scale, rotation);
 
-            pos += vec2(cos(t * PI * 2.0), sin(t * PI * 2.0)) * midsNormalized * 0.15;
+            // Smooth sinusoidal drift, amplitude gently modulated by mids trend
+            float driftAmp = 0.1 + midsSlope * 4.0 * midsRSquared * 0.05;
+            pos += vec2(cos(t * PI * 2.0 + iTime * 0.2), sin(t * PI * 2.0 + iTime * 0.15)) * driftAmp;
             scale *= 0.1 + BG_SCALE_MOD;
-            rotation += PATTERN_ROT * PI + SCATTER_CHAOS * sin(t * 8.0) * 0.5;
+            rotation += PATTERN_ROT * PI + SCATTER_CHAOS * sin(t * 8.0 + iTime * 0.1) * 0.5;
 
             vec2 bUV = uv - pos;
             bUV = rot(rotation + t * PI * 2.0) * bUV;
