@@ -72,21 +72,64 @@
 #define PAN_MOD (midsZScore * 0.02)
 // #define PAN_MOD 0.0
 
-// Musical excitement: triggers background hearts during drops, builds, beats
-#define EXCITEMENT (max(energyZScore * 0.4, 0.0) + max(spectralFluxZScore * 0.35, 0.0) + max(bassZScore * 0.25, 0.0))
-// #define EXCITEMENT 0.5
+// ============================================================================
+// BACKGROUND HEARTS — decoupled, always-present, smooth intensity
+// ============================================================================
 
-// Background hearts grid density (hearts per screen-width)
+// Confident energy trend (slope * rSquared): smooth builds/drops, no jitter
+#define ENERGY_TREND_SIGNAL clamp(energySlope * 12.0 * energyRSquared, -1.0, 1.0)
+// #define ENERGY_TREND_SIGNAL 0.0
+
+// Bass presence (slow, warm, independent from treble) — always moving
+#define BASS_PRESENCE bassNormalized
+// #define BASS_PRESENCE 0.5
+
+// Flux confidence (sustained timbral change, not one-off spikes)
+#define FLUX_TREND clamp(spectralFluxSlope * 10.0 * spectralFluxRSquared, 0.0, 1.0)
+// #define FLUX_TREND 0.0
+
+// Spectral texture (decorrelated from energy: roughness + entropy, not volume)
+#define TEXTURE_LEVEL (spectralRoughnessNormalized * 0.5 + spectralEntropyNormalized * 0.5)
+// #define TEXTURE_LEVEL 0.5
+
+// Bass character: bass with energy subtracted — shows bass *shape* not loudness
+#define BASS_CHARACTER (bassZScore - energyZScore * 0.7)
+// #define BASS_CHARACTER 0.0
+
+// Base visibility: hearts are always faintly present (never zero)
+#define BG_BASE 0.12
+
+// Smooth intensity: blends decoupled signals for organic swell
+// — energy trend (build/drop awareness)
+// — bass presence (slow warm pulse)
+// — flux trend (sustained timbral motion)
+// — texture level (harmonic richness)
+#define BG_INTENSITY (BG_BASE \
+    + clamp(ENERGY_TREND_SIGNAL, 0.0, 0.35) \
+    + BASS_PRESENCE * 0.15 \
+    + FLUX_TREND * 0.2 \
+    + TEXTURE_LEVEL * 0.1 \
+    + max(BASS_CHARACTER, 0.0) * 0.12)
+// #define BG_INTENSITY 0.5
+
+// Background hearts grid density
 #define BG_HEART_GRID 5.0
-// #define BG_HEART_GRID 5.0
 
-// Background heart max size
-#define BG_HEART_SIZE (0.08 + bassNormalized * 0.03)
+// Background heart size: bass-driven (slow, independent)
+#define BG_HEART_SIZE (0.07 + BASS_PRESENCE * 0.04)
 // #define BG_HEART_SIZE 0.1
 
-// Background heart drift speed
-#define BG_DRIFT (0.06 + spectralFluxNormalized * 0.04)
-// #define BG_DRIFT 0.08
+// Background heart drift speed: flux-trend driven (only drifts during sustained change)
+#define BG_DRIFT (0.04 + FLUX_TREND * 0.06)
+// #define BG_DRIFT 0.06
+
+// Per-heart color warmth: roughness shifts gold↔yellow (gritty = warmer)
+#define HEART_WARMTH spectralRoughnessNormalized
+// #define HEART_WARMTH 0.5
+
+// Per-heart rotation modulation: centroid (pitch center, independent from bass)
+#define HEART_ROT_MOD spectralCentroidNormalized
+// #define HEART_ROT_MOD 0.5
 
 #define PI 3.14159265359
 #define KALI_ITER 10
@@ -254,65 +297,78 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float pulse = sin(iTime * 2.0 + heartD * 10.0) * 0.5 + 0.5;
         col += chromadepth(0.1) * glowDist * pulse * 0.08;
 
-        // === BACKGROUND HEARTS during drops/exciting moments ===
-        float excitement = EXCITEMENT;
+        // === BACKGROUND HEARTS — always present, intensity swells smoothly ===
+        float intensity = clamp(BG_INTENSITY, 0.0, 1.0);
 
-        if (excitement > 0.05) {
-            // Tile UV into a grid for heart placement
-            float cellSize = 1.0 / max(BG_HEART_GRID, 1.0);
-            // Drift upward slowly for a "rising hearts" feel
-            vec2 driftUV = uv + vec2(0.0, iTime * BG_DRIFT);
+        // Tile UV into a grid for heart placement
+        float cellSize = 1.0 / max(BG_HEART_GRID, 1.0);
+        // Gentle upward drift (speed tied to sustained flux, not spikes)
+        vec2 driftUV = uv + vec2(0.0, iTime * BG_DRIFT);
 
-            vec2 cellID = floor(driftUV / cellSize);
-            vec2 cellUV = fract(driftUV / cellSize) - 0.5;
+        vec2 cellID = floor(driftUV / cellSize);
+        vec2 cellUV = fract(driftUV / cellSize) - 0.5;
 
-            // Check this cell and neighbors for overlap
-            vec3 heartCol = vec3(0.0);
-            for (float dx = -1.0; dx <= 1.0; dx++) {
-                for (float dy = -1.0; dy <= 1.0; dy++) {
-                    vec2 neighbor = cellID + vec2(dx, dy);
+        // Check this cell and neighbors for overlap
+        vec3 heartCol = vec3(0.0);
+        for (float dx = -1.0; dx <= 1.0; dx++) {
+            for (float dy = -1.0; dy <= 1.0; dy++) {
+                vec2 neighbor = cellID + vec2(dx, dy);
 
-                    // Per-heart random properties
-                    float rnd = hash21(neighbor);
-                    vec2 jitter = hash22(neighbor * 7.1) - 0.5;
-                    float hSize = mix(0.3, 0.8, rnd) * BG_HEART_SIZE / max(cellSize, 0.001);
-                    float hRot = (rnd - 0.5) * 1.2 + sin(iTime * 0.5 + rnd * 6.28) * 0.15;
+                // Per-heart random properties
+                float rnd = hash21(neighbor);
+                vec2 jitter = hash22(neighbor * 7.1) - 0.5;
 
-                    // Each heart has an excitement threshold — they cascade in
-                    float threshold = rnd * 0.6 + 0.05;
-                    float visibility = smoothstep(threshold, threshold + 0.15, excitement);
-                    if (visibility < 0.01) continue;
+                // Size: base from bass presence (slow), per-heart variation from hash
+                float hSize = mix(0.35, 0.85, rnd) * BG_HEART_SIZE / max(cellSize, 0.001);
 
-                    // Heart position within cell (jittered)
-                    vec2 hPos = cellUV - vec2(dx, dy) - jitter * 0.6;
-                    hPos = rot2(hRot) * hPos;
-                    hPos /= max(hSize, 0.01);
+                // Rotation: centroid-driven (pitch center, independent domain)
+                // + gentle per-heart wobble
+                float hRot = (rnd - 0.5) * 1.0
+                    + HEART_ROT_MOD * 0.4
+                    + sin(iTime * 0.3 + rnd * 6.28) * 0.1;
 
-                    float hd = sdHeart(hPos);
+                // Visibility: each heart has a unique threshold on the intensity curve
+                // Wide smoothstep (0.3 range) so hearts fade in/out gradually
+                // Low thresholds = always visible, high thresholds = only during peaks
+                float threshold = rnd * 0.55;
+                float visibility = smoothstep(threshold, threshold + 0.3, intensity);
 
-                    if (hd < 0.0) {
-                        // Yellow/gold hearts — chromadepth hue ~0.12-0.18
-                        float hue = mix(0.1, 0.2, rnd);
-                        vec3 hCol = hsl2rgb(vec3(hue, 0.9, 0.5));
+                // Always at least a ghost (base layer never fully gone)
+                visibility = max(visibility, BG_BASE * (1.0 - rnd * 0.5));
 
-                        // Soft interior fade
-                        float fill = smoothstep(0.0, -0.15, hd);
-                        hCol *= fill * visibility;
+                // Heart position within cell (jittered)
+                vec2 hPos = cellUV - vec2(dx, dy) - jitter * 0.6;
+                hPos = rot2(hRot) * hPos;
+                hPos /= max(hSize, 0.01);
 
-                        // Beat makes existing hearts flash brighter
-                        hCol *= 1.0 + float(beat) * 0.4;
+                float hd = sdHeart(hPos);
 
-                        heartCol = max(heartCol, hCol);
-                    } else if (hd < 0.03) {
-                        // Subtle warm glow around each heart
-                        float glow = smoothstep(0.03, 0.0, hd) * 0.15 * visibility;
-                        heartCol = max(heartCol, chromadepth(0.12) * glow);
-                    }
+                if (hd < 0.0) {
+                    // Color: gold/yellow, warmth from roughness (independent domain)
+                    // Gritty music → warmer ochre-gold, smooth → cooler lemon-yellow
+                    float hue = mix(0.08, 0.18, mix(rnd, 1.0 - HEART_WARMTH, 0.4));
+                    float sat = 0.85 + rnd * 0.1;
+                    float lit = mix(0.25, 0.55, visibility);
+                    vec3 hCol = hsl2rgb(vec3(hue, sat, lit));
+
+                    // Soft interior fade (no hard edges)
+                    float fill = smoothstep(0.0, -0.18, hd);
+                    hCol *= fill * visibility;
+
+                    // Beat: gentle additive glow, not a flash
+                    hCol *= 1.0 + float(beat) * 0.12 * visibility;
+
+                    heartCol = max(heartCol, hCol);
+                } else if (hd < 0.05) {
+                    // Warm glow halo around each heart
+                    float glow = smoothstep(0.05, 0.0, hd) * 0.12 * visibility;
+                    vec3 glowCol = hsl2rgb(vec3(0.1, 0.8, 0.4));
+                    heartCol = max(heartCol, glowCol * glow);
                 }
             }
-
-            col = max(col, heartCol);
         }
+
+        col = max(col, heartCol);
     }
 
     col = clamp(col, 0.0, 1.0);
