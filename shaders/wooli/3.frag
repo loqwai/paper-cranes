@@ -59,27 +59,16 @@
 #define LINE_HUE_DRIFT (spectralCentroidSlope * spectralCentroidRSquared * 0.3)
 
 // ============================================================================
-// SEED-DRIVEN COSINE PALETTE IN OKLCH
+// SEED-DRIVEN OKLAB PALETTE
 // ============================================================================
 //
-// Attempt at a perceptually uniform cosine palette (iq technique in Oklch).
-// One continuous function: seeds shape the curve, t indexes into it.
+// Five anchors in Oklch, blended via orbit traps (same structure as wooli/2).
 //   seed2 → base hue (full circle)
-//   seed  → lightness phase (shifts which t values are bright vs dark)
-//   seed3 → chroma intensity (muted vs vivid)
-//   seed4 → hue spread (how much hue varies across the palette)
+//   seed  → lightness character
+//   seed3 → chroma intensity
+//   seed4 → accent hue offset
 
 float baseHue;
-
-vec3 palette(float t) {
-    // Lightness: oscillates between 0.25 and 0.75, seed shifts phase
-    float L = 0.50 + 0.25 * cos(PI * 2.0 * (t + seed * 0.5));
-    // Chroma: oscillates between low and high, seed3 controls amplitude
-    float C = 0.10 + (0.06 + seed3 * 0.10) * cos(PI * 2.0 * (t * 1.5 + seed3));
-    // Hue: sweeps through an arc, seed4 controls how wide
-    float h = baseHue + t * (0.5 + seed4 * 1.5);
-    return oklch2rgb(vec3(clamp(L, 0.15, 0.80), max(C, 0.04), h));
-}
 
 // ============================================================================
 // MAMMOTH MASK
@@ -155,37 +144,29 @@ void juliaSet(vec2 p, vec2 jc,
 }
 
 // ============================================================================
-// FRACTAL COLOR — cosine palette indexed by orbit traps / iteration
+// FRACTAL COLOR — orbit traps blend palette anchors (like wooli/2)
 // ============================================================================
 
-vec3 fractalOklab(float tO, float tX, float tY, float tC, float iter, bool escaped) {
+vec3 fractalOklab(float tO, float tX, float tY, float tC, float iter) {
     tO = sqrt(tO); tX = sqrt(tX); tY = sqrt(tY);
 
-    vec3 col;
+    // Palette anchors — each trap blends in a different color
+    vec3 deep   = oklch2rgb(vec3(0.18 + seed * 0.06, 0.06 + seed3 * 0.04, baseHue + 0.15));
+    vec3 mid    = oklch2rgb(vec3(0.46 + seed * 0.08, 0.13 + seed3 * 0.05, baseHue));
+    vec3 bright = oklch2rgb(vec3(0.62 + seed * 0.07, 0.18 + seed3 * 0.04, baseHue - 0.2));
+    vec3 ice    = oklch2rgb(vec3(0.78 + seed * 0.05, 0.07 + seed3 * 0.04, baseHue + seed4 * 0.4));
+    vec3 accent = oklch2rgb(vec3(0.52 + seed * 0.08, 0.20 + seed3 * 0.06, baseHue + 0.7 + seed4 * 1.2));
 
-    if (!escaped) {
-        // INTERIOR: orbit traps index the palette for structural detail
-        float trapDetail = min(tX, tY);
-        float trapBlend = mix(tO, trapDetail, 0.5 + seed * 0.3);
-        trapBlend = mix(trapBlend, tC, 0.2 + seed * 0.15 + seed4 * 0.1);
-
-        // Main color from trap blend
-        float t = clamp(trapBlend * (2.0 + seed * 1.5), 0.0, 1.0);
-        col = palette(t);
-
-        // Layer in circle trap detail as accent (offset by 0.5 for contrast)
-        vec3 accentCol = palette(fract(tC * 3.0 + 0.5));
-        col = oklabmix(col, accentCol, smoothstep(0.0, 0.25, tC) * 0.35);
-    } else {
-        // EXTERIOR: iteration count cycles through palette for classic banding
-        float escapeFrac = clamp(iter / 80.0, 0.0, 1.0);
-        float t = fract(escapeFrac * (3.0 + seed * 1.5));
-        col = palette(t);
-    }
+    // Each trap independently blends in its palette color
+    vec3 col = deep;
+    col = oklabmix(col, mid,    smoothstep(0.0, 0.5, tX));
+    col = oklabmix(col, bright, smoothstep(0.0, 0.35, tY));
+    col = oklabmix(col, ice,    smoothstep(0.0, 0.18, tC));
+    col = oklabmix(col, accent, smoothstep(0.0, 0.2, tO) * 0.3);
 
     // Audio saturation boost
     vec3 lch = rgb2oklch(max(col, vec3(0.001)));
-    lch.y = min(lch.y * SAT_BOOST, 0.28);
+    lch.y = min(lch.y * SAT_BOOST, 0.30);
     return oklch2rgb(lch);
 }
 
@@ -245,8 +226,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float glow = glowParticle * rawGlow * LINE_GLOW_INT;
 
         float hueOffset = LINE_HUE_DRIFT;
-        vec3 lineCol = palette(0.7 + hueOffset * 0.1);
-        vec3 glowCol = palette(0.5 + hueOffset * 0.1);
+        vec3 lineCol = oklch2rgb(vec3(0.65, 0.16, baseHue + hueOffset));
+        vec3 glowCol = oklch2rgb(vec3(0.50, 0.12, baseHue + hueOffset + 0.15));
 
         lineLayer = lineCol * line + glowCol * glow;
 
@@ -264,8 +245,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 jc = vec2(J_REAL, J_IMAG);
     float tO, tX, tY, tC, sIter;
     juliaSet(p, jc, tO, tX, tY, tC, sIter);
-    bool escaped = (sIter < 80.0);
-    vec3 fracCol = fractalOklab(tO, tX, tY, tC, sIter, escaped);
+    vec3 fracCol = fractalOklab(tO, tX, tY, tC, sIter);
 
     // ---- FRACTAL FEEDBACK (interior only) ----
     float lum = dot(fracCol, vec3(0.3, 0.6, 0.1));
@@ -279,8 +259,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec3 interior = mix(prev, fracCol, 1.0 - FB_BLEND);
 
-    // ---- EDGE GLOW COLOR — bright palette highlight for clear outline ----
-    vec3 edgeCol = palette(0.75);
+    // ---- EDGE GLOW COLOR — bright from palette for clear outline ----
+    vec3 edgeCol = oklch2rgb(vec3(0.72, 0.14, baseHue + seed4 * 0.3));
     float mt = iTime * MOTION;
     float wave = sin(uv.x * (7.0 + seed4 * 3.0) + uv.y * (5.0 + seed4 * 3.0) - mt * 1.5) * 0.5 + 0.5;
     vec3 edgeLight = edgeCol * edgeGlow * GLOW_BASE * GLOW_PULSE * mix(0.7, 1.0, wave);
