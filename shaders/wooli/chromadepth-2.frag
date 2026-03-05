@@ -43,7 +43,7 @@
 #define REFRACT_STR ((0.005 + spectralRoughnessNormalized * 0.015) * MOTION)
 
 // Mammoth scale
-#define MAMMOTH_SCALE (1.4 - bassNormalized * 0.3 - clamp(energyZScore, 0.0, 1.0) * 0.15)
+#define MAMMOTH_SCALE (1.4 - bassNormalized * 0.15 - clamp(bassZScore, 0.0, 1.0) * 0.3 - clamp(energyZScore, 0.0, 1.0) * 0.2)
 
 // ============================================================================
 // LINE PARAMETERS — spectralCentroid drives Y, roughness drives width

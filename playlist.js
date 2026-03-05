@@ -70,7 +70,7 @@ const setupAudio = async () => {
         const audioConfig = {
             echoCancellation: false,
             noiseSuppression: false,
-            autoGainControl: params.get('autoGainControl') !== 'false',
+            autoGainControl: params.get('autoGainControl') === 'true',
             latency: 0,
             sampleRate: 44100,
             sampleSize: 16,
