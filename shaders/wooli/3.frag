@@ -43,8 +43,8 @@
 #define FB_BLEND (0.01)
 #define REFRACT_STR (0.08 * MOTION)
 
-// Mammoth scale
-#define MAMMOTH_SCALE (1.4 - bassNormalized * 0.2 - clamp(bassZScore, 0.0, 1.0) * 0.2 - clamp(energyZScore, 0.0, 1.0) * 0.15)
+// Mammoth scale — pulses with beat
+#define MAMMOTH_SCALE (1.4 - bassNormalized * 0.25 - clamp(bassZScore, 0.0, 1.0) * 0.25 - clamp(energyZScore, 0.0, 1.0) * 0.2)
 
 // Line glow intensity
 #define LINE_GLOW_INT (0.04 + energyMedian * 0.18)
@@ -84,11 +84,11 @@ float getMask(vec2 uv) {
     return 1.0 - getInitialFrameColor(imgUV).r;
 }
 
-// Static mask for stable scroll boundary — slightly smaller than min MAMMOTH_SCALE
-// so it always covers the mammoth even when scale shrinks with bass
+// Static mask — covers mammoth at largest possible size (smallest scale)
+// MAMMOTH_SCALE min ≈ 1.13, so use 1.0 to guarantee coverage with margin
 float getStaticMask(vec2 uv) {
     float screenAspect = iResolution.x / iResolution.y;
-    vec2 c = (uv - 0.5) * 0.8;
+    vec2 c = (uv - 0.5) * 1.0;
     if (screenAspect > IMG_ASPECT) c.x *= screenAspect / IMG_ASPECT;
     else c.y *= IMG_ASPECT / screenAspect;
     vec2 imgUV = c + 0.5;
@@ -193,54 +193,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float glowWidth = GLOW_WIDTH;
     float edgeGlow = getEdgeGlow(uv, mask, glowWidth);
 
-    // ---- SCROLLING LINE — bidirectional from edges toward mammoth ----
-    float px = floor(fragCoord.x);
-    float last = floor(res.x) - 1.0;
-    float centerX = res.x * 0.5;
+    // ---- BLACK BACKGROUND ----
     vec3 lineLayer = vec3(0.0);
-    bool leftSide = fragCoord.x < centerX;
-    bool isNewDataCol = (leftSide && px <= 0.0) || (!leftSide && px >= last);
-
-    if (!isNewDataCol && hasHistory) {
-        float srcX = leftSide ? (fragCoord.x - 1.0) : (fragCoord.x + 1.0);
-        vec2 scrollUV = vec2(srcX / res.x, uv.y);
-        float srcMask = getStaticMask(scrollUV);
-        if (srcMask < 0.3) {
-            lineLayer = getLastFrameColor(scrollUV).rgb;
-            lineLayer *= 0.994;
-            vec3 trailLCH = rgb2oklch(max(lineLayer, 0.001));
-            trailLCH.z += 0.004;
-            trailLCH.y *= 0.999;
-            lineLayer = oklch2rgb(trailLCH);
-        }
-    }
-
-    if (isNewDataCol) {
-        float lineY = LINE_Y;
-        float dist = abs(uv.y - lineY) * res.y;
-        float lw = LINE_WIDTH;
-
-        float stip = hash21(fragCoord + float(iFrame) * 0.1);
-
-        float edgeNoise = (stip - 0.5) * 0.8;
-        float line = smoothstep(lw + 1.0 + edgeNoise, max(lw - 0.5, 0.0), dist);
-
-        float glowR = LINE_GLOW_R;
-        float rawGlow = smoothstep(glowR * lw, lw * 0.5, dist);
-        float glowParticle = step(1.0 - rawGlow * rawGlow, stip);
-        float glow = glowParticle * rawGlow * LINE_GLOW_INT;
-
-        float hueOffset = LINE_HUE_DRIFT;
-        vec3 lineCol = oklch2rgb(vec3(0.65, 0.16, baseHue + hueOffset));
-        vec3 glowCol = oklch2rgb(vec3(0.50, 0.12, baseHue + hueOffset + 0.15));
-
-        lineLayer = lineCol * line + glowCol * glow;
-
-        if (beat) lineLayer *= 1.15;
-    }
-
-    // Fade line near dynamic mammoth boundary to prevent ghost trails
-    lineLayer *= (1.0 - smoothstep(0.0, 0.15, mask));
 
     // ---- FRACTAL (interior) ----
     vec2 p = (uv - 0.5) * 2.0;
