@@ -31,10 +31,10 @@
 #define ROT_ANGLE (seed * PI * 2.0 + iTime * (0.012 + seed4 * 0.008) + spectralFluxMedian * 0.08)
 #define DRIFT vec2(sin(iTime * 0.02 * PHI + seed3 * PI * 2.0) * 0.08 + bassMedian * 0.03, cos(iTime * 0.015 * SQRT2 + seed3 * 4.7) * 0.06 + seed2 * 0.1 + midsMedian * 0.02)
 
-// Edge glow — wide and bright for clear mammoth outline
-#define GLOW_WIDTH (0.4 + bassZScore * 0.5)
-#define GLOW_BASE (0.7 + bassNormalized * 0.5)
-#define GLOW_PULSE (1.0 + bassSlope * bassRSquared * 1.2)
+// Edge glow — thick complementary border
+#define GLOW_WIDTH (0.06)
+#define GLOW_BASE (0.8 + bassNormalized * 0.4)
+#define GLOW_PULSE (1.0 + bassSlope * bassRSquared * 1.0)
 
 // Palette saturation
 #define SAT_BOOST (1.0 + energyZScore * 0.1)
@@ -84,10 +84,11 @@ float getMask(vec2 uv) {
     return 1.0 - getInitialFrameColor(imgUV).r;
 }
 
-// Static mask for stable scroll boundary
+// Static mask for stable scroll boundary — slightly smaller than min MAMMOTH_SCALE
+// so it always covers the mammoth even when scale shrinks with bass
 float getStaticMask(vec2 uv) {
     float screenAspect = iResolution.x / iResolution.y;
-    vec2 c = (uv - 0.5) * 1.4;
+    vec2 c = (uv - 0.5) * 0.8;
     if (screenAspect > IMG_ASPECT) c.x *= screenAspect / IMG_ASPECT;
     else c.y *= IMG_ASPECT / screenAspect;
     vec2 imgUV = c + 0.5;
@@ -100,10 +101,14 @@ float getStaticMask(vec2 uv) {
 // ============================================================================
 
 float getEdgeGlow(vec2 uv, float mask, float width) {
+    // Sample at multiple radii for a thick, solid border
     float nearMask = 0.0;
-    for (int i = 0; i < 8; i++) {
-        float a = float(i) * PI * 0.25;
-        nearMask = max(nearMask, getMask(uv + vec2(cos(a), sin(a)) * width));
+    for (int r = 1; r <= 3; r++) {
+        float radius = width * float(r) * 0.5;
+        for (int i = 0; i < 8; i++) {
+            float a = float(i) * PI * 0.25;
+            nearMask = max(nearMask, getMask(uv + vec2(cos(a), sin(a)) * radius));
+        }
     }
     return nearMask * (1.0 - mask);
 }
@@ -234,6 +239,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         if (beat) lineLayer *= 1.15;
     }
 
+    // Fade line near dynamic mammoth boundary to prevent ghost trails
+    lineLayer *= (1.0 - smoothstep(0.0, 0.15, mask));
+
     // ---- FRACTAL (interior) ----
     vec2 p = (uv - 0.5) * 2.0;
     p.x *= aspect;
@@ -259,8 +267,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec3 interior = mix(prev, fracCol, 1.0 - FB_BLEND);
 
-    // ---- EDGE GLOW COLOR — bright from palette for clear outline ----
-    vec3 edgeCol = oklch2rgb(vec3(0.72, 0.14, baseHue + seed4 * 0.3));
+    // ---- EDGE GLOW COLOR — complementary hue for contrast ----
+    vec3 edgeCol = oklch2rgb(vec3(0.70, 0.18, baseHue + PI + seed4 * 0.3));
     float mt = iTime * MOTION;
     float wave = sin(uv.x * (7.0 + seed4 * 3.0) + uv.y * (5.0 + seed4 * 3.0) - mt * 1.5) * 0.5 + 0.5;
     vec3 edgeLight = edgeCol * edgeGlow * GLOW_BASE * GLOW_PULSE * mix(0.7, 1.0, wave);
