@@ -130,8 +130,6 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
 
     const initialTexture = await getTexture(gl, initialImageUrl)
     const frameBuffers = [createFramebufferInfo(gl), createFramebufferInfo(gl)]
-    // Transition framebuffer captures the last frame when switching shaders
-    const transitionFramebuffer = createFramebufferInfo(gl)
 
     const setFramebufferTexParams = (fb) => {
         const texture = fb.attachments[0]
@@ -142,14 +140,10 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
     }
 
-    // Set texture parameters for all framebuffers
     frameBuffers.forEach(setFramebufferTexParams)
-    setFramebufferTexParams(transitionFramebuffer)
 
     const bufferInfo = createBufferInfoFromArrays(gl, { position: positions })
 
-    // Resize canvas to display size before capturing initial dimensions
-    // This prevents the first frame from triggering resize logic and causing a black flash
     resizeCanvasToDisplaySize(gl.canvas, 1)
 
     let frameNumber = 0
@@ -158,27 +152,12 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
     let lastFragmentShader
     let renderTimes = []
     let lastResolutionRatio = 1
-    let lastCanvasWidth = gl.canvas.width
-    let lastCanvasHeight = gl.canvas.height
+    let lastCanvasWidth = 0
+    let lastCanvasHeight = 0
     let useInitialTextureAsPrev = false
-    let currentInitialTexture = initialTexture
 
     const render = ({ time, features, fragmentShader: newFragmentShader }) => {
         if (newFragmentShader !== lastFragmentShader) {
-            // Capture the previous shader's last frame as the transition/initial texture
-            if (frameNumber > 0) {
-                const prevFrame = frameBuffers[(frameNumber + 1) % 2]
-                gl.bindFramebuffer(gl.READ_FRAMEBUFFER, prevFrame.framebuffer)
-                gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, transitionFramebuffer.framebuffer)
-                gl.blitFramebuffer(
-                    0, 0, prevFrame.width, prevFrame.height,
-                    0, 0, transitionFramebuffer.width, transitionFramebuffer.height,
-                    gl.COLOR_BUFFER_BIT, gl.LINEAR
-                )
-                gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null)
-                gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null)
-                currentInitialTexture = transitionFramebuffer.attachments[0]
-            }
 
             const wrappedFragmentShader = shaderWrapper(newFragmentShader)
 
@@ -222,7 +201,7 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
 
             const newWidth = gl.canvas.width
             const newHeight = gl.canvas.height
-            const allBuffers = [...frameBuffers, transitionFramebuffer]
+            const allBuffers = frameBuffers
             allBuffers.forEach(fb => {
                 resizeFramebufferInfo(gl, fb, undefined, newWidth, newHeight)
                 setFramebufferTexParams(fb)
@@ -256,7 +235,7 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
             iFrame: frameNumber,
             time,
             prevFrame: prevTexture,
-            initialFrame: currentInitialTexture,
+            initialFrame: initialTexture,
             resolution: [frame.width, frame.height],
             frame: frameNumber,
             iRandom: Math.random(),

@@ -264,14 +264,24 @@ body.present #visualizer {
   height: 100vmin;
 }
 
+body.present #visualizer.fullscreen {
+  width: 100vw;
+  height: 100vh;
+}
+
 canvas {
   margin: 0;
-  height: 100vmin;
-  width: 100vmin;
+  height: min(50vw, 100vh);
+  width: min(50vw, 100vh);
   image-rendering: high-quality;
   will-change: transform;
   backface-visibility: hidden;
   transform: translateZ(0);
+}
+
+canvas.fullscreen {
+  width: 50vw;
+  height: 100vh;
 }
 
 /* Sparkly effect */
