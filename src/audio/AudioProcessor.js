@@ -18,7 +18,7 @@ export const getFlatAudioFeatures = (audioFeatures = AudioFeatures, rawFeatures 
 }
 
 export class AudioProcessor {
-    constructor(audioContext, sourceNode, historySize=500,  fftSize = 8192) {
+    constructor(audioContext, sourceNode, historySize=500,  fftSize = 4096) {
         this.audioContext = audioContext
         this.sourceNode = sourceNode
         this.fftSize = fftSize
@@ -30,9 +30,7 @@ export class AudioProcessor {
         this.currentFeatures = getFlatAudioFeatures()
         this.currentFeatures.beat = false
         this.smoothedFeatures = {}
-        this.smoothingFactor = 0.25 // Lower = smoother, higher = more responsive
-        this.frameCount = 0
-        this.warmupFrames = 120 // ~2s at 60fps
+        this.smoothingFactor = 0.10 // Lower = smoother, higher = more responsive
     }
 
     createAnalyzer = () => {
@@ -80,7 +78,7 @@ export class AudioProcessor {
                 // Exponential smoothing formula
                 // For z-scores and normalized values, use less smoothing to maintain responsiveness
                 const smoothingFactor = key.includes('ZScore') || key.includes('Normalized')
-                    ? currentSmoothing * 2.5
+                    ? currentSmoothing * 1.5
                     : currentSmoothing
 
                 this.smoothedFeatures[key] = this.smoothedFeatures[key] * (1 - smoothingFactor) +
@@ -90,20 +88,6 @@ export class AudioProcessor {
             } else {
                 this.currentFeatures[key] = newFeatures[key]
             }
-        }
-
-        // Dampen features toward neutral during warmup while statistics stabilize
-        if (this.frameCount < this.warmupFrames) {
-            const warmup = this.frameCount / this.warmupFrames
-            for (const key in this.currentFeatures) {
-                if (typeof this.currentFeatures[key] !== 'number') continue
-                if (key.includes('ZScore') || key.includes('Slope')) {
-                    this.currentFeatures[key] *= warmup
-                } else if (key.includes('Normalized')) {
-                    this.currentFeatures[key] = 0.5 + (this.currentFeatures[key] - 0.5) * warmup
-                }
-            }
-            this.frameCount++
         }
 
         this.historySize = window.cranes?.manualFeatures?.history_size ?? this.historySize
