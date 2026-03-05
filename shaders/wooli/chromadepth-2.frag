@@ -23,29 +23,29 @@
 
 // Julia set — medians of independent features for continuous, smooth evolution
 // Centroid (brightness) and entropy (complexity) shift gradually with musical character
-#define J_REAL (-0.745 + sin(iTime * 0.04 * PHI) * 0.03 + animateEaseInOutExpo(spectralCentroidZScore/10.))
+#define J_REAL (-0.745 + sin(iTime * 0.04 * PHI) * 0.03)+((energyZScore)/50.)
 // #define J_REAL 0.1
-#define J_IMAG (0.186 + cos(iTime * 0.03 * SQRT2) * 0.025 + animateEaseInExpo(spectralEntropyZScore/10.))
+#define J_IMAG (0.186 + cos(iTime * 0.03 * SQRT2) * 0.025)
 
 // Framing — seeds make each device unique via viewpoint, not fractal math
-#define ZOOM_LVL (0.82 + seed3 * 0.1 + seed4 * 0.05 + sin(iTime * 0.15 * PHI + seed3 * PI * 2.0) * 0.1 + energyMedian * 0.1)
+#define ZOOM_LVL (0.82 + seed3 * 0.1 + sin(iTime * 0.15 * PHI + seed3 * PI * 2.0) * 0.1 + energyMedian * 0.1)
 #define ROT_ANGLE (seed * PI * 2.0 + iTime * (0.012 + seed4 * 0.008) + spectralFluxMedian * 0.08)
 #define DRIFT vec2(sin(iTime * 0.02 * PHI + seed3 * PI * 2.0) * 0.08 + bassMedian * 0.03, cos(iTime * 0.015 * SQRT2 + seed3 * 4.7) * 0.06 + seed2 * 0.1 + midsMedian * 0.02)
 
 // Edge glow
-#define GLOW_WIDTH (0.02 + bassNormalized * 0.04)
+#define GLOW_WIDTH (0.2 + bassZScore * 0.4)
 #define GLOW_BASE (0.45 + bassNormalized * 0.45)
 #define GLOW_PULSE (1.0 + bassSlope * bassRSquared * 0.3)
 
 // Depth color — no audio on hue, only structural depth drives it
-#define DEPTH_SAT_BOOST 1.0
+#define DEPTH_SAT_BOOST 0.8 + (energyZScore+1.)/10.
 
 // Feedback — seed4 shifts base blend
 #define FB_BLEND (0.01)
 #define REFRACT_STR (0.008 * MOTION)
 
 // Mammoth scale
-#define MAMMOTH_SCALE (1.4 - bassNormalized * 0.12 - clamp(bassZScore, 0.0, 1.0) * 0.2 - clamp(energyZScore, 0.0, 1.0) * 0.15)
+#define MAMMOTH_SCALE (1.4 - bassNormalized * 0.2 - clamp(bassZScore, 0.0, 1.0) * 0.2 - clamp(energyZScore, 0.0, 1.0) * 0.15)
 
 // Line glow intensity
 #define LINE_GLOW_INT (0.04 + energyMedian * 0.18)
