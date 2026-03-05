@@ -27,7 +27,7 @@
 #define J_IMAG (0.186 + cos(iTime * 0.03 * SQRT2) * 0.025)
 
 // Framing — seeds make each device unique via viewpoint, not fractal math
-#define ZOOM_LVL (0.82 + seed3 * 0.1 + sin(iTime * 0.15 * PHI + seed3 * PI * 2.0) * 0.1 + energyMedian * 0.1)
+#define ZOOM_LVL (MAMMOTH_SCALE * 0.65 + seed3 * 0.1 + sin(iTime * 0.15 * PHI + seed3 * PI * 2.0) * 0.1)
 #define ROT_ANGLE (seed * PI * 2.0 + iTime * (0.012 + seed4 * 0.008) + spectralFluxMedian * 0.08)
 #define DRIFT vec2(sin(iTime * 0.02 * PHI + seed3 * PI * 2.0) * 0.08 + bassMedian * 0.03, cos(iTime * 0.015 * SQRT2 + seed3 * 4.7) * 0.06 + seed2 * 0.1 + midsMedian * 0.02)
 
@@ -43,8 +43,8 @@
 #define FB_BLEND (0.01)
 #define REFRACT_STR (0.08 * MOTION)
 
-// Mammoth scale — pulses with beat
-#define MAMMOTH_SCALE (1.4 - bassNormalized * 0.25 - clamp(bassZScore, 0.0, 1.0) * 0.25 - clamp(energyZScore, 0.0, 1.0) * 0.2)
+// Mammoth scale — smooth pulse using eased normalized values (no raw zScores)
+#define MAMMOTH_SCALE (1.4 - animateEaseInCubic(bassNormalized) * 0.35 - animateEaseInCubic(energyNormalized) * 0.25)
 
 // Line glow intensity
 #define LINE_GLOW_INT (0.04 + energyMedian * 0.18)
