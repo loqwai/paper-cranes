@@ -18,7 +18,7 @@ export const getFlatAudioFeatures = (audioFeatures = AudioFeatures, rawFeatures 
 }
 
 export class AudioProcessor {
-    constructor(audioContext, sourceNode, historySize=500,  fftSize = 4096) {
+    constructor(audioContext, sourceNode, historySize=500,  fftSize = 8192) {
         this.audioContext = audioContext
         this.sourceNode = sourceNode
         this.fftSize = fftSize
