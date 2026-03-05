@@ -19,11 +19,12 @@
 // AUDIO PARAMETERS
 // ============================================================================
 
-#define MOTION smoothstep(0.12, 0.5, energyNormalized)
+#define MOTION animateEaseInCubic(smoothstep(0.05, 0.2, energyNormalized))
 
-// Julia set — same on all devices, kurtosis drives shape
-#define J_REAL (-0.745 + sin(iTime * 0.04 * PHI) * 0.012 + animateEaseInCubic(spectralKurtosisNormalized) * 0.025)
-#define J_IMAG (0.186 + cos(iTime * 0.03 * SQRT2) * 0.008 + animateEaseInCubic(spectralKurtosisNormalized) * 0.02)
+// Julia set — medians of independent features for continuous, smooth evolution
+// Centroid (brightness) and entropy (complexity) shift gradually with musical character
+#define J_REAL (-0.745 + sin(iTime * 0.04 * PHI) * 0.03 + spectralCentroidZScore * 0.04)
+#define J_IMAG (0.186 + cos(iTime * 0.03 * SQRT2) * 0.025 + spectralEntropyZScore * 0.035)
 
 // Framing — seeds make each device unique via viewpoint, not fractal math
 #define ZOOM_LVL (0.82 + seed3 * 0.1 + seed4 * 0.05 + sin(iTime * 0.015 * PHI + seed3 * PI * 2.0) * 0.1 + energyMedian * 0.1)
@@ -35,10 +36,10 @@
 #define GLOW_PULSE (1.0 + bassSlope * bassRSquared * 0.3)
 
 // Depth color — no audio on hue, only structural depth drives it
-#define DEPTH_SAT_BOOST (1.0 + energySlope * energyRSquared * 0.1)
+#define DEPTH_SAT_BOOST 1.0
 
 // Feedback — seed4 shifts base blend
-#define FB_BLEND (0.75 + seed4 * 0.02 - energyNormalized * 0.04 - spectralFluxNormalized * 0.02)
+#define FB_BLEND (0.85 + seed4 * 0.02 - energyMedian * 0.06)
 #define REFRACT_STR (0.008 * MOTION)
 
 // Mammoth scale
@@ -277,10 +278,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 col = mix(lineLayer, interior, visMask);
     col += min(edgeLight, vec3(0.25)) * smoothstep(0.0, 0.3, mask);
 
-    // Beat — shift toward red for chromadepth pop-forward effect
+    // Beat — brightness pulse only, no hue change
     if (beat) {
         vec3 bHSL = rgb2hsl(max(col, vec3(0.001)));
-        bHSL.x = fract(bHSL.x - 0.04);
         bHSL.z = min(bHSL.z * 1.05, 0.58);
         col = hsl2rgb(bHSL);
     }
