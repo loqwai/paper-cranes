@@ -32,11 +32,11 @@
 #define DRIFT vec2(sin(iTime * 0.02 * PHI + seed3 * PI * 2.0) * 0.1 + spectralKurtosisZScore * 0.06 + spectralRoughnessZScore * 0.03, cos(iTime * 0.015 * SQRT2 + seed3 * 4.7) * 0.08 + midsZScore * 0.05 + spectralKurtosisSlope * spectralKurtosisRSquared * 0.15)
 
 // Edge glow
-#define GLOW_BASE (0.6 + bassNormalized * 0.8)
-#define GLOW_PULSE (1.0 + bassSlope * bassRSquared * 0.6)
+#define GLOW_BASE (0.45 + bassNormalized * 0.45)
+#define GLOW_PULSE (1.0 + bassSlope * bassRSquared * 0.3)
 
 // Depth color modulation — seed4 varies hue drift rate
-#define DEPTH_HUE_SHIFT (spectralCentroidSlope * spectralCentroidRSquared * 0.08 + iTime * (0.003 + seed4 * 0.002) * MOTION)
+#define DEPTH_HUE_SHIFT (spectralCentroidSlope * spectralCentroidRSquared * 0.02 + iTime * (0.001 + seed4 * 0.0005) * MOTION)
 #define DEPTH_SAT_BOOST (1.0 + energySlope * energyRSquared * 0.1)
 
 // Feedback — seed4 shifts base blend
@@ -61,7 +61,8 @@
 
 vec3 chromadepthColor(float t, float sat, float lit) {
     t = clamp(t, 0.0, 1.0);
-    float hue = fract(t * 0.75 + seed2 * 0.15 + DEPTH_HUE_SHIFT);
+    float hueRange = 0.3 + seed * 0.2;
+    float hue = fract(t * hueRange + seed2 * 0.5 + DEPTH_HUE_SHIFT);
     sat = clamp(sat * DEPTH_SAT_BOOST, 0.0, 1.0);
     return hsl2rgb(vec3(hue, sat, lit));
 }
@@ -277,13 +278,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // ---- COMPOSITE ----
     float visMask = smoothstep(0.1, 0.5, mask);
     vec3 col = mix(lineLayer, interior, visMask);
-    col += min(edgeLight, vec3(0.4)) * smoothstep(0.0, 0.3, mask);
+    col += min(edgeLight, vec3(0.25)) * smoothstep(0.0, 0.3, mask);
 
-    // Beat — shift toward red for chromadepth pop
+    // Beat — subtle shift toward red for chromadepth pop
     if (beat) {
         vec3 bHSL = rgb2hsl(max(col, vec3(0.001)));
-        bHSL.x = fract(bHSL.x - 0.05);
-        bHSL.z = min(bHSL.z * 1.08, 0.6);
+        bHSL.x = fract(bHSL.x - 0.02);
+        bHSL.z = min(bHSL.z * 1.03, 0.6);
         col = hsl2rgb(bHSL);
     }
 
