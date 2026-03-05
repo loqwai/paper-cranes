@@ -17,31 +17,30 @@
 
 #define MOTION smoothstep(0.12, 0.5, energyNormalized)
 
-// Julia set — seed picks fractal family, always drifts with time
-// Bass pushes the fractal shape, spectralCentroid shifts the imaginary axis
-#define J_REAL (-0.745 + sin(seed * PI * 2.0) * 0.13 + sin(iTime * 0.04 * PHI) * 0.015 + bassZScore * 0.015)
-#define J_IMAG (0.186 + cos(seed * PI * 2.0) * 0.11 + cos(iTime * 0.03 * SQRT2) * 0.01 + spectralCentroidZScore * 0.01)
+// Julia set — seed picks fractal family, seed4 offsets time phase
+// spectralKurtosis is the primary shape driver, eased to suppress low-level movement
+#define J_REAL (-0.745 + sin(seed * PI * 2.0) * 0.13 + sin(iTime * 0.04 * PHI + seed4 * PI) * 0.012 + animateEaseInCubic(spectralKurtosisNormalized) * 0.02)
+#define J_IMAG (0.186 + cos(seed * PI * 2.0) * 0.11 + cos(iTime * 0.03 * SQRT2 + seed4 * PI * 2.0) * 0.008 + animateEaseInCubic(spectralKurtosisNormalized) * 0.015)
 
-// Energy drives zoom — louder = closer; spectralFlux drives rotation — timbral change = spin
-#define ZOOM_LVL (0.7 + seed3 * 0.3 + sin(iTime * 0.015 * PHI + seed3 * PI * 2.0) * 0.15 + energyNormalized * 0.15)
-#define ROT_ANGLE (seed3 * PI * 2.0 + iTime * 0.012 + spectralFluxNormalized * 0.08)
-// Treble drifts X, mids drift Y — independent frequency bands for organic movement
-#define DRIFT vec2(sin(iTime * 0.02 * PHI + seed3 * PI * 2.0) * 0.1 + trebleZScore * 0.04, cos(iTime * 0.015 * SQRT2 + seed3 * 4.7) * 0.08 + midsZScore * 0.03)
+// Zoom / rotation / drift — seed4 varies speed, tighter zoom range across devices
+#define ZOOM_LVL (0.82 + seed3 * 0.1 + seed4 * 0.05 + sin(iTime * 0.015 * PHI + seed3 * PI * 2.0) * 0.12 + animateEaseInCubic(energyNormalized) * 0.12)
+#define ROT_ANGLE (seed3 * PI * 2.0 + iTime * (0.012 + seed4 * 0.008) + animateEaseInCubic(spectralFluxNormalized) * 0.06 + animateEaseInCubic(spectralKurtosisNormalized) * 0.07)
+#define DRIFT vec2(sin(iTime * 0.02 * PHI + seed3 * PI * 2.0) * 0.08 + animateEaseInCubic(spectralKurtosisNormalized) * 0.03, cos(iTime * 0.015 * SQRT2 + seed3 * 4.7) * 0.06 + spectralKurtosisSlope * spectralKurtosisRSquared * 0.08)
 
 // Edge glow
-#define GLOW_BASE (0.6 + bassNormalized * 0.8)
-#define GLOW_PULSE (1.0 + bassSlope * bassRSquared * 0.6)
+#define GLOW_BASE (0.45 + bassNormalized * 0.45)
+#define GLOW_PULSE (1.0 + bassSlope * bassRSquared * 0.3)
 
 // Color — linear regression for smooth evolution
-#define HUE_SHIFT (spectralCentroidSlope * spectralCentroidRSquared * 0.4 + iTime * 0.005 * MOTION)
-#define SAT_BOOST (1.0 + energySlope * energyRSquared * 0.3)
+#define HUE_SHIFT (spectralCentroidSlope * spectralCentroidRSquared * 0.15 + iTime * 0.002 * MOTION)
+#define SAT_BOOST (1.0 + energySlope * energyRSquared * 0.15)
 
 // Feedback
-#define FB_BLEND (0.82 - energyNormalized * 0.15 - spectralFluxNormalized * 0.05)
-#define REFRACT_STR ((0.005 + spectralRoughnessNormalized * 0.015) * MOTION)
+#define FB_BLEND (0.72 + seed4 * 0.04 - energyNormalized * 0.06 - spectralFluxNormalized * 0.03)
+#define REFRACT_STR ((0.005 + spectralRoughnessNormalized * 0.01 + spectralKurtosisNormalized * 0.01) * MOTION)
 
 // Mammoth scale — punches outward on bass
-#define MAMMOTH_SCALE (1.4 - bassNormalized * 0.3 - clamp(energyZScore, 0.0, 1.0) * 0.15)
+#define MAMMOTH_SCALE (1.4 - bassNormalized * 0.12 - clamp(bassZScore, 0.0, 1.0) * 0.2 - clamp(energyZScore, 0.0, 1.0) * 0.15)
 
 // ============================================================================
 // LINE PARAMETERS — spectralCentroid drives Y, roughness drives width

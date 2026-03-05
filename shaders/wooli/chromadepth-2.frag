@@ -21,27 +21,25 @@
 
 #define MOTION smoothstep(0.12, 0.5, energyNormalized)
 
-// Julia set — seed picks fractal family, seed4 offsets time phase
-// spectralKurtosis is the primary shape driver — most dynamic feature (CoV=1.118)
-#define J_REAL (-0.745 + sin(seed * PI * 2.0) * 0.13 + sin(iTime * 0.04 * PHI + seed4 * PI) * 0.012 + animateEaseInCubic(spectralKurtosisNormalized) * 0.02)
-#define J_IMAG (0.186 + cos(seed * PI * 2.0) * 0.11 + cos(iTime * 0.03 * SQRT2 + seed4 * PI * 2.0) * 0.008 + animateEaseInCubic(spectralKurtosisNormalized) * 0.015)
+// Julia set — same on all devices, kurtosis drives shape
+#define J_REAL (-0.745 + sin(iTime * 0.04 * PHI) * 0.012 + animateEaseInCubic(spectralKurtosisNormalized) * 0.025)
+#define J_IMAG (0.186 + cos(iTime * 0.03 * SQRT2) * 0.008 + animateEaseInCubic(spectralKurtosisNormalized) * 0.02)
 
-// Zoom / rotation / drift — seed4 varies speed and base zoom
-#define ZOOM_LVL (0.82 + seed3 * 0.1 + seed4 * 0.05 + sin(iTime * 0.015 * PHI + seed3 * PI * 2.0) * 0.12 + animateEaseInCubic(energyNormalized) * 0.12)
-#define ROT_ANGLE (seed3 * PI * 2.0 + iTime * (0.012 + seed4 * 0.008) + animateEaseInCubic(spectralFluxNormalized) * 0.06 + animateEaseInCubic(spectralKurtosisNormalized) * 0.07)
-#define DRIFT vec2(sin(iTime * 0.02 * PHI + seed3 * PI * 2.0) * 0.08 + animateEaseInCubic(spectralKurtosisNormalized) * 0.03, cos(iTime * 0.015 * SQRT2 + seed3 * 4.7) * 0.06 + spectralKurtosisSlope * spectralKurtosisRSquared * 0.08)
+// Framing — seeds make each device unique via viewpoint, not fractal math
+#define ZOOM_LVL (0.82 + seed3 * 0.1 + seed4 * 0.05 + sin(iTime * 0.015 * PHI + seed3 * PI * 2.0) * 0.1 + energyMedian * 0.1)
+#define ROT_ANGLE (seed * PI * 2.0 + iTime * (0.012 + seed4 * 0.008) + spectralFluxMedian * 0.08)
+#define DRIFT vec2(sin(iTime * 0.02 * PHI + seed3 * PI * 2.0) * 0.08 + bassMedian * 0.03, cos(iTime * 0.015 * SQRT2 + seed3 * 4.7) * 0.06 + seed2 * 0.1 + midsMedian * 0.02)
 
 // Edge glow
 #define GLOW_BASE (0.45 + bassNormalized * 0.45)
 #define GLOW_PULSE (1.0 + bassSlope * bassRSquared * 0.3)
 
-// Depth color modulation — seed4 varies hue drift rate
-#define DEPTH_HUE_SHIFT (iTime * 0.0003 * MOTION)
+// Depth color — no audio on hue, only structural depth drives it
 #define DEPTH_SAT_BOOST (1.0 + energySlope * energyRSquared * 0.1)
 
 // Feedback — seed4 shifts base blend
-#define FB_BLEND (0.72 + seed4 * 0.04 - energyNormalized * 0.06 - spectralFluxNormalized * 0.03)
-#define REFRACT_STR ((0.005 + spectralRoughnessNormalized * 0.01 + spectralKurtosisNormalized * 0.01) * MOTION)
+#define FB_BLEND (0.75 + seed4 * 0.02 - energyNormalized * 0.04 - spectralFluxNormalized * 0.02)
+#define REFRACT_STR (0.008 * MOTION)
 
 // Mammoth scale
 #define MAMMOTH_SCALE (1.4 - bassNormalized * 0.12 - clamp(bassZScore, 0.0, 1.0) * 0.2 - clamp(energyZScore, 0.0, 1.0) * 0.15)
@@ -61,8 +59,7 @@
 
 vec3 chromadepthColor(float t, float sat, float lit) {
     t = clamp(t, 0.0, 1.0);
-    float hueRange = 0.12 + seed * 0.08;
-    float hue = fract(t * hueRange + seed2 * 0.5 + DEPTH_HUE_SHIFT);
+    float hue = t * 0.75 + seed2 * 0.08;
     sat = clamp(sat * DEPTH_SAT_BOOST, 0.0, 1.0);
     return hsl2rgb(vec3(hue, sat, lit));
 }
@@ -151,22 +148,22 @@ vec3 fractalChromadepth(float tO, float tX, float tY, float tC, float iter, bool
     float brightness;
 
     if (!escaped) {
-        // INTERIOR — red/warm (chromadepth "near")
+        // INTERIOR — red/orange (chromadepth "near", pops forward)
         float trapDetail = min(tX, tY);
         float trapBlend = mix(tO, trapDetail, 0.5 + seed * 0.3);
         trapBlend = mix(trapBlend, tC, 0.2 + seed * 0.15 + seed4 * 0.1);
 
-        depth = clamp(trapBlend * (0.35 + seed * 0.1), 0.0, 0.35);
-        brightness = 0.45 + tO * (0.12 + seed4 * 0.08) + trapDetail * 0.15;
+        depth = clamp(trapBlend * (0.25 + seed * 0.08), 0.0, 0.25);
+        brightness = 0.5 + tO * (0.12 + seed4 * 0.08) + trapDetail * 0.15;
     } else {
-        // EXTERIOR — cool tones (chromadepth "far")
+        // EXTERIOR — green→blue→violet (chromadepth "far", recedes)
         float escapeFrac = clamp(iter / 80.0, 0.0, 1.0);
-        depth = mix(0.85, 0.4, pow(escapeFrac, 0.5 + seed * 0.2 + seed4 * 0.15));
-        brightness = mix(0.1, 0.6, pow(escapeFrac, 0.55 + seed4 * 0.1));
+        depth = mix(0.95, 0.45, pow(escapeFrac, 0.5 + seed * 0.2 + seed4 * 0.15));
+        brightness = mix(0.12, 0.55, pow(escapeFrac, 0.55 + seed4 * 0.1));
     }
 
-    float sat = 0.92 - depth * 0.06;
-    float lit = clamp(brightness * 0.55, 0.05, 0.55);
+    float sat = 0.95 - depth * 0.04;
+    float lit = clamp(brightness * 0.55, 0.06, 0.55);
     return chromadepthColor(depth, sat, lit);
 }
 
@@ -256,17 +253,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float lum = dot(fracCol, vec3(0.3, 0.6, 0.1));
     vec2 refr = vec2(dFdx(lum), dFdy(lum)) * REFRACT_STR;
     vec3 prev = getLastFrameColor(uv + refr).rgb;
-    // Decay in HSL — preserve chromadepth hue structure
+    // Decay in HSL — always pull brightness down to prevent accumulation
     vec3 prevHSL = rgb2hsl(max(prev, vec3(0.001)));
-    prevHSL.z *= 1.0 - 0.005 * MOTION;
-    prevHSL.y *= 0.998;
+    prevHSL.z *= 0.99 - 0.005 * MOTION;
+    prevHSL.z = min(prevHSL.z, 0.5);
+    prevHSL.y *= 0.997;
     prev = hsl2rgb(prevHSL);
 
     vec3 interior = mix(prev, fracCol, 1.0 - FB_BLEND);
 
-    // ---- EDGE GLOW COLOR ---- red/orange for chromadepth pop
-    float edgeHue = fract(0.05 + seed2 * 0.08);
-    vec3 edgeCol = hsl2rgb(vec3(edgeHue, 0.95, 0.5));
+    // ---- EDGE GLOW COLOR ---- pure red for maximum chromadepth pop
+    vec3 edgeCol = hsl2rgb(vec3(0.02, 0.95, 0.5));
     float mt = iTime * MOTION;
     float wave = sin(uv.x * (7.0 + seed4 * 3.0) + uv.y * (5.0 + seed4 * 3.0) - mt * 1.5) * 0.5 + 0.5;
     vec3 edgeLight = edgeCol * edgeGlow * GLOW_BASE * GLOW_PULSE * mix(0.7, 1.0, wave);
@@ -280,11 +277,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 col = mix(lineLayer, interior, visMask);
     col += min(edgeLight, vec3(0.25)) * smoothstep(0.0, 0.3, mask);
 
-    // Beat — subtle shift toward red for chromadepth pop
+    // Beat — shift toward red for chromadepth pop-forward effect
     if (beat) {
         vec3 bHSL = rgb2hsl(max(col, vec3(0.001)));
-        bHSL.x = fract(bHSL.x - 0.02);
-        bHSL.z = min(bHSL.z * 1.03, 0.6);
+        bHSL.x = fract(bHSL.x - 0.04);
+        bHSL.z = min(bHSL.z * 1.05, 0.58);
         col = hsl2rgb(bHSL);
     }
 
