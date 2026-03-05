@@ -21,29 +21,30 @@
 
 #define MOTION smoothstep(0.12, 0.5, energyNormalized)
 
-// Julia set — seed picks fractal family
-#define J_REAL (-0.745 + sin(seed * PI * 2.0) * 0.13 + sin(iTime * 0.04 * PHI) * 0.015 + bassZScore * 0.015)
-#define J_IMAG (0.186 + cos(seed * PI * 2.0) * 0.11 + cos(iTime * 0.03 * SQRT2) * 0.01 + spectralCentroidZScore * 0.01)
+// Julia set — seed picks fractal family, seed4 offsets time phase
+// spectralKurtosis is the primary shape driver — most dynamic feature (CoV=1.118)
+#define J_REAL (-0.745 + sin(seed * PI * 2.0) * 0.13 + sin(iTime * 0.04 * PHI + seed4 * PI) * 0.015 + bassZScore * 0.04 + spectralKurtosisZScore * 0.035)
+#define J_IMAG (0.186 + cos(seed * PI * 2.0) * 0.11 + cos(iTime * 0.03 * SQRT2 + seed4 * PI * 2.0) * 0.01 + spectralCentroidZScore * 0.02 + spectralKurtosisZScore * 0.03)
 
-// Zoom / rotation / drift
-#define ZOOM_LVL (0.7 + seed3 * 0.3 + sin(iTime * 0.015 * PHI + seed3 * PI * 2.0) * 0.15 + energyNormalized * 0.15)
-#define ROT_ANGLE (seed3 * PI * 2.0 + iTime * 0.012 + spectralFluxNormalized * 0.08)
-#define DRIFT vec2(sin(iTime * 0.02 * PHI + seed3 * PI * 2.0) * 0.1 + trebleZScore * 0.04, cos(iTime * 0.015 * SQRT2 + seed3 * 4.7) * 0.08 + midsZScore * 0.03)
+// Zoom / rotation / drift — seed4 varies speed and base zoom
+#define ZOOM_LVL (0.7 + seed3 * 0.25 + seed4 * 0.1 + sin(iTime * 0.015 * PHI + seed3 * PI * 2.0) * 0.15 + energyNormalized * 0.15 + clamp(bassZScore, 0.0, 1.0) * 0.12)
+#define ROT_ANGLE (seed3 * PI * 2.0 + iTime * (0.012 + seed4 * 0.008) + spectralFluxNormalized * 0.15 + spectralKurtosisNormalized * 0.12)
+#define DRIFT vec2(sin(iTime * 0.02 * PHI + seed3 * PI * 2.0) * 0.1 + spectralKurtosisZScore * 0.06 + spectralRoughnessZScore * 0.03, cos(iTime * 0.015 * SQRT2 + seed3 * 4.7) * 0.08 + midsZScore * 0.05 + spectralKurtosisSlope * spectralKurtosisRSquared * 0.15)
 
 // Edge glow
 #define GLOW_BASE (0.6 + bassNormalized * 0.8)
 #define GLOW_PULSE (1.0 + bassSlope * bassRSquared * 0.6)
 
-// Depth color modulation
-#define DEPTH_HUE_SHIFT (spectralCentroidSlope * spectralCentroidRSquared * 0.08 + iTime * 0.003 * MOTION)
+// Depth color modulation — seed4 varies hue drift rate
+#define DEPTH_HUE_SHIFT (spectralCentroidSlope * spectralCentroidRSquared * 0.08 + iTime * (0.003 + seed4 * 0.002) * MOTION)
 #define DEPTH_SAT_BOOST (1.0 + energySlope * energyRSquared * 0.1)
 
-// Feedback
-#define FB_BLEND (0.82 - energyNormalized * 0.15 - spectralFluxNormalized * 0.05)
-#define REFRACT_STR ((0.005 + spectralRoughnessNormalized * 0.015) * MOTION)
+// Feedback — seed4 shifts base blend
+#define FB_BLEND (0.80 + seed4 * 0.06 - energyNormalized * 0.15 - spectralFluxNormalized * 0.05)
+#define REFRACT_STR ((0.005 + spectralRoughnessNormalized * 0.01 + spectralKurtosisNormalized * 0.01) * MOTION)
 
 // Mammoth scale
-#define MAMMOTH_SCALE (1.4 - bassNormalized * 0.15 - clamp(bassZScore, 0.0, 1.0) * 0.3 - clamp(energyZScore, 0.0, 1.0) * 0.2)
+#define MAMMOTH_SCALE (1.4 - bassNormalized * 0.12 - clamp(bassZScore, 0.0, 1.0) * 0.2 - clamp(energyZScore, 0.0, 1.0) * 0.15)
 
 // ============================================================================
 // LINE PARAMETERS — spectralCentroid drives Y, roughness drives width
@@ -152,15 +153,15 @@ vec3 fractalChromadepth(float tO, float tX, float tY, float tC, float iter, bool
         // INTERIOR — red/warm (chromadepth "near")
         float trapDetail = min(tX, tY);
         float trapBlend = mix(tO, trapDetail, 0.5 + seed * 0.3);
-        trapBlend = mix(trapBlend, tC, 0.2 + seed * 0.15);
+        trapBlend = mix(trapBlend, tC, 0.2 + seed * 0.15 + seed4 * 0.1);
 
         depth = clamp(trapBlend * (0.35 + seed * 0.1), 0.0, 0.35);
-        brightness = 0.45 + tO * 0.15 + trapDetail * 0.15;
+        brightness = 0.45 + tO * (0.12 + seed4 * 0.08) + trapDetail * 0.15;
     } else {
         // EXTERIOR — cool tones (chromadepth "far")
         float escapeFrac = clamp(iter / 80.0, 0.0, 1.0);
-        depth = mix(0.85, 0.4, pow(escapeFrac, 0.5 + seed * 0.3));
-        brightness = mix(0.1, 0.6, pow(escapeFrac, 0.6));
+        depth = mix(0.85, 0.4, pow(escapeFrac, 0.5 + seed * 0.2 + seed4 * 0.15));
+        brightness = mix(0.1, 0.6, pow(escapeFrac, 0.55 + seed4 * 0.1));
     }
 
     float sat = 0.92 - depth * 0.06;
@@ -266,7 +267,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float edgeHue = fract(0.05 + seed2 * 0.08);
     vec3 edgeCol = hsl2rgb(vec3(edgeHue, 0.95, 0.5));
     float mt = iTime * MOTION;
-    float wave = sin(uv.x * 8.0 + uv.y * 6.0 - mt * 1.5) * 0.5 + 0.5;
+    float wave = sin(uv.x * (7.0 + seed4 * 3.0) + uv.y * (5.0 + seed4 * 3.0) - mt * 1.5) * 0.5 + 0.5;
     vec3 edgeLight = edgeCol * edgeGlow * GLOW_BASE * GLOW_PULSE * mix(0.7, 1.0, wave);
 
     // ---- VIGNETTE (interior only) ----
