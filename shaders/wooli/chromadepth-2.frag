@@ -23,24 +23,24 @@
 
 // Julia set — seed picks fractal family, seed4 offsets time phase
 // spectralKurtosis is the primary shape driver — most dynamic feature (CoV=1.118)
-#define J_REAL (-0.745 + sin(seed * PI * 2.0) * 0.13 + sin(iTime * 0.04 * PHI + seed4 * PI) * 0.015 + bassZScore * 0.04 + spectralKurtosisZScore * 0.035)
-#define J_IMAG (0.186 + cos(seed * PI * 2.0) * 0.11 + cos(iTime * 0.03 * SQRT2 + seed4 * PI * 2.0) * 0.01 + spectralCentroidZScore * 0.02 + spectralKurtosisZScore * 0.03)
+#define J_REAL (-0.745 + sin(seed * PI * 2.0) * 0.13 + sin(iTime * 0.04 * PHI + seed4 * PI) * 0.012 + animateEaseInCubic(spectralKurtosisNormalized) * 0.02)
+#define J_IMAG (0.186 + cos(seed * PI * 2.0) * 0.11 + cos(iTime * 0.03 * SQRT2 + seed4 * PI * 2.0) * 0.008 + animateEaseInCubic(spectralKurtosisNormalized) * 0.015)
 
 // Zoom / rotation / drift — seed4 varies speed and base zoom
-#define ZOOM_LVL (0.7 + seed3 * 0.25 + seed4 * 0.1 + sin(iTime * 0.015 * PHI + seed3 * PI * 2.0) * 0.15 + energyNormalized * 0.15 + clamp(bassZScore, 0.0, 1.0) * 0.12)
-#define ROT_ANGLE (seed3 * PI * 2.0 + iTime * (0.012 + seed4 * 0.008) + spectralFluxNormalized * 0.15 + spectralKurtosisNormalized * 0.12)
-#define DRIFT vec2(sin(iTime * 0.02 * PHI + seed3 * PI * 2.0) * 0.1 + spectralKurtosisZScore * 0.06 + spectralRoughnessZScore * 0.03, cos(iTime * 0.015 * SQRT2 + seed3 * 4.7) * 0.08 + midsZScore * 0.05 + spectralKurtosisSlope * spectralKurtosisRSquared * 0.15)
+#define ZOOM_LVL (0.82 + seed3 * 0.1 + seed4 * 0.05 + sin(iTime * 0.015 * PHI + seed3 * PI * 2.0) * 0.12 + animateEaseInCubic(energyNormalized) * 0.12)
+#define ROT_ANGLE (seed3 * PI * 2.0 + iTime * (0.012 + seed4 * 0.008) + animateEaseInCubic(spectralFluxNormalized) * 0.06 + animateEaseInCubic(spectralKurtosisNormalized) * 0.07)
+#define DRIFT vec2(sin(iTime * 0.02 * PHI + seed3 * PI * 2.0) * 0.08 + animateEaseInCubic(spectralKurtosisNormalized) * 0.03, cos(iTime * 0.015 * SQRT2 + seed3 * 4.7) * 0.06 + spectralKurtosisSlope * spectralKurtosisRSquared * 0.08)
 
 // Edge glow
 #define GLOW_BASE (0.45 + bassNormalized * 0.45)
 #define GLOW_PULSE (1.0 + bassSlope * bassRSquared * 0.3)
 
 // Depth color modulation — seed4 varies hue drift rate
-#define DEPTH_HUE_SHIFT (spectralCentroidSlope * spectralCentroidRSquared * 0.02 + iTime * (0.001 + seed4 * 0.0005) * MOTION)
+#define DEPTH_HUE_SHIFT (iTime * 0.0003 * MOTION)
 #define DEPTH_SAT_BOOST (1.0 + energySlope * energyRSquared * 0.1)
 
 // Feedback — seed4 shifts base blend
-#define FB_BLEND (0.80 + seed4 * 0.06 - energyNormalized * 0.15 - spectralFluxNormalized * 0.05)
+#define FB_BLEND (0.72 + seed4 * 0.04 - energyNormalized * 0.06 - spectralFluxNormalized * 0.03)
 #define REFRACT_STR ((0.005 + spectralRoughnessNormalized * 0.01 + spectralKurtosisNormalized * 0.01) * MOTION)
 
 // Mammoth scale
@@ -61,7 +61,7 @@
 
 vec3 chromadepthColor(float t, float sat, float lit) {
     t = clamp(t, 0.0, 1.0);
-    float hueRange = 0.3 + seed * 0.2;
+    float hueRange = 0.12 + seed * 0.08;
     float hue = fract(t * hueRange + seed2 * 0.5 + DEPTH_HUE_SHIFT);
     sat = clamp(sat * DEPTH_SAT_BOOST, 0.0, 1.0);
     return hsl2rgb(vec3(hue, sat, lit));

@@ -31,6 +31,8 @@ export class AudioProcessor {
         this.currentFeatures.beat = false
         this.smoothedFeatures = {}
         this.smoothingFactor = 0.25 // Lower = smoother, higher = more responsive
+        this.frameCount = 0
+        this.warmupFrames = 120 // ~2s at 60fps
     }
 
     createAnalyzer = () => {
@@ -88,6 +90,20 @@ export class AudioProcessor {
             } else {
                 this.currentFeatures[key] = newFeatures[key]
             }
+        }
+
+        // Dampen features toward neutral during warmup while statistics stabilize
+        if (this.frameCount < this.warmupFrames) {
+            const warmup = this.frameCount / this.warmupFrames
+            for (const key in this.currentFeatures) {
+                if (typeof this.currentFeatures[key] !== 'number') continue
+                if (key.includes('ZScore') || key.includes('Slope')) {
+                    this.currentFeatures[key] *= warmup
+                } else if (key.includes('Normalized')) {
+                    this.currentFeatures[key] = 0.5 + (this.currentFeatures[key] - 0.5) * warmup
+                }
+            }
+            this.frameCount++
         }
 
         this.historySize = window.cranes?.manualFeatures?.history_size ?? this.historySize

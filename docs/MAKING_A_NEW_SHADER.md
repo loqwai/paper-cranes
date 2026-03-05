@@ -395,6 +395,113 @@ vec4 layer3 = fractalFunction(uv * 0.5, time * 0.7);
 vec3 color = mix(mix(color1, color2, blend2), color3, blend3);
 ```
 
+### Pattern 7: Smoothstep Thresholds for "Only React to the Loud Parts"
+
+Raw normalized values respond linearly across the full 0-1 range, which means the fractal/visual is always moving, even during quiet passages. Use `smoothstep` to create a dead zone below a threshold, so the visual stays calm during normal moments and only comes alive when features push into their upper range:
+
+```glsl
+// Linear: always reacting, even to small values
+#define J_REAL_SHIFT (bassNormalized * 0.03)
+
+// Thresholded: calm below 40th percentile, S-curved response above
+#define J_REAL_SHIFT (smoothstep(0.4, 1.0, bassNormalized) * 0.03)
+```
+
+The S-curve from `smoothstep` also makes the onset of movement gentle rather than abrupt. Tune the lower edge (0.3-0.5) to control how much of the feature's range is "dead" vs "active."
+
+This pattern works especially well for:
+- Fractal shape parameters (Julia set constants)
+- Camera/zoom movement
+- Drift and rotation speed
+- Any parameter where constant low-level motion is distracting
+
+```glsl
+// Combine thresholded features from different domains for rich reactive movement
+#define ZOOM_AUDIO (smoothstep(0.5, 1.0, bassNormalized) * 0.08)
+#define ROT_AUDIO (smoothstep(0.3, 1.0, spectralFluxNormalized) * 0.12)
+#define DRIFT_X (smoothstep(0.3, 1.0, spectralKurtosisNormalized) * 0.05)
+```
+
+### Pattern 8: ZScore vs Normalized — Choosing Your Reactivity Character
+
+The same audio feature tells a very different visual story depending on which statistical variation you use:
+
+| Variation | Character | Best For |
+|-----------|-----------|----------|
+| `ZScore` | Spiky, beat-reactive, flashy | Event detection, beat pulses, dramatic moments |
+| `Normalized` | Smooth, flowing, continuous | Fractal shape, color evolution, gradual movement |
+| `Slope * RSquared` | Trend-aware, anticipatory | Building/dropping detection, confident evolution |
+
+**Rule of thumb:** If your visual parameter changes the overall *feel* of the image (shape, color, zoom), use `Normalized` or `Slope * RSquared`. If it should *punctuate* moments (flash, pulse, size bump), use `ZScore`.
+
+A common mistake is using z-scores for everything — this makes the entire visual flashy and tiring to watch. Reserve z-scores for a few specific "event" parameters (mammoth size on beat, beat color shift) and use normalized values for the continuous movement (fractal shape, rotation, drift).
+
+```glsl
+// GOOD: normalized for continuous movement, z-score for punctuation
+#define FRACTAL_MORPH (smoothstep(0.3, 1.0, spectralKurtosisNormalized) * 0.03)
+#define MAMMOTH_BEAT_PULSE (clamp(bassZScore, 0.0, 1.0) * 0.2)
+
+// BAD: z-scores everywhere = constant visual spiking
+#define FRACTAL_MORPH (spectralKurtosisZScore * 0.03)
+#define MAMMOTH_BEAT_PULSE (bassZScore * 0.2)
+```
+
+### Pattern 9: Taming Color Flashiness
+
+Color changes are the most noticeable form of "flashiness." Multiple color-affecting parameters can stack up and produce jarring shifts even when each individual effect seems subtle.
+
+**Sources of color flash (audit all of these):**
+- Hue shift on beat (e.g., `bHSL.x -= 0.05`)
+- Edge glow intensity scaling with audio
+- Depth-to-hue mapping range (how much of the color wheel is used)
+- Audio-driven hue drift over time
+- Saturation boost from audio features
+- Feedback blend amount (less feedback = faster color change)
+
+**Guidelines:**
+- Keep beat hue shifts small (0.01-0.03, not 0.05+)
+- Keep beat lightness boosts subtle (1.02-1.05x, not 1.1+)
+- Cap additive glow terms: `min(glow, vec3(0.25))` not `vec3(0.5)`
+- Use a narrower hue range in your color mapping (30-50% of the color wheel, not 75%)
+- Prefer `Normalized` over `ZScore` for any color-affecting parameter
+- Use `Slope * RSquared` for hue drift — it only shifts color during confident trends, not random fluctuations
+
+```glsl
+// Subtle beat color shift
+if (beat) {
+    vec3 bHSL = rgb2hsl(max(col, vec3(0.001)));
+    bHSL.x = fract(bHSL.x - 0.02);   // small hue nudge
+    bHSL.z = min(bHSL.z * 1.03, 0.6); // gentle brightness, hard cap
+    col = hsl2rgb(bHSL);
+}
+
+// Narrow, seed-varied palette instead of full rainbow
+float hueRange = 0.3 + seed * 0.2;  // 30-50% of wheel
+float hue = fract(depth * hueRange + seed2 * 0.5);
+```
+
+### Pattern 10: Genre-Aware Feature Selection
+
+Different music genres have different spectral signatures. Choose features that match what's most expressive in your target genre:
+
+**Dubstep / Bass Music:**
+- `spectralKurtosis` — most dynamic feature (CoV=1.118), measures spectrum peakedness. Great for shape morphing.
+- `spectralRoughness` — the "wub" and grit. Drives distortion/warping effects.
+- `bass` — the sub-bass drops. Best for size/zoom pulses.
+- `spectralFlux` — transients and hits. Good for rotation/drift speed.
+
+**Ambient / Atmospheric:**
+- `spectralEntropy` — chaos vs order. Drives complexity.
+- `spectralCentroid` — brightness shifts. Good for color temperature.
+- `spectralSpread` — harmonic width. Drives spatial effects.
+- `Slope` + `RSquared` variants — slow, confident evolution.
+
+**EDM / House:**
+- `spectralFlux` — strongest beat correlate (2.37x spike on beats).
+- `energy` — overall loudness drives intensity.
+- `bass` + `treble` — opposing frequency bands for contrast.
+- `beat` — reliable pulse for rhythmic effects.
+
 ---
 
 ## Common Techniques
@@ -1038,6 +1145,40 @@ Use `seed`, `seed2`, `seed3`, `seed4` uniforms to make each device display a uni
 | `wip/chromadepth/1.frag` | 3D Mandelbox | Raymarching, multiple depth sources |
 | `wooli/chromadepth-1.frag` | Seeded Julia + image mask | Full conversion from oklch palette |
 | `wooli/chromadepth-2.frag` | Seeded Julia + scrolling line | Scrolling tapestry with chromadepth |
+
+---
+
+## Audio Pipeline & Latency
+
+Understanding the audio processing pipeline helps explain why your shader might feel sluggish or jittery:
+
+### The Three Smoothing Layers
+
+Audio data passes through three independent smoothing stages before reaching your shader:
+
+1. **FFT window** (`fftSize`, default 8192) — determines frequency resolution. Larger = better bass detail but more historical audio per frame. At 44.1kHz, 8192 samples ≈ 186ms of audio.
+
+2. **AnalyserNode smoothing** (`smoothingTimeConstant`, default 0.4) — browser-level exponential average on raw FFT bins. Each frame: `output = old × 0.4 + new × 0.6`.
+
+3. **Feature smoothing** (default 0.25, z-scores get 2.5x multiplier) — exponential smoothing applied to computed features before they become shader uniforms.
+
+The statistical features (mean, median, z-score) computed over the 500-frame history window provide *additional* smoothing by their nature.
+
+### Startup Jitter
+
+The first ~2 seconds of audio are jittery because statistical features (z-scores, normalized values) are unstable with few history samples. The system applies a warmup ramp that dampens z-scores and slopes toward 0, and normalized values toward 0.5, gradually fading in over ~120 frames.
+
+If your shader looks wild on startup but settles down, this is expected behavior.
+
+### Mobile Audio Gotchas
+
+Browser audio processing features designed for voice calls can destroy music visualization:
+
+- **Auto Gain Control (AGC)** — compresses dynamics, squashing the transients that beat detection needs. Disabled by default.
+- **Noise Suppression** — targets non-voice sounds like bass and transients. Disabled by default.
+- **Echo Cancellation** — can interfere with audio analysis. Disabled by default.
+
+All three can be re-enabled via query params (`?autoGainControl=true`) if needed for specific scenarios (e.g., very quiet room).
 
 ---
 
