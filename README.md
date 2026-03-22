@@ -15,11 +15,7 @@ This will serve beadfamous on localhost:6969
 
 ## Viewing the visualizations
 
-visualizations are specified by the query param 'shader' in the url. For example, to view the 'star' visualization, you would go to [localhost:6969/?shader=star](http://localhost:6969/?shader=star)
-
-Behind the scenes, this loads code for what's called a 'shader' from the `shaders/` directory. These are written in GLSL, and are the code that actually runs on the GPU to make the visualizations. In the above example, the 'star' visualization is defined in `shaders/star.frag`. You can look at other files in the `shaders/` directory to see which visualizations are available.
-
-This project is deployed at [visuals.beadfamous.com](https://visuals.beadfamous.com), and you can view the visualizations there as well.
+Pick a shader from `shaders/` and load it via the `?shader` param — e.g. [localhost:6969/?shader=star](http://localhost:6969/?shader=star) loads `shaders/star.frag`. Browse the full gallery at [visuals.beadfamous.com](https://visuals.beadfamous.com).
 
 ## Fun developer features
 
