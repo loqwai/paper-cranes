@@ -21,6 +21,13 @@ Behind the scenes, this loads code for what's called a 'shader' from the `shader
 
 This project is deployed at [visuals.beadfamous.com](https://visuals.beadfamous.com), and you can view the visualizations there as well.
 
+## Fun developer features
+
+- **Any URL param is a shader uniform** — add `?myParam=0.5` to the URL and it's instantly available as `uniform float myParam` in your GLSL. Override audio features the same way (`?bassNormalized=0.8&energyZScore=1.2`) to simulate different musical conditions without needing a microphone, making iteration fast and deterministic.
+- **Live remote control via WebSocket** — open `edit.html?remote=control` on your laptop and `?remote=display` on a TV or projector. Every shader edit and knob change broadcasts in real-time to all connected displays. Write code on your laptop and watch it update on the big screen instantly, mid-performance.
+- **MIDI controllers for live tweaking and debugging** — physical knobs (mapped to `knob_3`–`knob_79`) are injected as shader uniforms in real-time. Swap out any audio feature for a knob with a one-line `#define` change (`#define BRIGHTNESS (knob_71)`) to tune constants by hand before wiring them back to audio, or to take live control of a visualization on stage without touching the keyboard.
+- **165 audio uniforms with musical intelligence** — 15 audio features (bass, treble, spectral entropy, pitch class, etc.) each expose 11 statistical variations including `zScore` (is this a drop?), `slope` (is energy building?), and `rSquared` (how confident is that trend?). Shaders can reason about where the music is *going*, not just where it is right now.
+
 ## Making your own visualizations
 
 Making your own visualization is easy, but requires some knowledge of GLSL shading language.
