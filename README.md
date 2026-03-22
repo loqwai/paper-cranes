@@ -1,6 +1,10 @@
-# Beadfamous
+# Beadfamous.
 
 Welcome to the Beadfamous project! This repo is an open-source project I made to do advanced audio analysis from a microphone in the browser, and drive arbitrary music visualizations with the data. The project can run on mobile phones, and is designed to make it easy to create new visualizations and share them with others.
+
+It can also be run on a projector or tv, and can use audio directly from the computer, without having to rely on a noisy mic. The results are much better this way! See [using virtual audio loopback](docs/professional-audio.md) for setup instructions on macOS (BlackHole) and Windows (Voicemeeter).
+
+Visuals made by this project can be seen [here](https://visuals.beadfamous.com/list.html). This includes many works in progress, that may be twitchy or broken.
 
 The other half of the project is a sort of "art project" where you make bead bracelets, and flash the visualizations onto them. This is a fun way to share your visualizations with others, and to make a physical object that represents your music. Scanning the bracelet with a phone will take you to a specific visualization - even when offline!
 
@@ -15,14 +19,14 @@ This will serve beadfamous on localhost:6969
 
 ## Viewing the visualizations
 
-Pick a shader from `shaders/` and load it via the `?shader` param — e.g. [localhost:6969/?shader=star](http://localhost:6969/?shader=star) loads `shaders/star.frag`. Browse the full gallery at [visuals.beadfamous.com](https://visuals.beadfamous.com).
+Pick a shader from `shaders/` and load it via the `?shader` param — e.g. [localhost:6969/?shader=star](http://localhost:6969/?shader=star) loads `shaders/star.frag`. Browse the full gallery at [visuals.beadfamous.com](https://visuals.beadfamous.com/list.html).
 
 ## Fun developer features
 
 - **Any URL param is a shader uniform** — add `?myParam=0.5` to the URL and it's instantly available as `uniform float myParam` in your GLSL. Override audio features the same way (`?bassNormalized=0.8&energyZScore=1.2`) to simulate different musical conditions without needing a microphone, making iteration fast and deterministic.
 - **Live remote control via WebSocket** — open `edit.html?remote=control` on your laptop and `?remote=display` on a TV or projector. Every shader edit and knob change broadcasts in real-time to all connected displays. Write code on your laptop and watch it update on the big screen instantly, mid-performance.
 - **MIDI controllers for live tweaking and debugging** — physical knobs (mapped to `knob_3`–`knob_79`) are injected as shader uniforms in real-time. Swap out any audio feature for a knob with a one-line `#define` change (`#define BRIGHTNESS (knob_71)`) to tune constants by hand before wiring them back to audio, or to take live control of a visualization on stage without touching the keyboard.
-- **165 audio uniforms with musical intelligence** — 15 audio features (bass, treble, spectral entropy, pitch class, etc.) each expose 11 statistical variations including `zScore` (is this a drop?), `slope` (is energy building?), and `rSquared` (how confident is that trend?). Shaders can reason about where the music is *going*, not just where it is right now.
+- **165 audio uniforms with musical intelligence** — 15 audio features (bass, treble, spectral entropy, pitch class, etc.) each expose 11 statistical variations including `zScore` (is this a drop?), `slope` (is energy building?), and `rSquared` (how confident is that trend?). Shaders can reason about where the music is _going_, not just where it is right now.
 
 ## Making your own visualizations
 
