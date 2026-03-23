@@ -15,6 +15,7 @@ This guide explains how to create music-reactive WebGL visualizations for the Pa
 8. [Testing Your Shader](#testing-your-shader)
 9. [Common Pitfalls](#common-pitfalls)
 10. [Example Shaders to Study](#example-shaders-to-study)
+11. [Debugging Twitchy Shaders](debugging-twitchy-shaders.md) — diagnosing and fixing jerky, flashy, or chaotic visuals
 
 ---
 
