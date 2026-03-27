@@ -5,14 +5,15 @@
   "type": "module",
   "main": "dist/src/audio/AudioProcessor.js",
   "scripts": {
-    "start": "npm run dev",
+    "start": "pnpm dev",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "vite build",
     "dev": "vite",
     "preview": "vite preview",
     "format": "eslint --fix .",
     "delete": "node scripts/delete-shader.js",
-    "delete:interactive": "node scripts/delete-shader.js --interactive"
+    "delete:interactive": "node scripts/delete-shader.js --interactive",
+    "preinstall": "npx only-allow pnpm"
   },
   "author": "hypnodroid",
   "license": "UNLICENSED",

@@ -22,11 +22,15 @@ jobs:
                   registry-url: 'https://registry.npmjs.org'
 
             # Build and publish VS Code extension
+            - uses: pnpm/action-setup@v4
+              with:
+                  version: latest
+
             - name: Install dependencies
-              run: cd ./vscode-extension && npm clean-install
+              run: cd ./vscode-extension && pnpm install --frozen-lockfile
 
             - name: Build extension
-              run: cd ./vscode-extension && npm run build
+              run: cd ./vscode-extension && pnpm build
 
             - name: Publish to VS Code Marketplace
               run: cd ./vscode-extension && npx vsce publish -p ${{ secrets.VSCE_PAT }}
