@@ -23,12 +23,16 @@ self.addEventListener("message", (event) => {
     if(event.data.type === "network-changed") retryDeadRequests()
 })
 
+let lastReloadTime = 0
+const RELOAD_COOLDOWN = 3000
+
 const reloadAllClients = async () => {
-    //console.debug("Reloading all clients")
+    const now = Date.now()
+    if (now - lastReloadTime < RELOAD_COOLDOWN) return
+    lastReloadTime = now
     contentChanged = false
     const clients = await self.clients.matchAll()
     clients.forEach((client) => client.postMessage("reload"))
-    //console.debug("Reloaded", clients.length, "clients")
 }
 
 
@@ -173,12 +177,12 @@ const didThingsChange = async (request, response) => {
  */
 async function fetchWithCache(request) {
     const networkPromise = fetchWithRetry(request).then(async (response) => {
-        if (await didThingsChange(request, response)) {
+        const changed = await didThingsChange(request, response)
+        await addToCache(request, response)
+        if (changed) {
             contentChanged = true
-            // Trigger reload right away when changes are detected
             reloadAllClients()
         }
-        await addToCache(request, response)
         return response
     })
 
