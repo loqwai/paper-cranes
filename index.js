@@ -354,3 +354,29 @@ const main = async () => {
 }
 
 main()
+
+// Flash diagnostics — logs events that could cause black flashes
+// Check localStorage.getItem('flash-log') after a desktop switch
+const flashLog = JSON.parse(localStorage.getItem('flash-log') || '[]')
+const pageLoadId = crypto.randomUUID().slice(0, 8)
+const flog = (event, extra) => {
+    flashLog.push({ t: Date.now(), page: pageLoadId, event, ...extra })
+    if (flashLog.length > 200) flashLog.splice(0, flashLog.length - 200)
+    localStorage.setItem('flash-log', JSON.stringify(flashLog))
+}
+
+flog('page-load')
+document.addEventListener('visibilitychange', () => flog('visibility', { hidden: document.hidden }))
+window.addEventListener('focus', () => flog('focus'))
+window.addEventListener('blur', () => flog('blur'))
+window.addEventListener('pagehide', () => flog('pagehide'))
+window.addEventListener('pageshow', (e) => flog('pageshow', { persisted: e.persisted }))
+
+const canvas = document.getElementById('visualizer')
+if (canvas) {
+    canvas.addEventListener('webglcontextlost', () => flog('contextlost'))
+    canvas.addEventListener('webglcontextrestored', () => flog('contextrestored'))
+}
+navigator.serviceWorker?.addEventListener('message', (e) => {
+    if (e.data === 'reload') flog('sw-reload-message')
+})
