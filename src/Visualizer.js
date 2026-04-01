@@ -116,6 +116,10 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         e.preventDefault()
     })
     canvas.addEventListener('webglcontextrestored', () => {
+        // Respect the same reload cooldown as the service worker
+        const lastReload = parseInt(sessionStorage.getItem('sw-last-reload') || '0')
+        if (Date.now() - lastReload < 5000) return
+        sessionStorage.setItem('sw-last-reload', String(Date.now()))
         window.location.reload()
     })
 
