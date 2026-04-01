@@ -111,16 +111,25 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         return () => {}
     }
 
-    // Recover from GPU context loss (common on mobile)
+    // Recover from GPU context loss (common on mobile/desktop switch)
+    let contextLost = false
     canvas.addEventListener('webglcontextlost', (e) => {
         e.preventDefault()
+        contextLost = true
     })
-    canvas.addEventListener('webglcontextrestored', () => {
-        // Respect the same reload cooldown as the service worker
-        const lastReload = parseInt(sessionStorage.getItem('sw-last-reload') || '0')
-        if (Date.now() - lastReload < 5000) return
-        sessionStorage.setItem('sw-last-reload', String(Date.now()))
-        window.location.reload()
+    canvas.addEventListener('webglcontextrestored', async () => {
+        // Reinitialize all GL resources in-place instead of reloading
+        initialTexture = await getTexture(gl, initialImageUrl)
+        frameBuffers = [createFramebufferInfo(gl), createFramebufferInfo(gl)]
+        frameBuffers.forEach(setFramebufferTexParams)
+        bufferInfo = createBufferInfoFromArrays(gl, { position: positions })
+        programInfo = null
+        lastFragmentShader = null
+        lastCanvasWidth = 0
+        lastCanvasHeight = 0
+        frameNumber = 0
+        renderTimes = []
+        contextLost = false
     })
 
     if (fullscreen) {
@@ -132,8 +141,8 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         canvas.classList.add('fullscreen')
     }
 
-    const initialTexture = await getTexture(gl, initialImageUrl)
-    const frameBuffers = [createFramebufferInfo(gl), createFramebufferInfo(gl)]
+    let initialTexture = await getTexture(gl, initialImageUrl)
+    let frameBuffers = [createFramebufferInfo(gl), createFramebufferInfo(gl)]
 
     const setFramebufferTexParams = (fb) => {
         const texture = fb.attachments[0]
@@ -146,7 +155,7 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
 
     frameBuffers.forEach(setFramebufferTexParams)
 
-    const bufferInfo = createBufferInfoFromArrays(gl, { position: positions })
+    let bufferInfo = createBufferInfoFromArrays(gl, { position: positions })
 
     resizeCanvasToDisplaySize(gl.canvas, 1)
 
@@ -161,6 +170,8 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
     let useInitialTextureAsPrev = false
 
     const render = ({ time, features, fragmentShader: newFragmentShader }) => {
+        if (contextLost) return
+
         if (newFragmentShader !== lastFragmentShader) {
 
             const wrappedFragmentShader = shaderWrapper(newFragmentShader)
