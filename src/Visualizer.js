@@ -96,14 +96,11 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
 
     const gl = canvas.getContext('webgl2', {
         antialias: false,
+        alpha: false,
+        depth: false,
+        stencil: false,
+        preserveDrawingBuffer: true,
         powerPreference: 'high-performance',
-        attributes: {
-            alpha: false,
-            depth: false,
-            stencil: false,
-            preserveDrawingBuffer: false,
-            pixelRatio: 1
-        }
     })
 
     if (!gl) {
