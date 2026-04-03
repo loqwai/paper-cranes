@@ -13,25 +13,48 @@
 // AUDIO-REACTIVE PARAMETERS
 // ============================================================================
 
-// Bass pulses orbit radius
-#define ORBIT_PULSE (1.0 + bassZScore * 0.10)
+// Bass pulses orbit radius outward
+#define ORBIT_PULSE (1.0 + bassZScore * 0.14)
 // #define ORBIT_PULSE 1.0
 
-// Spectral flux speeds up rotation
-#define SPEED_MOD (1.0 + spectralFluxNormalized * 0.7)
+// Spectral flux speeds up rotation — slope-gated for confident bursts
+#define SPEED_MOD (1.0 + spectralFluxNormalized * 0.8 + spectralFluxSlope * spectralFluxRSquared * 4.0)
 // #define SPEED_MOD 1.0
 
 // Energy drives overall brightness
-#define BRIGHT (0.88 + energyZScore * 0.12)
+#define BRIGHT (0.88 + energyZScore * 0.14)
 // #define BRIGHT 0.88
 
-// Beat: pop scale
-#define BEAT_POP (beat ? 1.07 : 1.0)
+// Beat: all cats snap-scale and flash
+#define BEAT_POP (beat ? 1.10 : 1.0)
 // #define BEAT_POP 1.0
 
-// Glow around cats
-#define GLOW (0.07 + energyNormalized * 0.12)
+// Glow: energy fills in the halos
+#define GLOW (0.05 + energyNormalized * 0.18)
 // #define GLOW 0.09
+
+// Treble: shimmer on fur surface
+#define SHIMMER (max(trebleZScore, 0.0) * 0.08)
+// #define SHIMMER 0.0
+
+// Spectral centroid: hue drift — brightening centroid = slightly warmer cats
+#define HUE_DRIFT (spectralCentroidNormalized * 0.025 - 0.012)
+// #define HUE_DRIFT 0.0
+
+// Mids: inner ring scale pulsing (mid-frequency body)
+#define INNER_SCALE_MOD (1.0 + midsZScore * 0.08)
+// #define INNER_SCALE_MOD 1.0
+
+// Pitch class: slowly rotates the orbital phase offset
+#define PITCH_TWIST (pitchClassNormalized * 0.4)
+// #define PITCH_TWIST 0.0
+
+// Energy slope + rSquared: confident builds make cats grow
+#define BUILD_SCALE (1.0 + energySlope * energyRSquared * 0.8)
+// #define BUILD_SCALE 1.0
+
+// Drop detection: energy dropping = cats contract inward
+#define IS_DROP clamp(-energySlope * energyRSquared * 6.0, 0.0, 1.0)
 
 #define OUTER_N 8
 #define INNER_N 6
@@ -78,10 +101,13 @@ vec4 drawCat(vec2 p, float seed) {
     // Per-cat animation (different phase per instance)
     float eyeOpen = 0.82 + sin(t * 0.017 * SQRT3 + ph) * 0.09
                          + smoothstep(0.90, 1.0, sin(t * 0.031 * PHI * 2.3 + ph)) * (-0.68);
-    float pupW    = 0.020 + (sin(t * 0.031 * PHI + ph) * 0.5 + 0.5)
-                          * (sin(t * 0.023 * SQRT2 * 1.3 + ph) * 0.5 + 0.5) * 0.010;
+    // Beat dilates pupils wide; bass keeps them slightly open
+    float pupW    = (beat ? 0.042 : 0.020 + bassNormalized * 0.008)
+                  + (sin(t * 0.031 * PHI + ph) * 0.5 + 0.5)
+                  * (sin(t * 0.023 * SQRT2 * 1.3 + ph) * 0.5 + 0.5) * 0.010;
     float earWig  = sin(t * 0.017 * SQRT3 * 2.1 + ph) * sin(t * 0.011 * 3.7 + ph) * 0.022;
-    float baseHue = 0.073 + sin(t * 0.007 * PHI * SQRT2 * 0.4 + ph) * 0.018
+    float baseHue = 0.073 + HUE_DRIFT
+                          + sin(t * 0.007 * PHI * SQRT2 * 0.4 + ph) * 0.018
                           + seed * 0.035 - 0.017;
     float furL    = 0.68 + sin(t * 0.031 * PHI * 0.7 + ph) * 0.06;
     float sway    = sin(t * 0.023 * SQRT2 * 0.8 + ph + 1.0) * 0.034;
@@ -141,8 +167,9 @@ vec4 drawCat(vec2 p, float seed) {
                 + exp(-length(p-vec2( 0.13,0.13))*12.0)*0.5;
     float mMark = clamp((rl+rr)*0.40 + spots, 0.0, 0.45) * smoothstep(aa,-aa,head);
 
-    // --- Fur color ---
-    vec3 furBase = hsl2rgb(vec3(baseHue,      0.72, furL));
+    // --- Fur color (treble adds shimmer flicker) ---
+    float shimmerFlicker = sin(p.x * 38.0 + t * 3.1) * sin(p.y * 32.0 - t * 2.3);
+    vec3 furBase = hsl2rgb(vec3(baseHue,      0.72, furL + shimmerFlicker * SHIMMER));
     vec3 furDark  = hsl2rgb(vec3(baseHue-0.01,0.65, furL-0.20));
     vec3 fur = mix(furBase, furDark, stripe*0.55);
     fur = mix(fur, furDark*0.82, mMark);
@@ -176,10 +203,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = (fragCoord - iResolution.xy * 0.5) / iResolution.y;
     float t  = iTime;
 
-    float outerRx = 0.65 * ORBIT_PULSE;
-    float outerRy = 0.40 * ORBIT_PULSE;
-    float innerRx = 0.40 * ORBIT_PULSE;
-    float innerRy = 0.26 * ORBIT_PULSE;
+    float pulse    = ORBIT_PULSE * BUILD_SCALE * mix(1.0, 0.88, IS_DROP);
+    float outerRx  = 0.65 * pulse;
+    float outerRy  = 0.40 * pulse;
+    float innerRx  = 0.40 * pulse;
+    float innerRy  = 0.26 * pulse;
     float outerSpd = 0.18 * SPEED_MOD;
     float innerSpd = 0.31 * SPEED_MOD;
 
@@ -195,7 +223,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // --- Outer ring: 8 cats on an elliptical orbit with slight wobble ---
     for (int i = 0; i < OUTER_N; i++) {
         float fi    = float(i);
-        float angle = fi / float(OUTER_N) * TWO_PI + t * outerSpd;
+        float angle = fi / float(OUTER_N) * TWO_PI + t * outerSpd + PITCH_TWIST;
         float wobX  = sin(angle * 2.0 + t * 0.11) * 0.04;
         float wobY  = cos(angle * 3.0 - t * 0.09) * 0.03;
         vec2  pos   = vec2(cos(angle)*outerRx + wobX, sin(angle)*outerRy + wobY);
@@ -217,11 +245,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // --- Inner ring: 6 cats, counter-rotating, slightly offset phase ---
     for (int i = 0; i < INNER_N; i++) {
         float fi    = float(i);
-        float angle = fi / float(INNER_N) * TWO_PI - t * innerSpd + PI / float(INNER_N);
+        float angle = fi / float(INNER_N) * TWO_PI - t * innerSpd + PI / float(INNER_N) + PITCH_TWIST;
         float wobX  = sin(angle * 3.0 + t * 0.13) * 0.025;
         float wobY  = cos(angle * 2.0 - t * 0.10) * 0.02;
         vec2  pos   = vec2(cos(angle)*innerRx + wobX, sin(angle)*innerRy + wobY);
-        float scale = 0.14;
+        float scale = 0.14 * INNER_SCALE_MOD;
         float seed  = fi / float(INNER_N) + 0.5;
 
         if (length(uv - pos) > scale * 0.60) continue;
@@ -231,9 +259,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         col = mix(col, cat.rgb, cat.a);
     }
 
-    // --- Main central cat ---
+    // --- Main central cat (grows with energy build, contracts on drop) ---
     {
-        vec2 lp = uv / 0.60;
+        float mainScale = 0.60 * BUILD_SCALE * mix(1.0, 0.90, IS_DROP);
+        vec2 lp = uv / mainScale;
         vec4 mainCat = drawCat(lp, 0.0);
         mainCat.rgb *= BRIGHT;
         col = mix(col, mainCat.rgb, mainCat.a);
