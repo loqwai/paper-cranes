@@ -130,9 +130,9 @@ const setupAudio = async () => {
         const sourceNode = audioContext.createMediaStreamSource(stream);
         const historySize = parseInt(params.get('history_size') ?? '500');
         const fftSize = parseInt(params.get('fft_size') ?? '4096');
-        const smoothing = parseFloat(params.get('smoothing') ?? '0.15');
+        const smoothing = parseFloat(params.get('smoothing') ?? '0.85');
         const audioProcessor = new AudioProcessor(audioContext, sourceNode, historySize, fftSize);
-        audioProcessor.smoothingFactor = smoothing;
+        audioProcessor.smoothing = smoothing;
         audioProcessor.start();
 
         return audioProcessor;

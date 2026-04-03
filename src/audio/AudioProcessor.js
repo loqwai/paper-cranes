@@ -1,5 +1,6 @@
 import { StatTypes, AudioFeatures } from 'hypnosound'
 import { WorkerRPC } from './WorkerRPC.js'
+import { computeAdaptiveSmoothing } from './adaptiveSmoothing.js'
 
 // Workers compute these but hypnosound's StatTypes doesn't include them
 const AllStatTypes = [...StatTypes, 'slope', 'intercept', 'rSquared']
@@ -30,12 +31,12 @@ export class AudioProcessor {
         this.currentFeatures = getFlatAudioFeatures()
         this.currentFeatures.beat = false
         this.smoothedFeatures = {}
-        this.smoothingFactor = 0.10 // Lower = smoother, higher = more responsive
+        this.smoothing = 0.85 // Higher = smoother, lower = more responsive
     }
 
     createAnalyzer = () => {
         const analyzer = this.audioContext.createAnalyser()
-        analyzer.smoothingTimeConstant = 0.4
+        analyzer.smoothingTimeConstant = 0.8
         analyzer.minDecibels = -100
         analyzer.maxDecibels = -30
         analyzer.fftSize = this.fftSize
@@ -58,32 +59,27 @@ export class AudioProcessor {
 
         const newFeatures = getFlatAudioFeatures(AudioFeatures, this.rawFeatures)
 
-        // Check for manual override of smoothing factor
-        const currentSmoothing = window.cranes?.manualFeatures?.smoothing ?? this.smoothingFactor
+        const smoothing = window.cranes?.manualFeatures?.smoothing ?? this.smoothing
+        const rSquared = this.rawFeatures.energy?.stats?.rSquared ?? 0.5
+        const alpha = computeAdaptiveSmoothing({ smoothing, rSquared })
 
-        // Apply exponential smoothing to reduce jitter
         for (const key in newFeatures) {
             if (typeof newFeatures[key] === 'number' && isFinite(newFeatures[key])) {
-                // pitchClass is categorical (which note) — smoothing it is meaningless
                 if (key.startsWith('pitchClass')) {
                     this.currentFeatures[key] = newFeatures[key]
                     continue
                 }
 
-                // Initialize smoothed value if it doesn't exist
                 if (!(key in this.smoothedFeatures)) {
                     this.smoothedFeatures[key] = newFeatures[key]
                 }
 
-                // Exponential smoothing formula
-                // For z-scores and normalized values, use less smoothing to maintain responsiveness
-                const smoothingFactor = key.includes('ZScore') || key.includes('Normalized')
-                    ? currentSmoothing * 1.5
-                    : currentSmoothing
+                // z-scores and normalized values get slightly less smoothing to stay responsive
+                const a = key.includes('ZScore') || key.includes('Normalized')
+                    ? Math.min(1, alpha * 1.5)
+                    : alpha
 
-                this.smoothedFeatures[key] = this.smoothedFeatures[key] * (1 - smoothingFactor) +
-                                             newFeatures[key] * smoothingFactor
-
+                this.smoothedFeatures[key] = this.smoothedFeatures[key] * (1 - a) + newFeatures[key] * a
                 this.currentFeatures[key] = this.smoothedFeatures[key]
             } else {
                 this.currentFeatures[key] = newFeatures[key]
