@@ -13,8 +13,8 @@
 // AUDIO-REACTIVE PARAMETERS
 // ============================================================================
 
-// Bass breathes orbit radius — normalized, not zScore
-#define ORBIT_PULSE (1.0 + (bassNormalized - 0.5) * 0.18)
+// Bass breathes orbit radius — use mean (very stable historical average)
+#define ORBIT_PULSE (1.0 + (bassMean - 0.3) * 0.12)
 // #define ORBIT_PULSE 1.0
 
 // Spectral flux speeds up rotation — slope-gated for confident bursts
@@ -45,9 +45,8 @@
 #define INNER_SCALE_MOD (1.0 + (midsNormalized - 0.5) * 0.10)
 // #define INNER_SCALE_MOD 1.0
 
-// Pitch class: slowly rotates the orbital phase offset
-#define PITCH_TWIST (pitchClassNormalized * 0.4)
-// #define PITCH_TWIST 0.0
+// Pitch class: disabled for orbit — it jumps on every note, teleporting cats
+#define PITCH_TWIST 0.0
 
 // Energy slope + rSquared: confident builds make cats grow
 #define BUILD_SCALE (1.0 + energySlope * energyRSquared * 0.8)
@@ -99,12 +98,13 @@ vec4 drawCat(vec2 p, float seed) {
     float ph   = seed * TWO_PI;
 
     // --- AUDIO AS PHASE BIAS ---
-    // Each feature shifts the *phase* of a time oscillator rather than just scaling amplitude.
-    // This creates constructive/destructive interference that tracks the music subtly.
-    float entropyBias  = spectralEntropyNormalized * PI;          // chaos → alert eyes
-    float fluxBias     = spectralFluxNormalized * TWO_PI * 0.7;   // timbral change → ear twitch
-    float pitchBias    = pitchClassNormalized * TWO_PI;            // note → whisker angle + hue
-    float centroidBias = spectralCentroidNormalized * PI * 0.8;   // brightness → fur lightness
+    // Use *Mean* values (stable historical averages) for phase shifts —
+    // Normalized can still change frame-to-frame and cause visible jitter
+    // when it shifts the phase of an oscillator controlling position/shape.
+    float entropyBias  = spectralEntropyMean * PI * 2.0;          // chaos → alert eyes
+    float fluxBias     = spectralFluxMean * TWO_PI * 2.0;         // timbral change → ear twitch
+    float pitchBias    = pitchClassMean * TWO_PI;                  // note → whisker angle + hue
+    float centroidBias = spectralCentroidMean * PI * 2.0;         // brightness → fur lightness
 
     // Eye openness: entropy bias shifts blink cycle phase (chaotic music = alert eyes).
     // Use slope-gated energy for confident build/drop openness — not raw zScore.
