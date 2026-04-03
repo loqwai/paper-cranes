@@ -2,26 +2,6 @@ import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { makeVisualizer } from './src/Visualizer.js'
 import { getInitialShader } from './src/shaderLoader.js'
 
-// Flash diagnostics — POST events to dev server so we can read them via curl
-const pageLoadId = crypto.randomUUID().slice(0, 8)
-const flog = (event, extra = {}) => {
-    const entry = { t: Date.now(), page: pageLoadId, event, ...extra }
-    fetch('/flash-log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(entry) }).catch(() => {})
-}
-flog('page-load')
-document.addEventListener('visibilitychange', () => flog('visibility', { hidden: document.hidden }))
-window.addEventListener('focus', () => flog('focus'))
-window.addEventListener('blur', () => flog('blur'))
-window.addEventListener('pagehide', () => flog('pagehide'))
-window.addEventListener('pageshow', (e) => flog('pageshow', { persisted: e.persisted }))
-navigator.serviceWorker?.addEventListener('message', (e) => { if (e.data === 'reload') flog('sw-reload-message') })
-document.addEventListener('DOMContentLoaded', () => {
-    const canvas = document.getElementById('visualizer')
-    if (canvas) {
-        canvas.addEventListener('webglcontextlost', () => flog('contextlost'))
-        canvas.addEventListener('webglcontextrestored', () => flog('contextrestored'))
-    }
-})
 
 const SEED_KEY = 'paperCranes.seeds'
 
@@ -383,7 +363,6 @@ const main = async () => {
         if (document.hidden) {
             // Cancel any pending removal so snapshot stays up through rapid hide/show cycles
             if (snapRemovalRaf) { cancelAnimationFrame(snapRemovalRaf); snapRemovalRaf = null }
-            flog('snapshot-capture')
             try {
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.92)
                 const rect = canvas.getBoundingClientRect()
@@ -399,17 +378,16 @@ const main = async () => {
                 snapDiv.style.backgroundImage = `url(${dataUrl})`
                 snapDiv.style.display = 'block'
             } catch (e) {
-                flog('snapshot-error', { msg: e.message })
+                console.error('snapshot failed:', e.message)
             }
             return
         }
         // Visible again: render immediately, then remove snapshot after 2 compositor frames
-        flog('visibility-render')
         const features = window.cranes?.flattenFeatures?.() ?? {}
         render({ time: ((performance.now() - startTime) / 1000) % 1000, features, fragmentShader: window.cranes?.shader ?? fragmentShader })
         snapRemovalRaf = requestAnimationFrame(() => {
             snapRemovalRaf = requestAnimationFrame(() => {
-                if (snapDiv) { snapDiv.style.display = 'none'; flog('snapshot-hidden') }
+                if (snapDiv) { snapDiv.style.display = 'none' }
                 snapRemovalRaf = null
             })
         })
