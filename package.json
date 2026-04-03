@@ -33,7 +33,8 @@
     "eslint": "^8.57.1",
     "glslang-validator-prebuilt": "^0.0.7",
     "prettier": "^3.4.2",
-    "vite": "^6.0.0"
+    "vite": "^6.0.0",
+    "vitest": "^4.1.2"
   },
   "languages": [
     {
