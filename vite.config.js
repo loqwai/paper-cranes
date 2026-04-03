@@ -4,6 +4,34 @@ import { execSync } from 'child_process'
 import { shaderPlugin } from './vite-plugins/shader-plugin.js'
 import { remoteWsPlugin } from './vite-plugins/remote-ws-plugin.js'
 
+const flashLog = []
+const flashLogPlugin = () => ({
+  name: 'flash-log',
+  configureServer(server) {
+    server.middlewares.use('/flash-log', (req, res) => {
+      res.setHeader('Access-Control-Allow-Origin', '*')
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+      if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return }
+      if (req.method === 'DELETE') {
+        flashLog.length = 0
+        res.writeHead(204); res.end(); return
+      }
+      if (req.method === 'POST') {
+        let body = ''
+        req.on('data', (chunk) => body += chunk)
+        req.on('end', () => {
+          try { const entry = JSON.parse(body); flashLog.push(entry); console.log('[flash]', JSON.stringify(entry)) } catch {}
+          res.writeHead(204); res.end()
+        })
+        return
+      }
+      res.setHeader('Content-Type', 'application/json')
+      res.end(JSON.stringify(flashLog, null, 2))
+    })
+  },
+})
+
 const branchToPort = (branch) => {
   if (branch === 'main') return 6969
   let hash = 0
@@ -44,5 +72,5 @@ export default defineConfig({
       external: (id) => id.startsWith('https://'),
     },
   },
-  plugins: [shaderPlugin(), remoteWsPlugin()],
+  plugins: [shaderPlugin(), remoteWsPlugin(), flashLogPlugin()],
 })
