@@ -106,16 +106,17 @@ vec4 drawCat(vec2 p, float seed) {
     float pitchBias    = pitchClassNormalized * TWO_PI;            // note → whisker angle + hue
     float centroidBias = spectralCentroidNormalized * PI * 0.8;   // brightness → fur lightness
 
-    // Eye openness: entropy bias makes chaotic music shift the blink cycle phase.
-    // Energy z-score directly widens (spike) or narrows (drop) eyes.
+    // Eye openness: entropy bias shifts blink cycle phase (chaotic music = alert eyes).
+    // Use slope-gated energy for confident build/drop openness — not raw zScore.
     float eyeOpen = 0.82 + sin(t * 0.017 * SQRT3 + ph + entropyBias) * 0.09
                          + smoothstep(0.90, 1.0, sin(t * 0.031 * PHI * 2.3 + ph + entropyBias * 0.5)) * (-0.68)
-                         + clamp(energyZScore * 0.12, -0.12, 0.22);
+                         + energySlope * energyRSquared * 0.18;  // confident builds open eyes
 
-    // Pupils: bass dilates; bright spectral centroid constricts (like pupils in bright light).
+    // Pupils: bass dilates; bright centroid constricts (like pupils in bright light).
+    // Use normalized values — smooth, not spiky.
     float pupW = (beat ? 0.042 : 0.020 + bassNormalized * 0.012)
                + sin(t * 0.031 * PHI + ph) * sin(t * 0.023 * SQRT2 * 1.3 + ph) * 0.004 + 0.002
-               + clamp(-spectralCentroidZScore * 0.007, -0.006, 0.010);
+               + (0.5 - spectralCentroidNormalized) * 0.010;  // bright = smaller pupils
 
     // Ears: flux biases phase AND amplitude — timbral transitions = ear twitches.
     float earAmp = 0.022 + spectralFluxNormalized * 0.030;
@@ -128,9 +129,9 @@ vec4 drawCat(vec2 p, float seed) {
                           + sin(t * 0.007 * PHI * SQRT2 * 0.4 + ph) * 0.018
                           + seed * 0.035 - 0.017;
 
-    // Fur lightness: centroid biases the oscillator — bright music = lighter fur.
+    // Fur lightness: centroid biases oscillator + normalized offset (no zScore jitter).
     float furL = 0.68 + sin(t * 0.031 * PHI * 0.7 + ph + centroidBias) * 0.06
-                      + spectralCentroidZScore * 0.04;
+                      + (spectralCentroidNormalized - 0.5) * 0.08;
 
     // Whiskers: pitchClass biases phase — different notes = different sway angles.
     // Roughness drives amplitude — gritty music = wild whiskers.
@@ -259,9 +260,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     for (int i = 0; i < OUTER_N; i++) {
         float fi    = float(i);
         float angle = fi / float(OUTER_N) * TWO_PI + t * outerSpd + PITCH_TWIST;
-        // Bass biases wobble phase: bass hits make outer cats lurch outward
-        float wobX  = sin(angle * 2.0 + t * 0.11 + bassNormalized * PI * 0.8) * (0.04 + max(bassZScore, 0.0) * 0.020);
-        float wobY  = cos(angle * 3.0 - t * 0.09 + bassNormalized * PI * 0.6) * (0.03 + max(bassZScore, 0.0) * 0.015);
+        // Bass biases wobble phase + amplitude via normalized (smooth, not spiky).
+        float wobX  = sin(angle * 2.0 + t * 0.11 + bassNormalized * PI * 0.8) * (0.04 + bassNormalized * 0.018);
+        float wobY  = cos(angle * 3.0 - t * 0.09 + bassNormalized * PI * 0.6) * (0.03 + bassNormalized * 0.014);
         vec2  pos   = vec2(cos(angle)*outerRx + wobX, sin(angle)*outerRy + wobY);
         float scale = 0.20;
         float seed  = fi / float(OUTER_N);
@@ -282,9 +283,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     for (int i = 0; i < INNER_N; i++) {
         float fi    = float(i);
         float angle = fi / float(INNER_N) * TWO_PI - t * innerSpd + PI / float(INNER_N) + PITCH_TWIST;
-        // Mids bias inner wobble: mid-frequency body = inner ring flutter
-        float wobX  = sin(angle * 3.0 + t * 0.13 + midsNormalized * PI * 0.6) * (0.025 + max(midsZScore, 0.0) * 0.015);
-        float wobY  = cos(angle * 2.0 - t * 0.10 + midsNormalized * PI * 0.45) * (0.02 + max(midsZScore, 0.0) * 0.012);
+        // Mids bias inner wobble: normalized so no zScore jitter.
+        float wobX  = sin(angle * 3.0 + t * 0.13 + midsNormalized * PI * 0.6) * (0.025 + midsNormalized * 0.014);
+        float wobY  = cos(angle * 2.0 - t * 0.10 + midsNormalized * PI * 0.45) * (0.02 + midsNormalized * 0.010);
         vec2  pos   = vec2(cos(angle)*innerRx + wobX, sin(angle)*innerRy + wobY);
         float scale = 0.14 * INNER_SCALE_MOD;
         float seed  = fi / float(INNER_N) + 0.5;
@@ -317,9 +318,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 warpUV = (fbUV - fbCenter) * zoomFB + fbCenter;
 
     // Bass-driven radial ripple on the feedback sample UV.
-    // On bass hits the previous frame shimmers outward from center.
+    // Use normalized bass (smooth) rather than zScore to avoid sudden pops.
     vec2 delta = fbUV - fbCenter;
-    float ripple = sin(length(delta) * 28.0 - iTime * 4.0) * max(bassZScore, 0.0) * 0.005;
+    float ripple = sin(length(delta) * 28.0 - iTime * 4.0) * bassNormalized * 0.004;
     warpUV += normalize(delta + vec2(0.0001)) * ripple;
 
     // Beat: add a brief rotation smear on the prev frame.
