@@ -18,7 +18,7 @@
 // #define ORBIT_PULSE 1.0
 
 // Spectral flux speeds up rotation — slope-gated for confident bursts
-#define SPEED_MOD (1.0 + spectralFluxNormalized * 0.3 + spectralFluxSlope * spectralFluxRSquared * 1.5)
+#define SPEED_MOD (1.0 + spectralFluxNormalized * 0.10 + spectralFluxSlope * spectralFluxRSquared * 0.3)
 // #define SPEED_MOD 1.0
 
 // Energy drives overall brightness
@@ -244,8 +244,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float outerRy  = 0.40 * pulse;
     float innerRx  = 0.40 * pulse;
     float innerRy  = 0.26 * pulse;
-    float outerSpd = 0.055 * SPEED_MOD;
-    float innerSpd = 0.090 * SPEED_MOD;
+    float outerSpd = 0.014 * SPEED_MOD;
+    float innerSpd = 0.022 * SPEED_MOD;
 
     // --- Background: dark warm gradient ---
     vec3 bg = hsl2rgb(vec3(0.073, 0.30, 0.05));
