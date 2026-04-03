@@ -22,7 +22,6 @@
     "debounce": "^2.2.0",
     "htm": "^3.1.1",
     "hypnosound": "^1.14.0",
-    "playwright": "^1.55.1",
     "preact": "^10.25.4",
     "twgl-base.js": "^5.5.3",
     "ws": "^8.18.1"
@@ -34,6 +33,7 @@
     "eslint": "^8.57.1",
     "glslang-validator-prebuilt": "^0.0.7",
     "prettier": "^3.4.2",
+    "playwright": "^1.55.1",
     "vite": "^6.0.0",
     "vitest": "^4.1.2"
   },

@@ -113,17 +113,22 @@ const setupAudio = async () => {
 
     const fileConfig = createAudioFileSource({ params })
     if (fileConfig) {
-        const audioContext = new AudioContext()
-        const { sourceNode, audioBuffer, startSource } = await initAudioFromFile({ config: fileConfig, audioContext })
-        window.cranes.audioBuffer = audioBuffer
-        window.cranes.startSource = startSource
+        try {
+            const audioContext = new AudioContext()
+            const { sourceNode, audioBuffer, startSource } = await initAudioFromFile({ config: fileConfig, audioContext })
+            window.cranes.audioBuffer = audioBuffer
+            window.cranes.startSource = startSource
 
-        const audioProcessor = new AudioProcessor(audioContext, sourceNode, fileConfig.historySize, fileConfig.fftSize)
-        audioProcessor.smoothingFactor = fileConfig.smoothing
-        await audioProcessor.start()
-        // Route through speakers (unlike mic input, file playback has no feedback risk)
-        audioProcessor.fftAnalyzer.connect(audioContext.destination)
-        return audioProcessor
+            const audioProcessor = new AudioProcessor(audioContext, sourceNode, fileConfig.historySize, fileConfig.fftSize)
+            audioProcessor.smoothingFactor = fileConfig.smoothing
+            await audioProcessor.start()
+            // Route through speakers (unlike mic input, file playback has no feedback risk)
+            audioProcessor.fftAnalyzer.connect(audioContext.destination)
+            return audioProcessor
+        } catch (err) {
+            console.error('Audio file initialization failed:', err)
+            return noAudio
+        }
     }
 
     try {

@@ -126,7 +126,7 @@ describe('initAudioFromFile', () => {
     beforeEach(async () => {
       sourceNode = makeMockSourceNode()
       audioContext = makeMockAudioContext(sourceNode)
-      globalThis.fetch = vi.fn(() => Promise.resolve({ arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)) }))
+      globalThis.fetch = vi.fn(() => Promise.resolve({ ok: true, arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)) }))
 
       result = await initAudioFromFile({
         config: { src: 'test-audio/song.mp3', startTime: 27.5, loop: true },
@@ -168,6 +168,22 @@ describe('initAudioFromFile', () => {
 
     it('returns a startSource function for re-seeking', () => {
       expect(typeof result.startSource).toBe('function')
+    })
+  })
+
+  describe('when fetch returns a non-ok response', () => {
+    let audioContext
+
+    beforeEach(() => {
+      audioContext = makeMockAudioContext()
+      globalThis.fetch = vi.fn(() => Promise.resolve({ ok: false, status: 404, statusText: 'Not Found' }))
+    })
+
+    it('throws with the status', async () => {
+      await expect(initAudioFromFile({
+        config: { src: 'test-audio/nope.mp3', startTime: 0, loop: true },
+        audioContext,
+      })).rejects.toThrow('Failed to fetch audio: 404 Not Found')
     })
   })
 })

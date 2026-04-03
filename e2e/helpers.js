@@ -1,11 +1,3 @@
-// E2E helpers for Chrome DevTools MCP-based testing.
-// These run inside the browser via evaluate_script.
-
-export const SHADER_BASE = 'shader=subtronics-eye2&image=images/subtronics.jpg&audio_file=test-audio/imaginary-friends.mp3'
-
-export const shaderUrl = (baseUrl, audioTime = 0, extras = '') =>
-  `${baseUrl}/?${SHADER_BASE}&audioTime=${audioTime}${extras ? '&' + extras : ''}`
-
 // ── Feature math (runs in node, on collected samples) ───────────────────────
 
 export const swing = (samples, key) => {

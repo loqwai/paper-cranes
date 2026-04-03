@@ -18,6 +18,7 @@ export const createAudioFileSource = ({ params }) => {
 
 export const initAudioFromFile = async ({ config, audioContext }) => {
   const resp = await fetch(config.src)
+  if (!resp.ok) throw new Error(`Failed to fetch audio: ${resp.status} ${resp.statusText}`)
   const arrayBuffer = await resp.arrayBuffer()
   const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
 
