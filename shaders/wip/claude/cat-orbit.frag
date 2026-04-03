@@ -13,16 +13,16 @@
 // AUDIO-REACTIVE PARAMETERS
 // ============================================================================
 
-// Bass pulses orbit radius outward
-#define ORBIT_PULSE (1.0 + bassZScore * 0.14)
+// Bass breathes orbit radius — normalized, not zScore
+#define ORBIT_PULSE (1.0 + (bassNormalized - 0.5) * 0.18)
 // #define ORBIT_PULSE 1.0
 
 // Spectral flux speeds up rotation — slope-gated for confident bursts
 #define SPEED_MOD (1.0 + spectralFluxNormalized * 0.10 + spectralFluxSlope * spectralFluxRSquared * 0.3)
 // #define SPEED_MOD 1.0
 
-// Energy drives overall brightness
-#define BRIGHT (0.88 + energyZScore * 0.14)
+// Energy drives overall brightness — normalized, smooth
+#define BRIGHT (0.88 + (energyNormalized - 0.5) * 0.20)
 // #define BRIGHT 0.88
 
 // Beat: all cats snap-scale and flash
@@ -33,16 +33,16 @@
 #define GLOW (0.05 + energyNormalized * 0.18)
 // #define GLOW 0.09
 
-// Treble: shimmer on fur surface
-#define SHIMMER (max(trebleZScore, 0.0) * 0.08)
+// Treble: shimmer on fur surface — normalized, not zScore
+#define SHIMMER (trebleNormalized * 0.06)
 // #define SHIMMER 0.0
 
 // Spectral centroid: hue drift — brightening centroid = slightly warmer cats
 #define HUE_DRIFT (spectralCentroidNormalized * 0.025 - 0.012)
 // #define HUE_DRIFT 0.0
 
-// Mids: inner ring scale pulsing (mid-frequency body)
-#define INNER_SCALE_MOD (1.0 + midsZScore * 0.08)
+// Mids: inner ring scale — normalized, not zScore
+#define INNER_SCALE_MOD (1.0 + (midsNormalized - 0.5) * 0.10)
 // #define INNER_SCALE_MOD 1.0
 
 // Pitch class: slowly rotates the orbital phase offset
@@ -260,9 +260,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     for (int i = 0; i < OUTER_N; i++) {
         float fi    = float(i);
         float angle = fi / float(OUTER_N) * TWO_PI + t * outerSpd + PITCH_TWIST;
-        // Bass biases wobble phase + amplitude via normalized (smooth, not spiky).
-        float wobX  = sin(angle * 2.0 + t * 0.11 + bassNormalized * PI * 0.8) * (0.04 + bassNormalized * 0.018);
-        float wobY  = cos(angle * 3.0 - t * 0.09 + bassNormalized * PI * 0.6) * (0.03 + bassNormalized * 0.014);
+        // Slow wobble — no audio phase bias here, just time-based drift
+        float wobX  = sin(angle * 2.0 + t * 0.11) * 0.035;
+        float wobY  = cos(angle * 3.0 - t * 0.09) * 0.025;
         vec2  pos   = vec2(cos(angle)*outerRx + wobX, sin(angle)*outerRy + wobY);
         float scale = 0.20;
         float seed  = fi / float(OUTER_N);
@@ -283,9 +283,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     for (int i = 0; i < INNER_N; i++) {
         float fi    = float(i);
         float angle = fi / float(INNER_N) * TWO_PI - t * innerSpd + PI / float(INNER_N) + PITCH_TWIST;
-        // Mids bias inner wobble: normalized so no zScore jitter.
-        float wobX  = sin(angle * 3.0 + t * 0.13 + midsNormalized * PI * 0.6) * (0.025 + midsNormalized * 0.014);
-        float wobY  = cos(angle * 2.0 - t * 0.10 + midsNormalized * PI * 0.45) * (0.02 + midsNormalized * 0.010);
+        // Slow wobble — time-based only, no audio phase bias
+        float wobX  = sin(angle * 3.0 + t * 0.13) * 0.020;
+        float wobY  = cos(angle * 2.0 - t * 0.10) * 0.016;
         vec2  pos   = vec2(cos(angle)*innerRx + wobX, sin(angle)*innerRy + wobY);
         float scale = 0.14 * INNER_SCALE_MOD;
         float seed  = fi / float(INNER_N) + 0.5;
