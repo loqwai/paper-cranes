@@ -247,14 +247,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float outerSpd = 0.014 * SPEED_MOD;
     float innerSpd = 0.022 * SPEED_MOD;
 
-    // --- Background: dark warm gradient ---
-    vec3 bg = hsl2rgb(vec3(0.073, 0.30, 0.05));
-    bg = mix(bg, hsl2rgb(vec3(0.73, 0.20, 0.08)), 0.3 - uv.y * 0.4);
-
-    // Soft warm center glow
-    bg += hsl2rgb(vec3(0.073, 0.95, 0.55)) * exp(-length(uv)*1.8) * GLOW;
-
-    vec3 col = bg;
+    vec3 col = vec3(0.0);
 
     // --- Outer ring: 8 cats on an elliptical orbit with slight wobble ---
     for (int i = 0; i < OUTER_N; i++) {
@@ -273,10 +266,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         vec4 cat = drawCat((uv - pos) / scale, seed);
         cat.rgb *= BRIGHT * (0.80 + 0.20 * sin(t * 0.8 + fi * 1.1));
         col = mix(col, cat.rgb, cat.a);
-
-        // Soft halo around each mini cat
-        float halo = exp(-max(0.0, length(uv-pos) - scale*0.28) * 18.0) * GLOW * 0.4;
-        col += hsl2rgb(vec3(0.073, 0.9, 0.6)) * halo;
     }
 
     // --- Inner ring: 6 cats, counter-rotating, slightly offset phase ---
@@ -306,47 +295,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         col = mix(col, mainCat.rgb, mainCat.a);
     }
 
-    col *= BEAT_POP;
-
-    // --- Subtronics-style warped feedback ---
+    // --- Frame feedback: gentle zoom trail, decays to black ---
     vec2 fbUV = fragCoord.xy / iResolution.xy;
     vec2 fbCenter = vec2(0.5);
-
-    // Slow zoom toward center (cats leave trailing afterimages).
-    // Energy builds make it zoom faster, drops reverse slightly.
-    float zoomFB = 1.0 - 0.003 - energySlope * energyRSquared * 0.004;
+    float zoomFB = 0.997;
     vec2 warpUV = (fbUV - fbCenter) * zoomFB + fbCenter;
-
-    // Bass-driven radial ripple on the feedback sample UV.
-    // Use normalized bass (smooth) rather than zScore to avoid sudden pops.
-    vec2 delta = fbUV - fbCenter;
-    float ripple = sin(length(delta) * 28.0 - iTime * 4.0) * bassNormalized * 0.004;
-    warpUV += normalize(delta + vec2(0.0001)) * ripple;
-
-    // Beat: add a brief rotation smear on the prev frame.
-    float beatRot = beat ? 0.018 : 0.0;
-    float cosR = cos(beatRot), sinR = sin(beatRot);
-    vec2 rotDelta = warpUV - fbCenter;
-    warpUV = vec2(rotDelta.x*cosR - rotDelta.y*sinR,
-                  rotDelta.x*sinR + rotDelta.y*cosR) + fbCenter;
-
     vec3 prev = getLastFrameColor(fract(warpUV)).rgb;
-
-    // Hue-rotate the prev frame trails by pitchClass + spectralFlux slope.
-    // Chord changes and timbral bursts shift trail colors, making history
-    // look like a psychedelic comet tail.
-    vec3 prevHSL = rgb2hsl(prev);
-    prevHSL.x = fract(prevHSL.x
-                    + pitchClassNormalized * 0.004
-                    + spectralFluxSlope * spectralFluxRSquared * 0.012);
-    prevHSL.y = clamp(prevHSL.y * 1.03, 0.0, 1.0); // trails stay vivid
-    prev = hsl2rgb(prevHSL);
-
-    col = mix(prev * 0.80, col, 0.86);
-
-    // --- Vignette ---
-    float vign = 1.0 - pow(length(uv) * 0.48, 2.2);
-    col *= max(vign, 0.0);
+    col = mix(prev * 0.75, col, 0.88);
 
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
