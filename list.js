@@ -154,9 +154,9 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
       }
     } else {
       // If no presets, copy and navigate
-      const fullscreenUrl = buildFullscreenUrl(getFullUrl(targetUrl))
-      navigator.clipboard.writeText(fullscreenUrl)
-      window.location.href = fullscreenUrl
+      const url = getFullUrl(targetUrl)
+      navigator.clipboard.writeText(url)
+      window.location.href = url
     }
   }
 
@@ -219,9 +219,9 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
                   const params = Object.fromEntries(presetUrl.searchParams.entries())
                   remoteController.sendParams(params)
                 } else {
-                  const fullscreenUrl = buildFullscreenUrl(getFullUrl(preset))
-                  navigator.clipboard.writeText(fullscreenUrl)
-                  window.location.href = fullscreenUrl
+                  const url = getFullUrl(preset)
+                  navigator.clipboard.writeText(url)
+                  window.location.href = url
                 }
               }}>
                 <span>${getPresetName(preset, index)}</span>
