@@ -98,19 +98,48 @@ vec4 drawCat(vec2 p, float seed) {
     float t    = iTime;
     float ph   = seed * TWO_PI;
 
-    // Per-cat animation (different phase per instance)
-    float eyeOpen = 0.82 + sin(t * 0.017 * SQRT3 + ph) * 0.09
-                         + smoothstep(0.90, 1.0, sin(t * 0.031 * PHI * 2.3 + ph)) * (-0.68);
-    // Beat dilates pupils wide; bass keeps them slightly open
-    float pupW    = (beat ? 0.042 : 0.020 + bassNormalized * 0.008)
-                  + (sin(t * 0.031 * PHI + ph) * 0.5 + 0.5)
-                  * (sin(t * 0.023 * SQRT2 * 1.3 + ph) * 0.5 + 0.5) * 0.010;
-    float earWig  = sin(t * 0.017 * SQRT3 * 2.1 + ph) * sin(t * 0.011 * 3.7 + ph) * 0.022;
+    // --- AUDIO AS PHASE BIAS ---
+    // Each feature shifts the *phase* of a time oscillator rather than just scaling amplitude.
+    // This creates constructive/destructive interference that tracks the music subtly.
+    float entropyBias  = spectralEntropyNormalized * PI;          // chaos → alert eyes
+    float fluxBias     = spectralFluxNormalized * TWO_PI * 0.7;   // timbral change → ear twitch
+    float pitchBias    = pitchClassNormalized * TWO_PI;            // note → whisker angle + hue
+    float centroidBias = spectralCentroidNormalized * PI * 0.8;   // brightness → fur lightness
+
+    // Eye openness: entropy bias makes chaotic music shift the blink cycle phase.
+    // Energy z-score directly widens (spike) or narrows (drop) eyes.
+    float eyeOpen = 0.82 + sin(t * 0.017 * SQRT3 + ph + entropyBias) * 0.09
+                         + smoothstep(0.90, 1.0, sin(t * 0.031 * PHI * 2.3 + ph + entropyBias * 0.5)) * (-0.68)
+                         + clamp(energyZScore * 0.12, -0.12, 0.22);
+
+    // Pupils: bass dilates; bright spectral centroid constricts (like pupils in bright light).
+    float pupW = (beat ? 0.042 : 0.020 + bassNormalized * 0.012)
+               + sin(t * 0.031 * PHI + ph) * sin(t * 0.023 * SQRT2 * 1.3 + ph) * 0.004 + 0.002
+               + clamp(-spectralCentroidZScore * 0.007, -0.006, 0.010);
+
+    // Ears: flux biases phase AND amplitude — timbral transitions = ear twitches.
+    float earAmp = 0.022 + spectralFluxNormalized * 0.030;
+    float earWig = sin(t * 0.017 * SQRT3 * 2.1 + ph + fluxBias)
+                 * sin(t * 0.011 * 3.7       + ph + fluxBias * 0.6) * earAmp;
+
+    // Hue: pitchClass shifts hue — chord changes shift each cat's color slightly.
     float baseHue = 0.073 + HUE_DRIFT
+                          + pitchClassNormalized * 0.040 - 0.020
                           + sin(t * 0.007 * PHI * SQRT2 * 0.4 + ph) * 0.018
                           + seed * 0.035 - 0.017;
-    float furL    = 0.68 + sin(t * 0.031 * PHI * 0.7 + ph) * 0.06;
-    float sway    = sin(t * 0.023 * SQRT2 * 0.8 + ph + 1.0) * 0.034;
+
+    // Fur lightness: centroid biases the oscillator — bright music = lighter fur.
+    float furL = 0.68 + sin(t * 0.031 * PHI * 0.7 + ph + centroidBias) * 0.06
+                      + spectralCentroidZScore * 0.04;
+
+    // Whiskers: pitchClass biases phase — different notes = different sway angles.
+    // Roughness drives amplitude — gritty music = wild whiskers.
+    float sway = sin(t * 0.023 * SQRT2 * 0.8 + ph + 1.0 + pitchBias * 0.4)
+               * sin(t * 0.007 * PHI * SQRT2 * 1.5 + ph + pitchBias * 0.25)
+               * (0.034 + spectralRoughnessNormalized * 0.028);
+
+    // Eye iris hue: centroid shifts warmer/cooler with music brightness.
+    float eyeHue = 0.075 + seed * 0.04 + spectralCentroidNormalized * 0.035 - 0.017;
 
     // --- SDFs ---
     float head   = sdCircle(p, 0.27);
@@ -189,7 +218,7 @@ vec4 drawCat(vec2 p, float seed) {
     // --- Composite features ---
     vec3 col = fur;
     col = mix(col, hsl2rgb(vec3(0.95,0.72,0.78)),  smoothstep(aa,-aa,innerEars));
-    col = mix(col, hsl2rgb(vec3(0.075+seed*0.04,0.55,0.36)), smoothstep(aa,-aa,eyes));
+    col = mix(col, hsl2rgb(vec3(eyeHue, 0.55, 0.36)), smoothstep(aa,-aa,eyes));
     col = mix(col, vec3(0.03,0.02,0.03),             smoothstep(aa,-aa,pupils));
     col = mix(col, vec3(1.0),                         smoothstep(aa*0.6,-aa*0.6,shines)*0.95);
     col = mix(col, hsl2rgb(vec3(0.02,0.62,0.38)),     smoothstep(aa,-aa,nose));
@@ -230,8 +259,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     for (int i = 0; i < OUTER_N; i++) {
         float fi    = float(i);
         float angle = fi / float(OUTER_N) * TWO_PI + t * outerSpd + PITCH_TWIST;
-        float wobX  = sin(angle * 2.0 + t * 0.11) * 0.04;
-        float wobY  = cos(angle * 3.0 - t * 0.09) * 0.03;
+        // Bass biases wobble phase: bass hits make outer cats lurch outward
+        float wobX  = sin(angle * 2.0 + t * 0.11 + bassNormalized * PI * 0.8) * (0.04 + max(bassZScore, 0.0) * 0.020);
+        float wobY  = cos(angle * 3.0 - t * 0.09 + bassNormalized * PI * 0.6) * (0.03 + max(bassZScore, 0.0) * 0.015);
         vec2  pos   = vec2(cos(angle)*outerRx + wobX, sin(angle)*outerRy + wobY);
         float scale = 0.20;
         float seed  = fi / float(OUTER_N);
@@ -252,8 +282,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     for (int i = 0; i < INNER_N; i++) {
         float fi    = float(i);
         float angle = fi / float(INNER_N) * TWO_PI - t * innerSpd + PI / float(INNER_N) + PITCH_TWIST;
-        float wobX  = sin(angle * 3.0 + t * 0.13) * 0.025;
-        float wobY  = cos(angle * 2.0 - t * 0.10) * 0.02;
+        // Mids bias inner wobble: mid-frequency body = inner ring flutter
+        float wobX  = sin(angle * 3.0 + t * 0.13 + midsNormalized * PI * 0.6) * (0.025 + max(midsZScore, 0.0) * 0.015);
+        float wobY  = cos(angle * 2.0 - t * 0.10 + midsNormalized * PI * 0.45) * (0.02 + max(midsZScore, 0.0) * 0.012);
         vec2  pos   = vec2(cos(angle)*innerRx + wobX, sin(angle)*innerRy + wobY);
         float scale = 0.14 * INNER_SCALE_MOD;
         float seed  = fi / float(INNER_N) + 0.5;
@@ -276,10 +307,41 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     col *= BEAT_POP;
 
-    // --- Frame feedback ---
+    // --- Subtronics-style warped feedback ---
     vec2 fbUV = fragCoord.xy / iResolution.xy;
-    vec3 prev = getLastFrameColor(fbUV).rgb;
-    col = mix(prev * 0.78, col, 0.85);
+    vec2 fbCenter = vec2(0.5);
+
+    // Slow zoom toward center (cats leave trailing afterimages).
+    // Energy builds make it zoom faster, drops reverse slightly.
+    float zoomFB = 1.0 - 0.003 - energySlope * energyRSquared * 0.004;
+    vec2 warpUV = (fbUV - fbCenter) * zoomFB + fbCenter;
+
+    // Bass-driven radial ripple on the feedback sample UV.
+    // On bass hits the previous frame shimmers outward from center.
+    vec2 delta = fbUV - fbCenter;
+    float ripple = sin(length(delta) * 28.0 - iTime * 4.0) * max(bassZScore, 0.0) * 0.005;
+    warpUV += normalize(delta + vec2(0.0001)) * ripple;
+
+    // Beat: add a brief rotation smear on the prev frame.
+    float beatRot = beat ? 0.018 : 0.0;
+    float cosR = cos(beatRot), sinR = sin(beatRot);
+    vec2 rotDelta = warpUV - fbCenter;
+    warpUV = vec2(rotDelta.x*cosR - rotDelta.y*sinR,
+                  rotDelta.x*sinR + rotDelta.y*cosR) + fbCenter;
+
+    vec3 prev = getLastFrameColor(fract(warpUV)).rgb;
+
+    // Hue-rotate the prev frame trails by pitchClass + spectralFlux slope.
+    // Chord changes and timbral bursts shift trail colors, making history
+    // look like a psychedelic comet tail.
+    vec3 prevHSL = rgb2hsl(prev);
+    prevHSL.x = fract(prevHSL.x
+                    + pitchClassNormalized * 0.004
+                    + spectralFluxSlope * spectralFluxRSquared * 0.012);
+    prevHSL.y = clamp(prevHSL.y * 1.03, 0.0, 1.0); // trails stay vivid
+    prev = hsl2rgb(prevHSL);
+
+    col = mix(prev * 0.80, col, 0.86);
 
     // --- Vignette ---
     float vign = 1.0 - pow(length(uv) * 0.48, 2.2);
