@@ -142,14 +142,19 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float shineR = sdCircle(uv - eyeRp - vec2(-0.021, 0.016), 0.009);
     float shines = min(shineL, shineR);
 
-    // Nose (small salmon oval — subtle)
-    vec2 noseP = vec2(0.0, -0.088);
-    float nose = sdEllipse(uv - noseP, vec2(0.018, 0.013));
+    // Nose — large, prominent reddish-brown with nostrils
+    vec2 noseP = vec2(0.0, -0.095);
+    float nose = sdEllipse(uv - noseP, vec2(0.040, 0.028));
+
+    // Nostrils — dark ovals near the bottom of the nose
+    float nostrilL = sdEllipse(uv - noseP - vec2(-0.014, -0.010), vec2(0.009, 0.007));
+    float nostrilR = sdEllipse(uv - noseP - vec2( 0.014, -0.010), vec2(0.009, 0.007));
+    float nostrils = min(nostrilL, nostrilR);
 
     // Mouth: center drop + two side curves
-    float mC  = sdSegment(uv, noseP - vec2(0.0, 0.018), vec2(0.0, -0.105));
-    float mL  = sdSegment(uv, vec2(-0.002, -0.105), vec2(-0.052, -0.130));
-    float mR  = sdSegment(uv, vec2( 0.002, -0.105), vec2( 0.052, -0.130));
+    float mC  = sdSegment(uv, noseP + vec2(0.0, -0.028), vec2(0.0, -0.140));
+    float mL  = sdSegment(uv, vec2(-0.002, -0.140), vec2(-0.052, -0.162));
+    float mR  = sdSegment(uv, vec2( 0.002, -0.140), vec2( 0.052, -0.162));
     float mouth = min(mC, min(mL, mR));
 
     // Whiskers — 3 per side, tips drift with spectral flux
@@ -260,9 +265,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Shine
     col = mix(col, vec3(1.0), smoothstep(aa * 0.6, -aa * 0.6, shines) * 0.95);
 
-    // Nose
-    vec3 nosePink = hsl2rgb(vec3(0.96, 0.45, 0.62));
-    col = mix(col, nosePink, smoothstep(aa, -aa, nose));
+    // Nose — reddish-brown, prominent
+    vec3 noseCol = hsl2rgb(vec3(0.02, 0.62, 0.38));
+    col = mix(col, noseCol, smoothstep(aa, -aa, nose));
+    // Nostrils — dark
+    col = mix(col, vec3(0.10, 0.05, 0.03), smoothstep(aa * 0.5, -aa * 0.5, nostrils));
 
     // Mouth lines
     col = mix(col, hsl2rgb(vec3(baseHue - 0.01, 0.55, 0.22)), smoothstep(0.005, -0.001, mouth));

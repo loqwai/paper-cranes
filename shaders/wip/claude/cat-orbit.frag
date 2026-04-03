@@ -130,12 +130,17 @@ vec4 drawCat(vec2 p, float seed) {
     float shines = min(sdCircle(p-eyeLp-vec2(-0.021,0.016), 0.009),
                        sdCircle(p-eyeRp-vec2(-0.021,0.016), 0.009));
 
-    vec2  noseP = vec2(0.0, -0.088);
-    float nose  = sdEllipse(p-noseP, vec2(0.018, 0.013));
+    vec2  noseP = vec2(0.0, -0.095);
+    float nose  = sdEllipse(p-noseP, vec2(0.040, 0.028));
 
-    float mC = sdSegment(p, noseP-vec2(0.0,0.018), vec2(0.0,-0.105));
-    float mL = sdSegment(p, vec2(-0.002,-0.105), vec2(-0.052,-0.130));
-    float mR = sdSegment(p, vec2( 0.002,-0.105), vec2( 0.052,-0.130));
+    // Nostrils — dark ovals at the bottom of the nose
+    float nostrilL = sdEllipse(p-noseP-vec2(-0.014,-0.010), vec2(0.009,0.007));
+    float nostrilR = sdEllipse(p-noseP-vec2( 0.014,-0.010), vec2(0.009,0.007));
+    float nostrils = min(nostrilL, nostrilR);
+
+    float mC = sdSegment(p, noseP+vec2(0.0,-0.028), vec2(0.0,-0.140));
+    float mL = sdSegment(p, vec2(-0.002,-0.140), vec2(-0.052,-0.162));
+    float mR = sdSegment(p, vec2( 0.002,-0.140), vec2( 0.052,-0.162));
     float mouth = min(mC, min(mL, mR));
 
     float wL1=sdSegment(p,vec2(-0.058,-0.052),vec2(-0.35,-0.025+sway));
@@ -187,7 +192,8 @@ vec4 drawCat(vec2 p, float seed) {
     col = mix(col, hsl2rgb(vec3(0.075+seed*0.04,0.55,0.36)), smoothstep(aa,-aa,eyes));
     col = mix(col, vec3(0.03,0.02,0.03),             smoothstep(aa,-aa,pupils));
     col = mix(col, vec3(1.0),                         smoothstep(aa*0.6,-aa*0.6,shines)*0.95);
-    col = mix(col, hsl2rgb(vec3(0.96,0.45,0.62)),    smoothstep(aa,-aa,nose));
+    col = mix(col, hsl2rgb(vec3(0.02,0.62,0.38)),     smoothstep(aa,-aa,nose));
+    col = mix(col, vec3(0.10,0.05,0.03),              smoothstep(aa*0.5,-aa*0.5,nostrils));
     col = mix(col, hsl2rgb(vec3(baseHue-0.01,0.5,0.22)), smoothstep(0.005,-0.001,mouth));
     col = mix(col, vec3(0.97,0.95,0.93),             smoothstep(0.0045,0.0,whiskers-0.0025));
 
