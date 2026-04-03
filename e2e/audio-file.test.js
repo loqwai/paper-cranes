@@ -30,9 +30,9 @@ afterAll(async () => {
 
 const baseUrl = () => `http://127.0.0.1:${port}`
 
-const loadAtTime = async (audioTime) => {
+const loadAtTime = async (audio_time) => {
   await page.goto(
-    `${baseUrl()}/?shader=subtronics-eye2&image=images/subtronics.jpg&audio_file=test-audio/imaginary-friends.mp3&audioTime=${audioTime}`,
+    `${baseUrl()}/?shader=subtronics-eye2&image=images/subtronics.jpg&audio_file=test-audio/imaginary-friends.mp3&audio_time=${audio_time}`,
     { waitUntil: 'load' },
   )
   // Wait for audio processing pipeline to produce real features

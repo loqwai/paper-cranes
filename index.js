@@ -121,6 +121,8 @@ const setupAudio = async () => {
         const audioProcessor = new AudioProcessor(audioContext, sourceNode, fileConfig.historySize, fileConfig.fftSize)
         audioProcessor.smoothingFactor = fileConfig.smoothing
         await audioProcessor.start()
+        // Route through speakers (unlike mic input, file playback has no feedback risk)
+        audioProcessor.fftAnalyzer.connect(audioContext.destination)
         return audioProcessor
     }
 

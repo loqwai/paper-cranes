@@ -61,15 +61,15 @@ describe('createAudioFileSource', () => {
     })
   })
 
-  describe('with audioTime param', () => {
+  describe('with audio_time param', () => {
     let result
 
     beforeEach(() => {
-      const params = new URLSearchParams('?audio_file=test-audio/song.mp3&audioTime=27.5')
+      const params = new URLSearchParams('?audio_file=test-audio/song.mp3&audio_time=27.5')
       result = createAudioFileSource({ params })
     })
 
-    it('parses audioTime as startTime', () => {
+    it('parses audio_time as startTime', () => {
       expect(result.startTime).toBe(27.5)
     })
   })

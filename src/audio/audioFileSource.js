@@ -1,7 +1,7 @@
 export const createAudioFileSource = ({ params }) => {
   const audioFile = params.get('audio_file')
   if (!audioFile) return null
-  const startTime = parseFloat(params.get('audioTime') ?? '0')
+  const startTime = parseFloat(params.get('audio_time') ?? '0')
   const historySize = parseInt(params.get('history_size') ?? '500')
   const fftSize = parseInt(params.get('fft_size') ?? '4096')
   const smoothing = parseFloat(params.get('smoothing') ?? '0.85')
