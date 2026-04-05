@@ -30,7 +30,7 @@ export class AudioProcessor {
         this.currentFeatures = getFlatAudioFeatures()
         this.currentFeatures.beat = false
         this.smoothedFeatures = {}
-        this.smoothingFactor = 0.10 // Lower = smoother, higher = more responsive
+        this.smoothingFactor = 0.10 // Internal alpha: lower = smoother, higher = more responsive
     }
 
     createAnalyzer = () => {
@@ -59,7 +59,8 @@ export class AudioProcessor {
         const newFeatures = getFlatAudioFeatures(AudioFeatures, this.rawFeatures)
 
         // Check for manual override of smoothing factor
-        const currentSmoothing = window.cranes?.manualFeatures?.smoothing ?? this.smoothingFactor
+        const manualSmoothing = window.cranes?.manualFeatures?.smoothing
+        const currentSmoothing = manualSmoothing != null ? 1 - manualSmoothing : this.smoothingFactor
 
         // Apply exponential smoothing to reduce jitter
         for (const key in newFeatures) {
