@@ -63,6 +63,59 @@ if (isRemoteControlMode) {
 // Expose paramsManager globally for monaco.js and other scripts
 window.paramsManager = paramsManager
 
+const KNOB_REGEX = /^knob_(\d+)$/
+
+const MidiLearnButton = ({ knobIndex }) => {
+    const [state, setState] = useState('idle') // idle | learning | mapped
+    const [ccLabel, setCcLabel] = useState(null)
+
+    // Check for existing mapping on mount
+    useEffect(() => {
+        const mapper = window.cranes?.midiMapper
+        if (!mapper) return
+        const profiles = mapper.getAllProfiles()
+        for (const profile of Object.values(profiles)) {
+            for (const [ccKey, idx] of Object.entries(profile.mappings)) {
+                if (idx === knobIndex) {
+                    setCcLabel(`CC${ccKey}`)
+                    setState('mapped')
+                    return
+                }
+            }
+        }
+    }, [knobIndex])
+
+    const handleClick = async () => {
+        const mapper = window.cranes?.midiMapper
+        if (!mapper) return
+
+        if (state === 'learning') {
+            mapper.cancelLearn()
+            setState(ccLabel ? 'mapped' : 'idle')
+            return
+        }
+
+        setState('learning')
+        try {
+            const result = await mapper.startLearn(knobIndex)
+            setCcLabel(`CC${result.ccKey}`)
+            setState('mapped')
+        } catch {
+            setState(ccLabel ? 'mapped' : 'idle')
+        }
+    }
+
+    const label = state === 'learning' ? '...' : state === 'mapped' ? ccLabel : 'MIDI'
+
+    return html`
+        <button
+            class=${`midi-learn-btn ${state === 'learning' ? 'learning' : ''}`}
+            onClick=${handleClick}
+            title=${state === 'learning' ? 'Click to cancel learn' : 'Click to learn MIDI CC'}
+        >${label}</button>
+    `
+}
+
 const FeatureEditor = ({ name, feature, onChange, onDelete }) => {
     const handleValueChange = (e) => onChange(name, { ...feature, value: parseFloat(e.target.value) })
 
@@ -191,6 +244,7 @@ const FeatureEditor = ({ name, feature, onChange, onDelete }) => {
             <div class="feature-header">
                 <div class="feature-name">
                     <span>${name}</span>
+                    ${KNOB_REGEX.test(name) && html`<${MidiLearnButton} knobIndex=${parseInt(name.match(KNOB_REGEX)[1])} />`}
                     <span class="value-display">${feature.value.toFixed(2)}</span>
                     <button onClick=${() => onDelete(name)} class="delete-button" title="Delete feature"></button>
                 </div>
