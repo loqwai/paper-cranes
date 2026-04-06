@@ -314,7 +314,7 @@ vec3 renderRay(vec3 ro, vec3 rd, float scaleMod, float hueShift) {
 // ============================================================================
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec2 uv = (fragCoord - 0.5 * iResolution.xy) / iResolution.y;
+    vec2 uv = (fragCoord - 0.5 * resolution) / min(resolution.x, resolution.y);
 
     float scaleMod = sin(TIME * 0.1) * 0.05 + SCALE_MOD;
     float hueShift = TIME * 0.025 + HUE_SHIFT;
@@ -342,7 +342,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 col = renderRay(ro, rd, scaleMod, hueShift);
 
     // Feedback (optional - can disable for pure chromadepth)
-    vec2 feedbackUV = fragCoord / iResolution.xy;
+    vec2 feedbackUV = fragCoord / resolution;
     vec2 center = vec2(0.5);
     vec2 fbOffset = (feedbackUV - center) * 0.997 + center;
     fbOffset += vec2(sin(TIME * 0.15), cos(TIME * 0.15)) * 0.003;
