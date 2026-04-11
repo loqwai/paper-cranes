@@ -94,6 +94,26 @@ const applyParams = async (data) => {
     const num = parseFloat(value)
     window.cranes.messageParams[key] = !isNaN(num) ? num : value
   }
+
+  // Mirror non-shaderCode params into the URL so a refresh preserves display state
+  syncParamsToUrl(data)
+}
+
+const syncParamsToUrl = (data) => {
+  try {
+    const url = new URL(window.location.href)
+    for (const [key, value] of Object.entries(data)) {
+      if (key === 'shaderCode') continue
+      if (value === null || value === undefined) {
+        url.searchParams.delete(key)
+      } else {
+        url.searchParams.set(key, value)
+      }
+    }
+    window.history.replaceState({}, '', url.toString())
+  } catch (e) {
+    console.warn('[Remote Display] URL sync failed:', e)
+  }
 }
 
 /**
