@@ -1,8 +1,14 @@
 import { defineConfig } from 'vite'
 import { resolve } from 'path'
 import { execSync } from 'child_process'
+import basicSsl from '@vitejs/plugin-basic-ssl'
 import { shaderPlugin } from './vite-plugins/shader-plugin.js'
 import { remoteWsPlugin } from './vite-plugins/remote-ws-plugin.js'
+
+// HTTPS is opt-in via `HTTPS=true npm run dev`. Needed for testing on phones,
+// since browsers only expose navigator.mediaDevices in secure contexts and a
+// LAN IP over plain HTTP doesn't qualify. Default stays HTTP.
+const httpsEnabled = process.env.HTTPS === 'true'
 
 
 const branchToPort = (branch) => {
@@ -45,5 +51,9 @@ export default defineConfig({
       external: (id) => id.startsWith('https://'),
     },
   },
-  plugins: [shaderPlugin(), remoteWsPlugin()],
+  plugins: [
+    ...(httpsEnabled ? [basicSsl()] : []),
+    shaderPlugin(),
+    remoteWsPlugin(),
+  ],
 })
