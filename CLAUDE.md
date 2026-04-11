@@ -332,6 +332,7 @@ uniform float another;   // = 1.2
 - `embed` - Embed mode (disables audio)
 - `fullscreen` - Start in fullscreen
 - `remote` - Remote mode: `display` (receive commands) or `control` (send commands)
+- `audio=tab` - Visualize a browser tab's audio (Spotify, YouTube, etc.) via `getDisplayMedia` instead of the microphone. Shows a "Share tab audio" overlay; user picks a tab/window and the audio track is routed into `AudioProcessor`. No loopback driver needed. Chrome/Edge desktop only. Modules for this flow are dynamic-imported, so the default mic path is unaffected.
 
 ### Dynamic Override
 All parameters can be overridden at runtime via:
