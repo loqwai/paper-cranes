@@ -29,11 +29,12 @@
   "devDependencies": {
     "@types/serviceworker": "^0.0.122",
     "@types/vscode": "^1.96.0",
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
     "chokidar": "^4.0.3",
     "eslint": "^8.57.1",
     "glslang-validator-prebuilt": "^0.0.7",
-    "prettier": "^3.4.2",
     "playwright": "^1.55.1",
+    "prettier": "^3.4.2",
     "vite": "^6.0.0",
     "vitest": "^4.1.2"
   },

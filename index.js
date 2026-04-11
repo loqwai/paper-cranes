@@ -75,6 +75,123 @@ const getAudioStream = async (config) => {
     return navigator.mediaDevices.getUserMedia(constraints);
 };
 
+// Opt-in voice removal: capture two streams from the same input device — a raw mix
+// and a voice-isolated version — then subtract the isolated voice from the raw mix
+// to leave the surrounding music/ambient audio. Enable with ?removeVoice=true.
+//
+// Caveats:
+// - Browsers vary. Safari honors `voiceIsolation`. Chrome may honor it on some
+//   platforms and silently ignore it on others. We DON'T gate on
+//   getSupportedConstraints() because that list under-reports non-standard
+//   constraints; instead we request both streams and inspect the resulting
+//   MediaStreamTrack.getSettings() to see what the browser actually applied.
+// - Cancellation quality depends on the two streams being phase-aligned. If they
+//   go through different processing pipelines they will drift, leaving partial
+//   residual voice and comb-filter artifacts on the music.
+// - If voiceIsolation didn't actually take effect AND no other DSP differs, the
+//   two streams will be near-identical and the subtraction would null the music.
+//   We detect that and fall back to the raw stream.
+const createVoiceCancelledSource = async (audioContext, baseConfig) => {
+    const devices = await navigator.mediaDevices.enumerateDevices()
+    const audioInputs = devices.filter(d => d.kind === 'audioinput')
+    const deviceId = audioInputs[0]?.deviceId
+    const deviceConstraint = (audioInputs.length > 1 && deviceId) ? { deviceId: { exact: deviceId } } : {}
+
+    const rawStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+            ...baseConfig,
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false,
+            voiceIsolation: false,
+            ...deviceConstraint,
+        },
+    })
+
+    let voiceStream = null
+    try {
+        voiceStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+                ...baseConfig,
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: false,
+                voiceIsolation: true,
+                ...deviceConstraint,
+            },
+        })
+    } catch (err) {
+        console.warn('[removeVoice] second getUserMedia rejected, using raw mic:', err)
+    }
+
+    const rawSource = audioContext.createMediaStreamSource(rawStream)
+    if (!voiceStream) return rawSource
+
+    // Diagnostic: did the browser actually apply voiceIsolation to the second stream?
+    const rawTrack = rawStream.getAudioTracks()[0]
+    const voiceTrack = voiceStream.getAudioTracks()[0]
+    const rawSettings = rawTrack?.getSettings?.() ?? {}
+    const voiceSettings = voiceTrack?.getSettings?.() ?? {}
+    console.info('[removeVoice] raw track settings:', rawSettings)
+    console.info('[removeVoice] voice track settings:', voiceSettings)
+    const voiceIsolationApplied = voiceSettings.voiceIsolation === true
+    const dspDifferent =
+        voiceSettings.noiseSuppression !== rawSettings.noiseSuppression ||
+        voiceSettings.echoCancellation !== rawSettings.echoCancellation ||
+        voiceIsolationApplied
+    if (!voiceIsolationApplied) {
+        console.warn(
+            '[removeVoice] voiceIsolation NOT confirmed in track settings.',
+            'Browser likely ignored the constraint.',
+            dspDifferent
+                ? 'Other DSP (NS/AEC) does differ — subtraction may still partially work.'
+                : 'Streams look identical — subtraction would null the music. Falling back to raw mic.'
+        )
+        if (!dspDifferent) {
+            voiceTrack?.stop()
+            return rawSource
+        }
+    }
+
+    const voiceSource = audioContext.createMediaStreamSource(voiceStream)
+    const invert = audioContext.createGain()
+    invert.gain.value = -1
+
+    // Time-align the two streams. The browser reports per-track latency in
+    // seconds; whichever stream arrives earlier gets delayed by the difference
+    // so the subtraction can actually phase-cancel. This is a coarse fix —
+    // reported latency is approximate and the real sample offset may drift —
+    // but it's vastly better than ignoring the misalignment entirely.
+    const rawLatency = rawSettings.latency ?? 0
+    const voiceLatency = voiceSettings.latency ?? 0
+    const delayRawBy = Math.max(0, voiceLatency - rawLatency)
+    const delayVoiceBy = Math.max(0, rawLatency - voiceLatency)
+    const rawDelay = audioContext.createDelay(1)
+    const voiceDelay = audioContext.createDelay(1)
+    rawDelay.delayTime.value = delayRawBy
+    voiceDelay.delayTime.value = delayVoiceBy
+    console.info(
+        `[removeVoice] aligning streams: raw +${(delayRawBy * 1000).toFixed(1)}ms, voice +${(delayVoiceBy * 1000).toFixed(1)}ms`
+    )
+
+    const summed = audioContext.createGain()
+    summed.gain.value = 1
+    rawSource.connect(rawDelay)
+    rawDelay.connect(summed)
+    voiceSource.connect(voiceDelay)
+    voiceDelay.connect(invert)
+    invert.connect(summed)
+
+    // Expose for runtime A/B testing and tuning from the console
+    window.cranes = window.cranes || {}
+    window.cranes.voiceRemoval = {
+        rawSource, voiceSource, rawDelay, voiceDelay, invert, summed,
+        rawSettings, voiceSettings,
+    }
+
+    return summed
+}
+
 // Factor out coordinate handling
 const coordsHandler = {
     coords: { x: 0.5, y: 0.5 },
@@ -147,8 +264,9 @@ const setupAudio = async () => {
         const audioContext = new AudioContext();
         await audioContext.resume();
 
-        const stream = await getAudioStream(audioConfig);
-        const sourceNode = audioContext.createMediaStreamSource(stream);
+        const sourceNode = params.get('removeVoice') === 'true'
+            ? await createVoiceCancelledSource(audioContext, audioConfig)
+            : audioContext.createMediaStreamSource(await getAudioStream(audioConfig));
         const historySize = parseInt(params.get('history_size') ?? '500');
         const fftSize = parseInt(params.get('fft_size') ?? '4096');
         const smoothing = parseFloat(params.get('smoothing') ?? '0.15');
