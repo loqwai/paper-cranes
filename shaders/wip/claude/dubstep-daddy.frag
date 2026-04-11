@@ -228,6 +228,20 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     drop_state = clamp(drop_state, 0.0, 1.0);
     float drop_eased = animateEaseInOutCubic(drop_state);
 
+    // ---- INTENSITY ZOOM (subtronics-eye2 style) ----
+    // Drive a pre-zoom off raw energy + sustained drop state. The whole scene
+    // pushes IN toward the daddy's head on intense passages — before any SDFs
+    // get evaluated, so everything scales together.
+    float intensity = max(
+        mapValue(energyNormalized, 0.0, 1.0, 0.0, 1.0),
+        bassNormalized
+    );
+    // Zoom factor: 1.0 idle → 2.5 max drop. Use drop_eased for sustain, raw
+    // intensity for immediate snap.
+    float zoomAmount = 1.0 + intensity * 0.6 + drop_eased * 0.9;
+    vec2 zoomCenter = P.head_c;  // push toward the daddy's face
+    uv = (uv - zoomCenter) / zoomAmount + zoomCenter;
+
     // ---- BACKDROP: smoky club with strobing floor ----
     float bg_grad = smoothstep(-0.8, 0.8, uv.y);
     vec3 bg = mix(vec3(0.08, 0.02, 0.12), vec3(0.02, 0.0, 0.05), bg_grad);
@@ -290,23 +304,30 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float a_le = atan(d_le2.y, d_le2.x);
     float a_re = atan(d_re2.y, d_re2.x);
 
-    // Ray fans — narrow lobes via high-power cos. Slight time rotation so
-    // they shimmer, plus a per-eye offset so left and right don't sync.
-    float fan_le = pow(abs(cos(a_le * 4.0 + iTime * 0.8)), 20.0);
-    float fan_re = pow(abs(cos(a_re * 4.0 - iTime * 0.7 + 1.3)), 20.0);
+    // Ray fans — narrow lobes via high-power cos. Wider fan (6 lobes instead
+    // of 4) and slightly softer power so rays reach further across the scene.
+    float fan_le = pow(abs(cos(a_le * 6.0 + iTime * 0.8)), 14.0);
+    float fan_re = pow(abs(cos(a_re * 6.0 - iTime * 0.7 + 1.3)), 14.0);
 
-    // Radial falloff — rays fade with distance from eye
-    float fall_le = exp(-r_le * 3.5);
-    float fall_re = exp(-r_re * 3.5);
+    // Radial falloff — long reach so rays cross the whole scene
+    float fall_le = exp(-r_le * 1.2);
+    float fall_re = exp(-r_re * 1.2);
 
     // Bias rays to shoot upward/outward (not downward into the chest)
     float up_le = smoothstep(-1.0, 0.3, d_le2.y / max(r_le, 0.001));
     float up_re = smoothstep(-1.0, 0.3, d_re2.y / max(r_re, 0.001));
 
-    // Combine — only visible during the drop
+    // Narrow beams (fan + falloff)
     float god_rays = (fan_le * fall_le * up_le + fan_re * fall_re * up_re) * drop_hit;
-    // Plus a soft glow bloom around each eye so the rays feel "lit"
+    // Eye bloom — soft glow around each eye socket
     god_rays += (exp(-r_le * 10.0) + exp(-r_re * 10.0)) * drop_hit * 0.6;
+
+    // Scene-wide eye wash — a much softer, much wider radial glow that tints
+    // the entire frame with hot light during drops. This is the "the room is
+    // glowing because his eyes are blasting" effect.
+    float wash_le = exp(-r_le * 0.8);
+    float wash_re = exp(-r_re * 0.8);
+    float eye_wash = (wash_le + wash_re) * drop_hit * 0.5;
 
     // ---- COLOR ----
     float hue = mix(HUE_BASE, HUE_DROP, IS_DROP);
@@ -325,8 +346,40 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // ---- EYES + GOD RAYS ----
     // Solid hot yellowish dots for the eyes
     col += eyes * hot * 2.2;
-    // Additive god-ray beams — only really appear on the drop
+    // Scene-wide eye wash — tints the whole frame hot during drops
+    col = mix(col, col + hot * 0.6, eye_wash);
+    col += eye_wash * hot * 0.4;
+    // Additive god-ray beams — narrow beams shooting into the scene
     col += god_rays * hot * 2.5;
+
+    // ---- INFINITY MIRROR (subtronics-eye2 style) ----
+    // Recursive zoom into the previous frame, centered on the daddy's head.
+    // Blended in on drops so his own image nests inside the scene behind him.
+    {
+        float minRes = min(res.x, res.y);
+        vec2 head_uv01 = vec2(0.5) + P.head_c * vec2(minRes / res.x, minRes / res.y);
+        float mirrorZoom = mix(1.3, 2.4, drop_eased);
+        float rot = iTime * 0.5 + drop_eased * sin(BEAT_PHASE) * 0.6;
+        float ca2 = cos(rot), sa2 = sin(rot);
+        vec2 mirror_uv = raw_uv01 - head_uv01;
+        mirror_uv = vec2(mirror_uv.x * ca2 - mirror_uv.y * sa2,
+                         mirror_uv.x * sa2 + mirror_uv.y * ca2);
+        mirror_uv += head_uv01;
+        int mirrorSteps = int(2.0 + drop_eased * 5.0);
+        for (int i = 0; i < 8; i++) {
+            if (i >= mirrorSteps) break;
+            mirror_uv = (mirror_uv - head_uv01) * mirrorZoom + head_uv01;
+            mirror_uv = fract(mirror_uv);
+        }
+        vec3 mirror = getLastFrameColor(mirror_uv).rgb;
+        // Hyper-saturate so the mirror doesn't wash out
+        vec3 mh = rgb2hsl(mirror);
+        mh.y = clamp(mh.y * 1.6 + 0.2, 0.0, 1.0);
+        mh.x = fract(mh.x + drop_eased * 0.1);
+        mirror = hsl2rgb(mh);
+        // Only blend into the BACKGROUND (not the body) so the daddy stays crisp
+        col = mix(col, mirror, drop_eased * (1.0 - body) * 0.55);
+    }
 
     // ---- FEEDBACK: motion smear from the body language ----
     vec2 fb_uv = fragCoord / res;
