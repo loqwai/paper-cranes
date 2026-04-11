@@ -2,7 +2,15 @@
 
 Welcome to the Beadfamous project! This repo is an open-source project I made to do advanced audio analysis from a microphone in the browser, and drive arbitrary music visualizations with the data. The project can run on mobile phones, and is designed to make it easy to create new visualizations and share them with others.
 
-It can also be run on a projector or tv, and can use audio directly from the computer, without having to rely on a noisy mic. The results are much better this way! See [using virtual audio loopback](docs/professional-audio.md) for setup instructions on macOS (BlackHole) and Windows (Voicemeeter).
+### Visualize Spotify (or any tab) — no loopback driver, no install
+
+Append **`?audio=tab`** to any visualization URL and Beadfamous will ask to share a browser tab instead of using the mic. Pick your Spotify (or YouTube, SoundCloud, Bandcamp…) tab in the picker, check **"Share tab audio"**, and the track streams directly into the FFT analyzer. Clean, full-fidelity audio — with none of the mic noise, room reverb, or virtual-cable setup that music visualizers usually demand.
+
+Try it now: [`visuals.beadfamous.com/?shader=plasma&audio=tab`](https://visuals.beadfamous.com/?shader=plasma&audio=tab)
+
+Works in Chrome and Edge on desktop. Firefox/Safari don't yet expose tab audio through `getDisplayMedia`, so on those browsers you'll still need the mic or the loopback setup below.
+
+For a permanent system-wide setup (projector rigs, live shows, OBS-style routing) see [using virtual audio loopback](docs/professional-audio.md) for BlackHole (macOS) and Voicemeeter (Windows). But for "I just want to see my Spotify react to a shader" — `?audio=tab` is all you need.
 
 Visuals made by this project can be seen [here](https://visuals.beadfamous.com/list.html). This includes many works in progress, that may be twitchy or broken.
 
