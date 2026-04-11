@@ -1,10 +1,6 @@
 // @fullscreen: true
 // @mobile: true
-// @tags: dubstep, daddy, bass, swagger, curls
-// Dubstep Daddy — short king with a bouncy curly mop and ALL the body language.
-// Head nods, hips pop, hands gesture on the snare. Curls bounce with every beat.
-// Big confidence, small frame.
-
+// inspiration: https://open.spotify.com/track/4iujYV1aY8bvFnynke7eN5?si=8f2220910e7f4de0
 #define PI 3.14159265
 
 // ============================================================================
