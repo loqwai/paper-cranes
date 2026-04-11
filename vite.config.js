@@ -4,6 +4,7 @@ import { execSync } from 'child_process'
 import { shaderPlugin } from './vite-plugins/shader-plugin.js'
 import { remoteWsPlugin } from './vite-plugins/remote-ws-plugin.js'
 
+
 const branchToPort = (branch) => {
   if (branch === 'main') return 6969
   let hash = 0
@@ -28,6 +29,7 @@ export default defineConfig({
         edit: resolve(import.meta.dirname, 'edit.html'),
         list: resolve(import.meta.dirname, 'list.html'),
         analyze: resolve(import.meta.dirname, 'analyze.html'),
+        playlist: resolve(import.meta.dirname, 'playlist.html'),
       },
     },
   },

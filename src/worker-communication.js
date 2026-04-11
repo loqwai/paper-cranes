@@ -16,10 +16,15 @@ window.addEventListener('load', async () => {
  * @param {MessageEvent} event
  */
 let reloadTimeout = null
+const RELOAD_GRACE = 5000
+
 const processServiceWorkerMessage = (event) => {
   if (event.data === 'reload') {
       if (reloadTimeout) return
+      const lastReload = parseInt(sessionStorage.getItem('sw-last-reload') || '0')
+      if (Date.now() - lastReload < RELOAD_GRACE) return
       reloadTimeout = setTimeout(() => {
+          sessionStorage.setItem('sw-last-reload', String(Date.now()))
           window.stop()
           window.location.reload()
       }, 100)

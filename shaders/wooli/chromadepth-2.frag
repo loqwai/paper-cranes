@@ -1,10 +1,14 @@
 // @fullscreen: true
 // @favorite: true
-// @tags: wooli, mammoth, fractal, tapestry, oscilloscope
+// @tags: wooli, mammoth, fractal, tapestry, oscilloscope, chromadepth, 3d
+//
+// ChromaDepth version of wooli/2 — mammoth with scrolling tapestry line
+// Red = foreground (closest), Green = middle, Blue/Violet = farthest
+// Designed for ChromaDepth 3D glasses
 //
 // PRESETS:
-// Default — mammoth with scrolling tapestry line
-// https://visuals.beadfamous.com/?shader=wooli/2&image=images/wooli.png
+// Default — chromadepth mammoth with scrolling line
+// https://visuals.beadfamous.com/?shader=wooli/chromadepth-2&image=images/wooli.png
 
 #define PI 3.14159265
 #define PHI 1.61803398
@@ -15,45 +19,56 @@
 // AUDIO PARAMETERS
 // ============================================================================
 
-#define MOTION smoothstep(0.12, 0.5, energyNormalized)
+#define MOTION animateEaseInCubic(smoothstep(0.05, 0.2, energyNormalized))
 
-// Julia set — seed picks fractal family, seed4 offsets time phase
-// spectralKurtosis is the primary shape driver, eased to suppress low-level movement
-#define J_REAL (-0.745 + sin(seed * PI * 2.0) * 0.13 + sin(iTime * 0.04 * PHI + seed4 * PI) * 0.012 + animateEaseInCubic(spectralKurtosisNormalized) * 0.02)
-#define J_IMAG (0.186 + cos(seed * PI * 2.0) * 0.11 + cos(iTime * 0.03 * SQRT2 + seed4 * PI * 2.0) * 0.008 + animateEaseInCubic(spectralKurtosisNormalized) * 0.015)
+// Julia set — medians of independent features for continuous, smooth evolution
+// Centroid (brightness) and entropy (complexity) shift gradually with musical character
+#define J_REAL (-0.745 + sin(iTime * 0.04 * PHI) * 0.03)+((energyZScore)/50.)
+// #define J_REAL 0.1
+#define J_IMAG (0.186 + cos(iTime * 0.03 * SQRT2) * 0.025)
 
-// Zoom / rotation / drift — seed4 varies speed, tighter zoom range across devices
-#define ZOOM_LVL (0.82 + seed3 * 0.1 + seed4 * 0.05 + sin(iTime * 0.015 * PHI + seed3 * PI * 2.0) * 0.12 + animateEaseInCubic(energyNormalized) * 0.12)
-#define ROT_ANGLE (seed3 * PI * 2.0 + iTime * (0.012 + seed4 * 0.008) + animateEaseInCubic(spectralFluxNormalized) * 0.06 + animateEaseInCubic(spectralKurtosisNormalized) * 0.07)
-#define DRIFT vec2(sin(iTime * 0.02 * PHI + seed3 * PI * 2.0) * 0.08 + animateEaseInCubic(spectralKurtosisNormalized) * 0.03, cos(iTime * 0.015 * SQRT2 + seed3 * 4.7) * 0.06 + spectralKurtosisSlope * spectralKurtosisRSquared * 0.08)
+// Framing — seeds make each device unique via viewpoint, not fractal math
+#define ZOOM_LVL (0.82 + seed3 * 0.1 + sin(iTime * 0.15 * PHI + seed3 * PI * 2.0) * 0.1 + energyMedian * 0.1)
+#define ROT_ANGLE (seed * PI * 2.0 + iTime * (0.012 + seed4 * 0.008) + spectralFluxMedian * 0.08)
+#define DRIFT vec2(sin(iTime * 0.02 * PHI + seed3 * PI * 2.0) * 0.08 + bassMedian * 0.03, cos(iTime * 0.015 * SQRT2 + seed3 * 4.7) * 0.06 + seed2 * 0.1 + midsMedian * 0.02)
 
 // Edge glow
+#define GLOW_WIDTH (0.2 + bassZScore * 0.4)
 #define GLOW_BASE (0.45 + bassNormalized * 0.45)
 #define GLOW_PULSE (1.0 + bassSlope * bassRSquared * 0.3)
 
-// Color — linear regression for smooth evolution
-#define HUE_SHIFT (spectralCentroidSlope * spectralCentroidRSquared * 0.15 + iTime * 0.002 * MOTION)
-#define SAT_BOOST (1.0 + energySlope * energyRSquared * 0.15)
+// Depth color — no audio on hue, only structural depth drives it
+#define DEPTH_SAT_BOOST 0.8 + (energyZScore+1.)/10.
 
-// Feedback
-#define FB_BLEND (0.72 + seed4 * 0.04 - energyNormalized * 0.06 - spectralFluxNormalized * 0.03)
-#define REFRACT_STR ((0.005 + spectralRoughnessNormalized * 0.01 + spectralKurtosisNormalized * 0.01) * MOTION)
+// Feedback — seed4 shifts base blend
+#define FB_BLEND (0.01)
+#define REFRACT_STR (0.008 * MOTION)
 
-// Mammoth scale — punches outward on bass
-#define MAMMOTH_SCALE (1.4 - bassNormalized * 0.12 - clamp(bassZScore, 0.0, 1.0) * 0.2 - clamp(energyZScore, 0.0, 1.0) * 0.15)
+// Mammoth scale
+#define MAMMOTH_SCALE (1.4 - bassNormalized * 0.2 - clamp(bassZScore, 0.0, 1.0) * 0.2 - clamp(energyZScore, 0.0, 1.0) * 0.15)
+
+// Line glow intensity
+#define LINE_GLOW_INT (0.04 + energyMedian * 0.18)
 
 // ============================================================================
 // LINE PARAMETERS — spectralCentroid drives Y, roughness drives width
 // ============================================================================
 
-// Y position: spectralCentroid tracks pitch center — smooth, musical movement
 #define LINE_Y (0.5 + spectralCentroidZScore * 0.25)
-// Width: roughness (dissonance) thickens the line
 #define LINE_WIDTH (1.0 + spectralRoughnessNormalized * 5.0 + abs(spectralCentroidZScore) * 1.5)
-// Glow radius: energy median (sustained loudness = wider glow)
 #define LINE_GLOW_R (3.0 + energyMedian * 12.0)
-// Color shift: use slope*rSquared for gradual hue drift
 #define LINE_HUE_DRIFT (spectralCentroidSlope * spectralCentroidRSquared * 0.3)
+
+// ============================================================================
+// CHROMADEPTH COLOR MAPPING
+// ============================================================================
+
+vec3 chromadepthColor(float t, float sat, float lit) {
+    t = clamp(t, 0.0, 1.0);
+    float hue = t * 0.75 + seed2 * 0.08;
+    sat = clamp(sat * DEPTH_SAT_BOOST, 0.0, 1.0);
+    return hsl2rgb(vec3(hue, sat, lit));
+}
 
 // ============================================================================
 // MAMMOTH MASK
@@ -69,7 +84,7 @@ float getMask(vec2 uv) {
     return 1.0 - getInitialFrameColor(imgUV).r;
 }
 
-// Static mask (no bass scaling) for stable scroll boundary
+// Static mask for stable scroll boundary
 float getStaticMask(vec2 uv) {
     float screenAspect = iResolution.x / iResolution.y;
     vec2 c = (uv - 0.5) * 1.4;
@@ -129,28 +144,33 @@ void juliaSet(vec2 p, vec2 jc,
 }
 
 // ============================================================================
-// ICY COLOR PALETTE (oklch)
+// CHROMADEPTH FRACTAL COLOR from orbit traps
 // ============================================================================
 
-vec3 icyColor(float tO, float tX, float tY, float tC, float iter) {
+vec3 fractalChromadepth(float tO, float tX, float tY, float tC, float iter, bool escaped) {
     tO = sqrt(tO); tX = sqrt(tX); tY = sqrt(tY);
-    float baseHue = 3.4 + seed2 * 2.1;
-    vec3 deep   = oklch2rgb(vec3(0.15 + seed * 0.05, 0.06 + seed * 0.03, baseHue + 0.2));
-    vec3 mid    = oklch2rgb(vec3(0.45 + seed * 0.08, 0.12 + seed * 0.04, baseHue));
-    vec3 bright = oklch2rgb(vec3(0.60 + seed * 0.06, 0.18 + seed * 0.03, baseHue - 0.2));
-    vec3 ice    = oklch2rgb(vec3(0.78 + seed * 0.05, 0.06 + seed * 0.03, baseHue + seed * 0.2));
-    vec3 accent = oklch2rgb(vec3(0.50 + seed * 0.08, 0.20 + seed * 0.04, baseHue + 0.8 + seed * 1.0));
 
-    vec3 col = deep;
-    col = oklabmix(col, mid,    smoothstep(0.0, 0.5, tX));
-    col = oklabmix(col, bright, smoothstep(0.0, 0.35, tY));
-    col = oklabmix(col, ice,    smoothstep(0.0, 0.18, tC));
-    col = oklabmix(col, accent, smoothstep(0.0, 0.2, tO) * 0.3);
+    float depth;
+    float brightness;
 
-    vec3 lch = rgb2oklch(max(col, vec3(0.001)));
-    lch.z += HUE_SHIFT * PI * 2.0;
-    lch.y = min(lch.y * SAT_BOOST, 0.32);
-    return oklch2rgb(lch);
+    if (!escaped) {
+        // INTERIOR — red/orange (chromadepth "near", pops forward)
+        float trapDetail = min(tX, tY);
+        float trapBlend = mix(tO, trapDetail, 0.5 + seed * 0.3);
+        trapBlend = mix(trapBlend, tC, 0.2 + seed * 0.15 + seed4 * 0.1);
+
+        depth = clamp(trapBlend * (0.25 + seed * 0.08), 0.0, 0.25);
+        brightness = 0.5 + tO * (0.12 + seed4 * 0.08) + trapDetail * 0.15;
+    } else {
+        // EXTERIOR — green→blue→violet (chromadepth "far", recedes)
+        float escapeFrac = clamp(iter / 80.0, 0.0, 1.0);
+        depth = mix(0.95, 0.45, pow(escapeFrac, 0.5 + seed * 0.2 + seed4 * 0.15));
+        brightness = mix(0.12, 0.55, pow(escapeFrac, 0.55 + seed4 * 0.1));
+    }
+
+    float sat = 0.95 - depth * 0.04;
+    float lit = clamp(brightness * 0.55, 0.06, 0.55);
+    return chromadepthColor(depth, sat, lit);
 }
 
 // ============================================================================
@@ -165,7 +185,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // ---- MAMMOTH MASK + EDGE GLOW ----
     float mask = getMask(uv);
     float staticMask = getStaticMask(uv);
-    float glowWidth = 0.02 + bassNormalized * 0.04;
+    float glowWidth = GLOW_WIDTH;
     float edgeGlow = getEdgeGlow(uv, mask, glowWidth);
 
     // ---- SCROLLING LINE (exterior only) ----
@@ -173,32 +193,28 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float last = floor(res.x) - 1.0;
     vec3 lineLayer = vec3(0.0);
 
-    // Seed-matched line color
-    float baseHue = 3.4 + seed2 * 2.1;
-
     if (staticMask < 0.3) {
-        // Outside mammoth: scrolling tapestry line
         if (px < last) {
             // Scroll: read from 1px to the right in previous frame
             vec2 scrollUV = vec2((fragCoord.x + 1.0) / res.x, uv.y);
             float srcMask = getStaticMask(scrollUV);
             if (srcMask < 0.3) {
                 lineLayer = getLastFrameColor(scrollUV).rgb;
-                // Trail decay (gentle — must survive ~1000 scroll steps)
+                // Trail decay
                 lineLayer *= 0.9988;
-                // Hue aging in oklch
-                vec3 trailLCH = rgb2oklch(max(lineLayer, 0.001));
-                trailLCH.z += 0.004;
-                trailLCH.y *= 0.999;
-                lineLayer = oklch2rgb(trailLCH);
+                // Hue aging — shift toward blue/far in chromadepth
+                vec3 trailHSL = rgb2hsl(max(lineLayer, 0.001));
+                trailHSL.x = fract(trailHSL.x + 0.002); // age toward blue
+                trailHSL.y *= 0.999;
+                lineLayer = hsl2rgb(trailHSL);
             }
         } else {
             // Rightmost column: draw new line data
             float lineY = LINE_Y;
-            float dist = abs(uv.y - lineY) * res.y; // distance in pixels
+            float dist = abs(uv.y - lineY) * res.y;
             float lw = LINE_WIDTH;
 
-            // Stipple for organic texture
+            // Stipple
             float stip = hash21(fragCoord + float(iFrame) * 0.1);
 
             // Core line
@@ -209,16 +225,18 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             float glowR = LINE_GLOW_R;
             float rawGlow = smoothstep(glowR * lw, lw * 0.5, dist);
             float glowParticle = step(1.0 - rawGlow * rawGlow, stip);
-            float glow = glowParticle * rawGlow * (0.04 + energyMedian * 0.18);
+            float glow = glowParticle * rawGlow * LINE_GLOW_INT;
 
-            // Line color: chromadepth-style from the seeded palette
-            float hueOffset = LINE_HUE_DRIFT;
-            vec3 lineCol = oklch2rgb(vec3(0.68, 0.18, baseHue + hueOffset));
-            vec3 glowCol = oklch2rgb(vec3(0.58, 0.14, baseHue + hueOffset + 0.15));
+            // Line color: chromadepth red/orange = pops forward
+            // seed2 shifts the starting hue within the warm range
+            float lineHue = fract(0.05 + seed2 * 0.08 + LINE_HUE_DRIFT * 0.1);
+            float glowHue = fract(lineHue + 0.08);
+            vec3 lineCol = hsl2rgb(vec3(lineHue, 0.95, 0.52));
+            vec3 glowCol = hsl2rgb(vec3(glowHue, 0.85, 0.42));
 
             lineLayer = lineCol * line + glowCol * glow;
 
-            // Beat brightens new data
+            // Beat brightens
             if (beat) lineLayer *= 1.15;
         }
     }
@@ -234,41 +252,45 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 jc = vec2(J_REAL, J_IMAG);
     float tO, tX, tY, tC, sIter;
     juliaSet(p, jc, tO, tX, tY, tC, sIter);
-    vec3 fracCol = icyColor(tO, tX, tY, tC, sIter);
+    bool escaped = (sIter < 80.0);
+    vec3 fracCol = fractalChromadepth(tO, tX, tY, tC, sIter, escaped);
 
     // ---- FRACTAL FEEDBACK (interior only) ----
     float lum = dot(fracCol, vec3(0.3, 0.6, 0.1));
     vec2 refr = vec2(dFdx(lum), dFdy(lum)) * REFRACT_STR;
     vec3 prev = getLastFrameColor(uv + refr).rgb;
-    vec3 plch = rgb2oklch(max(prev, vec3(0.001)));
-    float targetHue = baseHue;
-    plch.z = mix(plch.z, targetHue, 0.003 + MOTION * 0.007);
-    plch.x *= 1.0 - 0.005 * MOTION;
-    prev = oklch2rgb(plch);
+    // Decay in HSL — always pull brightness down to prevent accumulation
+    vec3 prevHSL = rgb2hsl(max(prev, vec3(0.001)));
+    prevHSL.z *= 0.99 - 0.005 * MOTION;
+    prevHSL.z = min(prevHSL.z, 0.5);
+    prevHSL.y *= 0.997;
+    prev = hsl2rgb(prevHSL);
 
     vec3 interior = mix(prev, fracCol, 1.0 - FB_BLEND);
 
-    // ---- EDGE GLOW COLOR ----
-    vec3 edgeCol = oklch2rgb(vec3(0.70, 0.18, baseHue - 0.1));
+    // ---- EDGE GLOW COLOR ---- pure red for maximum chromadepth pop
+    vec3 edgeCol = hsl2rgb(vec3(0.02, 0.95, 0.5));
     float mt = iTime * MOTION;
-    float wave = sin(uv.x * 8.0 + uv.y * 6.0 - mt * 1.5) * 0.5 + 0.5;
+    float wave = sin(uv.x * (7.0 + seed4 * 3.0) + uv.y * (5.0 + seed4 * 3.0) - mt * 1.5) * 0.5 + 0.5;
     vec3 edgeLight = edgeCol * edgeGlow * GLOW_BASE * GLOW_PULSE * mix(0.7, 1.0, wave);
 
-    // ---- VIGNETTE (interior only — exterior scrolls, so vignette would compound) ----
+    // ---- VIGNETTE (interior only) ----
     float vign = 1.0 - pow(length(uv - 0.5) * 0.85, 2.5);
     interior *= max(vign, 0.01);
 
     // ---- COMPOSITE ----
     float visMask = smoothstep(0.1, 0.5, mask);
     vec3 col = mix(lineLayer, interior, visMask);
-    // Edge glow only at the boundary transition — NOT on scrollable exterior
-    col += min(edgeLight, vec3(0.4)) * smoothstep(0.0, 0.3, mask);
+    col += min(edgeLight, vec3(0.25)) * smoothstep(0.0, 0.3, mask);
 
-    // Oklch clamp (idempotent — safe for scrolling)
-    vec3 flch = rgb2oklch(max(col, vec3(0.001)));
-    flch.y = clamp(flch.y, 0.02, 0.28);
-    flch.x = clamp(flch.x, 0.0, 0.72);
-    col = oklch2rgb(flch);
+    // Beat — brightness pulse only, no hue change
+    if (beat) {
+        vec3 bHSL = rgb2hsl(max(col, vec3(0.001)));
+        bHSL.z = min(bHSL.z * 1.05, 0.58);
+        col = hsl2rgb(bHSL);
+    }
+
+    col = clamp(col, 0.0, 1.0);
 
     fragColor = vec4(col, 1.0);
 }

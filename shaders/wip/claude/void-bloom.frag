@@ -79,11 +79,12 @@ void mainImage(out vec4 fragColor, vec2 fragCoord) {
     C.x += cos(time * 0.03 * PHI) * 0.15 + sin(time * 0.017 * SQRT3) * 0.08;
     C.y += sin(time * 0.023 * SQRT2) * 0.12 + cos(time * 0.013) * 0.06;
 
-    // CONTINUOUS ZOOM — always moving inward, breathing on top
-    // The base zoom trends inward over time, with slow oscillation
-    float zoomTime = time * 0.003; // Continuous inward progression
-    float zoomBreath = sin(time * 0.008 * PHI) * 0.25 + sin(time * 0.005 * SQRT2) * 0.15;
-    float zoom = exp(-fract(zoomTime) * 0.5) * (1.0 + zoomBreath) + ZOOM_AUDIO;
+    // CONTINUOUS ZOOM — smooth multi-frequency oscillation, never repeats
+    float zoom = 0.65
+        + sin(time * 0.003 * PHI) * 0.25
+        + sin(time * 0.002 * SQRT2) * 0.15
+        + sin(time * 0.0011 * SQRT3) * 0.10
+        + ZOOM_AUDIO;
     C *= zoom;
 
     // Gentle rotation
@@ -99,14 +100,14 @@ void mainImage(out vec4 fragColor, vec2 fragCoord) {
     // ========================================================================
 
     // Julia c — evolves independently, snaking through interesting regions
-    // Faster frequencies + higher harmonics = sinuous, snake-like path
-    float jt1 = time * 0.013 * PHI;
-    float jt2 = time * 0.011 * SQRT2;
-    float jt3 = time * 0.0079 * SQRT3;
+    // Fast frequencies + higher harmonics = active, snake-like path
+    float jt1 = time * 0.031 * PHI;
+    float jt2 = time * 0.023 * SQRT2;
+    float jt3 = time * 0.017 * SQRT3;
     // Lissajous with 3rd-harmonic "kinks" for snake quality
     vec2 jc = vec2(
-        -0.75 + sin(jt1) * 0.20 + sin(jt2 * 1.3) * 0.09 + sin(jt1 * 2.7 + jt3) * 0.04,
-         0.10 + cos(jt2) * 0.28 + cos(jt3 * 0.9) * 0.10 + cos(jt2 * 2.3 + jt1) * 0.05
+        -0.75 + sin(jt1) * 0.22 + sin(jt2 * 1.3) * 0.11 + sin(jt1 * 2.7 + jt3) * 0.06,
+         0.10 + cos(jt2) * 0.30 + cos(jt3 * 0.9) * 0.12 + cos(jt2 * 2.3 + jt1) * 0.07
     );
     // Stable audio nudges c into different Julia families
     jc.x += spectralRoughnessMedian * 0.12 - 0.06;  // dissonance explores real axis
@@ -130,44 +131,78 @@ void mainImage(out vec4 fragColor, vec2 fragCoord) {
     // Angle from Julia origin determines which tentacle you're in
     float armAngle = atan(juliaC.y, juliaC.x);
     float armDist = length(juliaC);
-    // 3-fold and 5-fold angular harmonics — like real tentacle symmetries
-    // Each harmonic evolves at its own speed so arms diverge and reconverge
+    // Angular harmonics — tentacle symmetries at different scales
+    float distFade = smoothstep(0.0, 0.2, armDist);
     vec2 tentacleWave = vec2(
-        sin(armAngle * 3.0 + jt1 * 1.5) + sin(armAngle * 5.0 - jt2 * 1.2),
-        cos(armAngle * 3.0 - jt2 * 1.5) + cos(armAngle * 5.0 + jt3 * 1.2)
-    ) * 0.02 * smoothstep(0.0, 0.3, armDist);
+        sin(armAngle * 3.0 + jt1 * 2.0) + sin(armAngle * 5.0 - jt2 * 1.7)
+            + sin(armAngle * 7.0 + jt3 * 2.3) * 0.6,
+        cos(armAngle * 3.0 - jt2 * 2.0) + cos(armAngle * 5.0 + jt3 * 1.7)
+            + cos(armAngle * 7.0 - jt1 * 2.3) * 0.6
+    ) * 0.035 * distFade;
+    // Radial waves travel along each arm's length — makes large arms undulate
+    float radialWave = sin(armDist * 10.0 - jt1 * 2.5)
+                     + sin(armDist * 6.0 + jt2 * 1.8) * 0.7
+                     + sin(armDist * 15.0 - jt3 * 3.0) * 0.4;
+    tentacleWave += vec2(cos(armAngle), sin(armAngle)) * radialWave * 0.02 * distFade;
     // Per-tentacle jc — center stays coherent, arms each get their own c
     vec2 jcLocal = jc + tentacleWave;
 
-    // 8 Julia iterations — evolving bailout shapes the warp character
+    // 8 Julia iterations — track smooth escape for soft edges
     vec2 jz = juliaC;
+    float jSmooth = 0.0; // smooth iteration count for continuous boundary
     for (int i = 0; i < 8; i++) {
         jz = vec2(jz.x * jz.x - jz.y * jz.y, 2.0 * jz.x * jz.y) + jcLocal;
-        if (dot(jz, jz) > jBailout) break;
+        float r2 = dot(jz, jz);
+        if (r2 > jBailout) {
+            // Fractional escape count — eliminates the hard boundary step
+            jSmooth = float(i) - log2(log2(r2) / log2(jBailout));
+            break;
+        }
+        jSmooth = float(i + 1);
     }
 
-    // Strong warp — 12-18% — enough to fully break banding everywhere
-    float warpStrength = 0.12 + energyRSquared * 0.06;
+    // Smooth warp fade — full inside the set, fades to zero at the boundary
+    // Prevents the harsh edge where bounded/escaped pixels meet
+    float jR2 = dot(jz, jz);
+    float warpFade = smoothstep(jBailout, jBailout * 0.15, jR2);
+    float warpStrength = (0.12 + energyRSquared * 0.06) * warpFade;
     C += (jz - juliaC) * warpStrength;
 
-    // Julia magnitude — used for rim lighting and dark-area distortion
-    float jMag = length(jz);
+    // Julia magnitude — normalized and capped for smooth rim/distortion
+    float jMag = min(length(jz) / sqrt(jBailout), 2.0);
 
     // ========================================================================
-    // DOM MANDY FRACTAL — 150 iterations with per-step micro-perturbation
+    // DOM MANDY FRACTAL — 150 iterations
+    // Spatial audio fields make every screen region slightly different,
+    // so orbit trap bands never align globally.
     // ========================================================================
 
-    float D = D_BASE;
+    // Spatial audio fields — stable medians create smooth variation across screen
+    // Each field uses a different pair of independent features
+    float sx = C.x, sy = C.y;
+    float field1 = sin(sx * 5.0 + bassMedian * 8.0) * cos(sy * 4.0 + trebleMedian * 7.0);
+    float field2 = sin(sx * 3.0 - spectralCentroidMedian * 6.0) * cos(sy * 6.0 + spectralKurtosisMedian * 5.0);
+    float field3 = cos(sx * 7.0 + spectralSpreadMedian * 9.0) * sin(sy * 5.0 - spectralRolloffMedian * 4.0);
+
+    // Spatially varied fractal parameters — each region explores slightly different fractal
+    float D = D_BASE + field1 * 0.02;
     vec2 V = C * D;
-    float A = A_BASE + A_MOD;
-    float B = B_BASE + B_MOD;
+    float A = A_BASE + A_MOD + field2 * 0.15;
+    float B = B_BASE + B_MOD + field3 * 0.005;
 
     float v, ox, oy,
           z = oy = ox = 9.0;
     vec2 Zt = V;
 
-    // Micro-perturbation seed from Julia — breaks residual banding inside the loop
-    vec2 microSeed = jz * 0.001;
+    // Trap rotation varies spatially — each screen region has its own trap angle
+    float trapA = time * 0.012 * PHI + field1 * 1.2 + field2 * 0.8;
+    float trapC = cos(trapA), trapS = sin(trapA);
+
+    // Soft accumulated proximity — naturally band-free
+    float sox = 0.0, soy = 0.0;
+
+    // Micro-perturbation — Julia seed + spatial audio for per-pixel uniqueness
+    vec2 microSeed = jz * 0.001 + vec2(field2, field3) * 0.0003;
 
     for (int k = 0; k < 150; k++) {
         float a = atan(V.y, V.x);
@@ -177,16 +212,27 @@ void mainImage(out vec4 fragColor, vec2 fragCoord) {
         V = vec2(V.x * V.x - V.y * V.y, dot(V, V.yx));
         V -= C * B;
 
-        // Tiny per-step Julia perturbation — breaks banding at its source
+        // Per-step perturbation with spatial variation
         V += microSeed * float(k % 7 == 0 ? 1 : 0);
 
-        ox = min(ox, abs(V.x));
-        oy = min(oy, abs(V.y));
+        // Rotated orbit traps — spatially varying axes
+        vec2 Vt = vec2(V.x * trapC - V.y * trapS, V.x * trapS + V.y * trapC);
+        ox = min(ox, abs(Vt.x));
+        oy = min(oy, abs(Vt.y));
+
+        // Soft proximity accumulation
+        sox += 1.0 / (1.0 + Vt.x * Vt.x * 40.0);
+        soy += 1.0 / (1.0 + Vt.y * Vt.y * 40.0);
+
         z > (v = dot(V, V)) ? z = v, Zt = V : Zt;
     }
 
-    // Sexy/2 coloring
-    z = 1.0 - smoothstep(1.0, -6.0, log(max(oy, 1e-8))) * smoothstep(1.0, -6.0, log(max(ox, 1e-8)));
+    // Blend sharp and soft — more soft in band-prone mid-range
+    float zHard = 1.0 - smoothstep(1.0, -6.0, log(max(oy, 1e-8))) * smoothstep(1.0, -6.0, log(max(ox, 1e-8)));
+    float zSoft = 1.0 - smoothstep(4.0, 70.0, sox) * smoothstep(4.0, 70.0, soy);
+    float bandRisk = smoothstep(0.15, 0.5, zHard) * smoothstep(0.85, 0.5, zHard);
+    z = mix(zHard, zSoft, 0.4 + bandRisk * 0.3);
+
     vec3 base = sqrt(max(
         z + (z - z * z * z) * cos(atan(Zt.y, Zt.x) - vec3(0.0, 2.1, 4.2)),
         vec3(0.0)
@@ -197,20 +243,28 @@ void mainImage(out vec4 fragColor, vec2 fragCoord) {
     // ========================================================================
 
     float here = dot(base, vec3(0.3, 0.6, 0.1));
-    vec2 n = vec2(dFdx(here), dFdy(here)) * REFRACT_STRENGTH;
+
+    // Detect sub-pixel noise — both fractal and Julia can produce static
+    float fracNoise = fwidth(z);
+    float jNoise = fwidth(jMag);
+    float noisy = smoothstep(0.03, 0.3, fracNoise) + smoothstep(0.1, 0.8, jNoise) * 0.5;
+    noisy = min(noisy, 1.0);
+
+    // Fractal gradient drives refraction — suppress in noisy areas
+    vec2 n = vec2(dFdx(here), dFdy(here)) * REFRACT_STRENGTH * (1.0 - noisy * 0.9);
 
     // Julia gradient provides distortion in dark areas where fractal is flat
-    // This is what keeps dark regions alive and moving
     float dark = 1.0 - here;
     vec2 jGrad = vec2(dFdx(jMag), dFdy(jMag));
-    n += jGrad * JULIA_DISTORT * dark;
+    // Also suppress Julia gradient where IT is noisy
+    n += jGrad * JULIA_DISTORT * dark * (1.0 - smoothstep(0.1, 0.8, jNoise) * 0.85);
 
     // Slow spiral drift in dark areas — trails always flow, never stagnate
     vec2 fromCenter = UV - 0.5;
     n += vec2(-fromCenter.y, fromCenter.x) * SPIRAL_DRIFT * dark;
 
-    // Blur: dark areas = dreamy blur, bright areas = sharp
-    float focus = mix(BLUR_AMOUNT, 0.5, here);
+    // Blur: dark = dreamy, noisy = extra smooth, very dark = inherent softness
+    float focus = mix(BLUR_AMOUNT, 0.5, here) + noisy * 2.0 + dark * dark * 1.5;
     vec3 prev = textureLod(prevFrame, UV + n, focus).rgb;
 
     // Age trails: hue drift in oklch
@@ -233,16 +287,25 @@ void mainImage(out vec4 fragColor, vec2 fragCoord) {
     // BLEND — fractal over dreamy refracted feedback
     // ========================================================================
 
-    float fractal_presence = smoothstep(0.1, 0.6, here);
+    // In noisy areas, lean toward smooth feedback instead of noisy fractal
+    float fractal_presence = smoothstep(0.1, 0.6, here) * (1.0 - noisy * 0.6);
     vec3 col = mix(prev, fractal_col, fractal_presence);
 
-    // Water-like rim lighting from Julia edges
-    // The Julia gradient catches light like water surface tension
-    float juliaRim = length(jGrad);
-    juliaRim = smoothstep(0.0, 2.5, juliaRim);
-    juliaRim = pow(juliaRim, 2.5); // sharpen to thin caustic lines
-    // Rim color — cool-white with slight warmth, like light through water
-    vec3 rimLch = vec3(0.85, 0.04, jMag * 0.5 + time * 0.02 * PHI);
+    // Rippling wave rim lighting along Julia edges
+    // Use smooth escape count gradient for continuous edge detection
+    float jSmoothGrad = length(vec2(dFdx(jSmooth), dFdy(jSmooth)));
+    float juliaEdge = smoothstep(0.0, 1.5, jSmoothGrad + length(jGrad) * 0.3);
+    juliaEdge *= juliaEdge; // softer quadratic falloff
+    // Traveling waves at different speeds/scales — creates ripple interference
+    float wave1 = sin(jMag * 8.0 - time * 1.2) * 0.5 + 0.5;
+    float wave2 = sin(jMag * 13.0 + time * 0.9 * PHI) * 0.5 + 0.5;
+    float wave3 = sin(jMag * 21.0 - time * 1.5 * SQRT2 + armAngle * 2.0) * 0.5 + 0.5;
+    float ripple = wave1 * 0.5 + wave2 * 0.3 + wave3 * 0.2;
+    // Rim = edge detection * traveling ripple
+    float juliaRim = juliaEdge * ripple;
+    // Rim color shifts with wave phase — like light refracting through water
+    float rimHue = jMag * 0.3 + time * 0.04 * PHI + ripple * 0.4;
+    vec3 rimLch = vec3(0.8 + ripple * 0.1, 0.06, rimHue);
     vec3 rimCol = clamp(oklch2rgb(rimLch), 0.0, 1.0);
     col += rimCol * juliaRim * RIM_INTENSITY;
 

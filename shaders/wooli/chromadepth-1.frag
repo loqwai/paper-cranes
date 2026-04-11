@@ -1,10 +1,14 @@
 // @fullscreen: true
 // @favorite: true
-// @tags: wooli, mammoth, fractal, dubstep, ice
+// @tags: wooli, mammoth, fractal, dubstep, chromadepth, 3d
+//
+// ChromaDepth version of wooli/1 — icy fractal mammoth with depth-mapped rainbow
+// Red = foreground (closest), Green = middle, Blue/Violet = farthest
+// Designed for ChromaDepth 3D glasses
 //
 // PRESETS:
-// Default — icy fractal mammoth
-// https://visuals.beadfamous.com/?shader=wooli/1&image=images/wooli.png
+// Default — chromadepth fractal mammoth
+// https://visuals.beadfamous.com/?shader=wooli/chromadepth-1&image=images/wooli.png
 
 #define PI 3.14159265
 #define PHI 1.61803398
@@ -16,66 +20,63 @@
 // ============================================================================
 
 // Julia set shape — seed picks a unique fractal family; bass morphs it live
-// sin/cos of seed traces a circle around the Douady rabbit region
-// Time wobble and audio modulation both scale with MOTION so it's nearly still at idle
 #define MOTION smoothstep(0.12, 0.5, energyNormalized)
 #define J_REAL (-0.745 + sin(seed * PI * 2.0) * 0.13 + bassNormalized * 0.01 * MOTION + sin(iTime * 0.011 * PHI) * 0.018 * MOTION)
 #define J_IMAG (0.186 + cos(seed * PI * 2.0) * 0.11 + spectralCentroidNormalized * 0.006 * MOTION + cos(iTime * 0.008 * SQRT2) * 0.012 * MOTION)
-// #define J_REAL -0.745
-// #define J_IMAG 0.186
 
-// Zoom — amplitude and speed both scale with MOTION
+// Zoom — seed3 picks unique zoom level and drift phase
 #define ZOOM_LVL (1.4 + seed3 * 0.8 + sin(iTime * 0.004 * PHI + seed3 * PI * 2.0) * 0.2 * MOTION + sin(iTime * 0.003 * SQRT2 + seed3 * 4.0) * 0.1 * MOTION + energyNormalized * 0.15)
-// #define ZOOM_LVL 2.0
 
-// Rotation — seed3 starting angle; rotation rate scales with MOTION
+// Rotation — seed3 starting angle
 #define ROT_ANGLE (seed3 * PI * 2.0 + iTime * 0.008 * MOTION + spectralFluxNormalized * 0.03)
-// #define ROT_ANGLE 0.0
 
-// Drift — amplitude scales with MOTION so it barely wanders at idle
+// Drift
 #define DRIFT vec2(sin(iTime * 0.005 * PHI + seed3 * PI * 2.0) * 0.2 * MOTION, cos(iTime * 0.004 * SQRT2 + seed3 * 4.7) * 0.15 * MOTION)
 
 // Edge glow
 #define GLOW_BASE (0.6 + bassNormalized * 0.8)
 #define GLOW_PULSE (1.0 + bassSlope * bassRSquared * 0.6)
-// #define GLOW_BASE 0.8
-// #define GLOW_PULSE 1.0
 
-// Color — use slopes/rSquared for gradual evolution instead of raw values
-// spectralCentroidSlope: rising = getting brighter, falling = getting darker
-// rSquared gates it so only confident trends shift the hue
-#define HUE_SHIFT (spectralCentroidSlope * spectralCentroidRSquared * 0.4 + iTime * 0.005 * MOTION)
-#define SAT_BOOST (1.0 + energySlope * energyRSquared * 0.3)
-// #define HUE_SHIFT 0.0
-// #define SAT_BOOST 1.0
+// Depth hue modulation — spectral centroid shifts which depth feels "close"
+#define DEPTH_HUE_SHIFT (spectralCentroidSlope * spectralCentroidRSquared * 0.08 + iTime * 0.003 * MOTION)
+#define DEPTH_SAT_BOOST (1.0 + energySlope * energyRSquared * 0.1)
 
-// Feedback — less blending = sharper fractal; still some trail at idle
+// Feedback
 #define FB_BLEND (0.82 - energyNormalized * 0.15 - spectralFluxNormalized * 0.05)
 #define REFRACT_STR ((0.005 + spectralRoughnessNormalized * 0.015) * MOTION)
 
-// Infinity zoom on drops — smoothstep with higher threshold so it only triggers on big drops
+// Infinity zoom on drops
 #define INFINITY_ZOOM smoothstep(0.2, 0.8, energyZScore)
-// #define INFINITY_ZOOM 0.0
 
 // Build/drop
 #define BUILD_DROP (energySlope * energyRSquared * 6.0)
 #define IS_DROPPING clamp(-BUILD_DROP, 0.0, 1.0)
 
-// Mammoth scale — punches outward on bass hits
+// Mammoth scale
 #define MAMMOTH_SCALE (1.4 - bassNormalized * 0.3 - clamp(energyZScore, 0.0, 1.0) * 0.15)
-// #define MAMMOTH_SCALE 1.25
 
-// Fractal tendrils from mammoth edges during intense music
+// Fractal tendrils
 #define TENDRIL_REACH (0.05 + bassNormalized * 0.1)
 #define TENDRIL_INTENSITY smoothstep(0.25, 0.7, energyNormalized)
-// #define TENDRIL_REACH 0.08
-// #define TENDRIL_INTENSITY 0.5
 
-// Background mammoth replication — only appears when music is really going off
+// Background mammoths
 #define BG_VIS (smoothstep(0.55, 0.85, spectralEntropyNormalized) * smoothstep(0.5, 0.8, energyNormalized) * 0.2)
 #define BG_TILES (3.0 + floor(energyNormalized * 2.0))
-// #define BG_VIS 0.15
-// #define BG_TILES 4.0
+
+// ============================================================================
+// CHROMADEPTH COLOR MAPPING
+// ============================================================================
+// Maps 0-1 depth to rainbow: red(0)→yellow→green→cyan→blue→violet(1)
+// seed2 shifts the depth-to-hue mapping so each device gets a unique palette bias
+
+vec3 chromadepthColor(float t, float sat, float lit) {
+    t = clamp(t, 0.0, 1.0);
+    // Hue: 0=red(near) → 0.75=violet(far)
+    // seed2 rotates which part of the spectrum maps to "near"
+    float hue = fract(t * 0.75 + seed2 * 0.15 + DEPTH_HUE_SHIFT);
+    sat = clamp(sat * DEPTH_SAT_BOOST, 0.0, 1.0);
+    return hsl2rgb(vec3(hue, sat, lit));
+}
 
 // ============================================================================
 // MAMMOTH MASK from image texture
@@ -92,7 +93,7 @@ float getMask(vec2 uv) {
 }
 
 // ============================================================================
-// EDGE GLOW — sample neighbors for wider glow region
+// EDGE GLOW
 // ============================================================================
 
 float getEdgeGlow(vec2 uv, float mask, float width) {
@@ -105,14 +106,13 @@ float getEdgeGlow(vec2 uv, float mask, float width) {
 }
 
 // ============================================================================
-// FRACTAL TENDRILS — Kleinian fold iteration creates branching filaments
+// FRACTAL TENDRILS
 // ============================================================================
 
 float tendrilFractal(vec2 p) {
     vec2 z = p;
     float v = 0.0;
     float t = iTime * 0.15 * MOTION;
-    // seed4 shifts the fold constant — different tendril branching per device
     vec2 c = vec2(1.2 + sin(t + seed4 * PI * 2.0) * 0.15, 0.9 + cos(t * PHI + seed4 * 4.0) * 0.1);
     for (int i = 0; i < 6; i++) {
         z = abs(z) / max(dot(z, z), 0.001) - c;
@@ -123,7 +123,7 @@ float tendrilFractal(vec2 p) {
 }
 
 // ============================================================================
-// JULIA SET with orbit traps (single pass)
+// JULIA SET with orbit traps
 // ============================================================================
 
 void juliaSet(vec2 p, vec2 jc,
@@ -152,38 +152,45 @@ void juliaSet(vec2 p, vec2 jc,
 }
 
 // ============================================================================
-// ICY COLOR PALETTE from orbit traps (oklch color space)
+// CHROMADEPTH FRACTAL COLOR from orbit traps
 // ============================================================================
+// Interior (didn't escape) → red/warm (near in chromadepth)
+// Boundary (escaped slowly) → green/cyan (mid depth)
+// Exterior (escaped fast) → blue/violet (far in chromadepth)
+// seed shifts which orbit trap dominates the depth mapping
 
-vec3 icyColor(float tO, float tX, float tY, float tC, float iter) {
+vec3 fractalChromadepth(float tO, float tX, float tY, float tC, float iter, bool escaped) {
     tO = sqrt(tO); tX = sqrt(tX); tY = sqrt(tY);
 
-    // seed2 picks base hue in oklch: ~3.4(cyan)→4.2(blue)→5.5(purple)
-    // seed varies palette structure (lightness, chroma)
-    float baseHue = 3.4 + seed2 * 2.1;
-    // oklch: (L, C, H) — L=lightness 0-1, C=chroma 0-0.37, H=hue radians
-    vec3 deep   = oklch2rgb(vec3(0.15 + seed * 0.05, 0.06 + seed * 0.03,  baseHue + 0.2));
-    vec3 mid    = oklch2rgb(vec3(0.45 + seed * 0.08, 0.12 + seed * 0.04,  baseHue));
-    vec3 bright = oklch2rgb(vec3(0.60 + seed * 0.06, 0.18 + seed * 0.03,  baseHue - 0.2));
-    vec3 ice    = oklch2rgb(vec3(0.78 + seed * 0.05, 0.06 + seed * 0.03,  baseHue + seed * 0.2));
-    vec3 accent = oklch2rgb(vec3(0.50 + seed * 0.08, 0.20 + seed * 0.04,  baseHue + 0.8 + seed * 1.0));
+    float depth;
+    float brightness;
 
-    // Mix in oklab for perceptually smooth blending
-    vec3 col = deep;
-    col = oklabmix(col, mid,    smoothstep(0.0, 0.5, tX));
-    col = oklabmix(col, bright, smoothstep(0.0, 0.35, tY));
-    col = oklabmix(col, ice,    smoothstep(0.0, 0.18, tC));
-    col = oklabmix(col, accent, smoothstep(0.0, 0.2, tO) * 0.3);
+    if (!escaped) {
+        // INTERIOR — red/warm tones (chromadepth "near")
+        // Combine orbit traps for structural detail
+        float trapDetail = min(tX, tY);
+        float trapBlend = mix(tO, trapDetail, 0.5 + seed * 0.3);
+        trapBlend = mix(trapBlend, tC, 0.2 + seed * 0.15);
 
-    // Shimmer from iteration count
-    float shimmer = sin(iter * 0.3 + iTime * 0.5 * MOTION) * 0.5 + 0.5;
-    col = oklabmix(col, bright, shimmer * 0.06 * MOTION);
+        // seed shifts which trap features map to which depth
+        depth = clamp(trapBlend * (0.35 + seed * 0.1), 0.0, 0.35);
+        brightness = 0.45 + tO * 0.15 + trapDetail * 0.15;
 
-    // Live hue modulation + chroma boost in oklch
-    vec3 lch = rgb2oklch(max(col, vec3(0.001)));
-    lch.z += HUE_SHIFT * PI * 2.0;
-    lch.y = min(lch.y * SAT_BOOST, 0.32);
-    return oklch2rgb(lch);
+        // Shimmer from iteration
+        float shimmer = sin(iter * 0.3 + iTime * 0.5 * MOTION) * 0.5 + 0.5;
+        brightness += shimmer * 0.05 * MOTION;
+    } else {
+        // EXTERIOR — cool tones (chromadepth "far")
+        float escapeFrac = clamp(iter / 80.0, 0.0, 1.0);
+        // Near boundary = green/cyan, fast escape = deep violet
+        depth = mix(0.85, 0.4, pow(escapeFrac, 0.5 + seed * 0.3));
+        // Fade brightness with distance from set
+        brightness = mix(0.1, 0.6, pow(escapeFrac, 0.6));
+    }
+
+    float sat = 0.92 - depth * 0.06;
+    float lit = clamp(brightness * 0.55, 0.05, 0.55);
+    return chromadepthColor(depth, sat, lit);
 }
 
 // ============================================================================
@@ -198,10 +205,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float mask = getMask(uv);
     float glowWidth = 0.02 + bassNormalized * 0.04;
     float edgeGlow = getEdgeGlow(uv, mask, glowWidth);
-
     float tendrilEdge = getEdgeGlow(uv, mask, TENDRIL_REACH);
 
-    // Bleed: on bass, fractal leaks outside via expanded mask
     float bleed = smoothstep(0.3, 0.8, bassNormalized) * 0.4;
     float visMask = smoothstep(-bleed * 0.3, 0.45, mask);
 
@@ -217,21 +222,25 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 jc = vec2(J_REAL, J_IMAG);
     float tO, tX, tY, tC, sIter;
     juliaSet(p, jc, tO, tX, tY, tC, sIter);
-    vec3 fracCol = icyColor(tO, tX, tY, tC, sIter);
+    bool escaped = (sIter < 80.0);
+    vec3 fracCol = fractalChromadepth(tO, tX, tY, tC, sIter, escaped);
 
-    // ---- EDGE GLOW COLOR ---- matches seeded palette
-    float glowHue = 3.4 + seed2 * 2.1;
-    vec3 glowCol = oklch2rgb(vec3(0.70, 0.18, glowHue - 0.1));
+    // ---- EDGE GLOW COLOR ---- red-shifted for chromadepth "pop"
+    // Edge glow in red/orange = pops forward in chromadepth glasses
+    float glowHue = fract(0.05 + seed2 * 0.08);
+    vec3 glowCol = hsl2rgb(vec3(glowHue, 0.95, 0.5));
     float mt = iTime * MOTION;
     float wave = sin(uv.x * 8.0 + uv.y * 6.0 - mt * 1.5) * 0.5 + 0.5;
     wave *= sin(uv.y * 5.0 - mt * 1.0 * PHI) * 0.5 + 0.5;
     vec3 edgeLight = glowCol * edgeGlow * GLOW_BASE * GLOW_PULSE * mix(0.7, 1.0, wave);
 
-    // ---- FRACTAL TENDRILS ----
+    // ---- FRACTAL TENDRILS ---- cyan/green for mid-depth
     vec2 tp = p * 0.7 + vec2(sin(iTime * 0.05 * MOTION), cos(iTime * 0.04 * MOTION));
     float tFrac = tendrilFractal(tp);
-    vec3 tendrilCol = vec3(0.0, 0.92, 1.0) * tendrilEdge * tFrac * TENDRIL_INTENSITY;
-    tendrilCol += vec3(0.3, 0.05, 0.65) * tendrilEdge * tFrac * TENDRIL_INTENSITY * 0.3;
+    float tendrilHue = fract(0.33 + seed2 * 0.1);
+    vec3 tendrilCol = hsl2rgb(vec3(tendrilHue, 0.9, 0.45)) * tendrilEdge * tFrac * TENDRIL_INTENSITY;
+    vec3 tendrilGlow = hsl2rgb(vec3(fract(tendrilHue + 0.1), 0.85, 0.35)) * tendrilEdge * tFrac * TENDRIL_INTENSITY * 0.3;
+    tendrilCol += tendrilGlow;
 
     // ---- BACKGROUND MAMMOTHS ----
     vec3 bgCol = vec3(0.0);
@@ -247,19 +256,19 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         vec2 tiled = fract(bgUV * count);
         float h = fract(sin(dot(cell, vec2(127.1, 311.7))) * 43758.5453);
         float bgM = (1.0 - getInitialFrameColor(tiled).r) * step(0.3, h) * (1.0 - mask);
-        bgCol = vec3(0.04, 0.22, 0.38) * bgM * bgVis * smoothstep(0.3, 0.7, h);
+        // Background mammoths in violet/blue = far depth
+        bgCol = hsl2rgb(vec3(fract(0.65 + seed2 * 0.1), 0.7, 0.2)) * bgM * bgVis * smoothstep(0.3, 0.7, h);
     }
 
     // ---- FRAME FEEDBACK ----
     float lum = dot(fracCol, vec3(0.3, 0.6, 0.1));
     vec2 refr = vec2(dFdx(lum), dFdy(lum)) * REFRACT_STR;
     vec3 prev = getLastFrameColor(uv + refr).rgb;
-    // Age feedback toward seeded palette hue in oklch
-    vec3 plch = rgb2oklch(max(prev, vec3(0.001)));
-    float targetHue = 3.4 + seed2 * 2.1;
-    plch.z = mix(plch.z, targetHue, 0.003 + MOTION * 0.007);
-    plch.x *= 1.0 - 0.005 * MOTION;
-    prev = oklch2rgb(plch);
+    // Decay feedback — keep chromadepth hue structure intact
+    vec3 prevHSL = rgb2hsl(max(prev, vec3(0.001)));
+    prevHSL.z *= 1.0 - 0.005 * MOTION; // gentle brightness decay
+    prevHSL.y *= 0.998; // very slight desat
+    prev = hsl2rgb(prevHSL);
 
     // ---- INFINITY ZOOM ON DROPS ----
     float infStr = INFINITY_ZOOM;
@@ -280,8 +289,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 col = mix(exterior, interior, visMask);
     col += min(edgeLight, vec3(0.4)) + min(tendrilCol, vec3(0.3)) + bgCol;
 
-    // Beat flash (subtle)
-    if (beat) col *= 1.03;
+    // Beat flash — shift toward red for chromadepth "pop forward"
+    if (beat) {
+        vec3 bHSL = rgb2hsl(max(col, vec3(0.001)));
+        bHSL.x = fract(bHSL.x - 0.05); // nudge toward red
+        bHSL.z = min(bHSL.z * 1.1, 0.6);
+        col = hsl2rgb(bHSL);
+    }
+
     // Drop contrast boost
     col = mix(col, pow(max(col, vec3(0.0)), vec3(1.15)), IS_DROPPING * 0.08);
 
@@ -289,10 +304,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float vign = 1.0 - pow(length(uv - 0.5) * 0.85, 2.5);
     col *= max(vign, 0.01);
 
-    vec3 flch = rgb2oklch(max(col, vec3(0.001)));
-    flch.y = clamp(flch.y, 0.02, 0.28);
-    flch.x = clamp(flch.x, 0.0, 0.72);
-    col = oklch2rgb(flch);
+    // Clamp to chromadepth-safe range
+    col = clamp(col, 0.0, 1.0);
 
     fragColor = vec4(col, 1.0);
 }
