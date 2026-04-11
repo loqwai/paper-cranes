@@ -111,6 +111,11 @@ const setupAudio = async () => {
         return noAudio
     }
 
+    if (params.get('audio') === 'tab') {
+        const { setupTabAudio } = await import('./src/audio/tabAudioSource.js')
+        return setupTabAudio({ params, AudioProcessor })
+    }
+
     const fileConfig = createAudioFileSource({ params })
     if (fileConfig) {
         try {
