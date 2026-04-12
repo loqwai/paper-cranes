@@ -486,13 +486,28 @@ This lets reviewers click through and test each shader directly.
 ## Claude-Specific Instructions
 
 ### Where to Put Your Shaders
-**Always create shaders in `shaders/wip/claude/`**
+
+Shaders go under `shaders/<github-username>/wip/<shader-name>/`. Iterations are numbered files. Keep a `docs/` subfolder alongside the shader with markdown notes as you go.
+
+```
+shaders/claude/wip/cosmic-bloom/
+├── 1.frag              # First iteration
+├── 2.frag              # Second iteration
+├── docs/
+│   ├── concept.md      # What you're going for, design intent
+│   └── iterations.md   # What changed between iterations and why
+```
 
 ```bash
-shaders/wip/claude/my-shader.frag      # Good
-shaders/wip/claude/experiment-1.frag   # Good
-shaders/my-shader.frag                  # Bad - don't put in root
+shaders/claude/wip/cosmic-bloom/1.frag        # Good
+shaders/claude/wip/cosmic-bloom/docs/concept.md  # Good — document as you go
+shaders/wip/claude/my-shader.frag              # Old convention, still works
+shaders/my-shader.frag                          # Bad - don't put in root
 ```
+
+**Document as you iterate.** When creating or revising a shader:
+- Write `docs/concept.md` describing the visual intent, which audio features drive what, and any key design decisions
+- Update `docs/iterations.md` with what changed between numbered versions and why (e.g. "2.frag: switched from spectralFlux to spectralEntropy for the color shift — less jittery on sparse tracks")
 
 The `wip/` directory is filtered from the mobile list by default, so experimental shaders won't clutter the production list.
 
