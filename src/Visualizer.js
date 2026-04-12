@@ -22,14 +22,8 @@ const positions = [
     1, 1, 0,
 ]
 
-const toWebpUrl = (url) => {
-    if (url.endsWith('.webp') || url.startsWith('data:')) return url
-    return url.replace(/\.(png|jpe?g|gif)$/i, '.webp')
-}
-
 const getTexture = async (gl, url) => {
-    const webpUrl = toWebpUrl(url)
-    const src = webpUrl !== url ? await fetch(webpUrl, { method: 'HEAD' }).then(() => webpUrl).catch(() => url) : url
+    const src = url
     return new Promise((resolve) => {
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
         const texture = createTexture(gl, {
