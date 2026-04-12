@@ -32,3 +32,5 @@ Create a pull request for the current branch, request a review from @redaphid, a
    ```
 
 6. Return the PR URL to the user.
+
+7. After the PR is created, review the commits in the PR. If it introduces a feature a user would be excited about (new capability, new query param, new UI — not just a fix or refactor), ask the user: "This PR adds [feature]. Want me to update the changelog?" If they say yes, invoke `/changelog`.
