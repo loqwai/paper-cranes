@@ -3,6 +3,23 @@ import { useState, useEffect, useRef } from 'preact/hooks'
 import { html } from 'htm/preact'
 import { getRelativeOrAbsoluteShaderUrl } from './src/utils.js'
 import { createParamsManager } from './src/params/ParamsManager.js'
+import { initMultiplayerEditor } from './src/multiplayer/MultiplayerEditor.js'
+
+// Initialize multiplayer editing as soon as Monaco is ready
+const startMultiplayer = () => {
+    const editor = window.__monacoEditor
+    if (!editor) return
+    try {
+        initMultiplayerEditor(editor)
+    } catch (e) {
+        console.error('[MP] Failed to initialize multiplayer:', e)
+    }
+}
+if (window.__monacoEditor) {
+    startMultiplayer()
+} else {
+    window.addEventListener('monaco-editor-ready', startMultiplayer, { once: true })
+}
 
 // Check if we're in remote control mode
 const searchParams = new URLSearchParams(window.location.search)
