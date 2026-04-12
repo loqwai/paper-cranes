@@ -4,6 +4,30 @@ import { WorkerRPC } from './WorkerRPC.js'
 // Workers compute these but hypnosound's StatTypes doesn't include them
 const AllStatTypes = [...StatTypes, 'slope', 'intercept', 'rSquared']
 
+// Neutral values for each stat type during warm-up (what the shader sees when audio hasn't "arrived" yet)
+const neutralValues = {
+    ZScore: 0,
+    Normalized: 0.5,
+    Mean: 0,
+    Median: 0,
+    Min: 0,
+    Max: 0,
+    StandardDeviation: 0,
+    Slope: 0,
+    Intercept: 0,
+    RSquared: 0,
+}
+
+// Returns the neutral value for a given feature key based on its stat suffix
+const getNeutralValue = (key) => {
+    for (const [suffix, value] of Object.entries(neutralValues)) {
+        if (key.endsWith(suffix)) return value
+    }
+    return 0 // raw values (e.g. "bass", "energy") ramp from 0
+}
+
+const WARMUP_FRAMES = 120 // ~2 seconds at 60fps
+
 export const getFlatAudioFeatures = (audioFeatures = AudioFeatures, rawFeatures = {}) => {
     const features = {}
     for (const feature of audioFeatures) {
@@ -31,6 +55,7 @@ export class AudioProcessor {
         this.currentFeatures.beat = false
         this.smoothedFeatures = {}
         this.smoothingFactor = 0.10 // Lower = smoother, higher = more responsive
+        this.warmupFrame = 0
     }
 
     createAnalyzer = () => {
@@ -90,8 +115,22 @@ export class AudioProcessor {
             }
         }
 
+        // Warm-up ramp: ease features from neutral to real over WARMUP_FRAMES
+        if (this.warmupFrame < WARMUP_FRAMES) {
+            const t = this.warmupFrame / WARMUP_FRAMES
+            const ramp = t * t * (3 - 2 * t) // smoothstep: smooth S-curve from 0 to 1
+
+            for (const key in this.currentFeatures) {
+                if (typeof this.currentFeatures[key] !== 'number') continue
+                const neutral = getNeutralValue(key)
+                this.currentFeatures[key] = neutral + (this.currentFeatures[key] - neutral) * ramp
+            }
+
+            this.warmupFrame++
+        }
+
         this.historySize = window.cranes?.manualFeatures?.history_size ?? this.historySize
-        this.currentFeatures.beat = this.isBeat()
+        this.currentFeatures.beat = this.warmupFrame >= WARMUP_FRAMES && this.isBeat()
     }
 
     isBeat = () => {

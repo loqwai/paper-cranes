@@ -20,6 +20,12 @@ export default defineConfig({
     port: parseInt(process.env.PORT) || branchToPort(gitBranch),
     host: '0.0.0.0',
     allowedHosts: true,
+    watch: {
+      // Ignore files that our plugins regenerate on .frag changes.
+      // Without this, Vite sees these writes and triggers a full page reload.
+      // The plugins handle updates via custom HMR events instead.
+      ignored: ['**/shaders.json', '**/manifests/**', '**/shaders/**'],
+    },
   },
   build: {
     target: 'esnext',
