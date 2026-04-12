@@ -170,19 +170,23 @@ float sdDaddy(vec2 p, float pump, Pose P) {
 // inflates outward by fur_thickness, its top sits below the neck — no hard
 // cut needed, no visible "back of collar" line.
 float sdTorso(vec2 p, float pump, Pose P) {
-    float chest_w = 0.23 + pump * 0.04;
+    // Tailored torso: narrower chest, pinched waist, slight hip flare so
+    // the coat silhouette reads as a fitted garment instead of a sack.
+    float chest_w = 0.20 + pump * 0.04;
     float chest_h = 0.10 + pump * 0.02;
     vec2 cp = p - vec2(P.hip * 0.8, 0.01);
     float chest = sdEllipse(cp, vec2(chest_w, chest_h));
 
-    vec2 wp = p - vec2(P.hip * 1.4, -0.22);
-    float hips = sdEllipse(wp, vec2(0.20, 0.09));
+    // Waist — narrower pinch at midsection
+    vec2 wpn = p - vec2(P.hip * 1.0, -0.12);
+    float waist = sdEllipse(wpn, vec2(0.16, 0.08));
 
-    // No separate shoulder bumps — the sleeves in sdFurCoat attach directly
-    // to the shoulder positions and merge with this torso via smin, giving
-    // a smooth chest→sleeve transition without flared shoulder wings.
+    vec2 wp = p - vec2(P.hip * 1.4, -0.24);
+    float hips = sdEllipse(wp, vec2(0.17, 0.09));
+
     float d = chest;
-    d = smin(d, hips, 0.06);
+    d = smin(d, waist, 0.08);
+    d = smin(d, hips, 0.08);
     return d;
 }
 
@@ -191,20 +195,19 @@ float sdTorso(vec2 p, float pump, Pose P) {
 float sdFurCoat(vec2 p, Pose P, float pump) {
     float d_torso = sdTorso(p, pump, P);
 
-    // Long sleeves — capsules from shoulder to wrist, radius wide enough to
-    // fully encase the body arms + fists. Sleeve ends exactly at hand so
-    // the hand emerges at the cuff.
+    // Long sleeves — capsules from shoulder to wrist. Sleeves sit further
+    // OUT from the torso so there's a visible armpit gap between them.
     float chest_w = 0.23 + pump * 0.04;
-    float coat_edge = chest_w * 0.95 + 0.055;
-    vec2 ls = vec2(-coat_edge + P.hip * 0.4, 0.0);
-    vec2 rs = vec2( coat_edge + P.hip * 0.4, 0.0);
-    float l_sleeve = sdCapsule(p, ls, P.l_hand, 0.07);
-    float r_sleeve = sdCapsule(p, rs, P.r_hand, 0.07);
+    float coat_edge = chest_w * 0.95 + 0.09;
+    vec2 ls = vec2(-coat_edge + P.hip * 0.4, -0.01);
+    vec2 rs = vec2( coat_edge + P.hip * 0.4, -0.01);
+    float l_sleeve = sdCapsule(p, ls, P.l_hand, 0.06);
+    float r_sleeve = sdCapsule(p, rs, P.r_hand, 0.06);
 
-    // Combine torso and sleeves with a wide smin so the chest→sleeve
-    // transition is smooth instead of a step/flare.
-    float coat_base = smin(d_torso, l_sleeve, 0.08);
-    coat_base = smin(coat_base, r_sleeve, 0.08);
+    // Combine torso and sleeves with a HARD union — no blending — so a
+    // visible armpit gap remains between the sleeve and the torso.
+    float coat_base = min(d_torso, l_sleeve);
+    coat_base = min(coat_base, r_sleeve);
 
     // Looser, straighter fit (not form-fitting) — more fur thickness so the
     // coat hangs straight down rather than hugging every curve.
