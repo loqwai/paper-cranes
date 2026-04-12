@@ -116,10 +116,10 @@ struct Pose {
 
 Pose makePose(float beat_phase, float hip_sway, float snap, float groove) {
     Pose P;
-    P.bob = -abs(sin(beat_phase)) * 0.04 + groove * 0.01;
+    P.bob = -abs(sin(beat_phase)) * 0.025 + groove * 0.005;
     P.tilt = hip_sway * 0.18 + sin(beat_phase * 0.5) * 0.05;
     P.hip = sign(hip_sway) * pow(abs(hip_sway), 0.6) * 0.05;
-    P.head_c = vec2(P.hip * 0.6, 0.30 + P.bob);
+    P.head_c = vec2(P.hip * 0.6, 0.24 + P.bob);
     float l_gesture = snap * 1.2;
     float r_gesture = snap * 1.2;
     P.l_open = l_gesture;
@@ -147,7 +147,7 @@ float sdDaddy(vec2 p, float pump, Pose P) {
     float jaw = sdEllipse(hp - vec2(0.0, -0.05), vec2(0.11, 0.09));
     head = smin(head, jaw, 0.04);
 
-    vec2 np = p - vec2(P.hip * 0.7, 0.13);
+    vec2 np = p - vec2(P.hip * 0.7, 0.11);
     float neck = sdEllipse(np, vec2(0.055, 0.045));
 
     // Slimmer chest
