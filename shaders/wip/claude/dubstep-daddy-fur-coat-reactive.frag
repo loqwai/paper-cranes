@@ -201,11 +201,11 @@ float sdTorso(vec2 p, float pump, Pose P) {
     // the coat silhouette reads as a fitted garment instead of a sack.
     float chest_w = CHEST_W_BASE + pump * 0.04;
     float chest_h = CHEST_H_BASE + pump * 0.02;
-    vec2 cp = p - vec2(P.hip * 0.8, 0.01);
+    vec2 cp = p - vec2(P.hip * 0.7, 0.01);
     float chest = sdEllipse(cp, vec2(chest_w, chest_h));
 
     // Waist — narrower pinch at midsection
-    vec2 wpn = p - vec2(P.hip * 1.0, -0.12);
+    vec2 wpn = p - vec2(P.hip * 0.8, -0.12);
     float waist = sdEllipse(wpn, vec2(0.16, 0.08));
 
     vec2 wp = p - vec2(P.hip * 1.4, -0.24);
@@ -359,7 +359,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float coat_edge_gate = coat * (1.0 - coat) * 4.0;
     coat_rim *= coat_edge_gate;
 
-    float chest_glow = exp(-pow(length(uv - vec2(P.hip * 0.8, -0.02)) * 3.0, 2.0));
+    float chest_glow = exp(-pow(length(uv - vec2(P.hip * 0.7, -0.02)) * 3.0, 2.0));
     chest_glow *= smoothstep(0.005, -0.005, d_body) * (0.3 + pump * 0.7);
 
     // Eyes
@@ -418,6 +418,44 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float shoulder_gleam = exp(-pow((uv.y - 0.08) * 10.0, 2.0));
     float gleam_intensity = 0.15 + spectralFluxNormalized * 0.25;
     fur_col += shoulder_gleam * vec3(gleam_intensity, gleam_intensity * 0.6, gleam_intensity * 1.2);
+    // ---- FRACTAL FUR FIBERS ----
+    // Swirling domain-warped fractal that appears inside the coat when the
+    // music is "interesting" — triggered by spectral entropy (chaos) and
+    // spectral roughness (dissonance). These are independent from the
+    // energy/bass features that drive the eyes, so the coat and eyes
+    // react to DIFFERENT musical qualities.
+    float fur_trigger = clamp(
+        spectralEntropyNormalized * 0.6 +
+        spectralRoughnessNormalized * 0.4 +
+        max(spectralKurtosisZScore, 0.0) * 0.3,
+        0.0, 1.0
+    );
+    // Only show when musically interesting (above baseline)
+    float fur_fractal_amt = smoothstep(0.3, 0.7, fur_trigger);
+    if (fur_fractal_amt > 0.01) {
+        // Domain warp: swirl the coords with low-freq noise so the fibers
+        // look like curling fur strands, not a static grid
+        vec2 fp = uv * 12.0;
+        float warp_t = time * 0.3 + spectralCentroidNormalized * 0.5;
+        vec2 warp = vec2(
+            fbm(fp + vec2(warp_t, 0.0)),
+            fbm(fp + vec2(0.0, warp_t + 3.7))
+        );
+        // Second domain warp for deeper swirl
+        vec2 fp2 = fp + warp * 2.5;
+        float fibers = fbm(fp2 + vec2(
+            fbm(fp2 + vec2(warp_t * 0.7, 1.3)),
+            fbm(fp2 + vec2(2.1, warp_t * 0.5))
+        ) * 1.5);
+        // Shape the fibers: sharp ridges that look like individual strands
+        float strand = pow(abs(sin(fibers * PI * 3.0)), 4.0);
+        // Color the strands: lighter than the base coat, tinted toward
+        // chrome/white so they read as light catching individual fur fibers
+        vec3 strand_col = mix(fur_col * 1.3, chrome, 0.3 + strand * 0.2);
+        // Blend into the coat color, gated by the trigger amount
+        fur_col = mix(fur_col, strand_col, strand * fur_fractal_amt * 0.75);
+    }
+
     // Seam strength computed here; chrome glow added after compositing
     // so it matches the rim-light aesthetic. Thin + subtle.
     float seam_x_pos = P.hip * 0.7;
