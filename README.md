@@ -1,5 +1,16 @@
 # Beadfamous.
 
+## What's New
+
+- **[Multiplayer editor](docs/multiplayer-editor.md)** — Edit shaders together with live cursors and real-time sync
+- **[Tab audio capture](docs/tab-audio.md)** — Visualize Spotify or any browser tab with `?audio=tab`, no drivers needed
+- **[Editor-filesystem sync](docs/editor-filesystem-sync.md)** — Ctrl+S writes to disk, external edits push back to the browser
+- **[MIDI controller profiles](docs/midi-mapping.md)** — Plug in a controller, knobs auto-map and persist per device
+
+See the full [changelog](docs/CHANGELOG.md) for more.
+
+---
+
 Welcome to the Beadfamous project! This repo is an open-source project I made to do advanced audio analysis from a microphone in the browser, and drive arbitrary music visualizations with the data. The project can run on mobile phones, and is designed to make it easy to create new visualizations and share them with others.
 
 ### Visualize Spotify (or any tab) — no loopback driver, no install
@@ -15,15 +26,6 @@ For a permanent system-wide setup (projector rigs, live shows, OBS-style routing
 Visuals made by this project can be seen [here](https://visuals.beadfamous.com/list.html). This includes many works in progress, that may be twitchy or broken.
 
 The other half of the project is a sort of "art project" where you make bead bracelets, and flash the visualizations onto them. This is a fun way to share your visualizations with others, and to make a physical object that represents your music. Scanning the bracelet with a phone will take you to a specific visualization - even when offline!
-
-## What's New
-
-- **[Multiplayer editor](docs/multiplayer-editor.md)** — Edit shaders together with live cursors and real-time sync
-- **[Tab audio capture](docs/tab-audio.md)** — Visualize Spotify or any browser tab with `?audio=tab`, no drivers needed
-- **[Editor-filesystem sync](docs/editor-filesystem-sync.md)** — Ctrl+S writes to disk, external edits push back to the browser
-- **[MIDI controller profiles](docs/midi-mapping.md)** — Plug in a controller, knobs auto-map and persist per device
-
-See the full [changelog](docs/CHANGELOG.md) for more.
 
 ## Usage
 
