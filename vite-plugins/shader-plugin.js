@@ -159,7 +159,14 @@ export function shaderPlugin() {
         await generateManifests()
         console.log(`[shaders] ${eventType}: ${path} (${count} total)`)
 
-        server.ws.send({ type: 'full-reload' })
+        // Send a custom event instead of full-reload so the editor page
+        // can handle shader changes without losing editor state.
+        // Pages that need a full reload can listen for this event and reload themselves.
+        server.ws.send({
+          type: 'custom',
+          event: 'shaders-changed',
+          data: { path, eventType, count },
+        })
       }
 
       watcher.on('add', (path) => regenerate('added', path))
