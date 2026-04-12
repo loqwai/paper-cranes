@@ -2,7 +2,7 @@
 // @mobile: true
 // inspiration: https://open.spotify.com/track/4iujYV1aY8bvFnynke7eN5?si=8f2220910e7f4de0
 // Variant: slimmer frame + pink fur coat with synthwave aesthetic
-// preset: ?knob_4=0.031&knob_6=0.276&knob_7=0&knob_8=0.039&knob_9=1&knob_10=0.937&knob_11=0.543
+// preset: ?shader=claude/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat&audio=tab
 #define PI 3.14159265
 
 // ============================================================================
