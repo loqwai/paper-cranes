@@ -12,6 +12,14 @@
       --padding: clamp(4px, 1vw, 8px);
     }
 
+    @media (min-width: 1200px) {
+      :root {
+        --title-size: 18px;
+        --text-size: 14px;
+        --padding: 4px;
+      }
+    }
+
     /* Reset & Layout */
     * {
       box-sizing: border-box;
@@ -165,36 +173,83 @@
     }
 
     @media (min-width: 1200px) {
+      body {
+        line-height: 1.3;
+      }
+
+      main {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 8px 16px;
+      }
+
       .shader-list>li {
-        padding: calc(var(--padding) * 2) 0;
+        padding: 4px 8px;
+      }
+
+      .main-link {
+        padding: 2px 4px;
       }
 
       .main-link-actions {
-        gap: calc(var(--padding) * 2);
+        gap: 8px;
       }
 
       .main-link-actions>* {
-        padding: 0 50px;
+        padding: 0 12px;
+      }
+
+      .copy-link svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      .main-link+ul .copy-link svg {
+        width: 14px;
+        height: 14px;
+      }
+
+      .main-link+ul {
+        margin-left: 24px;
+      }
+
+      .preset-link {
+        padding: 1px 4px;
       }
 
       .chip-list {
         display: flex;
         flex-wrap: wrap;
         margin-left: 4px;
-        gap: var(--padding);
+        gap: 2px;
       }
 
       .chip {
-        font-size: calc(var(--text-size) * 0.5);
-        padding: calc(var(--padding) * 0.5);
-        margin: calc(var(--padding) * 0.5);
+        font-size: 11px;
+        padding: 1px 6px;
+        margin: 1px;
       }
 
       .edit-link {
         display: block;
         font-size: var(--text-size);
-        font-weight: bold;
+        font-weight: 600;
         text-transform: uppercase;
+      }
+
+      .search-input {
+        padding: 4px 8px;
+      }
+
+      .filter-toggle {
+        padding: 4px 8px;
+        font-size: 12px;
+        border-radius: 4px;
+      }
+
+      .filter-toggle input {
+        width: 14px;
+        height: 14px;
       }
     }
   </style>
