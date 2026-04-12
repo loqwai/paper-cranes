@@ -60,7 +60,7 @@ const setupCanvasEvents = (canvas) => {
 const noAudio = { getFeatures: () => ({}) }
 
 const setupAudio = async () => {
-    if (params.get('noaudio') === 'true') return noAudio
+    if (params.get('audio') === 'none' || params.get('noaudio') === 'true') return noAudio
 
     try {
         const devices = await navigator.mediaDevices.enumerateDevices()
