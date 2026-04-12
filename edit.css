@@ -1,3 +1,12 @@
+/* Cosmic palette — referenced throughout the app */
+:root {
+  --color-nebula-purple: #7a3cff;
+  --color-asteroid-pink: #ff3d8a;
+  --color-galaxy-blue: #3ec5ff;
+  --color-lunar-white: #f5f0ff;
+  --color-deep-space: #0b0420;
+}
+
 /* Base styles */
 body {
   margin: 0;
@@ -65,12 +74,15 @@ body {
 #monaco-editor .monaco-editor .current-line ~ .line-numbers {
   color: #c6c6c6;
 }
-#monaco-editor .monaco-editor .cursor {
-  background-color: #aeafad !important;
-  color: #aeafad !important;
+#monaco-editor .monaco-editor .cursors-layer .cursor {
+  width: 2px !important;
+  background-color: #ff79c6 !important;
+  color: #ff79c6 !important;
+  border: none !important;
 }
 #monaco-editor .monaco-editor .view-overlays .current-line {
-  border-color: #282828;
+  border: none !important;
+  background: rgba(255, 121, 198, 0.06);
 }
 #monaco-editor .monaco-editor .minimap {
   background-color: #1e1e1e;
@@ -280,28 +292,60 @@ input[type="range"]::-webkit-slider-thumb {
   bottom: 10px;
   left: 10px;
   display: flex;
-  gap: 6px;
-  padding: 6px 10px;
-  background: rgba(0, 0, 0, 0.7);
-  border-radius: 4px;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(11, 4, 32, 0.78);
+  border: 1px solid rgba(122, 60, 255, 0.35);
+  border-radius: 999px;
   z-index: 10001;
   font-family: system-ui, sans-serif;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 4px 24px rgba(122, 60, 255, 0.15);
 }
 
 #save-and-publish > button {
-  padding: 3px 10px;
+  padding: 5px 14px;
   font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
   font-family: inherit;
-  color: white;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
+  color: var(--color-lunar-white);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
 }
 
-#save-and-publish > button:hover {
-  background: rgba(255, 255, 255, 0.22);
+/* Save — primary action, nebula→asteroid gradient */
+#save-and-publish > button#save {
+  background: linear-gradient(135deg, var(--color-nebula-purple), var(--color-asteroid-pink));
+  box-shadow: 0 0 12px rgba(255, 61, 138, 0.35);
+}
+#save-and-publish > button#save:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 18px rgba(255, 61, 138, 0.6);
+}
+
+/* Publish — secondary, galaxy-blue outline */
+#save-and-publish > button#publish {
+  border-color: rgba(62, 197, 255, 0.6);
+  color: var(--color-galaxy-blue);
+}
+#save-and-publish > button#publish:hover {
+  background: rgba(62, 197, 255, 0.15);
+  box-shadow: 0 0 12px rgba(62, 197, 255, 0.4);
+}
+
+/* Reset — tertiary, muted */
+#save-and-publish > button#reset {
+  border-color: rgba(245, 240, 255, 0.2);
+  color: rgba(245, 240, 255, 0.7);
+}
+#save-and-publish > button#reset:hover {
+  background: rgba(245, 240, 255, 0.08);
+  color: var(--color-lunar-white);
 }
 
 #save-and-publish > button > a {
