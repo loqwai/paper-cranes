@@ -17,8 +17,7 @@ const carryPassthroughParams = (url) => {
   const current = new URLSearchParams(window.location.search)
   for (const [key, value] of current) {
     if (LIST_UI_PARAMS.has(key)) continue
-    if (url.searchParams.has(key)) continue // target wins
-    url.searchParams.set(key, value)
+    url.searchParams.set(key, value) // current URL wins over target/preset
   }
   return url
 }
