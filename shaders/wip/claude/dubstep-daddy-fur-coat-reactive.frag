@@ -143,7 +143,7 @@ float sdDaddy(vec2 p, float pump, Pose P) {
     head = smin(head, jaw, 0.04);
 
     vec2 np = p - vec2(P.hip * 0.7, 0.11);
-    float neck = sdEllipse(np, vec2(0.055, 0.045));
+    float neck = sdEllipse(np, vec2(0.035, 0.045));
 
     // Slimmer chest
     float chest_w = 0.23 + pump * 0.04;
