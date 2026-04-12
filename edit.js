@@ -692,6 +692,14 @@ const FeatureAdder = () => {
         try {
             const shaderCode = await getRelativeOrAbsoluteShaderUrl(searchParams.get('shader'))
             localStorage.setItem('cranes-manual-code', shaderCode)
+
+            if (import.meta.hot) {
+                // Dev mode: keep ?shader= in URL so editor-sync knows which file to save to.
+                // Monaco init will load from the filesystem via ?shader= param.
+                return false
+            }
+
+            // Production: strip ?shader= and reload (original behavior)
             const newUrl = new URL(window.location)
             newUrl.searchParams.delete('shader')
             window.history.replaceState({}, '', newUrl)

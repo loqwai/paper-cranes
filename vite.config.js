@@ -3,6 +3,7 @@ import { resolve } from 'path'
 import { execSync } from 'child_process'
 import { shaderPlugin } from './vite-plugins/shader-plugin.js'
 import { remoteWsPlugin } from './vite-plugins/remote-ws-plugin.js'
+import { editorSyncPlugin } from './vite-plugins/editor-sync-plugin.js'
 
 
 const branchToPort = (branch) => {
@@ -50,5 +51,5 @@ export default defineConfig({
       external: (id) => id.startsWith('https://'),
     },
   },
-  plugins: [shaderPlugin(), remoteWsPlugin()],
+  plugins: [shaderPlugin(), remoteWsPlugin(), editorSyncPlugin()],
 })
