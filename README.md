@@ -10,6 +10,8 @@ Try it now: [`visuals.beadfamous.com/?shader=plasma&audio=tab`](https://visuals.
 
 Works in Chrome and Edge on desktop. Firefox/Safari don't yet expose tab audio through `getDisplayMedia`, so on those browsers you'll still need the mic or the loopback setup below.
 
+Screen-scraping the visualizer to drive LEDs? Chrome's "Sharing X to this tab" bar stays visible even in fullscreen. See [hiding the tab-share bar](docs/hiding-tab-share-bar.md) for the `--disable-infobars` workaround.
+
 For a permanent system-wide setup (projector rigs, live shows, OBS-style routing) see [using virtual audio loopback](docs/professional-audio.md) for BlackHole (macOS) and Voicemeeter (Windows). But for "I just want to see my Spotify react to a shader" — `?audio=tab` is all you need.
 
 Visuals made by this project can be seen [here](https://visuals.beadfamous.com/list.html). This includes many works in progress, that may be twitchy or broken.
