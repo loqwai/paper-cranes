@@ -727,3 +727,4 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 
 ## Misc Notes
 - Use far less time when running sleep than you ordinarily would; if it were 5 seconds, do 1 instead.
+- When creating a PR or pushing to one, consider whether the changes include features a user would be excited about. If so, ask the user if they'd like you to run `/changelog` to update the docs.
