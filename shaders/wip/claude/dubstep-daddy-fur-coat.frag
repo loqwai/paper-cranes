@@ -165,18 +165,18 @@ float sdTorso(vec2 p, float pump, Pose P) {
     vec2 wp = p - vec2(P.hip * 1.4, -0.22);
     float hips = sdEllipse(wp, vec2(0.20, 0.09));
 
-    // Torso shoulders narrower than body shoulders — the coat inflates outward
-    // to meet the arm shoulder positions. Lowered so the coat doesn't peak
-    // up too close to the jaw.
-    vec2 ls = vec2(-chest_w * 0.95 + P.hip * 0.4, -0.02);
-    vec2 rs = vec2( chest_w * 0.95 + P.hip * 0.4, -0.02);
+    // Torso shoulders — match the body shoulder positions exactly so the
+    // coat hugs the actual shoulder line, not a separate hidden torso.
+    float coat_edge = chest_w * 0.95 + 0.055;
+    vec2 ls = vec2(-coat_edge + P.hip * 0.4, 0.0);
+    vec2 rs = vec2( coat_edge + P.hip * 0.4, 0.0);
     float lshoulder = sdCircle(p - ls, 0.055);
     float rshoulder = sdCircle(p - rs, 0.055);
 
     float d = chest;
     d = smin(d, hips, 0.06);
-    d = smin(d, lshoulder, 0.05);
-    d = smin(d, rshoulder, 0.05);
+    d = smin(d, lshoulder, 0.06);
+    d = smin(d, rshoulder, 0.06);
     return d;
 }
 
@@ -197,23 +197,25 @@ float sdFurCoat(vec2 p, Pose P, float pump) {
     float hem = sdEllipse(p - hem_c, vec2(0.26, 0.45));
     inflated = smin(inflated, hem, 0.06);
 
-    // V-neckline carved from the top: subtract a V-shaped wedge from the neck
-    // region. The wedge is narrow at the bottom (where it starts around the
-    // sternum) and widens upward past the jawline so the coat ends in a V.
+    // V-neckline: a shallow, properly-proportioned V that opens from the
+    // sternum and ends at the base of the neck. Not a narrow slit, not a
+    // gaping hole — a realistic coat V-neck.
     float cx = P.hip * 0.7;
-    // V-wedge: half-width = max(0, (y - v_start) * slope)
-    float v_start = -0.02;  // where the V begins (sternum height)
-    float v_slope = 0.8;
-    float v_half = max(0.0, (p.y - v_start) * v_slope);
-    // Inside the wedge when |x - cx| < v_half AND y > v_start
+    float v_bottom = -0.05;  // V point at the sternum
+    float v_top = 0.12;      // V opening stops below the neck
+    float v_top_half = 0.10; // half-width at the top of the V
+    // Linear interpolation of half-width from 0 at v_bottom to v_top_half at v_top
+    float t = clamp((p.y - v_bottom) / (v_top - v_bottom), 0.0, 1.0);
+    float v_half = t * v_top_half;
+    // The wedge exists only in the V region (y between v_bottom and v_top)
     float v_horiz = abs(p.x - cx) - v_half;
-    float v_vert = v_start - p.y;  // negative when above v_start
+    float v_vert = max(v_bottom - p.y, p.y - v_top);
     float v_wedge = max(v_horiz, v_vert);
 
     float d = max(inflated, -v_wedge);
 
-    // Hard top cut: nothing above the jaw line, prevents back-of-collar peek.
-    float jaw_line = 0.19;
+    // Hard top cut at jaw line
+    float jaw_line = 0.16;
     d = max(d, p.y - jaw_line);
     return d;
 }
@@ -356,8 +358,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     fur_col *= 1.0 - seam * 0.18;
 
     vec3 col = bg;
-    // Body silhouette — dark skin tone, no leather material
-    vec3 skin = hsl2rgb(vec3(0.03, 0.35, 0.14));
+    // Body silhouette — warm plum skin that reads against the dark background
+    // and complements the pink coat
+    vec3 skin = hsl2rgb(vec3(0.92, 0.45, 0.18));
     col = mix(col, skin, body);
     // Coat sits OVER the body but UNDER the hair (so curls still fall)
     col = mix(col, fur_col, coat * (1.0 - curls));
