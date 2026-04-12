@@ -22,7 +22,7 @@
 #define SHOULDER_SPREAD  0.158
 // #define SHOULDER_SPREAD mix(0.15, 0.40, knob_4)
 
-#define SLEEVE_RADIUS    0.065
+#define SLEEVE_RADIUS    0.04
 // #define SLEEVE_RADIUS  mix(0.03, 0.10, knob_5)
 
 #define SHOULDER_CAP     0.042
