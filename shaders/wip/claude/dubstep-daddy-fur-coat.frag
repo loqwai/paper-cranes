@@ -1,7 +1,8 @@
 // @fullscreen: true
 // @mobile: true
 // inspiration: https://open.spotify.com/track/4iujYV1aY8bvFnynke7eN5?si=8f2220910e7f4de0
-// Variant: slimmer frame + white fur collar/shoulder coat with bluish shadows
+// Variant: slimmer frame + pink fur coat with synthwave aesthetic
+// preset: ?knob_4=0.031&knob_6=0.276&knob_7=0&knob_8=0.039&knob_9=1&knob_10=0.937&knob_11=0.543
 #define PI 3.14159265
 
 // ============================================================================
@@ -11,28 +12,36 @@
 #define DEBUG_OUTLINES 0
 
 // ============================================================================
-// KNOB HANDLES — live-adjustable shape parameters
-// Each knob is 0..1, mapped to a useful range. Defaults in parentheses.
+// COAT SHAPE CONSTANTS — baked from knob tuning session
+// Comment out a constant and uncomment the knob line below it to live-edit.
 // ============================================================================
 
-// Shoulder Y position: knob_3 maps -0.10..0.10 (default 0.4 → -0.02)
-#define SHOULDER_Y     mix(-0.10, 0.10, knob_3)
-// Shoulder X spread: knob_4 maps 0.15..0.40 (default ~0.5 → 0.275)
-#define SHOULDER_SPREAD mix(0.15, 0.40, knob_4)
-// Sleeve radius: knob_5 maps 0.03..0.10 (default ~0.5 → 0.065)
-#define SLEEVE_RADIUS  mix(0.03, 0.10, knob_5)
-// Shoulder cap radius: knob_6 maps 0.02..0.10 (default ~0.5 → 0.06)
-#define SHOULDER_CAP   mix(0.02, 0.10, knob_6)
-// Chest width: knob_7 maps 0.12..0.30 (default ~0.5 → 0.21)
-#define CHEST_W_BASE   mix(0.12, 0.30, knob_7)
-// Chest height: knob_8 maps 0.06..0.18 (default ~0.5 → 0.12)
-#define CHEST_H_BASE   mix(0.06, 0.18, knob_8)
-// Fur thickness: knob_9 maps 0.01..0.08 (default ~0.5 → 0.045)
-#define FUR_THICK      mix(0.01, 0.08, knob_9)
-// V-neck width at top: knob_10 maps 0.02..0.15 (default ~0.5 → 0.085)
-#define VNECK_WIDTH    mix(0.02, 0.15, knob_10)
-// V-neck bottom Y: knob_11 maps -0.10..0.06 (default ~0.5 → -0.02)
-#define VNECK_BOTTOM   mix(-0.10, 0.06, knob_11)
+#define SHOULDER_Y      -0.02
+// #define SHOULDER_Y     mix(-0.10, 0.10, knob_3)
+
+#define SHOULDER_SPREAD  0.158
+// #define SHOULDER_SPREAD mix(0.15, 0.40, knob_4)
+
+#define SLEEVE_RADIUS    0.065
+// #define SLEEVE_RADIUS  mix(0.03, 0.10, knob_5)
+
+#define SHOULDER_CAP     0.042
+// #define SHOULDER_CAP   mix(0.02, 0.10, knob_6)
+
+#define CHEST_W_BASE     0.12
+// #define CHEST_W_BASE   mix(0.12, 0.30, knob_7)
+
+#define CHEST_H_BASE     0.065
+// #define CHEST_H_BASE   mix(0.06, 0.18, knob_8)
+
+#define FUR_THICK        0.08
+// #define FUR_THICK      mix(0.01, 0.08, knob_9)
+
+#define VNECK_WIDTH      0.142
+// #define VNECK_WIDTH    mix(0.02, 0.15, knob_10)
+
+#define VNECK_BOTTOM    -0.013
+// #define VNECK_BOTTOM   mix(-0.10, 0.06, knob_11)
 
 // ============================================================================
 // AUDIO
@@ -169,8 +178,8 @@ float sdDaddy(vec2 p, float pump, Pose P) {
     float r_upper = sdCapsule(p, rs, r_elbow, 0.04);
     float r_lower = sdCapsule(p, r_elbow, P.r_hand, 0.035);
 
-    float l_fist = sdCircle(p - P.l_hand, 0.035 + P.l_open * 0.008);
-    float r_fist = sdCircle(p - P.r_hand, 0.035 + P.r_open * 0.008);
+    float l_fist = sdCircle(p - P.l_hand, 0.055 + P.l_open * 0.01);
+    float r_fist = sdCircle(p - P.r_hand, 0.055 + P.r_open * 0.01);
 
     float d = head;
     d = smin(d, neck, 0.035);
@@ -218,12 +227,15 @@ float sdTorso(vec2 p, float pump, Pose P) {
 float sdFurCoat(vec2 p, Pose P, float pump) {
     float d_torso = sdTorso(p, pump, P);
 
-    // Long sleeves — capsules from shoulder to wrist
+    // Long sleeves — capsules from shoulder to WRIST (not hand), so the
+    // fists poke out of the cuffs. Wrist = 80% of the way from shoulder to hand.
     float coat_edge = SHOULDER_SPREAD;
     vec2 ls = vec2(-coat_edge + P.hip * 0.4, SHOULDER_Y);
     vec2 rs = vec2( coat_edge + P.hip * 0.4, SHOULDER_Y);
-    float l_sleeve = sdCapsule(p, ls, P.l_hand, SLEEVE_RADIUS);
-    float r_sleeve = sdCapsule(p, rs, P.r_hand, SLEEVE_RADIUS);
+    vec2 l_wrist = mix(ls, P.l_hand, 0.55);
+    vec2 r_wrist = mix(rs, P.r_hand, 0.55);
+    float l_sleeve = sdCapsule(p, ls, l_wrist, SLEEVE_RADIUS);
+    float r_sleeve = sdCapsule(p, rs, r_wrist, SLEEVE_RADIUS);
 
     // Shoulder caps smin'd with both torso and sleeves
     float l_cap = sdCircle(p - ls, SHOULDER_CAP);
