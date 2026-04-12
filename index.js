@@ -106,8 +106,9 @@ const setupCanvasEvents = (canvas) => {
 const noAudio = { getFeatures: () => ({}) }
 
 const setupAudio = async () => {
-    // if we have a query param that says 'noaudio=true', just return a dummy audio processor
-    if (params.get('noaudio') === 'true' || params.get('embed') === 'true') {
+    // audio=none disables audio input (consistent with audio=tab pattern)
+    // noaudio=true and embed=true are kept for backwards compatibility
+    if (params.get('audio') === 'none' || params.get('noaudio') === 'true' || params.get('embed') === 'true') {
         return noAudio
     }
 
