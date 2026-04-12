@@ -425,9 +425,11 @@ const main = async () => {
 
 main()
 
-// Reload the page when shader files change on disk (replaces full-reload from shader-plugin)
+// Reload the page when shader files change on disk (replaces full-reload from shader-plugin).
+// Skip on the editor page — it handles shader updates via the editor-sync HMR event.
 if (import.meta.hot) {
     import.meta.hot.on('shaders-changed', () => {
+        if (window.location.pathname.includes('edit')) return
         location.reload()
     })
 }

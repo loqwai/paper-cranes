@@ -1,11 +1,18 @@
 import { readFile, writeFile } from 'fs/promises'
 import { join } from 'path'
+import chokidar from 'chokidar'
 
 const SHADER_DIR = 'shaders'
 
 export function editorSyncPlugin() {
+  let watcher = null
+
   return {
     name: 'vite-plugin-editor-sync',
+
+    handleHotUpdate({ file }) {
+      if (file.endsWith('.frag')) return []
+    },
 
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
@@ -25,7 +32,7 @@ export function editorSyncPlugin() {
             const filePath = join(SHADER_DIR, `${normalized}.frag`)
 
             await writeFile(filePath, code, 'utf-8')
-            console.log(`[editor-sync] Saved ${filePath}`)
+            console.log(`[editor-sync] Saved ${filePath} (${code.length} bytes)`)
 
             res.writeHead(200, { 'Content-Type': 'application/json' })
             res.end(JSON.stringify({ ok: true, path: filePath }))
@@ -37,7 +44,11 @@ export function editorSyncPlugin() {
         })
       })
 
-      server.watcher.on('change', async (filePath) => {
+      // Use our own chokidar watcher instead of server.watcher, because
+      // .frag files are ignored by Vite's watcher to prevent full-page reloads.
+      watcher = chokidar.watch(SHADER_DIR, { ignoreInitial: true })
+
+      watcher.on('change', async (filePath) => {
         if (!filePath.endsWith('.frag')) return
 
         const projectRoot = server.config.root
@@ -65,6 +76,10 @@ export function editorSyncPlugin() {
       })
 
       console.log('[editor-sync] Bidirectional shader sync enabled')
+    },
+
+    closeBundle() {
+      watcher?.close()
     },
   }
 }
