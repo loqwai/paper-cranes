@@ -152,3 +152,4 @@ manifests/
 test-screenshots/
 screenshots/
 public/test-audio/
+public/images/*.webp

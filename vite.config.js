@@ -31,6 +31,11 @@ export default defineConfig({
         analyze: resolve(import.meta.dirname, 'analyze.html'),
         playlist: resolve(import.meta.dirname, 'playlist.html'),
       },
+      output: {
+        entryFileNames: 'assets/[name].js',
+        chunkFileNames: 'assets/[name].js',
+        assetFileNames: 'assets/[name][extname]',
+      },
     },
   },
   resolve: {

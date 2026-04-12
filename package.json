@@ -8,7 +8,7 @@
     "start": "npm run dev",
     "test": "vitest run",
     "test:e2e": "vitest run --config vitest.e2e.config.js",
-    "build": "vite build",
+    "build": "bash scripts/optimize-images.sh && vite build",
     "dev": "vite",
     "preview": "vite preview",
     "format": "eslint --fix .",
