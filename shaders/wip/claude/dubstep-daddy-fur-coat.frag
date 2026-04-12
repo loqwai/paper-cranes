@@ -11,6 +11,30 @@
 #define DEBUG_OUTLINES 0
 
 // ============================================================================
+// KNOB HANDLES — live-adjustable shape parameters
+// Each knob is 0..1, mapped to a useful range. Defaults in parentheses.
+// ============================================================================
+
+// Shoulder Y position: knob_3 maps -0.10..0.10 (default 0.4 → -0.02)
+#define SHOULDER_Y     mix(-0.10, 0.10, knob_3)
+// Shoulder X spread: knob_4 maps 0.15..0.40 (default ~0.5 → 0.275)
+#define SHOULDER_SPREAD mix(0.15, 0.40, knob_4)
+// Sleeve radius: knob_5 maps 0.03..0.10 (default ~0.5 → 0.065)
+#define SLEEVE_RADIUS  mix(0.03, 0.10, knob_5)
+// Shoulder cap radius: knob_6 maps 0.02..0.10 (default ~0.5 → 0.06)
+#define SHOULDER_CAP   mix(0.02, 0.10, knob_6)
+// Chest width: knob_7 maps 0.12..0.30 (default ~0.5 → 0.21)
+#define CHEST_W_BASE   mix(0.12, 0.30, knob_7)
+// Chest height: knob_8 maps 0.06..0.18 (default ~0.5 → 0.12)
+#define CHEST_H_BASE   mix(0.06, 0.18, knob_8)
+// Fur thickness: knob_9 maps 0.01..0.08 (default ~0.5 → 0.045)
+#define FUR_THICK      mix(0.01, 0.08, knob_9)
+// V-neck width at top: knob_10 maps 0.02..0.15 (default ~0.5 → 0.085)
+#define VNECK_WIDTH    mix(0.02, 0.15, knob_10)
+// V-neck bottom Y: knob_11 maps -0.10..0.06 (default ~0.5 → -0.02)
+#define VNECK_BOTTOM   mix(-0.10, 0.06, knob_11)
+
+// ============================================================================
 // AUDIO
 // ============================================================================
 
@@ -128,11 +152,11 @@ float sdDaddy(vec2 p, float pump, Pose P) {
     float hips = sdEllipse(wp, vec2(0.20, 0.09));
 
     // Shoulders at the natural resting line — not raised (no shrugging)
-    float coat_edge = chest_w + 0.04;
-    vec2 ls = vec2(-coat_edge + P.hip * 0.4, -0.02);
-    vec2 rs = vec2( coat_edge + P.hip * 0.4, -0.02);
-    float lshoulder = sdCircle(p - ls, 0.05);
-    float rshoulder = sdCircle(p - rs, 0.05);
+    float coat_edge = SHOULDER_SPREAD;
+    vec2 ls = vec2(-coat_edge + P.hip * 0.4, SHOULDER_Y);
+    vec2 rs = vec2( coat_edge + P.hip * 0.4, SHOULDER_Y);
+    float lshoulder = sdCircle(p - ls, SHOULDER_CAP);
+    float rshoulder = sdCircle(p - rs, SHOULDER_CAP);
 
     // Arms hang proportionally — elbow at the midpoint between shoulder and
     // hand, slightly biased inward so the lower arm curves toward the body
@@ -171,8 +195,8 @@ float sdDaddy(vec2 p, float pump, Pose P) {
 float sdTorso(vec2 p, float pump, Pose P) {
     // Tailored torso: narrower chest, pinched waist, slight hip flare so
     // the coat silhouette reads as a fitted garment instead of a sack.
-    float chest_w = 0.20 + pump * 0.04;
-    float chest_h = 0.10 + pump * 0.02;
+    float chest_w = CHEST_W_BASE + pump * 0.04;
+    float chest_h = CHEST_H_BASE + pump * 0.02;
     vec2 cp = p - vec2(P.hip * 0.8, 0.01);
     float chest = sdEllipse(cp, vec2(chest_w, chest_h));
 
@@ -194,19 +218,16 @@ float sdTorso(vec2 p, float pump, Pose P) {
 float sdFurCoat(vec2 p, Pose P, float pump) {
     float d_torso = sdTorso(p, pump, P);
 
-    // Long sleeves — capsules from shoulder to wrist. Sleeve origins sit at
-    // the shoulder line (top-outside of the torso) so they connect seamlessly.
-    float chest_w = 0.20 + pump * 0.04;
-    float coat_edge = chest_w + 0.04;
-    vec2 ls = vec2(-coat_edge + P.hip * 0.4, -0.02);
-    vec2 rs = vec2( coat_edge + P.hip * 0.4, -0.02);
-    float l_sleeve = sdCapsule(p, ls, P.l_hand, 0.055);
-    float r_sleeve = sdCapsule(p, rs, P.r_hand, 0.055);
+    // Long sleeves — capsules from shoulder to wrist
+    float coat_edge = SHOULDER_SPREAD;
+    vec2 ls = vec2(-coat_edge + P.hip * 0.4, SHOULDER_Y);
+    vec2 rs = vec2( coat_edge + P.hip * 0.4, SHOULDER_Y);
+    float l_sleeve = sdCapsule(p, ls, P.l_hand, SLEEVE_RADIUS);
+    float r_sleeve = sdCapsule(p, rs, P.r_hand, SLEEVE_RADIUS);
 
-    // Shoulder caps smin'd with both torso and sleeves so the shoulder
-    // seam is smooth, while the armpit below stays open.
-    float l_cap = sdCircle(p - ls, 0.06);
-    float r_cap = sdCircle(p - rs, 0.06);
+    // Shoulder caps smin'd with both torso and sleeves
+    float l_cap = sdCircle(p - ls, SHOULDER_CAP);
+    float r_cap = sdCircle(p - rs, SHOULDER_CAP);
     float coat_base = min(d_torso, l_sleeve);
     coat_base = min(coat_base, r_sleeve);
     coat_base = smin(coat_base, l_cap, 0.04);
@@ -214,7 +235,7 @@ float sdFurCoat(vec2 p, Pose P, float pump) {
 
     // Looser, straighter fit (not form-fitting) — more fur thickness so the
     // coat hangs straight down rather than hugging every curve.
-    float fur_thickness = 0.03 + pump * 0.005;
+    float fur_thickness = FUR_THICK + pump * 0.005;
     float inflated = coat_base - fur_thickness;
 
     // Straight hem: a tall narrow rectangle-ish ellipse that gives the coat a
@@ -232,8 +253,8 @@ float sdFurCoat(vec2 p, Pose P, float pump) {
     // has NO visible "top corners" inside the coat, so rim lighting can't
     // trace a phantom collar back-edge at the top of the V.
     float cx = P.hip * 0.7;
-    float v_bottom = -0.02;
-    float v_half_at_top = 0.07;
+    float v_bottom = VNECK_BOTTOM;
+    float v_half_at_top = VNECK_WIDTH;
     // Slope of the V: widens as y increases, no upper bound
     float v_slope = v_half_at_top / 0.17;  // reaches 0.07 at y=0.15
     float v_half = max(0.0, (p.y - v_bottom)) * v_slope;
