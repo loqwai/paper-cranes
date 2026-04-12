@@ -166,11 +166,12 @@ float sdTorso(vec2 p, float pump, Pose P) {
     float hips = sdEllipse(wp, vec2(0.20, 0.09));
 
     // Torso shoulders narrower than body shoulders — the coat inflates outward
-    // to meet the arm shoulder positions
-    vec2 ls = vec2(-chest_w * 0.95 + P.hip * 0.4, 0.04);
-    vec2 rs = vec2( chest_w * 0.95 + P.hip * 0.4, 0.04);
-    float lshoulder = sdCircle(p - ls, 0.06);
-    float rshoulder = sdCircle(p - rs, 0.06);
+    // to meet the arm shoulder positions. Lowered so the coat doesn't peak
+    // up too close to the jaw.
+    vec2 ls = vec2(-chest_w * 0.95 + P.hip * 0.4, -0.02);
+    vec2 rs = vec2( chest_w * 0.95 + P.hip * 0.4, -0.02);
+    float lshoulder = sdCircle(p - ls, 0.055);
+    float rshoulder = sdCircle(p - rs, 0.055);
 
     float d = chest;
     d = smin(d, hips, 0.06);
@@ -340,15 +341,19 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 hair    = hsl2rgb(vec3(0.06, 0.7, 0.12));
     vec3 hot     = hsl2rgb(vec3(0.08, 1.0, 0.6));
 
-    // Coat fill — pink-tinted white. Flat, matches the shader's aesthetic
-    // (no internal texture), contrasts with the dark plum body. Hue stays
-    // warm pink even on the drop so the coat reads as a distinct garment.
-    vec3 fur_col = hsl2rgb(vec3(0.95, 0.55, 0.78));
-    // Subtle vertical button seam — just slightly darker line down center
-    float seam_x = P.hip * 0.7;
-    float seam = exp(-pow((uv.x - seam_x) * 60.0, 2.0));
-    seam *= smoothstep(-0.02, -0.08, uv.y);
-    fur_col *= 1.0 - seam * 0.35;
+    // Coat fill — saturated synthwave pink/magenta with a vertical gradient
+    // from hot pink at the shoulders to cooler magenta at the hem. Keeps
+    // the flat aesthetic but reads as neon instead of dusty gray.
+    float coat_grad = smoothstep(0.15, -0.4, uv.y);
+    vec3 fur_hi = hsl2rgb(vec3(0.93, 0.95, 0.72));  // hot pink highlight
+    vec3 fur_lo = hsl2rgb(vec3(0.86, 0.9, 0.55));   // magenta shadow
+    vec3 fur_col = mix(fur_hi, fur_lo, coat_grad);
+    // Vertical button seam — wavy, subtle crease down the center. Drifts
+    // with a slow sine so it doesn't read as a CG ruler line.
+    float seam_x = P.hip * 0.7 + sin(uv.y * 11.0) * 0.006;
+    float seam = exp(-pow((uv.x - seam_x) * 30.0, 2.0));
+    seam *= smoothstep(-0.02, -0.12, uv.y);
+    fur_col *= 1.0 - seam * 0.18;
 
     vec3 col = bg;
     // Body silhouette — dark skin tone, no leather material
@@ -359,8 +364,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     col = mix(col, hair, curls);
     col += rim * chrome * 1.3 * (1.0 - coat);
     col += chest_glow * chrome * 0.8 * (1.0 - coat);
-    // Coat rim — chrome edge hugs the shaggy outline
-    col += coat_rim * chrome * 1.4 * (1.0 - curls);
+    // Coat rim — chrome edge hugs the shaggy outline (pops hard on drop)
+    col += coat_rim * chrome * 1.8 * (1.0 - curls);
     col += eyes * hot * 2.2;
     col = mix(col, col + hot * 0.6, eye_wash);
     col += eye_wash * hot * 0.4;
