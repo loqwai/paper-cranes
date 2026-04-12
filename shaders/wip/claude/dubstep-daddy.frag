@@ -12,14 +12,14 @@
 // #define PUMP 0.4
 
 // Beat clock — drives the head nod / hip pop / curl bounce
-#define BEAT_PHASE (iTime * 2.2)
+#define BEAT_PHASE (time * 2.2)
 
 // Snare snap = hands flick out, grin flashes
 #define SNAP (max(trebleZScore, 0.0))
 // #define SNAP 0.0
 
 // Hip pop — slow weight-shift sway (alternates sides)
-#define HIP_SWAY (sin(iTime * 1.1))
+#define HIP_SWAY (sin(time * 1.1))
 
 // Mids drive a smaller secondary groove
 #define GROOVE (midsNormalized)
@@ -214,27 +214,22 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float pump = PUMP;
     Pose P = makePose(BEAT_PHASE, HIP_SWAY, SNAP, GROOVE);
 
-    // ---- SUSTAINED DROP STATE (accumulator pattern) ----
-    // Read previous frame's alpha as the sustained drop level
+    // Raw UVs for effects sampled in screen space
     vec2 raw_uv01 = fragCoord / res;
-    float prev_state = getLastFrameColor(raw_uv01).a;
-    float drop_state = prev_state;
-    drop_state = mix(drop_state, 1.0, DROP_TRIGGER * 0.12);              // fast ramp
-    drop_state = mix(drop_state, 0.0, (1.0 - DROP_TRIGGER) * 0.025);     // slow decay
-    drop_state = clamp(drop_state, 0.0, 1.0);
-    float drop_eased = animateEaseInOutCubic(drop_state);
+
+    // Drop level — purely immediate, no accumulator. (Accumulator was reading
+    // stale alpha from the initial framebuffer texture and pinning the state
+    // high, washing out idle.)
+    float drop_hit = clamp(max(IS_DROP, energyZScore * 0.5), 0.0, 1.0);
 
     // ---- INTENSITY ZOOM (subtronics-eye2 style) ----
-    // Drive a pre-zoom off raw energy + sustained drop state. The whole scene
-    // pushes IN toward the daddy's head on intense passages — before any SDFs
-    // get evaluated, so everything scales together.
+    // Drive a pre-zoom off raw energy + drop. The whole scene pushes IN
+    // toward the daddy's head on intense passages.
     float intensity = max(
         mapValue(energyNormalized, 0.0, 1.0, 0.0, 1.0),
         bassNormalized
     );
-    // Zoom factor: 1.0 idle → 2.5 max drop. Use drop_eased for sustain, raw
-    // intensity for immediate snap.
-    float zoomAmount = 1.0 + intensity * 0.6 + drop_eased * 0.9;
+    float zoomAmount = 1.0 + intensity * 0.6 + drop_hit * 0.9;
     vec2 zoomCenter = P.head_c;  // push toward the daddy's face
     uv = (uv - zoomCenter) / zoomAmount + zoomCenter;
 
@@ -280,12 +275,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 le = P.head_c + vec2(le_local.x * ct + le_local.y * st, -le_local.x * st + le_local.y * ct);
     vec2 re = P.head_c + vec2(re_local.x * ct + re_local.y * st, -re_local.x * st + re_local.y * ct);
 
-    // Immediate drop response (don't wait for the accumulator to ramp)
-    float drop_hit = max(drop_eased, IS_DROP);
-
-    // Solid eye cores — tight, hot, yellowish
-    float eyes = exp(-dot(uv - le, uv - le) * 900.0) + exp(-dot(uv - re, uv - re) * 900.0);
-    eyes *= (0.6 + drop_hit * 1.2 + SNAP * 0.8);
+    // Solid eye cores — tight pinpoints at idle, hot blasts on drop.
+    // Tight falloff (2500) so there's no halo bleeding at rest.
+    float eyes = exp(-dot(uv - le, uv - le) * 2500.0) + exp(-dot(uv - re, uv - re) * 2500.0);
+    // Low base intensity so idle eyes read as two pinpoints, not headlights
+    eyes *= (0.25 + drop_hit * 1.8 + SNAP * 0.6);
 
     // ---- GOD RAYS ----
     // For each eye, compute a directional beam that shoots OUTWARD from the
@@ -302,8 +296,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Ray fans — narrow lobes via high-power cos. Wider fan (6 lobes instead
     // of 4) and slightly softer power so rays reach further across the scene.
-    float fan_le = pow(abs(cos(a_le * 6.0 + iTime * 0.8)), 14.0);
-    float fan_re = pow(abs(cos(a_re * 6.0 - iTime * 0.7 + 1.3)), 14.0);
+    float fan_le = pow(abs(cos(a_le * 6.0 + time * 0.8)), 14.0);
+    float fan_re = pow(abs(cos(a_re * 6.0 - time * 0.7 + 1.3)), 14.0);
 
     // Radial falloff — long reach so rays cross the whole scene
     float fall_le = exp(-r_le * 1.2);
@@ -354,14 +348,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     {
         float minRes = min(res.x, res.y);
         vec2 head_uv01 = vec2(0.5) + P.head_c * vec2(minRes / res.x, minRes / res.y);
-        float mirrorZoom = mix(1.3, 2.4, drop_eased);
-        float rot = iTime * 0.5 + drop_eased * sin(BEAT_PHASE) * 0.6;
+        float mirrorZoom = mix(1.3, 2.4, drop_hit);
+        float rot = time * 0.5 + drop_hit * sin(BEAT_PHASE) * 0.6;
         float ca2 = cos(rot), sa2 = sin(rot);
         vec2 mirror_uv = raw_uv01 - head_uv01;
         mirror_uv = vec2(mirror_uv.x * ca2 - mirror_uv.y * sa2,
                          mirror_uv.x * sa2 + mirror_uv.y * ca2);
         mirror_uv += head_uv01;
-        int mirrorSteps = int(2.0 + drop_eased * 5.0);
+        int mirrorSteps = int(2.0 + drop_hit * 5.0);
         for (int i = 0; i < 8; i++) {
             if (i >= mirrorSteps) break;
             mirror_uv = (mirror_uv - head_uv01) * mirrorZoom + head_uv01;
@@ -371,10 +365,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         // Hyper-saturate so the mirror doesn't wash out
         vec3 mh = rgb2hsl(mirror);
         mh.y = clamp(mh.y * 1.6 + 0.2, 0.0, 1.0);
-        mh.x = fract(mh.x + drop_eased * 0.1);
+        mh.x = fract(mh.x + drop_hit * 0.1);
         mirror = hsl2rgb(mh);
         // Only blend into the BACKGROUND (not the body) so the daddy stays crisp
-        col = mix(col, mirror, drop_eased * (1.0 - body) * 0.55);
+        col = mix(col, mirror, drop_hit * (1.0 - body) * 0.55);
     }
 
     // ---- FEEDBACK: motion smear from the body language ----
@@ -385,11 +379,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     float feedback_amt = mix(0.45, 0.15, body);
     if (beat) feedback_amt *= 0.6;
+    // Cold start: first frames show the pure composition so the feedback
+    // buffer doesn't carry stale brightness from a previous load.
+    if (frame < 30) feedback_amt = 0.0;
     col = mix(prev, col, feedback_amt);
 
     // Vignette — keep the daddy framed
     col *= 1.0 - smoothstep(0.7, 1.4, length(uv * vec2(1.0, 0.85)));
 
-    // Store drop_state in alpha so the next frame can sustain it
-    fragColor = vec4(clamp(col, 0.0, 1.0), drop_state);
+    fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
