@@ -2,6 +2,18 @@
 
 All notable non-shader feature changes to this project will be documented in this file.
 
+## 2026-04-12
+
+### Features
+
+- **Audio warm-up ramp** — Visuals no longer spike/flash when audio first starts. A smoothstep ramp eases features from neutral values to real values over ~2 seconds, giving the statistics buffer time to stabilize. ([#110](https://github.com/loqwai/paper-cranes/pull/110))
+- **`?audio=none` query param** — Explicitly disable audio input. Cleaner alternative to `?noaudio=true`. ([#107](https://github.com/loqwai/paper-cranes/pull/107))
+
+### Fixes
+
+- **Editor no longer full-page reloads on save** — Saving shaders in the editor now hot-updates without losing state. ([#109](https://github.com/loqwai/paper-cranes/pull/109))
+- **Compact list page on desktop** — Tighter layout so more shaders are visible without scrolling. ([#108](https://github.com/loqwai/paper-cranes/pull/108))
+
 ## 2026-04-11
 
 ### Features
