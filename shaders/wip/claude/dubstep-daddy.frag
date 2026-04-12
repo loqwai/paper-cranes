@@ -41,8 +41,15 @@
 
 float sdCircle(vec2 p, float r) { return length(p) - r; }
 
+// Gradient-normalized ellipse approximation. The classic
+// `(length(p/r) - 1) * min(r)` under-estimates distance along the minor axis,
+// which makes rim/level-set renderers draw phantom lines far from the actual
+// silhouette. Dividing by an approximation of the gradient magnitude keeps
+// the distance close to euclidean.
 float sdEllipse(vec2 p, vec2 r) {
-    return (length(p / r) - 1.0) * min(r.x, r.y);
+    float k1 = length(p / r);
+    float k2 = length(p / (r * r));
+    return k1 * (k1 - 1.0) / max(k2, 1e-4);
 }
 
 // Smooth union — for stitching body parts together like a real chunky boi
@@ -193,16 +200,6 @@ float sdCurls(vec2 p, Pose P, float beat_phase, float pump) {
     return d;
 }
 
-// The grin — curved arc; lives in head-local space
-float sdGrin(vec2 p, Pose P) {
-    float ct = cos(P.tilt), st = sin(P.tilt);
-    vec2 gp = p - (P.head_c + vec2(0.0, -0.04));
-    gp = vec2(gp.x * ct - gp.y * st, gp.x * st + gp.y * ct);
-    float curve = gp.y + gp.x * gp.x * 2.5;
-    float along = smoothstep(0.07, 0.0, abs(gp.x));
-    return abs(curve) - 0.007 * along;
-}
-
 // ============================================================================
 // MAIN
 // ============================================================================
@@ -254,19 +251,19 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float body  = smoothstep(0.005, -0.005, d);
     float curls = smoothstep(0.005, -0.005, d_curls);
 
-    // Rim light — chrome edge thickens on the drop
-    float rim_w = 0.012 + IS_DROP * 0.02 + SNAP * 0.01;
+    // Rim light — chrome edge thickens on the drop.
+    // Rim is ONLY drawn where d is negative-and-tiny or positive-and-tiny
+    // AND near the actual silhouette transition, so phantom level sets from
+    // smin'd non-euclidean SDFs can't draw lines far from the body.
+    float rim_w = 0.006 + IS_DROP * 0.012 + SNAP * 0.006;
     float rim = smoothstep(rim_w, 0.0, abs(d));
-    rim *= 1.0 - body * 0.7;
+    // Extra gate: only inside the narrow silhouette-edge transition band
+    float edge_gate = body * (1.0 - body) * 4.0;  // peaks at body=0.5
+    rim *= edge_gate;
 
     // Chest gleam pulses with bass — anchored to torso center
     float chest_glow = exp(-pow(length(uv - vec2(P.hip * 0.8, -0.02)) * 3.0, 2.0));
     chest_glow *= smoothstep(0.005, -0.005, d_body) * (0.3 + pump * 0.7);
-
-    // Grin (head-local — moves with tilt and bob)
-    float grin_d = sdGrin(uv, P);
-    float grin = smoothstep(0.006, 0.0, grin_d) * smoothstep(-0.05, -0.02, d_body);
-    grin *= 0.3 + SNAP * 1.5 + IS_DROP * 0.8;
 
     // Eyes — solid hot dots. On the drop they shoot GOD RAYS out into the scene.
     float ct = cos(P.tilt), st = sin(P.tilt);
@@ -331,10 +328,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     col = mix(col, hair, curls);  // hair overrides body where curls live
     col += rim * chrome * 1.3;
     col += chest_glow * chrome * 0.8;
-    col += grin * vec3(1.0, 0.95, 0.85) * 1.5;
-
-    // ---- EYES + GOD RAYS ----
-    // Solid hot yellowish dots for the eyes
     col += eyes * hot * 2.2;
     // Scene-wide eye wash — tints the whole frame hot during drops
     col = mix(col, col + hot * 0.6, eye_wash);
