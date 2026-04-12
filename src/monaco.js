@@ -645,9 +645,19 @@ async function init() {
             if (editor.getValue() === code) return
 
             console.log(`[editor-sync] File changed on disk: ${shader}`)
-            editor.pushUndoStop()
-            editor.setValue(code)
-            editor.pushUndoStop()
+
+            // Suppress multiplayer broadcast — HMR already pushes to all
+            // connected peers, so relaying via multiplayer would be redundant
+            // and would send a full buffer replace that stomps concurrent edits.
+            const mpFlag = editor.__isApplyingRemoteEdit
+            if (mpFlag) mpFlag(true)
+            try {
+                editor.pushUndoStop()
+                editor.setValue(code)
+                editor.pushUndoStop()
+            } finally {
+                if (mpFlag) mpFlag(false)
+            }
 
             // Push to visualizer
             if (window.paramsManager) {
