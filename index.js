@@ -211,6 +211,8 @@ const setupCranesState = () => {
     window.c = window.cranes
 }
 
+let onFrameCommitted = null
+
 // Animation function for the shader rendering
 const animateShader = ({ render, audio, fragmentShader }) => {
     requestAnimationFrame(() => animateShader({ render, audio, fragmentShader }))
@@ -229,6 +231,7 @@ const animateShader = ({ render, audio, fragmentShader }) => {
             features,
             fragmentShader: window.cranes?.shader ?? fragmentShader,
         })
+        onFrameCommitted?.()
     } catch (e) {
         console.error('Shader render error:', e)
     }
@@ -378,46 +381,87 @@ const main = async () => {
     // Initialize visualizer and start shader animation loop
     const render = await makeVisualizer(visualizerConfig)
 
-    // WKWebView (Plash/macOS Spaces) composites the page before firing visibilitychange visible,
-    // so rendering in the handler is too late — the black frame already appeared.
-    // Fix: capture a snapshot of the last rendered frame before hiding and show it as a DOM
-    // overlay. Regular DOM elements are not cleared by WKWebView during Space transitions.
+    // Tab hide/show (and WKWebView Space transitions) can present black frames:
+    // Chrome throttles RAF while hidden, so the WebGL drawing buffer goes stale, and
+    // the compositor may clear it during the visible transition before a fresh frame
+    // has been committed. Fix: paint the last rendered frame onto <body> as a
+    // background image + a full-viewport overlay div, and keep the overlay up until
+    // the shader loop has committed at least 2 fresh frames post-visible.
     let snapDiv = null
-    let snapRemovalRaf = null
+    let framesSinceVisible = -1
+    const SNAPSHOT_HOLD_FRAMES = 2
+
+    const captureSnapshot = () => {
+        try {
+            return canvas.toDataURL('image/jpeg', 0.92)
+        } catch (e) {
+            console.error('snapshot failed:', e.message)
+            return null
+        }
+    }
+
+    const showSnapshot = (dataUrl) => {
+        if (!dataUrl) return
+        if (!snapDiv) {
+            snapDiv = document.createElement('div')
+            snapDiv.style.cssText = 'position: fixed; inset: 0; z-index: 9999; pointer-events: none; background-repeat: no-repeat; background-position: center center; background-color: #000;'
+            document.body.appendChild(snapDiv)
+        }
+        const rect = canvas.getBoundingClientRect()
+        snapDiv.style.backgroundImage = `url(${dataUrl})`
+        snapDiv.style.backgroundSize = `${rect.width}px ${rect.height}px`
+        snapDiv.style.display = 'block'
+        document.body.style.backgroundImage = `url(${dataUrl})`
+        document.body.style.backgroundRepeat = 'no-repeat'
+        document.body.style.backgroundPosition = 'center center'
+        document.body.style.backgroundSize = `${rect.width}px ${rect.height}px`
+    }
+
+    const hideSnapshot = () => {
+        if (snapDiv) snapDiv.style.display = 'none'
+        document.body.style.backgroundImage = ''
+    }
+
+    // Capture pre-emptively on blur too — Chrome sometimes composites a black frame
+    // between blur and visibilitychange, so we want a fresh snapshot already staged.
+    window.addEventListener('blur', () => {
+        const dataUrl = captureSnapshot()
+        if (dataUrl) showSnapshot(dataUrl)
+    })
 
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
-            // Cancel any pending removal so snapshot stays up through rapid hide/show cycles
-            if (snapRemovalRaf) { cancelAnimationFrame(snapRemovalRaf); snapRemovalRaf = null }
-            try {
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.92)
-                const rect = canvas.getBoundingClientRect()
-                if (!snapDiv) {
-                    snapDiv = document.createElement('div')
-                    snapDiv.style.cssText = 'position: fixed; z-index: 9999; pointer-events: none; background-repeat: no-repeat; background-size: 100% 100%;'
-                    document.body.appendChild(snapDiv)
-                }
-                snapDiv.style.left = `${rect.left}px`
-                snapDiv.style.top = `${rect.top}px`
-                snapDiv.style.width = `${rect.width}px`
-                snapDiv.style.height = `${rect.height}px`
-                snapDiv.style.backgroundImage = `url(${dataUrl})`
-                snapDiv.style.display = 'block'
-            } catch (e) {
-                console.error('snapshot failed:', e.message)
-            }
+            framesSinceVisible = -1
+            const dataUrl = captureSnapshot()
+            if (dataUrl) showSnapshot(dataUrl)
             return
         }
-        // Visible again: render immediately, then remove snapshot after 2 compositor frames
-        const features = window.cranes?.flattenFeatures?.() ?? {}
-        render({ time: ((performance.now() - startTime) / 1000) % 1000, features, fragmentShader: window.cranes?.shader ?? fragmentShader })
-        snapRemovalRaf = requestAnimationFrame(() => {
-            snapRemovalRaf = requestAnimationFrame(() => {
-                if (snapDiv) { snapDiv.style.display = 'none' }
-                snapRemovalRaf = null
+        // Visible again: synchronously render a fresh frame + flush so the drawing
+        // buffer has content before the compositor's next present, then hold the
+        // overlay until animateShader has committed SNAPSHOT_HOLD_FRAMES more frames.
+        framesSinceVisible = 0
+        try {
+            const features = window.cranes?.flattenFeatures?.() ?? {}
+            render({
+                time: ((performance.now() - startTime) / 1000) % 1000,
+                features,
+                fragmentShader: window.cranes?.shader ?? fragmentShader,
             })
-        })
+            const gl = canvas.getContext('webgl2')
+            gl?.flush()
+        } catch (e) {
+            console.error('visible render failed:', e.message)
+        }
     })
+
+    onFrameCommitted = () => {
+        if (framesSinceVisible < 0) return
+        framesSinceVisible++
+        if (framesSinceVisible >= SNAPSHOT_HOLD_FRAMES) {
+            hideSnapshot()
+            framesSinceVisible = -1
+        }
+    }
 
     requestAnimationFrame(() => animateShader({ render, audio, fragmentShader }))
 }
