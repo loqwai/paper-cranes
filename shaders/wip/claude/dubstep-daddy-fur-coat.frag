@@ -204,10 +204,14 @@ float sdFurCoat(vec2 p, Pose P, float pump) {
     float l_sleeve = sdCapsule(p, ls, P.l_hand, 0.06);
     float r_sleeve = sdCapsule(p, rs, P.r_hand, 0.06);
 
-    // Combine torso and sleeves with a HARD union — no blending — so a
-    // visible armpit gap remains between the sleeve and the torso.
+    // Hard union so armpit gaps remain visible, but add small shoulder
+    // cap circles at the junction so the shoulder line is smooth.
+    float l_cap = sdCircle(p - ls, 0.04);
+    float r_cap = sdCircle(p - rs, 0.04);
     float coat_base = min(d_torso, l_sleeve);
     coat_base = min(coat_base, r_sleeve);
+    coat_base = smin(coat_base, l_cap, 0.03);
+    coat_base = smin(coat_base, r_cap, 0.03);
 
     // Looser, straighter fit (not form-fitting) — more fur thickness so the
     // coat hangs straight down rather than hugging every curve.
