@@ -416,8 +416,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // so it matches the rim-light aesthetic. Thin + subtle.
     float seam_x_pos = P.hip * 0.7;
     float seam_dx = uv.x - seam_x_pos;
-    float seam_glow = exp(-seam_dx * seam_dx * 20000.0);
-    seam_glow *= smoothstep(-0.02, -0.10, uv.y);
+    float seam_glow = exp(-seam_dx * seam_dx * 40000.0);
+    seam_glow *= smoothstep(-0.02, -0.10, uv.y) * 0.3;
 
     vec3 col = bg;
     // Body silhouette — warm plum skin that reads against the dark background
@@ -432,7 +432,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Coat rim — chrome edge hugs the shaggy outline (boosted for visibility)
     col += coat_rim * chrome * 2.2 * (1.0 - curls);
     // Button seam glow — chrome line down the center
-    col += seam_glow * coat * chrome * 0.5 * (1.0 - curls);
+    col += seam_glow * coat * chrome * 0.25 * (1.0 - curls);
     col += eyes * hot * 2.2;
     col = mix(col, col + hot * 0.6, eye_wash);
     col += eye_wash * hot * 0.4;
