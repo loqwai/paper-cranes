@@ -638,3 +638,10 @@ const List = () => {
 }
 
 render(html`<${List} />`, document.getElementsByTagName('main')[0])
+
+// Reload the page when shader files change on disk
+if (import.meta.hot) {
+    import.meta.hot.on('shaders-changed', () => {
+        location.reload()
+    })
+}

@@ -423,3 +423,10 @@ const main = async () => {
 }
 
 main()
+
+// Reload the page when shader files change on disk (replaces full-reload from shader-plugin)
+if (import.meta.hot) {
+    import.meta.hot.on('shaders-changed', () => {
+        location.reload()
+    })
+}

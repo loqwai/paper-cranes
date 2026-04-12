@@ -26,6 +26,12 @@ export const initMultiplayerEditor = (editor) => {
 
     const peers = new Map()
     let isApplyingRemoteEdit = false
+    // Expose flag for HMR handler in monaco.js — disk changes reach all
+    // peers via HMR directly, so they shouldn't also broadcast via multiplayer.
+    editor.__isApplyingRemoteEdit = (val) => {
+        if (val !== undefined) isApplyingRemoteEdit = val
+        return isApplyingRemoteEdit
+    }
     let isReady = false
     let peersEl = document.getElementById('multiplayer-peers')
 
