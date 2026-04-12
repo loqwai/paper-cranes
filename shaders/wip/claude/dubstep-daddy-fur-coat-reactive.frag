@@ -148,7 +148,7 @@ float sdDaddy(vec2 p, float pump, Pose P) {
     // Slimmer chest
     float chest_w = 0.23 + pump * 0.04;
     float chest_h = 0.17 + pump * 0.02;
-    vec2 cp = p - vec2(P.hip * 0.8, -0.02);
+    vec2 cp = p - vec2(P.hip * 0.7, -0.02);
     float chest = sdEllipse(cp, vec2(chest_w, chest_h));
 
     // Slimmer hips
