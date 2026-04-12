@@ -16,6 +16,15 @@ Visuals made by this project can be seen [here](https://visuals.beadfamous.com/l
 
 The other half of the project is a sort of "art project" where you make bead bracelets, and flash the visualizations onto them. This is a fun way to share your visualizations with others, and to make a physical object that represents your music. Scanning the bracelet with a phone will take you to a specific visualization - even when offline!
 
+## What's New
+
+- **[Multiplayer editor](docs/multiplayer-editor.md)** — Edit shaders together with live cursors and real-time sync
+- **[Tab audio capture](docs/tab-audio.md)** — Visualize Spotify or any browser tab with `?audio=tab`, no drivers needed
+- **[Editor-filesystem sync](docs/editor-filesystem-sync.md)** — Ctrl+S writes to disk, external edits push back to the browser
+- **[MIDI controller profiles](docs/midi-mapping.md)** — Plug in a controller, knobs auto-map and persist per device
+
+See the full [changelog](docs/CHANGELOG.md) for more.
+
 ## Usage
 
 If you've done web development before, the following steps should be pretty familiar.
@@ -63,7 +72,7 @@ Pick a shader from `shaders/` and load it via the `?shader` param — e.g. [loca
 Making your own visualization is easy, but requires some knowledge of GLSL shading language.
 Lucky for you, I'm hosting a hackathon with HeatSync Labs next month, in which we go from nothing to a working visualization and bracelet in a couple of hours next month! Stay tuned for more details.
 
-**See [docs/MAKING_A_NEW_SHADER.md](docs/MAKING_A_NEW_SHADER.md) for the full guide** - covers audio features, utility functions, design patterns, and common pitfalls. For recent changes, see the [changelog](docs/changelog.md).
+**See [docs/MAKING_A_NEW_SHADER.md](docs/MAKING_A_NEW_SHADER.md) for the full guide** - covers audio features, utility functions, design patterns, and common pitfalls. For recent changes, see the [changelog](docs/CHANGELOG.md).
 
 To make your own visualizations, you can create a new file in the `shaders/` directory, and then load it by specifying the 'shader' query param in the url. For example, to view the 'my_new_shader' visualization, you would go to [localhost:6969/?shader=my_new_shader](http://localhost:6969/?shader=my_new_shader)
 
@@ -83,7 +92,7 @@ If you want to deploy a visualization you made, PR me and I'll add it to the dep
 | [MIDI Mapping](docs/midi-mapping.md) | Controller profiles, auto-assignment, and learn mode |
 | [Audio File Playback](docs/audio-file-playback.md) | Deterministic audio for testing and screenshots |
 | [Unique Feature Guide](docs/unique-feature-guide.md) | Choosing independent audio features for multi-element shaders |
-| [Changelog](docs/changelog.md) | Recent feature changes |
+| [Changelog](docs/CHANGELOG.md) | Recent feature changes |
 
 ## Deploying your visualization to visuals.beadfamous.com
 
