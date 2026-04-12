@@ -1,5 +1,6 @@
 import { WebSocketClient } from '../remote/WebSocketClient.js'
 import { getIdentity } from './identity.js'
+import { monaco } from '../monaco.js'
 
 const STYLE_EL_ID = 'mp-peer-styles'
 

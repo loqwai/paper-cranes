@@ -1,31 +1,16 @@
-async function init() {
-    console.log('[monaco.js] init() starting, monaco=', typeof monaco)
+// Monaco version — bump this single line to upgrade
+import * as monaco from 'https://esm.sh/monaco-editor@0.53.0?bundle'
 
-    // Load Monaco's worker via the AMD loader (same CDN base as editor.main)
-    // This cross-origin worker trick wraps it as a blob that importScripts() the real worker
-    const MONACO_CDN = 'https://cdn.jsdelivr.net/npm/monaco-editor@0.53.0/min/vs'
-    const workerBlob = new Blob(
-        [`self.MonacoEnvironment = { baseUrl: '${MONACO_CDN}/' };
-          importScripts('${MONACO_CDN}/base/worker/workerMain.js');`],
-        { type: 'text/javascript' }
-    )
-    const workerUrl = URL.createObjectURL(workerBlob)
-    self.MonacoEnvironment = {
-        getWorkerUrl: () => workerUrl
-    }
+export { monaco }
 
-    // Create the editor instance
-    const editor = monaco.editor.create(document.getElementById('monaco-editor'), {
+// Create the editor instance
+export const editor = monaco.editor.create(document.getElementById('monaco-editor'), {
         value: '',
         language: 'glsl',
         theme: 'vs-dark',
         minimap: { enabled: false },
         automaticLayout: true,
     });
-
-    // Expose for multiplayer / other modules
-    window.__monacoEditor = editor
-    window.dispatchEvent(new CustomEvent('monaco-editor-ready', { detail: { editor } }))
 
     // Watch for shader errors
     setInterval(() => {
@@ -742,13 +727,3 @@ async function init() {
             }
         }
     })
-}
-
-// Wait for Monaco to be loaded from CDN
-console.log('[monaco.js] module loaded, readyState=', document.readyState)
-const runInit = () => init().catch(e => console.error('[monaco.js] init failed:', e))
-if (document.readyState === 'complete') {
-    runInit()
-} else {
-    window.addEventListener('load', runInit);
-}
