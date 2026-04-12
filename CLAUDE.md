@@ -258,13 +258,8 @@ vec3 position = vec3(CIRCLE_RADIUS, 0.1, 0.1);
 ## Knob/MIDI Control System
 
 ### Available Knobs
-- `knob_3` to `knob_11`
-- `knob_14` to `knob_22`
-- `knob_30` to `knob_37`
-- `knob_40`, `knob_41`
-- `knob_43` to `knob_47`
-- `knob_60`
-- `knob_71` to `knob_79`
+- `knob_1` through `knob_200` — all are available as float uniforms (0-1 range)
+- Set via URL query params (e.g., `?knob_1=0.5`), MIDI controllers, or the ParamsManager API
 
 ### The #define Swap Pattern (Recommended)
 
@@ -369,7 +364,7 @@ The system supports controlling a remote display from another device (phone, lap
 ```
 Controller (edit.html?remote=control)
     ↓ WebSocket
-Dev Server (esbuild.dev.js WebSocket server)
+Dev Server (Vite + remote-ws-plugin WebSocket server)
     ↓ Broadcast
 Display (index.html?remote=display)
 ```
@@ -416,7 +411,10 @@ paramsManager.setShader(code)      // Syncs shader to remote
 ├── index.js                     # Main entry point
 ├── edit.js                      # Editor interface
 ├── list.js                      # Shader list/gallery page
-└── esbuild.dev.js              # Build configuration (includes WebSocket server)
+├── vite.config.js               # Vite build configuration
+└── vite-plugins/
+    ├── remote-ws-plugin.js      # WebSocket server for remote control
+    └── shader-plugin.js         # Shader discovery, metadata, and manifest generation
 ```
 
 ## Development Workflow
