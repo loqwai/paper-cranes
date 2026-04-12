@@ -77,6 +77,224 @@ if (isRemoteControlMode) {
     updateRemoteStatusIndicator('reconnecting', {})
 }
 
+// Param Navigator: a hidden-by-default panel for inspecting/editing URL query params.
+// Toggle with Cmd/Ctrl+Shift+U. Stays out of the way; pure DOM, no framework.
+const ParamNavigator = (() => {
+    let panel = null
+    let listEl = null
+    let isOpen = false
+
+    const KEY_BLACKLIST = new Set(['present', 'open_sliders'])
+
+    const build = () => {
+        panel = document.createElement('div')
+        panel.id = 'param-navigator'
+        panel.style.cssText = `
+            position: fixed;
+            top: 50px;
+            left: 10px;
+            width: 320px;
+            max-height: 70vh;
+            background: rgba(15, 15, 20, 0.95);
+            color: #eee;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 12px;
+            font-family: ui-monospace, Menlo, monospace;
+            font-size: 12px;
+            z-index: 10002;
+            display: none;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            overflow: hidden;
+            flex-direction: column;
+            gap: 8px;
+        `
+
+        const header = document.createElement('div')
+        header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #333;padding-bottom:6px;'
+        header.innerHTML = `<strong style="font-size:11px;letter-spacing:0.5px;">URL PARAMS</strong><span style="font-size:10px;opacity:0.6;">⌘⇧U to close</span>`
+        panel.appendChild(header)
+
+        listEl = document.createElement('div')
+        listEl.style.cssText = 'overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:4px;min-height:0;'
+        panel.appendChild(listEl)
+
+        const addRow = document.createElement('div')
+        addRow.style.cssText = 'display:flex;gap:4px;border-top:1px solid #333;padding-top:6px;'
+        const keyInput = document.createElement('input')
+        const valInput = document.createElement('input')
+        const addBtn = document.createElement('button')
+        keyInput.placeholder = 'key'
+        valInput.placeholder = 'value'
+        addBtn.textContent = '+'
+        ;[keyInput, valInput].forEach(i => {
+            i.style.cssText = 'flex:1;background:#222;color:#eee;border:1px solid #444;border-radius:4px;padding:4px 6px;font-family:inherit;font-size:11px;min-width:0;'
+        })
+        addBtn.style.cssText = 'background:#2a4;color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:13px;'
+        const submit = () => {
+            const k = keyInput.value.trim()
+            if (!k) return
+            setParam(k, valInput.value)
+            keyInput.value = ''
+            valInput.value = ''
+            keyInput.focus()
+            render()
+        }
+        addBtn.addEventListener('click', submit)
+        ;[keyInput, valInput].forEach(i => i.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); submit() }
+            e.stopPropagation()
+        }))
+        addRow.append(keyInput, valInput, addBtn)
+        panel.appendChild(addRow)
+
+        const footer = document.createElement('div')
+        footer.style.cssText = 'display:flex;gap:4px;'
+        const mkBtn = (label, bg, fn) => {
+            const b = document.createElement('button')
+            b.textContent = label
+            b.style.cssText = `flex:1;background:${bg};color:#fff;border:none;border-radius:4px;padding:5px;cursor:pointer;font-size:11px;`
+            b.addEventListener('click', fn)
+            return b
+        }
+        footer.append(
+            mkBtn('Copy URL', '#446', () => {
+                navigator.clipboard?.writeText(window.location.href)
+                flashToast('URL copied')
+            }),
+            mkBtn('Open viewer', '#464', () => {
+                const url = new URL(window.location.href)
+                url.pathname = url.pathname.replace(/edit\.html?$/, 'index.html')
+                window.open(url.toString(), '_blank')
+            }),
+            mkBtn('→ list', '#644', () => {
+                const url = new URL(window.location.href)
+                url.pathname = '/list.html'
+                const keep = new URLSearchParams()
+                for (const k of ['remote', 'room', 'relay']) {
+                    if (url.searchParams.has(k)) keep.set(k, url.searchParams.get(k))
+                }
+                url.search = keep.toString()
+                window.location.href = url.toString()
+            }),
+        )
+        panel.appendChild(footer)
+
+        document.body.appendChild(panel)
+    }
+
+    const setParam = (key, value) => {
+        const url = new URL(window.location.href)
+        if (value === '' || value === null || value === undefined) {
+            url.searchParams.delete(key)
+        } else {
+            url.searchParams.set(key, value)
+        }
+        window.history.replaceState({}, '', url.toString())
+        // Also push to paramsManager so the visualizer/remote pick it up
+        const num = parseFloat(value)
+        if (window.paramsManager) {
+            if (value === '' || value === null) {
+                window.paramsManager.delete(key)
+            } else {
+                window.paramsManager.set(key, isNaN(num) ? value : num)
+            }
+        }
+    }
+
+    const render = () => {
+        if (!listEl) return
+        listEl.innerHTML = ''
+        const url = new URL(window.location.href)
+        const entries = Array.from(url.searchParams.entries())
+        if (entries.length === 0) {
+            const empty = document.createElement('div')
+            empty.style.cssText = 'opacity:0.5;font-style:italic;padding:8px 0;'
+            empty.textContent = 'no query params'
+            listEl.appendChild(empty)
+            return
+        }
+        for (const [key, value] of entries) {
+            if (KEY_BLACKLIST.has(key)) continue
+            const row = document.createElement('div')
+            row.style.cssText = 'display:flex;gap:4px;align-items:center;'
+
+            const keyEl = document.createElement('span')
+            keyEl.textContent = key
+            keyEl.style.cssText = 'flex:0 0 38%;color:#9cf;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;'
+            keyEl.title = key
+
+            const input = document.createElement('input')
+            input.value = value
+            input.style.cssText = 'flex:1;background:#222;color:#eee;border:1px solid #333;border-radius:3px;padding:3px 5px;font-family:inherit;font-size:11px;min-width:0;'
+            input.addEventListener('change', () => {
+                setParam(key, input.value)
+            })
+            input.addEventListener('keydown', (e) => e.stopPropagation())
+
+            const delBtn = document.createElement('button')
+            delBtn.textContent = '×'
+            delBtn.title = `Remove ${key}`
+            delBtn.style.cssText = 'background:#622;color:#fff;border:none;border-radius:3px;padding:2px 7px;cursor:pointer;font-size:12px;'
+            delBtn.addEventListener('click', () => {
+                setParam(key, '')
+                render()
+            })
+
+            row.append(keyEl, input, delBtn)
+            listEl.appendChild(row)
+        }
+    }
+
+    return {
+        toggle() {
+            if (!panel) build()
+            isOpen = !isOpen
+            panel.style.display = isOpen ? 'flex' : 'none'
+            if (isOpen) render()
+        },
+        refresh() {
+            if (isOpen) render()
+        },
+    }
+})()
+window.ParamNavigator = ParamNavigator
+
+// Lightweight transient toast for keyboard-shortcut feedback
+const flashToast = (message, duration = 1800) => {
+    let toast = document.getElementById('edit-toast')
+    if (!toast) {
+        toast = document.createElement('div')
+        toast.id = 'edit-toast'
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 18px;
+            background: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            border-radius: 6px;
+            font-family: system-ui, sans-serif;
+            font-size: 13px;
+            max-width: 90vw;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            z-index: 10001;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+        `
+        document.body.appendChild(toast)
+    }
+    toast.textContent = message
+    toast.style.opacity = '1'
+    clearTimeout(toast._hideTimer)
+    toast._hideTimer = setTimeout(() => { toast.style.opacity = '0' }, duration)
+}
+window.flashToast = flashToast
+
 // Expose paramsManager globally for monaco.js and other scripts
 window.paramsManager = paramsManager
 
@@ -320,6 +538,34 @@ const FeatureAdder = () => {
                 event.preventDefault() // Prevent browser default actions
                 openRendererInANewWindowAndControlIt() // Toggle presentation mode
             }
+
+            // Cmd/Ctrl + Shift + U: toggle URL/param navigator
+            if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === 'u') {
+                event.preventDefault()
+                ParamNavigator.toggle()
+            }
+
+            // Cmd/Ctrl + Shift + C: copy a shareable viewer URL to clipboard
+            if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === 'c') {
+                event.preventDefault()
+                const viewerUrl = buildViewerUrl().toString()
+                navigator.clipboard?.writeText(viewerUrl)
+                flashToast(`Copied: ${viewerUrl}`)
+            }
+
+            // Cmd/Ctrl + Shift + L: jump back to the list page (preserves remote=control)
+            if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === 'l') {
+                event.preventDefault()
+                const listUrl = new URL(window.location.href)
+                listUrl.pathname = '/list.html'
+                // Drop shader-specific params, keep passthrough ones
+                const keep = new URLSearchParams()
+                for (const k of ['remote', 'room', 'relay', 'filter', 'favoritesOnly', 'fullscreenOnly', 'wip']) {
+                    if (listUrl.searchParams.has(k)) keep.set(k, listUrl.searchParams.get(k))
+                }
+                listUrl.search = keep.toString()
+                window.location.href = listUrl.toString()
+            }
         }
 
         // Add keyboard listener globally
@@ -331,9 +577,16 @@ const FeatureAdder = () => {
         }
     }, [isDrawerOpen, isPresentationMode]) // Add dependencies
 
+    const buildViewerUrl = () => {
+       const url = new URL(window.location.href)
+       url.pathname = url.pathname.replace(/edit\.html?$/, 'index.html').replace(/\/edit$/, '/')
+       if (url.pathname === '' || url.pathname === '/edit') url.pathname = '/'
+       return url
+    }
+
     const openRendererInANewWindowAndControlIt = () => {
-       // open renderer in a new window
-       const newWindow = window.open(window.location.href.replace('edit', 'index'), '_blank', 'width=1000,height=1000')
+       // open renderer in a new window — preserves all query params (shader, knobs, remote, etc.)
+       const newWindow = window.open(buildViewerUrl().toString(), '_blank', 'width=1000,height=1000')
        sendCranesStateToNewWindow(newWindow)
     }
 
