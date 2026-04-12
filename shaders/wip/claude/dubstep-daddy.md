@@ -77,6 +77,58 @@ Validate before committing:
 node scripts/validate-shader.js shaders/wip/claude/dubstep-daddy.frag
 ```
 
+## Fur coat variants
+
+Two new shaders built on top of the base dubstep daddy:
+
+### `dubstep-daddy-fur-coat.frag` — static variant
+A pink synthwave fur coat with baked shape constants. The coat is a separate SDF layer built from:
+- **Torso SDF** (chest + waist + hips) inflated by `FUR_THICK` to create the coat body
+- **Sleeve capsules** from shoulder to wrist (hard union with torso, leaving armpit gaps)
+- **Shoulder cap circles** smin'd at the junction for smooth shoulder seams
+- **V-neck** carved via smooth subtraction (smin-based smooth max) so the neckline merges organically into the coat top — no hard corners that create phantom "back of collar" rim lines
+- **Hem ellipse** extends the coat straight down off-screen
+
+Shape constants are baked from a knob-tuning session. Each constant has a commented-out `#define` that switches it to knob mode for live editing.
+
+Key design decisions:
+- **No leather** — body fill is warm plum skin, not leather. The coat is the only garment.
+- **Head lowered** (0.30→0.24) and bob amplitude reduced (0.04→0.025) so the head never disconnects from the neck/collar during the nod cycle.
+- **Body chest aligned** at `P.hip * 0.7` (matching neck and V-neck) instead of 0.8, so the body doesn't poke out of the coat during hip sway.
+- **Narrow neck** (0.035 half-width) so it reads as a thin neck column inside the coat collar.
+- **Fluffy silhouette edge** via noise-perturbed SDF (`d_coat_fluff`) — the "fur" read comes from the shaggy outline, not internal texture.
+- **Chrome rim + seam** match the synthwave aesthetic of the base shader.
+
+### `dubstep-daddy-fur-coat-reactive.frag` — audio-reactive variant
+Copy of the static variant with the coat responding to music:
+
+| Audio Feature | Coat Response |
+|---------------|---------------|
+| `bassZScore` | Shoulders shrug up, color brightens |
+| `bassNormalized` | Chest breathes wider |
+| `trebleZScore` | Sleeves flare outward |
+| `energyZScore` | Fur bristles thicker, V-neck opens wider |
+| `IS_DROP + energyZScore` | Color shifts pink → hot peach/yellow |
+| `spectralFluxNormalized` | Chrome rim blazes brighter, shoulder gleam pulses |
+| `spectralEntropyNormalized` | Fractal fur fibers appear inside the coat |
+| `spectralRoughnessNormalized` | Fractal fur fibers appear (combined with entropy) |
+| `spectralKurtosisZScore` | Boosts fractal trigger when spectrum is peaked |
+| `spectralCentroidNormalized` | Drives fractal warp speed (pitch-aware swirl) |
+
+The **fractal fur fibers** are the headline feature: double domain-warped fbm producing swirling chrome-tinted strands that look like individual fur fibers catching light. They're triggered by spectral quality features (entropy, roughness, kurtosis) — completely independent from the energy/bass features that drive the eyes. This means the coat and eyes react to DIFFERENT musical qualities: eyes blast on drops (energy), coat swirls on timbral complexity (entropy/roughness).
+
+Uses 21 audio features total.
+
+### Fixed bugs specific to the coat variants
+
+1. **Back-of-collar artifact** — the V-neck was carved with `max(inflated, -v_wedge)` which created closed triangle corners. The rim light traced those corners, producing a phantom collar edge visible above the front of the coat. Fix: smooth subtraction via `-smin(-inflated, v_wedge, k)` with an unbounded-upward wedge so no top corners exist.
+
+2. **Coat off-center from neck** — the body's chest SDF used `P.hip * 0.8` while the coat torso used `P.hip * 0.7`, causing the body to shift more than the coat during hip sway. The viewer's right shoulder would poke out. Fix: aligned both to `P.hip * 0.7`.
+
+3. **Head disconnecting from neck** — head resting position at y=0.30 left a gap above the coat top (~0.15). During the bob cycle, `bob=0` made the gap visible. Fix: lowered head to y=0.24, reduced bob amplitude.
+
+4. **Shoulder flare/wings** — separate shoulder circles in `sdTorso` created bumps that inflated into flared wing shapes. Fix: removed shoulder circles from torso SDF; sleeves attach directly with shoulder cap circles at the junction.
+
 ## Open questions / possible next work
 
 - Drop state is currently immediate-only. Should it sustain for a beat or two after the spike decays? If so, fix the accumulator bootstrap bug described above.
