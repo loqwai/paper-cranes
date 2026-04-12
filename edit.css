@@ -36,44 +36,8 @@ body {
   top: 0;
   width: 50vw;
   height: 100vh;
-  padding-top: 24px;
-  background: #1e1e1e;
-  box-sizing: border-box;
 }
 
-/* Monaco 0.53 EditContext elements — the ESM CDN bundle ships without
-   styles for these, leaving them visible as white rectangles. Clip them. */
-#monaco-editor .native-edit-context,
-#monaco-editor .ime-text-area {
-  position: absolute !important;
-  width: 1px !important;
-  height: 1px !important;
-  top: 0 !important;
-  left: 0 !important;
-  opacity: 0 !important;
-  pointer-events: none;
-}
-
-/* vs-dark theme colors — the esm.sh bundle omits Monaco's runtime-injected
-   theme stylesheet, so the editor background and gutter come through
-   transparent. Apply the canonical vs-dark palette directly. */
-#monaco-editor .monaco-editor,
-#monaco-editor .monaco-editor-background,
-#monaco-editor .monaco-editor .inputarea.ime-input {
-  background-color: #1e1e1e;
-}
-#monaco-editor .monaco-editor .margin {
-  background-color: #1e1e1e;
-}
-#monaco-editor .monaco-editor .view-lines {
-  color: #d4d4d4;
-}
-#monaco-editor .monaco-editor .line-numbers {
-  color: #858585;
-}
-#monaco-editor .monaco-editor .current-line ~ .line-numbers {
-  color: #c6c6c6;
-}
 #monaco-editor .monaco-editor .cursors-layer .cursor {
   width: 2px !important;
   background-color: #ff79c6 !important;
@@ -83,12 +47,6 @@ body {
 #monaco-editor .monaco-editor .view-overlays .current-line {
   border: none !important;
   background: rgba(255, 121, 198, 0.06);
-}
-#monaco-editor .monaco-editor .minimap {
-  background-color: #1e1e1e;
-}
-#monaco-editor .monaco-scrollable-element > .scrollbar > .slider {
-  background: rgba(121, 121, 121, 0.4);
 }
 
 /* Feature editor drawer */
