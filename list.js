@@ -9,15 +9,16 @@ const isRemoteControlMode = params.get('remote') === 'control'
 // Remote controller instance (initialized in List component)
 let remoteController = null
 
-// Query params that should be carried through navigations
-const PASSTHROUGH_PARAMS = ['remote', 'room', 'relay']
+// Params that are list-page UI state — should NOT forward to shader URLs.
+// Everything else on the current URL gets forwarded; target params win on conflict.
+const LIST_UI_PARAMS = new Set(['filter', 'favoritesOnly', 'fullscreenOnly', 'wip'])
 
 const carryPassthroughParams = (url) => {
   const current = new URLSearchParams(window.location.search)
-  for (const key of PASSTHROUGH_PARAMS) {
-    if (current.has(key) && !url.searchParams.has(key)) {
-      url.searchParams.set(key, current.get(key))
-    }
+  for (const [key, value] of current) {
+    if (LIST_UI_PARAMS.has(key)) continue
+    if (url.searchParams.has(key)) continue // target wins
+    url.searchParams.set(key, value)
   }
   return url
 }
