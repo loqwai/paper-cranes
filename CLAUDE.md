@@ -260,6 +260,7 @@ vec3 position = vec3(CIRCLE_RADIUS, 0.1, 0.1);
 ### Available Knobs
 - `knob_1` through `knob_200` — all are available as float uniforms (0-1 range)
 - Set via URL query params (e.g., `?knob_1=0.5`), MIDI controllers, or the ParamsManager API
+- MIDI controllers auto-map CCs to knobs with per-device profiles persisted in localStorage. See [docs/midi-mapping.md](docs/midi-mapping.md)
 
 ### The #define Swap Pattern (Recommended)
 
@@ -327,7 +328,10 @@ uniform float another;   // = 1.2
 - `embed` - Embed mode (disables audio)
 - `fullscreen` - Start in fullscreen
 - `remote` - Remote mode: `display` (receive commands) or `control` (send commands)
-- `audio=tab` - Visualize a browser tab's audio (Spotify, YouTube, etc.) via `getDisplayMedia` instead of the microphone. Shows a "Share tab audio" overlay; user picks a tab/window and the audio track is routed into `AudioProcessor`. No loopback driver needed. Chrome/Edge desktop only. Modules for this flow are dynamic-imported, so the default mic path is unaffected.
+- `audio=tab` - Capture audio from a browser tab instead of mic. Chrome/Edge only. See [docs/tab-audio.md](docs/tab-audio.md)
+- `audio_file=<url>` - Play a deterministic audio file through the analyzer. See [docs/audio-file-playback.md](docs/audio-file-playback.md)
+- `audio_time=<seconds>` - Start audio file playback at this offset (default: 0)
+- `time=<seconds>` - Hold time constant (useful for deterministic screenshots/testing)
 
 ### Dynamic Override
 All parameters can be overridden at runtime via:
@@ -359,6 +363,12 @@ The system supports controlling a remote display from another device (phone, lap
 - Saving shader code sends it to all connected displays in real-time
 - Knob/slider changes are synced to displays automatically
 - Shows connection status indicator (green = connected, displays count)
+
+### Multiplayer Editor
+Multiple people can edit the same shader simultaneously with live cursors via WebSocket. Each tab gets a random identity. No CRDT — edits apply in arrival order. See [docs/multiplayer-editor.md](docs/multiplayer-editor.md)
+
+### Editor-Filesystem Sync (dev mode only)
+Ctrl+S in the editor writes to disk via `/__save-shader` endpoint. External `.frag` changes push back via HMR. HMR updates suppress multiplayer broadcast to avoid stomping concurrent edits. See [docs/editor-filesystem-sync.md](docs/editor-filesystem-sync.md)
 
 ### Architecture
 ```
@@ -394,7 +404,16 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   ├── audio/
 │   │   ├── AudioProcessor.js    # Main audio processing
 │   │   ├── WorkerRPC.js        # Worker communication
-│   │   └── analyzer.js         # Worker analyzer loader
+│   │   ├── analyzer.js         # Worker analyzer loader
+│   │   ├── tabAudioSource.js   # ?audio=tab capture via getDisplayMedia
+│   │   ├── tabAudioButton.js   # Tab audio overlay UI
+│   │   └── audioFileSource.js  # ?audio_file= deterministic playback
+│   ├── midi/
+│   │   └── MidiMapper.js       # MIDI CC→knob mapping with profiles
+│   ├── multiplayer/
+│   │   ├── MultiplayerEditor.js # Live collaborative editing
+│   │   ├── identity.js         # Random per-tab identity generation
+│   │   └── multiplayer.css     # Cursor and peer chip styles
 │   ├── params/
 │   │   └── ParamsManager.js    # Unified params (URL, remote, features)
 │   ├── remote/
@@ -408,12 +427,15 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   ├── wip/claude/             # Claude-created shaders go here
 │   ├── plasma.frag
 │   └── melted-satin/2.frag
+├── scripts/
+│   └── remap-knobs.js          # Utility to remap knob assignments in shaders
 ├── index.js                     # Main entry point
 ├── edit.js                      # Editor interface
 ├── list.js                      # Shader list/gallery page
 ├── vite.config.js               # Vite build configuration
 └── vite-plugins/
     ├── remote-ws-plugin.js      # WebSocket server for remote control
+    ├── editor-sync-plugin.js    # Bidirectional editor↔disk sync (dev only)
     └── shader-plugin.js         # Shader discovery, metadata, and manifest generation
 ```
 
