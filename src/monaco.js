@@ -1,12 +1,19 @@
 async function init() {
-    //if we have a shader in the query param, return
-    // if (new URLSearchParams(window.location.search).get('shader')) return
+    console.log('[monaco.js] init() starting, monaco=', typeof monaco)
 
-    // add the worker as a blob url
+    // Load Monaco's worker via the AMD loader (same CDN base as editor.main)
+    // This cross-origin worker trick wraps it as a blob that importScripts() the real worker
+    const MONACO_CDN = 'https://cdn.jsdelivr.net/npm/monaco-editor@0.53.0/min/vs'
+    const workerBlob = new Blob(
+        [`self.MonacoEnvironment = { baseUrl: '${MONACO_CDN}/' };
+          importScripts('${MONACO_CDN}/base/worker/workerMain.js');`],
+        { type: 'text/javascript' }
+    )
+    const workerUrl = URL.createObjectURL(workerBlob)
+    self.MonacoEnvironment = {
+        getWorkerUrl: () => workerUrl
+    }
 
-    const res = await fetch('https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/base/worker/workerMain.js')
-    const blob = await res.blob()
-    const workerUrl = URL.createObjectURL(blob)
     // Create the editor instance
     const editor = monaco.editor.create(document.getElementById('monaco-editor'), {
         value: '',
@@ -15,10 +22,10 @@ async function init() {
         minimap: { enabled: false },
         automaticLayout: true,
     });
-    // add the web workers
-    self.MonacoEnvironment = {
-        getWorkerUrl: () => workerUrl
-        }
+
+    // Expose for multiplayer / other modules
+    window.__monacoEditor = editor
+    window.dispatchEvent(new CustomEvent('monaco-editor-ready', { detail: { editor } }))
 
     // Watch for shader errors
     setInterval(() => {
@@ -738,4 +745,10 @@ async function init() {
 }
 
 // Wait for Monaco to be loaded from CDN
-window.addEventListener('load', () => init());
+console.log('[monaco.js] module loaded, readyState=', document.readyState)
+const runInit = () => init().catch(e => console.error('[monaco.js] init failed:', e))
+if (document.readyState === 'complete') {
+    runInit()
+} else {
+    window.addEventListener('load', runInit);
+}
