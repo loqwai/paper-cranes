@@ -4,12 +4,21 @@ import { html } from 'htm/preact'
 import { getRelativeOrAbsoluteShaderUrl } from './src/utils.js'
 import { createParamsManager } from './src/params/ParamsManager.js'
 import { initMultiplayerEditor } from './src/multiplayer/MultiplayerEditor.js'
-import { editor } from './src/monaco.js'
 
-try {
-    initMultiplayerEditor(editor)
-} catch (e) {
-    console.error('[MP] Failed to initialize multiplayer:', e)
+// Initialize multiplayer editing as soon as Monaco is ready
+const startMultiplayer = () => {
+    const editor = window.__monacoEditor
+    if (!editor) return
+    try {
+        initMultiplayerEditor(editor)
+    } catch (e) {
+        console.error('[MP] Failed to initialize multiplayer:', e)
+    }
+}
+if (window.__monacoEditor) {
+    startMultiplayer()
+} else {
+    window.addEventListener('monaco-editor-ready', startMultiplayer, { once: true })
 }
 
 // Check if we're in remote control mode
@@ -472,7 +481,8 @@ const FeatureAdder = () => {
         if (isDrawerOpen && newFeatureInputRef.current) {
             // Store current cursor position before focusing drawer
             try {
-                {
+                const editor = window.__monacoEditor
+                if (editor) {
                     editorCursorPositionRef.current = editor.getPosition()
                 }
             } catch (e) {
@@ -487,7 +497,8 @@ const FeatureAdder = () => {
             // Focus monaco editor when drawer closes
             setTimeout(() => {
                 try {
-                    {
+                    const editor = window.__monacoEditor
+                    if (editor) {
                         editor.focus()
                         // Restore cursor position if we have one saved
                         if (editorCursorPositionRef.current) {

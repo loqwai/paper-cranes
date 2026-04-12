@@ -1,16 +1,24 @@
-// Monaco version — bump this single line to upgrade
-import * as monaco from 'https://esm.sh/monaco-editor@0.53.0?bundle'
+async function init() {
+    const res = await fetch('https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/base/worker/workerMain.js')
+    const blob = await res.blob()
+    const workerUrl = URL.createObjectURL(blob)
 
-export { monaco }
-
-// Create the editor instance
-export const editor = monaco.editor.create(document.getElementById('monaco-editor'), {
+    // Create the editor instance
+    const editor = monaco.editor.create(document.getElementById('monaco-editor'), {
         value: '',
         language: 'glsl',
         theme: 'vs-dark',
         minimap: { enabled: false },
         automaticLayout: true,
     });
+
+    self.MonacoEnvironment = {
+        getWorkerUrl: () => workerUrl
+    }
+
+    // Expose for multiplayer / other modules
+    window.__monacoEditor = editor
+    window.dispatchEvent(new CustomEvent('monaco-editor-ready', { detail: { editor } }))
 
     // Watch for shader errors
     setInterval(() => {
@@ -727,3 +735,13 @@ export const editor = monaco.editor.create(document.getElementById('monaco-edito
             }
         }
     })
+}
+
+// Wait for Monaco to be loaded from CDN
+console.log('[monaco.js] module loaded, readyState=', document.readyState)
+const runInit = () => init().catch(e => console.error('[monaco.js] init failed:', e))
+if (document.readyState === 'complete') {
+    runInit()
+} else {
+    window.addEventListener('load', runInit);
+}
