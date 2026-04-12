@@ -5,6 +5,12 @@
 #define PI 3.14159265
 
 // ============================================================================
+// DEBUG — flip to 1 to render SDF outlines (body cyan, coat yellow) over a
+// dimmed scene. Use when diagnosing coat/body alignment issues.
+// ============================================================================
+#define DEBUG_OUTLINES 0
+
+// ============================================================================
 // AUDIO
 // ============================================================================
 
@@ -85,9 +91,10 @@ Pose makePose(float beat_phase, float hip_sway, float snap, float groove) {
     float r_gesture = snap * 1.2;
     P.l_open = l_gesture;
     P.r_open = r_gesture;
-    // Hands hang below the new wider shoulder positions (coat_edge ≈ 0.275)
-    P.l_hand = vec2(-0.34 - l_gesture * 0.12, -0.30 + l_gesture * 0.30);
-    P.r_hand = vec2( 0.32 + r_gesture * 0.18, -0.22 + r_gesture * 0.20 + sin(beat_phase) * 0.02);
+    // Arms hang naturally at the sides, symmetric, proportional length.
+    // Hands end just past the hips (y ≈ -0.38).
+    P.l_hand = vec2(-0.30 - l_gesture * 0.15, -0.38 + l_gesture * 0.25);
+    P.r_hand = vec2( 0.30 + r_gesture * 0.15, -0.38 + r_gesture * 0.25 + sin(beat_phase) * 0.01);
     return P;
 }
 
@@ -128,13 +135,16 @@ float sdDaddy(vec2 p, float pump, Pose P) {
     float lshoulder = sdCircle(p - ls, 0.055);
     float rshoulder = sdCircle(p - rs, 0.055);
 
-    // Arms drop down and outward from the coat edge
-    vec2 l_elbow = mix(vec2(ls.x - 0.02, -0.14), vec2(ls.x - 0.06, -0.08), P.l_open);
-    vec2 r_elbow = mix(vec2(rs.x + 0.02, -0.14), vec2(rs.x + 0.06, -0.05), P.r_open);
-    float l_upper = sdCapsule(p, ls, l_elbow, 0.035);
-    float l_lower = sdCapsule(p, l_elbow, P.l_hand, 0.030);
-    float r_upper = sdCapsule(p, rs, r_elbow, 0.035);
-    float r_lower = sdCapsule(p, r_elbow, P.r_hand, 0.030);
+    // Arms hang proportionally — elbow at the midpoint between shoulder and
+    // hand, slightly biased inward so the lower arm curves toward the body
+    vec2 l_mid = mix(ls, P.l_hand, 0.5);
+    vec2 r_mid = mix(rs, P.r_hand, 0.5);
+    vec2 l_elbow = l_mid + vec2(0.015, 0.0) + vec2(-0.02, 0.02) * P.l_open;
+    vec2 r_elbow = r_mid + vec2(-0.015, 0.0) + vec2(0.02, 0.02) * P.r_open;
+    float l_upper = sdCapsule(p, ls, l_elbow, 0.04);
+    float l_lower = sdCapsule(p, l_elbow, P.l_hand, 0.035);
+    float r_upper = sdCapsule(p, rs, r_elbow, 0.04);
+    float r_lower = sdCapsule(p, r_elbow, P.r_hand, 0.035);
 
     float l_fist = sdCircle(p - P.l_hand, 0.035 + P.l_open * 0.008);
     float r_fist = sdCircle(p - P.r_hand, 0.035 + P.r_open * 0.008);
@@ -156,39 +166,50 @@ float sdDaddy(vec2 p, float pump, Pose P) {
 
 // Torso-only SDF: chest + shoulders + hips, NO head/neck/arms/hands.
 // Used as the base shape the fur coat inflates from, so arms poke out.
+// Chest is intentionally shorter than the body's chest so that when the coat
+// inflates outward by fur_thickness, its top sits below the neck — no hard
+// cut needed, no visible "back of collar" line.
 float sdTorso(vec2 p, float pump, Pose P) {
     float chest_w = 0.23 + pump * 0.04;
-    float chest_h = 0.17 + pump * 0.02;
-    vec2 cp = p - vec2(P.hip * 0.8, -0.02);
+    float chest_h = 0.12 + pump * 0.02;  // top at y=0.12, clears shoulders
+    vec2 cp = p - vec2(P.hip * 0.8, 0.0);
     float chest = sdEllipse(cp, vec2(chest_w, chest_h));
 
     vec2 wp = p - vec2(P.hip * 1.4, -0.22);
     float hips = sdEllipse(wp, vec2(0.20, 0.09));
 
-    // Torso shoulders — match the body shoulder positions exactly so the
-    // coat hugs the actual shoulder line, not a separate hidden torso.
-    float coat_edge = chest_w * 0.95 + 0.055;
-    vec2 ls = vec2(-coat_edge + P.hip * 0.4, 0.0);
-    vec2 rs = vec2( coat_edge + P.hip * 0.4, 0.0);
-    float lshoulder = sdCircle(p - ls, 0.055);
-    float rshoulder = sdCircle(p - rs, 0.055);
-
+    // No separate shoulder bumps — the sleeves in sdFurCoat attach directly
+    // to the shoulder positions and merge with this torso via smin, giving
+    // a smooth chest→sleeve transition without flared shoulder wings.
     float d = chest;
     d = smin(d, hips, 0.06);
-    d = smin(d, lshoulder, 0.06);
-    d = smin(d, rshoulder, 0.06);
     return d;
 }
 
-// Fur coat: inflates the torso (NOT the arms) by a fur thickness, caps at the
-// neckline, lets the bottom run off-screen. Arms emerge from the sides.
+// Fur coat: inflates the torso AND arms (long sleeves) by a fur thickness,
+// caps at the neckline with a V, lets the hem run off-screen.
 float sdFurCoat(vec2 p, Pose P, float pump) {
     float d_torso = sdTorso(p, pump, P);
 
+    // Long sleeves — capsules from shoulder to wrist, radius wide enough to
+    // fully encase the body arms + fists. Sleeve ends exactly at hand so
+    // the hand emerges at the cuff.
+    float chest_w = 0.23 + pump * 0.04;
+    float coat_edge = chest_w * 0.95 + 0.055;
+    vec2 ls = vec2(-coat_edge + P.hip * 0.4, 0.0);
+    vec2 rs = vec2( coat_edge + P.hip * 0.4, 0.0);
+    float l_sleeve = sdCapsule(p, ls, P.l_hand, 0.07);
+    float r_sleeve = sdCapsule(p, rs, P.r_hand, 0.07);
+
+    // Combine torso and sleeves with a wide smin so the chest→sleeve
+    // transition is smooth instead of a step/flare.
+    float coat_base = smin(d_torso, l_sleeve, 0.08);
+    coat_base = smin(coat_base, r_sleeve, 0.08);
+
     // Looser, straighter fit (not form-fitting) — more fur thickness so the
     // coat hangs straight down rather than hugging every curve.
-    float fur_thickness = 0.05 + pump * 0.008;
-    float inflated = d_torso - fur_thickness;
+    float fur_thickness = 0.03 + pump * 0.005;
+    float inflated = coat_base - fur_thickness;
 
     // Straight hem: a tall narrow rectangle-ish ellipse that gives the coat a
     // straight drop through the hips and off the bottom. Not wider than the
@@ -197,26 +218,25 @@ float sdFurCoat(vec2 p, Pose P, float pump) {
     float hem = sdEllipse(p - hem_c, vec2(0.26, 0.45));
     inflated = smin(inflated, hem, 0.06);
 
-    // V-neckline: a shallow, properly-proportioned V that opens from the
-    // sternum and ends at the base of the neck. Not a narrow slit, not a
-    // gaping hole — a realistic coat V-neck.
+    // V-neckline: opens from the sternum to the top of the coat. The V is
+    // bounded so it only carves within its y-range — outside the range,
+    // v_wedge stays positive so `-v_wedge` is negative and max() ignores it.
     float cx = P.hip * 0.7;
-    float v_bottom = -0.05;  // V point at the sternum
-    float v_top = 0.12;      // V opening stops below the neck
-    float v_top_half = 0.10; // half-width at the top of the V
-    // Linear interpolation of half-width from 0 at v_bottom to v_top_half at v_top
-    float t = clamp((p.y - v_bottom) / (v_top - v_bottom), 0.0, 1.0);
-    float v_half = t * v_top_half;
-    // The wedge exists only in the V region (y between v_bottom and v_top)
+    float v_bottom = -0.02;
+    float v_top = 0.14;
+    float v_top_half = 0.06;
+    float t_v = clamp((p.y - v_bottom) / (v_top - v_bottom), 0.0, 1.0);
+    float v_half = t_v * v_top_half;
     float v_horiz = abs(p.x - cx) - v_half;
     float v_vert = max(v_bottom - p.y, p.y - v_top);
     float v_wedge = max(v_horiz, v_vert);
 
     float d = max(inflated, -v_wedge);
 
-    // Hard top cut at jaw line
-    float jaw_line = 0.16;
-    d = max(d, p.y - jaw_line);
+    // Hard top cap: coat never draws above this y, so no part of the coat
+    // rises into the face region where it would read as "back of collar."
+    float top_cap = 0.14;
+    d = max(d, p.y - top_cap);
     return d;
 }
 
@@ -350,12 +370,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 fur_hi = hsl2rgb(vec3(0.93, 0.95, 0.72));  // hot pink highlight
     vec3 fur_lo = hsl2rgb(vec3(0.86, 0.9, 0.55));   // magenta shadow
     vec3 fur_col = mix(fur_hi, fur_lo, coat_grad);
-    // Vertical button seam — wavy, subtle crease down the center. Drifts
-    // with a slow sine so it doesn't read as a CG ruler line.
-    float seam_x = P.hip * 0.7 + sin(uv.y * 11.0) * 0.006;
-    float seam = exp(-pow((uv.x - seam_x) * 30.0, 2.0));
-    seam *= smoothstep(-0.02, -0.12, uv.y);
-    fur_col *= 1.0 - seam * 0.18;
+    // Seam strength computed here; chrome glow added after compositing
+    // so it matches the rim-light aesthetic. Thin + subtle.
+    float seam_x_pos = P.hip * 0.7;
+    float seam_dx = uv.x - seam_x_pos;
+    float seam_glow = exp(-seam_dx * seam_dx * 20000.0);
+    seam_glow *= smoothstep(-0.02, -0.10, uv.y);
 
     vec3 col = bg;
     // Body silhouette — warm plum skin that reads against the dark background
@@ -369,6 +389,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     col += chest_glow * chrome * 0.8 * (1.0 - coat);
     // Coat rim — chrome edge hugs the shaggy outline (pops hard on drop)
     col += coat_rim * chrome * 1.8 * (1.0 - curls);
+    // Button seam glow — chrome line down the center, same aesthetic as the rim
+    col += seam_glow * coat * chrome * 0.4 * (1.0 - curls);
     col += eyes * hot * 2.2;
     col = mix(col, col + hot * 0.6, eye_wash);
     col += eye_wash * hot * 0.4;
@@ -412,6 +434,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     col = mix(prev, col, feedback_amt);
 
     col *= 1.0 - smoothstep(0.7, 1.4, length(uv * vec2(1.0, 0.85)));
+
+#if DEBUG_OUTLINES
+    col *= 0.25;
+    float body_outline = smoothstep(0.003, 0.0, abs(d_body));
+    float coat_outline = smoothstep(0.003, 0.0, abs(d_coat));
+    col += body_outline * vec3(0.0, 1.0, 1.0);
+    col += coat_outline * vec3(1.0, 1.0, 0.0);
+#endif
 
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
