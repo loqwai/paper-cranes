@@ -364,12 +364,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 hot     = hsl2rgb(vec3(0.08, 1.0, 0.6));
 
     // Coat fill — saturated synthwave pink/magenta with a vertical gradient
-    // from hot pink at the shoulders to cooler magenta at the hem. Keeps
-    // the flat aesthetic but reads as neon instead of dusty gray.
+    // from hot pink at the shoulders to cooler magenta at the hem.
     float coat_grad = smoothstep(0.15, -0.4, uv.y);
-    vec3 fur_hi = hsl2rgb(vec3(0.93, 0.95, 0.72));  // hot pink highlight
-    vec3 fur_lo = hsl2rgb(vec3(0.86, 0.9, 0.55));   // magenta shadow
+    vec3 fur_hi = hsl2rgb(vec3(0.93, 0.95, 0.72));
+    vec3 fur_lo = hsl2rgb(vec3(0.86, 0.9, 0.55));
     vec3 fur_col = mix(fur_hi, fur_lo, coat_grad);
+    // Horizontal shoulder gleam — a soft band near the top that catches
+    // the light, reads as "light glinting off the upper chest"
+    float shoulder_gleam = exp(-pow((uv.y - 0.08) * 10.0, 2.0));
+    fur_col += shoulder_gleam * vec3(0.15, 0.08, 0.18);
     // Seam strength computed here; chrome glow added after compositing
     // so it matches the rim-light aesthetic. Thin + subtle.
     float seam_x_pos = P.hip * 0.7;
@@ -387,10 +390,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     col = mix(col, hair, curls);
     col += rim * chrome * 1.3 * (1.0 - coat);
     col += chest_glow * chrome * 0.8 * (1.0 - coat);
-    // Coat rim — chrome edge hugs the shaggy outline (pops hard on drop)
-    col += coat_rim * chrome * 1.8 * (1.0 - curls);
-    // Button seam glow — chrome line down the center, same aesthetic as the rim
-    col += seam_glow * coat * chrome * 0.4 * (1.0 - curls);
+    // Coat rim — chrome edge hugs the shaggy outline (boosted for visibility)
+    col += coat_rim * chrome * 2.2 * (1.0 - curls);
+    // Button seam glow — chrome line down the center
+    col += seam_glow * coat * chrome * 0.5 * (1.0 - curls);
     col += eyes * hot * 2.2;
     col = mix(col, col + hot * 0.6, eye_wash);
     col += eye_wash * hot * 0.4;
