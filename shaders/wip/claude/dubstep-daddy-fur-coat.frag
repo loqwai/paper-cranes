@@ -171,8 +171,8 @@ float sdDaddy(vec2 p, float pump, Pose P) {
 // cut needed, no visible "back of collar" line.
 float sdTorso(vec2 p, float pump, Pose P) {
     float chest_w = 0.23 + pump * 0.04;
-    float chest_h = 0.12 + pump * 0.02;  // top at y=0.12, clears shoulders
-    vec2 cp = p - vec2(P.hip * 0.8, 0.0);
+    float chest_h = 0.10 + pump * 0.02;
+    vec2 cp = p - vec2(P.hip * 0.8, 0.01);
     float chest = sdEllipse(cp, vec2(chest_w, chest_h));
 
     vec2 wp = p - vec2(P.hip * 1.4, -0.22);
@@ -221,22 +221,22 @@ float sdFurCoat(vec2 p, Pose P, float pump) {
     // V-neckline: opens from the sternum to the top of the coat. The V is
     // bounded so it only carves within its y-range — outside the range,
     // v_wedge stays positive so `-v_wedge` is negative and max() ignores it.
+    // V-neck carved with a smooth subtraction. Wedge is unbounded at the top
+    // so its sides continue upward past the coat top — this means the wedge
+    // has NO visible "top corners" inside the coat, so rim lighting can't
+    // trace a phantom collar back-edge at the top of the V.
     float cx = P.hip * 0.7;
     float v_bottom = -0.02;
-    float v_top = 0.14;
-    float v_top_half = 0.06;
-    float t_v = clamp((p.y - v_bottom) / (v_top - v_bottom), 0.0, 1.0);
-    float v_half = t_v * v_top_half;
+    float v_half_at_top = 0.07;
+    // Slope of the V: widens as y increases, no upper bound
+    float v_slope = v_half_at_top / 0.17;  // reaches 0.07 at y=0.15
+    float v_half = max(0.0, (p.y - v_bottom)) * v_slope;
     float v_horiz = abs(p.x - cx) - v_half;
-    float v_vert = max(v_bottom - p.y, p.y - v_top);
+    float v_vert = v_bottom - p.y;  // only the bottom is a hard wall
     float v_wedge = max(v_horiz, v_vert);
 
-    float d = max(inflated, -v_wedge);
-
-    // Hard top cap: coat never draws above this y, so no part of the coat
-    // rises into the face region where it would read as "back of collar."
-    float top_cap = 0.14;
-    d = max(d, p.y - top_cap);
+    // Smooth subtraction (smooth max via -smin)
+    float d = -smin(-inflated, v_wedge, 0.015);
     return d;
 }
 
