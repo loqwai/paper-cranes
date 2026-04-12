@@ -127,13 +127,12 @@ float sdDaddy(vec2 p, float pump, Pose P) {
     vec2 wp = p - vec2(P.hip * 1.4, -0.22);
     float hips = sdEllipse(wp, vec2(0.20, 0.09));
 
-    // Shoulders sit at the OUTER edge of the coat so arms exit cleanly
-    // from the sides of the fur. Fur thickness ≈ 0.055, matched in sdFurCoat.
-    float coat_edge = chest_w * 0.95 + 0.055;
-    vec2 ls = vec2(-coat_edge + P.hip * 0.4, 0.0);
-    vec2 rs = vec2( coat_edge + P.hip * 0.4, 0.0);
-    float lshoulder = sdCircle(p - ls, 0.055);
-    float rshoulder = sdCircle(p - rs, 0.055);
+    // Shoulders at the natural resting line — not raised (no shrugging)
+    float coat_edge = chest_w + 0.04;
+    vec2 ls = vec2(-coat_edge + P.hip * 0.4, -0.02);
+    vec2 rs = vec2( coat_edge + P.hip * 0.4, -0.02);
+    float lshoulder = sdCircle(p - ls, 0.05);
+    float rshoulder = sdCircle(p - rs, 0.05);
 
     // Arms hang proportionally — elbow at the midpoint between shoulder and
     // hand, slightly biased inward so the lower arm curves toward the body
@@ -195,23 +194,23 @@ float sdTorso(vec2 p, float pump, Pose P) {
 float sdFurCoat(vec2 p, Pose P, float pump) {
     float d_torso = sdTorso(p, pump, P);
 
-    // Long sleeves — capsules from shoulder to wrist. Sleeves sit further
-    // OUT from the torso so there's a visible armpit gap between them.
-    float chest_w = 0.23 + pump * 0.04;
-    float coat_edge = chest_w * 0.95 + 0.09;
-    vec2 ls = vec2(-coat_edge + P.hip * 0.4, -0.01);
-    vec2 rs = vec2( coat_edge + P.hip * 0.4, -0.01);
-    float l_sleeve = sdCapsule(p, ls, P.l_hand, 0.06);
-    float r_sleeve = sdCapsule(p, rs, P.r_hand, 0.06);
+    // Long sleeves — capsules from shoulder to wrist. Sleeve origins sit at
+    // the shoulder line (top-outside of the torso) so they connect seamlessly.
+    float chest_w = 0.20 + pump * 0.04;
+    float coat_edge = chest_w + 0.04;
+    vec2 ls = vec2(-coat_edge + P.hip * 0.4, -0.02);
+    vec2 rs = vec2( coat_edge + P.hip * 0.4, -0.02);
+    float l_sleeve = sdCapsule(p, ls, P.l_hand, 0.055);
+    float r_sleeve = sdCapsule(p, rs, P.r_hand, 0.055);
 
-    // Hard union so armpit gaps remain visible, but add small shoulder
-    // cap circles at the junction so the shoulder line is smooth.
-    float l_cap = sdCircle(p - ls, 0.04);
-    float r_cap = sdCircle(p - rs, 0.04);
+    // Shoulder caps smin'd with both torso and sleeves so the shoulder
+    // seam is smooth, while the armpit below stays open.
+    float l_cap = sdCircle(p - ls, 0.06);
+    float r_cap = sdCircle(p - rs, 0.06);
     float coat_base = min(d_torso, l_sleeve);
     coat_base = min(coat_base, r_sleeve);
-    coat_base = smin(coat_base, l_cap, 0.03);
-    coat_base = smin(coat_base, r_cap, 0.03);
+    coat_base = smin(coat_base, l_cap, 0.04);
+    coat_base = smin(coat_base, r_cap, 0.04);
 
     // Looser, straighter fit (not form-fitting) — more fur thickness so the
     // coat hangs straight down rather than hugging every curve.
