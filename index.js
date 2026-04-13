@@ -2,6 +2,7 @@ import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { createAudioFileSource, initAudioFromFile } from './src/audio/audioFileSource.js'
 import { makeVisualizer } from './src/Visualizer.js'
 import { getInitialShader } from './src/shaderLoader.js'
+import { getHashParams } from './src/params/urlParams.js'
 
 
 const SEED_KEY = 'paperCranes.seeds'
@@ -22,7 +23,7 @@ const loadOrCreateSeeds = () => {
 const events = ['touchstart', 'touchmove', 'touchstop', 'keydown', 'mousedown', 'resize']
 let ranMain = false
 let startTime = 0
-const params = new URLSearchParams(window.location.search)
+const params = getHashParams()
 
 const getVisualizerDOMElement = () => {
     if (!window.visualizer) {

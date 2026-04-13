@@ -33,7 +33,7 @@ async function generateShadersJson(outputDir = null) {
       return {
         name: shaderPath,
         fileUrl: `shaders/${relativePath.replace(/\\/g, '/')}`,
-        visualizerUrl: `/?shader=${shaderPath}`,
+        visualizerUrl: `/#shader=${shaderPath}`,
         ...meta,
         // Preserve the path-based name; move @name metadata to displayName
         ...(meta.name ? { displayName: meta.name, name: shaderPath } : {}),

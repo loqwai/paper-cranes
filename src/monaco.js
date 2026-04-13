@@ -565,12 +565,12 @@ async function init() {
     })
 
     // Initialize editor content
-    const searchParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
     (async () => {
         let shader = null
 
-        // If ?shader= is set, load from the filesystem
-        const shaderParam = searchParams.get('shader')
+        // If #shader= is set, load from the filesystem
+        const shaderParam = hashParams.get('shader')
         if (shaderParam) {
             try {
                 const path = shaderParam.endsWith('.frag') ? shaderParam : `${shaderParam}.frag`
@@ -593,7 +593,7 @@ async function init() {
         editor.layout()
     })()
 
-    const getShaderParam = () => new URLSearchParams(window.location.search).get('shader')
+    const getShaderParam = () => new URLSearchParams(window.location.hash.slice(1)).get('shader')
 
     const saveToFilesystem = import.meta.hot
         ? async (code) => {
@@ -701,21 +701,21 @@ async function init() {
     });
 
     const getFilename = (shaderCode) => {
-        const filename = new URLSearchParams(window.location.search).get('filename') || 'my-new-shader.frag'
+        const filename = new URLSearchParams(window.location.hash.slice(1)).get('filename') || 'my-new-shader.frag'
         return filename.replaceAll('.frag', '') + '.frag' // I can't see how this will ever go wrong.
     }
 
     const getUsername = (shaderCode) => {
-        return new URLSearchParams(window.location.search).get('username') || ''
+        return new URLSearchParams(window.location.hash.slice(1)).get('username') || ''
     }
 
     const getRepoName = (shaderCode) => {
-        return new URLSearchParams(window.location.search).get('repo') || 'loqwai/paper-cranes'
+        return new URLSearchParams(window.location.hash.slice(1)).get('repo') || 'loqwai/paper-cranes'
     }
 
     const getShaderWithInstructions = (shaderCode) => {
         // Only add instructions for new files, not updates
-        const isUpdate = new URLSearchParams(window.location.search).get('updateExisting') === 'true'
+        const isUpdate = new URLSearchParams(window.location.hash.slice(1)).get('updateExisting') === 'true'
         if (isUpdate || shaderCode.includes('"shaders/<YOUR_GITHUB_USERNAME>" folder')) return shaderCode
 
         let code = "// MAKE SURE TO NAME PUT YOUR SHADER IN \"shaders/<YOUR_GITHUB_USERNAME>\"\n"
@@ -730,7 +730,7 @@ async function init() {
         const filename = getFilename(shaderCode)
         const repoName = getRepoName(shaderCode)
         const username = getUsername(shaderCode)
-        const isUpdate = new URLSearchParams(window.location.search).get('updateExisting') === 'true'
+        const isUpdate = new URLSearchParams(window.location.hash.slice(1)).get('updateExisting') === 'true'
         // if this is an update:
         // 1. copy the code into the clipboard
         // 2. redirect to the edit url.

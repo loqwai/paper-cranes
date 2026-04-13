@@ -1,9 +1,10 @@
 import { render } from 'preact'
 import { useState, useEffect, useRef } from 'preact/hooks'
 import { html } from 'htm/preact'
+import { getHashParams, setHashParam, deleteHashParam } from './src/params/urlParams.js'
 
 // Check if we're in remote control mode
-const params = new URLSearchParams(window.location.search)
+const params = getHashParams()
 const isRemoteControlMode = params.get('remote') === 'control'
 
 // Remote controller instance (initialized in List component)
@@ -13,13 +14,13 @@ let remoteController = null
 // Everything else on the current URL gets forwarded; target params win on conflict.
 const LIST_UI_PARAMS = new Set(['filter', 'favoritesOnly', 'fullscreenOnly', 'wip'])
 
-const carryPassthroughParams = (url) => {
-  const current = new URLSearchParams(window.location.search)
+const carryPassthroughParams = (targetHash) => {
+  const current = getHashParams()
   for (const [key, value] of current) {
     if (LIST_UI_PARAMS.has(key)) continue
-    url.searchParams.set(key, value) // current URL wins over target/preset
+    targetHash.set(key, value) // current URL wins over target/preset
   }
-  return url
+  return targetHash
 }
 
 /**
@@ -73,8 +74,9 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
     setFilteredPresets(presets.filter(preset => {
       // Check if any preset parameter contains the filter text
       const url = new URL(preset)
-      const params = Array.from(url.searchParams.entries())
-      return params.some(([key, value]) =>
+      const hashParams = new URLSearchParams(url.hash.slice(1))
+      const entries = Array.from(hashParams.entries())
+      return entries.some(([key, value]) =>
         key.toLowerCase().includes(lowerFilter) ||
         value.toLowerCase().includes(lowerFilter)
       )
@@ -99,12 +101,11 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
     const { stripKnobs = true, addFullscreen = false } = options
 
     const originalUrl = new URL(url)
-    const newParams = new URLSearchParams()
+    const hashParams = new URLSearchParams(originalUrl.hash.slice(1))
 
-    for (const [key, value] of originalUrl.searchParams) {
-      if (stripKnobs && key.toLowerCase().includes('knob')) {
-        continue
-      }
+    const newParams = new URLSearchParams()
+    for (const [key, value] of hashParams) {
+      if (stripKnobs && key.toLowerCase().includes('knob')) continue
       newParams.set(key, value)
     }
 
@@ -118,7 +119,8 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
     }
 
     const finalUrl = new URL(originalUrl.pathname, originalUrl.origin)
-    finalUrl.search = newParams.toString()
+    finalUrl.search = ''
+    finalUrl.hash = newParams.toString()
 
     navigator.clipboard.writeText(finalUrl.toString())
 
@@ -135,16 +137,20 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
     }
   }
 
-  // Get preset name from URL parameters
+  // Get preset name from URL parameters (presets use hash params)
   const getPresetName = (preset, index) => {
-    return new URL(preset).searchParams.get('name') || `Preset ${index + 1}`
+    const hashParams = new URLSearchParams(new URL(preset).hash.slice(1))
+    return hashParams.get('name') || `Preset ${index + 1}`
   }
 
   // Get full URL for copying — carries passthrough params (remote, room, relay)
   const getFullUrl = (url) => {
     try {
       const fullUrl = new URL(url, window.location.origin)
-      carryPassthroughParams(fullUrl)
+      const hashParams = new URLSearchParams(fullUrl.hash.slice(1))
+      carryPassthroughParams(hashParams)
+      fullUrl.search = ''
+      fullUrl.hash = hashParams.toString()
       return fullUrl.toString()
     } catch (e) {
       return `${window.location.origin}${url}`
@@ -162,7 +168,8 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
       setIsExpanded(!isExpanded)
     } else if (isRemoteControlMode && remoteController) {
       // In remote control mode, send command instead of navigating
-      const shaderName = new URL(targetUrl, window.location.origin).searchParams.get('shader')
+      const hashParams = new URLSearchParams(new URL(targetUrl, window.location.origin).hash.slice(1))
+      const shaderName = hashParams.get('shader')
       if (shaderName) {
         remoteController.sendShader(shaderName)
       }
@@ -200,7 +207,7 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
               e.stopPropagation()
               if (isRemoteControlMode && remoteController) {
                 // In remote control mode, send shader with fullscreen param
-                const shaderName = new URL(targetUrl, window.location.origin).searchParams.get('shader')
+                const shaderName = new URLSearchParams(new URL(targetUrl, window.location.origin).hash.slice(1)).get('shader')
                 if (shaderName) {
                   remoteController.sendParams({ shader: shaderName, fullscreen: true })
                 }
@@ -230,7 +237,7 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
                 if (isRemoteControlMode && remoteController) {
                   // In remote control mode, send all params from the preset URL
                   const presetUrl = new URL(getFullUrl(preset))
-                  const params = Object.fromEntries(presetUrl.searchParams.entries())
+                  const params = Object.fromEntries(new URLSearchParams(presetUrl.hash.slice(1)).entries())
                   remoteController.sendParams(params)
                 } else {
                   const url = getFullUrl(preset)
@@ -257,7 +264,7 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
                       if (isRemoteControlMode && remoteController) {
                         // In remote control mode, send all params with fullscreen
                         const presetUrl = new URL(getFullUrl(preset))
-                        const params = Object.fromEntries(presetUrl.searchParams.entries())
+                        const params = Object.fromEntries(new URLSearchParams(presetUrl.hash.slice(1)).entries())
                         // Strip knob params
                         Object.keys(params).forEach(key => {
                           if (key.toLowerCase().includes('knob')) delete params[key]
@@ -292,17 +299,20 @@ const getEditUrl = (visualizationUrl) => {
     // trim beginning slash, if it exists
     visualizationUrl = visualizationUrl.startsWith('/') ? visualizationUrl.slice(1) : visualizationUrl
     const url = new URL(visualizationUrl)
-    url.pathname = '/edit.html'
-    carryPassthroughParams(url)
-    return url.toString()
+    const hashParams = new URLSearchParams(url.hash.slice(1))
+    carryPassthroughParams(hashParams)
+    const editUrl = new URL('/edit.html', url.origin)
+    editUrl.search = ''
+    editUrl.hash = hashParams.toString()
+    return editUrl.toString()
   } catch (e) {
     return `edit.html${visualizationUrl}`
   }
 }
 
 const PresetParams = ({ preset }) => {
-  const params = new URL(preset).searchParams
-  const presetProps = Array.from(params.entries()).filter(filterPresetProps)
+  const hashParams = new URLSearchParams(new URL(preset).hash.slice(1))
+  const presetProps = Array.from(hashParams.entries()).filter(filterPresetProps)
 
   if (presetProps.length === 0) return null
 
@@ -330,9 +340,10 @@ const filterPresetProps = ([key]) => {
  */
 const buildFullscreenUrl = (url) => {
   const originalUrl = new URL(url, window.location.origin)
+  const hashParams = new URLSearchParams(originalUrl.hash.slice(1))
   const newParams = new URLSearchParams()
 
-  for (const [key, value] of originalUrl.searchParams) {
+  for (const [key, value] of hashParams) {
     if (key.toLowerCase().includes('knob')) continue
     newParams.set(key, value)
   }
@@ -343,9 +354,11 @@ const buildFullscreenUrl = (url) => {
     newParams.set('image', 'images/rezz-full-lips-cropped.png')
   }
 
+  carryPassthroughParams(newParams)
+
   const finalUrl = new URL(originalUrl.pathname || '/', window.location.origin)
-  finalUrl.search = newParams.toString()
-  carryPassthroughParams(finalUrl)
+  finalUrl.search = ''
+  finalUrl.hash = newParams.toString()
   return finalUrl.toString()
 }
 
@@ -379,21 +392,25 @@ const getPresetUrl = (visualizerUrl, line) => {
   const presetUrlMatch = line.match(/https?:\/\/[^\s]+/)
   if (!presetUrlMatch) return visualizerUrl
 
+  // Preset URLs in shader source use classic ?search params
   const presetUrl = new URL(presetUrlMatch[0])
   const baseUrl = new URL(visualizerUrl, window.location.href)
-  const resultUrl = new URL(baseUrl.pathname, window.location.origin)
+  const hashParams = new URLSearchParams()
 
-  // Add preset parameters first
+  // Add preset parameters first (from ?search in shader source)
   for (const [key, value] of presetUrl.searchParams) {
-    resultUrl.searchParams.set(key, value)
+    hashParams.set(key, value)
   }
 
-  // Override with visualizer parameters
-  for (const [key, value] of baseUrl.searchParams) {
-    resultUrl.searchParams.set(key, value)
+  // Override with visualizer parameters (from hash of base URL)
+  const baseHash = new URLSearchParams(baseUrl.hash.slice(1))
+  for (const [key, value] of baseHash) {
+    hashParams.set(key, value)
   }
 
-  resultUrl.pathname = ''
+  const resultUrl = new URL('/', window.location.origin)
+  resultUrl.search = ''
+  resultUrl.hash = hashParams.toString()
 
   return resultUrl.toString()
 }
@@ -472,50 +489,43 @@ const SearchInput = ({ value, onChange }) => {
  * @param {string} filter - The filter text
  */
 const updateUrlWithFilter = (filter) => {
-  const url = new URL(window.location)
   if (filter) {
-    url.searchParams.set('filter', filter)
+    setHashParam('filter', filter)
   } else {
-    url.searchParams.delete('filter')
+    deleteHashParam('filter')
   }
-  window.history.replaceState({}, '', url)
 }
 
 /**
- * Gets the initial filter from URL query parameters
+ * Gets the initial filter from URL hash parameters
  * @returns {string} The filter from URL or empty string
  */
-const getInitialFilter = () => {
-  const url = new URL(window.location)
-  return url.searchParams.get('filter') || ''
-}
+const getInitialFilter = () => getHashParams().get('filter') || ''
 
 /**
- * Gets initial filter states from URL
+ * Gets initial filter states from URL hash
  * @returns {Object} Filter states
  */
 const getInitialFilters = () => {
-  const url = new URL(window.location)
+  const hp = getHashParams()
   return {
-    fullscreenOnly: url.searchParams.get('fullscreenOnly') === 'true',
-    favoritesOnly: url.searchParams.get('favoritesOnly') === 'true',
-    showWip: url.searchParams.get('wip') === 'true'
+    fullscreenOnly: hp.get('fullscreenOnly') === 'true',
+    favoritesOnly: hp.get('favoritesOnly') === 'true',
+    showWip: hp.get('wip') === 'true'
   }
 }
 
 /**
- * Updates URL with filter states
+ * Updates URL hash with filter states
  * @param {string} key - Filter key
  * @param {boolean} value - Filter value
  */
 const updateUrlFilter = (key, value) => {
-  const url = new URL(window.location)
   if (value) {
-    url.searchParams.set(key, 'true')
+    setHashParam(key, 'true')
   } else {
-    url.searchParams.delete(key)
+    deleteHashParam(key)
   }
-  window.history.replaceState({}, '', url)
 }
 
 const List = () => {

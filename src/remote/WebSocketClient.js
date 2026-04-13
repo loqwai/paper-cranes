@@ -6,7 +6,7 @@ const DEFAULT_RELAY_HOST = 'paper-cranes-remote.redaphid.workers.dev'
  * otherwise falls back to the local dev server.
  */
 const getWsUrl = () => {
-  const params = new URLSearchParams(window.location.search)
+  const params = new URLSearchParams(window.location.hash.slice(1))
   const room = params.get('room')
 
   if (room) {

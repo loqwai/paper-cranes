@@ -1,4 +1,5 @@
 import { getRelativeOrAbsoluteShaderUrl } from './utils.js'
+import { getHashParams, setHashParam } from './params/urlParams.js'
 
 /**
  * Load a shader and apply all associated side effects
@@ -26,9 +27,7 @@ export const loadShader = async (shaderPath, { updateUrl = false } = {}) => {
 
   // Update URL without reload if requested
   if (updateUrl) {
-    const url = new URL(window.location)
-    url.searchParams.set('shader', shaderPath)
-    window.history.replaceState({}, '', url)
+    setHashParam('shader', shaderPath)
   }
 
   return { code, fullscreen }
@@ -39,7 +38,7 @@ export const loadShader = async (shaderPath, { updateUrl = false } = {}) => {
  * @returns {Promise<{code: string, fullscreen: boolean}>}
  */
 export const getInitialShader = async () => {
-  const params = new URLSearchParams(window.location.search)
+  const params = getHashParams()
 
   // Check for inline shader code first
   if (params.get('shaderCode')) {
