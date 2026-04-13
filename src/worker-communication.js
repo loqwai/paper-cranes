@@ -1,14 +1,21 @@
-// Service worker registration - Vite migration
+// Service worker registration
+// In dev mode (Vite HMR available), skip the SW entirely — it detects file
+// changes and force-reloads all clients, which conflicts with HMR.
+const isDev = !!import.meta.hot
 window.addEventListener('load', async () => {
   const { serviceWorker } = navigator
-  if (!serviceWorker) {
+  if (!serviceWorker) return
+
+  if (isDev) {
+      // Unregister any leftover SW from production or previous sessions
+      const regs = await serviceWorker.getRegistrations()
+      for (const r of regs) await r.unregister()
       return
   }
+
   serviceWorker.addEventListener('message', processServiceWorkerMessage)
-  // Add cache version to URL to force update when version changes
   const registration = await serviceWorker.register(`/service-worker.js`)
   registration.addEventListener('message', processServiceWorkerMessage)
-
 })
 
 /**
@@ -20,6 +27,9 @@ const RELOAD_GRACE = 5000
 
 const processServiceWorkerMessage = (event) => {
   if (event.data === 'reload') {
+      // The editor page handles shader updates via HMR — don't full-reload
+      // when the service worker detects a .frag file changed on disk.
+      if (window.location.pathname.includes('edit')) return
       if (reloadTimeout) return
       const lastReload = parseInt(sessionStorage.getItem('sw-last-reload') || '0')
       if (Date.now() - lastReload < RELOAD_GRACE) return

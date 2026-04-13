@@ -258,13 +258,9 @@ vec3 position = vec3(CIRCLE_RADIUS, 0.1, 0.1);
 ## Knob/MIDI Control System
 
 ### Available Knobs
-- `knob_3` to `knob_11`
-- `knob_14` to `knob_22`
-- `knob_30` to `knob_37`
-- `knob_40`, `knob_41`
-- `knob_43` to `knob_47`
-- `knob_60`
-- `knob_71` to `knob_79`
+- `knob_1` through `knob_200` — all are available as float uniforms (0-1 range)
+- Set via URL query params (e.g., `?knob_1=0.5`), MIDI controllers, or the ParamsManager API
+- MIDI controllers auto-map CCs to knobs with per-device profiles persisted in localStorage. See [docs/midi-mapping.md](docs/midi-mapping.md)
 
 ### The #define Swap Pattern (Recommended)
 
@@ -332,6 +328,10 @@ uniform float another;   // = 1.2
 - `embed` - Embed mode (disables audio)
 - `fullscreen` - Start in fullscreen
 - `remote` - Remote mode: `display` (receive commands) or `control` (send commands)
+- `audio=tab` - Capture audio from a browser tab instead of mic. Chrome/Edge only. See [docs/tab-audio.md](docs/tab-audio.md)
+- `audio_file=<url>` - Play a deterministic audio file through the analyzer. See [docs/audio-file-playback.md](docs/audio-file-playback.md)
+- `audio_time=<seconds>` - Start audio file playback at this offset (default: 0)
+- `time=<seconds>` - Hold time constant (useful for deterministic screenshots/testing)
 
 ### Dynamic Override
 All parameters can be overridden at runtime via:
@@ -364,11 +364,17 @@ The system supports controlling a remote display from another device (phone, lap
 - Knob/slider changes are synced to displays automatically
 - Shows connection status indicator (green = connected, displays count)
 
+### Multiplayer Editor
+Multiple people can edit the same shader simultaneously with live cursors via WebSocket. Each tab gets a random identity. No CRDT — edits apply in arrival order. See [docs/multiplayer-editor.md](docs/multiplayer-editor.md)
+
+### Editor-Filesystem Sync (dev mode only)
+Ctrl+S in the editor writes to disk via `/__save-shader` endpoint. External `.frag` changes push back via HMR. HMR updates suppress multiplayer broadcast to avoid stomping concurrent edits. See [docs/editor-filesystem-sync.md](docs/editor-filesystem-sync.md)
+
 ### Architecture
 ```
 Controller (edit.html?remote=control)
     ↓ WebSocket
-Dev Server (esbuild.dev.js WebSocket server)
+Dev Server (Vite + remote-ws-plugin WebSocket server)
     ↓ Broadcast
 Display (index.html?remote=display)
 ```
@@ -398,7 +404,16 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   ├── audio/
 │   │   ├── AudioProcessor.js    # Main audio processing
 │   │   ├── WorkerRPC.js        # Worker communication
-│   │   └── analyzer.js         # Worker analyzer loader
+│   │   ├── analyzer.js         # Worker analyzer loader
+│   │   ├── tabAudioSource.js   # ?audio=tab capture via getDisplayMedia
+│   │   ├── tabAudioButton.js   # Tab audio overlay UI
+│   │   └── audioFileSource.js  # ?audio_file= deterministic playback
+│   ├── midi/
+│   │   └── MidiMapper.js       # MIDI CC→knob mapping with profiles
+│   ├── multiplayer/
+│   │   ├── MultiplayerEditor.js # Live collaborative editing
+│   │   ├── identity.js         # Random per-tab identity generation
+│   │   └── multiplayer.css     # Cursor and peer chip styles
 │   ├── params/
 │   │   └── ParamsManager.js    # Unified params (URL, remote, features)
 │   ├── remote/
@@ -412,10 +427,16 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   ├── wip/claude/             # Claude-created shaders go here
 │   ├── plasma.frag
 │   └── melted-satin/2.frag
+├── scripts/
+│   └── remap-knobs.js          # Utility to remap knob assignments in shaders
 ├── index.js                     # Main entry point
 ├── edit.js                      # Editor interface
 ├── list.js                      # Shader list/gallery page
-└── esbuild.dev.js              # Build configuration (includes WebSocket server)
+├── vite.config.js               # Vite build configuration
+└── vite-plugins/
+    ├── remote-ws-plugin.js      # WebSocket server for remote control
+    ├── editor-sync-plugin.js    # Bidirectional editor↔disk sync (dev only)
+    └── shader-plugin.js         # Shader discovery, metadata, and manifest generation
 ```
 
 ## Development Workflow
@@ -465,13 +486,27 @@ This lets reviewers click through and test each shader directly.
 ## Claude-Specific Instructions
 
 ### Where to Put Your Shaders
-**Always create shaders in `shaders/wip/claude/`**
+
+Shaders go under `shaders/<github-username>/wip/<shader-name>/`. Iterations are numbered files. Each shader in `wip/` gets a single markdown doc named `<shader-name>.md` in the same directory.
+
+```
+shaders/claude/wip/cosmic-bloom/
+├── 1.frag              # First iteration
+├── 2.frag              # Second iteration
+└── cosmic-bloom.md     # Design intent, audio mapping, iteration notes
+```
 
 ```bash
-shaders/wip/claude/my-shader.frag      # Good
-shaders/wip/claude/experiment-1.frag   # Good
-shaders/my-shader.frag                  # Bad - don't put in root
+shaders/claude/wip/cosmic-bloom/1.frag           # Good
+shaders/claude/wip/cosmic-bloom/cosmic-bloom.md   # Good — one doc per shader
+shaders/wip/claude/my-shader.frag                 # Old convention, still works
+shaders/my-shader.frag                             # Bad - don't put in root
 ```
+
+**Document as you iterate.** The `<shader-name>.md` should include:
+- Visual intent and design concept
+- Which audio features drive what and why
+- What changed between numbered iterations (e.g. "2.frag: switched from spectralFlux to spectralEntropy for the color shift — less jittery on sparse tracks")
 
 The `wip/` directory is filtered from the mobile list by default, so experimental shaders won't clutter the production list.
 
@@ -706,3 +741,4 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 
 ## Misc Notes
 - Use far less time when running sleep than you ordinarily would; if it were 5 seconds, do 1 instead.
+- When creating a PR or pushing to one, consider whether the changes include features a user would be excited about. If so, ask the user if they'd like you to run `/changelog` to update the docs.

@@ -106,9 +106,15 @@ const setupCanvasEvents = (canvas) => {
 const noAudio = { getFeatures: () => ({}) }
 
 const setupAudio = async () => {
-    // if we have a query param that says 'noaudio=true', just return a dummy audio processor
-    if (params.get('noaudio') === 'true' || params.get('embed') === 'true') {
+    // audio=none disables audio input (consistent with audio=tab pattern)
+    // noaudio=true and embed=true are kept for backwards compatibility
+    if (params.get('audio') === 'none' || params.get('noaudio') === 'true' || params.get('embed') === 'true') {
         return noAudio
+    }
+
+    if (params.get('audio') === 'tab') {
+        const { setupTabAudio } = await import('./src/audio/tabAudioSource.js')
+        return setupTabAudio({ params, AudioProcessor })
     }
 
     const fileConfig = createAudioFileSource({ params })
@@ -418,3 +424,12 @@ const main = async () => {
 }
 
 main()
+
+// Reload the page when shader files change on disk (replaces full-reload from shader-plugin).
+// Skip on the editor page — it handles shader updates via the editor-sync HMR event.
+if (import.meta.hot) {
+    import.meta.hot.on('shaders-changed', () => {
+        if (window.location.pathname.includes('edit')) return
+        location.reload()
+    })
+}

@@ -1,0 +1,54 @@
+.mp-peer-cursor {
+    position: absolute;
+    width: 2px !important;
+    margin-left: -1px;
+    pointer-events: none;
+}
+
+.mp-peer-cursor::before {
+    content: attr(data-mp-name);
+    position: absolute;
+    top: -1.2em;
+    left: 0;
+    padding: 1px 4px;
+    font-size: 10px;
+    font-family: system-ui, sans-serif;
+    color: white;
+    background: var(--mp-color, #888);
+    border-radius: 2px 2px 2px 0;
+    white-space: nowrap;
+    z-index: 10;
+}
+
+.mp-peer-selection {
+    background: var(--mp-color-alpha, rgba(136, 136, 136, 0.25));
+}
+
+#multiplayer-peers {
+    position: fixed;
+    bottom: 10px;
+    left: 260px;
+    padding: 8px 12px;
+    background: rgba(11, 4, 32, 0.78);
+    border: 1px solid rgba(62, 197, 255, 0.35);
+    color: white;
+    font-family: system-ui, sans-serif;
+    font-size: 11px;
+    border-radius: 999px;
+    z-index: 10000;
+    pointer-events: none;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 4px 24px rgba(62, 197, 255, 0.15);
+}
+
+#multiplayer-peers .mp-chip {
+    padding: 3px 10px;
+    border-radius: 999px;
+    color: white;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    box-shadow: 0 0 8px currentColor;
+}

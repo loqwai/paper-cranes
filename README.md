@@ -1,8 +1,27 @@
 # Beadfamous.
 
+## What's New
+
+- **[Multiplayer editor](docs/multiplayer-editor.md)** — Edit shaders together with live cursors and real-time sync
+- **[Tab audio capture](docs/tab-audio.md)** — Visualize Spotify or any browser tab with `?audio=tab`, no drivers needed
+- **[Editor-filesystem sync](docs/editor-filesystem-sync.md)** — Ctrl+S writes to disk, external edits push back to the browser
+- **[MIDI controller profiles](docs/midi-mapping.md)** — Plug in a controller, knobs auto-map and persist per device
+
+See the full [changelog](docs/CHANGELOG.md) for more.
+
+---
+
 Welcome to the Beadfamous project! This repo is an open-source project I made to do advanced audio analysis from a microphone in the browser, and drive arbitrary music visualizations with the data. The project can run on mobile phones, and is designed to make it easy to create new visualizations and share them with others.
 
-It can also be run on a projector or tv, and can use audio directly from the computer, without having to rely on a noisy mic. The results are much better this way! See [using virtual audio loopback](docs/professional-audio.md) for setup instructions on macOS (BlackHole) and Windows (Voicemeeter).
+### Visualize Spotify (or any tab) — no loopback driver, no install
+
+Append **`?audio=tab`** to any visualization URL and Beadfamous will ask to share a browser tab instead of using the mic. Pick your Spotify (or YouTube, SoundCloud, Bandcamp…) tab in the picker, check **"Share tab audio"**, and the track streams directly into the FFT analyzer. Clean, full-fidelity audio — with none of the mic noise, room reverb, or virtual-cable setup that music visualizers usually demand.
+
+Try it now: [`visuals.beadfamous.com/?shader=plasma&audio=tab`](https://visuals.beadfamous.com/?shader=plasma&audio=tab)
+
+Works in Chrome and Edge on desktop. Firefox/Safari don't yet expose tab audio through `getDisplayMedia`, so on those browsers you'll still need the mic or the loopback setup below.
+
+For a permanent system-wide setup (projector rigs, live shows, OBS-style routing) see [using virtual audio loopback](docs/professional-audio.md) for BlackHole (macOS) and Voicemeeter (Windows). But for "I just want to see my Spotify react to a shader" — `?audio=tab` is all you need.
 
 Visuals made by this project can be seen [here](https://visuals.beadfamous.com/list.html). This includes many works in progress, that may be twitchy or broken.
 
@@ -25,21 +44,57 @@ Pick a shader from `shaders/` and load it via the `?shader` param — e.g. [loca
 
 - **Any URL param is a shader uniform** — add `?myParam=0.5` to the URL and it's instantly available as `uniform float myParam` in your GLSL. Override audio features the same way (`?bassNormalized=0.8&energyZScore=1.2`) to simulate different musical conditions without needing a microphone, making iteration fast and deterministic.
 - **Live remote control via WebSocket** — open `edit.html?remote=control` on your laptop and `?remote=display` on a TV or projector. Every shader edit and knob change broadcasts in real-time to all connected displays. Write code on your laptop and watch it update on the big screen instantly, mid-performance.
-- **MIDI controllers for live tweaking and debugging** — physical knobs (mapped to `knob_3`–`knob_79`) are injected as shader uniforms in real-time. Swap out any audio feature for a knob with a one-line `#define` change (`#define BRIGHTNESS (knob_71)`) to tune constants by hand before wiring them back to audio, or to take live control of a visualization on stage without touching the keyboard.
+- **[MIDI controllers](docs/midi-mapping.md) for live tweaking and debugging** — physical knobs (mapped to `knob_1`–`knob_200`) are injected as shader uniforms in real-time. Controllers auto-map and profiles persist per device. Swap out any audio feature for a knob with a one-line `#define` change (`#define BRIGHTNESS (knob_71)`) to tune constants by hand before wiring them back to audio, or to take live control of a visualization on stage without touching the keyboard.
 - **165 audio uniforms with musical intelligence** — 15 audio features (bass, treble, spectral entropy, pitch class, etc.) each expose 11 statistical variations including `zScore` (is this a drop?), `slope` (is energy building?), and `rSquared` (how confident is that trend?). Shaders can reason about where the music is _going_, not just where it is right now.
+- **[Multiplayer editor](docs/multiplayer-editor.md)** — Multiple people can edit the same shader simultaneously with live cursors and real-time sync. Each tab gets a random identity with a colored cursor.
+- **[Editor-filesystem sync](docs/editor-filesystem-sync.md)** — In dev mode, Ctrl+S writes to disk and external file changes push back into the editor via HMR. Works alongside multiplayer without stomping edits.
+- **[Deterministic audio for testing](docs/audio-file-playback.md)** — Use `?audio_file=<url>` to play a specific audio file through the analyzer. Combine with `?time=10.0` for reproducible screenshots.
+
+## Query Parameters
+
+| Parameter | Example | Description |
+|-----------|---------|-------------|
+| `shader` | `?shader=plasma` | Shader file to load (without `.frag`) |
+| `audio` | `?audio=tab` | Audio source: `tab` to capture from a browser tab instead of the mic |
+| `audio_file` | `?audio_file=test.mp3` | Play a deterministic audio file through the analyzer |
+| `noaudio` | `?noaudio=true` | Disable audio input entirely (for visual testing) |
+| `fft_size` | `?fft_size=4096` | FFT window size (default: 4096) |
+| `smoothing` | `?smoothing=0.15` | Smoothing factor (default: 0.15) |
+| `history_size` | `?history_size=500` | Statistical history buffer size (default: 500) |
+| `fullscreen` | `?fullscreen=true` | Start in fullscreen mode |
+| `remote` | `?remote=display` | Remote mode: `display` (receive) or `control` (send) |
+| `embed` | `?embed=true` | Embed mode (disables audio) |
+| `knob_1`..`knob_200` | `?knob_1=0.5` | Set knob values directly (0-1 range) |
+| `seed`, `seed2`, etc. | `?seed=0.5` | Override deterministic seed values |
+| `time` | `?time=10.0` | Hold time constant (useful for screenshots/testing) |
+| *any name* | `?myParam=0.5` | Any numeric param becomes a `uniform float` in GLSL |
 
 ## Making your own visualizations
 
 Making your own visualization is easy, but requires some knowledge of GLSL shading language.
 Lucky for you, I'm hosting a hackathon with HeatSync Labs next month, in which we go from nothing to a working visualization and bracelet in a couple of hours next month! Stay tuned for more details.
 
-**See [docs/MAKING_A_NEW_SHADER.md](docs/MAKING_A_NEW_SHADER.md) for the full guide** - covers audio features, utility functions, design patterns, and common pitfalls.
+**See [docs/MAKING_A_NEW_SHADER.md](docs/MAKING_A_NEW_SHADER.md) for the full guide** - covers audio features, utility functions, design patterns, and common pitfalls. For recent changes, see the [changelog](docs/CHANGELOG.md).
 
 To make your own visualizations, you can create a new file in the `shaders/` directory, and then load it by specifying the 'shader' query param in the url. For example, to view the 'my_new_shader' visualization, you would go to [localhost:6969/?shader=my_new_shader](http://localhost:6969/?shader=my_new_shader)
 
 You can copy and paste any of the existing files in the `shaders/` directory to get started. Or ya know, wait until the Hackathon and I'll walk you through it.
 
 If you want to deploy a visualization you made, PR me and I'll add it to the deployed site!
+
+## Documentation
+
+| Guide | Description |
+|-------|-------------|
+| [Making a New Shader](docs/MAKING_A_NEW_SHADER.md) | Full tutorial: audio features, utility functions, design patterns, common pitfalls |
+| [Tab Audio Capture](docs/tab-audio.md) | Visualize Spotify/YouTube without a loopback driver (`?audio=tab`) |
+| [Professional Audio Setup](docs/professional-audio.md) | BlackHole (macOS) and Voicemeeter (Windows) for permanent rigs |
+| [Multiplayer Editor](docs/multiplayer-editor.md) | Live collaborative shader editing with cursors |
+| [Editor-Filesystem Sync](docs/editor-filesystem-sync.md) | Bidirectional sync between browser editor and disk |
+| [MIDI Mapping](docs/midi-mapping.md) | Controller profiles, auto-assignment, and learn mode |
+| [Audio File Playback](docs/audio-file-playback.md) | Deterministic audio for testing and screenshots |
+| [Unique Feature Guide](docs/unique-feature-guide.md) | Choosing independent audio features for multi-element shaders |
+| [Changelog](docs/CHANGELOG.md) | Recent feature changes |
 
 ## Deploying your visualization to visuals.beadfamous.com
 

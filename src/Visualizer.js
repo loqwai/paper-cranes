@@ -23,10 +23,11 @@ const positions = [
 ]
 
 const getTexture = async (gl, url) => {
+    const src = url
     return new Promise((resolve) => {
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
         const texture = createTexture(gl, {
-            src: url,
+            src,
             crossOrigin: 'anonymous',
             min: gl.NEAREST,
             mag: gl.NEAREST,

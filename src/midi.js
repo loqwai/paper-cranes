@@ -1,4 +1,5 @@
-"use strict"
+import { createMidiMapper } from './midi/MidiMapper.js'
+
 const relativeKnobs = new Set()
 
 const BASE_SENSITIVITY = 0.01 // Base sensitivity that will be scaled by range
@@ -51,27 +52,52 @@ function updateKnobValue(knob, value) {
   return
 }
 
+// Create mapper and expose globally
+const mapper = createMidiMapper()
+window.cranes = window.cranes || {}
+window.cranes.midiMapper = mapper
+
+const attachInput = (input) => {
+  input.addEventListener('midimessage', (message) => {
+    const [command, control, value] = message.data
+
+    // Check if it's a Control Change message (0xB0 to 0xBF)
+    const isCC = (command & 0xf0) === 0xb0
+    if (!isCC) return
+
+    // Extract channel (1-16) from the command byte
+    const channel = (command & 0x0f) + 1
+    const deviceName = input.name || 'Unknown MIDI Device'
+
+    // If mapper is in learn mode, capture this CC
+    if (mapper.isLearning()) {
+      mapper.handleLearnCC(deviceName, control, channel)
+      return
+    }
+
+    // Try existing mapping first, then auto-assign
+    let knobName = mapper.mapCCToKnob(deviceName, control, channel)
+    if (!knobName) {
+      knobName = mapper.autoAssign(deviceName, control, channel)
+    }
+
+    updateKnobValue(knobName, value)
+  })
+}
+
 // MIDI Access request
 navigator
   .requestMIDIAccess()
   .then((midiAccess) => {
-    midiAccess.inputs.forEach((input) => {
-      input.addEventListener("midimessage", (message) => {
-        const [command, control, value] = message.data
+    midiAccess.inputs.forEach((input) => attachInput(input))
 
-        // Check if it's a Control Change message (0xB0 to 0xBF)
-        const isCC = (command & 0xf0) === 0xb0
-        if (!isCC) return // Only handle CC messages
-
-        // Extract channel (1-16) from the command byte
-        const channel = (command & 0x0f) + 1
-
-        // Generate knob name based on control and correct channel
-        const knobName = channel === 1 ? `knob_${control}` : `knob_${control}_${channel}`
-        updateKnobValue(knobName, value)
-      })
+    // Hot-plug support
+    midiAccess.addEventListener('statechange', (e) => {
+      if (e.port.type === 'input' && e.port.state === 'connected') {
+        attachInput(e.port)
+      }
     })
   })
   .catch((error) => {
-    console.error("MIDI failed to start", error)
+    console.error('MIDI failed to start', error)
   })

@@ -9,6 +9,19 @@ const isRemoteControlMode = params.get('remote') === 'control'
 // Remote controller instance (initialized in List component)
 let remoteController = null
 
+// Params that are list-page UI state — should NOT forward to shader URLs.
+// Everything else on the current URL gets forwarded; target params win on conflict.
+const LIST_UI_PARAMS = new Set(['filter', 'favoritesOnly', 'fullscreenOnly', 'wip'])
+
+const carryPassthroughParams = (url) => {
+  const current = new URLSearchParams(window.location.search)
+  for (const [key, value] of current) {
+    if (LIST_UI_PARAMS.has(key)) continue
+    url.searchParams.set(key, value) // current URL wins over target/preset
+  }
+  return url
+}
+
 /**
  * @typedef {Object} Shader
  * @property {string} name - Display name of the shader
@@ -127,10 +140,11 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
     return new URL(preset).searchParams.get('name') || `Preset ${index + 1}`
   }
 
-  // Get full URL for copying
+  // Get full URL for copying — carries passthrough params (remote, room, relay)
   const getFullUrl = (url) => {
     try {
       const fullUrl = new URL(url, window.location.origin)
+      carryPassthroughParams(fullUrl)
       return fullUrl.toString()
     } catch (e) {
       return `${window.location.origin}${url}`
@@ -279,6 +293,7 @@ const getEditUrl = (visualizationUrl) => {
     visualizationUrl = visualizationUrl.startsWith('/') ? visualizationUrl.slice(1) : visualizationUrl
     const url = new URL(visualizationUrl)
     url.pathname = '/edit.html'
+    carryPassthroughParams(url)
     return url.toString()
   } catch (e) {
     return `edit.html${visualizationUrl}`
@@ -330,6 +345,7 @@ const buildFullscreenUrl = (url) => {
 
   const finalUrl = new URL(originalUrl.pathname || '/', window.location.origin)
   finalUrl.search = newParams.toString()
+  carryPassthroughParams(finalUrl)
   return finalUrl.toString()
 }
 
@@ -622,3 +638,10 @@ const List = () => {
 }
 
 render(html`<${List} />`, document.getElementsByTagName('main')[0])
+
+// Reload the page when shader files change on disk
+if (import.meta.hot) {
+    import.meta.hot.on('shaders-changed', () => {
+        location.reload()
+    })
+}

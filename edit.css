@@ -1,3 +1,12 @@
+/* Cosmic palette — referenced throughout the app */
+:root {
+  --color-nebula-purple: #7a3cff;
+  --color-asteroid-pink: #ff3d8a;
+  --color-galaxy-blue: #3ec5ff;
+  --color-lunar-white: #f5f0ff;
+  --color-deep-space: #0b0420;
+}
+
 /* Base styles */
 body {
   margin: 0;
@@ -27,6 +36,17 @@ body {
   top: 0;
   width: 50vw;
   height: 100vh;
+}
+
+#monaco-editor .monaco-editor .cursors-layer .cursor {
+  width: 2px !important;
+  background-color: #ff79c6 !important;
+  color: #ff79c6 !important;
+  border: none !important;
+}
+#monaco-editor .monaco-editor .view-overlays .current-line {
+  border: none !important;
+  background: rgba(255, 121, 198, 0.06);
 }
 
 /* Feature editor drawer */
@@ -224,21 +244,66 @@ input[type="range"]::-webkit-slider-thumb {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
-/* Save/publish buttons */
+/* Save/publish buttons — bottom-left, next to the multiplayer peers chip. */
 #save-and-publish {
   position: fixed;
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 10px;
+  left: 10px;
   display: flex;
   gap: 8px;
-  z-index: 999;
+  padding: 8px 12px;
+  background: rgba(11, 4, 32, 0.78);
+  border: 1px solid rgba(122, 60, 255, 0.35);
+  border-radius: 999px;
+  z-index: 10001;
+  font-family: system-ui, sans-serif;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 4px 24px rgba(122, 60, 255, 0.15);
 }
 
 #save-and-publish > button {
-  padding: 4px 8px;
-  font-size: 0.85em;
+  padding: 5px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  font-family: inherit;
+  color: var(--color-lunar-white);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
   cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+/* Save — primary action, nebula→asteroid gradient */
+#save-and-publish > button#save {
+  background: linear-gradient(135deg, var(--color-nebula-purple), var(--color-asteroid-pink));
+  box-shadow: 0 0 12px rgba(255, 61, 138, 0.35);
+}
+#save-and-publish > button#save:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 18px rgba(255, 61, 138, 0.6);
+}
+
+/* Publish — secondary, galaxy-blue outline */
+#save-and-publish > button#publish {
+  border-color: rgba(62, 197, 255, 0.6);
+  color: var(--color-galaxy-blue);
+}
+#save-and-publish > button#publish:hover {
+  background: rgba(62, 197, 255, 0.15);
+  box-shadow: 0 0 12px rgba(62, 197, 255, 0.4);
+}
+
+/* Reset — tertiary, muted */
+#save-and-publish > button#reset {
+  border-color: rgba(245, 240, 255, 0.2);
+  color: rgba(245, 240, 255, 0.7);
+}
+#save-and-publish > button#reset:hover {
+  background: rgba(245, 240, 255, 0.08);
+  color: var(--color-lunar-white);
 }
 
 #save-and-publish > button > a {
@@ -377,6 +442,38 @@ input[type="number"] {
   font-size: 0.8em;
   text-align: center;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* MIDI learn button */
+.midi-learn-btn {
+  flex: 0 0 auto;
+  background: rgba(100, 150, 255, 0.15);
+  border: 1px solid rgba(100, 150, 255, 0.3);
+  color: rgba(180, 210, 255, 0.8);
+  cursor: pointer;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 0.7em;
+  font-family: monospace;
+  transition: all 0.2s;
+  margin-left: 4px;
+}
+
+.midi-learn-btn:hover {
+  background: rgba(100, 150, 255, 0.3);
+  color: white;
+}
+
+.midi-learn-btn.learning {
+  background: rgba(255, 180, 50, 0.3);
+  border-color: rgba(255, 180, 50, 0.6);
+  color: rgba(255, 220, 150, 0.9);
+  animation: midi-pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes midi-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
 #existing-features-editor {

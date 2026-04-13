@@ -1,12 +1,8 @@
 async function init() {
-    //if we have a shader in the query param, return
-    // if (new URLSearchParams(window.location.search).get('shader')) return
-
-    // add the worker as a blob url
-
     const res = await fetch('https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/base/worker/workerMain.js')
     const blob = await res.blob()
     const workerUrl = URL.createObjectURL(blob)
+
     // Create the editor instance
     const editor = monaco.editor.create(document.getElementById('monaco-editor'), {
         value: '',
@@ -15,10 +11,14 @@ async function init() {
         minimap: { enabled: false },
         automaticLayout: true,
     });
-    // add the web workers
+
     self.MonacoEnvironment = {
         getWorkerUrl: () => workerUrl
-        }
+    }
+
+    // Expose for multiplayer / other modules
+    window.__monacoEditor = editor
+    window.dispatchEvent(new CustomEvent('monaco-editor-ready', { detail: { editor } }))
 
     // Watch for shader errors
     setInterval(() => {
@@ -567,8 +567,22 @@ async function init() {
     // Initialize editor content
     const searchParams = new URLSearchParams(window.location.search);
     (async () => {
-        // Normal initialization - only runs if no shader param or fetch failed
-        let shader = localStorage.getItem('cranes-manual-code')
+        let shader = null
+
+        // If ?shader= is set, load from the filesystem
+        const shaderParam = searchParams.get('shader')
+        if (shaderParam) {
+            try {
+                const path = shaderParam.endsWith('.frag') ? shaderParam : `${shaderParam}.frag`
+                const res = await fetch(`/shaders/${path}`)
+                if (res.ok) shader = await res.text()
+            } catch (e) {
+                console.warn('[monaco] Failed to load shader from filesystem:', e)
+            }
+        }
+
+        // Fall back to localStorage, then default
+        if (!shader) shader = localStorage.getItem('cranes-manual-code')
         if (!shader) {
             const res = await fetch('/shaders/default.frag')
             shader = await res.text()
@@ -578,6 +592,28 @@ async function init() {
         editor.pushUndoStop()
         editor.layout()
     })()
+
+    const getShaderParam = () => new URLSearchParams(window.location.search).get('shader')
+
+    const saveToFilesystem = import.meta.hot
+        ? async (code) => {
+            const shader = getShaderParam()
+            if (!shader) return
+            try {
+                const res = await fetch('/__save-shader', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ shader, code }),
+                })
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}))
+                    console.error('[editor-sync] Save failed:', err.error || res.statusText)
+                }
+            } catch (e) {
+                // Dev server not running — silently skip
+            }
+        }
+        : () => {} // No-op in production
 
     const save = () => {
         editor.pushUndoStop()
@@ -592,7 +628,44 @@ async function init() {
             window.cranes.shader = code
             localStorage.setItem('cranes-manual-code', code)
         }
+
+        // Save to filesystem when editing a named shader in dev mode
+        saveToFilesystem(code)
+
         editor.pushUndoStop()
+    }
+
+    // Listen for filesystem changes via Vite HMR
+    if (import.meta.hot) {
+        import.meta.hot.on('shader-update', ({ shader, code }) => {
+            const currentShader = getShaderParam()
+            if (!currentShader || shader !== currentShader) return
+
+            // Skip if content is identical (e.g. our own save echoing back)
+            if (editor.getValue() === code) return
+
+            console.log(`[editor-sync] File changed on disk: ${shader}`)
+
+            // Suppress multiplayer broadcast — HMR already pushes to all
+            // connected peers, so relaying via multiplayer would be redundant
+            // and would send a full buffer replace that stomps concurrent edits.
+            const mpFlag = editor.__isApplyingRemoteEdit
+            if (mpFlag) mpFlag(true)
+            try {
+                editor.pushUndoStop()
+                editor.setValue(code)
+                editor.pushUndoStop()
+            } finally {
+                if (mpFlag) mpFlag(false)
+            }
+
+            // Push to visualizer
+            if (window.paramsManager) {
+                window.paramsManager.setShader(code)
+            } else if (window.cranes) {
+                window.cranes.shader = code
+            }
+        })
     }
 
     document.querySelector('#save').addEventListener('click', save)
@@ -738,4 +811,10 @@ async function init() {
 }
 
 // Wait for Monaco to be loaded from CDN
-window.addEventListener('load', () => init());
+console.log('[monaco.js] module loaded, readyState=', document.readyState)
+const runInit = () => init().catch(e => console.error('[monaco.js] init failed:', e))
+if (document.readyState === 'complete') {
+    runInit()
+} else {
+    window.addEventListener('load', runInit);
+}
