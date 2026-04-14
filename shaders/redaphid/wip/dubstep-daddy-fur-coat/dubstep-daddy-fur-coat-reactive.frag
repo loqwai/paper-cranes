@@ -40,16 +40,61 @@
 #define VNECK_BOTTOM    (-0.013 - max(energyZScore, 0.0) * 0.03)
 
 // ============================================================================
-// AUDIO
+// AUDIO — knob swap pattern
+// Uncomment the knob lines and comment the audio lines to tune live.
+// knob_1: drop threshold (how much energy needed for drop)
+// knob_2: drop sustain decay (how long the drop lingers)
+// knob_3: zoom intensity from drops
+// knob_4: god ray intensity
+// knob_5: eye wash strength
+// knob_6: zoom from continuous intensity
 // ============================================================================
 
 #define PUMP (bassNormalized * 0.5 + bassSlope * bassRSquared * 2.0)
+// #define PUMP (knob_7)
 #define BEAT_PHASE (time * 2.2)
 #define SNAP (max(trebleZScore, 0.0))
+// #define SNAP (knob_8)
 #define HIP_SWAY (sin(time * 1.1))
 #define GROOVE (midsNormalized)
-#define BUILD (energySlope * energyRSquared * 8.0)
+// #define GROOVE (knob_9)
+
+// --- DROP DETECTION ---
+// BUILD: immediate spike detector — positive slope + confident trend
+#define BUILD (max(energySlope, 0.0) * energyRSquared * 8.0)
+// #define BUILD (knob_10)
 #define IS_DROP clamp(BUILD, 0.0, 1.0)
+
+// SUSTAIN: keeps the drop alive using trend features that naturally decay.
+// After a drop, energy is still high even as it falls. energyRSquared stays
+// high when the trend is confident (rising OR falling steadily — both count).
+// energyNormalized stays elevated during the loud section.
+// The sustain fades organically as the audio stats catch up to the new level.
+//
+// knob_1: drop trigger threshold (how anomalous energy must be)
+// knob_2: sustain sensitivity (how much trend features extend the drop)
+// #define DROP_TRIGGER_THRESH (knob_1 * 2.0)
+#define DROP_TRIGGER_THRESH 1.0
+// #define SUSTAIN_GAIN (0.5 + knob_2 * 1.0)
+#define SUSTAIN_GAIN 1.0
+
+// --- DROP VISUALS ---
+// knob_3: zoom intensity from drops
+// #define DROP_ZOOM (0.5 + knob_3 * 1.0)
+#define DROP_ZOOM 0.9
+
+// knob_4: god ray intensity
+// #define GODRAY_INTENSITY (1.0 + knob_4 * 3.0)
+#define GODRAY_INTENSITY 2.5
+
+// knob_5: eye wash strength
+// #define EYE_WASH_STRENGTH (knob_5 * 0.8)
+#define EYE_WASH_STRENGTH 0.4
+
+// knob_6: zoom from continuous intensity
+// #define INTENSITY_ZOOM (knob_6 * 0.6)
+#define INTENSITY_ZOOM 0.25
+
 #define DROP_TRIGGER clamp(max(energyZScore, BUILD), 0.0, 1.0)
 
 #define HUE_BASE 0.78
@@ -312,13 +357,28 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec2 raw_uv01 = fragCoord / res;
 
-    float drop_hit = clamp(max(IS_DROP, energyZScore * 0.5), 0.0, 1.0);
+    // --- DROP SUSTAIN via audio trend features ---
+    // Immediate spike: energyZScore above threshold
+    float drop_spike = smoothstep(DROP_TRIGGER_THRESH, DROP_TRIGGER_THRESH + 0.5, energyZScore);
 
-    float intensity = max(
-        mapValue(energyNormalized, 0.0, 1.0, 0.0, 1.0),
-        bassNormalized
-    );
-    float zoomAmount = 1.0 + intensity * 0.6 + drop_hit * 0.9;
+    // Sustain: after a drop, energy is still elevated and the trend is
+    // confident. energyRSquared stays high during both the rise AND fall
+    // of a drop (it measures trend confidence, not direction).
+    // energyNormalized stays high while the music is still loud.
+    // Together they naturally sustain through the drop section and fade
+    // organically as the stats window catches up to the new baseline.
+    float sustain = energyNormalized * energyRSquared * SUSTAIN_GAIN;
+    // Also sustain from the immediate BUILD signal
+    float drop_hit = clamp(max(drop_spike, max(IS_DROP, sustain)), 0.0, 1.0);
+    // Crush low values so faint signals don't leak into godrays
+    drop_hit = smoothstep(0.15, 0.5, drop_hit);
+
+    float intensity = max(energyNormalized, bassNormalized);
+    // Cubic ease-in: crushes twitchy low-end values, lets big moments punch through.
+    // smoothstep(0.2, 0.9) maps to 0-1, then cube kills anything below ~0.5
+    float zoom_intensity = smoothstep(0.2, 0.9, intensity);
+    zoom_intensity = zoom_intensity * zoom_intensity * zoom_intensity;
+    float zoomAmount = 1.0 + zoom_intensity * INTENSITY_ZOOM + drop_hit * DROP_ZOOM;
     vec2 zoomCenter = P.head_c;
     uv = (uv - zoomCenter) / zoomAmount + zoomCenter;
 
@@ -390,7 +450,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     float wash_le = exp(-r_le * 0.8);
     float wash_re = exp(-r_re * 0.8);
-    float eye_wash = (wash_le + wash_re) * drop_hit * 0.5;
+    float eye_wash = (wash_le + wash_re) * drop_hit * EYE_WASH_STRENGTH;
 
     // ---- COLOR ----
     float hue = mix(HUE_BASE, HUE_DROP, IS_DROP);
@@ -483,7 +543,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     col += eyes * hot * 2.2;
     col = mix(col, col + hot * 0.6, eye_wash);
     col += eye_wash * hot * 0.4;
-    col += god_rays * hot * 2.5;
+    col += god_rays * hot * GODRAY_INTENSITY;
 
     // ---- INFINITY MIRROR ----
     {
