@@ -1,28 +1,42 @@
 ---
-name: knobify
-description: Convert a shader's audio-reactive parameters into knob-controlled #defines with commented-out audio alternatives. Takes a shader path as input, or defaults to the shader modified in the git worktree.
+name: solo
+description: Toggle a shader between knob mode (manual control) and audio mode (audio-reactive). Use `/solo knobs <path>` to force knob mode, `/solo audio <path>` to force audio mode, or just `/solo` to auto-toggle. Defaults to the shader modified in the git worktree.
 allowed-tools: Bash Read Write Edit Grep Glob Agent
 ---
 
-# Knobify a Shader
+# Solo — Shader Knob/Audio Mode Toggle
 
-Transform a shader so its tunable parameters use `knob_*` uniforms, with commented-out audio-reactive `#define` alternatives for quick switching.
+Toggle a shader between **knob mode** (manual `knob_*` uniforms for live tuning) and **audio mode** (audio-reactive features driving the visuals).
 
 ## Context
 
+Arguments:
+!`echo "$ARGUMENTS"`
+
 Target shader (from arguments or git diff):
-!`if [ -n "$ARGUMENTS" ]; then echo "$ARGUMENTS"; else git diff --name-only HEAD | grep '\.frag$' | head -1 || git diff --cached --name-only | grep '\.frag$' | head -1 || echo "(no .frag files modified in worktree)"; fi`
+!`args="$ARGUMENTS"; shader=$(echo "$args" | grep -oE '[^ ]+\.frag'); if [ -n "$shader" ]; then echo "$shader"; else git diff --name-only HEAD | grep '\.frag$' | head -1 || git diff --cached --name-only | grep '\.frag$' | head -1 || echo "(no .frag files modified in worktree)"; fi`
+
+Current mode of target shader (knobs active = "knob_mode", audio active = "audio_mode", not yet knobified = "raw"):
+!`args="$ARGUMENTS"; shader=$(echo "$args" | grep -oE '[^ ]+\.frag'); if [ -z "$shader" ]; then shader=$(git diff --name-only HEAD | grep '\.frag$' | head -1); fi; if [ -n "$shader" ] && [ -f "$shader" ]; then if grep -qP '^#define \S+ .*knob_' "$shader" && grep -qP '^// #define \S+ .*(?:bass|treble|energy|mids|spectral|pitchClass)' "$shader"; then echo "knob_mode"; elif grep -qP '^// #define \S+ .*knob_' "$shader" && grep -qP '^#define \S+ .*(?:bass|treble|energy|mids|spectral|pitchClass)' "$shader"; then echo "audio_mode"; else echo "raw"; fi; else echo "no_shader_found"; fi`
 
 Highest knob number already used across all shaders (to avoid collisions):
 !`grep -roh 'knob_[0-9]\+' shaders/ 2>/dev/null | sed 's/knob_//' | sort -n | tail -1 || echo "0"`
 
-## Determine the target shader
+## Determine mode and target
 
-1. If `$ARGUMENTS` contains a path to a `.frag` file, use that.
-2. Otherwise, find the first `.frag` file modified in the git worktree (`git diff --name-only HEAD`).
-3. If neither yields a result, ask the user which shader to knobify.
+Parse `$ARGUMENTS`:
+- First word may be `knobs` or `audio` (the mode). If omitted, **auto-toggle** based on the shader's current state:
+  - If currently in **knob_mode** → switch to `audio`
+  - If currently in **audio_mode** → switch to `knobs`
+  - If **raw** (not yet knobified) → use `knobs`
+- Remaining argument is the path to a `.frag` file. If omitted, find the first `.frag` modified in the git worktree.
+- If no shader can be found, ask the user.
 
-## Steps
+---
+
+## Mode: `knobs`
+
+Transform the shader so its tunable parameters use `knob_*` uniforms, with commented-out audio-reactive `#define` alternatives.
 
 Read the target shader fully before making any changes.
 
@@ -161,7 +175,7 @@ Format:
 
 Keep it on one line if possible. If there are many knobs, it's OK to wrap or split across lines.
 
-## Quality checks
+### Quality checks (knobs mode)
 
 Before finishing:
 - Every `#define` that uses a knob has a commented-out audio alternative
@@ -170,3 +184,58 @@ Before finishing:
 - The knob index comment block matches the actual `#define` assignments
 - No structural constants or math constants were accidentally knobified
 - `mapValue` ranges make sense (outMin < outMax, reasonable aesthetic range)
+
+---
+
+## Mode: `audio`
+
+Switch a knobified shader back to audio-reactive mode. This swaps every `#define` pair so the audio line is active and the knob line is commented out.
+
+Read the target shader fully before making any changes.
+
+### 1. Find all knob/audio `#define` pairs
+
+Look for the pattern where a knob `#define` is active and an audio `#define` is commented out directly below it:
+
+```glsl
+#define WARP_DEPTH mapValue(knob_1, 0., 1., 0.3, 0.8)
+// #define WARP_DEPTH mapValue(bassNormalized, 0., 1., 0.3, 0.8)
+```
+
+### 2. Swap each pair
+
+For every such pair, comment out the knob line and uncomment the audio line:
+
+**Before:**
+```glsl
+#define WARP_DEPTH mapValue(knob_1, 0., 1., 0.3, 0.8)
+// #define WARP_DEPTH mapValue(bassNormalized, 0., 1., 0.3, 0.8)
+```
+
+**After:**
+```glsl
+// #define WARP_DEPTH mapValue(knob_1, 0., 1., 0.3, 0.8)
+#define WARP_DEPTH mapValue(bassNormalized, 0., 1., 0.3, 0.8)
+```
+
+### 3. Handle derived defines
+
+Some `#define`s may have audio-mode alternatives noted in comments (e.g., `// In audio mode, restore: ...`). Apply those too.
+
+### 4. Preserve everything else
+
+Do NOT change:
+- The knob index comment block (keep it for reference)
+- The preset URL comment (keep it for switching back to knobs later)
+- The `// ============================================================================` section headers
+- Any code in the shader body
+- Comment descriptions (the `// Warp depth: 0=subtle, 1=heavy` lines)
+
+### Quality checks (audio mode)
+
+Before finishing:
+- Every audio `#define` is now active (uncommented)
+- Every knob `#define` is now commented out
+- No `#define` pairs were missed
+- The shader body was NOT changed (it already uses the `#define` macro names)
+- The knob index and preset URL comments are preserved

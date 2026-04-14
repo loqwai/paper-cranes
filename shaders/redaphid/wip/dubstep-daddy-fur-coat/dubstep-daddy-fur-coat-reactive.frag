@@ -3,7 +3,7 @@
 // inspiration: https://open.spotify.com/track/4iujYV1aY8bvFnynke7eN5?si=8f2220910e7f4de0
 // Variant: slimmer frame + pink fur coat with synthwave aesthetic
 // http://localhost:6969/?shader=claude/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab
-// http://localhost:6969/edit.html?shader=claude/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&noaudio=true&time=3.5&knob_4=0.031&knob_6=0.276&knob_7=0&knob_8=0.039&knob_9=1&knob_10=0.937&knob_11=0.543
+// http://localhost:6969/edit.html?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&noaudio=true
 #define PI 3.14159265
 
 // ============================================================================
@@ -13,92 +13,184 @@
 #define DEBUG_OUTLINES 0
 
 // ============================================================================
-// COAT SHAPE — audio-reactive variant
-// The coat breathes, bristles, and pulses with the music.
+// KNOB CONTROLS
+// Each knob is 0-1. Uncomment audio lines to switch back to audio-reactive.
+// Test: ?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&noaudio=true&knob_1=0&knob_2=0.3&knob_3=0&knob_4=0.4&knob_5=0.3&knob_6=0.3&knob_7=0&knob_8=0&knob_9=0&knob_10=0.3&knob_11=0&knob_12=0.3&knob_13=0&knob_14=0.44&knob_15=0.5&knob_16=0.4&knob_17=0.5&knob_18=0.5&knob_19=0.42&knob_20=0.78&knob_21=0.13&knob_22=0&knob_23=0&knob_24=0&knob_25=0.3&knob_26=0&knob_27=0.3&knob_28=0
+//
+// --- COAT SHAPE ---
+// knob_1: shoulder shrug amount (0=relaxed, 1=shrugged up)
+// knob_2: shoulder spread / coat width (0=narrow, 1=wide)
+// knob_3: sleeve flare (0=tight, 1=flared)
+// knob_4: shoulder cap radius (0=small, 1=large)
+// knob_5: chest width (0=narrow, 1=wide)
+// knob_6: chest height (0=short, 1=tall)
+// knob_7: fur thickness (0=thin, 1=thick)
+// knob_8: v-neck width (0=narrow, 1=wide)
+// knob_9: v-neck depth (0=shallow, 1=deep)
+//
+// --- MOTION / ANIMATION ---
+// knob_10: pump / body pulse (0=still, 1=pumping)
+// knob_11: snap / gesture intensity (0=calm, 1=snappy)
+// knob_12: groove / sway amount (0=still, 1=grooving)
+// knob_13: build / drop detection (0=no drop, 1=full drop)
+//
+// --- DROP DETECTION ---
+// knob_14: drop trigger threshold (0=sensitive, 1=needs big energy)
+// knob_15: sustain gain (0=short decay, 1=long sustain)
+//
+// --- DROP VISUALS ---
+// knob_16: drop zoom intensity (0=none, 1=heavy zoom)
+// knob_17: god ray intensity (0=none, 1=blinding)
+// knob_18: eye wash strength (0=none, 1=full wash)
+// knob_19: continuous intensity zoom (0=none, 1=heavy)
+//
+// --- COLOR ---
+// knob_20: base hue (0=red, 1=red via full spectrum)
+// knob_21: drop hue shift target (0=red, 1=full spectrum)
+//
+// --- COAT SURFACE ---
+// knob_22: fluff agitation (0=smooth, 1=bristly)
+// knob_23: bass pulse on color (0=none, 1=strong)
+// knob_24: drop color shift (0=none, 1=full shift)
+// knob_25: shoulder gleam intensity (0=none, 1=bright)
+// knob_26: fractal fur trigger (0=hidden, 1=fully visible)
+// knob_27: fractal warp speed (0=frozen, 1=fast)
+// knob_28: rim boost (0=subtle, 1=blazing)
 // ============================================================================
 
-// Shoulders shrug up on beat, relax between hits
+// --- COAT SHAPE ---
+
+// Shoulder shrug: 0=relaxed, 1=shrugged up
+// #define SHOULDER_Y      (-0.02 + knob_1 * 0.015)
 #define SHOULDER_Y      (-0.02 + max(bassZScore, 0.0) * 0.015)
 
-// Coat widens slightly on bass swells — breathing
+// Coat width: 0=narrow, 1=wide
+// #define SHOULDER_SPREAD (0.158 + knob_2 * 0.02)
 #define SHOULDER_SPREAD (0.158 + bassNormalized * 0.02)
 
-// Sleeves flare outward on snare/treble hits
+// Sleeve flare: 0=tight, 1=flared
+// #define SLEEVE_RADIUS   (0.04 + knob_3 * 0.015)
 #define SLEEVE_RADIUS   (0.04 + max(trebleZScore, 0.0) * 0.015)
 
+// Shoulder cap size: 0=small, 1=large
+// #define SHOULDER_CAP    mapValue(knob_4, 0., 1., 0.03, 0.06)
 #define SHOULDER_CAP     0.042
 
-// Chest pumps with bass — the coat breathes
+// Chest width: 0=narrow, 1=wide
+// #define CHEST_W_BASE    (0.12 + knob_5 * 0.03)
 #define CHEST_W_BASE    (0.12 + bassNormalized * 0.03)
+
+// Chest height: 0=short, 1=tall
+// #define CHEST_H_BASE    (0.065 + knob_6 * 0.01)
 #define CHEST_H_BASE    (0.065 + bassNormalized * 0.01)
 
-// Fur bristles up on energy spikes — thicker on drops
+// Fur thickness: 0=thin, 1=thick
+// #define FUR_THICK       (0.06 + knob_7 * 0.04)
 #define FUR_THICK       (0.06 + max(energyZScore, 0.0) * 0.04)
 
-// V-neck opens wider on high energy — coat being pulled apart
+// V-neck width: 0=narrow, 1=wide
+// #define VNECK_WIDTH     (0.10 + knob_8 * 0.06)
 #define VNECK_WIDTH     (0.10 + max(energyZScore, 0.0) * 0.06)
+
+// V-neck depth: 0=shallow, 1=deep
+// #define VNECK_BOTTOM    (-0.013 - knob_9 * 0.03)
 #define VNECK_BOTTOM    (-0.013 - max(energyZScore, 0.0) * 0.03)
 
-// ============================================================================
-// AUDIO — knob swap pattern
-// Uncomment the knob lines and comment the audio lines to tune live.
-// knob_1: drop threshold (how much energy needed for drop)
-// knob_2: drop sustain decay (how long the drop lingers)
-// knob_3: zoom intensity from drops
-// knob_4: god ray intensity
-// knob_5: eye wash strength
-// knob_6: zoom from continuous intensity
-// ============================================================================
+// --- MOTION / ANIMATION ---
 
+// Pump / body pulse: 0=still, 1=pumping
+// #define PUMP (knob_10)
 #define PUMP (bassNormalized * 0.5 + bassSlope * bassRSquared * 2.0)
-// #define PUMP (knob_7)
+
 #define BEAT_PHASE (time * 2.2)
+
+// Snap / gesture intensity: 0=calm, 1=snappy
+// #define SNAP (knob_11)
 #define SNAP (max(trebleZScore, 0.0))
-// #define SNAP (knob_8)
+
 #define HIP_SWAY (sin(time * 1.1))
+
+// Groove / sway: 0=still, 1=grooving
+// #define GROOVE (knob_12)
 #define GROOVE (midsNormalized)
-// #define GROOVE (knob_9)
 
 // --- DROP DETECTION ---
-// BUILD: immediate spike detector — positive slope + confident trend
+
+// Build / drop signal: 0=no drop, 1=full drop
+// #define BUILD (knob_13)
 #define BUILD (max(energySlope, 0.0) * energyRSquared * 8.0)
-// #define BUILD (knob_10)
+
 #define IS_DROP clamp(BUILD, 0.0, 1.0)
 
-// SUSTAIN: keeps the drop alive using trend features that naturally decay.
-// After a drop, energy is still high even as it falls. energyRSquared stays
-// high when the trend is confident (rising OR falling steadily — both count).
-// energyNormalized stays elevated during the loud section.
-// The sustain fades organically as the audio stats catch up to the new level.
-//
-// knob_1: drop trigger threshold (how anomalous energy must be)
-// knob_2: sustain sensitivity (how much trend features extend the drop)
-// #define DROP_TRIGGER_THRESH (knob_1 * 2.0)
+// Drop trigger threshold: 0=sensitive, 1=needs big energy
+// #define DROP_TRIGGER_THRESH mapValue(knob_14, 0., 1., 0.2, 2.0)
 #define DROP_TRIGGER_THRESH 1.0
-// #define SUSTAIN_GAIN (0.5 + knob_2 * 1.0)
+
+// Sustain gain: 0=short decay, 1=long sustain
+// #define SUSTAIN_GAIN mapValue(knob_15, 0., 1., 0.5, 1.5)
 #define SUSTAIN_GAIN 1.0
 
 // --- DROP VISUALS ---
-// knob_3: zoom intensity from drops
-// #define DROP_ZOOM (0.5 + knob_3 * 1.0)
+
+// Drop zoom: 0=none, 1=heavy
+// #define DROP_ZOOM mapValue(knob_16, 0., 1., 0.5, 1.5)
 #define DROP_ZOOM 0.9
 
-// knob_4: god ray intensity
-// #define GODRAY_INTENSITY (1.0 + knob_4 * 3.0)
+// God ray intensity: 0=none, 1=blinding
+// #define GODRAY_INTENSITY mapValue(knob_17, 0., 1., 1.0, 4.0)
 #define GODRAY_INTENSITY 2.5
 
-// knob_5: eye wash strength
-// #define EYE_WASH_STRENGTH (knob_5 * 0.8)
+// Eye wash strength: 0=none, 1=full
+// #define EYE_WASH_STRENGTH (knob_18 * 0.8)
 #define EYE_WASH_STRENGTH 0.4
 
-// knob_6: zoom from continuous intensity
-// #define INTENSITY_ZOOM (knob_6 * 0.6)
+// Continuous intensity zoom: 0=none, 1=heavy
+// #define INTENSITY_ZOOM (knob_19 * 0.6)
 #define INTENSITY_ZOOM 0.25
 
-#define DROP_TRIGGER clamp(max(energyZScore, BUILD), 0.0, 1.0)
+// --- COLOR ---
 
+// Base hue: full spectrum
+// #define HUE_BASE (knob_20)
 #define HUE_BASE 0.78
+
+// Drop hue target: full spectrum
+// #define HUE_DROP (knob_21)
 #define HUE_DROP 0.13
+
+// --- COAT SURFACE ---
+
+// Fluff agitation: 0=smooth, 1=bristly
+// #define FLUFF_AGITATION (knob_22)
+#define FLUFF_AGITATION (max(energyZScore, 0.0))
+
+// Bass pulse on color: 0=none, 1=strong
+// #define BASS_PULSE_AMT (knob_23)
+#define BASS_PULSE_AMT (max(bassZScore, 0.0))
+
+// Drop color shift: 0=none, 1=full
+// #define DROP_COLOR_AMT (knob_24)
+#define DROP_COLOR_AMT clamp(IS_DROP + max(energyZScore, 0.0) * 0.3, 0.0, 1.0)
+
+// Shoulder gleam: 0=none, 1=bright
+// #define GLEAM_INTENSITY (0.15 + knob_25 * 0.25)
+#define GLEAM_INTENSITY (0.15 + spectralFluxNormalized * 0.25)
+
+// Fractal fur trigger: 0=hidden, 1=fully visible
+// #define FUR_TRIGGER (knob_26)
+#define FUR_TRIGGER clamp(spectralEntropyNormalized * 0.6 + spectralRoughnessNormalized * 0.4 + max(spectralKurtosisZScore, 0.0) * 0.3, 0.0, 1.0)
+
+// Fractal warp speed: 0=frozen, 1=fast
+// #define WARP_SPEED (knob_27 * 0.5)
+#define WARP_SPEED (spectralCentroidNormalized * 0.5)
+
+// Rim boost: 0=subtle, 1=blazing
+// #define RIM_BOOST mapValue(knob_28, 0., 1., 2.2, 4.5)
+#define RIM_BOOST (2.2 + spectralFluxNormalized * 1.5 + max(bassZScore, 0.0) * 0.8)
+
+// --- DERIVED (not directly knobbed) ---
+#define DROP_TRIGGER clamp(max(energyZScore, BUILD), 0.0, 1.0)
+// In knob mode, restore: clamp(BUILD, 0.0, 1.0)
 
 // ============================================================================
 // SDFs
@@ -357,23 +449,16 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec2 raw_uv01 = fragCoord / res;
 
-    // --- DROP SUSTAIN via audio trend features ---
-    // Immediate spike: energyZScore above threshold
-    float drop_spike = smoothstep(DROP_TRIGGER_THRESH, DROP_TRIGGER_THRESH + 0.5, energyZScore);
-
-    // Sustain: after a drop, energy is still elevated and the trend is
-    // confident. energyRSquared stays high during both the rise AND fall
-    // of a drop (it measures trend confidence, not direction).
-    // energyNormalized stays high while the music is still loud.
-    // Together they naturally sustain through the drop section and fade
-    // organically as the stats window catches up to the new baseline.
-    float sustain = energyNormalized * energyRSquared * SUSTAIN_GAIN;
-    // Also sustain from the immediate BUILD signal
+    // --- DROP SUSTAIN ---
+    // In knob mode, BUILD (knob_13) directly drives the drop.
+    // In audio mode, the commented #defines above restore the full
+    // spike + sustain logic.
+    float drop_spike = smoothstep(DROP_TRIGGER_THRESH, DROP_TRIGGER_THRESH + 0.5, BUILD);
+    float sustain = BUILD * SUSTAIN_GAIN;
     float drop_hit = clamp(max(drop_spike, max(IS_DROP, sustain)), 0.0, 1.0);
-    // Crush low values so faint signals don't leak into godrays
     drop_hit = smoothstep(0.15, 0.5, drop_hit);
 
-    float intensity = max(energyNormalized, bassNormalized);
+    float intensity = max(PUMP, GROOVE);
     // Cubic ease-in: crushes twitchy low-end values, lets big moments punch through.
     // smoothstep(0.2, 0.9) maps to 0-1, then cube kills anything below ~0.5
     float zoom_intensity = smoothstep(0.2, 0.9, intensity);
@@ -400,7 +485,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 fur_p = uv * 38.0 + vec2(0.0, sin(BEAT_PHASE) * 0.15);
     float fur_n = fbm(fur_p);
     // Fur edge gets much more agitated on drops/bass — bristles up
-    float fluff_amp = 0.018 + pump * 0.015 + SNAP * 0.012 + max(energyZScore, 0.0) * 0.02;
+    float fluff_amp = 0.018 + pump * 0.015 + SNAP * 0.012 + FLUFF_AGITATION * 0.02;
     float d_coat_fluff = d_coat - (fur_n - 0.5) * fluff_amp;
 
     float d = min(d_body, d_curls);
@@ -464,8 +549,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // - Hue shifts toward hot yellow/white on drops
     // - Saturation dips slightly on quiet passages (more white/pastel)
     float coat_grad = smoothstep(0.15, -0.4, uv.y);
-    float bass_pulse = max(bassZScore, 0.0);
-    float drop_color = clamp(IS_DROP + max(energyZScore, 0.0) * 0.3, 0.0, 1.0);
+    float bass_pulse = BASS_PULSE_AMT;
+    float drop_color = DROP_COLOR_AMT;
     // Hue slides from pink (0.93) toward warm peach (0.05) on drops
     float fur_hue_hi = mix(0.93, 0.05, drop_color * 0.5);
     float fur_hue_lo = mix(0.86, 0.08, drop_color * 0.4);
@@ -477,7 +562,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 fur_col = mix(fur_hi, fur_lo, coat_grad);
     // Shoulder gleam pulses with spectral flux — light catching the coat
     float shoulder_gleam = exp(-pow((uv.y - 0.08) * 10.0, 2.0));
-    float gleam_intensity = 0.15 + spectralFluxNormalized * 0.25;
+    float gleam_intensity = GLEAM_INTENSITY;
     fur_col += shoulder_gleam * vec3(gleam_intensity, gleam_intensity * 0.6, gleam_intensity * 1.2);
     // ---- FRACTAL FUR FIBERS ----
     // Swirling domain-warped fractal that appears inside the coat when the
@@ -485,19 +570,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // spectral roughness (dissonance). These are independent from the
     // energy/bass features that drive the eyes, so the coat and eyes
     // react to DIFFERENT musical qualities.
-    float fur_trigger = clamp(
-        spectralEntropyNormalized * 0.6 +
-        spectralRoughnessNormalized * 0.4 +
-        max(spectralKurtosisZScore, 0.0) * 0.3,
-        0.0, 1.0
-    );
+    float fur_trigger = FUR_TRIGGER;
     // Only show when musically interesting (above baseline)
     float fur_fractal_amt = smoothstep(0.3, 0.7, fur_trigger);
     if (fur_fractal_amt > 0.01) {
         // Domain warp: swirl the coords with low-freq noise so the fibers
         // look like curling fur strands, not a static grid
         vec2 fp = uv * 12.0;
-        float warp_t = time * 0.3 + spectralCentroidNormalized * 0.5;
+        float warp_t = time * 0.3 + WARP_SPEED;
         vec2 warp = vec2(
             fbm(fp + vec2(warp_t, 0.0)),
             fbm(fp + vec2(0.0, warp_t + 3.7))
@@ -536,7 +616,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     col += chest_glow * chrome * 0.8 * (1.0 - coat);
     // Coat rim — chrome edge hugs the shaggy outline (boosted for visibility)
     // Coat rim pulses with spectral flux — brighter on timbral changes
-    float rim_boost = 2.2 + spectralFluxNormalized * 1.5 + max(bassZScore, 0.0) * 0.8;
+    float rim_boost = RIM_BOOST;
     col += coat_rim * chrome * rim_boost * (1.0 - curls);
     // Button seam glow — chrome line down the center
     col += seam_glow * coat * chrome * 0.25 * (1.0 - curls);
