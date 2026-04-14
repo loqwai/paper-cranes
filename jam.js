@@ -87,7 +87,7 @@ const snapshotPreset = async () => {
         knobs,
         audio,
         name: null,
-        musicTab: document.title || null,
+        musicTab: cranes.tabAudioLabel || null,
         userNote: null,
     }
 
