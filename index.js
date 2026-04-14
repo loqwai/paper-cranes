@@ -206,7 +206,11 @@ const setupCranesState = () => {
         messageParams: {},          // Message parameters (highest precedence)
         frameCount: 0,
         // Centralized feature flattening function with proper order of precedence
-        flattenFeatures: getCranesState
+        flattenFeatures: getCranesState,
+        // Used by src/midi.js to set knob values
+        updateFeature: (name, value) => {
+            window.cranes.manualFeatures[name] = value
+        },
     }
 
     window.c = window.cranes
@@ -325,6 +329,9 @@ const main = async () => {
     // Initialize global state
     setupCranesState()
     startTime = performance.now()
+
+    // Lazy-load MIDI support when opted in via ?midi=true
+    if (params.get('midi') === 'true') import('./src/midi.js')
 
     // Initialize remote display mode if ?remote=display
     if (params.get('remote') === 'display') {
