@@ -751,8 +751,12 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 
 | Skill | Purpose |
 |-------|---------|
-| `/solo` | Toggle a shader between knob mode and audio mode. Auto-detects current mode and switches. Use `/solo knobs` or `/solo audio` to force a mode. Defaults to the modified `.frag` in the worktree. |
+| `/jam` | Launch a jam session — open the jam page with shader + controller + music source. Lighter than `/live-session`: no editor, just knobs + snapshots. |
 | `/live-session` | Launch a live creative session — open Chrome with shader editor + audio source, connect Claude-in-Chrome, and jam. Optionally pass a shader path or SoundCloud/Spotify URL. See [docs/live-session-insights.md](docs/live-session-insights.md). |
+| `/fork` | Save the current shader + knob state as a new numbered iteration. Reads knobs from the browser, copies the `.frag`, writes a companion doc. |
+| `/record` | Record a music video from the current shader canvas. Uses MediaRecorder API, restarts the music track, auto-stops after duration. |
+| `/preset` | Save knob state as a named preset (live) or batch-process the snapshot queue (`/preset process`). |
+| `/solo` | Toggle a shader between knob mode and audio mode. Auto-detects current mode and switches. Use `/solo knobs` or `/solo audio` to force a mode. Defaults to the modified `.frag` in the worktree. |
 | `/changelog` | Update docs/CHANGELOG.md and README with recent features. |
 | `/pr` | Create a PR, request review, and open in browser. |
 
