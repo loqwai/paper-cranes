@@ -78,6 +78,11 @@ export const setupTabAudio = ({ params, AudioProcessor }) => {
             const { audioContext, sourceNode, onEnded } = makeTabAudioSource(stream)
             await audioContext.resume()
 
+            // Store the shared tab's title so snapshots can record what music was playing.
+            // MediaStreamTrack.label contains the source tab/window title for getDisplayMedia tracks.
+            const audioTrack = stream.getAudioTracks()[0]
+            if (audioTrack?.label && window.cranes) window.cranes.tabAudioLabel = audioTrack.label
+
             const historySize = parseInt(params.get('history_size') ?? '500')
             const fftSize = parseInt(params.get('fft_size') ?? '4096')
             const smoothing = parseFloat(params.get('smoothing') ?? '0.15')
@@ -92,6 +97,7 @@ export const setupTabAudio = ({ params, AudioProcessor }) => {
             // they can pick another tab without reloading the page.
             onEnded(() => {
                 holder.getFeatures = () => ({})
+                if (window.cranes) window.cranes.tabAudioLabel = null
                 processor.cleanup()
                 audioContext.close().catch(() => {})
                 run()

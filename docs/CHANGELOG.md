@@ -2,6 +2,27 @@
 
 All notable non-shader feature changes to this project will be documented in this file.
 
+## 2026-04-14
+
+### Features
+
+- **[Jam page](jam-page.md) (`/jam.html`)** — Lean visualization page for live sessions: fullscreen shader + knob drawer, no editor. Spacebar snapshots the current knob + audio state to a queue for batch processing. Backspace undoes the last snapshot. ([#114](https://github.com/loqwai/paper-cranes/pull/114))
+- **Preset snapshot queue** — Snapshots capture structured audio features (normalized, zScore, slope, rSquared for 14 features) alongside knob values. Process the queue offline with `/preset process` — no live browser needed. ([#114](https://github.com/loqwai/paper-cranes/pull/114))
+- **`?audio=none` param** — Explicitly disable audio input. Cleaner than `?noaudio=true`. ([#107](https://github.com/loqwai/paper-cranes/pull/107))
+- **MIDI on index page** — Opt-in MIDI controller support on the viewer page with `?midi=true`. ([#113](https://github.com/loqwai/paper-cranes/pull/113))
+
+### Fixes
+
+- **No more black flashes on tab switch** — Eliminated black frames when hiding/showing the browser tab or switching desktops. ([#101](https://github.com/loqwai/paper-cranes/pull/101))
+- **Wake lock on user gesture** — Screen stays on during live sessions without needing manual settings. ([#112](https://github.com/loqwai/paper-cranes/pull/112))
+- **Editor save no longer reloads** — Ctrl+S in the editor saves to disk without triggering a full page reload. ([#109](https://github.com/loqwai/paper-cranes/pull/109))
+- **Audio warm-up ramp** — Prevents visual spikes when audio first connects. ([#110](https://github.com/loqwai/paper-cranes/pull/110))
+- **Hot-swap shader updates on jam page** — `.frag` file changes apply without page reload, preserving tab audio sharing permissions.
+
+### Developer Experience
+
+- **Compact list page layout** — Desktop list page uses space more efficiently. ([#108](https://github.com/loqwai/paper-cranes/pull/108))
+
 ## 2026-04-11
 
 ### Features

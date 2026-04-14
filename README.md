@@ -2,6 +2,7 @@
 
 ## What's New
 
+- **[Jam page](docs/jam-page.md)** — Lean live session page: fullscreen shader + knob drawer + spacebar snapshot queue. No editor overhead.
 - **[Multiplayer editor](docs/multiplayer-editor.md)** — Edit shaders together with live cursors and real-time sync
 - **[Tab audio capture](docs/tab-audio.md)** — Visualize Spotify or any browser tab with `?audio=tab`, no drivers needed
 - **[Editor-filesystem sync](docs/editor-filesystem-sync.md)** — Ctrl+S writes to disk, external edits push back to the browser
