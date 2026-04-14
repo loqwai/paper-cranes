@@ -1,5 +1,5 @@
-import { readFile, writeFile } from 'fs/promises'
-import { join } from 'path'
+import { readFile, writeFile, mkdir } from 'fs/promises'
+import { join, dirname } from 'path'
 import chokidar from 'chokidar'
 
 const SHADER_DIR = 'shaders'
@@ -38,6 +38,55 @@ export function editorSyncPlugin() {
             res.end(JSON.stringify({ ok: true, path: filePath }))
           } catch (e) {
             console.error('[editor-sync] Save failed:', e.message)
+            res.writeHead(500, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ error: e.message }))
+          }
+        })
+      })
+
+      // Snapshot preset endpoint — captures knob + audio state to a JSON file
+      // for Claude to process later with full musical interpretation
+      server.middlewares.use(async (req, res, next) => {
+        if (req.method !== 'POST' || req.url !== '/__snapshot-preset') return next()
+
+        let body = ''
+        req.on('data', (chunk) => { body += chunk })
+        req.on('end', async () => {
+          try {
+            const data = JSON.parse(body)
+            const { shader, knobs, audio, name } = data
+            if (!shader) {
+              res.writeHead(400, { 'Content-Type': 'application/json' })
+              return res.end(JSON.stringify({ error: 'Missing shader' }))
+            }
+
+            const normalized = shader.replace(/\.\./g, '').replace(/^\//, '')
+            const snapshotDir = join(SHADER_DIR, normalized, 'docs', '.snapshots')
+            await mkdir(snapshotDir, { recursive: true })
+
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+            const filename = name
+              ? `${timestamp}--${name.replace(/[^a-z0-9-]/gi, '-').toLowerCase()}.json`
+              : `${timestamp}.json`
+            const filePath = join(snapshotDir, filename)
+
+            const snapshot = {
+              timestamp: new Date().toISOString(),
+              shader: normalized,
+              name: name || null,
+              knobs: knobs || {},
+              audio: audio || {},
+              musicTab: data.musicTab || null,
+              userNote: data.userNote || null,
+            }
+
+            await writeFile(filePath, JSON.stringify(snapshot, null, 2), 'utf-8')
+            console.log(`[editor-sync] Preset snapshot saved: ${filePath}`)
+
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ ok: true, path: filePath }))
+          } catch (e) {
+            console.error('[editor-sync] Snapshot failed:', e.message)
             res.writeHead(500, { 'Content-Type': 'application/json' })
             res.end(JSON.stringify({ error: e.message }))
           }
