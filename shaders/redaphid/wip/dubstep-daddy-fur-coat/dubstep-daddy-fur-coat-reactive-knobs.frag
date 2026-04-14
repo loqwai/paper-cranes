@@ -35,10 +35,10 @@
 #define CHEST_H_BASE    (0.065 + bassNormalized * 0.006)
 
 // Fur bristles: gentle continuous thickening, big bristle only on spikes
-#define FUR_THICK       (0.06 + energyNormalized * 0.01 + max(energyZScore - 0.5, 0.0) * 0.03)
+#define FUR_THICK       knob_4
 
 // V-neck: subtle breathing, opens wide only on real spikes
-#define VNECK_WIDTH     (0.10 + energyNormalized * 0.015 + max(energyZScore - 0.5, 0.0) * 0.03)
+#define VNECK_WIDTH     knob_6
 #define VNECK_BOTTOM    (-0.013 - max(energyZScore - 0.5, 0.0) * 0.02)
 
 // ============================================================================
