@@ -34,6 +34,7 @@ export default defineConfig({
       input: {
         main: resolve(import.meta.dirname, 'index.html'),
         edit: resolve(import.meta.dirname, 'edit.html'),
+        jam: resolve(import.meta.dirname, 'jam.html'),
         list: resolve(import.meta.dirname, 'list.html'),
         analyze: resolve(import.meta.dirname, 'analyze.html'),
         playlist: resolve(import.meta.dirname, 'playlist.html'),

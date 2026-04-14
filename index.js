@@ -397,6 +397,7 @@ main()
 if (import.meta.hot) {
     import.meta.hot.on('shaders-changed', () => {
         if (window.location.pathname.includes('edit')) return
+        if (window.location.pathname.includes('jam')) return
         location.reload()
     })
 }

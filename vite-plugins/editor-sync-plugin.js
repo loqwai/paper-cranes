@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir } from 'fs/promises'
+import { readFile, writeFile, mkdir, readdir, unlink } from 'fs/promises'
 import { join, dirname } from 'path'
 import chokidar from 'chokidar'
 
@@ -87,6 +87,48 @@ export function editorSyncPlugin() {
             res.end(JSON.stringify({ ok: true, path: filePath }))
           } catch (e) {
             console.error('[editor-sync] Snapshot failed:', e.message)
+            res.writeHead(500, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ error: e.message }))
+          }
+        })
+      })
+
+      // Undo last snapshot — deletes the most recent .json from the snapshot dir
+      server.middlewares.use(async (req, res, next) => {
+        if (req.method !== 'DELETE' || req.url !== '/__snapshot-preset') return next()
+
+        let body = ''
+        req.on('data', (chunk) => { body += chunk })
+        req.on('end', async () => {
+          try {
+            const data = JSON.parse(body)
+            const { shader } = data
+            if (!shader) {
+              res.writeHead(400, { 'Content-Type': 'application/json' })
+              return res.end(JSON.stringify({ error: 'Missing shader' }))
+            }
+
+            const normalized = shader.replace(/\.\./g, '').replace(/^\//, '')
+            const snapshotDir = join(SHADER_DIR, normalized, 'docs', '.snapshots')
+
+            const files = (await readdir(snapshotDir).catch(() => []))
+              .filter(f => f.endsWith('.json'))
+              .sort()
+
+            if (files.length === 0) {
+              res.writeHead(404, { 'Content-Type': 'application/json' })
+              return res.end(JSON.stringify({ error: 'No snapshots to delete' }))
+            }
+
+            const lastFile = files[files.length - 1]
+            const filePath = join(snapshotDir, lastFile)
+            await unlink(filePath)
+            console.log(`[editor-sync] Snapshot deleted: ${filePath}`)
+
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ ok: true, deleted: lastFile, remaining: files.length - 1 }))
+          } catch (e) {
+            console.error('[editor-sync] Snapshot delete failed:', e.message)
             res.writeHead(500, { 'Content-Type': 'application/json' })
             res.end(JSON.stringify({ error: e.message }))
           }

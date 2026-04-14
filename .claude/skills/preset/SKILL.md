@@ -1,20 +1,89 @@
 ---
 name: preset
-description: Save the current knob state as a named preset. Usage: `/preset <name>` or just `/preset` to auto-name from context (music playing, knob character, vibe). Reads knob values from the browser and writes them to the shader's preset doc.
+description: "Save the current knob state as a named preset. Two modes: (1) `/preset <name>` — live capture from browser. (2) `/preset process` — batch-process snapshots from jam page queue. Just `/preset` auto-names from context."
 allowed-tools: Bash Read Write Edit Grep Glob Agent mcp__claude-in-chrome__tabs_context_mcp mcp__claude-in-chrome__javascript_tool
 ---
 
 # Preset — Save Current Knob State
 
-Capture the current knob values from the live browser session and save them as a named preset in the shader's docs folder.
+Capture the current knob values from the live browser session and save them as a named preset in the shader's docs folder. Or batch-process snapshots from the jam page queue.
 
 ## Context
 
-Arguments (preset name):
+Arguments (preset name or "process"):
 !`echo "$ARGUMENTS"`
 
 Active shader editor tab:
 !`echo "Use tabs_context_mcp + javascript_tool to find the editor tab and read knob state"`
+
+## Mode Selection
+
+If `$ARGUMENTS` is `process` or `queue`, go to **Batch Mode** below.
+Otherwise, go to **Live Mode** (the original flow).
+
+---
+
+## Batch Mode — Process Jam Page Snapshot Queue
+
+The jam page (`jam.html`) writes raw snapshot JSON files to `shaders/<shader>/docs/.snapshots/` when the user hits spacebar. Each snapshot contains the full knob state AND structured audio features. Your job: read each snapshot, add musical interpretation and naming, write to `presets.md`, then archive.
+
+### Batch Steps
+
+#### B1. Find unprocessed snapshots
+
+```bash
+find shaders/ -path '*/docs/.snapshots/*.json' -not -path '*/docs/.snapshots/processed/*' | sort
+```
+
+If none, tell the user there's nothing in the queue.
+
+#### B2. For each snapshot file
+
+Read the JSON. It contains:
+- `shader` — the shader path
+- `knobs` — `{ knob_1: 0.5, knob_3: 1.0, ... }` (only knobs the user set)
+- `audio` — structured audio features: `{ bass: { normalized, zScore, slope, rSquared }, energy: { ... }, ... }`
+- `timestamp` — when it was captured
+- `name` — user-provided name (often null)
+- `musicTab` — browser tab title at capture time (the music source)
+- `userNote` — user-provided note (often null)
+
+#### B3. Generate preset name
+
+If the snapshot has a `name`, use it. Otherwise auto-name from context:
+- Music tab title, audio character (drop vs buildup vs chill), knob extremes
+- Same naming style as live mode: lowercase, hyphenated, 1-3 words
+
+#### B4. Read the knob comment block from the .frag file
+
+Grep the shader's `.frag` file for knob comments (`// knob_N:`) to label what each knob does.
+
+#### B5. Interpret the audio state
+
+The snapshot already has structured audio data. Write your musical interpretation:
+- Is this a drop, buildup, breakdown, quiet passage?
+- What's the bass/energy/mids story?
+- Use slope + rSquared for trend detection
+- Same analysis you'd do in live mode, just from the saved numbers
+
+#### B6. Write preset to presets.md
+
+Same format as live mode. Append to `shaders/<shader-path>/docs/presets.md`.
+
+#### B7. Archive the processed snapshot
+
+```bash
+mkdir -p shaders/<shader>/docs/.snapshots/processed
+mv <snapshot-file> shaders/<shader>/docs/.snapshots/processed/
+```
+
+#### B8. Repeat for all snapshots
+
+Process each one, then report a summary of what was processed.
+
+---
+
+## Live Mode — Original Flow
 
 ## Steps
 
