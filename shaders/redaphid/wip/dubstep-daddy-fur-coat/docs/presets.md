@@ -222,3 +222,291 @@ The knobs reflect this perfectly: drop hit and god rays basically off, so the ey
 ```
 
 **Notes:** The coat preset. Eyes and god rays turned off so the fur coat is the whole show. With high spectral entropy/roughness the fractal fur fibers go wild — swirling, complex, alive. Best for intricate passages with lots of harmonic detail, arpeggios, or complex sound design. The eye wash gives a warm glow without the eyes dominating. The coat dances while the daddy bounces.
+
+---
+
+_The following presets were captured via the jam page snapshot queue and batch-processed._
+
+### whisper-glow
+_Saved: 2026-04-14 09:31 | Music: (jam session)_
+
+| Knob | Value | What it does |
+|------|-------|-------------|
+| knob_1 | 0.039 | base zoom (barely zoomed) |
+| knob_2 | 0.173 | drop hit override (subtle) |
+| knob_3 | 0.26 | god ray intensity (gentle) |
+| knob_4 | 0.197 | eye wash strength (warm hint) |
+
+**Audio character at save time:**
+- bassNormalized: 0.237 (low), bassZScore: -0.251
+- energyNormalized: 0.552, energyZScore: +0.192 (slightly above average)
+- midsNormalized: 0.277 (scooped), midsZScore: -0.207
+- trebleNormalized: 0.519, spectralCentroidNormalized: 0.729 (bright)
+- spectralEntropyNormalized: 0.849 (chaotic — complex harmonics)
+- spectralRoughnessNormalized: 0.497 (moderate)
+- spectralFluxNormalized: 0.192 (steady)
+- All slopes ~0, all rSquared ~0 — no trends, flat state
+
+**Musical moment:** A textured, complex passage with moderate energy. Bass is below average, mids scooped, but treble and spectral centroid are both elevated — the sound is bright and harmonically rich. Entropy near 0.85 means tons of spectral complexity. No trends anywhere — this is a sustained state, not building or dropping. Likely an intricate mid-section with lots of detail.
+
+The knobs match: everything dialed low and gentle. A subtle, understated preset where the audio complexity drives the visual through the fractal fur rather than through flashy effects.
+
+**URL:**
+```
+?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab&knob_1=0.039&knob_2=0.173&knob_3=0.26&knob_4=0.197
+```
+
+**Notes:** Whisper mode. Everything turned down to a murmur — let the audio-reactive elements do the talking. Best for complex, textured passages where subtlety wins over spectacle.
+
+### dark-bass
+_Saved: 2026-04-14 09:32 | Music: (jam session)_
+
+| Knob | Value | What it does |
+|------|-------|-------------|
+| knob_1 | 0 | base zoom (full wide) |
+| knob_2 | 0.276 | drop hit override (quarter) |
+| knob_3 | 0 | god ray intensity (off) |
+| knob_4 | 0.197 | eye wash strength (warm hint) |
+
+**Audio character at save time:**
+- bassNormalized: 0.496 (moderate), bassZScore: -0.095
+- energyNormalized: 0.109 (very low!), energyZScore: -0.129
+- midsNormalized: 0.796 (heavy!), midsZScore: +0.163
+- trebleNormalized: 0.338 (dim)
+- spectralCentroidNormalized: 0.089 (very dark — sound concentrated in low frequencies)
+- spectralEntropyNormalized: 0.134 (clean, simple)
+- spectralRoughnessNormalized: 0.111 (smooth)
+- spectralKurtosisNormalized: 0.627 (peaked — single dominant frequency)
+
+**Musical moment:** A dark, bass-heavy passage with almost no energy. Centroid at 0.089 is extremely low — the sound is concentrated deep in the bass/mid-bass. Mids are heavy at 0.796 while entropy is just 0.134, meaning a clean, simple sound — likely a sustained bass note or a quiet, rumbling breakdown. Very smooth (roughness 0.111) with high kurtosis (peaked distribution). This is the quiet before a storm.
+
+God rays off, wide view, just a hint of drop and eye wash. The daddy is a dark silhouette, barely glowing, waiting.
+
+**URL:**
+```
+?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab&knob_2=0.276&knob_4=0.197
+```
+
+**Notes:** Dark mode. God rays completely off, zoomed out, during a quiet bass rumble. The visual is almost a silhouette. Best for breakdowns, intros, or any passage where the music goes dark and deep.
+
+### bright-chaos
+_Saved: 2026-04-14 09:32 | Music: (jam session)_
+
+| Knob | Value | What it does |
+|------|-------|-------------|
+| knob_1 | 0.283 | base zoom (slight zoom) |
+| knob_2 | 0.276 | drop hit override (quarter) |
+| knob_3 | 0 | god ray intensity (off) |
+| knob_4 | 0.197 | eye wash strength (warm hint) |
+
+**Audio character at save time:**
+- bassNormalized: 0.346, bassZScore: -0.406 (below average)
+- energyNormalized: 0.39, energyZScore: +0.431 (above average!)
+- midsNormalized: 0.293 (scooped!), midsZScore: -0.605
+- trebleNormalized: 0.85 (bright!), trebleZScore: +0.611
+- spectralCentroidNormalized: 0.676 (bright), centroidZScore: +0.612
+- spectralEntropyNormalized: 0.937 (near-max chaos!)
+- spectralRoughnessNormalized: 0.776 (very gritty)
+- spectralCrestNormalized: 0.192 (spread out, not peaked)
+
+**Musical moment:** Bright, chaotic, gritty. Mids deeply scooped (-0.605 z-score) while treble blazes at 0.85 — classic mid-scoop sound design. Entropy near-maxed at 0.937 with roughness at 0.776 means this is harmonically complex AND dissonant. Bass below average but energy above average — the power is all in the highs. This is a bright, aggressive synth passage or a complex sound design moment, not a bass drop.
+
+Interesting contrast: all this spectral fury is happening while the knobs are modest. The user is letting the audio drive the visuals at a gentle knob setting. The slight zoom (0.283) focuses the frame while the audio-reactive elements go wild from the entropy.
+
+**URL:**
+```
+?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab&knob_1=0.283&knob_2=0.276&knob_4=0.197
+```
+
+**Notes:** Subtle knobs during bright chaos. God rays off, mild zoom, during a hyper-complex treble-heavy passage. The fur fibers go crazy from entropy while the effects stay restrained. Best for complex synth passages where the texture does the work.
+
+### balanced-glow
+_Saved: 2026-04-14 09:33 | Music: (jam session)_
+
+| Knob | Value | What it does |
+|------|-------|-------------|
+| knob_1 | 0 | base zoom (full wide) |
+| knob_2 | 0.52 | drop hit override (half) |
+| knob_3 | 0.52 | god ray intensity (half) |
+| knob_4 | 0.465 | eye wash strength (mid) |
+
+**Audio character at save time:**
+- bassNormalized: 0.352, bassZScore: -0.26 (below average, confidently falling — slope -0.0001, r2: 0.205)
+- energyNormalized: 0.497, energyZScore: +0.154 (slightly above, confidently flat — r2: 0.207)
+- midsNormalized: 0.455, midsZScore: -0.21
+- trebleNormalized: 0.567, trebleZScore: +0.249
+- spectralCentroidNormalized: 0.557, centroidZScore: +0.314
+- spectralEntropyNormalized: 0.527, entropyZScore: +0.463 (moderate chaos, trending up — r2: 0.23)
+
+**Musical moment:** Everything near the middle. Moderate energy, moderate brightness, moderate chaos — but with some confident trends: bass falling (r2: 0.205), entropy rising (r2: 0.23). This reads like a transition section — the track is shifting character, moving from one energy state to another. The even-handed knobs (all around 0.5) match the balanced audio state.
+
+**URL:**
+```
+?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab&knob_2=0.52&knob_3=0.52&knob_4=0.465
+```
+
+**Notes:** The balanced preset. Everything at half — drop, god rays, eye wash all hovering around 0.5. A good default for when the music is in transition and you want the visual to be evenly responsive to whatever comes next.
+
+### ray-bloom
+_Saved: 2026-04-14 09:33 | Music: (jam session)_
+
+| Knob | Value | What it does |
+|------|-------|-------------|
+| knob_1 | 0.079 | base zoom (nearly wide) |
+| knob_2 | 0.37 | drop hit override (gentle) |
+| knob_3 | 0.638 | god ray intensity (prominent!) |
+| knob_4 | 0.465 | eye wash strength (mid) |
+
+**Audio character at save time:**
+- bassNormalized: 0.185, bassZScore: -0.34 (low, gently falling)
+- energyNormalized: 0.277, energyZScore: +0.472 (above average — r2: 0.152)
+- midsNormalized: 0.525, midsZScore: -0.498 (below average, falling — slope -0.0003, r2: 0.16)
+- trebleNormalized: 0.585, trebleZScore: +0.65 (well above average, rising — slope +0.0004, r2: 0.167)
+- spectralCentroidNormalized: 0.441, centroidZScore: +0.584 (rising — slope +0.0002, r2: 0.215)
+- spectralEntropyNormalized: 0.835, entropyZScore: +0.632 (chaotic)
+- spectralRoughnessNormalized: 0.485, roughnessZScore: +0.546 (rising grit — r2: 0.212)
+- spectralSpreadNormalized: 0.53, spreadZScore: +0.638 (rising — r2: 0.239, most confident trend)
+
+**Musical moment:** A build. Treble rising, centroid rising, spread rising, roughness rising — all with moderate r2 confidence. Mids are falling and scooping out. The sound is getting brighter, wider, grittier. Bass is absent. This is a textbook buildup: the frequency content is spreading upward and getting more complex, while the low end drops away. Energy is above average and the spectral character is rapidly evolving.
+
+The god rays at 0.638 are the star here — during a build, the rays would be growing in intensity with the treble, creating a bloom effect as the music brightens. Nearly wide view to see the full figure backlit by rays.
+
+**URL:**
+```
+?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab&knob_1=0.079&knob_2=0.37&knob_3=0.638&knob_4=0.465
+```
+
+**Notes:** God ray buildup preset. Rays prominent during a rising, brightening passage. The visual blooms as treble and spectral complexity rise. Best for buildups and rising tension where you want the rays to tell the story.
+
+### body-sculpt
+_Saved: 2026-04-14 09:35 | Music: (jam session)_
+
+| Knob | Value | What it does |
+|------|-------|-------------|
+| knob_1 | 0.394 | base zoom (medium) |
+| knob_2 | 0.197 | drop hit override (subtle) |
+| knob_3 | 0.142 | god ray intensity (dim) |
+| knob_4 | 0.535 | eye wash strength (half) |
+| knob_5 | 1.0 | drop zoom (maxed!) |
+| knob_6 | 0.22 | shoulder spread (narrow) |
+| knob_7 | 0.559 | fur thickness (medium) |
+| knob_8 | 0.291 | v-neck width (narrow) |
+
+**Audio character at save time:**
+- bassNormalized: 0.547, bassZScore: +0.43 (above average, but gently falling — slope -0.0002, r2: 0.313)
+- energyNormalized: 0.439, energyZScore: +0.066 (flat — r2: 0.436, very confident flat trend)
+- midsNormalized: 0.457, midsZScore: 0 (dead average, confidently falling — slope -0.0003, r2: 0.467)
+- trebleNormalized: 0.553, trebleZScore: -0.203 (rising — slope +0.0005, r2: 0.421)
+- spectralCentroidNormalized: 0.443 (rising — slope +0.0003, r2: 0.514, most confident trend!)
+- spectralRoughnessNormalized: 0.538 (rising — r2: 0.488)
+- spectralSpreadNormalized: 0.616 (rising — r2: 0.574, very confident!)
+
+**Musical moment:** This snapshot has the most confident trends of any in the batch. Everything is moving: bass falling (r2: 0.313), mids falling (r2: 0.467), treble rising (r2: 0.421), centroid rising (r2: 0.514), spread rising (r2: 0.574). The sound is migrating upward — from a bass-heavy state toward a brighter, wider spectral character. Energy is dead flat and confidently so (r2: 0.436) — the overall volume isn't changing, just the frequency balance.
+
+This is the user exploring the body knobs (shoulder spread, fur thickness, v-neck) while the sound evolves. Drop zoom maxed at 1.0 means any energy spike will punch in hard. The narrow shoulders and modest fur create a leaner silhouette — less "daddy energy," more sculpted.
+
+**URL:**
+```
+?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab&knob_1=0.394&knob_2=0.197&knob_3=0.142&knob_4=0.535&knob_5=1&knob_6=0.22&knob_7=0.559&knob_8=0.291
+```
+
+**Notes:** Body exploration preset. First time using the body-shape knobs (shoulders, fur, v-neck). Lean build, maxed drop zoom, during a confidently evolving audio state. The sound is shifting upward while energy stays flat — perfect for testing how body shape interacts with spectral movement.
+
+### golden-wash
+_Saved: 2026-04-14 09:38 | Music: (jam session)_
+
+| Knob | Value | What it does |
+|------|-------|-------------|
+| knob_1 | 0 | base zoom (full wide) |
+| knob_2 | 0.016 | drop hit override (barely on) |
+| knob_3 | 0.024 | god ray intensity (whisper) |
+| knob_4 | 0.945 | eye wash strength (near-max!) |
+| knob_5 | 0.858 | drop zoom (heavy) |
+| knob_9 | 0.189 | v-neck depth (shallow) |
+
+**Audio character at save time:**
+- bassNormalized: 0.134 (very low), bassZScore: +0.055
+- energyNormalized: 0.629, energyZScore: +0.441 (well above average)
+- midsNormalized: 0.561, midsZScore: -0.043 (average)
+- trebleNormalized: 0.597, trebleZScore: +0.142
+- spectralCentroidNormalized: 0.692 (bright)
+- spectralEntropyNormalized: 0.947 (near-max chaos!)
+- spectralRoughnessNormalized: 0.642 (gritty)
+- spectralKurtosisNormalized: 0.063 (very flat distribution — energy spread across all frequencies)
+
+**Musical moment:** High-energy, hyper-complex, bass-absent. Energy is well above average but bass is nearly zero — all the power is in the mids/highs. Entropy near-maxed at 0.947 with roughness at 0.642 and a completely flat spectral distribution (kurtosis 0.063). This is a wall of sound — dense, complex, gritty, with energy everywhere except the sub-bass. Could be a heavy synth pad, a complex arpeggio, or a sound design passage.
+
+The eye wash at 0.945 bathes the whole figure in golden light. God rays and drop effects are basically off. The daddy is a golden silhouette — washed in color but not lit by eyes or rays. With the heavy drop zoom (0.858), any energy spike will punch in hard, but the sustained state is just this warm golden glow.
+
+**URL:**
+```
+?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab&knob_2=0.016&knob_3=0.024&knob_4=0.945&knob_5=0.858&knob_9=0.189
+```
+
+**Notes:** Golden wash. Eye wash cranked near-max, everything else off. The daddy glows warm yellow against a complex, chaotic audio backdrop. The heavy drop zoom is coiled and ready but hasn't fired yet. Best for dense, bright passages where you want the figure bathed in color without the eye/ray drama.
+
+### griz-sizzle
+_Saved: 2026-04-14 09:39 | Music: (jam session)_
+
+| Knob | Value | What it does |
+|------|-------|-------------|
+| knob_1 | 0 | base zoom (full wide) |
+| knob_2 | 0.016 | drop hit override (barely on) |
+| knob_3 | 0.024 | god ray intensity (whisper) |
+| knob_4 | 0.953 | eye wash strength (near-max!) |
+| knob_5 | 0.858 | drop zoom (heavy) |
+| knob_9 | 0.189 | v-neck depth (shallow) |
+
+**Audio character at save time:**
+- bassNormalized: 0.136, bassZScore: -0.566 (well below average)
+- energyNormalized: 0.699, energyZScore: +1.171 (huge! Way above average)
+- midsNormalized: 0.232 (scooped!), midsZScore: -0.73 (deeply below, falling — slope -0.0003, r2: 0.134)
+- trebleNormalized: 0.768 (bright!), trebleZScore: +0.766 (well above)
+- spectralCentroidNormalized: 0.672 (bright), centroidZScore: +0.498
+- spectralEntropyNormalized: 0.748, entropyZScore: +0.601 (chaotic, rising — r2: 0.331)
+- spectralRoughnessNormalized: 0.55, roughnessZScore: +0.491 (rising)
+- spectralKurtosisNormalized: 0.645, kurtosisZScore: +0.839 (very peaked — dominant frequency)
+
+**Musical moment:** Peak energy. Energy z-score of +1.171 is the highest in the entire batch — this is the loudest moment captured. But bass is absent (-0.566) and mids are deeply scooped (-0.73 and falling). All the energy is in the treble. High kurtosis (0.839 z-score) means there's a dominant frequency piercing through. Entropy rising at r2: 0.331 — the complexity is building. This reads like a high-frequency lead synth or a sizzling riser — not a bass drop but a treble assault.
+
+Near-identical knobs to golden-wash but the audio is much more extreme. The golden wash silhouette would be trembling with the energy z-score at 1.17.
+
+**URL:**
+```
+?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab&knob_2=0.016&knob_3=0.024&knob_4=0.953&knob_5=0.858&knob_9=0.189
+```
+
+**Notes:** Same golden wash preset but during a peak treble assault. Energy z-score 1.17 — the highest captured. Mids deeply scooped, bass absent, treble blazing. The golden figure would be vibrating from sheer energy. Shows how the same knobs feel completely different at different musical moments.
+
+### full-drop-punch
+_Saved: 2026-04-14 09:39 | Music: (jam session)_
+
+| Knob | Value | What it does |
+|------|-------|-------------|
+| knob_1 | 0.205 | base zoom (slight) |
+| knob_2 | 1.0 | drop hit override (MAXED) |
+| knob_3 | 0.071 | god ray intensity (subtle) |
+| knob_4 | 0.567 | eye wash strength (moderate) |
+| knob_5 | 0.449 | drop zoom (moderate) |
+| knob_9 | 0.189 | v-neck depth (shallow) |
+
+**Audio character at save time:**
+- bassNormalized: 0.339, bassZScore: +0.111 (slightly above, gently falling — r2: 0.125)
+- energyNormalized: 0.317, energyZScore: -0.155 (below average)
+- midsNormalized: 0.46, midsZScore: +0.089 (average)
+- trebleNormalized: 0.554, trebleZScore: -0.089 (average)
+- spectralCentroidNormalized: 0.566 (mid-bright)
+- spectralEntropyNormalized: 0.636 (moderate)
+- spectralRoughnessNormalized: 0.52 (moderate)
+- All slopes small, r2 values low-moderate — no confident trends
+
+**Musical moment:** Surprisingly calm for a full-drop override. Energy is below average, everything is near the middle, no trends. This is either a quiet passage where the user cranked the drop override to see the visual at full blast regardless of audio — or it was dialed in during a transition, deliberately forcing the drop state to see what it looks like independent of the music.
+
+Drop hit maxed at 1.0 — the daddy's eyes are fully lit, the drop effects are at maximum. But with moderate eye wash and subtle god rays, it's the eyes doing the work, not the environment. A controlled burn rather than a full blaze.
+
+**URL:**
+```
+?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab&knob_1=0.205&knob_2=1&knob_3=0.071&knob_4=0.567&knob_5=0.449&knob_9=0.189
+```
+
+**Notes:** Full drop override during a calm passage. The user forced max drop state to explore what it looks like independent of the music. Eyes blazing, moderate wash, subtle rays. A "what does this look like at 11" exploration preset.

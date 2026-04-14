@@ -166,6 +166,19 @@ export function editorSyncPlugin() {
         }
       })
 
+      // Watch controllers/ for hot-reload
+      const controllerWatcher = chokidar.watch('controllers', { ignoreInitial: true })
+      controllerWatcher.on('change', async (filePath) => {
+        if (!filePath.endsWith('.js')) return
+        const name = filePath.replace(/^controllers\//, '').replace(/\.js$/, '')
+        server.ws.send({
+          type: 'custom',
+          event: 'controller-update',
+          data: { controller: name },
+        })
+        console.log(`[editor-sync] Controller changed: ${name}`)
+      })
+
       console.log('[editor-sync] Bidirectional shader sync enabled')
     },
 

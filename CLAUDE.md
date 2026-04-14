@@ -255,6 +255,10 @@ vec3 position = vec3(CIRCLE_RADIUS, 0.1, 0.1);
 5. Center visuals in viewport
 6. Maintain 60fps on mobile
 
+## Controllers (JavaScript Companions to Shaders)
+
+Controllers are JavaScript modules (`controllers/*.js`) that run once per frame with persistent state. They fill gaps GLSL can't: exponential decay, accumulators, state machines, double-precision math. Loaded via `?controller=<name>`. **Default to shader logic** — only use a controller when the shader literally cannot hold the state you need. Controller outputs become shader uniforms (must be explicitly declared with `uniform float`). See [docs/controllers.md](docs/controllers.md) for the full guide.
+
 ## Knob/MIDI Control System
 
 ### Available Knobs
@@ -427,8 +431,12 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   ├── wip/claude/             # Claude-created shaders go here
 │   ├── plasma.frag
 │   └── melted-satin/2.frag
+├── controllers/                 # JS companions to shaders (frame-persistent state)
+│   ├── example.js              # Documented example
+│   └── griz-coat.js            # Drop sustain with exponential decay
 ├── scripts/
 │   └── remap-knobs.js          # Utility to remap knob assignments in shaders
+├── jam.js                       # Jam page UI (knob drawer + spacebar snapshots)
 ├── index.js                     # Main entry point
 ├── edit.js                      # Editor interface
 ├── list.js                      # Shader list/gallery page

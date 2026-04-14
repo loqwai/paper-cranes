@@ -492,4 +492,20 @@ if (import.meta.hot) {
         window.cranes.shader = code
         flashToast('Shader updated')
     })
+
+    // Hot-swap controller without reloading — just replace the function reference.
+    // The animation loop in index.js reads from window._hotController each frame.
+    import.meta.hot.on('controller-update', async ({ controller }) => {
+        const currentController = searchParams.get('controller')
+        if (!currentController || controller !== currentController) return
+        try {
+            const mod = await import(/* @vite-ignore */ `/controllers/${controller}.js?t=${Date.now()}`)
+            const fn = mod.default || mod.make || mod
+            if (typeof fn !== 'function') return
+            window._hotController = fn
+            flashToast(`Controller updated: ${controller}`)
+        } catch (e) {
+            flashToast(`Controller error: ${e.message}`)
+        }
+    })
 }

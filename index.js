@@ -239,29 +239,28 @@ const animateShader = ({ render, audio, fragmentShader }) => {
     }
 }
 
-// Separate animation function for the controller
+// Separate animation function for the controller.
+// Uses window._hotController so jam.js can hot-swap the function without
+// starting a second loop.
 const animateController = (controller) => {
     if (!controller) return
 
+    window._hotController = controller
+    if (window._hotControllerRunning) return
+    window._hotControllerRunning = true
+
     const controllerFrame = () => {
         try {
-            // Get flattened features using the centralized method
-            const features = window.cranes.flattenFeatures()
-
-            // Call controller with flattened features
-            const controllerResult = controller(features) ?? {}
-
-            // Store controller result in controllerFeatures
-            window.cranes.controllerFeatures = controllerResult
+            if (window._hotController) {
+                const features = window.cranes.flattenFeatures()
+                window.cranes.controllerFeatures = window._hotController(features) ?? {}
+            }
         } catch (e) {
             console.error('Controller error:', e)
         }
-
-        // Schedule next frame
         requestAnimationFrame(controllerFrame)
     }
 
-    // Start controller animation loop
     requestAnimationFrame(controllerFrame)
 }
 

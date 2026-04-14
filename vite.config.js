@@ -24,7 +24,7 @@ export default defineConfig({
       // Ignore files that our plugins regenerate on .frag changes.
       // Without this, Vite sees these writes and triggers a full page reload.
       // The plugins handle updates via custom HMR events instead.
-      ignored: ['**/shaders.json', '**/manifests/**', '**/shaders/**'],
+      ignored: ['**/shaders.json', '**/manifests/**', '**/shaders/**', '**/controllers/**'],
     },
   },
   build: {
