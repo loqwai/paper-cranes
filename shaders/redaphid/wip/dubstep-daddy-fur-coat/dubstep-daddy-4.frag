@@ -1,8 +1,7 @@
 // @fullscreen: true
 // @mobile: true
-// dubstep-daddy-2: baked from live jam session preset
-// Knob defaults captured: knob_2=-0.346, knob_7=0.98, knob_12=0.669, knob_15=0.46
-// Use with controller=dubstep-daddy for sustained drop glow
+// dubstep-daddy-4: slow burn variant — cool palette, wide shot, breathing motion
+// Forked from dubstep-daddy-3
 uniform float drop_glow; // from dubstep-daddy controller — sustained drop with decay
 #define PI 3.14159265
 
@@ -20,9 +19,9 @@ uniform float drop_glow; // from dubstep-daddy controller — sustained drop wit
 // ============================================================================
 
 // --- ZOOM ---
-// Baked from knob_2=-0.346 session value
-// knob_2: 0=wide, 1=tight
-#define BASE_ZOOM (mix(0.3, 2.5, knob_2) + energyNormalized * 0.4)
+// Pulled way back — the figure is small and alone
+// knob_2: 0=lonely wide, 1=intimate closeup
+#define BASE_ZOOM (mix(0.15, 2.0, knob_2) + energyNormalized * 0.15)
 
 // --- COAT SHAPE ---
 #define SHOULDER_Y      (-0.02 + max(bassZScore, 0.0) * 0.015)
@@ -39,14 +38,14 @@ uniform float drop_glow; // from dubstep-daddy controller — sustained drop wit
 #define VNECK_BOTTOM    (-0.013 - clamp(energyZScore, 0.0, 1.0) * 0.03)
 
 // --- MOTION ---
-// Heavy pump from bass — body bounces with the kick drum
-#define PUMP (bassNormalized * 0.6 + clamp(bassSlope * bassRSquared, 0.0, 0.5) * 3.0)
-#define BEAT_PHASE (time * 2.2)
-// Treble drives snap gestures — hi-hats make hands twitch
-#define SNAP (clamp(trebleZScore, 0.0, 1.5))
-#define HIP_SWAY (sin(time * 1.1))
-// Mids drive groove — melodic content makes the body sway
-#define GROOVE (midsNormalized * 0.8 + spectralCentroidNormalized * 0.2)
+// Slower, heavier — breathing not bouncing
+#define PUMP (bassNormalized * 0.3 + clamp(bassSlope * bassRSquared, 0.0, 0.3) * 1.5)
+#define BEAT_PHASE (time * 1.4)
+// Barely any snap — still, contemplative
+#define SNAP (clamp(trebleZScore, 0.0, 0.5) * 0.3)
+#define HIP_SWAY (sin(time * 0.6) * 0.5)
+// Gentle sway — swaying alone
+#define GROOVE (midsNormalized * 0.4 + spectralCentroidNormalized * 0.1)
 
 // --- DROP DETECTION ---
 // Confident energy build = drop approaching
@@ -56,20 +55,20 @@ uniform float drop_glow; // from dubstep-daddy controller — sustained drop wit
 #define SUSTAIN_GAIN 1.2
 
 // --- DROP VISUALS ---
-// Drop zoom punches in hard — learned from wooli-drop preset (knob_5=0.764)
-#define DROP_ZOOM 0.9
-// God rays — quiet below average energy, bloom above it
-#define GODRAY_INTENSITY (clamp(energyZScore, 0.0, 1.5) * 2.5 + clamp(trebleZScore, 0.0, 1.0) * 1.0)
-// Eye wash — kicks in above-average energy, scales up from there
-#define EYE_WASH_STRENGTH (clamp(energyZScore, 0.0, 1.0) * 0.5 + clamp(bassZScore, 0.0, 1.0) * 0.2)
-// Continuous zoom breathes with intensity
-#define INTENSITY_ZOOM (energyNormalized * 0.3)
+// Gentle zoom — not punchy, more like a slow inhale
+#define DROP_ZOOM 0.3
+// God rays dim — embers, not fire
+#define GODRAY_INTENSITY (clamp(energyZScore, 0.0, 1.0) * 1.0)
+// Eye wash barely there — a faint warm glow, not a blaze
+#define EYE_WASH_STRENGTH (clamp(energyZScore, 0.0, 1.0) * 0.2)
+// Breathing zoom — slow, like sighing
+#define INTENSITY_ZOOM (energyNormalized * 0.12)
 
 // --- COLOR ---
-// Base hue shifts with pitch class — different notes = different colors
-#define HUE_BASE (0.78 + pitchClassNormalized * 0.15)
-// Drop shifts toward hot orange/yellow
-#define HUE_DROP (0.08 + spectralCentroidNormalized * 0.1)
+// Cooler palette — blue-violet instead of pink, shifts toward cold white on drops
+#define HUE_BASE (0.65 + pitchClassNormalized * 0.1)
+// Drops shift toward pale lavender, not hot orange
+#define HUE_DROP (0.72 + spectralCentroidNormalized * 0.05)
 
 // --- COAT SURFACE (the star of the show) ---
 // Fluff bristles up — knob_9 makes the outline go wild

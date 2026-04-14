@@ -1,0 +1,113 @@
+{
+  "timestamp": "2026-04-14T09:38:54.577Z",
+  "shader": "redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive",
+  "name": null,
+  "knobs": {
+    "knob_2": 0.016,
+    "knob_5": 0.858,
+    "knob_5.min": 0,
+    "knob_5.max": 1,
+    "knob_4": 0.945,
+    "knob_4.min": 0,
+    "knob_4.max": 1,
+    "knob_3": 0.024,
+    "knob_3.min": 0,
+    "knob_3.max": 1,
+    "knob_1": 0,
+    "knob_1.min": 0,
+    "knob_1.max": 1,
+    "knob_2.min": 0,
+    "knob_2.max": 1,
+    "knob_9": 0.189,
+    "knob_9.min": 0,
+    "knob_9.max": 1
+  },
+  "audio": {
+    "bass": {
+      "normalized": 0.984,
+      "zScore": 3.196,
+      "slope": 0.0001,
+      "rSquared": 0.13
+    },
+    "energy": {
+      "normalized": 0.345,
+      "zScore": 0.009,
+      "slope": 0,
+      "rSquared": 0.4
+    },
+    "mids": {
+      "normalized": 0.642,
+      "zScore": 0.109,
+      "slope": -0.0006,
+      "rSquared": 0.125
+    },
+    "treble": {
+      "normalized": 0.152,
+      "zScore": -0.445,
+      "slope": 0.0008,
+      "rSquared": 0.234
+    },
+    "spectralCentroid": {
+      "normalized": 0.363,
+      "zScore": -0.429,
+      "slope": 0.0003,
+      "rSquared": 0.287
+    },
+    "spectralFlux": {
+      "normalized": 0.121,
+      "zScore": -0.231,
+      "slope": 0,
+      "rSquared": 0.217
+    },
+    "spectralEntropy": {
+      "normalized": 0.852,
+      "zScore": 0.108,
+      "slope": 0.0007,
+      "rSquared": 0.206
+    },
+    "spectralRoughness": {
+      "normalized": 0.49,
+      "zScore": -0.084,
+      "slope": 0.0001,
+      "rSquared": 0.398
+    },
+    "spectralKurtosis": {
+      "normalized": 0.004,
+      "zScore": -0.245,
+      "slope": -0.0005,
+      "rSquared": 0.174
+    },
+    "spectralSpread": {
+      "normalized": 0.434,
+      "zScore": -0.206,
+      "slope": 0.0003,
+      "rSquared": 0.332
+    },
+    "spectralCrest": {
+      "normalized": 0.012,
+      "zScore": -0.071,
+      "slope": -0.0156,
+      "rSquared": 0.035
+    },
+    "spectralRolloff": {
+      "normalized": 0.374,
+      "zScore": -0.311,
+      "slope": 0.0003,
+      "rSquared": 0.281
+    },
+    "spectralSkew": {
+      "normalized": 0.121,
+      "zScore": -0.004,
+      "slope": -0.0001,
+      "rSquared": 0.114
+    },
+    "pitchClass": {
+      "normalized": 0.455,
+      "zScore": -0.212,
+      "slope": 0.0005,
+      "rSquared": 0.086
+    }
+  },
+  "musicTab": "Paper Cranes - dubstep daddy fur coat reactive [jam]",
+  "userNote": null
+}
