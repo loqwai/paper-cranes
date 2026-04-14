@@ -739,6 +739,14 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 5. **Hardcoded resolution**: Always use `iResolution`, never hardcode 1920x1080
 6. **Metadata before #version**: If your shader has `#version 300 es`, it MUST be the first line. Put metadata comments (`// @fullscreen: true`) on line 2, not line 1. Shaders without `#version` (ShaderToy-style) can have metadata on line 1.
 
+## Claude Code Skills
+
+| Skill | Purpose |
+|-------|---------|
+| `/solo` | Toggle a shader between knob mode and audio mode. Auto-detects current mode and switches. Use `/solo knobs` or `/solo audio` to force a mode. Defaults to the modified `.frag` in the worktree. |
+| `/changelog` | Update docs/CHANGELOG.md and README with recent features. |
+| `/pr` | Create a PR, request review, and open in browser. |
+
 ## Misc Notes
 - Use far less time when running sleep than you ordinarily would; if it were 5 seconds, do 1 instead.
 - When creating a PR or pushing to one, consider whether the changes include features a user would be excited about. If so, ask the user if they'd like you to run `/changelog` to update the docs.

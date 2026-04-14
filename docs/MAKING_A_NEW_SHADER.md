@@ -1047,6 +1047,25 @@ await page.screenshot({ path: 'state-high.png' });
 | `knob_70-79` | Secondary/fine-tune parameters |
 | `knob_14-22` | MIDI controller banks |
 
+### `/solo` — Automated Knob/Audio Toggle
+
+The `/solo` Claude Code skill automates the knob swap pattern. It can:
+
+- **Knobify a shader** (`/solo knobs <path>`) — extract all tunable parameters into `#define`s with `knob_*` uniforms, add commented-out audio alternatives, refactor any bare `knob_*` references into named `#define`s, and generate a preset URL.
+- **Switch to audio mode** (`/solo audio <path>`) — swap every `#define` pair so the audio-reactive line is active and the knob line is commented out.
+- **Auto-toggle** (`/solo` or `/solo <path>`) — detect the shader's current mode and switch to the other one. If it's in knob mode, switch to audio; if in audio mode, switch to knobs. If the shader hasn't been knobified yet, knobify it.
+
+The skill defaults to the first `.frag` file modified in the git worktree, so you can often just run `/solo` with no arguments.
+
+**The pattern `/solo` produces:**
+```glsl
+// Shoulder shrug: 0=relaxed, 1=shrugged up
+#define SHOULDER_Y      (-0.02 + knob_1 * 0.015)
+// #define SHOULDER_Y      (-0.02 + max(bassZScore, 0.0) * 0.015)
+```
+
+This is a flat comment-swap pattern (no `#ifdef`). Each `#define` has exactly one knob line and one audio line — toggle by commenting/uncommenting. The `/solo` skill does this swap for every pair in the shader at once.
+
 ---
 
 ## Creating ChromaDepth Versions of Existing Shaders
