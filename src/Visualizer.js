@@ -68,6 +68,10 @@ const handleShaderError = (gl, wrappedFragmentShader, newFragmentShader) => {
 }
 
 const calculateResolutionRatio = (frameTime, renderTimes, lastResolutionRatio) => {
+    // Ignore frame times from background/throttled tabs — they're artificially
+    // long and cause resolution downscaling that clears the canvas on return.
+    if (frameTime > 200) return lastResolutionRatio
+
     renderTimes.push(frameTime)
     if (renderTimes.length > 20) renderTimes.shift()
     if(renderTimes.length < 20) return lastResolutionRatio

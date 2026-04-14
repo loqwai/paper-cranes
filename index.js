@@ -379,47 +379,6 @@ const main = async () => {
     // Initialize visualizer and start shader animation loop
     const render = await makeVisualizer(visualizerConfig)
 
-    // WKWebView (Plash/macOS Spaces) composites the page before firing visibilitychange visible,
-    // so rendering in the handler is too late — the black frame already appeared.
-    // Fix: capture a snapshot of the last rendered frame before hiding and show it as a DOM
-    // overlay. Regular DOM elements are not cleared by WKWebView during Space transitions.
-    let snapDiv = null
-    let snapRemovalRaf = null
-
-    document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-            // Cancel any pending removal so snapshot stays up through rapid hide/show cycles
-            if (snapRemovalRaf) { cancelAnimationFrame(snapRemovalRaf); snapRemovalRaf = null }
-            try {
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.92)
-                const rect = canvas.getBoundingClientRect()
-                if (!snapDiv) {
-                    snapDiv = document.createElement('div')
-                    snapDiv.style.cssText = 'position: fixed; z-index: 9999; pointer-events: none; background-repeat: no-repeat; background-size: 100% 100%;'
-                    document.body.appendChild(snapDiv)
-                }
-                snapDiv.style.left = `${rect.left}px`
-                snapDiv.style.top = `${rect.top}px`
-                snapDiv.style.width = `${rect.width}px`
-                snapDiv.style.height = `${rect.height}px`
-                snapDiv.style.backgroundImage = `url(${dataUrl})`
-                snapDiv.style.display = 'block'
-            } catch (e) {
-                console.error('snapshot failed:', e.message)
-            }
-            return
-        }
-        // Visible again: render immediately, then remove snapshot after 2 compositor frames
-        const features = window.cranes?.flattenFeatures?.() ?? {}
-        render({ time: ((performance.now() - startTime) / 1000) % 1000, features, fragmentShader: window.cranes?.shader ?? fragmentShader })
-        snapRemovalRaf = requestAnimationFrame(() => {
-            snapRemovalRaf = requestAnimationFrame(() => {
-                if (snapDiv) { snapDiv.style.display = 'none' }
-                snapRemovalRaf = null
-            })
-        })
-    })
-
     requestAnimationFrame(() => animateShader({ render, audio, fragmentShader }))
 }
 
