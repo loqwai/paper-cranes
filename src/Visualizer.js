@@ -84,7 +84,7 @@ const calculateResolutionRatio = (frameTime, renderTimes, lastResolutionRatio) =
     return lastResolutionRatio
 }
 
-const askForWakeLock = async () => {
+export const askForWakeLock = async () => {
     if(!navigator.wakeLock) return
     return navigator.wakeLock.request('screen')
 }

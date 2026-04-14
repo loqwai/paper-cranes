@@ -1,6 +1,6 @@
 import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { createAudioFileSource, initAudioFromFile } from './src/audio/audioFileSource.js'
-import { makeVisualizer } from './src/Visualizer.js'
+import { makeVisualizer, askForWakeLock } from './src/Visualizer.js'
 import { getInitialShader } from './src/shaderLoader.js'
 
 
@@ -313,6 +313,7 @@ const addListenersForFullscreen = (visualizer) => {
             } catch (e) {
                 console.error(`requesting fullscreen from event ${event} failed`, e);
             }
+            askForWakeLock().catch(e => console.warn('Wake lock failed after user gesture:', e))
         }, { once: true });
     }
 }
