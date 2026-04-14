@@ -17,8 +17,17 @@
 // Each knob is 0-1. Uncomment audio lines to switch back to audio-reactive.
 // Test: ?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&noaudio=true&knob_1=0&knob_2=0.3&knob_3=0&knob_4=0.4&knob_5=0.3&knob_6=0.3&knob_7=0&knob_8=0&knob_9=0&knob_10=0.3&knob_11=0&knob_12=0.3&knob_13=0&knob_14=0.44&knob_15=0.5&knob_16=0.4&knob_17=0.5&knob_18=0.5&knob_19=0.42&knob_20=0.78&knob_21=0.13&knob_22=0&knob_23=0&knob_24=0&knob_25=0.3&knob_26=0&knob_27=0.3&knob_28=0
 //
+// --- ZOOM ---
+// knob_1: base zoom (0=normal, 1=zoomed in tight)
+//
+// --- DROP EXPLORER ---
+// knob_2: drop hit override (0=idle, 1=full drop)
+// knob_3: god ray intensity (0=none, 1=blinding)
+// knob_4: eye wash strength (0=none, 1=full yellow wash)
+// knob_5: drop zoom (0=none, 1=heavy zoom)
+//
 // --- COAT SHAPE ---
-// knob_1: shoulder shrug amount (0=relaxed, 1=shrugged up)
+// knob_6: shoulder spread / coat width (0=narrow, 1=wide)
 // knob_2: shoulder spread / coat width (0=narrow, 1=wide)
 // knob_3: sleeve flare (0=tight, 1=flared)
 // knob_4: shoulder cap radius (0=small, 1=large)
@@ -58,10 +67,14 @@
 // knob_28: rim boost (0=subtle, 1=blazing)
 // ============================================================================
 
+// --- ZOOM ---
+
+// Base zoom: 0=normal view, 1=zoomed in tight
+#define BASE_ZOOM mapValue(knob_1, 0., 1., 1.0, 2.5)
+
 // --- COAT SHAPE ---
 
 // Shoulder shrug: 0=relaxed, 1=shrugged up
-// #define SHOULDER_Y      (-0.02 + knob_1 * 0.015)
 #define SHOULDER_Y      (-0.02 + max(bassZScore, 0.0) * 0.015)
 
 // Coat width: 0=narrow, 1=wide
@@ -133,16 +146,16 @@
 // --- DROP VISUALS ---
 
 // Drop zoom: 0=none, 1=heavy
-// #define DROP_ZOOM mapValue(knob_16, 0., 1., 0.5, 1.5)
-#define DROP_ZOOM 0.9
+#define DROP_ZOOM mapValue(knob_5, 0., 1., 0.0, 1.5)
+// #define DROP_ZOOM 0.9
 
 // God ray intensity: 0=none, 1=blinding
-// #define GODRAY_INTENSITY mapValue(knob_17, 0., 1., 1.0, 4.0)
-#define GODRAY_INTENSITY 2.5
+#define GODRAY_INTENSITY mapValue(knob_3, 0., 1., 0.0, 5.0)
+// #define GODRAY_INTENSITY 2.5
 
-// Eye wash strength: 0=none, 1=full
-// #define EYE_WASH_STRENGTH (knob_18 * 0.8)
-#define EYE_WASH_STRENGTH 0.4
+// Eye wash strength: 0=none, 1=full yellow wash
+#define EYE_WASH_STRENGTH mapValue(knob_4, 0., 1., 0.0, 0.8)
+// #define EYE_WASH_STRENGTH 0.4
 
 // Continuous intensity zoom: 0=none, 1=heavy
 // #define INTENSITY_ZOOM (knob_19 * 0.6)
@@ -457,13 +470,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float sustain = BUILD * SUSTAIN_GAIN;
     float drop_hit = clamp(max(drop_spike, max(IS_DROP, sustain)), 0.0, 1.0);
     drop_hit = smoothstep(0.15, 0.5, drop_hit);
+    // knob_2 override — crank drop_hit directly for exploring drop space
+    drop_hit = max(drop_hit, knob_2);
 
     float intensity = max(PUMP, GROOVE);
     // Cubic ease-in: crushes twitchy low-end values, lets big moments punch through.
     // smoothstep(0.2, 0.9) maps to 0-1, then cube kills anything below ~0.5
     float zoom_intensity = smoothstep(0.2, 0.9, intensity);
     zoom_intensity = zoom_intensity * zoom_intensity * zoom_intensity;
-    float zoomAmount = 1.0 + zoom_intensity * INTENSITY_ZOOM + drop_hit * DROP_ZOOM;
+    float zoomAmount = BASE_ZOOM + zoom_intensity * INTENSITY_ZOOM + drop_hit * DROP_ZOOM;
     vec2 zoomCenter = P.head_c;
     uv = (uv - zoomCenter) / zoomAmount + zoomCenter;
 
