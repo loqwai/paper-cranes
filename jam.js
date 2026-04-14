@@ -487,7 +487,7 @@ import('./src/midi.js')
 // Hot-swap shader code without reloading (preserves tab audio permissions)
 if (import.meta.hot) {
     import.meta.hot.on('shader-update', ({ shader, code }) => {
-        const currentShader = searchParams.get('shader')
+        const currentShader = new URLSearchParams(window.location.search).get('shader')
         if (!currentShader || shader !== currentShader) return
         window.cranes.shader = code
         flashToast('Shader updated')
@@ -496,7 +496,7 @@ if (import.meta.hot) {
     // Hot-swap controller without reloading — just replace the function reference.
     // The animation loop in index.js reads from window._hotController each frame.
     import.meta.hot.on('controller-update', async ({ controller }) => {
-        const currentController = searchParams.get('controller')
+        const currentController = new URLSearchParams(window.location.search).get('controller')
         if (!currentController || controller !== currentController) return
         try {
             const mod = await import(/* @vite-ignore */ `/controllers/${controller}.js?t=${Date.now()}`)

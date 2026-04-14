@@ -1,4 +1,4 @@
-# griz-coat — Fully Audio-Reactive Dubstep Daddy
+# dubstep-daddy-2 — Fully Audio-Reactive Dubstep Daddy
 
 ## Origin
 

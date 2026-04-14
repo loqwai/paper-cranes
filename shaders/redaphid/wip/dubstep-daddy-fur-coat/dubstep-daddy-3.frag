@@ -1,23 +1,28 @@
 // @fullscreen: true
 // @mobile: true
-// griz-coat: fully audio-reactive dubstep daddy, no knobs needed
-// Personality baked from preset sessions: living-coat texture, golden-wash warmth,
-// ray-bloom buildups, wooli-drop spectacle
-uniform float drop_glow; // from griz-coat controller — sustained drop with decay
+// dubstep-daddy-2: baked from live jam session preset
+// Knob defaults captured: knob_2=-0.346, knob_7=0.98, knob_12=0.669, knob_15=0.46
+// Use with controller=dubstep-daddy for sustained drop glow
+uniform float drop_glow; // from dubstep-daddy controller — sustained drop with decay
 #define PI 3.14159265
 
 #define DEBUG_OUTLINES 0
 
 // ============================================================================
-// FULLY AUDIO-REACTIVE — no knobs, the music drives everything
-// Learned from preset sessions: the coat texture is the star during complex
-// passages, eyes + rays blaze on drops, golden wash on sustained energy,
-// body breathes with bass
+// KNOB CONTROLS — knobs override baked defaults from the jam session
+// knob_2: zoom (0=wide, 1=tight)
+// knob_3: god ray intensity override
+// knob_4: eye wash override
+// knob_5: drop zoom override
+// knob_6: camera tilt swagger
+// knob_7: fur thickness
+// knob_13: sustain decay (via controller)
 // ============================================================================
 
 // --- ZOOM ---
-// Zoom responds to energy: quiet = wide shot, loud = tighter
-#define BASE_ZOOM (1.0 + energyNormalized * 0.4)
+// Baked from knob_2=-0.346 session value
+// knob_2: 0=wide, 1=tight
+#define BASE_ZOOM (mix(0.3, 2.5, knob_2) + energyNormalized * 0.4)
 
 // --- COAT SHAPE ---
 #define SHOULDER_Y      (-0.02 + max(bassZScore, 0.0) * 0.015)
@@ -563,7 +568,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     fb_uv.y -= 0.002 + pump * 0.003;
     vec3 prev = getLastFrameColor(fb_uv).rgb * 0.88;
     float silhouette = max(body, coat);
-    float feedback_amt = mix(0.45, 0.15, silhouette);
+    // knob_9: feedback/trails (0=crisp, 1=heavy smear)
+    float feedback_amt = mix(mix(0.45, 0.05, knob_9), mix(0.15, 0.03, knob_9), silhouette);
     if (beat) feedback_amt *= 0.6;
     if (frame < 30) feedback_amt = 0.0;
     col = mix(prev, col, feedback_amt);

@@ -1,4 +1,4 @@
-// griz-coat controller — sustained drop glow with exponential decay
+// dubstep-daddy controller — sustained drop glow with exponential decay
 // Outputs drop_glow: raw sustained value for the shader to shape
 // knob_13 controls decay rate but is read in the controller because
 // frame-to-frame state requires JS
@@ -15,5 +15,5 @@ export default (features) => {
 
   if (dropGlow < 0.01) dropGlow = 0
 
-  return { drop_glow: 1.0 }
+  return { drop_glow: dropGlow }
 }
