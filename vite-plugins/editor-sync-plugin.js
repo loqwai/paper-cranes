@@ -1,5 +1,5 @@
-import { readFile, writeFile } from 'fs/promises'
-import { join } from 'path'
+import { readFile, writeFile, mkdir, readdir, unlink } from 'fs/promises'
+import { join, dirname } from 'path'
 import chokidar from 'chokidar'
 
 const SHADER_DIR = 'shaders'
@@ -44,6 +44,97 @@ export function editorSyncPlugin() {
         })
       })
 
+      // Snapshot preset endpoint — captures knob + audio state to a JSON file
+      // for Claude to process later with full musical interpretation
+      server.middlewares.use(async (req, res, next) => {
+        if (req.method !== 'POST' || req.url !== '/__snapshot-preset') return next()
+
+        let body = ''
+        req.on('data', (chunk) => { body += chunk })
+        req.on('end', async () => {
+          try {
+            const data = JSON.parse(body)
+            const { shader, knobs, audio, name } = data
+            if (!shader) {
+              res.writeHead(400, { 'Content-Type': 'application/json' })
+              return res.end(JSON.stringify({ error: 'Missing shader' }))
+            }
+
+            const normalized = shader.replace(/\.\./g, '').replace(/^\//, '')
+            const snapshotDir = join(SHADER_DIR, normalized, 'docs', '.snapshots')
+            await mkdir(snapshotDir, { recursive: true })
+
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+            const filename = name
+              ? `${timestamp}--${name.replace(/[^a-z0-9-]/gi, '-').toLowerCase()}.json`
+              : `${timestamp}.json`
+            const filePath = join(snapshotDir, filename)
+
+            const snapshot = {
+              timestamp: new Date().toISOString(),
+              shader: normalized,
+              name: name || null,
+              knobs: knobs || {},
+              audio: audio || {},
+              musicTab: data.musicTab || null,
+              userNote: data.userNote || null,
+            }
+
+            await writeFile(filePath, JSON.stringify(snapshot, null, 2), 'utf-8')
+            console.log(`[editor-sync] Preset snapshot saved: ${filePath}`)
+
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ ok: true, path: filePath }))
+          } catch (e) {
+            console.error('[editor-sync] Snapshot failed:', e.message)
+            res.writeHead(500, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ error: e.message }))
+          }
+        })
+      })
+
+      // Undo last snapshot — deletes the most recent .json from the snapshot dir
+      server.middlewares.use(async (req, res, next) => {
+        if (req.method !== 'DELETE' || req.url !== '/__snapshot-preset') return next()
+
+        let body = ''
+        req.on('data', (chunk) => { body += chunk })
+        req.on('end', async () => {
+          try {
+            const data = JSON.parse(body)
+            const { shader } = data
+            if (!shader) {
+              res.writeHead(400, { 'Content-Type': 'application/json' })
+              return res.end(JSON.stringify({ error: 'Missing shader' }))
+            }
+
+            const normalized = shader.replace(/\.\./g, '').replace(/^\//, '')
+            const snapshotDir = join(SHADER_DIR, normalized, 'docs', '.snapshots')
+
+            const files = (await readdir(snapshotDir).catch(() => []))
+              .filter(f => f.endsWith('.json'))
+              .sort()
+
+            if (files.length === 0) {
+              res.writeHead(404, { 'Content-Type': 'application/json' })
+              return res.end(JSON.stringify({ error: 'No snapshots to delete' }))
+            }
+
+            const lastFile = files[files.length - 1]
+            const filePath = join(snapshotDir, lastFile)
+            await unlink(filePath)
+            console.log(`[editor-sync] Snapshot deleted: ${filePath}`)
+
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ ok: true, deleted: lastFile, remaining: files.length - 1 }))
+          } catch (e) {
+            console.error('[editor-sync] Snapshot delete failed:', e.message)
+            res.writeHead(500, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ error: e.message }))
+          }
+        })
+      })
+
       // Use our own chokidar watcher instead of server.watcher, because
       // .frag files are ignored by Vite's watcher to prevent full-page reloads.
       watcher = chokidar.watch(SHADER_DIR, { ignoreInitial: true })
@@ -73,6 +164,19 @@ export function editorSyncPlugin() {
         } catch (e) {
           console.error(`[editor-sync] Failed to read ${filePath}:`, e.message)
         }
+      })
+
+      // Watch controllers/ for hot-reload
+      const controllerWatcher = chokidar.watch('controllers', { ignoreInitial: true })
+      controllerWatcher.on('change', async (filePath) => {
+        if (!filePath.endsWith('.js')) return
+        const name = filePath.replace(/^controllers\//, '').replace(/\.js$/, '')
+        server.ws.send({
+          type: 'custom',
+          event: 'controller-update',
+          data: { controller: name },
+        })
+        console.log(`[editor-sync] Controller changed: ${name}`)
       })
 
       console.log('[editor-sync] Bidirectional shader sync enabled')

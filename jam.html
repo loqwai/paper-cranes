@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <link rel="stylesheet" href="jam.css" />
+    <title>Paper Cranes - Jam</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <script>
+    // PWA manifest injection (same as index.html)
+    (function() {
+      var shader = new URLSearchParams(window.location.search).get('shader')
+      var safe = shader ? shader.replace(/\//g, '--') : 'default'
+      var link = document.createElement('link')
+      link.rel = 'manifest'
+      link.href = '/manifests/' + safe + '.json'
+      document.head.appendChild(link)
+      fetch('/manifests/' + safe + '.json').then(function(r) { return r.json() }).then(function(manifest) {
+        var origin = window.location.origin
+        manifest.start_url = origin + window.location.pathname + window.location.search
+        manifest.icons = manifest.icons.map(function(icon) {
+          icon.src = origin + icon.src
+          return icon
+        })
+        link.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/json' }))
+      })
+      if (shader) {
+        var parts = shader.split('/')
+        var last = parts[parts.length - 1]
+        var displayName = last
+        if (parts.length > 1 && (/^\d+$/.test(last) || last.length <= 2)) {
+          displayName = parts[parts.length - 2] + ' ' + last
+        }
+        document.title = 'Paper Cranes - ' + displayName.replace(/[-_]/g, ' ').replace(/\b\w/g, function(c) { return c.toLowerCase() }) + ' [jam]'
+      }
+    })()
+    </script>
+    <script type="module" src="./src/worker-communication.js"></script>
+</head>
+
+<body class="ready">
+    <div id="feature-editor-root"></div>
+    <canvas id="visualizer" width="2160" height="1920"></canvas>
+    <script type="module" src="./index.js"></script>
+    <script type="module" src="./jam.js"></script>
+</body>
+
+</html>

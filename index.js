@@ -1,6 +1,6 @@
 import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { createAudioFileSource, initAudioFromFile } from './src/audio/audioFileSource.js'
-import { makeVisualizer } from './src/Visualizer.js'
+import { makeVisualizer, askForWakeLock } from './src/Visualizer.js'
 import { getInitialShader } from './src/shaderLoader.js'
 
 
@@ -206,7 +206,11 @@ const setupCranesState = () => {
         messageParams: {},          // Message parameters (highest precedence)
         frameCount: 0,
         // Centralized feature flattening function with proper order of precedence
-        flattenFeatures: getCranesState
+        flattenFeatures: getCranesState,
+        // Used by src/midi.js to set knob values
+        updateFeature: (name, value) => {
+            window.cranes.manualFeatures[name] = value
+        },
     }
 
     window.c = window.cranes
@@ -235,29 +239,28 @@ const animateShader = ({ render, audio, fragmentShader }) => {
     }
 }
 
-// Separate animation function for the controller
+// Separate animation function for the controller.
+// Uses window._hotController so jam.js can hot-swap the function without
+// starting a second loop.
 const animateController = (controller) => {
     if (!controller) return
 
+    window._hotController = controller
+    if (window._hotControllerRunning) return
+    window._hotControllerRunning = true
+
     const controllerFrame = () => {
         try {
-            // Get flattened features using the centralized method
-            const features = window.cranes.flattenFeatures()
-
-            // Call controller with flattened features
-            const controllerResult = controller(features) ?? {}
-
-            // Store controller result in controllerFeatures
-            window.cranes.controllerFeatures = controllerResult
+            if (window._hotController) {
+                const features = window.cranes.flattenFeatures()
+                window.cranes.controllerFeatures = window._hotController(features) ?? {}
+            }
         } catch (e) {
             console.error('Controller error:', e)
         }
-
-        // Schedule next frame
         requestAnimationFrame(controllerFrame)
     }
 
-    // Start controller animation loop
     requestAnimationFrame(controllerFrame)
 }
 
@@ -313,6 +316,7 @@ const addListenersForFullscreen = (visualizer) => {
             } catch (e) {
                 console.error(`requesting fullscreen from event ${event} failed`, e);
             }
+            askForWakeLock().catch(e => console.warn('Wake lock failed after user gesture:', e))
         }, { once: true });
     }
 }
@@ -324,6 +328,9 @@ const main = async () => {
     // Initialize global state
     setupCranesState()
     startTime = performance.now()
+
+    // Lazy-load MIDI support when opted in via ?midi=true
+    if (params.get('midi') === 'true') import('./src/midi.js')
 
     // Initialize remote display mode if ?remote=display
     if (params.get('remote') === 'display') {
@@ -379,47 +386,6 @@ const main = async () => {
     // Initialize visualizer and start shader animation loop
     const render = await makeVisualizer(visualizerConfig)
 
-    // WKWebView (Plash/macOS Spaces) composites the page before firing visibilitychange visible,
-    // so rendering in the handler is too late — the black frame already appeared.
-    // Fix: capture a snapshot of the last rendered frame before hiding and show it as a DOM
-    // overlay. Regular DOM elements are not cleared by WKWebView during Space transitions.
-    let snapDiv = null
-    let snapRemovalRaf = null
-
-    document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-            // Cancel any pending removal so snapshot stays up through rapid hide/show cycles
-            if (snapRemovalRaf) { cancelAnimationFrame(snapRemovalRaf); snapRemovalRaf = null }
-            try {
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.92)
-                const rect = canvas.getBoundingClientRect()
-                if (!snapDiv) {
-                    snapDiv = document.createElement('div')
-                    snapDiv.style.cssText = 'position: fixed; z-index: 9999; pointer-events: none; background-repeat: no-repeat; background-size: 100% 100%;'
-                    document.body.appendChild(snapDiv)
-                }
-                snapDiv.style.left = `${rect.left}px`
-                snapDiv.style.top = `${rect.top}px`
-                snapDiv.style.width = `${rect.width}px`
-                snapDiv.style.height = `${rect.height}px`
-                snapDiv.style.backgroundImage = `url(${dataUrl})`
-                snapDiv.style.display = 'block'
-            } catch (e) {
-                console.error('snapshot failed:', e.message)
-            }
-            return
-        }
-        // Visible again: render immediately, then remove snapshot after 2 compositor frames
-        const features = window.cranes?.flattenFeatures?.() ?? {}
-        render({ time: ((performance.now() - startTime) / 1000) % 1000, features, fragmentShader: window.cranes?.shader ?? fragmentShader })
-        snapRemovalRaf = requestAnimationFrame(() => {
-            snapRemovalRaf = requestAnimationFrame(() => {
-                if (snapDiv) { snapDiv.style.display = 'none' }
-                snapRemovalRaf = null
-            })
-        })
-    })
-
     requestAnimationFrame(() => animateShader({ render, audio, fragmentShader }))
 }
 
@@ -430,6 +396,7 @@ main()
 if (import.meta.hot) {
     import.meta.hot.on('shaders-changed', () => {
         if (window.location.pathname.includes('edit')) return
+        if (window.location.pathname.includes('jam')) return
         location.reload()
     })
 }

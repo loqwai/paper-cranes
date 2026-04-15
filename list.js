@@ -574,7 +574,7 @@ const List = () => {
     setFilterText(value)
   }
 
-  const filteredPaths = showWip ? ['knobs', 'static'] : ['wip', 'knobs', 'static']
+  const filteredPaths = showWip ? [] : ['wip']
   let filteredShaders = shaders.filter(shader => !filteredPaths.some(path => shader.name.includes(path)))
 
   // Filter to fullscreen-compatible shaders (hide explicitly marked as false)

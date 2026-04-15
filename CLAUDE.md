@@ -255,6 +255,10 @@ vec3 position = vec3(CIRCLE_RADIUS, 0.1, 0.1);
 5. Center visuals in viewport
 6. Maintain 60fps on mobile
 
+## Controllers (JavaScript Companions to Shaders)
+
+Controllers are JavaScript modules (`controllers/*.js`) that run once per frame with persistent state. They fill gaps GLSL can't: exponential decay, accumulators, state machines, double-precision math. Loaded via `?controller=<name>`. **Default to shader logic** — only use a controller when the shader literally cannot hold the state you need. Controller outputs become shader uniforms (must be explicitly declared with `uniform float`). See [docs/controllers.md](docs/controllers.md) for the full guide.
+
 ## Knob/MIDI Control System
 
 ### Available Knobs
@@ -427,8 +431,12 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   ├── wip/claude/             # Claude-created shaders go here
 │   ├── plasma.frag
 │   └── melted-satin/2.frag
+├── controllers/                 # JS companions to shaders (frame-persistent state)
+│   ├── example.js              # Documented example
+│   └── griz-coat.js            # Drop sustain with exponential decay
 ├── scripts/
 │   └── remap-knobs.js          # Utility to remap knob assignments in shaders
+├── jam.js                       # Jam page UI (knob drawer + spacebar snapshots)
 ├── index.js                     # Main entry point
 ├── edit.js                      # Editor interface
 ├── list.js                      # Shader list/gallery page
@@ -738,6 +746,19 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 4. **Too much feedback**: `mix(prev, new, 0.1)` can accumulate to white - use `mix(prev * 0.99, new, 0.1)`
 5. **Hardcoded resolution**: Always use `iResolution`, never hardcode 1920x1080
 6. **Metadata before #version**: If your shader has `#version 300 es`, it MUST be the first line. Put metadata comments (`// @fullscreen: true`) on line 2, not line 1. Shaders without `#version` (ShaderToy-style) can have metadata on line 1.
+
+## Claude Code Skills
+
+| Skill | Purpose |
+|-------|---------|
+| `/jam` | Launch a jam session — open the jam page with shader + controller + music source. Lighter than `/live-session`: no editor, just knobs + snapshots. |
+| `/live-session` | Launch a live creative session — open Chrome with shader editor + audio source, connect Claude-in-Chrome, and jam. Optionally pass a shader path or SoundCloud/Spotify URL. See [docs/live-session-insights.md](docs/live-session-insights.md). |
+| `/fork` | Save the current shader + knob state as a new numbered iteration. Reads knobs from the browser, copies the `.frag`, writes a companion doc. |
+| `/record` | Record a music video from the current shader canvas. Uses MediaRecorder API, restarts the music track, auto-stops after duration. |
+| `/preset` | Save knob state as a named preset (live) or batch-process the snapshot queue (`/preset process`). |
+| `/solo` | Toggle a shader between knob mode and audio mode. Auto-detects current mode and switches. Use `/solo knobs` or `/solo audio` to force a mode. Defaults to the modified `.frag` in the worktree. |
+| `/changelog` | Update docs/CHANGELOG.md and README with recent features. |
+| `/pr` | Create a PR, request review, and open in browser. |
 
 ## Misc Notes
 - Use far less time when running sleep than you ordinarily would; if it were 5 seconds, do 1 instead.
