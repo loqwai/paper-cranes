@@ -32,7 +32,7 @@ If `$ARGUMENTS` contains "full", read the track duration from the music tab if p
 
 Read the shader name and music tab title to generate a filename:
 ```
-dubstep-daddy-3--rain-apashe.webm
+the-coat-3--rain-apashe.webm
 ```
 
 ### 4. Restart the music track

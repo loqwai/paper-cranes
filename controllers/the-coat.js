@@ -1,4 +1,4 @@
-// dubstep-daddy controller — sustained drop glow with exponential decay
+// the-coat controller — sustained drop glow with exponential decay
 // Outputs drop_glow: raw sustained value for the shader to shape
 // knob_13 controls decay rate but is read in the controller because
 // frame-to-frame state requires JS

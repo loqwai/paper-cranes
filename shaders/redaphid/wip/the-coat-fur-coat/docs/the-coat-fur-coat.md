@@ -1,4 +1,4 @@
-# dubstep-daddy-fur-coat — Static Variant
+# the-coat-fur-coat — Static Variant
 
 Pink synthwave fur coat over the dubstep daddy character. Shape constants baked from a knob-tuning session.
 
@@ -36,15 +36,15 @@ Shape constants are baked from a knob-tuning session. Each constant has a commen
 
 Idle test:
 ```
-?shader=claude/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat&noaudio=true&time=3.5&bassNormalized=0.3&energyNormalized=0.3
+?shader=claude/wip/the-coat-fur-coat/the-coat-fur-coat&noaudio=true&time=3.5&bassNormalized=0.3&energyNormalized=0.3
 ```
 
 Drop test:
 ```
-?shader=claude/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat&noaudio=true&time=3.5&bassNormalized=0.95&energyNormalized=0.95&trebleZScore=1.5&energyZScore=2.5&energySlope=0.3&energyRSquared=0.95
+?shader=claude/wip/the-coat-fur-coat/the-coat-fur-coat&noaudio=true&time=3.5&bassNormalized=0.95&energyNormalized=0.95&trebleZScore=1.5&energyZScore=2.5&energySlope=0.3&energyRSquared=0.95
 ```
 
 Bob peak (head disconnect check):
 ```
-?shader=claude/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat&noaudio=true&time=1.428&bassNormalized=0.3&energyNormalized=0.3
+?shader=claude/wip/the-coat-fur-coat/the-coat-fur-coat&noaudio=true&time=1.428&bassNormalized=0.3&energyNormalized=0.3
 ```

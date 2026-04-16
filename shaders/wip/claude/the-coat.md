@@ -1,11 +1,11 @@
 # Dubstep Daddy — Working Notes
 
-Live notes for ongoing work on `dubstep-daddy.frag`. Written so a future session can pick this up cold.
+Live notes for ongoing work on `the-coat.frag`. Written so a future session can pick this up cold.
 
 ## What he is
 A chunky, short-statured character shader shown in the PaperCranes visualizer. Curly hair, no mouth, pinpoint glowing eyes at rest. On drops his eyes blast god rays, the scene zooms in, a hot yellow wash floods the frame, and an infinity mirror of the previous frame kicks in behind him. Inspiration track pinned at the top of the shader as a Spotify link.
 
-## Current state (branch: `shader/dubstep-daddy`)
+## Current state (branch: `shader/the-coat`)
 
 ### Shape and pose
 - Short proportions (total figure ~65% the height of a "tall daddy"). Head center at `y=0.30` in centered NDC coords.
@@ -62,26 +62,26 @@ Dev server runs on **port 6969** (Vite default).
 
 **Idle test URL:**
 ```
-http://localhost:6969/?shader=wip/claude/dubstep-daddy&noaudio=true&time=3.5&bassNormalized=0.3&energyNormalized=0.3&trebleZScore=0.0&energyZScore=0.0&energySlope=0.0&energyRSquared=0.5&midsNormalized=0.4&bassSlope=0.0&bassRSquared=0.5
+http://localhost:6969/?shader=wip/claude/the-coat&noaudio=true&time=3.5&bassNormalized=0.3&energyNormalized=0.3&trebleZScore=0.0&energyZScore=0.0&energySlope=0.0&energyRSquared=0.5&midsNormalized=0.4&bassSlope=0.0&bassRSquared=0.5
 ```
 
 **Drop test URL:**
 ```
-http://localhost:6969/?shader=wip/claude/dubstep-daddy&noaudio=true&time=3.5&bassNormalized=0.95&energyNormalized=0.95&trebleZScore=1.5&energyZScore=2.5&energySlope=0.3&energyRSquared=0.95&midsNormalized=0.9&bassSlope=0.2&bassRSquared=0.9
+http://localhost:6969/?shader=wip/claude/the-coat&noaudio=true&time=3.5&bassNormalized=0.95&energyNormalized=0.95&trebleZScore=1.5&energyZScore=2.5&energySlope=0.3&energyRSquared=0.95&midsNormalized=0.9&bassSlope=0.2&bassRSquared=0.9
 ```
 
 `&time=3.5` holds time constant so screenshots are comparable across runs. Change the value to spot-check different phases of the beat/nod/sway.
 
 Validate before committing:
 ```bash
-node scripts/validate-shader.js shaders/wip/claude/dubstep-daddy.frag
+node scripts/validate-shader.js shaders/wip/claude/the-coat.frag
 ```
 
 ## Fur coat variants
 
 Two new shaders built on top of the base dubstep daddy:
 
-### `dubstep-daddy-fur-coat.frag` — static variant
+### `the-coat-fur-coat.frag` — static variant
 A pink synthwave fur coat with baked shape constants. The coat is a separate SDF layer built from:
 - **Torso SDF** (chest + waist + hips) inflated by `FUR_THICK` to create the coat body
 - **Sleeve capsules** from shoulder to wrist (hard union with torso, leaving armpit gaps)
@@ -99,7 +99,7 @@ Key design decisions:
 - **Fluffy silhouette edge** via noise-perturbed SDF (`d_coat_fluff`) — the "fur" read comes from the shaggy outline, not internal texture.
 - **Chrome rim + seam** match the synthwave aesthetic of the base shader.
 
-### `dubstep-daddy-fur-coat-reactive.frag` — audio-reactive variant
+### `the-coat-fur-coat-reactive.frag` — audio-reactive variant
 Copy of the static variant with the coat responding to music:
 
 | Audio Feature | Coat Response |

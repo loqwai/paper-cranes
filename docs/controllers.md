@@ -52,7 +52,7 @@ Controllers live in `controllers/` and are loaded via the `?controller=` URL par
 controllers/
 ├── example.js          # Documented example with make() pattern
 ├── simple.js           # Direct export pattern
-├── dubstep-daddy.js        # Drop sustain with exponential decay
+├── the-coat.js        # Drop sustain with exponential decay
 └── zoomer.js           # Deep zoom with double-precision splitting
 ```
 
@@ -84,7 +84,7 @@ export function make(cranes) {
 
 Add `?controller=<name>` to the URL (without `.js`):
 ```
-/jam.html?shader=my-shader&audio=tab&controller=dubstep-daddy
+/jam.html?shader=my-shader&audio=tab&controller=the-coat
 ```
 
 The controller runs in a `requestAnimationFrame` loop managed by `index.js`. On the jam page, controllers hot-swap on file save without page reload (via the `controller-update` HMR event).
@@ -163,7 +163,7 @@ Standard audio features and `knob_*` uniforms are auto-declared. Controller outp
 
 ## Examples
 
-### Sustain / Decay Latch (dubstep-daddy.js)
+### Sustain / Decay Latch (the-coat.js)
 
 The canonical use case. GLSL can't hold a scalar across frames, so a spike in `energyZScore` would only last one frame. The controller latches the peak value and decays it exponentially.
 

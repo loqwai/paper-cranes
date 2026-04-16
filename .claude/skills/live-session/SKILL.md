@@ -37,7 +37,7 @@ Wait for it to be ready (poll with curl, max 10 seconds).
 
 From `$ARGUMENTS`, or fall back to:
 1. The most recently modified `.frag` in the worktree
-2. `redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive` (the default jam shader)
+2. `redaphid/wip/the-coat-fur-coat/the-coat-fur-coat-reactive` (the default jam shader)
 
 ### 3. Open Chrome and connect
 

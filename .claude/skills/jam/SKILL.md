@@ -36,11 +36,11 @@ Wait for it (poll with curl, max 10 seconds).
 
 Parse `$ARGUMENTS` for a shader path. Fall back to:
 1. Most recently modified `.frag` in the worktree
-2. `redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-3` (the latest jam shader)
+2. `redaphid/wip/the-coat-fur-coat/the-coat-3` (the latest jam shader)
 
 ### 3. Determine the controller
 
-Check if the shader has a matching controller in `controllers/`. Convention: shader `dubstep-daddy-3.frag` → controller `dubstep-daddy.js`.
+Check if the shader has a matching controller in `controllers/`. Convention: shader `the-coat-3.frag` → controller `the-coat.js`.
 
 If a controller exists, add `&controller=<name>` to the URL.
 

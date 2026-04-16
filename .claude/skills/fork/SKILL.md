@@ -44,9 +44,9 @@ JSON.stringify({
 
 Look at existing numbered files in the shader directory:
 ```
-shaders/<path>/dubstep-daddy-2.frag
-shaders/<path>/dubstep-daddy-3.frag
-→ next: dubstep-daddy-4.frag
+shaders/<path>/the-coat-2.frag
+shaders/<path>/the-coat-3.frag
+→ next: the-coat-4.frag
 ```
 
 If no numbered files exist, use `2.frag` as the first fork.

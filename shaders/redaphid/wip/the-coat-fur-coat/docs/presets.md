@@ -6,7 +6,7 @@ Knob presets discovered during live sessions. Each preset records the knob value
 
 Load a preset by appending the knob params to the editor URL:
 ```
-http://localhost:6969/edit.html?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab&<knob params>
+http://localhost:6969/edit.html?shader=redaphid/wip/the-coat-fur-coat/the-coat-fur-coat-reactive&audio=tab&<knob params>
 ```
 
 Or set knobs programmatically in the browser console:
@@ -29,7 +29,7 @@ _Saved: 2026-04-14 | Music: WOOLI - Lost Lands 2025 (Full Set)_
 
 **URL:**
 ```
-?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab&knob_2=0.472&knob_3=1&knob_4=0.362&knob_10=0.386&knob_11=0.543
+?shader=redaphid/wip/the-coat-fur-coat/the-coat-fur-coat-reactive&audio=tab&knob_2=0.472&knob_3=1&knob_4=0.362&knob_10=0.386&knob_11=0.543
 ```
 
 **Audio character at save time:**
@@ -59,7 +59,7 @@ _Saved: 2026-04-14 | Music: WOOLI - Lost Lands 2025 (Full Set)_
 
 **URL:**
 ```
-?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab&knob_1=0.969&knob_2=0.087&knob_3=0.024&knob_4=0.362&knob_10=0.386&knob_11=0.543
+?shader=redaphid/wip/the-coat-fur-coat/the-coat-fur-coat-reactive&audio=tab&knob_1=0.969&knob_2=0.087&knob_3=0.024&knob_4=0.362&knob_10=0.386&knob_11=0.543
 ```
 
 **Notes:** Intimate portrait mode. Zoomed tight on the face, god rays and drop almost off — letting the audio-reactive fur fibers and coat texture do all the work. High spectral entropy means the fractal fur is swirling. Best during textured, complex passages rather than drops. The eye wash gives a subtle warm glow without being overwhelming.
@@ -93,7 +93,7 @@ _Saved: 2026-04-14 | Music: WOOLI - Lost Lands 2025 (Full Set)_
 
 **URL:**
 ```
-?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab&knob_1=0.559&knob_2=0.866&knob_3=0.472&knob_4=0.827&knob_5=1&knob_6=0.622&knob_7=0.89&knob_8=0.677&knob_9=0.039&knob_10=0.378&knob_11=0.535&knob_12=0.472&knob_14=1
+?shader=redaphid/wip/the-coat-fur-coat/the-coat-fur-coat-reactive&audio=tab&knob_1=0.559&knob_2=0.866&knob_3=0.472&knob_4=0.827&knob_5=1&knob_6=0.622&knob_7=0.89&knob_8=0.677&knob_9=0.039&knob_10=0.378&knob_11=0.535&knob_12=0.472&knob_14=1
 ```
 
 **Notes:** Everything cranked. Near-max drop state with heavy zoom punch, thick fur, wide v-neck, heavy eye wash. The mid-scoop and rising brightness in the audio suggest this was dialed in right before a bass drop — the daddy is puffed up and ready to explode. Best for peak energy moments. Drop trigger threshold maxed so it only fires on huge energy spikes.
@@ -137,7 +137,7 @@ The knobs match: drop hit basically maxed (0.992), god rays blinding, eye wash n
 
 **URL:**
 ```
-?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab&knob_1=0.575&knob_2=0.992&knob_3=1&knob_4=0.898&knob_5=0.764&knob_7=0.693&knob_8=0.677&knob_9=0.039&knob_10=0.669&knob_11=0.535&knob_12=0.472&knob_14=1
+?shader=redaphid/wip/the-coat-fur-coat/the-coat-fur-coat-reactive&audio=tab&knob_1=0.575&knob_2=0.992&knob_3=1&knob_4=0.898&knob_5=0.764&knob_7=0.693&knob_8=0.677&knob_9=0.039&knob_10=0.669&knob_11=0.535&knob_12=0.472&knob_14=1
 ```
 
 **Notes:** THE drop preset. User wanted this to be the drop moment. Everything blazing — god rays max, drop hit max, heavy pump, eyes washing yellow. The audio tells a story of sustained heavy bass grinding after impact. Best paired with the heaviest part of a dubstep track where the wobble bass is doing its thing.
@@ -178,7 +178,7 @@ The knob choice is smart: zoomed all the way out so you see the full silhouette 
 
 **URL:**
 ```
-?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab&knob_2=0.992&knob_3=1&knob_4=0.898&knob_6=0.039&knob_7=0.693&knob_8=0.677&knob_9=0.039&knob_10=0.669&knob_11=0.535&knob_12=0.472&knob_14=0.937
+?shader=redaphid/wip/the-coat-fur-coat/the-coat-fur-coat-reactive&audio=tab&knob_2=0.992&knob_3=1&knob_4=0.898&knob_6=0.039&knob_7=0.693&knob_8=0.677&knob_9=0.039&knob_10=0.669&knob_11=0.535&knob_12=0.472&knob_14=0.937
 ```
 
 **Notes:** Full body shot, fully blazing. Zoomed out to see the whole silhouette with god rays and eye wash maxed but no zoom punch — stable and wide. Best for sustained heavy sections where the track is grinding and you want to take in the whole visual.
@@ -218,7 +218,7 @@ The knobs reflect this perfectly: drop hit and god rays basically off, so the ey
 
 **URL:**
 ```
-?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab&knob_2=0.024&knob_3=0.008&knob_4=0.953&knob_5=0.016&knob_6=0.142&knob_7=0.693&knob_8=0.677&knob_9=0.039&knob_10=0.669&knob_11=0.535&knob_12=0.472&knob_14=0.937
+?shader=redaphid/wip/the-coat-fur-coat/the-coat-fur-coat-reactive&audio=tab&knob_2=0.024&knob_3=0.008&knob_4=0.953&knob_5=0.016&knob_6=0.142&knob_7=0.693&knob_8=0.677&knob_9=0.039&knob_10=0.669&knob_11=0.535&knob_12=0.472&knob_14=0.937
 ```
 
 **Notes:** The coat preset. Eyes and god rays turned off so the fur coat is the whole show. With high spectral entropy/roughness the fractal fur fibers go wild — swirling, complex, alive. Best for intricate passages with lots of harmonic detail, arpeggios, or complex sound design. The eye wash gives a warm glow without the eyes dominating. The coat dances while the daddy bounces.
@@ -253,7 +253,7 @@ The knobs match: everything dialed low and gentle. A subtle, understated preset 
 
 **URL:**
 ```
-?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab&knob_1=0.039&knob_2=0.173&knob_3=0.26&knob_4=0.197
+?shader=redaphid/wip/the-coat-fur-coat/the-coat-fur-coat-reactive&audio=tab&knob_1=0.039&knob_2=0.173&knob_3=0.26&knob_4=0.197
 ```
 
 **Notes:** Whisper mode. Everything turned down to a murmur — let the audio-reactive elements do the talking. Best for complex, textured passages where subtlety wins over spectacle.
@@ -284,7 +284,7 @@ God rays off, wide view, just a hint of drop and eye wash. The daddy is a dark s
 
 **URL:**
 ```
-?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab&knob_2=0.276&knob_4=0.197
+?shader=redaphid/wip/the-coat-fur-coat/the-coat-fur-coat-reactive&audio=tab&knob_2=0.276&knob_4=0.197
 ```
 
 **Notes:** Dark mode. God rays completely off, zoomed out, during a quiet bass rumble. The visual is almost a silhouette. Best for breakdowns, intros, or any passage where the music goes dark and deep.
@@ -315,7 +315,7 @@ Interesting contrast: all this spectral fury is happening while the knobs are mo
 
 **URL:**
 ```
-?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab&knob_1=0.283&knob_2=0.276&knob_4=0.197
+?shader=redaphid/wip/the-coat-fur-coat/the-coat-fur-coat-reactive&audio=tab&knob_1=0.283&knob_2=0.276&knob_4=0.197
 ```
 
 **Notes:** Subtle knobs during bright chaos. God rays off, mild zoom, during a hyper-complex treble-heavy passage. The fur fibers go crazy from entropy while the effects stay restrained. Best for complex synth passages where the texture does the work.
@@ -342,7 +342,7 @@ _Saved: 2026-04-14 09:33 | Music: (jam session)_
 
 **URL:**
 ```
-?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab&knob_2=0.52&knob_3=0.52&knob_4=0.465
+?shader=redaphid/wip/the-coat-fur-coat/the-coat-fur-coat-reactive&audio=tab&knob_2=0.52&knob_3=0.52&knob_4=0.465
 ```
 
 **Notes:** The balanced preset. Everything at half — drop, god rays, eye wash all hovering around 0.5. A good default for when the music is in transition and you want the visual to be evenly responsive to whatever comes next.
@@ -373,7 +373,7 @@ The god rays at 0.638 are the star here — during a build, the rays would be gr
 
 **URL:**
 ```
-?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab&knob_1=0.079&knob_2=0.37&knob_3=0.638&knob_4=0.465
+?shader=redaphid/wip/the-coat-fur-coat/the-coat-fur-coat-reactive&audio=tab&knob_1=0.079&knob_2=0.37&knob_3=0.638&knob_4=0.465
 ```
 
 **Notes:** God ray buildup preset. Rays prominent during a rising, brightening passage. The visual blooms as treble and spectral complexity rise. Best for buildups and rising tension where you want the rays to tell the story.
@@ -407,7 +407,7 @@ This is the user exploring the body knobs (shoulder spread, fur thickness, v-nec
 
 **URL:**
 ```
-?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab&knob_1=0.394&knob_2=0.197&knob_3=0.142&knob_4=0.535&knob_5=1&knob_6=0.22&knob_7=0.559&knob_8=0.291
+?shader=redaphid/wip/the-coat-fur-coat/the-coat-fur-coat-reactive&audio=tab&knob_1=0.394&knob_2=0.197&knob_3=0.142&knob_4=0.535&knob_5=1&knob_6=0.22&knob_7=0.559&knob_8=0.291
 ```
 
 **Notes:** Body exploration preset. First time using the body-shape knobs (shoulders, fur, v-neck). Lean build, maxed drop zoom, during a confidently evolving audio state. The sound is shifting upward while energy stays flat — perfect for testing how body shape interacts with spectral movement.
@@ -440,7 +440,7 @@ The eye wash at 0.945 bathes the whole figure in golden light. God rays and drop
 
 **URL:**
 ```
-?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab&knob_2=0.016&knob_3=0.024&knob_4=0.945&knob_5=0.858&knob_9=0.189
+?shader=redaphid/wip/the-coat-fur-coat/the-coat-fur-coat-reactive&audio=tab&knob_2=0.016&knob_3=0.024&knob_4=0.945&knob_5=0.858&knob_9=0.189
 ```
 
 **Notes:** Golden wash. Eye wash cranked near-max, everything else off. The daddy glows warm yellow against a complex, chaotic audio backdrop. The heavy drop zoom is coiled and ready but hasn't fired yet. Best for dense, bright passages where you want the figure bathed in color without the eye/ray drama.
@@ -473,7 +473,7 @@ Near-identical knobs to golden-wash but the audio is much more extreme. The gold
 
 **URL:**
 ```
-?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab&knob_2=0.016&knob_3=0.024&knob_4=0.953&knob_5=0.858&knob_9=0.189
+?shader=redaphid/wip/the-coat-fur-coat/the-coat-fur-coat-reactive&audio=tab&knob_2=0.016&knob_3=0.024&knob_4=0.953&knob_5=0.858&knob_9=0.189
 ```
 
 **Notes:** Same golden wash preset but during a peak treble assault. Energy z-score 1.17 — the highest captured. Mids deeply scooped, bass absent, treble blazing. The golden figure would be vibrating from sheer energy. Shows how the same knobs feel completely different at different musical moments.
@@ -506,7 +506,7 @@ Drop hit maxed at 1.0 — the daddy's eyes are fully lit, the drop effects are a
 
 **URL:**
 ```
-?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab&knob_1=0.205&knob_2=1&knob_3=0.071&knob_4=0.567&knob_5=0.449&knob_9=0.189
+?shader=redaphid/wip/the-coat-fur-coat/the-coat-fur-coat-reactive&audio=tab&knob_1=0.205&knob_2=1&knob_3=0.071&knob_4=0.567&knob_5=0.449&knob_9=0.189
 ```
 
 **Notes:** Full drop override during a calm passage. The user forced max drop state to explore what it looks like independent of the music. Eyes blazing, moderate wash, subtle rays. A "what does this look like at 11" exploration preset.

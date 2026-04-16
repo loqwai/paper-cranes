@@ -2,8 +2,8 @@
 // @mobile: true
 // inspiration: https://open.spotify.com/track/4iujYV1aY8bvFnynke7eN5?si=8f2220910e7f4de0
 // Variant: slimmer frame + pink fur coat with synthwave aesthetic
-// http://localhost:6969/?shader=claude/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab
-// http://localhost:6969/edit.html?shader=claude/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&noaudio=true&time=3.5&knob_4=0.031&knob_6=0.276&knob_7=0&knob_8=0.039&knob_9=1&knob_10=0.937&knob_11=0.543
+// http://localhost:6969/?shader=claude/wip/the-coat-fur-coat/the-coat-fur-coat&audio=tab
+// http://localhost:6969/edit.html?shader=claude/wip/the-coat-fur-coat/the-coat-fur-coat&noaudio=true&time=3.5&knob_4=0.031&knob_6=0.276&knob_7=0&knob_8=0.039&knob_9=1&knob_10=0.937&knob_11=0.543
 #define PI 3.14159265
 
 // ============================================================================
@@ -13,85 +13,49 @@
 #define DEBUG_OUTLINES 0
 
 // ============================================================================
-// COAT SHAPE — audio-reactive variant
-// The coat breathes and sways continuously with the music — gentle at low
-// energy, pronounced at high. The dramatic stuff (eyes, zoom, godrays)
-// is reserved for real drops via the sustain system below.
+// COAT SHAPE CONSTANTS — baked from knob tuning session
+// Comment out a constant and uncomment the knob line below it to live-edit.
 // ============================================================================
 
-// Shoulders shrug gently with bass — always some movement
-#define SHOULDER_Y      (-0.02 + max(bassZScore, 0.0) * 0.008)
+#define SHOULDER_Y      -0.02
+// #define SHOULDER_Y     mix(-0.10, 0.10, knob_3)
 
-// Coat breathes continuously with bass
-#define SHOULDER_SPREAD (0.158 + bassNormalized * 0.015)
+#define SHOULDER_SPREAD  0.158
+// #define SHOULDER_SPREAD mix(0.15, 0.40, knob_4)
 
-// Sleeves react to treble — subtle swell, not a hard flare
-#define SLEEVE_RADIUS   (0.04 + max(trebleZScore, 0.0) * 0.008)
+#define SLEEVE_RADIUS    0.04
+// #define SLEEVE_RADIUS  mix(0.03, 0.10, knob_5)
 
 #define SHOULDER_CAP     0.042
+// #define SHOULDER_CAP   mix(0.02, 0.10, knob_6)
 
-// Chest breathes with bass — always alive
-#define CHEST_W_BASE    (0.12 + bassNormalized * 0.02)
-#define CHEST_H_BASE    (0.065 + bassNormalized * 0.006)
+#define CHEST_W_BASE     0.12
+// #define CHEST_W_BASE   mix(0.12, 0.30, knob_7)
 
-// Fur bristles: gentle continuous thickening, big bristle only on spikes
-#define FUR_THICK       knob_4
+#define CHEST_H_BASE     0.065
+// #define CHEST_H_BASE   mix(0.06, 0.18, knob_8)
 
-// V-neck: subtle breathing, opens wide only on real spikes
-#define VNECK_WIDTH     knob_6
-#define VNECK_BOTTOM    (-0.013 - max(energyZScore - 0.5, 0.0) * 0.02)
+#define FUR_THICK        0.08
+// #define FUR_THICK      mix(0.01, 0.08, knob_9)
+
+#define VNECK_WIDTH      0.142
+// #define VNECK_WIDTH    mix(0.02, 0.15, knob_10)
+
+#define VNECK_BOTTOM    -0.013
+// #define VNECK_BOTTOM   mix(-0.10, 0.06, knob_11)
 
 // ============================================================================
-// AUDIO — swap knob_N for audio features to tune live
+// AUDIO
 // ============================================================================
 
-// --- Drop / intensity tuning knobs ---
-// knob_1: drop threshold low  (smoothstep low edge, default ~0.25)
-// knob_2: drop threshold high (smoothstep high edge, default ~0.7)
-// knob_3: drop decay rate     (0 = instant off, 1 = long sustain, default ~0.98)
-// knob_4: zoom from intensity (continuous, default ~0.25)
-// knob_5: zoom from drop      (on drop, default ~1.0)
-// knob_6: godray intensity    (multiplier, default ~2.5)
-// knob_7: eye wash strength   (default ~0.4)
-// knob_8: eye brightness on drop (default ~1.5)
-
-#define DROP_THRESH_LO  (knob_1 * 0.5)
-// #define DROP_THRESH_LO  0.25
-#define DROP_THRESH_HI  (0.3 + knob_2 * 0.7)
-// #define DROP_THRESH_HI  0.7
-#define DROP_DECAY      (0.9 + knob_3 * 0.099)
-// #define DROP_DECAY      0.98
-#define ZOOM_INTENSITY  (knob_4 * 0.6)
-// #define ZOOM_INTENSITY  0.25
-#define ZOOM_DROP       (knob_5 * 2.0)
-// #define ZOOM_DROP       1.0
-#define GODRAY_MULT     (knob_6 * 5.0)
-// #define GODRAY_MULT     2.5
-#define EYE_WASH_STR    (knob_7 * 0.8)
-// #define EYE_WASH_STR    0.4
-#define EYE_DROP_BRIGHT (knob_8 * 3.0)
-// #define EYE_DROP_BRIGHT 1.5
-// knob_10: feedback on body/coat (0 = crisp/no trail, 1 = heavy smear)
-// background gets more feedback, body gets this amount
-// NOTE: this is how much NEW frame comes through (higher = crisper)
-#define FEEDBACK_BODY   (0.1 + knob_10 * 0.9)
-// #define FEEDBACK_BODY   0.15
-// knob_11: feedback on background (higher = crisper)
-#define FEEDBACK_BG     (0.1 + knob_11 * 0.9)
-// #define FEEDBACK_BG     0.45
-
-// PUMP is always alive — drives body bob, chest glow, coat breathing
-#define PUMP (bassNormalized * 0.4 + max(bassSlope * bassRSquared, 0.0) * 1.5)
+#define PUMP (bassNormalized * 0.5 + bassSlope * bassRSquared * 2.0)
 #define BEAT_PHASE (time * 2.2)
-// SNAP drives hand gestures — gentle at low treble, snappy on spikes
-#define SNAP (max(trebleZScore, 0.0) * 0.7)
+#define SNAP (max(trebleZScore, 0.0))
 #define HIP_SWAY (sin(time * 1.1))
 #define GROOVE (midsNormalized)
-// Build requires BOTH rising energy AND a very confident trend
-#define BUILD (max(energySlope - 0.1, 0.0) * energyRSquared * 5.0)
+#define BUILD (energySlope * energyRSquared * 8.0)
 #define IS_DROP clamp(BUILD, 0.0, 1.0)
-// Drop trigger requires energyZScore > 1.0 — truly anomalous energy
-#define DROP_TRIGGER clamp(max(energyZScore - 1.0, BUILD) * 0.8, 0.0, 1.0)
+#define DROP_TRIGGER clamp(max(energyZScore, BUILD), 0.0, 1.0)
 
 #define HUE_BASE 0.78
 #define HUE_DROP 0.13
@@ -185,12 +149,12 @@ float sdDaddy(vec2 p, float pump, Pose P) {
     head = smin(head, jaw, 0.04);
 
     vec2 np = p - vec2(P.hip * 0.7, 0.11);
-    float neck = sdEllipse(np, vec2(0.035, 0.045));
+    float neck = sdEllipse(np, vec2(0.055, 0.045));
 
     // Slimmer chest
     float chest_w = 0.23 + pump * 0.04;
     float chest_h = 0.17 + pump * 0.02;
-    vec2 cp = p - vec2(P.hip * 0.7, -0.02);
+    vec2 cp = p - vec2(P.hip * 0.8, -0.02);
     float chest = sdEllipse(cp, vec2(chest_w, chest_h));
 
     // Slimmer hips
@@ -243,11 +207,11 @@ float sdTorso(vec2 p, float pump, Pose P) {
     // the coat silhouette reads as a fitted garment instead of a sack.
     float chest_w = CHEST_W_BASE + pump * 0.04;
     float chest_h = CHEST_H_BASE + pump * 0.02;
-    vec2 cp = p - vec2(P.hip * 0.7, 0.01);
+    vec2 cp = p - vec2(P.hip * 0.8, 0.01);
     float chest = sdEllipse(cp, vec2(chest_w, chest_h));
 
     // Waist — narrower pinch at midsection
-    vec2 wpn = p - vec2(P.hip * 0.8, -0.12);
+    vec2 wpn = p - vec2(P.hip * 1.0, -0.12);
     float waist = sdEllipse(wpn, vec2(0.16, 0.08));
 
     vec2 wp = p - vec2(P.hip * 1.4, -0.24);
@@ -353,28 +317,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec2 raw_uv01 = fragCoord / res;
 
-    // Immediate drop signal — requires truly anomalous energy.
-    // smoothstep crushes low values so faint signals don't leak into godrays.
-    float drop_raw = max(IS_DROP, max(energyZScore - 1.0, 0.0) * 0.6);
-    float drop_now = smoothstep(DROP_THRESH_LO, DROP_THRESH_HI, drop_raw);
+    float drop_hit = clamp(max(IS_DROP, energyZScore * 0.5), 0.0, 1.0);
 
-    // Sustained drop: stash drop_hit in the red channel of pixel (0,0).
-    // Read it back from last frame to create a decaying accumulator.
-    // Using a corner pixel avoids alpha issues (non-1.0 alpha makes the
-    // whole canvas semi-transparent in compositing).
-    vec2 stash_uv = vec2(0.5) / res;  // center of pixel (0,0)
-    float prev_drop = (frame < 30) ? 0.0 : getLastFrameColor(stash_uv).r;
-    // Decay over ~2 seconds at 60fps. Floor at 0.02 so residual glow
-    // doesn't linger — below the floor, snap to zero.
-    float decayed = prev_drop * DROP_DECAY;
-    float drop_hit = clamp(max(drop_now, decayed < 0.02 ? 0.0 : decayed), 0.0, 1.0);
-
-    // Gentle zoom from continuous intensity (small), big zoom from drops
-    // smoothstep(0.2, 0.9) gives a gentle ramp that's mostly flat at low
-    // levels but accelerates into the top end
-    float raw_intensity = max(energyNormalized, bassNormalized);
-    float intensity = smoothstep(0.2, 0.9, raw_intensity);
-    float zoomAmount = 1.0 + intensity * ZOOM_INTENSITY + drop_hit * ZOOM_DROP;
+    float intensity = max(
+        mapValue(energyNormalized, 0.0, 1.0, 0.0, 1.0),
+        bassNormalized
+    );
+    float zoomAmount = 1.0 + intensity * 0.6 + drop_hit * 0.9;
     vec2 zoomCenter = P.head_c;
     uv = (uv - zoomCenter) / zoomAmount + zoomCenter;
 
@@ -395,8 +344,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Noise coords wobble with beat so the fur looks alive
     vec2 fur_p = uv * 38.0 + vec2(0.0, sin(BEAT_PHASE) * 0.15);
     float fur_n = fbm(fur_p);
-    // Fur edge gets much more agitated on drops/bass — bristles up
-    float fluff_amp = 0.018 + pump * 0.015 + SNAP * 0.012 + max(energyZScore, 0.0) * 0.02;
+    float fluff_amp = 0.018 + pump * 0.008 + SNAP * 0.006;
     float d_coat_fluff = d_coat - (fur_n - 0.5) * fluff_amp;
 
     float d = min(d_body, d_curls);
@@ -416,7 +364,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float coat_edge_gate = coat * (1.0 - coat) * 4.0;
     coat_rim *= coat_edge_gate;
 
-    float chest_glow = exp(-pow(length(uv - vec2(P.hip * 0.7, -0.02)) * 3.0, 2.0));
+    float chest_glow = exp(-pow(length(uv - vec2(P.hip * 0.8, -0.02)) * 3.0, 2.0));
     chest_glow *= smoothstep(0.005, -0.005, d_body) * (0.3 + pump * 0.7);
 
     // Eyes
@@ -427,8 +375,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 re = P.head_c + vec2(re_local.x * ct + re_local.y * st, -re_local.x * st + re_local.y * ct);
 
     float eyes = exp(-dot(uv - le, uv - le) * 2500.0) + exp(-dot(uv - re, uv - re) * 2500.0);
-    // Eyes stay as pinpoints until a real drop — SNAP needs to be strong (>0.3)
-    eyes *= (0.25 + drop_hit * EYE_DROP_BRIGHT + max(SNAP - 0.3, 0.0) * 0.4);
+    eyes *= (0.25 + drop_hit * 1.8 + SNAP * 0.6);
 
     vec2 d_le2 = uv - le;
     vec2 d_re2 = uv - re;
@@ -447,7 +394,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     float wash_le = exp(-r_le * 0.8);
     float wash_re = exp(-r_re * 0.8);
-    float eye_wash = (wash_le + wash_re) * drop_hit * EYE_WASH_STR;
+    float eye_wash = (wash_le + wash_re) * drop_hit * 0.5;
 
     // ---- COLOR ----
     float hue = mix(HUE_BASE, HUE_DROP, IS_DROP);
@@ -456,67 +403,16 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 hair    = hsl2rgb(vec3(0.06, 0.7, 0.12));
     vec3 hot     = hsl2rgb(vec3(0.08, 1.0, 0.6));
 
-    // Coat fill — audio-reactive color. Base is synthwave pink, but:
-    // - Lightness pulses brighter on bass hits
-    // - Hue shifts toward hot yellow/white on drops
-    // - Saturation dips slightly on quiet passages (more white/pastel)
+    // Coat fill — saturated synthwave pink/magenta with a vertical gradient
+    // from hot pink at the shoulders to cooler magenta at the hem.
     float coat_grad = smoothstep(0.15, -0.4, uv.y);
-    float bass_pulse = max(bassZScore, 0.0);
-    // Color shift uses the sustained drop_hit — so the warm hue lingers
-    float drop_color = drop_hit;
-    // Hue slides from pink (0.93) toward warm peach (0.05) on drops
-    float fur_hue_hi = mix(0.93, 0.05, drop_color * 0.5);
-    float fur_hue_lo = mix(0.86, 0.08, drop_color * 0.4);
-    // Lightness pumps up on bass
-    float fur_l_hi = 0.72 + bass_pulse * 0.12;
-    float fur_l_lo = 0.55 + bass_pulse * 0.08;
-    vec3 fur_hi = hsl2rgb(vec3(fur_hue_hi, 0.95, clamp(fur_l_hi, 0.0, 0.95)));
-    vec3 fur_lo = hsl2rgb(vec3(fur_hue_lo, 0.9, clamp(fur_l_lo, 0.0, 0.85)));
+    vec3 fur_hi = hsl2rgb(vec3(0.93, 0.95, 0.72));
+    vec3 fur_lo = hsl2rgb(vec3(0.86, 0.9, 0.55));
     vec3 fur_col = mix(fur_hi, fur_lo, coat_grad);
-    // Shoulder gleam pulses gently with spectral flux — always a little shine
+    // Horizontal shoulder gleam — a soft band near the top that catches
+    // the light, reads as "light glinting off the upper chest"
     float shoulder_gleam = exp(-pow((uv.y - 0.08) * 10.0, 2.0));
-    float gleam_intensity = 0.12 + spectralFluxNormalized * 0.18;
-    fur_col += shoulder_gleam * vec3(gleam_intensity, gleam_intensity * 0.6, gleam_intensity * 1.2);
-    // ---- FRACTAL FUR FIBERS ----
-    // Swirling domain-warped fractal that appears inside the coat when the
-    // music is "interesting" — triggered by spectral entropy (chaos) and
-    // spectral roughness (dissonance). These are independent from the
-    // energy/bass features that drive the eyes, so the coat and eyes
-    // react to DIFFERENT musical qualities.
-    // Fractal fur only appears when the spectrum is genuinely complex —
-    // requires high entropy AND roughness together, not just one
-    float fur_trigger = clamp(
-        spectralEntropyNormalized * 0.4 +
-        spectralRoughnessNormalized * 0.3 +
-        max(spectralKurtosisZScore - 0.3, 0.0) * 0.2,
-        0.0, 1.0
-    );
-    // Much higher threshold: only the wildest timbral moments get fibers
-    float fur_fractal_amt = smoothstep(0.55, 0.85, fur_trigger);
-    if (fur_fractal_amt > 0.01) {
-        // Domain warp: swirl the coords with low-freq noise so the fibers
-        // look like curling fur strands, not a static grid
-        vec2 fp = uv * 12.0;
-        float warp_t = time * 0.3 + spectralCentroidNormalized * 0.5;
-        vec2 warp = vec2(
-            fbm(fp + vec2(warp_t, 0.0)),
-            fbm(fp + vec2(0.0, warp_t + 3.7))
-        );
-        // Second domain warp for deeper swirl
-        vec2 fp2 = fp + warp * 2.5;
-        float fibers = fbm(fp2 + vec2(
-            fbm(fp2 + vec2(warp_t * 0.7, 1.3)),
-            fbm(fp2 + vec2(2.1, warp_t * 0.5))
-        ) * 1.5);
-        // Shape the fibers: sharp ridges that look like individual strands
-        float strand = pow(abs(sin(fibers * PI * 3.0)), 4.0);
-        // Color the strands: lighter than the base coat, tinted toward
-        // chrome/white so they read as light catching individual fur fibers
-        vec3 strand_col = mix(fur_col * 1.3, chrome, 0.3 + strand * 0.2);
-        // Blend into the coat color, gated by the trigger amount
-        fur_col = mix(fur_col, strand_col, strand * fur_fractal_amt * 0.75);
-    }
-
+    fur_col += shoulder_gleam * vec3(0.15, 0.08, 0.18);
     // Seam strength computed here; chrome glow added after compositing
     // so it matches the rim-light aesthetic. Thin + subtle.
     float seam_x_pos = P.hip * 0.7;
@@ -535,15 +431,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     col += rim * chrome * 1.3 * (1.0 - coat);
     col += chest_glow * chrome * 0.8 * (1.0 - coat);
     // Coat rim — chrome edge hugs the shaggy outline (boosted for visibility)
-    // Coat rim pulses with spectral flux — brighter on timbral changes
-    float rim_boost = 2.2 + spectralFluxNormalized * 1.5 + max(bassZScore, 0.0) * 0.8;
-    col += coat_rim * chrome * rim_boost * (1.0 - curls);
+    col += coat_rim * chrome * 2.2 * (1.0 - curls);
     // Button seam glow — chrome line down the center
     col += seam_glow * coat * chrome * 0.25 * (1.0 - curls);
     col += eyes * hot * 2.2;
     col = mix(col, col + hot * 0.6, eye_wash);
     col += eye_wash * hot * 0.4;
-    col += god_rays * hot * GODRAY_MULT;
+    col += god_rays * hot * 2.5;
 
     // ---- INFINITY MIRROR ----
     {
@@ -577,7 +471,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     fb_uv.y -= 0.002 + pump * 0.003;
     vec3 prev = getLastFrameColor(fb_uv).rgb * 0.88;
     float silhouette = max(body, coat);
-    float feedback_amt = mix(FEEDBACK_BG, FEEDBACK_BODY, silhouette);
+    float feedback_amt = mix(0.45, 0.15, silhouette);
     if (beat) feedback_amt *= 0.6;
     if (frame < 30) feedback_amt = 0.0;
     col = mix(prev, col, feedback_amt);
@@ -592,11 +486,5 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     col += coat_outline * vec3(1.0, 1.0, 0.0);
 #endif
 
-    // Stash drop_hit in pixel (0,0) red channel for next-frame readback.
-    // All other pixels render normally with alpha = 1.0.
-    vec3 out_col = clamp(col, 0.0, 1.0);
-    if (fragCoord.x < 1.0 && fragCoord.y < 1.0) {
-        out_col = vec3(drop_hit, 0.0, 0.0);
-    }
-    fragColor = vec4(out_col, 1.0);
+    fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

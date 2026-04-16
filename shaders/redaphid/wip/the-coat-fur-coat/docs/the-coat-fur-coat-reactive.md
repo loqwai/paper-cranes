@@ -1,4 +1,4 @@
-# dubstep-daddy-fur-coat-reactive — Audio-Reactive Variant
+# the-coat-fur-coat-reactive — Audio-Reactive Variant
 
 Copy of the static fur coat with the coat shape, color, and texture all responding to music.
 
@@ -37,15 +37,15 @@ The coat should feel alive — not just changing color, but physically respondin
 
 Idle (low audio):
 ```
-?shader=claude/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&noaudio=true&time=3.5&bassNormalized=0.3&energyNormalized=0.3&spectralEntropyNormalized=0.3&spectralRoughnessNormalized=0.3
+?shader=claude/wip/the-coat-fur-coat/the-coat-fur-coat-reactive&noaudio=true&time=3.5&bassNormalized=0.3&energyNormalized=0.3&spectralEntropyNormalized=0.3&spectralRoughnessNormalized=0.3
 ```
 
 Fractal fibers visible (high entropy/roughness):
 ```
-?shader=claude/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&noaudio=true&time=3.5&bassNormalized=0.5&energyNormalized=0.5&spectralEntropyNormalized=0.9&spectralRoughnessNormalized=0.8&spectralKurtosisZScore=0.5&spectralCentroidNormalized=0.5
+?shader=claude/wip/the-coat-fur-coat/the-coat-fur-coat-reactive&noaudio=true&time=3.5&bassNormalized=0.5&energyNormalized=0.5&spectralEntropyNormalized=0.9&spectralRoughnessNormalized=0.8&spectralKurtosisZScore=0.5&spectralCentroidNormalized=0.5
 ```
 
 Full drop:
 ```
-?shader=claude/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&noaudio=true&time=3.5&bassNormalized=0.95&energyNormalized=0.95&trebleZScore=1.5&energyZScore=2.5&energySlope=0.3&energyRSquared=0.95&spectralFluxNormalized=0.9&bassZScore=2.0
+?shader=claude/wip/the-coat-fur-coat/the-coat-fur-coat-reactive&noaudio=true&time=3.5&bassNormalized=0.95&energyNormalized=0.95&trebleZScore=1.5&energyZScore=2.5&energySlope=0.3&energyRSquared=0.95&spectralFluxNormalized=0.9&bassZScore=2.0
 ```

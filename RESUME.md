@@ -57,7 +57,7 @@ Reuse the `flashToast` pattern from edit.js — a transient overlay that says "S
 
 ## URL
 ```
-http://localhost:6969/jam.html?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab
+http://localhost:6969/jam.html?shader=redaphid/wip/the-coat-fur-coat/the-coat-fur-coat-reactive&audio=tab
 ```
 
 ## User Preferences

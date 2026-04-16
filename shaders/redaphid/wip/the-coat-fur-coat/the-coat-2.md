@@ -1,8 +1,8 @@
-# dubstep-daddy-2 — Fully Audio-Reactive Dubstep Daddy
+# the-coat-2 — Fully Audio-Reactive Dubstep Daddy
 
 ## Origin
 
-Forked from `dubstep-daddy-fur-coat-reactive.frag` on 2026-04-14. That shader had 28 knobs for manual control during live sessions. This variant bakes in the personality learned from 6+ preset sessions (lost-lands, closeup-texture, full-send, wooli-drop, wide-blaze, living-coat, golden-wash, griz-sizzle, and others) so it plays well with any music — no knobs needed.
+Forked from `the-coat-fur-coat-reactive.frag` on 2026-04-14. That shader had 28 knobs for manual control during live sessions. This variant bakes in the personality learned from 6+ preset sessions (lost-lands, closeup-texture, full-send, wooli-drop, wide-blaze, living-coat, golden-wash, griz-sizzle, and others) so it plays well with any music — no knobs needed.
 
 Named after a GRiZ Lost Lands set that was playing during the jam session that inspired this fork.
 

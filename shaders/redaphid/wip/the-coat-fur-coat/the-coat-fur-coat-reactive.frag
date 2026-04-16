@@ -2,8 +2,8 @@
 // @mobile: true
 // inspiration: https://open.spotify.com/track/4iujYV1aY8bvFnynke7eN5?si=8f2220910e7f4de0
 // Variant: slimmer frame + pink fur coat with synthwave aesthetic
-// http://localhost:6969/?shader=claude/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&audio=tab
-// http://localhost:6969/edit.html?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&noaudio=true
+// http://localhost:6969/?shader=claude/wip/the-coat-fur-coat/the-coat-fur-coat-reactive&audio=tab
+// http://localhost:6969/edit.html?shader=redaphid/wip/the-coat-fur-coat/the-coat-fur-coat-reactive&noaudio=true
 #define PI 3.14159265
 
 // ============================================================================
@@ -15,7 +15,7 @@
 // ============================================================================
 // KNOB CONTROLS
 // Each knob is 0-1. Uncomment audio lines to switch back to audio-reactive.
-// Test: ?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-fur-coat-reactive&noaudio=true&knob_1=0&knob_2=0.3&knob_3=0&knob_4=0.4&knob_5=0.3&knob_6=0.3&knob_7=0&knob_8=0&knob_9=0&knob_10=0.3&knob_11=0&knob_12=0.3&knob_13=0&knob_14=0.44&knob_15=0.5&knob_16=0.4&knob_17=0.5&knob_18=0.5&knob_19=0.42&knob_20=0.78&knob_21=0.13&knob_22=0&knob_23=0&knob_24=0&knob_25=0.3&knob_26=0&knob_27=0.3&knob_28=0
+// Test: ?shader=redaphid/wip/the-coat-fur-coat/the-coat-fur-coat-reactive&noaudio=true&knob_1=0&knob_2=0.3&knob_3=0&knob_4=0.4&knob_5=0.3&knob_6=0.3&knob_7=0&knob_8=0&knob_9=0&knob_10=0.3&knob_11=0&knob_12=0.3&knob_13=0&knob_14=0.44&knob_15=0.5&knob_16=0.4&knob_17=0.5&knob_18=0.5&knob_19=0.42&knob_20=0.78&knob_21=0.13&knob_22=0&knob_23=0&knob_24=0&knob_25=0.3&knob_26=0&knob_27=0.3&knob_28=0
 //
 // --- ZOOM ---
 // knob_1: base zoom (0=normal, 1=zoomed in tight)

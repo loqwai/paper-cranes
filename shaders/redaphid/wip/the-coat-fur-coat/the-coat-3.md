@@ -1,8 +1,8 @@
-# dubstep-daddy-2 — Baked Jam Session Preset
+# the-coat-2 — Baked Jam Session Preset
 
 ## Origin
 
-Forked from `dubstep-daddy.frag` on 2026-04-14 during a live jam session with ZISO, Apashe, DEATHPIXIE, Dr. Fresch, and SIPPY on Spotify.
+Forked from `the-coat.frag` on 2026-04-14 during a live jam session with ZISO, Apashe, DEATHPIXIE, Dr. Fresch, and SIPPY on Spotify.
 
 ## Baked Knob Values
 
@@ -10,7 +10,7 @@ These were the knob settings at save time:
 
 | Knob | Value | What it controls |
 |------|-------|-----------------|
-| knob_1 | 0.063 | (unused in dubstep-daddy) |
+| knob_1 | 0.063 | (unused in the-coat) |
 | knob_2 | -0.346 | zoom — wide shot, slightly pulled back |
 | knob_3 | 0.173 | god ray intensity — subtle |
 | knob_4 | 0.11 | eye wash — barely there |
@@ -27,10 +27,10 @@ These were the knob settings at save time:
 ## Preset URL
 
 ```
-?shader=redaphid/wip/dubstep-daddy-fur-coat/dubstep-daddy-2&audio=tab&controller=dubstep-daddy&knob_2=-0.346&knob_7=0.98&knob_12=0.669&knob_15=0.46
+?shader=redaphid/wip/the-coat-fur-coat/the-coat-2&audio=tab&controller=the-coat&knob_2=-0.346&knob_7=0.98&knob_12=0.669&knob_15=0.46
 ```
 
-## What Changed from dubstep-daddy
+## What Changed from the-coat
 
 This is the same shader code with the session's knob values as the starting point. The vibe: wide shot, thick fur coat as the star, heavy groove sway, subtle eyes/rays (only on drops via the controller sustain).
 
