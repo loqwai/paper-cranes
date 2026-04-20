@@ -39,7 +39,19 @@
 // knob_20: warp speed (0=still, 1=fast swirl)
 // knob_21: rim boost (0=subtle, 1=blazing)
 // knob_22: hue base (0=red, 1=full hue cycle)
-// knob_23: hue drop (0=red, 1=full hue cycle)
+//
+// --- HYPERCOLOR COAT (knobs 38-48) ---
+// knob_38: hypercolor mix (0=normal coat, 1=full psychedelic)
+// knob_39: rainbow cycle speed (0=frozen, 1=fast cycling)
+// knob_40: hue spread (0=monochrome, 1=full rainbow across coat)
+// knob_41: saturation overdrive (0=pastel, 1=neon burn)
+// knob_42: lightness overdrive (0=dark/moody, 1=blinding bright)
+// knob_43: fractal detail scale (0=large swirls, 1=fine grain)
+// knob_44: domain warp depth (0=subtle, 1=melted reality)
+// knob_45: chromatic split (0=none, 1=RGB separation)
+// knob_46: iridescence (0=flat, 1=oil-slick angle-dependent color)
+// knob_47: noise grain (0=smooth, 1=TV static texture)
+// knob_48: color inversion pulse (0=normal, 1=inverted negative)
 // ============================================================================
 
 // ============================================================================
@@ -67,8 +79,8 @@
 // ============================================================================
 
 // --- ZOOM ---
-// Base zoom: 0=wide, 1=tight on face
-#define BASE_ZOOM (1.0 + knob_5 * 0.8)
+// Base zoom: 0=default view, 1=tight on face, pulls negative for wide
+#define BASE_ZOOM mapValue(knob_5, 0., 1., 0.1555, 1.8)
 // #define BASE_ZOOM (1.0 + DROP_SIGNAL * 0.8)
 
 // --- COAT SHAPE ---
@@ -109,9 +121,9 @@
 
 #define BEAT_PHASE (time * 2.2)
 
-// Snap / gesture intensity: 0=chill, 1=snappy
+// Snap / arms raise: 0=arms down, 1=arms up — energy builds push arms up
 #define SNAP mapValue(knob_11, 0., 1., 0.0, 0.6)
-// #define SNAP (max(trebleZScore, 0.0) * 0.6)
+// #define SNAP (clamp(max(energyZScore, 0.0) * 0.4 + max(energySlope, 0.0) * energyRSquared * 4.0, 0.0, 1.0) * 0.6)
 
 #define HIP_SWAY (sin(time * 1.1))
 
@@ -178,6 +190,52 @@
 // Rim boost: 0=subtle, 1=blazing chrome edge
 #define RIM_BOOST mapValue(knob_21, 0., 1., 2.2, 4.5)
 // #define RIM_BOOST (2.2 + spectralFluxNormalized * 1.5 + max(bassZScore, 0.0) * 0.8)
+
+// --- HYPERCOLOR COAT TEXTURE (knobs 23-33) ---
+// knob_23: hypercolor mix (0=normal coat, 1=full psychedelic)
+// knob_24: rainbow cycle speed (0=frozen, 1=fast cycling)
+// knob_25: hue spread (0=monochrome, 1=full rainbow across coat)
+// knob_26: saturation overdrive (0=pastel, 1=neon burn)
+// knob_27: lightness overdrive (0=dark/moody, 1=blinding bright)
+// knob_28: fractal detail scale (0=large swirls, 1=fine grain)
+// knob_29: domain warp depth (0=subtle, 1=melted reality)
+// knob_30: chromatic split (0=none, 1=RGB separation)
+// knob_31: iridescence (0=flat, 1=oil-slick angle-dependent color)
+// knob_32: noise grain (0=smooth, 1=TV static texture)
+// knob_33: color inversion pulse (0=normal, 1=inverted negative)
+
+#define HYPER_MIX (knob_38)
+// #define HYPER_MIX (spectralEntropyNormalized)
+
+#define RAINBOW_SPEED mapValue(knob_39, 0., 1., 0.0, 3.0)
+// #define RAINBOW_SPEED (spectralFluxNormalized * 3.0)
+
+#define HUE_SPREAD mapValue(knob_40, 0., 1., 0.0, 1.0)
+// #define HUE_SPREAD (spectralSpreadNormalized)
+
+#define SAT_OVERDRIVE mapValue(knob_41, 0., 1., 0.5, 1.0)
+// #define SAT_OVERDRIVE (0.5 + spectralRoughnessNormalized * 0.5)
+
+#define LIGHT_OVERDRIVE mapValue(knob_42, 0., 1., 0.3, 0.95)
+// #define LIGHT_OVERDRIVE (0.3 + energyNormalized * 0.65)
+
+#define FRACTAL_SCALE mapValue(knob_43, 0., 1., 4.0, 80.0)
+// #define FRACTAL_SCALE (4.0 + spectralCentroidNormalized * 76.0)
+
+#define WARP_DEPTH mapValue(knob_44, 0., 1., 0.0, 5.0)
+// #define WARP_DEPTH (spectralEntropyNormalized * 5.0)
+
+#define CHROMA_SPLIT mapValue(knob_45, 0., 1., 0.0, 0.03)
+// #define CHROMA_SPLIT (spectralSpreadNormalized * 0.03)
+
+#define IRIDESCENCE mapValue(knob_46, 0., 1., 0.0, 1.0)
+// #define IRIDESCENCE (spectralCrestNormalized)
+
+#define NOISE_GRAIN mapValue(knob_47, 0., 1., 0.0, 1.0)
+// #define NOISE_GRAIN (spectralKurtosisNormalized)
+
+#define COLOR_INVERT (knob_48)
+// #define COLOR_INVERT (max(spectralFluxZScore, 0.0))
 
 // --- DERIVED ---
 #define DROP_TRIGGER clamp(max(DROP_SIGNAL, BUILD), 0.0, 1.0)
@@ -587,6 +645,50 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         vec3 strand_col = mix(fur_col * 1.3, chrome, 0.3 + strand * 0.2);
         // Blend into the coat color, gated by the trigger amount
         fur_col = mix(fur_col, strand_col, strand * fur_fractal_amt * 0.75);
+    }
+
+    // ---- HYPERCOLOR COAT TEXTURE ----
+    if (HYPER_MIX > 0.01) {
+        float hmix = HYPER_MIX;
+
+        // Domain-warped coordinates for the hypercolor pattern
+        vec2 hp = uv * FRACTAL_SCALE;
+        float ht = time * RAINBOW_SPEED;
+
+        // Deep domain warp — melts reality at high values
+        vec2 hw1 = vec2(fbm(hp + vec2(ht * 0.7, 1.3)), fbm(hp + vec2(2.7, ht * 0.5)));
+        vec2 hw2 = vec2(fbm(hp + hw1 * WARP_DEPTH + vec2(ht * 0.3, 0.0)),
+                        fbm(hp + hw1 * WARP_DEPTH + vec2(0.0, ht * 0.4 + 5.2)));
+        float pattern = fbm(hp + hw2 * WARP_DEPTH);
+
+        // Rainbow hue — spreads across the coat surface
+        float hyper_hue = fract(pattern * HUE_SPREAD + ht * 0.2 + uv.y * HUE_SPREAD * 0.5);
+
+        // Iridescence — hue shifts based on view angle relative to coat surface
+        float angle_factor = abs(dot(normalize(uv - vec2(0.0, -0.1)), vec2(0.0, 1.0)));
+        hyper_hue = fract(hyper_hue + angle_factor * IRIDESCENCE * 0.5);
+
+        // Noise grain overlay
+        float grain = hash(uv * 500.0 + fract(time * 60.0)) * NOISE_GRAIN;
+
+        // Build the hypercolor
+        float hyper_sat = SAT_OVERDRIVE;
+        float hyper_light = LIGHT_OVERDRIVE + grain * 0.15;
+        vec3 hyper_col = hsl2rgb(vec3(hyper_hue, hyper_sat, clamp(hyper_light, 0.0, 0.95)));
+
+        // Chromatic split — offset R, G, B channels for prismatic effect
+        if (CHROMA_SPLIT > 0.0001) {
+            float cs = CHROMA_SPLIT;
+            vec3 hc_r = hsl2rgb(vec3(fract(hyper_hue + cs * 10.0), hyper_sat, clamp(hyper_light, 0.0, 0.95)));
+            vec3 hc_b = hsl2rgb(vec3(fract(hyper_hue - cs * 10.0), hyper_sat, clamp(hyper_light, 0.0, 0.95)));
+            hyper_col = vec3(hc_r.r, hyper_col.g, hc_b.b);
+        }
+
+        // Color inversion pulse
+        hyper_col = mix(hyper_col, 1.0 - hyper_col, COLOR_INVERT);
+
+        // Blend into the coat
+        fur_col = mix(fur_col, hyper_col, hmix);
     }
 
     // Seam strength computed here; chrome glow added after compositing
