@@ -879,5 +879,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     col += coat_outline * vec3(1.0, 1.0, 0.0);
 #endif
 
+    // VJ FLUX HUE DRIFT — sustained spectral flux slowly rotates overall hue
+    {
+        float drift = clamp(spectralFluxNormalized - 0.15, 0.0, 0.7) * 0.18;
+        if (drift > 0.005) {
+            vec3 hsl_col = rgb2hsl(col);
+            hsl_col.x = fract(hsl_col.x + drift);
+            col = hsl2rgb(hsl_col);
+        }
+    }
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
