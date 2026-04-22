@@ -814,6 +814,26 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             col += streak_col * streaks * streak_life * mask * hyper_on * 0.55;
         }
     }
+    // VJ SEARCHLIGHT — rotating police-style beam, red/blue alternating on bass
+    {
+        float search_on = clamp(midsNormalized - 0.2, 0.0, 1.0);
+        if (search_on > 0.02) {
+            // Beam anchored above the frame, sweeps angle
+            vec2 origin = vec2(sin(time * 0.7) * 0.5, 1.1);
+            vec2 to_pix = uv - origin;
+            float beam_a = atan(to_pix.y, to_pix.x);
+            // Beam target angle (rotates)
+            float target_a = -PI * 0.5 + sin(time * 1.1) * 0.45;
+            float beam_width = 0.12;
+            float beam = smoothstep(beam_width, 0.0, abs(beam_a - target_a));
+            beam *= smoothstep(0.0, 0.3, length(to_pix));
+            beam *= 1.0 - smoothstep(0.8, 1.3, length(to_pix));
+            // Alternate red/blue every half-cycle
+            float flash = step(0.0, sin(time * 2.5 + clamp(bassZScore, 0.0, 2.0) * 4.0));
+            vec3 beam_col = mix(vec3(0.2, 0.4, 1.0), vec3(1.0, 0.2, 0.3), flash);
+            col += beam_col * beam * search_on * 0.7;
+        }
+    }
     col *= 1.0 - smoothstep(0.7, 1.4, length(uv * vec2(1.0, 0.85)));
 
 #if DEBUG_OUTLINES

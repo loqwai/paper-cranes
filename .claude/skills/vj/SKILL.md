@@ -31,10 +31,30 @@ Existing state file (if a run is in progress):
 
 ## Arguments
 
-- **No args** → 180 iterations (3 hours), 1 per minute
-- **Single integer N** → N iterations
+The skill parses `$ARGUMENTS` by looking for these tokens in any order:
+
+- **No args** → 180 iterations (3 hours), 1 per minute, shader = most recently modified `.frag`
+- **Integer N** → N iterations instead of 180
 - **`stop`** → read `.claude/vj-state.json`, `CronDelete` the stored job ID, remove the state file
 - **`tick`** → single iteration (what the cron fires)
+- **A shader path** → use this shader for the run. Accepted forms:
+  - `shaders/redaphid/wip/the-coat-fur-coat/the-coat-6.frag` (full path from repo root)
+  - `redaphid/wip/the-coat-fur-coat/the-coat-6.frag` (relative to `shaders/`)
+  - `redaphid/wip/the-coat-fur-coat/the-coat-6` (no extension, same format `/__save-shader` accepts)
+  - Absolute path anywhere under the repo
+  - A bare shader name if unique: `/vj the-coat-6` resolves by find-matching under `shaders/`
+  - A URL containing `?shader=...`: extract the param
+  Normalize to the no-extension form before saving to `vj-state.json` as `shaderPath`.
+
+Examples:
+- `/vj` — 180 iters on the most-recent .frag
+- `/vj 30` — 30 iters
+- `/vj redaphid/wip/the-coat-fur-coat/the-coat-6` — 180 iters on this shader
+- `/vj 60 the-coat-6` — 60 iters, resolving `the-coat-6` by name
+- `/vj stop` — end the run
+- `/vj tick` — what cron fires; reads state, runs one iteration
+
+If a shader arg is passed mid-run (skill re-invoked while state exists), treat it as a shader-swap: update `shaderPath` in state and navigate the jam tab to the new shader URL without reloading the whole page (use `window.cranes.shader = <code>` + `history.replaceState` pattern).
 
 ## Setup (once, at start)
 
