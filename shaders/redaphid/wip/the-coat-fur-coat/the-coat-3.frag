@@ -833,6 +833,29 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             col += vec3(0.7, 0.85, 1.2) * tear_bright * tear_on * 1.1;
         }
     }
+    // VJ GROUND QUAKE — concentric amber rings from floor, bass-driven, multiple wavefronts
+    {
+        float quake_on = clamp(bassNormalized - 0.3, 0.0, 1.0);
+        quake_on *= smoothstep(0.5, 0.15, spectralCentroidNormalized);
+        if (quake_on > 0.02) {
+            vec2 feet_c = vec2(0.0, -0.6);
+            vec2 dvec = uv - feet_c;
+            // Squash vertically so rings look like ground waves (elliptical)
+            dvec.y *= 2.0;
+            float r = length(dvec);
+            float wavefronts = 0.0;
+            for (int wi = 0; wi < 3; wi++) {
+                float wf = float(wi);
+                float ring_r = fract(time * 0.6 + wf * 0.33) * 1.2;
+                float dr = r - ring_r;
+                float w = exp(-dr * dr * 90.0);
+                float fade = 1.0 - ring_r / 1.2;
+                wavefronts += w * fade;
+            }
+            vec3 quake_col = mix(vec3(1.0, 0.35, 0.08), vec3(1.0, 0.75, 0.3), bassNormalized);
+            col += quake_col * wavefronts * quake_on * 0.55;
+        }
+    }
     col *= 1.0 - smoothstep(0.7, 1.4, length(uv * vec2(1.0, 0.85)));
 
 #if DEBUG_OUTLINES
