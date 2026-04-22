@@ -787,7 +787,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             beam = pow(beam, 8.0);
             float dist_fade = 1.0 - smoothstep(0.2, 1.4, length(to_origin));
             float sil_mask = 1.0 - silhouette;
-            vec3 beam_col = vec3(0.95, 0.85, 0.55);
+            // Pitch-driven warm/cool: low pitch = warm amber, high pitch = cool white
+            vec3 beam_col = mix(vec3(1.0, 0.7, 0.35), vec3(0.85, 0.95, 1.0), pitchClassNormalized);
             col += beam_col * beam * dist_fade * sil_mask * beams_on * 0.45;
         }
     }
@@ -881,6 +882,22 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             float halo_d = smoothstep(0.0, 0.35, length(uv - vec2(0.0, -0.05)));
             float darken = menace * halo_d * (1.0 - silhouette_proxy) * 0.35;
             col *= 1.0 - darken;
+        }
+    }
+    // VJ BATON — tall thin bright sweep from overhead on big treble peaks. Orchestral cue.
+    {
+        float baton_on = clamp(trebleZScore - 0.2, 0.0, 1.5) * smoothstep(0.55, 0.85, spectralCentroidNormalized);
+        if (baton_on > 0.02) {
+            float sweep_angle = sin(time * 1.3 + pitchClassNormalized * 6.28) * 0.6;
+            vec2 baton_dir = vec2(sin(sweep_angle), -cos(sweep_angle));
+            vec2 baton_base = vec2(0.0, 0.85);
+            // Distance from pixel to the line (base + t * dir)
+            vec2 to_pix = uv - baton_base;
+            float along = dot(to_pix, baton_dir);
+            float across = abs(to_pix.x * baton_dir.y - to_pix.y * baton_dir.x);
+            float line = exp(-across * across * 8000.0);
+            float length_mask = smoothstep(0.0, 0.05, along) * smoothstep(1.6, 1.4, along);
+            col += vec3(1.0, 0.95, 0.8) * line * length_mask * baton_on * knob_2 * 0.8;
         }
     }
     col *= 1.0 - smoothstep(0.7, 1.4, length(uv * vec2(1.0, 0.85)));

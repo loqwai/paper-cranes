@@ -1,7 +1,7 @@
 # the-coat-8 — Session Journal
 
 ## Status
-Iter 49/180. **knob_2 repurposed as climax dampener** — scales god rays, eye wash, eye punch, cosmic shockwave, and mouth glow by knob_2. 0 = payoff effects suppressed; 1 = full. User controls when climactic moments fire. Fog now at a fixed 0.22 density. iter 48 added VJ GRIT (roughness-gated luminance flicker on coat). Active track: *symphony no.5 in bass minor – LŪN*.
+Iter 51/180. Volumetric-beam color now pitch-shifts warm→cool across pitchClass. Climax dampener (knob_2) working well as a live control. Active track: *Holy – Nostalgix, Kyra Mastro*.
 
 ## Knob map (current)
 - knob_1: zoom
@@ -15,6 +15,16 @@ Iter 49/180. **knob_2 repurposed as climax dampener** — scales god rays, eye w
 - knob_9: feedback amount
 
 ## Cool moments
+
+### iter 51 — *Holy* — Nostalgix, Kyra Mastro
+
+**Audio fingerprint:** `treble 0.74 (trebZ +0.08) + centroid 0.71 + entropy 0.79 + energy 0.61 + bass 0.19 + mids 0.23 + pitch 0.50 + knob_2 ≈ 0.98 (climax near full)`.
+
+**What worked:** Volumetric beams fire strong (centroid × energy both mid-high both satisfy gates), god rays at full knob_2 climax, beam color now pitch-shifts warm-cool. The track title cues a religious reading → the existing cathedral-sunbeam motif reads as literally holy. User pulled knob_2 up from 0.76 → 0.98 mid-track, which *is* them calling for the climax. Journal-driven dampener is working: subtle ambient sections → knob_2 low → warm-breath + fog + aurora only; climax → knob_2 high → beams + god rays + mouth glow + cosmic shockwave + eye-wash unload.
+
+**What was missed:** No effect specifically keyed to *beat-aligned pitch changes* as its own channel. pitchClass is used for rainbow drift + confetti-style tints, but not as a *beat-aware signal*. A chord-change detector (pitchClass over several beats) would let v(next) respond to harmonic motion, not just instantaneous note.
+
+**Design hypothesis:** v(next) should have a **pitch-change event detector** — window pitchClass over ~2 seconds, emit a pulse when it discretely shifts (major 3rd, 5th, octave). That's a stronger signal than instantaneous pitch — would key a "harmony changed" visual moment distinct from rhythmic signals.
 
 ### iter 39 (carried from the-coat-6) — *Odds & Ends* — Late Night Radio
 
@@ -53,5 +63,7 @@ Iter 49/180. **knob_2 repurposed as climax dampener** — scales god rays, eye w
 - Dedicated **mid-dominant warmth** effect for `mids > 0.7 AND centroid < 0.3 AND entropy < 0.2` (slow amber inner glow emanating from silhouette).
 - **Effects declare their feature-space region** via a lightweight DSL so multi-effect alignments are deliberate rather than accidental. The iter-39 five-way alignment happened because three separate blocks coincidentally wanted the same corner; v(next) should express that intent in one place.
 - **Avoid visible sine-cross products** on elements that will be textured onto silhouettes — they read as artifacting (mercury-flow lattice lesson).
-- **Pitch-driven color** (iter 41 confetti, iter 19 chrome, iter 43 mouth glow) consistently felt *intentional*. Keep this pattern: the music's note → some visual channel's hue. v(next) should have a single place where pitchClass is the palette's anchor, rather than each effect computing its own.
+- **Pitch-driven color** (iter 41 confetti, iter 19 chrome, iter 43 mouth glow, iter 51 beam color) consistently felt *intentional*. Keep this pattern: the music's note → some visual channel's hue. v(next) should have a single place where pitchClass is the palette's anchor, rather than each effect computing its own.
 - **Feedback is the #1 flow killer** when effects feed back into next frame and create tiling. Keep effect blocks *after* the `col = mix(prev, col, feedback_amt)` step if they shouldn't persist across frames.
+- **Climax dampener knob** was the biggest-impact live control this session. User pulled it back during chill phases, pushed it up for drops. v(next) should **bake this into the design** — a single "intensity" channel that scales all payoff effects uniformly, keyed to a user knob AND to `IS_DROP` / `drop_glow`. Multiple effects shouldn't each do their own drop-gating; they should subscribe to the single channel.
+- **Pitch-change event detector** (windowed pitchClass, emit pulse on discrete chord changes) would give v(next) a "harmony changed" signal distinct from rhythmic ones. Would let visuals respond to musical structure, not just loudness.
