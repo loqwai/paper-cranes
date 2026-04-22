@@ -647,23 +647,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Coat rim pulses with spectral flux — brighter on timbral changes
     float rim_boost = RIM_BOOST;
     col += coat_rim * chrome * rim_boost * (1.0 - curls);
-    // VJ CRYSTALLINE FACETS — on high entropy, coat turns to iridescent obsidian shards
-    {
-        float facet_on = clamp(spectralEntropyNormalized - 0.55, 0.0, 0.5) * 2.0;
-        if (facet_on > 0.02 && coat > 0.05) {
-            vec2 fp_c = uv * 9.0 + vec2(time * 0.15, -time * 0.07);
-            vec2 fcell = floor(fp_c);
-            vec2 ffrac = fract(fp_c) - 0.5;
-            float fh = hash(fcell);
-            float face_d = abs(ffrac.x) + abs(ffrac.y);
-            float facet = smoothstep(0.55, 0.15, face_d);
-            float iri_hue = fract(fh + time * 0.2 + spectralCentroidNormalized * 0.5);
-            vec3 iri = hsl2rgb(vec3(iri_hue, 0.9, 0.55));
-            vec3 obsidian = vec3(0.02, 0.02, 0.04);
-            vec3 shard = mix(obsidian, iri, facet * 0.8);
-            col = mix(col, shard, facet_on * coat * (1.0 - curls) * 0.8);
-        }
-    }
 
     // Button seam glow — chrome line down the center
     col += seam_glow * coat * chrome * 0.25 * (1.0 - curls);
@@ -689,22 +672,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     if (beat) feedback_amt *= 0.6;
     if (frame < 30) feedback_amt = 0.0;
     col = mix(prev, col, feedback_amt);
-    // VJ MERCURY FLOW — bass-heavy low-centroid phases turn the coat into flowing liquid metal
-    {
-        float flow_on = clamp(bassNormalized - 0.25, 0.0, 1.0);
-        flow_on *= smoothstep(0.60, 0.25, spectralCentroidNormalized);
-        if (flow_on > 0.02 && silhouette > 0.05) {
-            float flow_t = time * (0.5 + bassNormalized * 1.5);
-            // Vertical flow: stripes drip downward at varying speeds
-            float stripe = sin(uv.x * 18.0 + sin(uv.y * 4.0 + flow_t) * 2.5 - flow_t * 2.0);
-            stripe = stripe * 0.5 + 0.5;
-            stripe = smoothstep(0.35, 0.95, stripe);
-            vec3 mercury_dark = vec3(0.05, 0.06, 0.1);
-            vec3 mercury_hi = vec3(0.92, 0.94, 1.0);
-            vec3 mercury = mix(mercury_dark, mercury_hi, stripe);
-            col = mix(col, mercury, flow_on * silhouette * 0.75);
-        }
-    }
 
 
     // VJ TIME-ECHO — on energy surges, triple-expose previous frame around head
@@ -878,6 +845,25 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         vec3 s_hsl = rgb2hsl(col);
         s_hsl.y = clamp(s_hsl.y * sat_k, 0.0, 1.0);
         col = hsl2rgb(s_hsl);
+    }
+
+    // --- KNOB_13: outline / shadow-mode ---
+    // 0 = normal color, 1 = heavy ink-outlined shadowy look.
+    // Uses Sobel-style 4-tap prev-frame sampling (moody-octopus technique).
+    if (knob_13 > 0.01) {
+        vec2 px = vec2(1.0 / res.x, 1.0 / res.y) * mix(1.5, 5.0, knob_13);
+        vec2 fb_outline = fragCoord / res;
+        float ll = dot(getLastFrameColor(fb_outline - vec2(px.x, 0.0)).rgb, vec3(0.33));
+        float lr = dot(getLastFrameColor(fb_outline + vec2(px.x, 0.0)).rgb, vec3(0.33));
+        float lu = dot(getLastFrameColor(fb_outline + vec2(0.0, px.y)).rgb, vec3(0.33));
+        float ld = dot(getLastFrameColor(fb_outline - vec2(0.0, px.y)).rgb, vec3(0.33));
+        float gx = lr - ll;
+        float gy = lu - ld;
+        float edge = sqrt(gx*gx + gy*gy);
+        float ink = smoothstep(0.05, 0.25, edge) * knob_13;
+        // Darken colors (shadowy) + overlay ink lines
+        col *= mix(1.0, 0.35, knob_13 * 0.6);
+        col = mix(col, vec3(0.02, 0.02, 0.04), ink * 0.85);
     }
 
     col *= 1.0 - smoothstep(0.7, 1.4, length(uv * vec2(1.0, 0.85)));

@@ -22,6 +22,7 @@ Live-set starter. Forked from the-coat-3 with full 15-knob layout wired from the
 
 ## History of changes
 - **Pre-session removals** (don't re-add these): LIGHTNING (vertical bolts), COSMIC SHOCKWAVE (large white ring), SCAN LINE (cyan CRT sweep). User flagged all three at fork time.
+- **Iter 2:** Removed MERCURY FLOW + CRYSTALLINE FACETS — user: "none of those diamond patches." Both used sine-cross-products or diamond-grid cells that read as artifacting. **Added KNOB_13 = outline/shadow mode** — user wanted a knob to toggle between normal color and shadowy/inked look (moody-octopus Sobel outline pass). knob_13=0 → normal, knob_13=1 → dark + heavy ink outlines.
 - Inherits the-coat-3 baseline: nebula fog, starfield, sub-ring, heart pulse, ghost echo, ember/mercury flow, ground quake, water pool, hyperspace tunnel, mouth glow, warm breath, bouncing body, camera drift, fog pulse, fur shimmer, aurora, black hole, dissolution particles, searchlight, flux hue drift.
 
 ## Design hypotheses for v(next)
