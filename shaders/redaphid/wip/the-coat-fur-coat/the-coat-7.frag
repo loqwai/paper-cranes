@@ -1,6 +1,6 @@
 // @fullscreen: true
 // @mobile: true
-// the-coat-6: forked from the-coat-5 mid-/vj-session after iter 38 (hyperspace). Fresh baseline.
+// the-coat-7: forked from the-coat-6 at iter 45. User: "pretty gorgeous" — capturing the state.
 // Knob defaults captured: knob_2=-0.346, knob_7=0.98, knob_12=0.669, knob_15=0.46
 // Use with controller=the-coat for sustained drop glow
 uniform float drop_glow; // from the-coat controller — sustained drop with decay
