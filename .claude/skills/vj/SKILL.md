@@ -1,6 +1,6 @@
 ---
 name: vj
-description: "VJ a shader live at a party — auto-mutates the shader every minute to match the track. Reads audio features + Spotify track name from the jam page, edits the .frag via /__save-shader (HMR hot-swaps). Usage: `/vj [duration-minutes]` (default 180). Use `/vj stop` to end early."
+description: "VJ a shader live at a party — auto-mutates the shader every minute to match the track. Reads audio features + Spotify track name from the jam page, edits the .frag via /__save-shader (HMR hot-swaps). Usage: `/vj [N-iterations] [shader-path-or-name]` (default 180, most-recent .frag). `/vj stop` ends early. `/vj tick` runs one iteration (what the cron fires)."
 allowed-tools: Bash Read Write Edit Grep Glob CronCreate CronList CronDelete mcp__claude-in-chrome__tabs_context_mcp mcp__claude-in-chrome__tabs_create_mcp mcp__claude-in-chrome__navigate mcp__claude-in-chrome__javascript_tool
 ---
 
