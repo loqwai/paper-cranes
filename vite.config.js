@@ -5,19 +5,11 @@ import { shaderPlugin } from './vite-plugins/shader-plugin.js'
 import { remoteWsPlugin } from './vite-plugins/remote-ws-plugin.js'
 import { editorSyncPlugin } from './vite-plugins/editor-sync-plugin.js'
 
-
-const branchToPort = (branch) => {
-  if (branch === 'main') return 6969
-  let hash = 0
-  for (const ch of branch) hash = ((hash << 5) - hash + ch.charCodeAt(0)) | 0
-  return 1024 + (Math.abs(hash) % 64511) // 1024–65534
-}
-
-const gitBranch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf-8' }).trim()
+const port = parseInt(execSync('./scripts/dev-port', { encoding: 'utf-8' }))
 
 export default defineConfig({
   server: {
-    port: parseInt(process.env.PORT) || branchToPort(gitBranch),
+    port,
     host: '0.0.0.0',
     allowedHosts: true,
     watch: {
