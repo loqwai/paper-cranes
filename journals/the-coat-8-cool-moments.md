@@ -1,7 +1,7 @@
 # the-coat-8 — Session Journal
 
 ## Status
-Iter 51/180. Volumetric-beam color now pitch-shifts warm→cool across pitchClass. Climax dampener (knob_2) working well as a live control. Active track: *Holy – Nostalgix, Kyra Mastro*.
+Iter 52/180. **Big knob-layout revamp**: knobs 3–8 each now a clearly-visible visual lever (fog, aurora, hyperspace, particles, trails, saturation). Also fixed zoom-in pixelation by scaling hash-grid frequencies (grit, starfield, dissolution particles) by `zoomAmount` so cells stay screen-pixel sized under zoom. Active track: *TiiGA – Buku*.
 
 ## Knob map (current)
 - knob_1: zoom
@@ -52,6 +52,7 @@ Iter 51/180. Volumetric-beam color now pitch-shifts warm→cool across pitchClas
 - **Removed iter 37:** LIGHTNING + SCAN LINE + CRYSTALLINE FACETS — user: "horizontal lightning / CRT scan / rainbow checkerboard."
 - **Removed iter pre-fork -7:** INFINITY MIRROR (spinning tiled kaleido) — user: "spinning squares, distracting."
 - **Removed in -8 fork (iter 45):** CONFETTI — user request.
+- **Removed iter 52:** VJ GRIT — user: "let's not have that grittiness at all." Was always-on noise flicker on coat during high-roughness tracks.
 
 ## Forks
 

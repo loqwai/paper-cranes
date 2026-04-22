@@ -10,12 +10,14 @@ uniform float drop_glow; // from the-coat controller — sustained drop with dec
 
 // ============================================================================
 // KNOB CONTROLS — knobs override baked defaults from the jam session
-// knob_1: zoom (0=wide, 1=tight) — live-remapped
-// knob_3: god ray intensity override
-// knob_4: eye wash override
-// knob_5: drop zoom override
-// knob_6: camera tilt swagger
-// knob_7: fur thickness
+// knob_1: zoom (0=wide, 1=tight)
+// knob_2: climax dampener (god rays, eye wash, cosmic shockwave, mouth glow, baton)
+// knob_3: fog density (0=clear, 1=thick cosmic cloud)
+// knob_4: aurora intensity (0=off, 1=full neon sky)
+// knob_5: hyperspace tunnel strength (0=off, 1=full rushing streaks)
+// knob_6: particle storm (0=off, 1=heavy dissolution)
+// knob_7: trails/ghost smear (0=crisp, 1=max)
+// knob_8: saturation (0=greyscale, 0.5=neutral, 1=supersaturated neon)
 // knob_13: sustain decay (via controller)
 // ============================================================================
 
@@ -392,7 +394,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     bg += spot * vec3(0.5, 0.2, 0.6) * (0.5 + 0.5 * sin(BEAT_PHASE * 2.0)) * (0.8 + clamp(energyZScore, -0.5, 2.0) * 0.6);
     // VJ STARFIELD — sparkle crosses in the upper sky, twinkle faster on treble
     {
-        vec2 sp = uv * 14.0;
+        vec2 sp = uv * (14.0 * zoomAmount);
         vec2 scell = floor(sp);
         vec2 scf = fract(sp) - 0.5;
         float sr = hash(scell);
@@ -425,8 +427,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         vec3 nebula = mix(nebula_a, nebula_b, sin(np.x * 0.7 + t) * 0.5 + 0.5);
         // knob_2: nebula fog density (0 = clear, 1 = thick cosmic cloud) — auto-wired when twisted
         float fog_pulse = 1.0 + clamp(bassZScore, 0.0, 2.0) * 0.50;
-        // knob_2 was fog density — repurposed as climax dampener (see below). Fog now constant.
-        bg += nebula * fog * 0.22 * (0.7 + midsNormalized * 0.4) * fog_pulse;
+        // knob_3: fog density (0 = clear sky, 1 = thick cosmic cloud)
+        bg += nebula * fog * mix(0.02, 0.55, knob_3) * (0.7 + midsNormalized * 0.4) * fog_pulse;
     }
         // VJ AURORA VEILS — glowing green-teal curtains in dark/wonky phases (low centroid)
     {
@@ -438,8 +440,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             float curtain1 = exp(-pow(uv.y - 0.35 - v1 * 0.25, 2.0) * 14.0);
             float curtain2 = exp(-pow(uv.y - 0.20 - v2 * 0.3, 2.0) * 10.0);
             float intensity = aurora_on * (0.5 + bassNormalized * 0.6);
-            bg += vec3(0.25, 0.85, 0.55) * curtain1 * intensity * 0.7;
-            bg += vec3(0.15, 0.55, 0.95) * curtain2 * intensity * 0.5;
+            // knob_4: aurora intensity (0 = no curtains, 1 = full neon sky)
+            bg += vec3(0.25, 0.85, 0.55) * curtain1 * intensity * 0.7 * knob_4;
+            bg += vec3(0.15, 0.55, 0.95) * curtain2 * intensity * 0.5 * knob_4;
         }
     }
     // VJ ROTOR GEAR — stepped 8-spoke halo behind head, ticks on treble-heavy phases
@@ -680,21 +683,23 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     fb_uv.y -= 0.002 + pump * 0.003;
     vec3 prev = getLastFrameColor(fb_uv).rgb * 0.88;
     float silhouette = max(body, coat);
-    // knob_9: feedback/trails (0=crisp, 1=heavy smear)
-    float feedback_amt = mix(mix(0.45, 0.05, knob_9), mix(0.15, 0.03, knob_9), silhouette);
+    // knob_7: trails/feedback smear (0 = crisp, 1 = max ghost trails)
+    float trail_k = 1.0 - knob_7;  // invert so higher knob = more trails
+    float feedback_amt = mix(mix(0.08, 0.55, trail_k), mix(0.03, 0.25, trail_k), silhouette);
     // VJ GHOST ECHO — bass spikes briefly raise feedback for a coat afterimage
     feedback_amt = mix(feedback_amt, 0.55, clamp(bassZScore - 0.4, 0.0, 1.0) * 0.5);
     if (beat) feedback_amt *= 0.6;
     if (frame < 30) feedback_amt = 0.0;
     col = mix(prev, col, feedback_amt);
-    // VJ GRIT — luminance noise on coat only, gated by high roughness
+    // VJ ENERGY FIELD — thin iridescent rim on silhouette during high-entropy-high-roughness (no bass)
     {
-        float grit_on = clamp(spectralRoughnessNormalized - 0.45, 0.0, 1.0);
-        if (grit_on > 0.02 && silhouette > 0.05) {
-            vec2 gp = uv * 80.0 + vec2(time * 7.0, time * 4.5);
-            float grit = hash(floor(gp));
-            float flicker = mix(0.75, 1.2, grit);
-            col *= mix(1.0, flicker, grit_on * silhouette * 0.55);
+        float field_on = clamp(spectralEntropyNormalized * spectralRoughnessNormalized - 0.5, 0.0, 0.4) * 2.5;
+        field_on *= 1.0 - clamp(bassNormalized, 0.0, 1.0);  // suppress when bass is present
+        if (field_on > 0.02 && silhouette > 0.01 && silhouette < 0.2) {
+            float edge = smoothstep(0.0, 0.05, silhouette) * smoothstep(0.20, 0.05, silhouette);
+            float hue_spin = fract(time * 0.6 + silhouette * 3.0 + pitchClassNormalized);
+            vec3 field_col = hsl2rgb(vec3(hue_spin, 0.9, 0.6));
+            col += field_col * edge * field_on * 0.85;
         }
     }
     // VJ MERCURY FLOW — bass-heavy low-centroid phases turn the coat into flowing liquid metal
@@ -820,7 +825,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float dissolve = clamp(trebleNormalized - 0.3, 0.0, 1.0);
         dissolve *= clamp(spectralCentroidNormalized - 0.5, 0.0, 1.0) * 2.0;
         if (dissolve > 0.02) {
-            vec2 pp = uv * vec2(12.0, 8.0) + vec2(sin(time * 0.3) * 0.3, time * -0.8);
+            vec2 pp = uv * vec2(12.0, 8.0) * zoomAmount + vec2(sin(time * 0.3) * 0.3, time * -0.8);
             vec2 pcell = floor(pp);
             vec2 pfrac = fract(pp) - 0.5;
             float ph = hash(pcell);
@@ -829,7 +834,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             float particle = exp(-pd * pd * 25.0) * alive;
             float near_sil = smoothstep(0.0, 0.15, silhouette) * (1.0 - silhouette);
             vec3 particle_col = mix(vec3(0.9, 0.95, 1.0), vec3(1.0, 0.85, 0.6), hash(pcell + vec2(1.1, 3.3)));
-            col += particle_col * particle * near_sil * dissolve * 1.2;
+            // knob_6: particle storm (scales dissolution particles 0=off to 3x)
+            col += particle_col * particle * near_sil * dissolve * (0.4 + knob_6 * 2.5);
         }
     }
     // VJ HYPERSPACE — radial streaks rushing outward from head on mid-high energy
@@ -850,7 +856,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             // Mask: fade near the silhouette and at screen edge
             float mask = smoothstep(0.18, 0.35, hr) * (1.0 - smoothstep(0.9, 1.3, hr));
             vec3 streak_col = mix(vec3(0.6, 0.7, 1.0), vec3(1.0, 0.9, 0.7), trebleNormalized);
-            col += streak_col * streaks * streak_life * mask * hyper_on * 0.55;
+            // knob_5: hyperspace tunnel strength
+            col += streak_col * streaks * streak_life * mask * hyper_on * 0.55 * knob_5;
         }
     }
     // VJ SEARCHLIGHT — rotating police-style beam, red/blue alternating on bass
@@ -918,6 +925,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             hsl_col.x = fract(hsl_col.x + drift);
             col = hsl2rgb(hsl_col);
         }
+    }
+    // knob_8: global saturation (0 = greyscale, 0.5 = neutral, 1 = supersaturated)
+    {
+        vec3 s_hsl = rgb2hsl(col);
+        s_hsl.y = clamp(s_hsl.y * (knob_8 * 1.8), 0.0, 1.0);
+        col = hsl2rgb(s_hsl);
     }
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
