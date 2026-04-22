@@ -640,6 +640,18 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Button seam glow — chrome line down the center
     col += seam_glow * coat * chrome * 0.25 * (1.0 - curls);
     col += eyes * hot * 2.2;
+    // VJ MOUTH GLOW — soft glow where the mouth would be, pulsing on mids (vocal presence)
+    {
+        float mouth_on = clamp(midsNormalized - 0.15, 0.0, 1.0);
+        if (mouth_on > 0.02) {
+            vec2 mouth_c = P.head_c + vec2(0.0, -0.06);
+            float md = length((uv - mouth_c) * vec2(1.4, 2.0));
+            float mouth_blob = exp(-md * md * 80.0);
+            float pulse = 0.5 + 0.5 * sin(time * 4.0 + pitchClassNormalized * 6.28);
+            vec3 mouth_col = hsl2rgb(vec3(fract(0.05 + pitchClassNormalized * 0.15), 0.9, 0.55));
+            col += mouth_col * mouth_blob * mouth_on * pulse * 0.8;
+        }
+    }
     col = mix(col, col + hot * 0.6, eye_wash);
     col += eye_wash * hot * 0.4;
     vec3 ray_col = mix(hot, vec3(0.4, 0.85, 1.0), smoothstep(0.45, 0.85, spectralCentroidNormalized));
