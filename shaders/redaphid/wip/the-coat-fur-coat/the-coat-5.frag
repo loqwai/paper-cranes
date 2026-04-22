@@ -637,24 +637,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Coat rim pulses with spectral flux — brighter on timbral changes
     float rim_boost = RIM_BOOST;
     col += coat_rim * chrome * rim_boost * (1.0 - curls);
-    // VJ CRYSTALLINE FACETS — on high entropy, coat turns to iridescent obsidian shards
-    {
-        float facet_on = clamp(spectralEntropyNormalized - 0.55, 0.0, 0.5) * 2.0;
-        if (facet_on > 0.02 && coat > 0.05) {
-            vec2 fp_c = uv * 9.0 + vec2(time * 0.15, -time * 0.07);
-            vec2 fcell = floor(fp_c);
-            vec2 ffrac = fract(fp_c) - 0.5;
-            float fh = hash(fcell);
-            float face_d = abs(ffrac.x) + abs(ffrac.y);
-            float facet = smoothstep(0.55, 0.15, face_d);
-            float iri_hue = fract(fh + time * 0.2 + spectralCentroidNormalized * 0.5);
-            vec3 iri = hsl2rgb(vec3(iri_hue, 0.9, 0.55));
-            vec3 obsidian = vec3(0.02, 0.02, 0.04);
-            vec3 shard = mix(obsidian, iri, facet * 0.8);
-            col = mix(col, shard, facet_on * coat * (1.0 - curls) * 0.8);
-        }
-    }
-
     // Button seam glow — chrome line down the center
     col += seam_glow * coat * chrome * 0.25 * (1.0 - curls);
     col += eyes * hot * 2.2;
@@ -724,35 +706,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         }
     }
 
-
-    // VJ SCAN LINE — hi-hat driven horizontal band sweeps down
-    {
-        float hat = clamp(trebleZScore, 0.0, 2.0);
-        if (hat > 0.15) {
-            float scan_y = uv.y - fract(time * 0.35) * 2.0 + 1.0;
-            float scan = exp(-scan_y * scan_y * 800.0);
-            col += vec3(0.3, 0.8, 1.0) * scan * hat * 0.4;
-        }
-    }
-    // VJ LIGHTNING — jagged electric branches on big treble/flux spikes
-    {
-        float strike = max(clamp(trebleZScore - 0.5, 0.0, 1.5), clamp(spectralFluxZScore - 0.4, 0.0, 1.5));
-        if (strike > 0.05) {
-            // 3 offset branches, each a warped vertical line
-            float bolt = 0.0;
-            for (int bi = 0; bi < 3; bi++) {
-                float bf = float(bi);
-                float bolt_x = (hash(vec2(bf + floor(time * 4.0), 17.3)) - 0.5) * 1.6;
-                float warp = sin(uv.y * 6.0 + bf * 3.0 + time * 2.0) * 0.08
-                           + sin(uv.y * 18.0 + bf * 5.0) * 0.02;
-                float dx = uv.x - bolt_x - warp;
-                float b = exp(-dx * dx * 1200.0);
-                bolt = max(bolt, b);
-            }
-            float flicker = step(0.4, hash(vec2(floor(time * 20.0), 7.1)));
-            col += vec3(0.8, 0.95, 1.2) * bolt * strike * flicker * 1.8;
-        }
-    }
 
     // VJ COSMIC SHOCKWAVE — one-shot expanding ring on true beat flux spikes
     {
