@@ -455,26 +455,26 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 hair    = hsl2rgb(vec3(0.06, 0.7, 0.12));
     vec3 hot     = hsl2rgb(vec3(0.08, 1.0, 0.6));
 
-    // Coat fill — audio-reactive color. Base is synthwave pink, but:
+    // Coat fill — audio-reactive color. Base is deep blue, but:
     // - Lightness pulses brighter on bass hits
-    // - Hue shifts toward hot yellow/white on drops
+    // - Hue shifts toward electric cyan on drops
     // - Saturation dips slightly on quiet passages (more white/pastel)
     float coat_grad = smoothstep(0.15, -0.4, uv.y);
     float bass_pulse = BASS_PULSE_AMT;
     float drop_color = DROP_COLOR_AMT;
-    // Hue slides from pink (0.93) toward warm peach (0.05) on drops
-    float fur_hue_hi = mix(0.93, 0.05, drop_color * 0.5);
-    float fur_hue_lo = mix(0.86, 0.08, drop_color * 0.4);
+    // Hue slides from deep blue (0.62) toward electric cyan (0.50) on drops
+    float fur_hue_hi = mix(0.62, 0.50, drop_color * 0.6);
+    float fur_hue_lo = mix(0.58, 0.48, drop_color * 0.5);
     // Lightness pumps up on bass
-    float fur_l_hi = 0.72 + bass_pulse * 0.12;
-    float fur_l_lo = 0.55 + bass_pulse * 0.08;
+    float fur_l_hi = 0.65 + bass_pulse * 0.15;
+    float fur_l_lo = 0.45 + bass_pulse * 0.10;
     vec3 fur_hi = hsl2rgb(vec3(fur_hue_hi, 0.95, clamp(fur_l_hi, 0.0, 0.95)));
     vec3 fur_lo = hsl2rgb(vec3(fur_hue_lo, 0.9, clamp(fur_l_lo, 0.0, 0.85)));
     vec3 fur_col = mix(fur_hi, fur_lo, coat_grad);
     // Shoulder gleam pulses with spectral flux — light catching the coat
     float shoulder_gleam = exp(-pow((uv.y - 0.08) * 10.0, 2.0));
     float gleam_intensity = GLEAM_INTENSITY;
-    fur_col += shoulder_gleam * vec3(gleam_intensity, gleam_intensity * 0.6, gleam_intensity * 1.2);
+    fur_col += shoulder_gleam * vec3(gleam_intensity * 0.5, gleam_intensity * 0.8, gleam_intensity * 1.5);
     // ---- FRACTAL FUR FIBERS ----
     // Swirling domain-warped fractal that appears inside the coat when the
     // music is "interesting" — triggered by spectral entropy (chaos) and
@@ -483,29 +483,29 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // react to DIFFERENT musical qualities.
     float fur_trigger = FUR_TRIGGER;
     // Only show when musically interesting (above baseline)
-    float fur_fractal_amt = smoothstep(0.3, 0.7, fur_trigger);
+    float fur_fractal_amt = smoothstep(0.15, 0.55, fur_trigger);
     if (fur_fractal_amt > 0.01) {
         // Domain warp: swirl the coords with low-freq noise so the fibers
         // look like curling fur strands, not a static grid
-        vec2 fp = uv * 12.0;
+        vec2 fp = uv * 18.0;
         float warp_t = time * 0.3 + WARP_SPEED;
         vec2 warp = vec2(
             fbm(fp + vec2(warp_t, 0.0)),
             fbm(fp + vec2(0.0, warp_t + 3.7))
         );
         // Second domain warp for deeper swirl
-        vec2 fp2 = fp + warp * 2.5;
+        vec2 fp2 = fp + warp * 3.5;
         float fibers = fbm(fp2 + vec2(
             fbm(fp2 + vec2(warp_t * 0.7, 1.3)),
             fbm(fp2 + vec2(2.1, warp_t * 0.5))
         ) * 1.5);
         // Shape the fibers: sharp ridges that look like individual strands
-        float strand = pow(abs(sin(fibers * PI * 3.0)), 4.0);
+        float strand = pow(abs(sin(fibers * PI * 4.0)), 3.0);
         // Color the strands: lighter than the base coat, tinted toward
-        // chrome/white so they read as light catching individual fur fibers
-        vec3 strand_col = mix(fur_col * 1.3, chrome, 0.3 + strand * 0.2);
+        // cyan/white so they read as light catching individual fur fibers
+        vec3 strand_col = mix(fur_col * 1.5, vec3(0.7, 0.9, 1.0), 0.3 + strand * 0.4);
         // Blend into the coat color, gated by the trigger amount
-        fur_col = mix(fur_col, strand_col, strand * fur_fractal_amt * 0.75);
+        fur_col = mix(fur_col, strand_col, strand * fur_fractal_amt * 0.85);
     }
 
     // Seam strength computed here; chrome glow added after compositing
