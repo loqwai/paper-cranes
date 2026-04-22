@@ -166,6 +166,8 @@ Let the features + track name guide it. Some reliable archetypes:
 
 `vj-state.json` holds a `moveStyle` field — `"subtle"` (default: parameter nudges, coefficient tweaks) or `"dramatic"` (new visual motifs per tick: black-hole silhouette, lightning strikes, aurora, tearfall, rotor gear, crystalline facets, time-echo, water pool). Dramatic mode adds a whole feature each tick instead of adjusting one. Switch modes when user says "more variation" or "less busy". Save the choice.
 
+**Many-knob heuristic (promote to dramatic for the current tick):** if the user moved **3+ knobs by >0.05** since the last snapshot, treat that as a signal they want a bigger vibe change. Upgrade this tick's move from subtle → dramatic regardless of `moveStyle`, and choose an edit that meaningfully shifts the *overall* aesthetic (palette swing, motif added/removed, feedback character flipped, zoom regime changed) rather than a coefficient tweak. Don't rewrite `moveStyle` in state — this is a per-tick upgrade. Log why in the journal so the history is legible.
+
 ### C.2 Auto-wire knobs the user is twisting
 
 `vj-state.json` holds `knobSnapshot` (previous values) and `unwiredKnobs` (knob indices with no shader reference). Each tick, diff current knob values vs snapshot. If an **unwired** knob moved by >0.02, wire it to something interesting (fog density, palette tint, an existing-effect intensity knob). Update `knobSnapshot` every tick, and remove the knob from `unwiredKnobs` once mapped.

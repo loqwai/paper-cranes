@@ -1,6 +1,7 @@
 // @fullscreen: true
 // @mobile: true
-// the-coat-11: forked from the-coat-3 for live set. 15 knobs wired.
+// the-coat-2: baked from live jam session preset
+// Knob defaults captured: knob_2=-0.346, knob_7=0.98, knob_12=0.669, knob_15=0.46
 // Use with controller=the-coat for sustained drop glow
 uniform float drop_glow; // from the-coat controller — sustained drop with decay
 #define PI 3.14159265
@@ -8,19 +9,14 @@ uniform float drop_glow; // from the-coat controller — sustained drop with dec
 #define DEBUG_OUTLINES 0
 
 // ============================================================================
-// KNOB CONTROLS — all 15 live-performance levers
-// knob_1: zoom (0=wide, 1=tight)
-// knob_2: climax dampener (overall brightness cap)
-// knob_3: palette hue shift
-// knob_4: palette chroma floor
-// knob_5: hyperspace tunnel
-// knob_6: particle storm
-// knob_7: trails / ghost smear
-// knob_8: saturation boost
-// knob_9: star density
-// knob_10: fog density
-// knob_11: aurora intensity
-// knob_12-15: reserved
+// KNOB CONTROLS — knobs override baked defaults from the jam session
+// knob_1: zoom (0=wide, 1=tight) — live-remapped
+// knob_3: god ray intensity override
+// knob_4: eye wash override
+// knob_5: drop zoom override
+// knob_6: camera tilt swagger
+// knob_7: fur thickness
+// knob_13: sustain decay (via controller)
 // ============================================================================
 
 // --- ZOOM ---
@@ -71,16 +67,9 @@ uniform float drop_glow; // from the-coat controller — sustained drop with dec
 // --- COLOR ---
 // Base hue shifts with pitch class — different notes = different colors
 // VJ breathing rainbow — full cycle every ~60s, mids nudge the hue
-// Sand-castle palette baseline (iter 8) — sand/amber instead of magenta
-#define HUE_BASE (fract(0.10 + time * 0.0167 + pitchClassNormalized * 0.15 + midsNormalized * 0.20))
+#define HUE_BASE (fract(0.78 + time * 0.0167 + pitchClassNormalized * 0.15 + midsNormalized * 0.20))
 // Drop shifts toward hot orange/yellow
 #define HUE_DROP (fract(0.99 + spectralCentroidNormalized * 0.05))
-
-// --- PALETTE ---
-#define PALETTE_HUE_OFFSET knob_3
-#define PALETTE_CHROMA_FLOOR (knob_4 * 0.9)
-#define PAL_HUE(h) fract((h) + PALETTE_HUE_OFFSET)
-#define PAL_SAT(s) max((s), PALETTE_CHROMA_FLOOR)
 
 // --- COAT SURFACE (the star of the show) ---
 // Fluff bristles up on energy spikes AND spectral roughness
@@ -99,7 +88,7 @@ uniform float drop_glow; // from the-coat controller — sustained drop with dec
 // Warp speed driven by centroid — brighter sounds = faster swirl
 #define WARP_SPEED (spectralCentroidNormalized * 0.6 + spectralFluxNormalized * 0.2)
 // Rim boost: flux + bass make the chrome edge blaze
-#define RIM_BOOST (2.5 + spectralFluxNormalized * 2.0 + clamp(bassZScore, 0.0, 1.0) * 1.0 + max(trebleZScore, 0.0) * 1.2)
+#define RIM_BOOST (2.5 + spectralFluxNormalized * 2.0 + clamp(bassZScore, 0.0, 1.0) * 1.0 + smoothstep(0.4, 0.9, energyNormalized) * 1.5 + max(trebleZScore, 0.0) * 0.8)
 
 // --- DERIVED ---
 #define DROP_TRIGGER clamp(max(energyZScore, BUILD), 0.0, 1.0)
@@ -377,7 +366,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // smoothstep(0.2, 0.9) maps to 0-1, then cube kills anything below ~0.5
     float zoom_intensity = smoothstep(0.2, 0.9, intensity);
     zoom_intensity = zoom_intensity * zoom_intensity * zoom_intensity;
-    float zoomAmount = BASE_ZOOM + zoom_intensity * INTENSITY_ZOOM + drop_hit * DROP_ZOOM;
+    float zoomAmount = BASE_ZOOM + zoom_intensity * INTENSITY_ZOOM + drop_hit * DROP_ZOOM * (knob_5 * 2.0);
     vec2 zoomCenter = P.head_c;
     // VJ CAMERA DRIFT — slow lateral sway + flux nudge so the frame never sits locked
     vec2 cam_drift = vec2(
@@ -415,17 +404,16 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float cross_h = exp(-delta.y*delta.y * 2500.0) * exp(-abs(delta.x) * 15.0);
         float cross_v = exp(-delta.x*delta.x * 2500.0) * exp(-abs(delta.y) * 15.0);
         float core = exp(-sd * sd * 800.0);
-        float tw_s = 0.5 + 0.5 * sin(time * (2.0 + sr * 4.0 + trebleNormalized * 6.0 + max(trebleZScore, 0.0) * 5.0 + spectralEntropyNormalized * 3.0) + sr * 30.0);
+        float tw_s = 0.5 + 0.5 * sin(time * (2.0 + sr * 4.0 + trebleNormalized * 6.0 + max(trebleZScore, 0.0) * 5.0) + sr * 30.0);
         float twinkle = 0.35 + 0.65 * tw_s * tw_s;
         float star = (core + (cross_h + cross_v) * 0.6) * star_active * twinkle;
         float sky_mask = smoothstep(-0.2, 0.3, uv.y);
-        bg += vec3(1.0, 0.95, 0.85) * star * sky_mask * (1.3 + clamp(trebleZScore, 0.0, 2.5) * 0.8 + spectralEntropyNormalized * 0.5);
+        bg += vec3(1.0, 0.95, 0.85) * star * sky_mask * (1.3 + clamp(trebleZScore, 0.0, 2.5) * 0.8);
     }
 
     // VJ NEBULA FOG — slow drifting cosmic haze, no per-frame hashing
     {
-        // iter 5: add pitchClass phase so fog drifts with the chord (Come Back to Me cue)
-        float t = time * 0.05 + trebleNormalized * 0.08 + sin(pitchClassNormalized * 6.28) * 0.15;
+        float t = time * 0.05 + trebleNormalized * 0.08;
         vec2 np = uv * 1.3;
         float n1 = sin(np.x * 1.7 + t * 1.3) * sin(np.y * 2.1 - t * 0.9);
         float n2 = sin(np.x * 3.1 - t * 0.7) * sin(np.y * 2.7 + t * 1.1);
@@ -435,9 +423,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         vec3 nebula_a = vec3(0.35, 0.15, 0.55);
         vec3 nebula_b = vec3(0.10, 0.35, 0.70);
         vec3 nebula = mix(nebula_a, nebula_b, sin(np.x * 0.7 + t) * 0.5 + 0.5);
-        // knob_10: fog density (0 = clear sky, 1 = thick cosmic cloud)
+        // knob_2: nebula fog density (0 = clear, 1 = thick cosmic cloud) — auto-wired when twisted
         float fog_pulse = 1.0 + clamp(bassZScore, 0.0, 2.0) * 0.35;
-        bg += nebula * fog * mix(0.02, 0.55, knob_10) * (0.55 + midsNormalized * 0.9) * fog_pulse;
+        bg += nebula * fog * mix(0.04, 0.45, knob_2) * (0.7 + midsNormalized * 0.4) * fog_pulse;
     }
         // VJ AURORA VEILS — glowing green-teal curtains in dark/wonky phases (low centroid)
     {
@@ -520,7 +508,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 re = P.head_c + vec2(re_local.x * ct + re_local.y * st, -re_local.x * st + re_local.y * ct);
 
     float eyes = exp(-dot(uv - le, uv - le) * 2500.0) + exp(-dot(uv - re, uv - re) * 2500.0);
-    eyes *= (0.25 + drop_hit * 1.8 + SNAP * 0.6);
+    eyes *= (0.25 + drop_hit * 1.8 + SNAP * 0.6 + smoothstep(0.5, 0.85, energyNormalized) * smoothstep(0.4, 0.8, spectralCentroidNormalized) * 0.9);
 
     vec2 d_le2 = uv - le;
     vec2 d_re2 = uv - re;
@@ -543,7 +531,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // ---- COLOR ----
     float hue = mix(HUE_BASE, HUE_DROP, IS_DROP);
-    vec3 leather = hsl2rgb(vec3(PAL_HUE(hue), PAL_SAT(0.8), mix(0.06, 0.14, spectralCentroidNormalized)));
+    vec3 leather = hsl2rgb(vec3(hue, 0.8, mix(0.06, 0.14, spectralCentroidNormalized)));
     // VJ prism rim — chrome cycles its own rainbow based on uv angle + time
     float chrome_hue = fract(atan(uv.y - P.head_c.y, uv.x) / 6.2831 + time * (0.10 + pitchClassNormalized * 0.25) + hue * 0.3);
     vec3 chrome  = hsl2rgb(vec3(chrome_hue, 1.0, 0.65));
@@ -579,12 +567,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // react to DIFFERENT musical qualities.
     float fur_trigger = FUR_TRIGGER;
     // Only show when musically interesting (above baseline)
-    float fur_fractal_amt = smoothstep(0.45, 0.85, fur_trigger);
+    float fur_fractal_amt = smoothstep(0.15, 0.55, fur_trigger);
     if (fur_fractal_amt > 0.01) {
         // Domain warp: swirl the coords with low-freq noise so the fibers
         // look like curling fur strands, not a static grid
         vec2 fp = uv * 18.0;
-        float warp_t = time * 0.12 + WARP_SPEED * 0.5;
+        float warp_t = time * 0.3 + WARP_SPEED;
         vec2 warp = vec2(
             fbm(fp + vec2(warp_t, 0.0)),
             fbm(fp + vec2(0.0, warp_t + 3.7))
@@ -596,12 +584,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             fbm(fp2 + vec2(2.1, warp_t * 0.5))
         ) * 1.5);
         // Shape the fibers: sharp ridges that look like individual strands
-        float strand = pow(abs(sin(fibers * PI * (2.2 + clamp(spectralFluxZScore, -0.5, 0.5) * 0.6))), 4.0);
+        float strand = pow(abs(sin(fibers * PI * (4.0 + spectralFluxZScore * 1.5))), 3.0);
         // Color the strands: lighter than the base coat, tinted toward
         // cyan/white so they read as light catching individual fur fibers
         vec3 strand_col = mix(fur_col * 1.5, vec3(0.7, 0.9, 1.0), 0.3 + strand * 0.4);
         // Blend into the coat color, gated by the trigger amount
-        fur_col = mix(fur_col, strand_col, strand * fur_fractal_amt * 0.55);
+        fur_col = mix(fur_col, strand_col, strand * fur_fractal_amt * 0.85);
     }
 
     // Seam strength computed here; chrome glow added after compositing
@@ -619,10 +607,49 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Coat sits OVER the body but UNDER the hair (so curls still fall)
     col = mix(col, fur_col, coat * (1.0 - curls));
     col = mix(col, hair, curls);
-    col += rim * chrome * 1.3 * (1.0 - coat);
-    // VJ SUB RING — expanding cone ring on bass spikes (gated by bassZScore)
+    // VJ WARM HEARTH — implements journal hypothesis (iter 39 on -6, iter 51 on -8)
+    // Fires on mid-dominant warm-dark-instrumental corner — the music's *identity*
+    // for tracks like Late Night Radio's "Odds & Ends" where mids are the character,
+    // not a transient signal. Slow amber glow radiating outward from silhouette.
+    // Smooth math, no hash, no prev-frame read.
     {
-        float bass_hit = clamp(bassZScore, 0.0, 2.5);
+        float warm_gate = smoothstep(0.45, 0.75, midsNormalized)
+                        * smoothstep(0.50, 0.25, spectralCentroidNormalized)
+                        * smoothstep(0.50, 0.20, energyNormalized);
+        if (warm_gate > 0.02) {
+            // d = signed distance to body silhouette. Negative inside, positive outside.
+            // We want a soft glow extending OUTWARD from the silhouette edge.
+            float hearth = exp(-max(d, 0.0) * 8.0);
+            // Slow breathing — independent low-frequency oscillation so it feels alive
+            float breath = 0.85 + 0.15 * sin(time * 0.4);
+            // Amber hue — slight pitchClass wander keeps it musical
+            float hearth_hue = fract(0.08 + pitchClassNormalized * 0.04);
+            vec3 hearth_col = hsl2rgb(vec3(hearth_hue, 0.85, 0.45));
+            col += hearth_col * hearth * warm_gate * breath * 0.55;
+        }
+    }
+    // VJ SIGIL SWIRL — radial iridescent swirl on the coat surface (iter 16, track: Wurk)
+    // Only visible on the coat. Smooth math (no hash). knob_14 gates intensity.
+    if (knob_14 > 0.01) {
+        vec2 sc = uv - vec2(P.hip * 0.7, -0.05);
+        float sr = length(sc);
+        float sa = atan(sc.y, sc.x);
+        // Spiral pattern: angle + radial wave
+        float spiral = sin(sa * 5.0 + sr * 14.0 - time * 1.2 + midsNormalized * 3.0);
+        float swirl_band = smoothstep(0.05, 0.22, sr) * smoothstep(0.45, 0.28, sr);
+        float swirl = pow(0.5 + 0.5 * spiral, 3.0) * swirl_band;
+        // Iridescent: hue cycles with angle + time
+        float swirl_hue = fract(0.7 + sa / 6.28 + time * 0.08 + pitchClassNormalized * 0.25);
+        vec3 swirl_col = hsl2rgb(vec3(swirl_hue, 0.85, 0.55));
+        // Mids-boost so grooves (not drops) light it up
+        float mids_gain = 0.4 + midsNormalized * 0.8;
+        col += swirl_col * swirl * coat * (1.0 - curls) * mids_gain * knob_14 * 1.2;
+    }
+    col += rim * chrome * 1.3 * (1.0 - coat);
+    // VJ SUB RING — expanding cone ring on bass spikes. Iter 25: gated by drop_hit too so
+    // it only fires on real drops, not every ambient bass bump (was drowning the figure).
+    {
+        float bass_hit = clamp(bassZScore, 0.0, 2.5) * drop_hit;
         if (bass_hit > 0.3) {
             vec2 sub_c = vec2(0.0, -0.15);
             float sd = length(uv - sub_c);
@@ -644,20 +671,61 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         vec3 heart_col = hsl2rgb(vec3(fract(0.92 + pitchClassNormalized * 0.10 + sin(time * 0.4) * 0.03), 1.0, 0.55));
         col += heart * heart_col * heart_pulse * coat * 0.6;
     }
+    // VJ DRIP — liquid droplet descends from chest on bass hits (iter 13, track: DRIP)
+    // knob_15 gates drip intensity. Smooth SDF = no grain, no feedback issues.
+    if (knob_15 > 0.01) {
+        vec2 drip_src = vec2(P.hip * 0.7, -0.02);
+        float bass_hit = clamp(bassZScore, 0.0, 2.0);
+        // Drop falls: phase resets on bass spikes, then advects down
+        float drip_phase = fract(time * 0.6);
+        float drip_y = drip_src.y - drip_phase * 0.55;
+        // Teardrop shape: circle at top, elongated tail
+        vec2 dp = uv - vec2(drip_src.x, drip_y);
+        float drip_r = 0.022 + bass_hit * 0.01;
+        // Tail stretches upward (back toward source)
+        float tail_y = max(0.0, uv.y - drip_y) * 2.5;
+        float drop_sd = length(vec2(dp.x, dp.y + tail_y * 0.15)) - drip_r;
+        float drop_glow = exp(-max(drop_sd, 0.0) * 80.0);
+        // Plus a faint trail from the source to the current drop position
+        float trail_dist = abs(uv.x - drip_src.x);
+        float trail_mask = smoothstep(drip_src.y, drip_y, uv.y) * smoothstep(drip_y - 0.02, drip_y, uv.y);
+        float trail = exp(-trail_dist * trail_dist * 3000.0) * trail_mask * (0.4 + bass_hit * 0.6);
+        vec3 drip_col = hsl2rgb(vec3(fract(0.58 + pitchClassNormalized * 0.15), 0.85, 0.6));
+        col += drip_col * (drop_glow + trail * 0.5) * (0.4 + bass_hit * 0.8) * knob_15 * 1.3;
+    }
+    // VJ DRIP POOL — rippling puddle at bottom of frame that catches the drops (iter 15)
+    // Concentric rings expand outward on bass hits; piggy-backs on knob_15 so drip+pool scale together.
+    if (knob_15 > 0.01) {
+        vec2 pool_c = vec2(P.hip * 0.7, -0.72);
+        vec2 pd = uv - pool_c;
+        float pool_d = length(pd * vec2(1.0, 2.4));  // flattened ellipse = ground puddle
+        float pool_edge = smoothstep(0.28, 0.06, pool_d);
+        float pool_mask = smoothstep(-0.55, -0.70, uv.y);  // only lower region
+        // Ripples: radial sine with bass-sync speed, decaying amplitude
+        float ripple_speed = 1.8 + clamp(bassZScore, 0.0, 2.0) * 1.2;
+        float ripple = 0.5 + 0.5 * sin(pool_d * 28.0 - time * ripple_speed);
+        ripple = pow(ripple, 3.0);
+        // Ripple fades outward
+        float ripple_falloff = exp(-pool_d * 6.0);
+        vec3 pool_col = hsl2rgb(vec3(fract(0.58 + pitchClassNormalized * 0.15), 0.75, 0.45));
+        vec3 ripple_col = hsl2rgb(vec3(fract(0.58 + pitchClassNormalized * 0.15 + 0.08), 0.9, 0.65));
+        col += pool_col * pool_edge * pool_mask * knob_15 * 0.6;
+        col += ripple_col * ripple * ripple_falloff * pool_mask * pool_edge * knob_15 * 0.8;
+    }
     col += chest_glow * chrome * 0.8 * (1.0 - coat);
     // Coat rim — chrome edge hugs the shaggy outline (boosted for visibility)
     // Coat rim pulses with spectral flux — brighter on timbral changes
     float rim_boost = RIM_BOOST;
     col += coat_rim * chrome * rim_boost * (1.0 - curls);
+    // VJ CRYSTALLINE FACETS — REMOVED iter 19 (user: "terrible flashing flannel-like diamonds and colored squares on the jacket")
 
     // Button seam glow — chrome line down the center
     col += seam_glow * coat * chrome * 0.25 * (1.0 - curls);
-    col += eyes * hot * 2.2;  // eyes always on
+    col += eyes * hot * 2.2;
     col = mix(col, col + hot * 0.6, eye_wash);
     col += eye_wash * hot * 0.4;
     vec3 ray_col = mix(hot, vec3(0.4, 0.85, 1.0), smoothstep(0.45, 0.85, spectralCentroidNormalized));
-    // knob_13: god-ray crown strength (0 = no crown, 1 = full)
-    col += god_rays * ray_col * GODRAY_INTENSITY * knob_13;
+    col += god_rays * ray_col * GODRAY_INTENSITY;
 
     // ---- INFINITY MIRROR removed (spinning-tile repetition clashed with spacy ambient bg) ----
 
@@ -667,14 +735,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     fb_uv.y -= 0.002 + pump * 0.003;
     vec3 prev = getLastFrameColor(fb_uv).rgb * 0.88;
     float silhouette = max(body, coat);
-    // knob_7: trails / ghost smear (0=crisp, 1=max)
-    float trail_k = knob_7;
-    float feedback_amt = mix(mix(0.08, 0.55, trail_k), mix(0.03, 0.25, trail_k), silhouette);
+    // knob_9: feedback/trails (0=crisp, 1=heavy smear)
+    float feedback_amt = mix(mix(0.45, 0.05, knob_9), mix(0.15, 0.03, knob_9), silhouette);
     // VJ GHOST ECHO — bass spikes briefly raise feedback for a coat afterimage
     feedback_amt = mix(feedback_amt, 0.35, clamp(bassZScore - 0.4, 0.0, 1.0) * 0.5);
     if (beat) feedback_amt *= 0.6;
     if (frame < 30) feedback_amt = 0.0;
     col = mix(prev, col, feedback_amt);
+    // VJ MERCURY FLOW — REMOVED iter 19 (user: "flannel-like diamond lattice, artifacting" — confirmed same as prior -6 journal flag)
 
 
     // VJ TIME-ECHO — on energy surges, triple-expose previous frame around head
@@ -689,10 +757,28 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             col = mix(col, col + echoed * 0.5, echo * 0.9);
         }
     }
+    // VJ BLACK HOLE — silhouette becomes a gravitational lens. Iter 25: gated by drop_hit so
+    // it doesn't darken the figure during calm passages (prior lock-in hazard noted in journals).
+    {
+        float bh_strength = clamp(bassZScore - 0.3, 0.0, 1.5) * drop_hit;
+        if (bh_strength > 0.05 && silhouette > 0.0) {
+            vec2 bh_center = P.head_c + vec2(0.0, -0.05);
+            vec2 to_center = bh_center - uv;
+            float bh_d = length(to_center);
+            vec2 dir_lens = to_center / max(bh_d, 0.001);
+            float lens_strength = bh_strength * 0.08 / max(bh_d * bh_d + 0.04, 0.04);
+            vec2 lens_uv = fb_uv + dir_lens * lens_strength * vec2(res.y / res.x, 1.0);
+            vec3 lensed = getLastFrameColor(lens_uv).rgb;
+            col = mix(col, lensed, bh_strength * (1.0 - silhouette) * 0.8);
+            col = mix(col, vec3(0.0), silhouette * bh_strength * 0.85);
+        }
+    }
 
 
-    // VJ RGB SPLIT — REMOVED (iter 11, user: "gray staticky bleeding effect")
-
+    // VJ RGB SPLIT — REMOVED iter 25 (user veto from -11 carried over)
+    // VJ SCAN LINE — REMOVED iter 25 (user veto from -11 carried over)
+    // VJ LIGHTNING — REMOVED iter 25 (user veto from -11 carried over; drowns out figure)
+    // VJ COSMIC SHOCKWAVE — REMOVED iter 25 (user veto from -11 carried over; drowns out figure)
     // VJ WATER POOL — bottom-third reflective pool ripples in dark/deep phases
     {
         float pool_on = smoothstep(0.25, 0.05, spectralCentroidNormalized);
@@ -727,9 +813,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             col += beam_col * beam * dist_fade * sil_mask * beams_on * 0.45;
         }
     }
-    // VJ GROUND QUAKE — concentric amber rings from floor, bass-driven, multiple wavefronts
+    // VJ GROUND QUAKE — concentric amber rings from floor. Iter 25: gated by drop_hit so
+    // it stops competing with the figure during ambient bass passages.
     {
-        float quake_on = clamp(bassNormalized - 0.3, 0.0, 1.0);
+        float quake_on = clamp(bassNormalized - 0.3, 0.0, 1.0) * drop_hit;
         quake_on *= smoothstep(0.5, 0.15, spectralCentroidNormalized);
         if (quake_on > 0.02) {
             vec2 feet_c = vec2(0.0, -0.6);
@@ -750,117 +837,48 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             col += quake_col * wavefronts * quake_on * 0.55;
         }
     }
-    // --- KNOB_5: hyperspace tunnel ---
-    if (knob_5 > 0.01) {
-        float hs = clamp(energyNormalized - 0.2, 0.0, 1.0) * clamp(trebleNormalized, 0.0, 1.0);
-        vec2 hp2 = uv;
-        float hr = length(hp2);
-        float ha = atan(hp2.y, hp2.x);
-        float streaks = 0.5 + 0.5 * sin(ha * 48.0 + hash(vec2(floor(ha * 8.0), 0.0)) * 6.28);
-        streaks = pow(streaks, 6.0);
-        float flow = fract(hr * 2.0 - time * 1.2);
-        float streak_life = (1.0 - flow) * (1.0 - flow);
-        float mask = smoothstep(0.18, 0.35, hr) * (1.0 - smoothstep(0.9, 1.3, hr));
-        vec3 streak_col = mix(vec3(0.6, 0.7, 1.0), vec3(1.0, 0.9, 0.7), trebleNormalized);
-        col += streak_col * streaks * streak_life * mask * hs * 0.55 * knob_5;
+    // VJ CHAOS HALO — REMOVED iter 27 (user: "Remove that aura effect entirely")
+
+    // VJ BEAT STROBE — full-frame warm bump on each beat, knob_13 gates intensity (iter 17)
+    // Additive only (never darkens), uses a quick decay from beat-true so it feels like a hit.
+    // Decays via BEAT_PHASE (already in scope — climbs from 0→1 over a beat period).
+    if (knob_13 > 0.01) {
+        float beat_pulse = pow(1.0 - clamp(BEAT_PHASE, 0.0, 1.0), 3.0);
+        float beat_boost = beat_pulse * (0.8 + clamp(bassZScore, 0.0, 1.5) * 0.5);
+        // Warm tint — cream/peach so it feels like a room light, not a strobe
+        vec3 pulse_col = vec3(1.0, 0.85, 0.65);
+        col += pulse_col * beat_boost * knob_13 * 0.25;
     }
-
-    // --- KNOB_6: particle storm ---
-    if (knob_6 > 0.01) {
-        vec2 pp = uv * vec2(12.0, 8.0) * zoomAmount + vec2(sin(time * 0.3) * 0.3, time * -0.8);
-        vec2 pcell = floor(pp);
-        vec2 pfrac = fract(pp) - 0.5;
-        float ph = hash(pcell);
-        float alive = step(0.82, ph);
-        float pd = length(pfrac * vec2(2.5, 1.2));
-        float particle = exp(-pd * pd * 25.0) * alive;
-        vec3 particle_col = mix(vec3(0.9, 0.95, 1.0), vec3(1.0, 0.85, 0.6), hash(pcell + vec2(1.1, 3.3)));
-        col += particle_col * particle * knob_6 * 0.8;
+    // VJ RADIAL BARS — finale laser curtain (iter 35). 128 thin rotating spears
+    // radiating from the silhouette outward, strictly masked to the background
+    // (silhouette < 0.02) so the jacket is NEVER touched. No prev-frame sampling,
+    // pure procedural math — zero gray-static risk. Energy-gated so calm passages
+    // stay clean. Pitch drives hue. knob_13 scales intensity alongside beat strobe.
+    if (knob_13 > 0.01 && silhouette < 0.02) {
+        vec2 rp = uv - vec2(P.hip * 0.7, -0.08);  // emanation center = chest
+        float ra = atan(rp.y, rp.x);
+        float rr = length(rp);
+        // 128 spears with slow rotation + treble-modulated angular twist
+        float bars_n = 128.0;
+        float twist = time * 0.08 + max(trebleZScore, 0.0) * 0.18;
+        float bar_phase = ra * bars_n / 6.2831853 + twist * bars_n;
+        float spear = 0.5 + 0.5 * cos(bar_phase * 6.2831853);
+        spear = pow(spear, 24.0);  // very thin spears
+        // Amplitude per spear varies with pitch + entropy for live chaos
+        float hash_amp = 0.5 + 0.5 * sin(floor(bar_phase) * 12.9898 + time * 0.3);
+        spear *= 0.35 + 0.65 * hash_amp;
+        // Radial falloff — travel outward and fade; treble pushes the bars longer
+        float reach = 0.6 + max(trebleZScore, 0.0) * 0.35;
+        float radial = smoothstep(0.05, 0.15, rr) * (1.0 - smoothstep(reach * 0.7, reach, rr));
+        // Energy gate keeps calm moments clean (finale-only)
+        float energy_gate = smoothstep(0.3, 0.75, energyNormalized);
+        float drive = energy_gate * (0.4 + max(trebleNormalized, 0.3) * 0.6);
+        // Pitch-tinted, saturated; cycles slowly with time so it doesn't sit static
+        float bar_hue = fract(0.7 + pitchClassNormalized * 0.45 + floor(bar_phase) * 0.004 + time * 0.03);
+        vec3 bar_col = hsl2rgb(vec3(bar_hue, 0.95, 0.62));
+        col += bar_col * spear * radial * drive * knob_13 * 1.6;
     }
-
-    // --- KNOB_9: star density ---
-    if (knob_9 > 0.01) {
-        vec2 sp = uv * (14.0 * zoomAmount);
-        vec2 scell = floor(sp);
-        vec2 scf = fract(sp) - 0.5;
-        float sr = hash(scell);
-        float sr2 = hash(scell + vec2(3.7, 1.3));
-        float star_active = step(mix(1.0, 0.86, knob_9), sr);
-        vec2 spos = (vec2(sr2, hash(scell + vec2(2.1, 5.9))) - 0.5) * 0.4;
-        vec2 delta = scf - spos;
-        float sd = length(delta);
-        float cross_h = exp(-delta.y*delta.y * 700.0) * exp(-abs(delta.x) * 9.0);
-        float cross_v = exp(-delta.x*delta.x * 700.0) * exp(-abs(delta.y) * 9.0);
-        float core = exp(-sd * sd * 400.0);
-        float tw_s = 0.5 + 0.5 * sin(time * (2.0 + sr * 4.0 + trebleNormalized * 6.0) + sr * 30.0);
-        float twinkle = 0.35 + 0.65 * tw_s * tw_s;
-        float star = (core + (cross_h + cross_v) * 0.6) * star_active * twinkle;
-        float sky_mask = smoothstep(-0.2, 0.3, uv.y);
-        col += vec3(1.0, 0.95, 0.85) * star * sky_mask * 1.3;
-    }
-
-    // --- KNOB_11: aurora ---
-    if (knob_11 > 0.01) {
-        float aurora_on = smoothstep(0.35, 0.10, spectralCentroidNormalized);
-        if (aurora_on > 0.02) {
-            float ta = time * 0.35;
-            float v1 = sin(uv.x * 2.3 + ta) * 0.5 + sin(uv.x * 1.1 - ta * 0.7) * 0.25;
-            float v2 = sin(uv.x * 3.7 - ta * 0.6) * 0.35;
-            float curtain1 = exp(-pow(uv.y - 0.35 - v1 * 0.25, 2.0) * 14.0);
-            float curtain2 = exp(-pow(uv.y - 0.20 - v2 * 0.3, 2.0) * 10.0);
-            float intensity = aurora_on * (0.5 + bassNormalized * 0.6);
-            col += vec3(0.25, 0.85, 0.55) * curtain1 * intensity * 0.7 * knob_11;
-            col += vec3(0.15, 0.55, 0.95) * curtain2 * intensity * 0.5 * knob_11;
-        }
-    }
-
-    // --- KNOB_2: climax dampener — scales ONLY payoff effects (god rays, eye wash, eye punch).
-    // Orthogonal to knob_12 (outline mode). Base scene brightness unchanged by knob_2.
-
-    // --- KNOB_8: saturation boost ---
-    if (knob_8 > 0.01) {
-        float sat_k = 1.0 + knob_8 * 1.0;
-        vec3 s_hsl = rgb2hsl(col);
-        s_hsl.y = clamp(s_hsl.y * sat_k, 0.0, 1.0);
-        col = hsl2rgb(s_hsl);
-    }
-
-    // --- KNOB_14: palette invert (0 = normal, 1 = photo-negative) ---
-    if (knob_14 > 0.01) {
-        vec3 inverted = vec3(1.0) - col;
-        col = mix(col, inverted, knob_14);
-    }
-
-    // --- KNOB_12: outline / shadow-mode ---
-    // 0 = normal color, 1 = heavy ink-outlined shadowy look.
-    // Uses Sobel-style 4-tap prev-frame sampling (moody-octopus technique).
-    if (knob_12 > 0.01) {
-        // iter 12: oklab-space outline — chroma-preserving, gated by local gradient strength
-        // to kill the gray-static feedback loop. Only act on strong edges, never on flat
-        // low-contrast noise (which was the "gray static everywhere" culprit).
-        vec2 px = vec2(1.0 / res.x, 1.0 / res.y) * mix(1.5, 5.0, knob_12);
-        vec2 fb_outline = fragCoord / res;
-        // Perceptual L (oklab L is true lightness, not grayscale average)
-        float ll = rgb2oklab(getLastFrameColor(fb_outline - vec2(px.x, 0.0)).rgb).x;
-        float lr = rgb2oklab(getLastFrameColor(fb_outline + vec2(px.x, 0.0)).rgb).x;
-        float lu = rgb2oklab(getLastFrameColor(fb_outline + vec2(0.0, px.y)).rgb).x;
-        float ld = rgb2oklab(getLastFrameColor(fb_outline - vec2(0.0, px.y)).rgb).x;
-        float gx = lr - ll;
-        float gy = lu - ld;
-        float edge = sqrt(gx*gx + gy*gy);
-        // Much stricter gate — 0.14 floor kills all low-contrast gradient noise.
-        float ink = smoothstep(0.14, 0.28, edge) * knob_12;
-        // Darken LIGHTNESS only (preserves chroma of whatever color is here —
-        // no more desaturation feeding back into the trail as gray).
-        vec3 lab = rgb2oklab(col);
-        lab.x *= mix(1.0, 0.75, knob_12 * 0.6);
-        // Ink overlay: only where gradient is strong. Darken L, slightly mute a/b.
-        lab.x = mix(lab.x, lab.x * 0.15, ink);
-        lab.yz *= mix(1.0, 0.55, ink);
-        col = oklab2rgb(lab);
-    }
-
-    col *= 1.0 - smoothstep(0.7, 1.4, length(uv * vec2(1.0, 0.85)));
+    col *= 1.0 - smoothstep(0.7 + drop_hit * 0.3, 1.4 + drop_hit * 0.3, length(uv * vec2(1.0, 0.85)));
 
 #if DEBUG_OUTLINES
     col *= 0.25;

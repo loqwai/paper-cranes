@@ -607,6 +607,44 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Coat sits OVER the body but UNDER the hair (so curls still fall)
     col = mix(col, fur_col, coat * (1.0 - curls));
     col = mix(col, hair, curls);
+    // VJ WARM HEARTH — implements journal hypothesis (iter 39 on -6, iter 51 on -8)
+    // Fires on mid-dominant warm-dark-instrumental corner — the music's *identity*
+    // for tracks like Late Night Radio's "Odds & Ends" where mids are the character,
+    // not a transient signal. Slow amber glow radiating outward from silhouette.
+    // Smooth math, no hash, no prev-frame read.
+    {
+        float warm_gate = smoothstep(0.45, 0.75, midsNormalized)
+                        * smoothstep(0.50, 0.25, spectralCentroidNormalized)
+                        * smoothstep(0.50, 0.20, energyNormalized);
+        if (warm_gate > 0.02) {
+            // d = signed distance to body silhouette. Negative inside, positive outside.
+            // We want a soft glow extending OUTWARD from the silhouette edge.
+            float hearth = exp(-max(d, 0.0) * 8.0);
+            // Slow breathing — independent low-frequency oscillation so it feels alive
+            float breath = 0.85 + 0.15 * sin(time * 0.4);
+            // Amber hue — slight pitchClass wander keeps it musical
+            float hearth_hue = fract(0.08 + pitchClassNormalized * 0.04);
+            vec3 hearth_col = hsl2rgb(vec3(hearth_hue, 0.85, 0.45));
+            col += hearth_col * hearth * warm_gate * breath * 0.55;
+        }
+    }
+    // VJ SIGIL SWIRL — radial iridescent swirl on the coat surface (iter 16, track: Wurk)
+    // Only visible on the coat. Smooth math (no hash). knob_14 gates intensity.
+    if (knob_14 > 0.01) {
+        vec2 sc = uv - vec2(P.hip * 0.7, -0.05);
+        float sr = length(sc);
+        float sa = atan(sc.y, sc.x);
+        // Spiral pattern: angle + radial wave
+        float spiral = sin(sa * 5.0 + sr * 14.0 - time * 1.2 + midsNormalized * 3.0);
+        float swirl_band = smoothstep(0.05, 0.22, sr) * smoothstep(0.45, 0.28, sr);
+        float swirl = pow(0.5 + 0.5 * spiral, 3.0) * swirl_band;
+        // Iridescent: hue cycles with angle + time
+        float swirl_hue = fract(0.7 + sa / 6.28 + time * 0.08 + pitchClassNormalized * 0.25);
+        vec3 swirl_col = hsl2rgb(vec3(swirl_hue, 0.85, 0.55));
+        // Mids-boost so grooves (not drops) light it up
+        float mids_gain = 0.4 + midsNormalized * 0.8;
+        col += swirl_col * swirl * coat * (1.0 - curls) * mids_gain * knob_14 * 1.2;
+    }
     col += rim * chrome * 1.3 * (1.0 - coat);
     // VJ SUB RING — expanding cone ring on bass spikes (gated by bassZScore)
     {
@@ -632,28 +670,53 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         vec3 heart_col = hsl2rgb(vec3(fract(0.92 + pitchClassNormalized * 0.10 + sin(time * 0.4) * 0.03), 1.0, 0.55));
         col += heart * heart_col * heart_pulse * coat * 0.6;
     }
+    // VJ DRIP — liquid droplet descends from chest on bass hits (iter 13, track: DRIP)
+    // knob_15 gates drip intensity. Smooth SDF = no grain, no feedback issues.
+    if (knob_15 > 0.01) {
+        vec2 drip_src = vec2(P.hip * 0.7, -0.02);
+        float bass_hit = clamp(bassZScore, 0.0, 2.0);
+        // Drop falls: phase resets on bass spikes, then advects down
+        float drip_phase = fract(time * 0.6);
+        float drip_y = drip_src.y - drip_phase * 0.55;
+        // Teardrop shape: circle at top, elongated tail
+        vec2 dp = uv - vec2(drip_src.x, drip_y);
+        float drip_r = 0.022 + bass_hit * 0.01;
+        // Tail stretches upward (back toward source)
+        float tail_y = max(0.0, uv.y - drip_y) * 2.5;
+        float drop_sd = length(vec2(dp.x, dp.y + tail_y * 0.15)) - drip_r;
+        float drop_glow = exp(-max(drop_sd, 0.0) * 80.0);
+        // Plus a faint trail from the source to the current drop position
+        float trail_dist = abs(uv.x - drip_src.x);
+        float trail_mask = smoothstep(drip_src.y, drip_y, uv.y) * smoothstep(drip_y - 0.02, drip_y, uv.y);
+        float trail = exp(-trail_dist * trail_dist * 3000.0) * trail_mask * (0.4 + bass_hit * 0.6);
+        vec3 drip_col = hsl2rgb(vec3(fract(0.58 + pitchClassNormalized * 0.15), 0.85, 0.6));
+        col += drip_col * (drop_glow + trail * 0.5) * (0.4 + bass_hit * 0.8) * knob_15 * 1.3;
+    }
+    // VJ DRIP POOL — rippling puddle at bottom of frame that catches the drops (iter 15)
+    // Concentric rings expand outward on bass hits; piggy-backs on knob_15 so drip+pool scale together.
+    if (knob_15 > 0.01) {
+        vec2 pool_c = vec2(P.hip * 0.7, -0.72);
+        vec2 pd = uv - pool_c;
+        float pool_d = length(pd * vec2(1.0, 2.4));  // flattened ellipse = ground puddle
+        float pool_edge = smoothstep(0.28, 0.06, pool_d);
+        float pool_mask = smoothstep(-0.55, -0.70, uv.y);  // only lower region
+        // Ripples: radial sine with bass-sync speed, decaying amplitude
+        float ripple_speed = 1.8 + clamp(bassZScore, 0.0, 2.0) * 1.2;
+        float ripple = 0.5 + 0.5 * sin(pool_d * 28.0 - time * ripple_speed);
+        ripple = pow(ripple, 3.0);
+        // Ripple fades outward
+        float ripple_falloff = exp(-pool_d * 6.0);
+        vec3 pool_col = hsl2rgb(vec3(fract(0.58 + pitchClassNormalized * 0.15), 0.75, 0.45));
+        vec3 ripple_col = hsl2rgb(vec3(fract(0.58 + pitchClassNormalized * 0.15 + 0.08), 0.9, 0.65));
+        col += pool_col * pool_edge * pool_mask * knob_15 * 0.6;
+        col += ripple_col * ripple * ripple_falloff * pool_mask * pool_edge * knob_15 * 0.8;
+    }
     col += chest_glow * chrome * 0.8 * (1.0 - coat);
     // Coat rim — chrome edge hugs the shaggy outline (boosted for visibility)
     // Coat rim pulses with spectral flux — brighter on timbral changes
     float rim_boost = RIM_BOOST;
     col += coat_rim * chrome * rim_boost * (1.0 - curls);
-    // VJ CRYSTALLINE FACETS — on high entropy, coat turns to iridescent obsidian shards
-    {
-        float facet_on = clamp(spectralEntropyNormalized - 0.55, 0.0, 0.5) * 2.0;
-        if (facet_on > 0.02 && coat > 0.05) {
-            vec2 fp_c = uv * 9.0 + vec2(time * 0.15, -time * 0.07);
-            vec2 fcell = floor(fp_c);
-            vec2 ffrac = fract(fp_c) - 0.5;
-            float fh = hash(fcell);
-            float face_d = abs(ffrac.x) + abs(ffrac.y);
-            float facet = smoothstep(0.55, 0.15, face_d);
-            float iri_hue = fract(fh + time * 0.2 + spectralCentroidNormalized * 0.5);
-            vec3 iri = hsl2rgb(vec3(iri_hue, 0.9, 0.55));
-            vec3 obsidian = vec3(0.02, 0.02, 0.04);
-            vec3 shard = mix(obsidian, iri, facet * 0.8);
-            col = mix(col, shard, facet_on * coat * (1.0 - curls) * 0.8);
-        }
-    }
+    // VJ CRYSTALLINE FACETS — REMOVED iter 19 (user: "terrible flashing flannel-like diamonds and colored squares on the jacket")
 
     // Button seam glow — chrome line down the center
     col += seam_glow * coat * chrome * 0.25 * (1.0 - curls);
@@ -674,26 +737,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // knob_9: feedback/trails (0=crisp, 1=heavy smear)
     float feedback_amt = mix(mix(0.45, 0.05, knob_9), mix(0.15, 0.03, knob_9), silhouette);
     // VJ GHOST ECHO — bass spikes briefly raise feedback for a coat afterimage
-    feedback_amt = mix(feedback_amt, 0.55, clamp(bassZScore - 0.4, 0.0, 1.0) * 0.5);
+    feedback_amt = mix(feedback_amt, 0.35, clamp(bassZScore - 0.4, 0.0, 1.0) * 0.5);
     if (beat) feedback_amt *= 0.6;
     if (frame < 30) feedback_amt = 0.0;
     col = mix(prev, col, feedback_amt);
-    // VJ MERCURY FLOW — bass-heavy low-centroid phases turn the coat into flowing liquid metal
-    {
-        float flow_on = clamp(bassNormalized - 0.25, 0.0, 1.0);
-        flow_on *= smoothstep(0.60, 0.25, spectralCentroidNormalized);
-        if (flow_on > 0.02 && silhouette > 0.05) {
-            float flow_t = time * (0.5 + bassNormalized * 1.5);
-            // Vertical flow: stripes drip downward at varying speeds
-            float stripe = sin(uv.x * 18.0 + sin(uv.y * 4.0 + flow_t) * 2.5 - flow_t * 2.0);
-            stripe = stripe * 0.5 + 0.5;
-            stripe = smoothstep(0.35, 0.95, stripe);
-            vec3 mercury_dark = vec3(0.05, 0.06, 0.1);
-            vec3 mercury_hi = vec3(0.92, 0.94, 1.0);
-            vec3 mercury = mix(mercury_dark, mercury_hi, stripe);
-            col = mix(col, mercury, flow_on * silhouette * 0.75);
-        }
-    }
+    // VJ MERCURY FLOW — REMOVED iter 19 (user: "flannel-like diamond lattice, artifacting" — confirmed same as prior -6 journal flag)
 
 
     // VJ TIME-ECHO — on energy surges, triple-expose previous frame around head
@@ -834,6 +882,37 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             vec3 quake_col = mix(vec3(1.0, 0.35, 0.08), vec3(1.0, 0.75, 0.3), bassNormalized);
             col += quake_col * wavefronts * quake_on * 0.55;
         }
+    }
+    // VJ CHAOS HALO — concentric pulsing rings radiating from silhouette.
+    // Iter 22: knob_2 now primary gate (user: "the knob I've been twirling should control
+    // the amount and visibility of those radiating auras" — knob_2 had by far the largest
+    // delta since last snapshot, 0.52 pts). Entropy acts as a secondary modulator: the rings
+    // get denser on chaotic passages but visibility is user-controlled.
+    if (knob_2 > 0.01) {
+        float entropy_mod = 0.4 + smoothstep(0.3, 0.9, spectralEntropyNormalized) * 0.6;
+        float halo_gate = knob_2 * entropy_mod;
+        float ring_phase = fract(time * 0.35);
+        float halo = 0.0;
+        for (int i = 0; i < 3; i++) {
+            float ri = float(i);
+            float ring_r = ring_phase * 0.4 + ri * 0.18;
+            float ring_d = abs(d - ring_r);
+            halo += exp(-ring_d * ring_d * 600.0) * (1.0 - ri * 0.3);
+        }
+        float halo_mask = smoothstep(-0.005, 0.03, d) * (1.0 - smoothstep(0.5, 0.8, d));
+        vec3 halo_col = hsl2rgb(vec3(fract(0.1 + pitchClassNormalized * 1.0 + time * 0.02), 0.9, 0.55));
+        // knob_2 drives both amount (coefficient) and visibility (opacity curve).
+        col += halo_col * halo * halo_mask * halo_gate * 0.9;
+    }
+    // VJ BEAT STROBE — full-frame warm bump on each beat, knob_13 gates intensity (iter 17)
+    // Additive only (never darkens), uses a quick decay from beat-true so it feels like a hit.
+    // Decays via BEAT_PHASE (already in scope — climbs from 0→1 over a beat period).
+    if (knob_13 > 0.01) {
+        float beat_pulse = pow(1.0 - clamp(BEAT_PHASE, 0.0, 1.0), 3.0);
+        float beat_boost = beat_pulse * (0.8 + clamp(bassZScore, 0.0, 1.5) * 0.5);
+        // Warm tint — cream/peach so it feels like a room light, not a strobe
+        vec3 pulse_col = vec3(1.0, 0.85, 0.65);
+        col += pulse_col * beat_boost * knob_13 * 0.25;
     }
     col *= 1.0 - smoothstep(0.7, 1.4, length(uv * vec2(1.0, 0.85)));
 
