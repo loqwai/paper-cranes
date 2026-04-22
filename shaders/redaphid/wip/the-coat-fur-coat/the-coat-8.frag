@@ -12,12 +12,15 @@ uniform float drop_glow; // from the-coat controller — sustained drop with dec
 // KNOB CONTROLS — knobs override baked defaults from the jam session
 // knob_1: zoom (0=wide, 1=tight)
 // knob_2: climax dampener (god rays, eye wash, cosmic shockwave, mouth glow, baton)
-// knob_3: fog density (0=clear, 1=thick cosmic cloud)
-// knob_4: aurora intensity (0=off, 1=full neon sky)
+// knob_3: palette hue shift (0=original, 0.5=complement, 1=full loop)
+// knob_4: palette chroma floor (0=natural, 1=always saturated)
 // knob_5: hyperspace tunnel strength (0=off, 1=full rushing streaks)
 // knob_6: particle storm (0=off, 1=heavy dissolution)
 // knob_7: trails/ghost smear (0=crisp, 1=max)
 // knob_8: saturation (0=greyscale, 0.5=neutral, 1=supersaturated neon)
+// knob_9: star density (0=clean sky, 1=starry)
+// knob_10: fog density (moved from knob_3)
+// knob_11: aurora intensity (moved from knob_4)
 // knob_13: sustain decay (via controller)
 // ============================================================================
 
@@ -72,6 +75,16 @@ uniform float drop_glow; // from the-coat controller — sustained drop with dec
 #define HUE_BASE (fract(0.78 + time * 0.0167 + pitchClassNormalized * 0.15 + midsNormalized * 0.20))
 // Drop shifts toward hot orange/yellow
 #define HUE_DROP (fract(0.99 + spectralCentroidNormalized * 0.05))
+
+// --- PALETTE (knob_3 + knob_4 navigate the color space) ---
+// knob_3 rotates the entire palette around the hue wheel (0 = original, 0.5 = complement, 1 = full loop)
+// knob_4 adds chroma floor so saturation never drops below a user-controlled baseline
+#define PALETTE_HUE_OFFSET knob_3
+#define PALETTE_CHROMA_FLOOR (knob_4 * 0.9)
+// Helper: any call site that produces a hsl color should apply PAL_HUE to its hue and PAL_SAT to its sat.
+// Use them like: hsl2rgb(vec3(PAL_HUE(myhue), PAL_SAT(mysat), mylight))
+#define PAL_HUE(h) fract((h) + PALETTE_HUE_OFFSET)
+#define PAL_SAT(s) max((s), PALETTE_CHROMA_FLOOR)
 
 // --- COAT SURFACE (the star of the show) ---
 // Fluff bristles up on energy spikes AND spectral roughness
@@ -399,13 +412,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         vec2 scf = fract(sp) - 0.5;
         float sr = hash(scell);
         float sr2 = hash(scell + vec2(3.7, 1.3));
-        float star_active = step(0.80, sr);
+        // knob_9: star density (0 = none, 1 = full). Default-at-zero means stars OFF unless user wants them.
+        float star_active = step(mix(1.0, 0.86, knob_9), sr);
         vec2 spos = (vec2(sr2, hash(scell + vec2(2.1, 5.9))) - 0.5) * 0.4;
         vec2 delta = scf - spos;
         float sd = length(delta);
-        float cross_h = exp(-delta.y*delta.y * 2500.0) * exp(-abs(delta.x) * 15.0);
-        float cross_v = exp(-delta.x*delta.x * 2500.0) * exp(-abs(delta.y) * 15.0);
-        float core = exp(-sd * sd * 800.0);
+        float cross_h = exp(-delta.y*delta.y * 700.0) * exp(-abs(delta.x) * 9.0);
+        float cross_v = exp(-delta.x*delta.x * 700.0) * exp(-abs(delta.y) * 9.0);
+        float core = exp(-sd * sd * 400.0);
         float tw_s = 0.5 + 0.5 * sin(time * (2.0 + sr * 4.0 + trebleNormalized * 6.0 + max(trebleZScore, 0.0) * 5.0) + sr * 30.0);
         float twinkle = 0.35 + 0.65 * tw_s * tw_s;
         float star = (core + (cross_h + cross_v) * 0.6) * star_active * twinkle;
@@ -427,8 +441,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         vec3 nebula = mix(nebula_a, nebula_b, sin(np.x * 0.7 + t) * 0.5 + 0.5);
         // knob_2: nebula fog density (0 = clear, 1 = thick cosmic cloud) — auto-wired when twisted
         float fog_pulse = 1.0 + clamp(bassZScore, 0.0, 2.0) * 0.50;
-        // knob_3: fog density (0 = clear sky, 1 = thick cosmic cloud)
-        bg += nebula * fog * mix(0.02, 0.55, knob_3) * (0.7 + midsNormalized * 0.4) * fog_pulse;
+        // knob_10: fog density (0 = clear sky, 1 = thick cosmic cloud)
+        bg += nebula * fog * mix(0.02, 0.55, knob_10) * (0.7 + midsNormalized * 0.4) * fog_pulse;
     }
         // VJ AURORA VEILS — glowing green-teal curtains in dark/wonky phases (low centroid)
     {
@@ -440,9 +454,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             float curtain1 = exp(-pow(uv.y - 0.35 - v1 * 0.25, 2.0) * 14.0);
             float curtain2 = exp(-pow(uv.y - 0.20 - v2 * 0.3, 2.0) * 10.0);
             float intensity = aurora_on * (0.5 + bassNormalized * 0.6);
-            // knob_4: aurora intensity (0 = no curtains, 1 = full neon sky)
-            bg += vec3(0.25, 0.85, 0.55) * curtain1 * intensity * 0.7 * knob_4;
-            bg += vec3(0.15, 0.55, 0.95) * curtain2 * intensity * 0.5 * knob_4;
+            // knob_11: aurora intensity (0 = no curtains, 1 = full neon sky)
+            bg += vec3(0.25, 0.85, 0.55) * curtain1 * intensity * 0.7 * knob_11;
+            bg += vec3(0.15, 0.55, 0.95) * curtain2 * intensity * 0.5 * knob_11;
         }
     }
     // VJ ROTOR GEAR — stepped 8-spoke halo behind head, ticks on treble-heavy phases
@@ -535,12 +549,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // ---- COLOR ----
     float hue = mix(HUE_BASE, HUE_DROP, IS_DROP);
-    vec3 leather = hsl2rgb(vec3(hue, 0.8, mix(0.06, 0.14, spectralCentroidNormalized)));
+    vec3 leather = hsl2rgb(vec3(PAL_HUE(hue), PAL_SAT(0.8), mix(0.06, 0.14, spectralCentroidNormalized)));
     // VJ prism rim — chrome cycles its own rainbow based on uv angle + time
     float chrome_hue = fract(atan(uv.y - P.head_c.y, uv.x) / 6.2831 + time * (0.10 + pitchClassNormalized * 0.25) + hue * 0.3);
-    vec3 chrome  = hsl2rgb(vec3(chrome_hue, 1.0, 0.65));
-    vec3 hair    = hsl2rgb(vec3(0.06, 0.7, 0.12));
-    vec3 hot     = hsl2rgb(vec3(0.08, 1.0, 0.6));
+    vec3 chrome  = hsl2rgb(vec3(PAL_HUE(chrome_hue), PAL_SAT(1.0), 0.65));
+    vec3 hair    = hsl2rgb(vec3(PAL_HUE(0.06), PAL_SAT(0.7), 0.12));
+    vec3 hot     = hsl2rgb(vec3(PAL_HUE(0.08), PAL_SAT(1.0), 0.6));
 
     // Coat fill — audio-reactive color. Base is deep blue, but:
     // - Lightness pulses brighter on bass hits
@@ -555,8 +569,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Lightness pumps up on bass
     float fur_l_hi = 0.65 + bass_pulse * 0.15;
     float fur_l_lo = 0.45 + bass_pulse * 0.10;
-    vec3 fur_hi = hsl2rgb(vec3(fur_hue_hi, 0.95, clamp(fur_l_hi, 0.0, 0.95)));
-    vec3 fur_lo = hsl2rgb(vec3(fur_hue_lo, 0.9, clamp(fur_l_lo, 0.0, 0.85)));
+    vec3 fur_hi = hsl2rgb(vec3(PAL_HUE(fur_hue_hi), PAL_SAT(0.95), clamp(fur_l_hi, 0.0, 0.95)));
+    vec3 fur_lo = hsl2rgb(vec3(PAL_HUE(fur_hue_lo), PAL_SAT(0.9), clamp(fur_l_lo, 0.0, 0.85)));
     vec3 fur_col = mix(fur_hi, fur_lo, coat_grad);
     // Shoulder gleam pulses with spectral flux — light catching the coat
     float shoulder_gleam_d = (uv.y - 0.08) * 10.0;
@@ -926,10 +940,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             col = hsl2rgb(hsl_col);
         }
     }
-    // knob_8: global saturation (0 = greyscale, 0.5 = neutral, 1 = supersaturated)
-    {
+    // knob_8: global saturation boost (0 = no boost = natural colors, 1 = supersaturated)
+    // Note: 0 passes through untouched, rising from 0 boosts. No way to go below natural this way.
+    if (knob_8 > 0.01) {
+        float sat_k = 1.0 + knob_8 * 1.0;  // 1.0x at 0, 2.0x at 1
         vec3 s_hsl = rgb2hsl(col);
-        s_hsl.y = clamp(s_hsl.y * (knob_8 * 1.8), 0.0, 1.0);
+        s_hsl.y = clamp(s_hsl.y * sat_k, 0.0, 1.0);
         col = hsl2rgb(s_hsl);
     }
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);

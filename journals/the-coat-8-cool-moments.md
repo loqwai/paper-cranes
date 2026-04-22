@@ -1,7 +1,20 @@
 # the-coat-8 — Session Journal
 
 ## Status
-Iter 52/180. **Big knob-layout revamp**: knobs 3–8 each now a clearly-visible visual lever (fog, aurora, hyperspace, particles, trails, saturation). Also fixed zoom-in pixelation by scaling hash-grid frequencies (grit, starfield, dissolution particles) by `zoomAmount` so cells stay screen-pixel sized under zoom. Active track: *TiiGA – Buku*.
+Iter 54/180. Knob layout settled. **Colors back** (saturation formula was collapsing to greyscale at knob_8=0; fixed to passthrough-at-0). **knob_3 + knob_4 now palette-navigators**: knob_3 rotates hue globally, knob_4 is chroma floor — works everywhere, any position gives a coherent palette. Starfield defaulted OFF (knob_9) + softened (was likely source of "graininess"). Active track: *Sweat (Soulji Remix) – Karma Fields*.
+
+## Knob map (current, final)
+- knob_1: zoom
+- knob_2: climax dampener
+- knob_3: **palette hue shift** (global hue wheel)
+- knob_4: **palette chroma floor** (0=natural, 1=always saturated)
+- knob_5: hyperspace tunnel
+- knob_6: particle storm
+- knob_7: trails/ghost smear
+- knob_8: saturation boost (0=natural, up=supersat)
+- knob_9: **star density** (0=off, 1=full starry)
+- knob_10: fog density
+- knob_11: aurora intensity
 
 ## Knob map (current)
 - knob_1: zoom
