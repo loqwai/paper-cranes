@@ -425,7 +425,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         vec3 nebula = mix(nebula_a, nebula_b, sin(np.x * 0.7 + t) * 0.5 + 0.5);
         // knob_2: nebula fog density (0 = clear, 1 = thick cosmic cloud) — auto-wired when twisted
         float fog_pulse = 1.0 + clamp(bassZScore, 0.0, 2.0) * 0.50;
-        bg += nebula * fog * mix(0.04, 0.45, knob_2) * (0.7 + midsNormalized * 0.4) * fog_pulse;
+        // knob_2 was fog density — repurposed as climax dampener (see below). Fog now constant.
+        bg += nebula * fog * 0.22 * (0.7 + midsNormalized * 0.4) * fog_pulse;
     }
         // VJ AURORA VEILS — glowing green-teal curtains in dark/wonky phases (low centroid)
     {
@@ -639,7 +640,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     col += coat_rim * chrome * rim_boost * (1.0 - curls);
     // Button seam glow — chrome line down the center
     col += seam_glow * coat * chrome * 0.25 * (1.0 - curls);
-    col += eyes * hot * 2.2;
+    col += eyes * hot * 2.2 * knob_2;
     // VJ WARM BREATH — slow amber chest glow breathing at 0.5Hz, gated on sustained mid-energy
     // Fills the 'warm dark instrumental' slot (iter 39 journal hypothesis).
     {
@@ -663,13 +664,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             float mouth_blob = exp(-md * md * 80.0);
             float pulse = 0.5 + 0.5 * sin(time * 4.0 + pitchClassNormalized * 6.28);
             vec3 mouth_col = hsl2rgb(vec3(fract(0.05 + pitchClassNormalized * 0.15), 0.9, 0.55));
-            col += mouth_col * mouth_blob * mouth_on * pulse * 0.8;
+            col += mouth_col * mouth_blob * mouth_on * pulse * 0.8 * knob_2;
         }
     }
-    col = mix(col, col + hot * 0.6, eye_wash);
-    col += eye_wash * hot * 0.4;
+    col = mix(col, col + hot * 0.6, eye_wash * knob_2);
+    col += eye_wash * hot * 0.4 * knob_2;
     vec3 ray_col = mix(hot, vec3(0.4, 0.85, 1.0), smoothstep(0.45, 0.85, spectralCentroidNormalized));
-    col += god_rays * ray_col * GODRAY_INTENSITY;
+    col += god_rays * ray_col * GODRAY_INTENSITY * knob_2;
 
     // ---- INFINITY MIRROR removed (spinning-tile repetition clashed with spacy ambient bg) ----
 
@@ -686,6 +687,16 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     if (beat) feedback_amt *= 0.6;
     if (frame < 30) feedback_amt = 0.0;
     col = mix(prev, col, feedback_amt);
+    // VJ GRIT — luminance noise on coat only, gated by high roughness
+    {
+        float grit_on = clamp(spectralRoughnessNormalized - 0.45, 0.0, 1.0);
+        if (grit_on > 0.02 && silhouette > 0.05) {
+            vec2 gp = uv * 80.0 + vec2(time * 7.0, time * 4.5);
+            float grit = hash(floor(gp));
+            float flicker = mix(0.75, 1.2, grit);
+            col *= mix(1.0, flicker, grit_on * silhouette * 0.55);
+        }
+    }
     // VJ MERCURY FLOW — bass-heavy low-centroid phases turn the coat into flowing liquid metal
     {
         float flow_on = clamp(bassNormalized - 0.25, 0.0, 1.0);
@@ -744,7 +755,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float shock_ring = exp(-shock_d * shock_d * 300.0);
         float shock_fade = (1.0 - shock_phase);
         shock_fade *= shock_fade;
-        col += vec3(1.0, 1.0, 1.2) * shock_ring * shock_fade * shock_trigger * 1.4;
+        col += vec3(1.0, 1.0, 1.2) * shock_ring * shock_fade * shock_trigger * 1.4 * knob_2;
     }
     // VJ WATER POOL — bottom-third reflective pool ripples in dark/deep phases
     {
@@ -859,6 +870,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             float flash = step(0.0, sin(time * 2.5 + clamp(bassZScore, 0.0, 2.0) * 4.0));
             vec3 beam_col = mix(vec3(0.2, 0.4, 1.0), vec3(1.0, 0.2, 0.3), flash);
             col += beam_col * beam * search_on * 0.7;
+        }
+    }
+    // VJ SHADOW HALO — deepens darkness around silhouette on bass pulses (menace gate)
+    {
+        float menace = clamp(bassZScore, 0.0, 1.5) * smoothstep(0.5, 0.1, spectralCentroidNormalized);
+        if (menace > 0.02) {
+            // Distance to silhouette edge — falls off outside
+            float silhouette_proxy = smoothstep(0.0, 0.1, silhouette);
+            float halo_d = smoothstep(0.0, 0.35, length(uv - vec2(0.0, -0.05)));
+            float darken = menace * halo_d * (1.0 - silhouette_proxy) * 0.35;
+            col *= 1.0 - darken;
         }
     }
     col *= 1.0 - smoothstep(0.7, 1.4, length(uv * vec2(1.0, 0.85)));

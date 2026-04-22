@@ -1,7 +1,18 @@
 # the-coat-8 — Session Journal
 
 ## Status
-Iter 47/180. Mercury lattice + warm-breath intensity both addressed. No open user flags. Active track: *Take It Off - Dubstep – AIR SIK*.
+Iter 49/180. **knob_2 repurposed as climax dampener** — scales god rays, eye wash, eye punch, cosmic shockwave, and mouth glow by knob_2. 0 = payoff effects suppressed; 1 = full. User controls when climactic moments fire. Fog now at a fixed 0.22 density. iter 48 added VJ GRIT (roughness-gated luminance flicker on coat). Active track: *symphony no.5 in bass minor – LŪN*.
+
+## Knob map (current)
+- knob_1: zoom
+- knob_2: **climax dampener** (god rays, eye wash, eye punch, cosmic shockwave, mouth glow)
+- knob_3: god ray intensity multiplier (old)
+- knob_4: eye wash override (old)
+- knob_5: drop zoom
+- knob_6: camera tilt (off by default)
+- knob_7: fur thickness
+- knob_8, 10, 11: unwired
+- knob_9: feedback amount
 
 ## Cool moments
 
