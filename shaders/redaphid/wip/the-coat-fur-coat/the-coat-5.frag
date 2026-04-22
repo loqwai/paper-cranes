@@ -1,6 +1,6 @@
 // @fullscreen: true
 // @mobile: true
-// the-coat-2: baked from live jam session preset
+// the-coat-5: forked from the-coat-3 during /vj session (dramatic mode). RGB split removed.
 // Knob defaults captured: knob_2=-0.346, knob_7=0.98, knob_12=0.669, knob_15=0.46
 // Use with controller=the-coat for sustained drop glow
 uniform float drop_glow; // from the-coat controller — sustained drop with decay
@@ -637,24 +637,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Coat rim pulses with spectral flux — brighter on timbral changes
     float rim_boost = RIM_BOOST;
     col += coat_rim * chrome * rim_boost * (1.0 - curls);
-    // VJ CRYSTALLINE FACETS — on high entropy, coat turns to iridescent obsidian shards
-    {
-        float facet_on = clamp(spectralEntropyNormalized - 0.55, 0.0, 0.5) * 2.0;
-        if (facet_on > 0.02 && coat > 0.05) {
-            vec2 fp_c = uv * 9.0 + vec2(time * 0.15, -time * 0.07);
-            vec2 fcell = floor(fp_c);
-            vec2 ffrac = fract(fp_c) - 0.5;
-            float fh = hash(fcell);
-            float face_d = abs(ffrac.x) + abs(ffrac.y);
-            float facet = smoothstep(0.55, 0.15, face_d);
-            float iri_hue = fract(fh + time * 0.2 + spectralCentroidNormalized * 0.5);
-            vec3 iri = hsl2rgb(vec3(iri_hue, 0.9, 0.55));
-            vec3 obsidian = vec3(0.02, 0.02, 0.04);
-            vec3 shard = mix(obsidian, iri, facet * 0.8);
-            col = mix(col, shard, facet_on * coat * (1.0 - curls) * 0.8);
-        }
-    }
-
     // Button seam glow — chrome line down the center
     col += seam_glow * coat * chrome * 0.25 * (1.0 - curls);
     col += eyes * hot * 2.2;
@@ -725,47 +707,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     }
 
 
-    // VJ RGB SPLIT — chromatic aberration on high entropy/roughness moments
-    {
-        float aber = clamp(spectralRoughnessNormalized * spectralEntropyNormalized, 0.0, 1.0) * 0.012;
-        if (aber > 0.0005) {
-            vec2 dir = normalize(uv + vec2(0.01, 0.0));
-            float r = prev.r / 0.88;  // reuse prev (prev was *= 0.88, undo for RGB split)
-            float b = getLastFrameColor(fb_uv - dir * aber * 2.0).b;
-            float g = col.g;
-            col = mix(col, vec3(mix(r, col.r, 0.4), g, mix(b, col.b, 0.4)), 0.55);
-        }
-    }
-
-    // VJ SCAN LINE — hi-hat driven horizontal band sweeps down
-    {
-        float hat = clamp(trebleZScore, 0.0, 2.0);
-        if (hat > 0.15) {
-            float scan_y = uv.y - fract(time * 0.35) * 2.0 + 1.0;
-            float scan = exp(-scan_y * scan_y * 800.0);
-            col += vec3(0.3, 0.8, 1.0) * scan * hat * 0.4;
-        }
-    }
-    // VJ LIGHTNING — jagged electric branches on big treble/flux spikes
-    {
-        float strike = max(clamp(trebleZScore - 0.5, 0.0, 1.5), clamp(spectralFluxZScore - 0.4, 0.0, 1.5));
-        if (strike > 0.05) {
-            // 3 offset branches, each a warped vertical line
-            float bolt = 0.0;
-            for (int bi = 0; bi < 3; bi++) {
-                float bf = float(bi);
-                float bolt_x = (hash(vec2(bf + floor(time * 4.0), 17.3)) - 0.5) * 1.6;
-                float warp = sin(uv.y * 6.0 + bf * 3.0 + time * 2.0) * 0.08
-                           + sin(uv.y * 18.0 + bf * 5.0) * 0.02;
-                float dx = uv.x - bolt_x - warp;
-                float b = exp(-dx * dx * 1200.0);
-                bolt = max(bolt, b);
-            }
-            float flicker = step(0.4, hash(vec2(floor(time * 20.0), 7.1)));
-            col += vec3(0.8, 0.95, 1.2) * bolt * strike * flicker * 1.8;
-        }
-    }
-
     // VJ COSMIC SHOCKWAVE — one-shot expanding ring on true beat flux spikes
     {
         float shock_trigger = float(beat) * clamp(spectralFluxZScore, 0.0, 1.0);
@@ -833,6 +774,44 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             }
             vec3 quake_col = mix(vec3(1.0, 0.35, 0.08), vec3(1.0, 0.75, 0.3), bassNormalized);
             col += quake_col * wavefronts * quake_on * 0.55;
+        }
+    }
+    // VJ DISSOLUTION — character sheds drifting particles upward on bright high-treble phases
+    {
+        float dissolve = clamp(trebleNormalized - 0.3, 0.0, 1.0);
+        dissolve *= clamp(spectralCentroidNormalized - 0.5, 0.0, 1.0) * 2.0;
+        if (dissolve > 0.02) {
+            vec2 pp = uv * vec2(12.0, 8.0) + vec2(sin(time * 0.3) * 0.3, time * -0.8);
+            vec2 pcell = floor(pp);
+            vec2 pfrac = fract(pp) - 0.5;
+            float ph = hash(pcell);
+            float alive = step(0.82, ph);
+            float pd = length(pfrac * vec2(2.5, 1.2));
+            float particle = exp(-pd * pd * 25.0) * alive;
+            float near_sil = smoothstep(0.0, 0.15, silhouette) * (1.0 - silhouette);
+            vec3 particle_col = mix(vec3(0.9, 0.95, 1.0), vec3(1.0, 0.85, 0.6), hash(pcell + vec2(1.1, 3.3)));
+            col += particle_col * particle * near_sil * dissolve * 1.2;
+        }
+    }
+    // VJ HYPERSPACE — radial streaks rushing outward from head on mid-high energy
+    {
+        float hyper_on = clamp(energyNormalized - 0.3, 0.0, 1.0);
+        hyper_on *= clamp(trebleNormalized - 0.2, 0.0, 1.0) * 1.8;
+        if (hyper_on > 0.02) {
+            vec2 hp2 = uv - P.head_c;
+            float hr = length(hp2);
+            float ha = atan(hp2.y, hp2.x);
+            // Streak density — high angular frequency for hyperspace feel
+            float streaks = 0.5 + 0.5 * sin(ha * 48.0 + hash(vec2(floor(ha * 8.0), 0.0)) * 6.28);
+            streaks = pow(streaks, 6.0);
+            // Animate outward: faster toward center
+            float flow = fract(hr * 2.0 - time * 1.2);
+            float streak_life = 1.0 - flow;
+            streak_life = streak_life * streak_life;
+            // Mask: fade near the silhouette and at screen edge
+            float mask = smoothstep(0.18, 0.35, hr) * (1.0 - smoothstep(0.9, 1.3, hr));
+            vec3 streak_col = mix(vec3(0.6, 0.7, 1.0), vec3(1.0, 0.9, 0.7), trebleNormalized);
+            col += streak_col * streaks * streak_life * mask * hyper_on * 0.55;
         }
     }
     col *= 1.0 - smoothstep(0.7, 1.4, length(uv * vec2(1.0, 0.85)));
