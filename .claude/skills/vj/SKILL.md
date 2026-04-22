@@ -142,14 +142,51 @@ Let the features + track name guide it. Some reliable archetypes:
 
 **Avoid stacking more than ~6 simultaneous overlay effects** — the composition blows out. If adding something heavy, reduce or remove something else.
 
+### C.1 Move style: dramatic vs. subtle
+
+`vj-state.json` holds a `moveStyle` field — `"subtle"` (default: parameter nudges, coefficient tweaks) or `"dramatic"` (new visual motifs per tick: black-hole silhouette, lightning strikes, aurora, tearfall, rotor gear, crystalline facets, time-echo, water pool). Dramatic mode adds a whole feature each tick instead of adjusting one. Switch modes when user says "more variation" or "less busy". Save the choice.
+
+### C.2 Auto-wire knobs the user is twisting
+
+`vj-state.json` holds `knobSnapshot` (previous values) and `unwiredKnobs` (knob indices with no shader reference). Each tick, diff current knob values vs snapshot. If an **unwired** knob moved by >0.02, wire it to something interesting (fog density, palette tint, an existing-effect intensity knob). Update `knobSnapshot` every tick, and remove the knob from `unwiredKnobs` once mapped.
+
+To find which knobs are already in the shader, grep the `.frag` for `knob_N`. Exclude comment-only references.
+
 ### D. Apply the edit via the jam tab
 
-Read + edit + save through the browser so HMR is the edit path:
+**Validate BEFORE saving** — never write a broken shader to disk. The static linter doesn't catch forward-reference or type errors; only the real GLSL compiler does. Use `window.__vjValidate` installed on the jam tab.
+
+**One-time install per jam-tab reload:**
+```javascript
+(async () => {
+  if (typeof window.__vjValidate === 'function') return 'already installed';
+  const mod = await import('/src/shader-transformers/shader-wrapper.js');
+  const wrap = mod.shaderWrapper;
+  const canvas = document.createElement('canvas');
+  canvas.width = 4; canvas.height = 4;
+  const gl = canvas.getContext('webgl2');
+  window.__vjValidate = (src) => {
+    const wrapped = wrap(src);
+    const sh = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(sh, wrapped);
+    gl.compileShader(sh);
+    const ok = gl.getShaderParameter(sh, gl.COMPILE_STATUS);
+    const info = ok ? null : gl.getShaderInfoLog(sh);
+    gl.deleteShader(sh);
+    return { ok, info };
+  };
+  return 'installed';
+})()
+```
+
+Then each tick:
 ```javascript
 (async () => {
   const src = await (await fetch('/shaders/<shader-path>.frag?t=' + Date.now())).text();
   let edited = src;
   // ... string replacements ...
+  const v = window.__vjValidate(edited);
+  if (!v.ok) return 'COMPILE FAIL (not saved): ' + v.info;
   const res = await fetch('/__save-shader', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
@@ -161,19 +198,15 @@ Read + edit + save through the browser so HMR is the edit path:
 
 Note: the `/__save-shader` `shader` field takes the path WITHOUT `.frag`.
 
-### E. Validate
+### E. Post-save sanity check (optional)
 
 ```fish
 node scripts/validate-shader.js <shader-path>.frag 2>&1 | grep -E "^ERROR" | head -5
 ```
 
-The validator exits non-zero on warnings too (e.g. divide-by-zero hints), so check for `^ERROR` lines, not exit status.
+The static linter is a secondary check — pre-save GL compile (step D) is the primary gate.
 
-If errors appear:
-- Fix inline (common issues: GLSL reserved words like `active`, `input`, `output`, `sample` → rename)
-- If unfixable in one pass, revert to the previous version via `git checkout -- <file>` and skip this iteration's edit
-
-Track consecutive failures in `vj-state.json` (`failCount`). After 3 in a row, stop the cron and tell the user.
+If a broken edit somehow slipped through (e.g. validator install failed silently), revert with `git checkout -- <file>`, bump `failCount` in state. After 3 consecutive failures, stop the cron and tell the user.
 
 ### F. Increment + persist
 

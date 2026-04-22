@@ -27,9 +27,10 @@ const RELOAD_GRACE = 5000
 
 const processServiceWorkerMessage = (event) => {
   if (event.data === 'reload') {
-      // The editor page handles shader updates via HMR — don't full-reload
+      // The editor and jam pages handle shader updates via HMR — don't full-reload
       // when the service worker detects a .frag file changed on disk.
       if (window.location.pathname.includes('edit')) return
+      if (window.location.pathname.includes('jam')) return
       if (reloadTimeout) return
       const lastReload = parseInt(sessionStorage.getItem('sw-last-reload') || '0')
       if (Date.now() - lastReload < RELOAD_GRACE) return
