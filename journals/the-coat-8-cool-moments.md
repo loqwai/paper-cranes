@@ -1,7 +1,7 @@
 # the-coat-8 — Session Journal
 
 ## Status
-Forked from the-coat-7 at iter 45, mid-`/vj` run (target 180). Confetti removed. User-approved state apart from one open issue (mercury-flow diamond lattice). Active track: *Watch Me – Scorsi*.
+Iter 46/180. Mercury diamond-lattice fixed (fbm-based flow, no tiling). Active track: *STARBURST – ProbCause, AHEE*. No open user flags.
 
 ## Cool moments
 
@@ -17,7 +17,7 @@ Forked from the-coat-7 at iter 45, mid-`/vj` run (target 180). Confetti removed.
 
 ## Todo
 
-- [ ] **Fix mercury-flow diamond lattice** — user: "flannel-like, large diamonds with thick lines, almost like zooming into a microscope, moves quickly." Caused by `sin(uv.x * 18 + sin(uv.y * 4 + flow_t) * 2.5 - flow_t * 2)` — the cross-sine product creates a diamond grid. Coat-only because gated `silhouette > 0.05`. Fix candidates: (a) drop the cross-modulation → plain vertical stripes via `sin(uv.x * 9 - flow_t * 2)`, (b) shift to `fbm`-based mercury with no lattice period, (c) remove mercury flow entirely and replace with something else for the bass-heavy-low-centroid corner.
+- [x] **Fix mercury-flow diamond lattice** (iter 46) — replaced `sin(uv.x*18 + sin(uv.y*4 + t)*2.5 - t*2)` cross-product with fbm-based domain warp: `fbm(uv * (2.5, 3.5) + vec2(sin(t*0.7)*0.4, t*1.1))`. fbm has no periodic lattice so no diamonds can form. Preserves "flowing liquid" character without the microscope-artifact look. Also slowed flow_t base from 0.5 → 0.3 per bass-scale unit to read less frantic.
 
 - [ ] **Warm breath intensity (iter 45)** — subtle. Users calling for "feels good" might want a stronger effect. Current: `0.45 * pulse * warm_on`. Try `0.7` if it under-reads.
 

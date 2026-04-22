@@ -691,11 +691,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float flow_on = clamp(bassNormalized - 0.25, 0.0, 1.0);
         flow_on *= smoothstep(0.60, 0.25, spectralCentroidNormalized);
         if (flow_on > 0.02 && silhouette > 0.05) {
-            float flow_t = time * (0.5 + bassNormalized * 1.5);
-            // Vertical flow: stripes drip downward at varying speeds
-            float stripe = sin(uv.x * 9.0 - flow_t * 2.0);
-            stripe = stripe * 0.5 + 0.5;
-            stripe = smoothstep(0.35, 0.95, stripe);
+            float flow_t = time * (0.3 + bassNormalized * 0.8);
+            // Mercury FLOW via fbm — no periodic lattice, no diamond artifacting.
+            // Vertical bias: sample at uv.xy shifted by (low-freq horizontal wobble, fast downward drift).
+            vec2 flow_p = uv * vec2(2.5, 3.5) + vec2(sin(flow_t * 0.7) * 0.4, flow_t * 1.1);
+            float stripe = fbm(flow_p);
+            stripe = smoothstep(0.40, 0.75, stripe);
             vec3 mercury_dark = vec3(0.05, 0.06, 0.1);
             vec3 mercury_hi = vec3(0.92, 0.94, 1.0);
             vec3 mercury = mix(mercury_dark, mercury_hi, stripe);
