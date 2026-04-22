@@ -150,7 +150,7 @@ struct Pose {
 
 Pose makePose(float beat_phase, float hip_sway, float snap, float groove) {
     Pose P;
-    P.bob = -abs(sin(beat_phase)) * 0.025 + groove * 0.005;
+    P.bob = -abs(sin(beat_phase)) * 0.025 + groove * 0.005 - clamp(bassZScore, 0.0, 2.0) * 0.04;
     P.tilt = hip_sway * 0.18 + sin(beat_phase * 0.5) * 0.05;
     P.hip = sign(hip_sway) * pow(abs(hip_sway), 0.6) * 0.05;
     P.head_c = vec2(P.hip * 0.6, 0.24 + P.bob);
