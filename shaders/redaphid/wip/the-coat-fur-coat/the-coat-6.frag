@@ -424,7 +424,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         vec3 nebula_b = vec3(0.10, 0.35, 0.70);
         vec3 nebula = mix(nebula_a, nebula_b, sin(np.x * 0.7 + t) * 0.5 + 0.5);
         // knob_2: nebula fog density (0 = clear, 1 = thick cosmic cloud) — auto-wired when twisted
-        float fog_pulse = 1.0 + clamp(bassZScore, 0.0, 2.0) * 0.35;
+        float fog_pulse = 1.0 + clamp(bassZScore, 0.0, 2.0) * 0.50;
         bg += nebula * fog * mix(0.04, 0.45, knob_2) * (0.7 + midsNormalized * 0.4) * fog_pulse;
     }
         // VJ AURORA VEILS — glowing green-teal curtains in dark/wonky phases (low centroid)

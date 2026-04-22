@@ -238,6 +238,26 @@ Bump `iteration` in `.claude/vj-state.json`.
 
 Keep it tight. No screenshot — the user is watching the shader live.
 
+### H. Journal cool moments (only when warranted)
+
+After the edit lands, notice the current visual+audio combination. If it's working especially well, append an entry to the **per-shader journal**:
+
+```
+journals/<shader-filename-without-dir-or-ext>-cool-moments.md
+```
+
+For example, `shaders/redaphid/wip/the-coat-fur-coat/the-coat-6.frag` → `journals/the-coat-6-cool-moments.md`. Create it if missing.
+
+**Purpose: these journals feed the next shader.** When the user eventually says "make a new shader", the combined entries across shaders become a design brief — which audio/visual correspondences are worth keeping, which gating thresholds reliably produce "modes" rather than noise, which track types the current shader vocabulary can and can't serve. So write each entry with future-you (designing v7 from scratch) as the reader, not session-present-you.
+
+Each entry should capture:
+- **Audio fingerprint** — the *specific* feature combination that made the moment. Not vague ("bass hit") — precise ranges (`bass 0.65-0.75 + centroid < 0.15 + entropy < 0.1`) so a future shader can be designed to *reward* that fingerprint.
+- **What the shader did right** — which existing blocks fired, and *how their gating conditions overlapped*. The goal of a v7 is often to take an alignment that happened by accident here and make it deliberate.
+- **What the shader missed** — moments where the music was doing X and the shader *should* have responded but didn't (wrong gate threshold, no matching effect, clashing overlay). These are v7 requirements.
+- **Design hypothesis** — one line: "next shader should have a dedicated effect for audio-pattern X."
+
+Skip ordinary ticks. The git log already records *what* changed — the journal captures *why a specific audio-pattern called for a specific visual response*. 3-5 honest entries per shader beats 30 mediocre ones.
+
 ## Stop conditions
 
 - `iteration >= target` → `CronDelete(jobId)`, delete state file
