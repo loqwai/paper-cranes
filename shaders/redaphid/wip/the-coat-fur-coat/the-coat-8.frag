@@ -651,7 +651,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             float chest_d = length(uv - chest_c_world.xy) * 1.4;
             float glow = exp(-chest_d * chest_d * 6.0);
             vec3 warm_col = vec3(1.0, 0.55, 0.25);
-            col += warm_col * glow * warm_on * breath * 0.45;
+            col += warm_col * glow * warm_on * breath * 0.70;
         }
     }
     // VJ MOUTH GLOW — soft glow where the mouth would be, pulsing on mids (vocal presence)
