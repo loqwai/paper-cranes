@@ -834,6 +834,29 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             col += beam_col * beam * search_on * 0.7;
         }
     }
+    // VJ CONFETTI — falling spinning squares on treble × entropy (bright-chaotic-playful)
+    {
+        float confetti_on = clamp(trebleNormalized - 0.35, 0.0, 1.0);
+        confetti_on *= clamp(spectralEntropyNormalized - 0.5, 0.0, 1.0) * 2.0;
+        if (confetti_on > 0.02) {
+            vec2 cp = uv * vec2(10.0, 6.0);
+            cp.y += time * 0.6;
+            cp.x += sin(time * 0.4 + uv.y * 3.0) * 0.3;
+            vec2 ccell = floor(cp);
+            vec2 cfrac = fract(cp) - 0.5;
+            float ch = hash(ccell);
+            float has_piece = step(0.75, ch);
+            // Rotate each square
+            float spin_angle = time * (1.5 + ch * 3.0) + ch * 6.28;
+            float cs = cos(spin_angle), ss = sin(spin_angle);
+            vec2 rp = vec2(cfrac.x * cs - cfrac.y * ss, cfrac.x * ss + cfrac.y * cs);
+            float square = step(abs(rp.x), 0.11) * step(abs(rp.y), 0.11);
+            // Color from pitch class — music's note → confetti hue
+            float c_hue = fract(pitchClassNormalized + ch * 0.3);
+            vec3 c_col = hsl2rgb(vec3(c_hue, 0.85, 0.6));
+            col += c_col * square * has_piece * confetti_on * 0.9;
+        }
+    }
     col *= 1.0 - smoothstep(0.7, 1.4, length(uv * vec2(1.0, 0.85)));
 
 #if DEBUG_OUTLINES
