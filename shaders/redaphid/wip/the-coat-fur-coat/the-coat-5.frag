@@ -793,6 +793,27 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             col += particle_col * particle * near_sil * dissolve * 1.2;
         }
     }
+    // VJ HYPERSPACE — radial streaks rushing outward from head on mid-high energy
+    {
+        float hyper_on = clamp(energyNormalized - 0.3, 0.0, 1.0);
+        hyper_on *= clamp(trebleNormalized - 0.2, 0.0, 1.0) * 1.8;
+        if (hyper_on > 0.02) {
+            vec2 hp2 = uv - P.head_c;
+            float hr = length(hp2);
+            float ha = atan(hp2.y, hp2.x);
+            // Streak density — high angular frequency for hyperspace feel
+            float streaks = 0.5 + 0.5 * sin(ha * 48.0 + hash(vec2(floor(ha * 8.0), 0.0)) * 6.28);
+            streaks = pow(streaks, 6.0);
+            // Animate outward: faster toward center
+            float flow = fract(hr * 2.0 - time * 1.2);
+            float streak_life = 1.0 - flow;
+            streak_life = streak_life * streak_life;
+            // Mask: fade near the silhouette and at screen edge
+            float mask = smoothstep(0.18, 0.35, hr) * (1.0 - smoothstep(0.9, 1.3, hr));
+            vec3 streak_col = mix(vec3(0.6, 0.7, 1.0), vec3(1.0, 0.9, 0.7), trebleNormalized);
+            col += streak_col * streaks * streak_life * mask * hyper_on * 0.55;
+        }
+    }
     col *= 1.0 - smoothstep(0.7, 1.4, length(uv * vec2(1.0, 0.85)));
 
 #if DEBUG_OUTLINES
