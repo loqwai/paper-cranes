@@ -823,6 +823,23 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             col += quake_col * wavefronts * quake_on * 0.55;
         }
     }
+    // VJ DISSOLUTION — character sheds drifting particles upward on bright high-treble phases
+    {
+        float dissolve = clamp(trebleNormalized - 0.3, 0.0, 1.0);
+        dissolve *= clamp(spectralCentroidNormalized - 0.5, 0.0, 1.0) * 2.0;
+        if (dissolve > 0.02) {
+            vec2 pp = uv * vec2(12.0, 8.0) + vec2(sin(time * 0.3) * 0.3, time * -0.8);
+            vec2 pcell = floor(pp);
+            vec2 pfrac = fract(pp) - 0.5;
+            float ph = hash(pcell);
+            float alive = step(0.82, ph);
+            float pd = length(pfrac * vec2(2.5, 1.2));
+            float particle = exp(-pd * pd * 25.0) * alive;
+            float near_sil = smoothstep(0.0, 0.15, silhouette) * (1.0 - silhouette);
+            vec3 particle_col = mix(vec3(0.9, 0.95, 1.0), vec3(1.0, 0.85, 0.6), hash(pcell + vec2(1.1, 3.3)));
+            col += particle_col * particle * near_sil * dissolve * 1.2;
+        }
+    }
     col *= 1.0 - smoothstep(0.7, 1.4, length(uv * vec2(1.0, 0.85)));
 
 #if DEBUG_OUTLINES
