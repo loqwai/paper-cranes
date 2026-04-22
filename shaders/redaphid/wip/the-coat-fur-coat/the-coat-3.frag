@@ -812,27 +812,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             col += beam_col * beam * dist_fade * sil_mask * beams_on * 0.45;
         }
     }
-    // VJ TEARFALL — 5 bright teardrops streak downward. Mids-driven (vocal presence).
-    {
-        float tear_on = clamp(midsNormalized - 0.15, 0.0, 1.0);
-        if (tear_on > 0.02) {
-            float tear_bright = 0.0;
-            for (int ti = 0; ti < 5; ti++) {
-                float tf = float(ti);
-                float col_x = (hash(vec2(tf, 101.0)) - 0.5) * 1.7;
-                float speed = 0.5 + hash(vec2(tf, 202.0)) * 0.4;
-                float phase = fract(hash(vec2(tf, 303.0)) + time * speed * 0.4);
-                // y goes from 1.2 (above) to -1.0 (below)
-                float y0 = mix(1.2, -1.0, phase);
-                float dx = uv.x - col_x;
-                float dy = uv.y - y0;
-                // Streaky: elongated teardrop, longer as it falls
-                float streak = exp(-dx*dx * 900.0 - dy*dy * 20.0 * (1.0 - phase * 0.5));
-                tear_bright += streak;
-            }
-            col += vec3(0.7, 0.85, 1.2) * tear_bright * tear_on * 1.1;
-        }
-    }
     // VJ GROUND QUAKE — concentric amber rings from floor, bass-driven, multiple wavefronts
     {
         float quake_on = clamp(bassNormalized - 0.3, 0.0, 1.0);
