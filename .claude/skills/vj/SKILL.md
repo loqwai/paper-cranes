@@ -238,25 +238,67 @@ Bump `iteration` in `.claude/vj-state.json`.
 
 Keep it tight. No screenshot — the user is watching the shader live.
 
-### H. Journal cool moments (only when warranted)
+### H. Read + update the per-shader journal (every session, every cool moment, every user flag)
 
-After the edit lands, notice the current visual+audio combination. If it's working especially well, append an entry to the **per-shader journal**:
+The **per-shader journal** is the session-memory of the VJ run. It lives at:
 
 ```
 journals/<shader-filename-without-dir-or-ext>-cool-moments.md
 ```
 
-For example, `shaders/redaphid/wip/the-coat-fur-coat/the-coat-6.frag` → `journals/the-coat-6-cool-moments.md`. Create it if missing.
+e.g. `shaders/redaphid/wip/the-coat-fur-coat/the-coat-8.frag` → `journals/the-coat-8-cool-moments.md`.
 
-**Purpose: these journals feed the next shader.** When the user eventually says "make a new shader", the combined entries across shaders become a design brief — which audio/visual correspondences are worth keeping, which gating thresholds reliably produce "modes" rather than noise, which track types the current shader vocabulary can and can't serve. So write each entry with future-you (designing v7 from scratch) as the reader, not session-present-you.
+**Two purposes:**
+1. **Resume the VJ session** later — a new `/vj` run should pick up with full awareness of what's already been explored with this shader: which audio-features-to-visual mappings worked, which the user flagged for removal/fix, which track types were in rotation.
+2. **Refine this shader** — between sessions we can return with a "todo" list: issues to fix, tweaks to try, effects that were close-but-off.
 
-Each entry should capture:
-- **Audio fingerprint** — the *specific* feature combination that made the moment. Not vague ("bass hit") — precise ranges (`bass 0.65-0.75 + centroid < 0.15 + entropy < 0.1`) so a future shader can be designed to *reward* that fingerprint.
-- **What the shader did right** — which existing blocks fired, and *how their gating conditions overlapped*. The goal of a v7 is often to take an alignment that happened by accident here and make it deliberate.
-- **What the shader missed** — moments where the music was doing X and the shader *should* have responded but didn't (wrong gate threshold, no matching effect, clashing overlay). These are v7 requirements.
-- **Design hypothesis** — one line: "next shader should have a dedicated effect for audio-pattern X."
+**When to read:**
+- **At `/vj` setup** (step 3/4/5 in the session start) — if `journals/<shader-name>-cool-moments.md` exists, read it first. Its contents should shape the session: don't re-introduce effects the user already rejected, prioritize the Todo section's unfixed items when planning early ticks.
+- **Before each tick that proposes a dramatic move** — so we don't re-add a motif that was already vetoed.
 
-Skip ordinary ticks. The git log already records *what* changed — the journal captures *why a specific audio-pattern called for a specific visual response*. 3-5 honest entries per shader beats 30 mediocre ones.
+**When to write:**
+- **Cool moment** — visual + audio combo landed well. Add a dated entry under `## Cool moments`.
+- **User flag** — user called something out (remove, fix, nudge). Add an entry under `## Todo` with enough context to act on it later.
+- **Removal / major change** — record what was pulled and why under `## History of changes` so future-you knows not to re-add it.
+- **Fork** — note the fork under `## Forks` on both the source and the destination journal.
+
+**Journal structure** (create sections on first write, append after that):
+
+```markdown
+# <shader-name> — Session Journal
+
+## Status
+One-line current state. Updated each tick or as often as meaningful.
+e.g. "Iter 47 on /vj run. User approves everything except mercury-flow diamonds."
+
+## Cool moments
+Entries for (audio-fingerprint → visual-response) wins. Each entry:
+- **Audio fingerprint** — precise ranges, not vague. e.g. `bass 0.65-0.75 + centroid < 0.15 + entropy < 0.1`.
+- **What worked** — which blocks fired, how their gates overlapped.
+- **What was missed** — signal that should have provoked a response but didn't.
+- **Design hypothesis** — one line for the next shader.
+
+## Todo
+Unresolved user requests. Ordered by how much they matter.
+- `[ ] fix mercury-flow diamond lattice (user: "flannel-like, moves quickly, artifacting")`
+- `[ ] warm breath intensity feels low at mids > 0.7 — try 0.45 → 0.7 scale`
+Tick off with `[x]` when fixed, don't remove — history is useful.
+
+## History of changes
+Brief bullets of removals + reasons. Don't re-add these.
+- "Removed CONFETTI (iter 45 after fork to -8) — user request."
+- "Removed RGB-SPLIT (iter pre-fork -5) — user: 'rgb checkerboard on coat'."
+
+## Forks
+- `the-coat-8 ← the-coat-7` (iter 45): confetti removed.
+
+## Design hypotheses for v(next)
+Accumulated one-liners from cool moments. Read this when designing the next shader.
+- "Dedicated mid-dominant warmth effect for mids > 0.7 AND centroid < 0.3 AND entropy < 0.2."
+- "Effects should declare their feature-space region so alignments are deliberate, not emergent."
+```
+
+Skip the journal only on totally ordinary parameter nudges with nothing learned. Otherwise write.
 
 ## Stop conditions
 
