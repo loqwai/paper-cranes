@@ -678,6 +678,23 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     if (beat) feedback_amt *= 0.6;
     if (frame < 30) feedback_amt = 0.0;
     col = mix(prev, col, feedback_amt);
+    // VJ MERCURY FLOW — bass-heavy low-centroid phases turn the coat into flowing liquid metal
+    {
+        float flow_on = clamp(bassNormalized - 0.25, 0.0, 1.0);
+        flow_on *= smoothstep(0.60, 0.25, spectralCentroidNormalized);
+        if (flow_on > 0.02 && silhouette > 0.05) {
+            float flow_t = time * (0.5 + bassNormalized * 1.5);
+            // Vertical flow: stripes drip downward at varying speeds
+            float stripe = sin(uv.x * 18.0 + sin(uv.y * 4.0 + flow_t) * 2.5 - flow_t * 2.0);
+            stripe = stripe * 0.5 + 0.5;
+            stripe = smoothstep(0.35, 0.95, stripe);
+            vec3 mercury_dark = vec3(0.05, 0.06, 0.1);
+            vec3 mercury_hi = vec3(0.92, 0.94, 1.0);
+            vec3 mercury = mix(mercury_dark, mercury_hi, stripe);
+            col = mix(col, mercury, flow_on * silhouette * 0.75);
+        }
+    }
+
 
     // VJ TIME-ECHO — on energy surges, triple-expose previous frame around head
     {
