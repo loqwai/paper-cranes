@@ -176,30 +176,9 @@ To find which knobs are already in the shader, grep the `.frag` for `knob_N`. Ex
 
 ### D. Apply the edit via the jam tab
 
-**Validate BEFORE saving** — never write a broken shader to disk. The static linter doesn't catch forward-reference or type errors; only the real GLSL compiler does. Use `window.__vjValidate` installed on the jam tab.
+**Validate BEFORE saving** — never write a broken shader to disk. The static linter doesn't catch forward-reference or type errors; only the real GLSL compiler does. Use `window.__vjValidate(src) → { ok, info }` on the jam tab.
 
-**One-time install per jam-tab reload:**
-```javascript
-(async () => {
-  if (typeof window.__vjValidate === 'function') return 'already installed';
-  const mod = await import('/src/shader-transformers/shader-wrapper.js');
-  const wrap = mod.shaderWrapper;
-  const canvas = document.createElement('canvas');
-  canvas.width = 4; canvas.height = 4;
-  const gl = canvas.getContext('webgl2');
-  window.__vjValidate = (src) => {
-    const wrapped = wrap(src);
-    const sh = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(sh, wrapped);
-    gl.compileShader(sh);
-    const ok = gl.getShaderParameter(sh, gl.COMPILE_STATUS);
-    const info = ok ? null : gl.getShaderInfoLog(sh);
-    gl.deleteShader(sh);
-    return { ok, info };
-  };
-  return 'installed';
-})()
-```
+`window.__vjValidate` is **auto-installed** by `jam.html` on every load — no manual install step needed. (See the small `<script type="module">` block at the bottom of `jam.html`.) If it's ever missing on a reload, that page is broken — file a bug, don't paper over it.
 
 Then each tick:
 ```javascript
