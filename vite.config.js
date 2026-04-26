@@ -1,11 +1,11 @@
 import { defineConfig } from 'vite'
 import { resolve } from 'path'
-import { execSync } from 'child_process'
 import { shaderPlugin } from './vite-plugins/shader-plugin.js'
 import { remoteWsPlugin } from './vite-plugins/remote-ws-plugin.js'
 import { editorSyncPlugin } from './vite-plugins/editor-sync-plugin.js'
+import { getPort } from './scripts/dev-port.js'
 
-const port = parseInt(execSync('./scripts/dev-port', { encoding: 'utf-8' }))
+const port = getPort()
 
 export default defineConfig({
   server: {
