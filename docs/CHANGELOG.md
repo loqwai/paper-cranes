@@ -2,6 +2,21 @@
 
 All notable non-shader feature changes to this project will be documented in this file.
 
+## 2026-04-25
+
+### Features
+
+- **`/vibej` skill (renamed from `/vj`)** — The live auto-VJ loop is now invoked as `/vibej`. The legacy `/vj` alias still works identically — same arguments, same `.claude/vj-state.json`, same per-shader journal. Disambiguates "vj" (often "video jockey" generally) from this specific shader auto-mutation loop.
+- **`/jam`, `/fork`, `/record` skills** — Streamlined live-jam workflow. `/jam` opens jam page + Spotify + tab audio sharing in one shot. `/fork` snapshots the current shader + knob state as a new numbered iteration. `/record` captures a video of the current visualization with auto-stop. ([#115](https://github.com/loqwai/paper-cranes/pull/115))
+- **`/vibej` (`/vj`) skill + live VJ session infrastructure** — Claude runs as the VJ: every minute, reads audio features + Spotify track name from the jam page, makes one focused edit to the shader (validated pre-save against a real GL compile), HMR hot-swaps. Per-shader journal accumulates "cool moments", todos, removals, and forks so future sessions resume with full context. Subtle vs dramatic move styles, auto-wires knobs the user is twisting. ([#116](https://github.com/loqwai/paper-cranes/pull/116))
+- **Tab audio capture title in snapshots** — Snapshots now record the shared tab title (via `MediaStreamTrack.label`), so the queue knows which Spotify/SoundCloud track was playing when each preset was captured.
+- **Controller hot-reload** — Edits to `controllers/*.js` now hot-reload on the jam/edit pages without losing the audio stream or knob state.
+
+### Developer Experience
+
+- **`scripts/dev-port`** — Branch-derived dev server port (main = 6969, other branches hash to 1024–65534). All skills and tooling read from this script; never hardcode the port. Means multiple worktrees can run `npm run dev` simultaneously without colliding.
+- **Pre-save GL validation in `/vibej`** — Each shader edit is compiled in a tiny offscreen WebGL2 context on the jam tab BEFORE writing to disk, catching errors the static linter misses (forward refs, type errors).
+
 ## 2026-04-14
 
 ### Features
