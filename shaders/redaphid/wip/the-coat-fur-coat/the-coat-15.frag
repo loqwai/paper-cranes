@@ -22,7 +22,9 @@ uniform float drop_glow; // from the-coat controller — sustained drop with dec
 // --- ZOOM ---
 // Baked from knob_2=-0.346 session value
 // knob_1: 0=wide, 1=tight — live-remapped from knob_2
-#define BASE_ZOOM (mix(0.1, 2.5, knob_1) + energyNormalized * 0.4)
+// BASE_ZOOM: knob-driven only. Audio-driven zoom comes from INTENSITY_ZOOM + drop_hit, both smoothed below.
+// knob_10: fine zoom trim. 0 = 0.6× knob_1 zoom, 0.5 = exact knob_1 zoom, 1 = 1.4× knob_1 zoom. Lets user fine-tune without sweeping knob_1.
+#define BASE_ZOOM (mix(0.1, 2.5, knob_1) * mix(0.6, 1.4, knob_10))
 
 // --- COAT SHAPE ---
 #define SHOULDER_Y      (-0.02 + max(bassZScore, 0.0) * 0.015)
@@ -62,7 +64,9 @@ uniform float drop_glow; // from the-coat controller — sustained drop with dec
 // Eye wash — kicks in above-average energy, scales up from there
 #define EYE_WASH_STRENGTH (clamp(energyZScore, 0.0, 1.0) * 0.5 + clamp(bassZScore, 0.0, 1.0) * 0.2)
 // Continuous zoom breathes with intensity
-#define INTENSITY_ZOOM (energyNormalized * 0.20 + max(trebleZScore, 0.0) * 0.06)
+// INTENSITY_ZOOM: slowly-varying audio terms only. energyMean is a long-window average (no per-frame jitter); slow sin breath adds musical pulse synced to time.
+// Smooth audio-synced zoom: slow breath oscillator (~0.55Hz, ~1.8sec period) gives the timing; current energy level scales the magnitude. Per-frame transients average out across each breath cycle.
+#define INTENSITY_ZOOM ((sin(time * 0.55) * 0.5 + 0.5) * energyNormalized * 0.32 + bassMean * 0.06)
 
 // --- COLOR ---
 // Base hue shifts with pitch class — different notes = different colors
@@ -81,8 +85,7 @@ uniform float drop_glow; // from the-coat controller — sustained drop with dec
 // Color shift driven by drops AND energy — more reactive than before
 #define DROP_COLOR_AMT clamp(IS_DROP + clamp(energyZScore, 0.0, 1.0) * 0.4 + clamp(bassZScore, 0.0, 1.0) * 0.2, 0.0, 1.0)
 // Shoulder gleam pulses with spectral flux — light catches on timbral changes
-// spectralRolloffNormalized: where the highs cut off. High = full-spectrum content (gleam pops). Low = filtered/muffled (gleam dims). Independent from flux.
-#define GLEAM_INTENSITY (0.15 + spectralFluxNormalized * 0.35 + spectralRolloffNormalized * 0.25)
+#define GLEAM_INTENSITY (0.15 + spectralFluxNormalized * 0.35)
 
 // Fractal fur — THE signature feature (living-coat preset)
 // Entropy (chaos) + roughness (grit) + kurtosis (peaked) trigger the fur fibers
@@ -91,8 +94,7 @@ uniform float drop_glow; // from the-coat controller — sustained drop with dec
 // Warp speed driven by centroid — brighter sounds = faster swirl
 #define WARP_SPEED (spectralCentroidNormalized * 0.6 + spectralFluxNormalized * 0.2)
 // Rim boost: flux + bass make the chrome edge blaze
-// Crest-Z: high = spiky transient (snare/stab/percussive hit). Distinct from bassZ (low-freq) and trebZ (high-freq) — measures peakedness.
-#define RIM_BOOST (2.5 + spectralFluxNormalized * 2.0 + clamp(bassZScore, 0.0, 1.0) * 1.0 + (beat ? 1.5 : 0.0) + smoothstep(0.5, 0.9, energyNormalized) * 1.2 + clamp(spectralCrestZScore, 0.0, 1.5) * 0.6)
+#define RIM_BOOST (2.5 + spectralFluxNormalized * 2.0 + clamp(bassZScore, 0.0, 1.0) * 1.0 + (beat ? 1.5 : 0.0) + smoothstep(0.5, 0.9, energyNormalized) * 1.2)
 
 // --- DERIVED ---
 #define DROP_TRIGGER clamp(max(energyZScore, BUILD), 0.0, 1.0)
@@ -368,12 +370,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float intensity = max(PUMP, GROOVE);
     // Cubic ease-in: crushes twitchy low-end values, lets big moments punch through.
     // smoothstep(0.2, 0.9) maps to 0-1, then cube kills anything below ~0.5
-    float zoom_intensity = smoothstep(0.2, 0.9, intensity);
-    zoom_intensity = zoom_intensity * zoom_intensity * zoom_intensity;
-    // Beat zoom: per-kick ~14% snap, on top of intensity breath. Bumped from 0.06 → 0.14 per user request.
-    float beat_zoom = (beat ? 0.14 : 0.0) + smoothstep(0.4, 1.2, bassZScore) * 0.05;
+    // Single smoothstep (no cube) — gentle ease without crushing the mid range.
+    float zoom_intensity = smoothstep(0.25, 0.85, intensity);
+    // Beat zoom: tiny per-kick snap (~3% scale punch) on top of the smooth breath. Subtle — just enough to feel the kick without competing with drop-zoom.
+    float beat_zoom = (beat ? 0.06 : 0.0) + smoothstep(0.4, 1.2, bassZScore) * 0.025;
     float zoomAmount = BASE_ZOOM + zoom_intensity * INTENSITY_ZOOM + drop_hit * DROP_ZOOM * (knob_5 * 2.0) + beat_zoom;
-    vec2 zoomCenter = P.head_c;
+    // Zoom center offset DOWN from head_c so the head stays in upper-third framing — top of head doesn't crop on tight zoom.
+    vec2 zoomCenter = P.head_c + vec2(0.0, 0.18);
     // VJ CAMERA DRIFT — slow lateral sway + flux nudge so the frame never sits locked
     vec2 cam_drift = vec2(
         sin(time * 0.12) * 0.015 + spectralFluxZScore * 0.012,
@@ -383,7 +386,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     uv = (uv - zoomCenter) / zoomAmount + zoomCenter;
 
     // Camera tilt — knob_6 controls how much swagger
-    float tilt_angle = (sin(time * 0.7) * 0.15
+    // Tilt rate synced to 0.4Hz organism breath (HEART PULSE + WARM HEARTH match) — figure sways and breathes in shared rhythm.
+    float tilt_angle = (sin(time * 0.4) * 0.15
                      + (spectralCentroidNormalized - 0.5) * 0.2
                      + bassZScore * 0.075) * knob_6;
     float ca = cos(tilt_angle), sa = sin(tilt_angle);
@@ -443,8 +447,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             float curtain1 = exp(-pow(uv.y - 0.35 - v1 * 0.25, 2.0) * 14.0);
             float curtain2 = exp(-pow(uv.y - 0.20 - v2 * 0.3, 2.0) * 10.0);
             float intensity = aurora_on * (0.5 + bassNormalized * 0.6);
-            bg += vec3(0.25, 0.85, 0.55) * curtain1 * intensity * 0.7;
-            bg += vec3(0.15, 0.55, 0.95) * curtain2 * intensity * 0.5;
+            // THEME_SHIFT-aware: rotate aurora curtain hue with the global palette
+            float aurora_h1 = fract(0.4 + THEME_SHIFT * 0.5);
+            float aurora_h2 = fract(0.55 + THEME_SHIFT * 0.5);
+            bg += hsl2rgb(vec3(aurora_h1, 0.7, 0.5)) * curtain1 * intensity * 0.7;
+            bg += hsl2rgb(vec3(aurora_h2, 0.85, 0.5)) * curtain2 * intensity * 0.5;
         }
     }
     // VJ ROTOR GEAR — stepped 8-spoke halo behind head, ticks on treble-heavy phases
@@ -492,8 +499,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float coat  = smoothstep(0.006, -0.006, d_coat_fluff);
 
     // Rim light — body
-    // spectralSpread: harmonic-width signal (independent from centroid). Wider spread = wider chrome rim. Adds harmonic-richness as a visual width axis.
-    float rim_w = 0.006 + IS_DROP * 0.012 + SNAP * 0.006 + spectralSpreadNormalized * 0.004;
+    float rim_w = 0.006 + IS_DROP * 0.012 + SNAP * 0.006;
     float rim = smoothstep(rim_w, 0.0, abs(d));
     float edge_gate = body * (1.0 - body) * 4.0;
     rim *= edge_gate;
@@ -536,13 +542,32 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float wash_re = exp(-r_re * 0.8);
     float eye_wash = (wash_le + wash_re) * drop_hit * EYE_WASH_STRENGTH;
 
+    // VJ EYE TUNNELS — Rezz-inspired hypnotic concentric rings inside each eye, latched in "blast mode"
+    // (drop_hit sustained OR knob_4 cranked >0.8). Tunnels read as receding rings via log-radius.
+    float blast_mode = max(drop_hit, smoothstep(0.78, 1.0, knob_4));
+    float tunnel = 0.0;
+    if (blast_mode > 0.02) {
+        // Log-radius gives perspective-tunnel feel: rings get tighter as r increases (depth illusion).
+        // Add time drift so rings move INTO the eye (hypnotic / pulling-you-in).
+        float lr_le = log(max(r_le, 0.005)) * 8.0;
+        float lr_re = log(max(r_re, 0.005)) * 8.0;
+        float ring_le = pow(0.5 + 0.5 * sin(lr_le - time * 2.5 + a_le * 0.8), 8.0);
+        float ring_re = pow(0.5 + 0.5 * sin(lr_re - time * 2.5 - a_re * 0.8), 8.0);
+        // Confine rings to eye region — fall off past r > 0.06
+        float eye_falloff_le = smoothstep(0.07, 0.012, r_le);
+        float eye_falloff_re = smoothstep(0.07, 0.012, r_re);
+        tunnel = ring_le * eye_falloff_le + ring_re * eye_falloff_re;
+        tunnel *= blast_mode;
+    }
+
     // ---- COLOR ----
     float hue = mix(HUE_BASE, HUE_DROP, IS_DROP);
     vec3 leather = hsl2rgb(vec3(hue, 0.8, mix(0.06, 0.14, spectralCentroidNormalized)));
     // VJ prism rim — chrome cycles its own rainbow based on uv angle + time
-    // spectralSkewNormalized: dark vs bright distribution tilt. Adds an independent hue-shift axis distinct from pitchClass + flux.
-    float chrome_hue = fract(atan(uv.y - P.head_c.y, uv.x) / 6.2831 + time * (0.045 + pitchClassNormalized * 0.10) + hue * 0.3 + (spectralSkewNormalized - 0.5) * 0.15);
-    vec3 chrome  = hsl2rgb(vec3(chrome_hue, 1.0, 0.65 + max(trebleZScore, 0.0) * 0.18 + smoothstep(0.7, 0.95, trebleNormalized) * 0.15));
+    // Flux term: when timbre is shifting (positive flux), chrome cycles slightly faster; steady = brooding.
+    float chrome_hue = fract(atan(uv.y - P.head_c.y, uv.x) / 6.2831 + time * (0.045 + pitchClassNormalized * 0.10 + max(spectralFluxZScore, 0.0) * 0.05) + hue * 0.3);
+    // pitchClassZScore high abs = unusual note vs recent history → melodic punctuation flash on the rim. Standing journal hypothesis since -6.
+    vec3 chrome  = hsl2rgb(vec3(chrome_hue, 1.0, 0.65 + max(trebleZScore, 0.0) * 0.18 + smoothstep(0.7, 0.95, trebleNormalized) * 0.15 + smoothstep(0.4, 0.85, abs(pitchClassZScore)) * 0.12));
     vec3 hair    = hsl2rgb(vec3(0.06, 0.7, 0.12));
     vec3 hot     = hsl2rgb(vec3(0.08, 1.0, 0.6));
 
@@ -629,29 +654,32 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             // We want a soft glow extending OUTWARD from the silhouette edge.
             float hearth = exp(-max(d, 0.0) * 8.0);
             // Slow breathing — independent low-frequency oscillation so it feels alive
-            float breath = 0.85 + 0.15 * sin(time * 0.4);
+            float breath = 0.85 + 0.15 * sin(time * 0.4) + clamp(bassZScore, 0.0, 1.5) * 0.25;
             // Amber hue — slight pitchClass wander keeps it musical
             float hearth_hue = fract(0.08 + pitchClassNormalized * 0.04);
             vec3 hearth_col = hsl2rgb(vec3(hearth_hue, 0.85, 0.45));
             col += hearth_col * hearth * warm_gate * breath * 0.55;
         }
     }
-    // VJ SIGIL SWIRL — radial iridescent swirl on the coat surface (iter 16, track: Wurk)
+    // VJ COAT RIBBONS — flowing iridescent horizontal bands drift down the coat (replaced the pinwheel iter 23, user: "I'm bored with the pinwheel").
     // Only visible on the coat. Smooth math (no hash). knob_14 gates intensity.
     if (knob_14 > 0.01) {
         vec2 sc = uv - vec2(P.hip * 0.7, -0.05);
-        float sr = length(sc);
-        float sa = atan(sc.y, sc.x);
-        // Spiral pattern: angle + radial wave
-        float spiral = sin(sa * 5.0 + sr * 14.0 - time * 1.2 + midsNormalized * 3.0);
-        float swirl_band = smoothstep(0.05, 0.22, sr) * smoothstep(0.45, 0.28, sr);
-        float swirl = pow(0.5 + 0.5 * spiral, 3.0) * swirl_band;
-        // Iridescent: hue cycles with angle + time
-        float swirl_hue = fract(0.7 + sa / 6.28 + time * 0.08 + pitchClassNormalized * 0.25);
-        vec3 swirl_col = hsl2rgb(vec3(swirl_hue, 0.85, 0.55));
-        // Mids-boost so grooves (not drops) light it up
+        // Three sine waves at different rates and amplitudes that warp horizontally — produces flowing band shapes
+        float wave1 = sin(sc.y * 18.0 - time * 1.4 + sc.x * 4.0 + midsNormalized * 2.5);
+        float wave2 = sin(sc.y * 11.0 + time * 0.9 - sc.x * 2.5 + bassNormalized * 1.8);
+        float wave3 = sin(sc.y * 6.0 - time * 0.6 + sc.x * 6.5);
+        float ribbon = (wave1 + wave2 * 0.7 + wave3 * 0.5) / 2.2;
+        // Sharpen into thin bright bands
+        float bands = pow(0.5 + 0.5 * ribbon, 4.0);
+        // Coat-y region only (not at the very edge or top, like before)
+        float band_region = smoothstep(0.4, 0.18, length(sc));
+        bands *= band_region;
+        // Iridescent: hue drifts with vertical position + time + pitch — different bands have different hues
+        float ribbon_hue = fract(0.7 + sc.y * 0.8 + time * 0.06 + pitchClassNormalized * 0.25);
+        vec3 ribbon_col = hsl2rgb(vec3(ribbon_hue, 0.85, 0.55));
         float mids_gain = 0.4 + midsNormalized * 0.8;
-        col += swirl_col * swirl * coat * (1.0 - curls) * mids_gain * knob_14 * 1.2;
+        col += ribbon_col * bands * coat * (1.0 - curls) * mids_gain * knob_14 * 1.2;
     }
     col += rim * chrome * 1.3 * (1.0 - coat);
     // VJ SUB RING — expanding cone ring on bass spikes. Iter 25: gated by drop_hit too so
@@ -675,7 +703,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float heart_d = length((uv - heart_c) * vec2(0.7, 0.6));
         // Heart-shape-ish falloff
         float heart = exp(-heart_d * 2.6);
-        float monster_breath = 0.85 + 0.15 * sin(time * 0.7);
+        // Sync HEART PULSE breath to WARM HEARTH (also 0.4Hz) and the same block's hue-wander — figure breathes as one organism instead of multiple offset wiggles.
+        float monster_breath = 0.85 + 0.15 * sin(time * 0.4);
         float heart_pulse = (0.5 + clamp(bassZScore, 0., 2.5) * 2.4 + bassNormalized * 1.0 + midsNormalized * 0.4) * monster_breath;
         vec3 heart_col = hsl2rgb(vec3(fract(0.92 + pitchClassNormalized * 0.10 + sin(time * 0.4) * 0.03), 1.0, 0.55));
         col += heart * heart_col * heart_pulse * coat * 0.9;
@@ -733,6 +762,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     col += eyes * hot * 2.2;
     col = mix(col, col + hot * 0.6, eye_wash);
     col += eye_wash * hot * 0.4;
+    // EYE TUNNELS composite — bright rings in hot palette, sit on top of base eye glow.
+    // EYE TUNNELS color: hue cycles with depth (log-radius), so each ring band is a different color — Rezz-style harsh contrast palette instead of flat warm.
+    if (tunnel > 0.001) {
+        float tunnel_hue = fract(0.55 + log(max((r_le + r_re) * 0.5, 0.005)) * 0.4 + time * 0.15 + pitchClassNormalized * 0.25);
+        vec3 tunnel_col = hsl2rgb(vec3(tunnel_hue, 0.9, 0.65));
+        // Tunnel brightness scales with energy — permanent presence, but louder on louder music.
+        float tunnel_loudness = 0.6 + smoothstep(0.2, 0.8, energyNormalized) * 1.4;
+        col += tunnel * tunnel_col * 1.8 * tunnel_loudness;
+    }
     vec3 ray_col = mix(hot, vec3(0.4, 0.85, 1.0), smoothstep(0.45, 0.85, spectralCentroidNormalized));
     col += god_rays * ray_col * GODRAY_INTENSITY;
 
@@ -864,7 +902,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     if (knob_12 > 0.01) {
         float entropy_sharpen = 0.5 + 0.5 * spectralEntropyNormalized;
         float bg_mask = 1.0 - silhouette;
-        float dim_amt = knob_12 * entropy_sharpen * bg_mask;
+        // bass_pump: BG goes deeper-dark on each kick when INKY is engaged. Subtle (cap 0.18) to not crush silhouette.
+        float bass_pump = clamp(bassZScore, 0.0, 1.5) * 0.10;
+        float dim_amt = clamp(knob_12 * entropy_sharpen + bass_pump * knob_12, 0.0, 1.0) * bg_mask;
         vec3 lab = rgb2oklab(col);
         lab.x *= mix(1.0, 0.35, dim_amt);    // darken L
         lab.yz *= mix(1.0, 0.45, dim_amt);   // mute chroma
@@ -872,7 +912,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     }
     // DREAD VIGNETTE — tightens during build-up fingerprint (high entropy + bright centroid + low bass + rising energy), lifts on drop.
     // Wider gate ranges = much less jumpy (each factor changes slowly, product changes very slowly)
-    float dread = smoothstep(0.55, 1.0, spectralEntropyNormalized) * smoothstep(0.45, 0.95, spectralCentroidNormalized) * smoothstep(0.55, 0.05, bassNormalized) * smoothstep(0.0, 0.6, max(energyZScore, 0.0));
+    // Original DREAD = build-up fingerprint (chaos + bright + lowbass + rising)
+    // Build-corner trigger: chaos + bright + low bass. Fourth factor takes the MAX of energyZ-rising OR sustained-treble — so chaotic atmospheric passages dread even when energyZ is flat.
+    float dread_build = smoothstep(0.55, 1.0, spectralEntropyNormalized) * smoothstep(0.45, 0.95, spectralCentroidNormalized) * smoothstep(0.55, 0.05, bassNormalized) * max(smoothstep(0.0, 0.6, max(energyZScore, 0.0)), smoothstep(0.5, 0.85, trebleNormalized) * 0.6);
+    // MONSTER DREAD = warm-bass corner (mid-dominant + dark + sustained-bass), darkens corners to spotlight the monster
+    float dread_monster = smoothstep(0.45, 0.80, midsNormalized) * smoothstep(0.50, 0.20, spectralCentroidNormalized) * smoothstep(0.20, 0.50, bassNormalized) * 0.7;
+    float dread = max(dread_build, dread_monster);
     float vig_inner = mix(0.7, 0.58, dread) + IS_DROP * 0.25;
     float vig_outer = mix(1.4, 1.20, dread) + IS_DROP * 0.25;
     col *= 1.0 - smoothstep(vig_inner, vig_outer, length(uv * vec2(1.0, 0.85)));
@@ -884,22 +929,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     col += body_outline * vec3(0.0, 1.0, 1.0);
     col += coat_outline * vec3(1.0, 1.0, 0.0);
 #endif
-
-    // VJ FRY — knob_11: DJ-able tween toward the hypersaturated/fried later-series style.
-    // 0 = baseline (current monster aesthetic). 1 = full fry (sat boosted, lightness pumped, hue cycle accelerated, contrast pushed).
-    if (knob_11 > 0.001) {
-        // Convert to HSL, push saturation + lightness, then back
-        vec3 hsl_fry = rgb2hsl(col);
-        // Saturation: 1.0 + knob_11 * 0.5 (overdrive saturation up to 1.5x, will clamp)
-        hsl_fry.y = clamp(hsl_fry.y * (1.0 + knob_11 * 0.6), 0.0, 1.0);
-        // Lightness: gentle pump on midtones, push to brighter
-        hsl_fry.z = mix(hsl_fry.z, smoothstep(0.0, 1.0, hsl_fry.z) * 0.7 + 0.15, knob_11 * 0.5);
-        // Hue cycle: drift accelerator scaled by knob_11 + audio reactivity
-        hsl_fry.x = fract(hsl_fry.x + knob_11 * (time * 0.04 + spectralCentroidNormalized * 0.15 + max(spectralFluxZScore, 0.0) * 0.08));
-        col = mix(col, hsl2rgb(hsl_fry), knob_11);
-        // Final contrast push (smoothstep curve) for the crispy fried look
-        col = mix(col, smoothstep(vec3(0.05), vec3(0.95), col), knob_11 * 0.4);
-    }
 
     // VJ DARKNESS — knob_8: pull global brightness down. 0 = full color, 1 = near-black silhouette only.
     col *= mix(1.0, 0.12, knob_8);
