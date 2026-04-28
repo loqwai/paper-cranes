@@ -1,8 +1,10 @@
 // @fullscreen: true
 // @mobile: true
-// the-coat-2: baked from live jam session preset
-// Knob defaults captured: knob_2=-0.346, knob_7=0.98, knob_12=0.669, knob_15=0.46
-// Use with controller=the-coat for sustained drop glow
+// the-coat-15: forked from the-coat-14 mid-VJ-run during *Temptation – SIDEPIECE*
+// Painterly-groove preset: heavy feedback (knob_9=0.92), camera swagger MAX (knob_6=1),
+// palette MAX rotation (knob_3=1), nebula UP (knob_2=0.66), fur thick (knob_7=0.80),
+// drop-zoom OFF (knob_5=0). DOOM RED moderate (knob_8=0.45), INKY BG mild (knob_12=0.31).
+// Use with controller=the-coat for drop_glow + pitch_change.
 uniform float drop_glow; // from the-coat controller — sustained drop with decay
 uniform float pitch_change; // from the-coat controller — transient pulse on chord/pitch jumps
 #define PI 3.14159265
@@ -489,8 +491,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             float beam = exp(-pow((uv.x - tx) * 6.0, 2.0));
             float vfall = exp(-pow(uv.y, 2.0) * 1.5);
             vec3 zt_col = hsl2rgb(vec3(HUE_BASE, 0.4, 0.75));
-            // Iter 58: pitch_change brightens the headlight on chord arrivals — chains Z-TRAIN gate × HUE_BASE × pitch_change into one event
-            bg += zt_col * beam * vfall * zt_gate * 0.5 * (1.0 + pitch_change * 0.6);
+            // Iter 58: pitch_change brightens on chord arrivals; iter-65: extreme-bass amplifier (bass>0.85 → up to 1.5x) for peak ZHU corner
+            bg += zt_col * beam * vfall * zt_gate * 0.5 * (1.0 + pitch_change * 0.6) * (1.0 + smoothstep(0.85, 1.0, bassNormalized) * 0.5);
         }
     }
 
@@ -543,7 +545,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     eyes *= (0.25 + drop_hit * 1.8 + SNAP * 0.6
         + smoothstep(0.5, 0.85, energyNormalized) * smoothstep(0.4, 0.8, spectralCentroidNormalized) * 0.9
         + smoothstep(0.4, 0.75, midsNormalized) * smoothstep(0.5, 0.15, energyNormalized) * smoothstep(0.4, 0.15, spectralRoughnessNormalized) * 0.7
-        + smoothstep(0.6, 0.85, spectralEntropyNormalized) * smoothstep(0.6, 0.85, spectralCentroidNormalized) * 0.6
+        + smoothstep(0.6, 0.85, spectralEntropyNormalized) * smoothstep(0.6, 0.85, spectralCentroidNormalized) * 0.9
         + pitch_change * 0.3);
 
     vec2 d_le2 = uv - le;

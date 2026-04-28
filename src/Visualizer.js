@@ -1,7 +1,7 @@
 import {
     createTexture,
     createFramebufferInfo,
-    createProgramInfo,
+    createProgramInfoAsync,
     createBufferInfoFromArrays,
     resizeCanvasToDisplaySize,
     resizeFramebufferInfo,
@@ -165,6 +165,7 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
     let lastRender = performance.now()
     let programInfo
     let lastFragmentShader
+    let pendingShaderSource = null
     let renderTimes = []
     let lastResolutionRatio = 1
     let lastCanvasWidth = 0
@@ -174,22 +175,28 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
     const render = ({ time, features, fragmentShader: newFragmentShader }) => {
         if (contextLost) return
 
-        if (newFragmentShader !== lastFragmentShader) {
-
+        if (newFragmentShader !== lastFragmentShader && newFragmentShader !== pendingShaderSource) {
             const wrappedFragmentShader = shaderWrapper(newFragmentShader)
-
-            const newProgramInfo = createProgramInfo(gl, [defaultVertexShader, wrappedFragmentShader])
-            if (!newProgramInfo?.program) {
-                handleShaderError(gl, wrappedFragmentShader, newFragmentShader);
-                programInfo = null;
-                lastFragmentShader = newFragmentShader;
-                return;
-            }
-
-            gl.useProgram(newProgramInfo.program)
-            window.cranes.error = null;
-            programInfo = newProgramInfo
-            lastFragmentShader = newFragmentShader
+            const sourceAtCompile = newFragmentShader
+            pendingShaderSource = newFragmentShader
+            createProgramInfoAsync(gl, [defaultVertexShader, wrappedFragmentShader])
+                .then((newProgramInfo) => {
+                    if (sourceAtCompile !== pendingShaderSource) {
+                        gl.deleteProgram(newProgramInfo.program)
+                        return
+                    }
+                    programInfo = newProgramInfo
+                    lastFragmentShader = sourceAtCompile
+                    pendingShaderSource = null
+                    gl.useProgram(programInfo.program)
+                    window.cranes.error = null
+                })
+                .catch(() => {
+                    if (sourceAtCompile !== pendingShaderSource) return
+                    handleShaderError(gl, shaderWrapper(sourceAtCompile), sourceAtCompile)
+                    lastFragmentShader = sourceAtCompile
+                    pendingShaderSource = null
+                })
         }
 
         if (!programInfo) return

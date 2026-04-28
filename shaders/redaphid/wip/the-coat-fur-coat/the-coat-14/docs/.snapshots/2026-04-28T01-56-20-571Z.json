@@ -1,0 +1,152 @@
+{
+  "timestamp": "2026-04-28T01:56:20.571Z",
+  "shader": "redaphid/wip/the-coat-fur-coat/the-coat-14",
+  "name": null,
+  "knobs": {
+    "knob_1": 0.661,
+    "knob_1.min": 0,
+    "knob_1.max": 1,
+    "knob_2": 0.362,
+    "knob_2.min": 0,
+    "knob_2.max": 1,
+    "knob_3": 1,
+    "knob_3.min": 0,
+    "knob_3.max": 1,
+    "knob_4": 0,
+    "knob_4.min": 0,
+    "knob_4.max": 1,
+    "knob_5": 0.268,
+    "knob_5.min": 0,
+    "knob_5.max": 1,
+    "knob_6": 1,
+    "knob_6.min": 0,
+    "knob_6.max": 1,
+    "knob_7": 0.795,
+    "knob_7.min": 0,
+    "knob_7.max": 1,
+    "knob_8": 0.449,
+    "knob_8.min": 0,
+    "knob_8.max": 1,
+    "knob_9": 0.921,
+    "knob_9.min": 0,
+    "knob_9.max": 1,
+    "knob_10": 0.331,
+    "knob_10.min": 0,
+    "knob_10.max": 1,
+    "knob_11": 0.677,
+    "knob_11.min": 0,
+    "knob_11.max": 1,
+    "knob_12": 0.307,
+    "knob_12.min": 0,
+    "knob_12.max": 1,
+    "knob_13": 0,
+    "knob_13.min": 0,
+    "knob_13.max": 1,
+    "knob_14": 0.339,
+    "knob_14.min": 0,
+    "knob_14.max": 1,
+    "knob_15": 0,
+    "knob_15.min": 0,
+    "knob_15.max": 1,
+    "knob_16": 0.559,
+    "knob_16.min": 0,
+    "knob_16.max": 1,
+    "knob_17": 0,
+    "knob_17.min": 0,
+    "knob_17.max": 1,
+    "knob_18": 0.638,
+    "knob_18.min": 0,
+    "knob_18.max": 1,
+    "knob_19": 0,
+    "knob_19.min": 0,
+    "knob_19.max": 1
+  },
+  "audio": {
+    "bass": {
+      "normalized": 0.312,
+      "zScore": -0.476,
+      "slope": -0.0001,
+      "rSquared": 0.118
+    },
+    "energy": {
+      "normalized": 0.404,
+      "zScore": 0.066,
+      "slope": 0,
+      "rSquared": 0.089
+    },
+    "mids": {
+      "normalized": 0.721,
+      "zScore": 0.468,
+      "slope": 0.0001,
+      "rSquared": 0.111
+    },
+    "treble": {
+      "normalized": 0.159,
+      "zScore": 0.184,
+      "slope": 0,
+      "rSquared": 0.029
+    },
+    "spectralCentroid": {
+      "normalized": 0.681,
+      "zScore": 0.607,
+      "slope": 0,
+      "rSquared": 0.197
+    },
+    "spectralFlux": {
+      "normalized": 0.171,
+      "zScore": 0.21,
+      "slope": 0,
+      "rSquared": 0.033
+    },
+    "spectralEntropy": {
+      "normalized": 0.698,
+      "zScore": 0.491,
+      "slope": 0.0001,
+      "rSquared": 0.22
+    },
+    "spectralRoughness": {
+      "normalized": 0.571,
+      "zScore": 0.259,
+      "slope": 0,
+      "rSquared": 0.13
+    },
+    "spectralKurtosis": {
+      "normalized": 0.16,
+      "zScore": -0.24,
+      "slope": 0,
+      "rSquared": 0.089
+    },
+    "spectralSpread": {
+      "normalized": 0.606,
+      "zScore": 0.497,
+      "slope": 0,
+      "rSquared": 0.132
+    },
+    "spectralCrest": {
+      "normalized": 0.197,
+      "zScore": -0.557,
+      "slope": -0.0008,
+      "rSquared": 0.149
+    },
+    "spectralRolloff": {
+      "normalized": 0.677,
+      "zScore": 0.608,
+      "slope": 0,
+      "rSquared": 0.201
+    },
+    "spectralSkew": {
+      "normalized": 0.259,
+      "zScore": -0.601,
+      "slope": 0,
+      "rSquared": 0.177
+    },
+    "pitchClass": {
+      "normalized": 0.9,
+      "zScore": 0.445,
+      "slope": 0.0001,
+      "rSquared": 0.012
+    }
+  },
+  "musicTab": null,
+  "userNote": null
+}
