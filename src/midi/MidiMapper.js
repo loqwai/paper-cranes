@@ -42,9 +42,42 @@ export const createMidiMapper = () => {
         deviceName,
         updatedAt: new Date().toISOString(),
         mappings: {},
+        knobs: {},
       }
     }
+    if (!data.profiles[deviceName].knobs) data.profiles[deviceName].knobs = {}
     return data.profiles[deviceName]
+  }
+
+  const getKnobMeta = (deviceName, knobIndex) => {
+    const profile = getProfile(deviceName)
+    if (!profile?.knobs) return null
+    return profile.knobs[knobIndex] ?? null
+  }
+
+  const setKnobMeta = (deviceName, knobIndex, meta) => {
+    const profile = ensureProfile(deviceName)
+    profile.knobs[knobIndex] = { ...(profile.knobs[knobIndex] ?? {}), ...meta }
+    profile.updatedAt = new Date().toISOString()
+    persist()
+    return profile.knobs[knobIndex]
+  }
+
+  const getKnobIndexByCCKey = (deviceName, ccKey) => {
+    const profile = getProfile(deviceName)
+    if (!profile) return null
+    return profile.mappings[ccKey] ?? null
+  }
+
+  // Force-replace the device's CC→knob mapping (preserves knob meta).
+  // Used to lock in the Twister's canonical layout so a stray knob bump
+  // can't auto-assign and shift the whole rig.
+  const replaceMappings = (deviceName, mappings) => {
+    const profile = ensureProfile(deviceName)
+    profile.mappings = { ...mappings }
+    profile.updatedAt = new Date().toISOString()
+    persist()
+    return profile
   }
 
   const mapCCToKnob = (deviceName, ccNumber, channel) => {
@@ -145,5 +178,10 @@ export const createMidiMapper = () => {
     cancelLearn,
     handleLearnCC,
     getMappedCC,
+    getKnobMeta,
+    setKnobMeta,
+    getKnobIndexByCCKey,
+    makeCCKey,
+    replaceMappings,
   }
 }

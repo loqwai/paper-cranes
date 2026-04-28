@@ -1,5 +1,46 @@
 # Paper Cranes / Beadfamous - Music Visualization System
 
+## Active branch: `twister-fighter` (live-show prep, ~1.5 weeks out)
+
+This branch is dedicated to a single upcoming live VJ set driven by the **MIDI
+Fighter Twister**. Risk tolerance is high — break things if it makes the rig
+better.
+
+**Active shader:** `shaders/redaphid/wip/the-coat-fur-coat/the-coat-15.frag`
+(see `the-coat-15.md` for the knob table and design notes).
+
+**What's wired up here that's specific to this branch:**
+
+- **Hardcoded Twister mapping** — `src/midi.js` pre-seeds the canonical 4×4 layout
+  (CC `N` ch=1 → `knob_(N+1)`) on every Twister attach. Auto-assignment is
+  disabled for Twister-named devices, so a stray bump can't shift the rig.
+- **Per-knob audio↔manual toggle** — every tunable in `the-coat-15` rides on
+  `mix(knob_N, audio_feature, knob_N_mode)`. Click the knob to crossfade
+  (180 ms) between manual and audio. All 16 mode uniforms default to `1.0`
+  (audio-on) at startup.
+- **LED feedback** — `src/midi.js` paints each knob's LED in a colour matching
+  its paired audio feature (blue when manual). The shader's `mix(...)` form
+  is auto-parsed for the pairings; `// @audio_pair: knob_N=feature` comments
+  are also recognised.
+- **Knob 16 long-press → `cranes:vj-bump`** — fires a `window` CustomEvent and
+  sets `localStorage['cranes-vj-bump']` so `/vj` ticks can pick it up and
+  treat the next iteration as dramatic.
+- **`window.cranes.midi` API for claude-in-chrome** — `setLed(idx, 0..127)`,
+  `setLedNamed(idx, 'red'|'blue'|...)`, `flashLed(idx, color, ms)`, plus the
+  `LED` palette object. Use these from `javascript_tool` to give visual
+  feedback during `/vj` ticks (flash a knob white right before its bucket
+  edits).
+- **Controller toggle** — `controllers/the-coat.js`'s `drop_glow` is gated
+  through knob 10 (DROP SUSTAIN). Click it to manual + 0 to silence the
+  controller's contribution everywhere it propagates.
+- **Regex fix** — `src/shader-transformers/shader-wrapper.js` got a `\b`
+  word-boundary fix so `uniform float knob_N_mode;` doesn't suppress the
+  bare `knob_N` auto-inject.
+
+**Read first when doing live-show work:** `.claude/skills/vj/SKILL.md` —
+gained a major "MIDI Fighter Twister setup" section with knob table, LED
+palette, paint API, and bump-flag handling.
+
 ## Project Overview
 A real-time browser-based music visualization system that:
 - Performs advanced audio analysis from microphone input

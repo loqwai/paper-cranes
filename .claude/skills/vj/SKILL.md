@@ -15,6 +15,115 @@ Run Claude as the VJ: every minute, read the current audio features + track name
 - **Respect the user**: the user might be twiddling knobs or watching the editor — don't smash their knobs, don't rewrite their code wholesale.
 - **Fail loud, not silent**: validate each edit with `scripts/validate-shader.js`; if it breaks, fix or revert.
 
+## MIDI Fighter Twister setup (twister-fighter branch)
+
+This branch has a **hardcoded 16-knob Twister rig** wired up in `src/midi.js`.
+Read this section before doing anything that touches knobs.
+
+### Mapping is locked
+Auto-assignment is disabled for devices named "Twister". The layout is canonical
+and pre-seeded in `localStorage['cranes-midi-profiles']` on every connect:
+
+- **Rotation** on MIDI channel 1: CC `N` → `knob_(N+1)` for N in 0..15
+- **Button click** on channel 2 with the same CC# → toggles `knob_(N+1)_mode`
+- **LED out** on channel 2, value = hue byte 0..127
+
+A stray knob bump can no longer shift the layout.
+
+### Per-knob audio↔manual toggle
+Each shader tunable for the live show rides on:
+```glsl
+mix(knob_N, audio_feature, knob_N_mode)
+```
+- `knob_N_mode = 1.0` → audio-tracking (LED feature-coloured)
+- `knob_N_mode = 0.0` → manual (LED blue)
+- Click cross-fades between them over 180 ms
+
+All 16 mode uniforms are seeded to 1.0 (audio-on) at startup, so the shader
+looks audio-driven before the user touches anything.
+
+### the-coat-15 layout (live-show shader)
+
+| # | Aspect | Audio pair |
+|---|---|---|
+| 1  | ZOOM | energyNormalized |
+| 2  | BG MOOD (clean ↔ inky) | spectralEntropyNormalized |
+| 3  | PALETTE rotation | pitchClassNormalized |
+| 4  | TILT / swagger | bassNormalized |
+| 5  | FUR PEAK | spectralRoughnessNormalized |
+| 6  | GLEAM (chrome edge) | spectralFluxNormalized |
+| 7  | SMEAR (feedback) | energyNormalized |
+| 8  | CHAOS | spectralEntropyNormalized |
+| 9  | GOD RAYS | trebleNormalized |
+| 10 | **DROP SUSTAIN** | `drop_glow` (controller!) |
+| 11 | CLIMAX master gain | energyNormalized |
+| 12 | EYE WASH | energyNormalized |
+| 13 | BEAT STROBE | midsNormalized |
+| 14 | SIGIL SWIRL | spectralRoughnessNormalized |
+| 15 | DRIP / POOL | bassNormalized |
+| 16 | SURPRISE / vj-bump | spectralFluxNormalized |
+
+Knob 10 is the **single gate for the `controllers/the-coat.js` output**. Click
+to manual + 0 silences `drop_glow` everywhere it propagates (eyes, god_rays,
+drip, pool, sub_ring, black_hole, drop_zoom, ground_quake).
+
+In the shader, all these macros use `K_*` defines (e.g. `K_ZOOM`, `K_BG_MOOD`).
+**Never reference `knob_N` directly** in -15 — go through the K_* macro so
+mode-toggle and tween still work.
+
+### LED color palette (Twister hue wheel)
+
+| Name | Byte | Used for |
+|---|---|---|
+| off    | 0    | unassigned |
+| blue   | 32   | manual mode |
+| cyan   | 48   | treble / rolloff |
+| green  | 64   | mids |
+| yellow | 96   | pitch / centroid |
+| orange | 108  | bass |
+| pink   | 116  | flux |
+| purple | 112  | entropy / roughness |
+| red    | 124  | energy |
+| white  | 127  | claude-attention pulse |
+
+### LED paint API (use during /vj ticks!)
+
+`window.cranes.midi` exposes (via `src/midi.js`):
+- `setLed(knobIndex, color)` — raw 0..127 byte to a knob's LED
+- `setLedNamed(knobIndex, name)` — palette name ('red', 'blue', 'white', …)
+- `flashLed(knobIndex, color, ms = 300)` — paint, revert to computed colour
+- `LED` — the full palette object
+
+Use these to give the user **visual feedback** during a tick:
+- About to edit a bucket → `flashLed(N, 127, 200)` (white pulse on the knob)
+- Just wired a previously-unwired knob → `setLedNamed(N, 'green')` (sticky)
+- Don't paint colours that conflict with the mode-tracking colour — let the
+  natural LED state win when nothing's happening
+
+Example: at the start of a tick that's about to edit the gleam bucket,
+```javascript
+window.cranes.midi.flashLed(6, 127, 250)
+```
+
+### vj-bump flag (long-press knob 16)
+
+When the user long-presses knob 16:
+- `localStorage['cranes-vj-bump']` ← ISO timestamp
+- `window` dispatches `cranes:vj-bump` (CustomEvent, with detail)
+
+Each `/vj tick` should **read and clear** this flag at the start of the tick
+(step B). If set since last tick → treat this iteration as **dramatic**
+regardless of `moveStyle`, and pick a meaningful aesthetic shift.
+
+Browser read-and-clear:
+```javascript
+(() => {
+  const v = localStorage.getItem('cranes-vj-bump')
+  if (v) localStorage.removeItem('cranes-vj-bump')
+  return v
+})()
+```
+
 ## Context
 
 Arguments:
@@ -123,10 +232,19 @@ If `iteration >= target`, call `CronDelete(jobId)`, delete the state file, print
 
 ### B. Read state from browser
 
-Run on the jam tab:
+Run on the jam tab — capture audio features, knob state, and the vj-bump flag
+in one round-trip:
 ```javascript
 (() => {
   const f = window.cranes.flattenFeatures();
+  const bump = localStorage.getItem('cranes-vj-bump');
+  if (bump) localStorage.removeItem('cranes-vj-bump');
+  const knobs = {};
+  const modes = {};
+  for (let i = 1; i <= 16; i++) {
+    knobs[`knob_${i}`] = f[`knob_${i}`];
+    modes[`knob_${i}_mode`] = f[`knob_${i}_mode`];
+  }
   return JSON.stringify({
     bass: f.bassNormalized?.toFixed(2), bassZ: f.bassZScore?.toFixed(2),
     treb: f.trebleNormalized?.toFixed(2), trebZ: f.trebleZScore?.toFixed(2),
@@ -137,9 +255,14 @@ Run on the jam tab:
     centroid: f.spectralCentroidNormalized?.toFixed(2),
     pitch: f.pitchClassNormalized?.toFixed(2),
     beat: f.beat,
+    drop_glow: f.drop_glow?.toFixed(2),
+    knobs, modes, bump,
   });
 })()
 ```
+
+If `bump` is non-null, the user long-pressed knob 16 since last tick → set
+`dramaticThisTick = true` and pick an aesthetic shift, not a coefficient nudge.
 
 Read the track name on the Spotify tab:
 ```javascript
@@ -174,7 +297,25 @@ Let the features + track name guide it. Some reliable archetypes:
 
 To find which knobs are already in the shader, grep the `.frag` for `knob_N`. Exclude comment-only references.
 
+**For the-coat-15 (and any shader using `K_*` defines):** all 16 knobs are
+already wired through `mix(knob_N, feature, knob_N_mode)`. There are no unwired
+slots — `unwiredKnobs` should be empty for this shader. If a user move calls
+for a knob meaning change, **edit the K_NAME's audio pair** (e.g. swap
+`pitchClassNormalized` for `spectralCentroidNormalized` on K_PALETTE), not the
+knob_N reference itself. The mode toggle and LED colour follow the audio pair.
+
 ### D. Apply the edit via the jam tab
+
+**Pulse the LED for the bucket you're editing.** When the edit changes one of
+the K_* macros, flash that knob's LED white (200 ms) right before the save so
+the user sees on the Twister which aspect just changed:
+```javascript
+window.cranes?.midi?.flashLed?.(bucketKnobIndex, 127, 200)
+```
+
+Skip the flash if the device isn't connected — it's no-op when `setLed` returns
+false. Also skip on edits that touch many buckets at once (e.g. dramatic
+moves) — flashing every knob is noise.
 
 **Validate BEFORE saving** — never write a broken shader to disk. The static linter doesn't catch forward-reference or type errors; only the real GLSL compiler does. Use `window.__vjValidate(src) → { ok, info }` on the jam tab.
 

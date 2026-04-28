@@ -38,7 +38,7 @@ const getQueryParamUniforms = (shader, otherUniforms = '') => {
 
 const getKnobUniforms = (shader) => {
     const existingKnobs = new Set(
-        [...shader.matchAll(/uniform\s+float\s+knob_(\d+)/g)].map(m => parseInt(m[1]))
+        [...shader.matchAll(/uniform\s+float\s+knob_(\d+)\b/g)].map(m => parseInt(m[1]))
     )
     return Array.from({length: 200}, (_, i) => i + 1)
         .filter(i => !existingKnobs.has(i))
