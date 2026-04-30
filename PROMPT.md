@@ -1,240 +1,164 @@
-# Banana Boy Shader Prompt
+# The Coat — Variant Generation Prompt
 
 ## Goal
 
-Create one or more ChromaDepth shaders for Eddie (a guy who wears a banana costume to raves). Place them in `./shaders/eddie-banana/<semantic-name>.frag`.
+Generate **5–10 aesthetically distinct variants** of the existing "the-coat" shader family, validated live against varying musical conditions (Spotify track changes). Each variant should be a meaningfully different visual *mode*, not a knob-tweak of the same look.
 
-## Visual Concept
-
-### Main Element: Banana Man Silhouette
-The shader should feature a **silhouette of a man wearing a banana outfit**. This can be done two ways (pick whichever looks better):
-
-1. **Image-based silhouette** (recommended): Load a banana-man image via `?image=images/eddie-banana.png` and detect the silhouette using HSL thresholding (like subtronics.frag does). The user will provide the image.
-2. **SDF-based silhouette**: Build the banana-man shape from SDF primitives (a banana curve for the body, circle for the head, rectangles for arms/legs poking out).
-
-Here's a simple banana SDF if you go the SDF route:
-```glsl
-// Banana shape: thick arc
-float sdBanana(vec2 p) {
-    // Rotate slightly for natural banana curve
-    float a = -0.3;
-    p = mat2(cos(a), -sin(a), sin(a), cos(a)) * p;
-    // Arc parameters
-    float r = 0.6;  // radius of curvature
-    float thickness = 0.15;
-    // Offset to arc center
-    p.y += r * 0.6;
-    float d = abs(length(p) - r) - thickness;
-    // Clip to half-arc
-    d = max(d, -p.y - 0.1);
-    d = max(d, p.y - r * 1.1);
-    return d;
-}
+Place new variants at:
+```
+shaders/redaphid/wip/the-coat-fur-coat/the-coat-<N>.frag
+shaders/redaphid/wip/the-coat-fur-coat/the-coat-<N>.md
+journals/the-coat-<N>-cool-moments.md
 ```
 
-### Background: Dark Blue
-The background must be **dark blue/navy** (`~vec3(0.02, 0.02, 0.08)` or darker). This is critical because:
-- ChromaDepth glasses need dark backgrounds for the depth effect to work
-- Dark blue recedes (appears far away in chromadepth)
-- Makes the yellow/red banana pop forward dramatically
+Continue numbering from the highest existing index (currently `-23`).
 
-### Small Background Bananas
-Scatter **lots of small bananas** in the background, using the same technique as the heart shaders. Here's the pattern from `redaphid/wip/hearts/fractal.frag`:
+## Canon: what "the-coat" is
 
+A silhouette-figure dubstep-daddy shader. The figure (head + body + coat outline) stays roughly centered. Audio modulates the coat's surface (fur, chrome rim, hearth glow), the eye channels, the background nebula/stars, frame feedback trails, drop wash, godrays, drip, and so on. Companion controller `the-coat.js` provides:
+
+- `drop_glow` — exponential-decay sustain of `energyZScore`/`bassZScore` peaks (via `knob_13`)
+- `pitch_change` — transient pulse on pitch-class jumps (decays in ~0.5s, "harmony arrived" signal)
+
+Use `?controller=the-coat` and declare:
 ```glsl
-// Render multiple lines of shapes along Mandelbrot-driven paths
-for (float line = 0.0; line < LINE_COUNT; line++) {
-    for (float i = 0.0; i < COUNT; i++) {
-        float t = fract(i / COUNT - iTime * 0.2 + line * 0.25);
-
-        // Get position from Mandelbrot iteration
-        vec2 pos;
-        float scale, rotation;
-        mandelbrotTransform(t, line, pos, scale, rotation);
-
-        // Audio reactivity
-        pos += vec2(cos(t*PI*2.0), sin(t*PI*2.0)) * midsNormalized * 0.2;
-        scale *= 0.15 + energyNormalized * 0.1;
-
-        // Transform UV for this shape
-        vec2 shapeUV = uv - pos;
-        shapeUV = rot(rotation) * shapeUV;
-        shapeUV /= scale;
-
-        float d = sdBanana(shapeUV);  // or sdHeart, etc.
-        if (d < 0.0) {
-            // Color and composite
-        }
-    }
-}
+uniform float drop_glow;   // from controller
+uniform float pitch_change; // from controller
 ```
 
-The small bananas should:
-- Use chromadepth coloring (yellow-green-blue gradient based on distance from center)
-- Be scattered along fractal/Mandelbrot spiral paths
-- React to audio (wobble, scale, rotate with the music)
-- Sometimes increase in density/count on beats or energy spikes
+## Standing rules (carried from journal lineage — DO NOT VIOLATE)
 
-### ChromaDepth Coloring
-- **Banana silhouette**: Red/orange/yellow (hue 0.0-0.15) — pops FORWARD
-- **Small background bananas**: Yellow to green (hue 0.1-0.4) — mid depth
-- **Far background elements**: Blue/violet (hue 0.5-0.75) — recedes
-- **Background**: Very dark blue/black — neutral depth
+1. **Pinwheel (knob_14 / SIGIL_SWIRL): the user hates it.** Default `knob_14 = 0` in every variant. Do not introduce new pinwheel-shaped patterns.
+2. **Figure stays centered and recognizable.** No abstract "throw away the silhouette" forks unless that *is* the variant's stated thesis.
+3. **Big aesthetic > subtle.** Per memory `feedback_shader_aesthetic`: over-the-top, match dubstep-daddy energy, not subtle.
+4. **Don't white-out on loud audio.** Always `clamp(col, 0.0, 1.0)` and decay previous-frame luminance.
+5. **Mobile-friendly.** Iteration counts low, no >50-step raymarching.
+6. **No graceful audio fallbacks.** If a feature is missing, fail loudly — but use safe defaults inline (e.g. `clamp(bassZScore, 0.0, 1.0)`) rather than swallowing.
 
-Use HSL for the chromadepth mapping (NOT oklch — chromadepth needs raw spectral hue order):
-```glsl
-vec3 chromadepth(float t) {
-    t = clamp(t, 0.0, 1.0);
-    float hue = t * 0.75;  // 0=red(near), 0.75=violet(far)
-    float sat = 0.92;
-    float lit = 0.5 - t * 0.1;
-    return hsl2rgb(vec3(hue, sat, lit));
-}
+## Variant axes (pick distinct combinations — don't dial-tweak)
+
+To produce *meaningfully different* variants, each one should commit to a specific combination across these axes:
+
+### A. Aesthetic mood
+- **brooding monster** (slow, weighted, dr-fresch corner)
+- **painterly groove** (heavy feedback, soft trails, cool palette)
+- **inky-dramatic chaos drop** (high contrast, dark BG, occasional bright pop)
+- **warm hearth** (mids-driven, amber glow, slow breath)
+- **chrome arena** (high RIM_BOOST, metallic, sharp)
+- **foggy figure** (atmospheric, recessed eyes, soft body)
+- **electric vapor** (treble-driven, neon, rapid shimmer)
+- **velvet drift** (slow camera, deep field, tonal/ambient)
+- **chromadepth coat** (HSL spectral mapping for 3D glasses — see CLAUDE.md guide)
+- **glitch storm** (entropy/flux-driven artifacts, only when audio is chaotic)
+
+### B. Audio reactivity dominant feature
+Pick *one* lead feature that dominates this variant. Don't mix three equally — variants need a thesis.
+- bass dominant (sub-200Hz)
+- mids dominant (warm body, vocal range)
+- treble dominant (shimmer, sparkle)
+- spectralCentroid (tonal brightness drift)
+- spectralEntropy (chaos detector)
+- spectralRoughness (dissonance / dirty bass)
+- spectralFlux (transient response)
+- pitchClass + pitch_change (harmonic awareness)
+- spectralCrestZScore (peakedness — percussive hits)
+- drop_glow (sustained drops)
+
+### C. Composition
+- close-up portrait (head dominant)
+- mid-shot (body + coat)
+- wide silhouette (figure small, environment large)
+- back-lit / counter-light (figure as cutout)
+- mirrored / kaleidoscopic (figure echoed)
+
+### D. Color strategy
+- single-hue rotation (HUE_BASE drift)
+- complementary pop (BASE + WARM hearth)
+- chromadepth (red→violet by depth, dark BG required)
+- monochrome luminance (b/w with one accent on beat)
+- duotone (two fixed hues mixed by audio)
+
+**Each variant must commit to a unique (A, B, C, D) cell.** Track which cells are used so the set covers the space.
+
+## Validation protocol (live, per variant)
+
+For each new variant:
+1. Save the `.frag` and `.md` to disk (HMR hot-swaps in the browser).
+2. Drive jam page to load the new shader: `?shader=redaphid/wip/the-coat-fur-coat/the-coat-<N>&controller=the-coat`.
+3. Wait ≥30 seconds and watch it under at least **2 distinct musical conditions** in the current Spotify session (e.g., a heavy-bass moment + a quieter melodic moment).
+4. Take screenshots via Chrome devtools MCP at meaningful audio moments. Save to `shaders/redaphid/wip/the-coat-fur-coat/the-coat-<N>/docs/.snapshots/` if useful.
+5. Critique honestly in the variant's `.md`:
+   - **What works** — which (A, B, C, D) commitments paid off?
+   - **What fails** — does it look the same as another variant under quiet conditions? Does it crash visually on loud transients?
+   - **Verdict** — keep, or kill and try a different cell?
+6. If keeping, append a "Cool moments" journal entry with the music context (track + timestamp).
+7. If killing, leave the file but mark `# KILLED:` at the top of the .md and note why. Do **not** delete; the failed forks are training signal (per -21 journal lesson).
+
+## Process (autonomous loop)
+
+While the user is at dinner, run the loop:
+
+```
+loop:
+  1. Read recent Spotify track name from jam page (via MCP)
+  2. Pick an unused (A, B, C, D) cell that fits the current track's character
+  3. Fork the closest existing -N as a starting point
+  4. Make the variant's *thesis* commitment in code (don't just tweak knobs)
+  5. Save → reload jam page → observe ≥30s
+  6. If it's distinct + working: write .md + journal, mark cell used
+  7. If it fails: mark KILLED in .md, pick a different cell next iter
+  8. Stop when there are 5–10 keepers covering distinct cells
 ```
 
-But use **oklab** for frame feedback blending (perceptually uniform):
-```glsl
-vec3 colOk = rgb2oklab(col);
-vec3 prevOk = rgb2oklab(prev);
-prevOk.x *= 0.96;  // luminance decay
-vec3 blended = mix(prevOk, colOk, 0.7);
-col = oklab2rgb(blended);
-```
+Each variant should be its own commit. Push every 3 keepers so progress survives crashes.
 
-## Audio Reactivity
+## Reference shaders (read these before forking)
 
-Use the `#define` swap pattern for all audio parameters:
-```glsl
-// Active: audio-reactive
-#define BANANA_PULSE (1.0 + bassZScore * 0.08)
-// #define BANANA_PULSE 1.0
-```
+Existing the-coat lineage in `shaders/redaphid/wip/the-coat-fur-coat/`:
+- `the-coat-3.frag` — early baseline
+- `the-coat-14.frag` — current "main" with full Hypnosound feature coverage; most logic lives here
+- `the-coat-15.frag` — indomitable-monster (dr-fresch, slow + large + weighted)
+- `the-coat-16` through `-21` — local fork series (foggy-figure, etc.)
+- `the-coat-22.frag` — painterly-groove (cool palette, heavy feedback)
+- `the-coat-23.frag` — inky-dramatic chaos drop
+- `the-coat-3-knobs.frag` — knob exploration variant
 
-Suggested mappings:
-- **Bass**: Main banana silhouette pulses/breathes
-- **Energy**: Overall brightness, small banana count/density
-- **Treble**: Small banana shimmer/sparkle
-- **Spectral flux**: Edge glow intensity on the main silhouette
-- **Spectral centroid**: Hue drift within the chromadepth range
-- **Pitch class**: Slow rotation of background banana patterns
-- **Beat**: Flash/throb effect, main banana briefly scales up
-- **Spectral entropy**: Chaos in background banana scatter pattern
-- **Spectral roughness**: Saturation boost
+Recent journals (read for lessons + standing rules):
+- `journals/the-coat-21-cool-moments.md` — pinwheel-hate escalation
+- `journals/the-coat-22-cool-moments.md`, `-23-` — painterly + chaos lineage notes
 
-## Technical Requirements
+## Available controllers
 
-### Metadata
+- `the-coat` — drop_glow + pitch_change (default for this series)
+- `mandelbrot` / `mandelbrot-perturbation` — deep-zoom fractals (probably not needed here)
+- `zoomer` — double-precision zoom (only if going deep)
+- `chromatic-flow` / `simple` / `example` — see source
+
+Default to `the-coat`. Only swap if a variant's thesis genuinely needs different state.
+
+## File header template (paste at top of new variants)
+
 ```glsl
 // @fullscreen: true
 // @mobile: true
-// @favorite: true
-// @tags: banana, chromadepth, 3d, eddie, love
+// the-coat-<N>: <one-line aesthetic thesis> — variant cell (A=<mood>, B=<lead-feature>, C=<composition>, D=<color>)
+// Forked from the-coat-<parent>. Music at fork time: <track>.
+uniform float drop_glow;
+uniform float pitch_change;
 ```
 
-### Performance
-- Mobile-safe: keep iteration counts low (< 12 for Kali/Mandelbrot)
-- Background banana count: 8-15 per line, 3-4 lines max
-- Use `rot()` matrix instead of separate sin/cos calls
+## End conditions
 
-### Frame Feedback
-Use oklab blending for perceptually uniform feedback:
-```glsl
-vec3 prev = getLastFrameColor(fbUV).rgb;
-vec3 colOk = rgb2oklab(col);
-vec3 prevOk = rgb2oklab(prev);
-prevOk.x *= 0.96;
-prevOk.yz *= 0.98;
-float newAmount = 0.7;
-vec3 blended = mix(prevOk, colOk, newAmount);
-// Prevent chroma death
-if (length(blended.yz) < length(colOk.yz) * 0.6) {
-    blended.yz = mix(blended.yz, colOk.yz, 0.35);
-}
-col = oklab2rgb(blended);
-```
+- 5 distinct keepers: stop unless feeling inspired.
+- 10 distinct keepers: stop regardless.
+- Cells exhausted: stop and document the gaps.
+- 90 minutes elapsed: stop, summarize, push.
 
-### Vignette
-Always add a vignette to keep edges dark:
-```glsl
-vec2 vc = screenUV - 0.5;
-col *= 1.0 - dot(vc, vc) * 0.6;
-```
+## When done
 
-### Avoid Common Mistakes
-1. Put metadata AFTER `#version 300 es` if using it, or on line 1 if not
-2. Always clamp final output: `col = clamp(col, 0.0, 1.0);`
-3. Protect divisions: `max(value, 0.001)`
-4. Don't let feedback accumulate to white: decay previous frame luminance
-
-## Reference Shaders to Study
-
-Read these before writing:
-- `shaders/redaphid/wip/hearts/fractal.frag` — the scattered-shapes-along-Mandelbrot-paths pattern
-- `shaders/redaphid/wip/hearts/spinny.frag` — more hearts with wider spread
-- `shaders/claude/chromadepth-julia.frag` — clean chromadepth fractal
-- `shaders/claude/chromadepth-kali.frag` — chromadepth + oklab feedback pattern
-- `shaders/subtronics.frag` — image-based silhouette detection technique
-- `shaders/nella/heart/kali-pulse.frag` — heart silhouette with fractal interior + chromadepth
-
-## Available Utility Functions (auto-injected, don't redeclare)
-
-```glsl
-vec3 hsl2rgb(vec3 hsl);
-vec3 rgb2hsl(vec3 rgb);
-vec3 rgb2oklab(vec3 c);
-vec3 oklab2rgb(vec3 lab);
-vec3 rgb2oklch(vec3 c);
-vec3 oklch2rgb(vec3 lch);
-vec4 getLastFrameColor(vec2 uv);
-vec4 getInitialFrameColor(vec2 uv);
-float mapValue(float val, float inMin, float inMax, float outMin, float outMax);
-float random(vec2 st);
-```
-
-## Image Loading (if using image-based silhouette)
-
-Images are loaded via query parameter: `?image=images/eddie-banana.png`
-
-The image is available as:
-- `iChannel0` / `iChannel2` — the loaded image texture
-- `getInitialFrameColor(uv)` — helper function (recommended)
-
-To detect the silhouette from an image:
-```glsl
-vec3 imgColor = getInitialFrameColor(uv).rgb;
-vec3 hsl = rgb2hsl(imgColor);
-// Detect banana-yellow regions
-float isBanana = smoothstep(0.1, 0.15, hsl.x) * (1.0 - smoothstep(0.18, 0.22, hsl.x))
-               * smoothstep(0.3, 0.5, hsl.y)
-               * smoothstep(0.3, 0.5, hsl.z);
-```
-
-Adjust the hue/saturation/lightness thresholds based on the actual image colors.
-
-## File Location
-
-Create shaders at: `./shaders/eddie-banana/<semantic-name>.frag`
-
-Good names: `banana-man.frag`, `peel-fractal.frag`, `banana-rain.frag`, `costume-party.frag`
-
-## Shader Validation
-
-After writing, run:
-```bash
-node scripts/validate-shader.js shaders/eddie-banana/<name>.frag
-```
-
-## Dev Server
-
-```bash
-pnpm dev
-# Then open: http://localhost:<port>/?shader=eddie-banana/<name>
-```
-
-## PR Instructions
-
-When creating the PR:
-- Base branch: `main`
-- Include preview links using the branch preview URL convention:
-  `https://banana-boy.paper-cranes-visuals.pages.dev/?shader=eddie-banana/<name>`
-- Request review from `redaphid`
+1. Push the branch.
+2. Write a summary at the top of `journals/the-coat-variant-run-2026-04-29.md` listing:
+   - Each keeper variant (number, cell, one-line description, music context where it shone)
+   - Each KILLED with reason
+   - Cells covered vs cells gap
+3. Tell the user when they're back: how many keepers, top 2 picks, any surprises.
