@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <title>Paper Cranes - MIDI Mapping</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0a0a0a;
+      color: #eee;
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    h1 { font-size: 18px; font-weight: 500; margin-bottom: 12px; }
+    h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #888; margin-bottom: 8px; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 220px 1fr 1fr;
+      gap: 16px;
+      height: calc(100vh - 80px);
+    }
+
+    .panel {
+      background: #151515;
+      border: 1px solid #222;
+      border-radius: 6px;
+      padding: 12px;
+      overflow-y: auto;
+    }
+
+    .device { padding: 8px 10px; border-radius: 4px; cursor: pointer; font-size: 13px; margin-bottom: 4px; border: 1px solid transparent; }
+    .device:hover { background: #1f1f1f; }
+    .device.active { background: #2a3a4a; border-color: #4a7aaa; }
+    .device.live::after { content: ' ●'; color: #4a4; }
+    .device .meta { color: #777; font-size: 11px; margin-top: 2px; }
+
+    .empty { color: #666; font-size: 13px; padding: 12px; text-align: center; }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 90px 60px 28px;
+      gap: 8px;
+      align-items: center;
+      padding: 6px 8px;
+      border-radius: 4px;
+      font-size: 13px;
+      margin-bottom: 2px;
+      transition: background 100ms;
+    }
+    .row:hover { background: #1c1c1c; }
+    .row.flash { background: #2d4030; }
+    .row .cc { font-family: ui-monospace, monospace; color: #ccc; }
+    .row .knob-input {
+      background: #0a0a0a;
+      border: 1px solid #333;
+      color: #eee;
+      padding: 3px 6px;
+      border-radius: 3px;
+      font-family: ui-monospace, monospace;
+      width: 100%;
+    }
+    .row .knob-input:focus { outline: none; border-color: #4a7aaa; }
+    .bar {
+      height: 6px;
+      background: #222;
+      border-radius: 3px;
+      overflow: hidden;
+      position: relative;
+    }
+    .bar-fill {
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      background: linear-gradient(90deg, #4a7aaa, #7aa);
+      width: 0%;
+      transition: width 60ms linear;
+    }
+    .unmap {
+      background: none;
+      border: 1px solid #333;
+      color: #888;
+      width: 24px; height: 24px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+    }
+    .unmap:hover { background: #3a1a1a; border-color: #6a3a3a; color: #faa; }
+
+    .knob-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      gap: 6px;
+    }
+    .knob {
+      background: #0e0e0e;
+      border: 1px solid #2a2a2a;
+      border-radius: 4px;
+      padding: 8px 6px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 100ms;
+    }
+    .knob:hover { border-color: #4a4a4a; }
+    .knob.mapped { border-color: #2a4a3a; }
+    .knob.learning {
+      border-color: #faa;
+      background: #2a1a1a;
+      animation: pulse 1s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    .knob .idx { font-family: ui-monospace, monospace; font-size: 12px; color: #aaa; }
+    .knob .cc-label { font-family: ui-monospace, monospace; font-size: 10px; color: #6a8; margin-top: 4px; min-height: 12px; }
+    .knob .knob-bar { margin-top: 6px; }
+
+    .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+    .status { font-size: 12px; color: #888; }
+    .hint { font-size: 12px; color: #666; margin-bottom: 8px; font-style: italic; }
+  </style>
+</head>
+
+<body>
+  <h1>MIDI Mapping</h1>
+  <div class="toolbar">
+    <span class="status" id="status">Requesting MIDI access…</span>
+  </div>
+  <div class="layout">
+    <div class="panel">
+      <h2>Devices</h2>
+      <div id="devices"></div>
+    </div>
+    <div class="panel">
+      <h2>CC → Knob</h2>
+      <div class="hint">Edit the knob index inline. Wiggle a knob on your controller to auto-add it.</div>
+      <div id="mappings"></div>
+    </div>
+    <div class="panel">
+      <h2>Knobs</h2>
+      <div class="hint">Click a knob, then move a control on your MIDI device to bind it.</div>
+      <div id="knobs" class="knob-grid"></div>
+    </div>
+  </div>
+  <script type="module" src="./src/midi-mapping-page.js"></script>
+</body>
+
+</html>
