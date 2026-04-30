@@ -31,6 +31,7 @@ export default defineConfig({
         analyze: resolve(import.meta.dirname, 'analyze.html'),
         playlist: resolve(import.meta.dirname, 'playlist.html'),
         'nfc-writer': resolve(import.meta.dirname, 'nfc-writer.html'),
+        midi: resolve(import.meta.dirname, 'midi.html'),
       },
       output: {
         entryFileNames: 'assets/[name].js',

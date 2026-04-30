@@ -2,6 +2,12 @@
 
 All notable non-shader feature changes to this project will be documented in this file.
 
+## 2026-04-30
+
+### Features
+
+- **[MIDI mapping page (`/midi.html`)](midi-mapping.md#mapping-page-midihtml)** — Dedicated visual UI for managing controller mappings: device list, live CC→knob table with inline knob-index editing, and a knob grid you click to learn-bind the next incoming CC. Replaces the per-knob learn flow buried in the editor. ([#121](https://github.com/loqwai/paper-cranes/pull/121))
+
 ## 2026-04-25
 
 ### Features
