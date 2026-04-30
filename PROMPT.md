@@ -1,240 +1,92 @@
-# Banana Boy Shader Prompt
+# the-coat bracelet variants — session handoff
+
+## Original user prompt
+
+> We have been working on a live music visual in this project that evolves over time. There are a lot of prototypes and docs about the latest one, 'the coat', that we have been working on. The wips are in `shaders/redaphid/wip/the-coat-fur-coat`. And maybe elsewhere. I am making kandi bracelets with nfc chips with the music visuals in them. I want variations of the coat visual that we can put in `shaders/redaphid/the-coat-<semantic_name>`. I want the bracelets to be somewhat unique, drawing off of ~5 visuals. I know some of the wip variants zoom too far away. Also, use the seed1...seed4 uniforms to customize the visual.
+>
+> Follow-up: understand how the javascript 'controllers' work — I believe we have some to augment the visuals.
 
 ## Goal
 
-Create one or more ChromaDepth shaders for Eddie (a guy who wears a banana costume to raves). Place them in `./shaders/eddie-banana/<semantic-name>.frag`.
+Produce **~5 self-contained shader variants** of "the coat" for kandi bracelets with NFC chips. Each bracelet's NFC URL points to one of 5 base visuals, parameterized by `seed`/`seed2`/`seed3`/`seed4` so individual bracelets are visibly unique within a family of 5.
 
-## Visual Concept
+Output paths: `shaders/redaphid/the-coat-<semantic_name>.frag` (production location, **not** `wip/` — these are bracelet-final).
 
-### Main Element: Banana Man Silhouette
-The shader should feature a **silhouette of a man wearing a banana outfit**. This can be done two ways (pick whichever looks better):
+## Constraints
 
-1. **Image-based silhouette** (recommended): Load a banana-man image via `?image=images/eddie-banana.png` and detect the silhouette using HSL thresholding (like subtronics.frag does). The user will provide the image.
-2. **SDF-based silhouette**: Build the banana-man shape from SDF primitives (a banana curve for the body, circle for the head, rectangles for arms/legs poking out).
+- **Zoom safety**: some WIP variants zoom too far in (knob_1=1 → BASE_ZOOM=2.5, plus +0.3 INTENSITY_ZOOM, +0.9 DROP_ZOOM = up to ~3.7x). Bracelet variants should bake conservative zoom hardcoded — figure framed at ~60–80% of screen. Cap so neither extreme close-up nor too-distant happens.
+- **Self-contained**: each `.frag` should work standalone. Bracelet URL form: `?shader=redaphid/the-coat-<name>&controller=the-coat&seed=...&seed2=...&seed3=...&seed4=...`
+- **Use seed uniforms** for per-bracelet uniqueness. The project provides `seed`, `seed2`, `seed3`, `seed4` (note: there's no `seed1` — `seed` is the first one). All four are float uniforms auto-injected by `src/shader-transformers/shader-wrapper.js:117-122`.
 
-Here's a simple banana SDF if you go the SDF route:
-```glsl
-// Banana shape: thick arc
-float sdBanana(vec2 p) {
-    // Rotate slightly for natural banana curve
-    float a = -0.3;
-    p = mat2(cos(a), -sin(a), sin(a), cos(a)) * p;
-    // Arc parameters
-    float r = 0.6;  // radius of curvature
-    float thickness = 0.15;
-    // Offset to arc center
-    p.y += r * 0.6;
-    float d = abs(length(p) - r) - thickness;
-    // Clip to half-arc
-    d = max(d, -p.y - 0.1);
-    d = max(d, p.y - r * 1.1);
-    return d;
-}
-```
+## Audio-visual system context
 
-### Background: Dark Blue
-The background must be **dark blue/navy** (`~vec3(0.02, 0.02, 0.08)` or darker). This is critical because:
-- ChromaDepth glasses need dark backgrounds for the depth effect to work
-- Dark blue recedes (appears far away in chromadepth)
-- Makes the yellow/red banana pop forward dramatically
+- **Latest WIP shader to fork from**: `shaders/redaphid/wip/the-coat-fur-coat/the-coat-8.frag` (~885 lines). Forked from the-coat-7 with confetti removed. Mercury lattice + warm-breath addressed in iter 46–47.
+- **Base controller** (already built and excellent): `controllers/the-coat.js` — sustains drop glow with exponential decay. Latches `max(energyZScore, bassZScore*0.7)` when > 0.15, decay rate via knob_13 (0.94–0.995). Outputs uniform `drop_glow`. The shader declares `uniform float drop_glow;` and uses `float drop_hit = max(drop_now, drop_glow);` for sustained eye/ray glow. **Every bracelet URL should include `controller=the-coat`.** If absent, `drop_glow` defaults to 0 → falls back to instantaneous IS_DROP detection (not broken, just less smooth).
+- **the-coat-8 effect blocks** (curate per variant): starfield, nebula fog, aurora veils, rotor gear, sub ring, heart pulse, warm breath, mouth glow, eye wash, god rays, mercury flow, time echo, black hole, cosmic shockwave, water pool, volumetric beams, ground quake, dissolution particles, hyperspace streaks, searchlight, flux hue drift.
+- **SDFs**: `sdDaddy` (body — head/neck/chest/hips/arms/fists), `sdFurCoat` (torso inflated by FUR_THICK, sleeves, V-neck via smooth subtraction, hem ellipse), `sdCurls` (8 hair circles).
+- **Coat color**: HSL-based, deep blue→cyan on drops, lightness pumps with bass.
 
-### Small Background Bananas
-Scatter **lots of small bananas** in the background, using the same technique as the heart shaders. Here's the pattern from `redaphid/wip/hearts/fractal.frag`:
+## Five variant identities (proposed plan, awaiting user confirmation)
 
-```glsl
-// Render multiple lines of shapes along Mandelbrot-driven paths
-for (float line = 0.0; line < LINE_COUNT; line++) {
-    for (float i = 0.0; i < COUNT; i++) {
-        float t = fract(i / COUNT - iTime * 0.2 + line * 0.25);
+| Variant | File | Vibe | Zoom | Effects kept | Effects dropped |
+|---|---|---|---|---|---|
+| **the-coat-cosmic** | `the-coat-cosmic.frag` | Wide cosmic stage | ~0.6 (wide) | starfield, nebula, aurora, subtle god rays | mercury, hyperspace, searchlight, water pool |
+| **the-coat-drop** | `the-coat-drop.frag` | Peak-drop frozen | ~1.0 + tame DROP_ZOOM | god rays max, eye wash, sub ring, shockwave, ground quake | aurora, hyperspace, water pool |
+| **the-coat-portrait** | `the-coat-portrait.frag` | Tight face | ~1.5 | fractal fur, mouth glow, warm breath, eye gleam | god rays, hyperspace, beams, ground quake |
+| **the-coat-mercury** | `the-coat-mercury.frag` | Coat is the show | ~0.8 | mercury flow, fractal fur, heart pulse, time echo | aurora, hyperspace, beams, searchlight |
+| **the-coat-storm** | `the-coat-storm.frag` | Bright treble chaos | ~0.7 | hyperspace, dissolution particles, beams, shockwave, flux drift | aurora, mercury, water pool, ground quake |
 
-        // Get position from Mandelbrot iteration
-        vec2 pos;
-        float scale, rotation;
-        mandelbrotTransform(t, line, pos, scale, rotation);
+## Seed mapping (apply consistently across all 5 variants)
 
-        // Audio reactivity
-        pos += vec2(cos(t*PI*2.0), sin(t*PI*2.0)) * midsNormalized * 0.2;
-        scale *= 0.15 + energyNormalized * 0.1;
+| Uniform | Role | Pattern (from `shaders/wooli/1.frag`) |
+|---|---|---|
+| `seed` (≡ "seed1") | HUE_BASE anchor — each bracelet's signature color rotation start | `+ seed * 0.13` added to base hue |
+| `seed2` | Secondary palette tilt — drop hue, chrome direction, accent color | Walk a circle: `sin(seed2 * PI * 2.0)`, `cos(seed2 * PI * 2.0)` |
+| `seed3` | Motion/timing phase — camera drift offset, beat sync offset, particle phase | Phase offset: `+ seed3 * PI * 2.0` in time arguments |
+| `seed4` | Chaos amount bias — fractal fur trigger sensitivity, effect strengths | Multiplicative bias on FUR_TRIGGER, hyperspace amount, etc. |
 
-        // Transform UV for this shape
-        vec2 shapeUV = uv - pos;
-        shapeUV = rot(rotation) * shapeUV;
-        shapeUV /= scale;
+The wooli pattern (`shaders/wooli/1.frag:22-36`) is the reference — seeds drive offsets via `sin(seed * PI * 2.0)` so the same shader produces predictable variation across the seed range.
 
-        float d = sdBanana(shapeUV);  // or sdHeart, etc.
-        if (d < 0.0) {
-            // Color and composite
-        }
-    }
-}
-```
+## Open questions to resolve before producing the 5 files
 
-The small bananas should:
-- Use chromadepth coloring (yellow-green-blue gradient based on distance from center)
-- Be scattered along fractal/Mandelbrot spiral paths
-- React to audio (wobble, scale, rotate with the music)
-- Sometimes increase in density/count on beats or energy spikes
+1. **Single file vs. directory per variant?** Wooli convention is single file (`shaders/wooli/1.frag`); zorn convention is directory + numbered iterations. Recommend single file for bracelets since they're frozen-final.
+2. **Are these the right 5 cuts?** Or do you want different splits (e.g. drop "storm" and add a "calm-portrait" / "drop-portrait" pair)?
+3. **Live preview during design?** Could drive each variant via the jam page with `?audio=tab` and capture before/after screenshots.
 
-### ChromaDepth Coloring
-- **Banana silhouette**: Red/orange/yellow (hue 0.0-0.15) — pops FORWARD
-- **Small background bananas**: Yellow to green (hue 0.1-0.4) — mid depth
-- **Far background elements**: Blue/violet (hue 0.5-0.75) — recedes
-- **Background**: Very dark blue/black — neutral depth
+## Useful files
 
-Use HSL for the chromadepth mapping (NOT oklch — chromadepth needs raw spectral hue order):
-```glsl
-vec3 chromadepth(float t) {
-    t = clamp(t, 0.0, 1.0);
-    float hue = t * 0.75;  // 0=red(near), 0.75=violet(far)
-    float sat = 0.92;
-    float lit = 0.5 - t * 0.1;
-    return hsl2rgb(vec3(hue, sat, lit));
-}
-```
+- `shaders/redaphid/wip/the-coat-fur-coat/the-coat-8.frag` — base to fork from
+- `shaders/redaphid/wip/the-coat-fur-coat/docs/presets.md` — captures audio fingerprints for `lost-lands`, `closeup-texture`, `full-send`, `wooli-drop`, `wide-blaze`, `living-coat`, `whisper-glow`, `dark-bass`, `bright-chaos`, `balanced-glow`, `ray-bloom`, `body-sculpt`, `golden-wash`, `griz-sizzle`, `full-drop-punch`. These describe distinct moods and inform variant identity.
+- `shaders/redaphid/wip/the-coat-fur-coat/docs/the-coat-fur-coat.md` — coat construction notes (V-neck smooth subtraction, alignment fixes).
+- `shaders/redaphid/wip/the-coat-fur-coat/docs/the-coat-fur-coat-reactive.md` — audio feature mapping reference.
+- `journals/the-coat-8-cool-moments.md` — iter-39 5-effect alignment, design hypotheses for v(next).
+- `controllers/the-coat.js` — drop sustain controller (33 lines, the only essential one for the bracelets)
+- `controllers/README.md`, `docs/controllers.md` — controller system docs
+- `src/shader-transformers/shader-wrapper.js:107-125` — uniform injection (seed, seed2, seed3, seed4, time, resolution, etc.)
+- `shaders/wooli/1.frag` — reference for seed-driven variation pattern
+- `CLAUDE.md` — project conventions, audio feature reference, shader patterns
 
-But use **oklab** for frame feedback blending (perceptually uniform):
-```glsl
-vec3 colOk = rgb2oklab(col);
-vec3 prevOk = rgb2oklab(prev);
-prevOk.x *= 0.96;  // luminance decay
-vec3 blended = mix(prevOk, colOk, 0.7);
-col = oklab2rgb(blended);
-```
+## Branch context
 
-## Audio Reactivity
+Created from `vj-session-the-coat-13-finale`. The base branch has these unrelated in-flight changes (don't touch them when continuing — they belong to the parent branch's open work):
 
-Use the `#define` swap pattern for all audio parameters:
-```glsl
-// Active: audio-reactive
-#define BANANA_PULSE (1.0 + bassZScore * 0.08)
-// #define BANANA_PULSE 1.0
-```
+- modified: `journals/the-coat-8-cool-moments.md`, `package-lock.json`, `shaders/redaphid/wip/the-coat-fur-coat/the-coat-8.frag`, `shaders/rezz/spiral-ct.frag`
+- untracked: `journals/spiral-ct-cool-moments.md`, `shaders/debug/`, `shaders/wip/bioluminescence.frag`, `shaders/wip/cosmic-flow.frag`, `shaders/wip/dimensional-rift.frag`, `shaders/wip/dream-morph.frag`, `shaders/wip/emergent-life.frag`, `shaders/wip/fractal-cells.frag`, `shaders/wip/liquid-chrome.frag`, `shaders/wip/magnetic-fields.frag`, `shaders/wip/neural-pulse.frag`, `shaders/wip/plasma-vortex.frag`, `shaders/wip/quantum-wave.frag`, `shaders/wip/sound-sculpture.frag`, `src/params.js`
 
-Suggested mappings:
-- **Bass**: Main banana silhouette pulses/breathes
-- **Energy**: Overall brightness, small banana count/density
-- **Treble**: Small banana shimmer/sparkle
-- **Spectral flux**: Edge glow intensity on the main silhouette
-- **Spectral centroid**: Hue drift within the chromadepth range
-- **Pitch class**: Slow rotation of background banana patterns
-- **Beat**: Flash/throb effect, main banana briefly scales up
-- **Spectral entropy**: Chaos in background banana scatter pattern
-- **Spectral roughness**: Saturation boost
+## Status when this handoff was written
 
-## Technical Requirements
+- Researched the-coat-8.frag, presets, journals, controllers system.
+- Variant plan + seed mapping proposed and **awaiting user confirmation** before producing 5 large `.frag` files.
+- No bracelet shader files written yet.
 
-### Metadata
-```glsl
-// @fullscreen: true
-// @mobile: true
-// @favorite: true
-// @tags: banana, chromadepth, 3d, eddie, love
-```
+## Next step on resume
 
-### Performance
-- Mobile-safe: keep iteration counts low (< 12 for Kali/Mandelbrot)
-- Background banana count: 8-15 per line, 3-4 lines max
-- Use `rot()` matrix instead of separate sin/cos calls
+1. Confirm the 5-variant plan above (or adjust splits / count).
+2. Confirm single-file vs. directory layout.
+3. Then produce 5 `.frag` files. Each will be ~400–500 lines (trimmed subset of the-coat-8 with conservative baked zoom and seed-based personalization).
+4. Validate each with `node scripts/validate-shader.js shaders/redaphid/the-coat-<name>.frag` before committing.
+5. PR with preview links: `https://the-coat-bracelet-variants.paper-cranes-visuals.pages.dev/?shader=redaphid/the-coat-<name>&controller=the-coat&seed=0.42&seed2=0.71&seed3=0.18&seed4=0.55`
 
-### Frame Feedback
-Use oklab blending for perceptually uniform feedback:
-```glsl
-vec3 prev = getLastFrameColor(fbUV).rgb;
-vec3 colOk = rgb2oklab(col);
-vec3 prevOk = rgb2oklab(prev);
-prevOk.x *= 0.96;
-prevOk.yz *= 0.98;
-float newAmount = 0.7;
-vec3 blended = mix(prevOk, colOk, newAmount);
-// Prevent chroma death
-if (length(blended.yz) < length(colOk.yz) * 0.6) {
-    blended.yz = mix(blended.yz, colOk.yz, 0.35);
-}
-col = oklab2rgb(blended);
-```
+## Note on this PROMPT.md file
 
-### Vignette
-Always add a vignette to keep edges dark:
-```glsl
-vec2 vc = screenUV - 0.5;
-col *= 1.0 - dot(vc, vc) * 0.6;
-```
-
-### Avoid Common Mistakes
-1. Put metadata AFTER `#version 300 es` if using it, or on line 1 if not
-2. Always clamp final output: `col = clamp(col, 0.0, 1.0);`
-3. Protect divisions: `max(value, 0.001)`
-4. Don't let feedback accumulate to white: decay previous frame luminance
-
-## Reference Shaders to Study
-
-Read these before writing:
-- `shaders/redaphid/wip/hearts/fractal.frag` — the scattered-shapes-along-Mandelbrot-paths pattern
-- `shaders/redaphid/wip/hearts/spinny.frag` — more hearts with wider spread
-- `shaders/claude/chromadepth-julia.frag` — clean chromadepth fractal
-- `shaders/claude/chromadepth-kali.frag` — chromadepth + oklab feedback pattern
-- `shaders/subtronics.frag` — image-based silhouette detection technique
-- `shaders/nella/heart/kali-pulse.frag` — heart silhouette with fractal interior + chromadepth
-
-## Available Utility Functions (auto-injected, don't redeclare)
-
-```glsl
-vec3 hsl2rgb(vec3 hsl);
-vec3 rgb2hsl(vec3 rgb);
-vec3 rgb2oklab(vec3 c);
-vec3 oklab2rgb(vec3 lab);
-vec3 rgb2oklch(vec3 c);
-vec3 oklch2rgb(vec3 lch);
-vec4 getLastFrameColor(vec2 uv);
-vec4 getInitialFrameColor(vec2 uv);
-float mapValue(float val, float inMin, float inMax, float outMin, float outMax);
-float random(vec2 st);
-```
-
-## Image Loading (if using image-based silhouette)
-
-Images are loaded via query parameter: `?image=images/eddie-banana.png`
-
-The image is available as:
-- `iChannel0` / `iChannel2` — the loaded image texture
-- `getInitialFrameColor(uv)` — helper function (recommended)
-
-To detect the silhouette from an image:
-```glsl
-vec3 imgColor = getInitialFrameColor(uv).rgb;
-vec3 hsl = rgb2hsl(imgColor);
-// Detect banana-yellow regions
-float isBanana = smoothstep(0.1, 0.15, hsl.x) * (1.0 - smoothstep(0.18, 0.22, hsl.x))
-               * smoothstep(0.3, 0.5, hsl.y)
-               * smoothstep(0.3, 0.5, hsl.z);
-```
-
-Adjust the hue/saturation/lightness thresholds based on the actual image colors.
-
-## File Location
-
-Create shaders at: `./shaders/eddie-banana/<semantic-name>.frag`
-
-Good names: `banana-man.frag`, `peel-fractal.frag`, `banana-rain.frag`, `costume-party.frag`
-
-## Shader Validation
-
-After writing, run:
-```bash
-node scripts/validate-shader.js shaders/eddie-banana/<name>.frag
-```
-
-## Dev Server
-
-```bash
-pnpm dev
-# Then open: http://localhost:<port>/?shader=eddie-banana/<name>
-```
-
-## PR Instructions
-
-When creating the PR:
-- Base branch: `main`
-- Include preview links using the branch preview URL convention:
-  `https://banana-boy.paper-cranes-visuals.pages.dev/?shader=eddie-banana/<name>`
-- Request review from `redaphid`
+This file replaces a previous PROMPT.md (banana-boy session handoff, commit `03106eb`). The old version remains on `main` and in history — overwriting it here only affects this branch.
