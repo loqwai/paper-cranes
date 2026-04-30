@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a14">
+<title>the-coat NFC writer</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0a0a14;
+    --fg: #e5e7f0;
+    --dim: #6b7080;
+    --navy: #1a3470;
+    --skyblue: #6cb0e8;
+    --shadow: #1a1a1a;
+    --ok: #2ecc71;
+    --err: #e74c3c;
+    --warn: #f39c12;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    gap: 16px;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  h1 {
+    font-size: 18px;
+    margin: 0;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+  .progress {
+    font-size: 14px;
+    color: var(--dim);
+    font-variant-numeric: tabular-nums;
+  }
+  .current {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .current.color-navy { border-left: 4px solid var(--navy); }
+  .current.color-skyblue { border-left: 4px solid var(--skyblue); }
+  .current.color-shadow { border-left: 4px solid var(--shadow); }
+  .label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--dim);
+  }
+  .next-name {
+    font-size: 24px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    word-break: break-all;
+  }
+  .next-url {
+    font-size: 13px;
+    color: var(--dim);
+    word-break: break-all;
+    line-height: 1.4;
+  }
+  .write-btn {
+    flex: 1;
+    min-height: 200px;
+    background: var(--ok);
+    color: #fff;
+    border: none;
+    border-radius: 16px;
+    font-size: 28px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 120ms;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .write-btn:active { background: #25a058; }
+  .write-btn:disabled {
+    background: var(--dim);
+    opacity: 0.6;
+  }
+  .write-btn.writing { background: var(--warn); }
+  .write-btn.error { background: var(--err); }
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .controls button {
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--fg);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .controls button:active { background: rgba(255, 255, 255, 0.12); }
+  .status {
+    font-size: 14px;
+    min-height: 20px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    text-align: center;
+  }
+  .status.ok { color: var(--ok); }
+  .status.err { color: var(--err); }
+  .status.warn { color: var(--warn); }
+  .queue {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    padding: 8px;
+    max-height: 240px;
+    overflow-y: auto;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .queue summary {
+    cursor: pointer;
+    color: var(--dim);
+    padding: 4px 8px;
+  }
+  .queue ol {
+    margin: 8px 0 0;
+    padding-left: 24px;
+  }
+  .queue li {
+    padding: 2px 0;
+    cursor: pointer;
+    color: var(--dim);
+  }
+  .queue li.done { text-decoration: line-through; opacity: 0.5; }
+  .queue li.current { color: var(--fg); font-weight: 600; }
+  .unsupported {
+    background: var(--err);
+    color: #fff;
+    padding: 16px;
+    border-radius: 8px;
+    text-align: center;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>the-coat NFC writer</h1>
+  <span class="progress" id="progress">0 / 30</span>
+</header>
+
+<div id="unsupported" class="unsupported" style="display:none">
+  <strong>Web NFC not supported on this browser.</strong><br>
+  Use Chrome/Edge on Android (HTTPS required). On iOS, Web NFC is not available — use NFC Tools instead.
+</div>
+
+<div class="current" id="current">
+  <span class="label">Next tag</span>
+  <span class="next-name" id="next-name">—</span>
+  <span class="next-url" id="next-url">—</span>
+</div>
+
+<button class="write-btn" id="write" disabled>Tap a tag to write</button>
+
+<div class="status" id="status">Ready.</div>
+
+<div class="controls">
+  <button id="prev">&larr; Prev</button>
+  <button id="skip">Skip &rarr;</button>
+  <button id="reset">Reset</button>
+</div>
+
+<details class="queue" id="queue-details">
+  <summary>Queue (tap a row to jump)</summary>
+  <ol id="queue"></ol>
+</details>
+
+<script>
+const QUEUE = [
+  // navy
+  { name: "coat-navy-1",  url: "https://2cb.pw/coat-navy-1",  color: "navy" },
+  { name: "coat-navy-2",  url: "https://2cb.pw/coat-navy-2",  color: "navy" },
+  { name: "coat-navy-3",  url: "https://2cb.pw/coat-navy-3",  color: "navy" },
+  { name: "coat-navy-4",  url: "https://2cb.pw/coat-navy-4",  color: "navy" },
+  { name: "coat-navy-5",  url: "https://2cb.pw/coat-navy-5",  color: "navy" },
+  { name: "coat-navy-6",  url: "https://2cb.pw/coat-navy-6",  color: "navy" },
+  { name: "coat-navy-7",  url: "https://2cb.pw/coat-navy-7",  color: "navy" },
+  { name: "coat-navy-8",  url: "https://2cb.pw/coat-navy-8",  color: "navy" },
+  { name: "coat-navy-9",  url: "https://2cb.pw/coat-navy-9",  color: "navy" },
+  { name: "coat-navy-10", url: "https://2cb.pw/coat-navy-10", color: "navy" },
+  // skyblue
+  { name: "coat-skyblue-1",  url: "https://2cb.pw/coat-skyblue-1",  color: "skyblue" },
+  { name: "coat-skyblue-2",  url: "https://2cb.pw/coat-skyblue-2",  color: "skyblue" },
+  { name: "coat-skyblue-3",  url: "https://2cb.pw/coat-skyblue-3",  color: "skyblue" },
+  { name: "coat-skyblue-4",  url: "https://2cb.pw/coat-skyblue-4",  color: "skyblue" },
+  { name: "coat-skyblue-5",  url: "https://2cb.pw/coat-skyblue-5",  color: "skyblue" },
+  { name: "coat-skyblue-6",  url: "https://2cb.pw/coat-skyblue-6",  color: "skyblue" },
+  { name: "coat-skyblue-7",  url: "https://2cb.pw/coat-skyblue-7",  color: "skyblue" },
+  { name: "coat-skyblue-8",  url: "https://2cb.pw/coat-skyblue-8",  color: "skyblue" },
+  { name: "coat-skyblue-9",  url: "https://2cb.pw/coat-skyblue-9",  color: "skyblue" },
+  { name: "coat-skyblue-10", url: "https://2cb.pw/coat-skyblue-10", color: "skyblue" },
+  // shadow
+  { name: "coat-shadow-1",  url: "https://2cb.pw/coat-shadow-1",  color: "shadow" },
+  { name: "coat-shadow-2",  url: "https://2cb.pw/coat-shadow-2",  color: "shadow" },
+  { name: "coat-shadow-3",  url: "https://2cb.pw/coat-shadow-3",  color: "shadow" },
+  { name: "coat-shadow-4",  url: "https://2cb.pw/coat-shadow-4",  color: "shadow" },
+  { name: "coat-shadow-5",  url: "https://2cb.pw/coat-shadow-5",  color: "shadow" },
+  { name: "coat-shadow-6",  url: "https://2cb.pw/coat-shadow-6",  color: "shadow" },
+  { name: "coat-shadow-7",  url: "https://2cb.pw/coat-shadow-7",  color: "shadow" },
+  { name: "coat-shadow-8",  url: "https://2cb.pw/coat-shadow-8",  color: "shadow" },
+  { name: "coat-shadow-9",  url: "https://2cb.pw/coat-shadow-9",  color: "shadow" },
+  { name: "coat-shadow-10", url: "https://2cb.pw/coat-shadow-10", color: "shadow" },
+]
+
+const STORAGE_KEY = "the-coat-nfc-writer-state"
+
+const els = {
+  unsupported: document.getElementById("unsupported"),
+  current: document.getElementById("current"),
+  nextName: document.getElementById("next-name"),
+  nextUrl: document.getElementById("next-url"),
+  progress: document.getElementById("progress"),
+  write: document.getElementById("write"),
+  status: document.getElementById("status"),
+  prev: document.getElementById("prev"),
+  skip: document.getElementById("skip"),
+  reset: document.getElementById("reset"),
+  queue: document.getElementById("queue"),
+}
+
+let state = loadState()
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (typeof parsed.index === "number" && Array.isArray(parsed.done)) return parsed
+    }
+  } catch (_) {}
+  return { index: 0, done: [] }
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+}
+
+function setStatus(msg, kind = "") {
+  els.status.textContent = msg
+  els.status.className = "status" + (kind ? " " + kind : "")
+}
+
+function render() {
+  const cur = QUEUE[state.index]
+  if (!cur) {
+    els.nextName.textContent = "All done."
+    els.nextUrl.textContent = "Tap Reset to start over."
+    els.write.disabled = true
+    els.write.textContent = "Done"
+    els.current.className = "current"
+  } else {
+    els.nextName.textContent = cur.name
+    els.nextUrl.textContent = cur.url
+    els.current.className = "current color-" + cur.color
+    els.write.disabled = false
+    els.write.textContent = "Tap a tag to write"
+  }
+  els.progress.textContent = `${state.done.length} / ${QUEUE.length}`
+  renderQueue()
+  saveState()
+}
+
+function renderQueue() {
+  els.queue.innerHTML = ""
+  QUEUE.forEach((item, i) => {
+    const li = document.createElement("li")
+    li.textContent = item.name
+    if (state.done.includes(i)) li.classList.add("done")
+    if (i === state.index) li.classList.add("current")
+    li.addEventListener("click", () => {
+      state.index = i
+      render()
+      setStatus(`Jumped to ${item.name}.`)
+    })
+    els.queue.appendChild(li)
+  })
+}
+
+async function writeCurrent() {
+  const cur = QUEUE[state.index]
+  if (!cur) return
+  if (!("NDEFReader" in window)) {
+    setStatus("Web NFC not available.", "err")
+    return
+  }
+  els.write.classList.remove("error")
+  els.write.classList.add("writing")
+  els.write.textContent = "Hold tag to phone..."
+  setStatus(`Writing ${cur.name}...`, "warn")
+
+  try {
+    const ndef = new NDEFReader()
+    await ndef.write({
+      records: [{ recordType: "url", data: cur.url }],
+    })
+    // Success
+    if (!state.done.includes(state.index)) state.done.push(state.index)
+    state.index++
+    while (state.index < QUEUE.length && state.done.includes(state.index)) state.index++
+    els.write.classList.remove("writing")
+    setStatus(`✓ Wrote ${cur.name}. Next: ${QUEUE[state.index]?.name ?? "(done)"}`, "ok")
+    if (navigator.vibrate) navigator.vibrate(80)
+    render()
+  } catch (e) {
+    els.write.classList.remove("writing")
+    els.write.classList.add("error")
+    els.write.textContent = "Try again"
+    setStatus(`Error: ${e.message || e}`, "err")
+  }
+}
+
+els.write.addEventListener("click", writeCurrent)
+
+els.prev.addEventListener("click", () => {
+  if (state.index > 0) {
+    state.index--
+    render()
+    setStatus(`Back to ${QUEUE[state.index].name}.`)
+  }
+})
+els.skip.addEventListener("click", () => {
+  if (state.index < QUEUE.length) {
+    state.index++
+    render()
+    setStatus(`Skipped. Next: ${QUEUE[state.index]?.name ?? "(done)"}`)
+  }
+})
+els.reset.addEventListener("click", () => {
+  if (!confirm("Reset progress? This clears the 'done' list.")) return
+  state = { index: 0, done: [] }
+  render()
+  setStatus("Reset.")
+})
+
+if (!("NDEFReader" in window)) {
+  els.unsupported.style.display = "block"
+  els.write.disabled = true
+}
+
+render()
+</script>
+</body>
+</html>
