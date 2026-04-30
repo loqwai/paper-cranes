@@ -6,12 +6,12 @@ Generate **5–10 aesthetically distinct variants** of the existing "the-coat" s
 
 Place new variants at:
 ```
-shaders/redaphid/wip/the-coat-fur-coat/the-coat-<N>.frag
-shaders/redaphid/wip/the-coat-fur-coat/the-coat-<N>.md
-journals/the-coat-<N>-cool-moments.md
+shaders/redaphid/the-coat/<semantic-name>.frag
+shaders/redaphid/the-coat/<semantic-name>.md
+journals/the-coat-<semantic-name>-cool-moments.md
 ```
 
-Continue numbering from the highest existing index (currently `-23`).
+Use **semantic names**, not numbers (e.g. `brooding-monster.frag`, `chrome-arena.frag`, `velvet-drift.frag`). The numbered `-N` series in `wip/the-coat-fur-coat/` is the iteration-history lineage; this run produces *named, curated* variants in a new directory.
 
 ## Canon: what "the-coat" is
 
@@ -26,6 +26,10 @@ uniform float drop_glow;   // from controller
 uniform float pitch_change; // from controller
 ```
 
+### Adding new controllers
+
+If a variant has a theory that genuinely needs frame-to-frame state the existing controllers can't provide (e.g. a section-detector state machine, an integrator, a hysteresis latch on a feature pair), **write a new controller** in `controllers/<name>.js` and load it with `?controller=<name>`. Don't shoehorn theories into `the-coat.js` — keep that one as the canonical drop_glow + pitch_change. Document the new controller's outputs at the top of the file. See `docs/controllers.md` for patterns.
+
 ## Standing rules (carried from journal lineage — DO NOT VIOLATE)
 
 1. **Pinwheel (knob_14 / SIGIL_SWIRL): the user hates it.** Default `knob_14 = 0` in every variant. Do not introduce new pinwheel-shaped patterns.
@@ -34,6 +38,51 @@ uniform float pitch_change; // from controller
 4. **Don't white-out on loud audio.** Always `clamp(col, 0.0, 1.0)` and decay previous-frame luminance.
 5. **Mobile-friendly.** Iteration counts low, no >50-step raymarching.
 6. **No graceful audio fallbacks.** If a feature is missing, fail loudly — but use safe defaults inline (e.g. `clamp(bassZScore, 0.0, 1.0)`) rather than swallowing.
+
+## Per-variant requirements (every shader MUST have these)
+
+### 1. Palette knobs
+
+The user wants an *easy* way to adjust palette per variant via knobs. Every shader must expose at minimum:
+
+- `knob_1` → **HUE_SHIFT** — additive offset on the base hue (0 → 1 = full rotation around the hue wheel)
+- `knob_2` → **SATURATION** — multiplier `mix(0.0, 1.5, knob_2)` so 0=desaturated, 0.5=normal, 1.0=oversaturated
+- `knob_3` → **PALETTE_WARMTH** — biases hue toward warm (red/orange) at high values, cool (blue/violet) at low; `mix(-0.15, +0.15, knob_3)` added to base hue
+
+Implement these via `#define` so they're tunable inline:
+```glsl
+#define HUE_SHIFT      (knob_1)
+#define SATURATION_MUL mix(0.0, 1.5, knob_2)
+#define PALETTE_WARMTH mix(-0.15, 0.15, knob_3)
+```
+
+Then bake them into the variant's color path. Every color emitted should pass through these three. The variant's *thesis* color strategy (D axis below) layers on top — but the three palette knobs are the universal handle.
+
+Reserve `knob_1`–`knob_3` for palette across the whole `the-coat/` directory so muscle memory works between variants.
+
+### 2. URL comment
+
+Every variant must include a comment near the top of its `.frag` showing the exact local URL used to view it on the jam page. Example:
+
+```glsl
+// URL: http://localhost:6969/jam.html?shader=redaphid/the-coat/brooding-monster&controller=the-coat
+```
+
+If the variant uses a non-default controller, reflect that in the URL.
+
+### 3. Standard knob slots
+
+Beyond palette, document each variant's knob assignments as a comment block. Reuse existing the-coat slots where they make sense:
+
+- `knob_1`–`knob_3` palette (reserved, see above)
+- `knob_4` eye wash override
+- `knob_7` fur thickness
+- `knob_8` darkness / VJ darkness
+- `knob_9` feedback / trails (0=crisp, 1=smear)
+- `knob_13` drop sustain decay (consumed by the-coat controller)
+- `knob_14` pinwheel — leave at 0 (HATED; see standing rules)
+
+Variant-specific knobs can use `knob_5, 6, 10, 11, 12, 15, 16+`.
 
 ## Variant axes (pick distinct combinations — don't dial-tweak)
 
@@ -84,15 +133,16 @@ Pick *one* lead feature that dominates this variant. Don't mix three equally —
 
 For each new variant:
 1. Save the `.frag` and `.md` to disk (HMR hot-swaps in the browser).
-2. Drive jam page to load the new shader: `?shader=redaphid/wip/the-coat-fur-coat/the-coat-<N>&controller=the-coat`.
+2. Drive jam page to load the new shader: `?shader=redaphid/the-coat/<name>&controller=the-coat` (or whichever controller this variant uses).
 3. Wait ≥30 seconds and watch it under at least **2 distinct musical conditions** in the current Spotify session (e.g., a heavy-bass moment + a quieter melodic moment).
-4. Take screenshots via Chrome devtools MCP at meaningful audio moments. Save to `shaders/redaphid/wip/the-coat-fur-coat/the-coat-<N>/docs/.snapshots/` if useful.
-5. Critique honestly in the variant's `.md`:
+4. Take screenshots via Chrome devtools MCP at meaningful audio moments. Save to `shaders/redaphid/the-coat/<name>/.snapshots/` if useful.
+5. **Twist `knob_1`, `knob_2`, `knob_3`** during validation to confirm the palette knobs actually rotate / desaturate / warm-shift the look as intended. A variant that ignores its palette knobs is broken.
+6. Critique honestly in the variant's `.md`:
    - **What works** — which (A, B, C, D) commitments paid off?
    - **What fails** — does it look the same as another variant under quiet conditions? Does it crash visually on loud transients?
    - **Verdict** — keep, or kill and try a different cell?
-6. If keeping, append a "Cool moments" journal entry with the music context (track + timestamp).
-7. If killing, leave the file but mark `# KILLED:` at the top of the .md and note why. Do **not** delete; the failed forks are training signal (per -21 journal lesson).
+7. If keeping, append a "Cool moments" journal entry with the music context (track + timestamp).
+8. If killing, leave the file but mark `# KILLED:` at the top of the .md and note why. Do **not** delete; the failed forks are training signal (per -21 journal lesson).
 
 ## Process (autonomous loop)
 
@@ -141,11 +191,30 @@ Default to `the-coat`. Only swap if a variant's thesis genuinely needs different
 ```glsl
 // @fullscreen: true
 // @mobile: true
-// the-coat-<N>: <one-line aesthetic thesis> — variant cell (A=<mood>, B=<lead-feature>, C=<composition>, D=<color>)
-// Forked from the-coat-<parent>. Music at fork time: <track>.
-uniform float drop_glow;
-uniform float pitch_change;
+// @tags: the-coat
+// the-coat / <semantic-name>: <one-line aesthetic thesis>
+// Cell: A=<mood>, B=<lead-feature>, C=<composition>, D=<color>
+// Forked from <parent-path>. Music at fork time: <track - artist>.
+//
+// URL: http://localhost:6969/jam.html?shader=redaphid/the-coat/<semantic-name>&controller=the-coat
+//
+// Knobs:
+//   knob_1: HUE_SHIFT (palette — full hue rotation)
+//   knob_2: SATURATION (palette — 0=desat, 0.5=normal, 1=oversat)
+//   knob_3: PALETTE_WARMTH (palette — cool ↔ warm bias)
+//   knob_4: <variant-specific>
+//   ...
+//   knob_13: drop sustain decay (the-coat controller)
+//   knob_14: PINWHEEL — leave at 0 (HATED)
+uniform float drop_glow;    // from the-coat controller
+uniform float pitch_change; // from the-coat controller
+
+#define HUE_SHIFT      (knob_1)
+#define SATURATION_MUL mix(0.0, 1.5, knob_2)
+#define PALETTE_WARMTH mix(-0.15, 0.15, knob_3)
 ```
+
+If using a custom controller, add its `uniform float ...;` declarations and update the URL line's `&controller=` segment.
 
 ## End conditions
 
@@ -158,7 +227,8 @@ uniform float pitch_change;
 
 1. Push the branch.
 2. Write a summary at the top of `journals/the-coat-variant-run-2026-04-29.md` listing:
-   - Each keeper variant (number, cell, one-line description, music context where it shone)
+   - Each keeper variant (semantic name, cell, one-line description, music context where it shone, full URL)
    - Each KILLED with reason
    - Cells covered vs cells gap
+   - Any new controllers added and what they provide
 3. Tell the user when they're back: how many keepers, top 2 picks, any surprises.
