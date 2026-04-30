@@ -2,7 +2,7 @@
 // @mobile: true
 // @tags: the-coat
 // the-coat / bracelet-shadow: pure-black silhouette with rim lighting only — matches the CENTER all-black NFC bead
-// Source: bracelet-navy.frag with skin + coat blacked out, rim cranked to bright white
+// Source: the-coat-21 (foggy-figure: atmospheric, recessed eyes, fog-wrapped figure)
 //
 // URL: http://localhost:6969/jam.html?shader=redaphid/the-coat/bracelet-shadow&controller=the-coat&audio=tab
 //
@@ -16,14 +16,14 @@
 //   knob_7: fur thickness
 //   knob_8: VJ darkness
 //   knob_9: feedback / trails (0=crisp, 1=smear)
-//   knob_10: nebula fog density
-//   knob_11: VJ FRY (hypersaturated / hue-cycle accelerator)
+//   knob_10: fine zoom trim (from parent)
+//   knob_11: VJ FRY
 //   knob_12: INKY BG
 //   knob_13: drop sustain decay (the-coat controller)
 //   knob_14: PINWHEEL — leave at 0 (HATED)
 //   knob_15: drip + drip pool intensity
 //   knob_16: BRACELET_SEED — picks eye color (4 buckets) + coat lightness anchor (deep ↔ bright)
-//            so each wearer's shadow bracelet feels uniquely theirs while staying menacingly black.
+//            so each wearer's bracelet feels uniquely theirs while staying in the shadow family.
 uniform float drop_glow;    // from the-coat controller
 uniform float pitch_change; // from the-coat controller
 #define PI 3.14159265
@@ -39,13 +39,8 @@ uniform float pitch_change; // from the-coat controller
 // ============================================================================
 #define BRACELET_SEED (knob_16)
 #define SEED_HASH(n) fract(sin(BRACELET_SEED * 12.9898 + (n) * 78.233) * 43758.5453)
-
-// Eye hue: 4 buckets — colorway-specific palette below.
 #define SEED_EYE_BUCKET   floor(SEED_HASH(1.0) * 4.0)
-// Coat lightness anchor — shadow stays near-zero by definition (the void). Tiny range.
 #define SEED_COAT_LIGHT   mix(0.005, 0.04, SEED_HASH(2.0))
-#define SEED_BG_BUCKET    floor(SEED_HASH(3.0) * 4.0)
-#define SEED_RIM_BUCKET   floor(SEED_HASH(4.0) * 3.0)
 
 
 #define DEBUG_OUTLINES 0
@@ -109,11 +104,11 @@ uniform float pitch_change; // from the-coat controller
 // --- COLOR ---
 // Base hue shifts with pitch class — different notes = different colors
 // VJ breathing rainbow — full cycle every ~60s, mids nudge the hue
-// BRACELET-NAVY: HUE_BASE is purely informational — coat color is hard-locked to navy below.
-// THEME_SHIFT removed (knob_16 is now BRACELET_SEED).
-#define THEME_SHIFT 0.0
-#define HUE_BASE (fract(0.62 + PALETTE_WARMTH))
-#define HUE_DROP (fract(0.62 + PALETTE_WARMTH))
+// knob_16: THEME SHIFT — proportional aesthetic dial. 0 = baseline, 1 = full theme inversion (hue +0.5 rotation, sat boost).
+#define THEME_SHIFT 0.0  // BRACELET: knob_16 is BRACELET_SEED; theme shift forced 0
+#define HUE_BASE (fract(0.78 + time * 0.003 + pitchClassNormalized * 0.08 + midsNormalized * 0.10 + PALETTE_WARMTH + THEME_SHIFT * 0.5))
+// Drop shifts toward hot orange/yellow
+#define HUE_DROP (fract(0.99 + spectralCentroidNormalized * 0.05 + PALETTE_WARMTH + THEME_SHIFT * 0.5))
 
 // --- COAT SURFACE (the star of the show) ---
 // Fluff bristles up on energy spikes AND spectral roughness
@@ -417,7 +412,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float zoomAmount = BASE_ZOOM + zoom_intensity * INTENSITY_ZOOM + drop_hit * DROP_ZOOM * 1.0 + beat_zoom;
     vec2 zoomCenter = P.head_c;
     // VJ CAMERA DRIFT — slow lateral sway + flux nudge so the frame never sits locked
-    // BRACELET_SEED nudges horizontal cam by ±2% so each wearer sees a slightly different angle
     vec2 cam_drift = vec2(
         sin(time * 0.12) * 0.015 + spectralFluxZScore * 0.012,
         sin(time * 0.09 + 1.3) * 0.010
@@ -474,7 +468,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         vec3 nebula = mix(nebula_a, nebula_b, sin(np.x * 0.7 + t) * 0.5 + 0.5);
         // knob_2: nebula fog density (0 = clear, 1 = thick cosmic cloud) — auto-wired when twisted
         float fog_pulse = 1.0 + clamp(bassZScore, 0.0, 2.0) * 0.35;
-        bg += nebula * fog * mix(0.04, 0.45, knob_10) * (0.7 + midsNormalized * 0.4) * fog_pulse;
+        bg += nebula * fog * mix(0.04, 0.45, knob_2) * (0.7 + midsNormalized * 0.4) * fog_pulse;
     }
         // VJ AURORA VEILS — glowing green-teal curtains in dark/wonky phases (low centroid)
     {
@@ -583,17 +577,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float hue = mix(HUE_BASE, HUE_DROP, IS_DROP);
     vec3 leather = hsl2rgb(vec3(hue, 0.8, mix(0.06, 0.14, spectralCentroidNormalized)));
     // BRACELET-SHADOW: chrome is BRIGHT WHITE / steel — the only light source on the figure.
-    // SEED_RIM_TILT subtly shifts cool ↔ warm steel ±0.04 hue.
     float chrome_hue = mix(0.55, 0.65, sin(time * 0.3) * 0.5 + 0.5);
     vec3 chrome  = hsl2rgb(vec3(chrome_hue, 0.10, 0.95 + max(trebleZScore, 0.0) * 0.05));
     vec3 hair    = vec3(0.0); // BRACELET-SHADOW: hair is pure black
-    // SEED_EYE_BUCKET picks one of 4 eye hues — shadow palette: blood red, hot orange,
-    // electric blue, sickly green. Every choice is high-contrast against the black void.
+    // SEED_EYE_BUCKET picks one of 4 eye hues — colorway-specific palette.
     float eye_hue = SEED_EYE_BUCKET < 1.0 ? 0.00      // blood red
                   : SEED_EYE_BUCKET < 2.0 ? 0.08      // hot orange
                   : SEED_EYE_BUCKET < 3.0 ? 0.55      // electric blue
                   :                          0.30;    // sickly green
-    vec3 hot     = hsl2rgb(vec3(eye_hue, 1.0, 0.55));
+    vec3 hot     = hsl2rgb(vec3(eye_hue, 1.0, 0.6));
 
     // Coat fill — audio-reactive color. Base is deep blue, but:
     // - Lightness pulses brighter on bass hits
@@ -605,8 +597,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // BRACELET-SHADOW: coat is BLACK. Hue irrelevant; lightness floored ~0.
     float fur_hue_hi = 0.62;
     float fur_hue_lo = 0.62;
-    // SEED_COAT_LIGHT (0.005..0.04) — shadow lightness varies near zero. Some bracelets are
-    // pitch-black voids, others are charcoal-grey-near-black, but never bright.
+    // SEED_COAT_LIGHT (0.005..0.04) — pitch-black to charcoal-near-black, never bright.
     float fur_l_hi = SEED_COAT_LIGHT + bass_pulse * 0.03;
     float fur_l_lo = max(SEED_COAT_LIGHT * 0.5, 0.0) + bass_pulse * 0.015;
     vec3 fur_hi = hsl2rgb(vec3(fur_hue_hi, clamp(0.95 + THEME_SHIFT * 0.05, 0.0, 1.0), clamp(fur_l_hi, 0.0, 0.95)));
@@ -665,7 +656,27 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Coat sits OVER the body but UNDER the hair (so curls still fall)
     col = mix(col, fur_col, coat * (1.0 - curls));
     col = mix(col, hair, curls);
-    // BRACELET-SHADOW: WARM HEARTH disabled — amber glow would warm the cool-shadow look.
+    // VJ WARM HEARTH — implements journal hypothesis (iter 39 on -6, iter 51 on -8)
+    // Fires on mid-dominant warm-dark-instrumental corner — the music's *identity*
+    // for tracks like Late Night Radio's "Odds & Ends" where mids are the character,
+    // not a transient signal. Slow amber glow radiating outward from silhouette.
+    // Smooth math, no hash, no prev-frame read.
+    {
+        float warm_gate = smoothstep(0.45, 0.75, midsNormalized)
+                        * smoothstep(0.50, 0.25, spectralCentroidNormalized)
+                        * smoothstep(0.65, 0.25, energyNormalized);
+        if (warm_gate > 0.02) {
+            // d = signed distance to body silhouette. Negative inside, positive outside.
+            // We want a soft glow extending OUTWARD from the silhouette edge.
+            float hearth = exp(-max(d, 0.0) * 8.0);
+            // Slow breathing — independent low-frequency oscillation so it feels alive
+            float breath = 0.85 + 0.15 * sin(time * 0.4);
+            // Amber hue — slight pitchClass wander keeps it musical
+            float hearth_hue = fract(0.08 + pitchClassNormalized * 0.04);
+            vec3 hearth_col = hsl2rgb(vec3(hearth_hue, 0.85, 0.45));
+            col += hearth_col * hearth * warm_gate * breath * 0.55;
+        }
+    }
     // VJ SIGIL SWIRL — radial iridescent swirl on the coat surface (iter 16, track: Wurk)
     // Only visible on the coat. Smooth math (no hash). knob_14 gates intensity.
     if (knob_14 > 0.01) {
@@ -699,8 +710,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             col += vec3(1.0, 0.3, 0.1) * ring * bass_hit * ring_fade * 0.7;
         }
     }
-    // BRACELET-SHADOW: HEART PULSE disabled — would paint magenta on the void coat.
-    // Bass response routes through rim brightening instead (chrome already responds via bassZScore in chrome lightness).
+    // BRACELET: HEART PULSE disabled — magenta would clash with the colorway.
     // VJ DRIP — liquid droplet descends from chest on bass hits (iter 13, track: DRIP)
     // knob_15 gates drip intensity. Smooth SDF = no grain, no feedback issues.
     if (knob_15 > 0.01) {
