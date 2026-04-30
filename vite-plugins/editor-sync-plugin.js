@@ -93,6 +93,33 @@ export function editorSyncPlugin() {
         })
       })
 
+      // Capture canvas — accepts {filename, b64} where b64 is a PNG data string,
+      // writes it to /tmp/<filename>.png so Claude can process with imagemagick.
+      server.middlewares.use(async (req, res, next) => {
+        if (req.method !== 'POST' || req.url !== '/__capture') return next()
+
+        let body = ''
+        req.on('data', (chunk) => { body += chunk })
+        req.on('end', async () => {
+          try {
+            const { filename, b64 } = JSON.parse(body)
+            if (!filename || !b64) {
+              res.writeHead(400, { 'Content-Type': 'application/json' })
+              return res.end(JSON.stringify({ error: 'Missing filename or b64' }))
+            }
+            const safe = filename.replace(/[^a-zA-Z0-9_-]/g, '_')
+            const out = `/tmp/${safe}.png`
+            await writeFile(out, Buffer.from(b64, 'base64'))
+            console.log(`[capture] wrote ${out} (${b64.length} b64 chars)`)
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ ok: true, path: out }))
+          } catch (e) {
+            res.writeHead(500, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ error: e.message }))
+          }
+        })
+      })
+
       // Undo last snapshot — deletes the most recent .json from the snapshot dir
       server.middlewares.use(async (req, res, next) => {
         if (req.method !== 'DELETE' || req.url !== '/__snapshot-preset') return next()

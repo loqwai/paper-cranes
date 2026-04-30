@@ -652,7 +652,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 col = bg;
     // BRACELET-SHADOW: skin/body is BLACK — pure void inside the silhouette.
     vec3 skin = vec3(0.0);
-    col = mix(col, skin, body);
+    // BRACELET-SHADOW: skin painted only where hair isn't (eliminates inner-hair band).
+    col = mix(col, skin, body * (1.0 - curls));
     // Coat sits OVER the body but UNDER the hair (so curls still fall)
     col = mix(col, fur_col, coat * (1.0 - curls));
     col = mix(col, hair, curls);
@@ -773,30 +774,19 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 fb_uv = fragCoord / res;
     fb_uv.x -= P.hip * 0.01;
     fb_uv.y -= 0.002 + pump * 0.003;
-    vec3 prev = getLastFrameColor(fb_uv).rgb * 0.88;
+    vec3 prev = getLastFrameColor(fb_uv).rgb * 0.75;
     float silhouette = max(body, coat);
-    // knob_9: feedback/trails (0=crisp, 1=heavy smear)
-    float feedback_amt = mix(mix(0.05, 0.65, knob_9), mix(0.03, 0.25, knob_9), silhouette);
-    // VJ GHOST ECHO — bass spikes briefly raise feedback for a coat afterimage
-    feedback_amt = mix(feedback_amt, 0.35, clamp(bassZScore - 0.4, 0.0, 1.0) * 0.5);
+    // BRACELET-SHADOW: knob_9 controls trails. 0=crisp, 1=heavy smear.
+    float feedback_amt = mix(mix(0.05, 0.55, knob_9), mix(0.03, 0.25, knob_9), silhouette);
+    // VJ GHOST ECHO — bass spikes briefly raise feedback (capped low at default).
+    feedback_amt = mix(feedback_amt, 0.20, clamp(bassZScore - 0.4, 0.0, 1.0) * 0.5);
     if (beat) feedback_amt *= 0.6;
     if (frame < 30) feedback_amt = 0.0;
-    col = mix(prev, col, feedback_amt);
+    col = mix(col, prev, feedback_amt);
     // VJ MERCURY FLOW — REMOVED iter 19 (user: "flannel-like diamond lattice, artifacting" — confirmed same as prior -6 journal flag)
 
 
-    // VJ TIME-ECHO — on energy surges, triple-expose previous frame around head
-    {
-        float echo = clamp(energyZScore - 0.5, 0.0, 1.0);
-        if (echo > 0.05) {
-            vec2 ec = P.head_c;
-            vec3 e1 = getLastFrameColor(fb_uv + vec2( 0.020,  0.006)).rgb;
-            vec3 e2 = getLastFrameColor(fb_uv + vec2(-0.024,  0.009)).rgb;
-            vec3 e3 = getLastFrameColor(fb_uv + vec2( 0.004, -0.018)).rgb;
-            vec3 echoed = (e1 * vec3(1.2, 0.7, 0.7) + e2 * vec3(0.7, 1.1, 0.9) + e3 * vec3(0.8, 0.9, 1.2)) * 0.34;
-            col = mix(col, col + echoed * 0.5, echo * 0.9);
-        }
-    }
+    // BRACELET-SHADOW: VJ TIME-ECHO disabled — was the source of motion blur on energy surges.
     // VJ BLACK HOLE — silhouette becomes a gravitational lens. Iter 25: gated by drop_hit so
     // it doesn't darken the figure during calm passages (prior lock-in hazard noted in journals).
     {

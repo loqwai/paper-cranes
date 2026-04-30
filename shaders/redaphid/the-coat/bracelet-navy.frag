@@ -40,7 +40,9 @@ uniform float pitch_change; // from the-coat controller
 #define BRACELET_SEED (knob_16)
 #define SEED_HASH(n) fract(sin(BRACELET_SEED * 12.9898 + (n) * 78.233) * 43758.5453)
 #define SEED_EYE_BUCKET   floor(SEED_HASH(1.0) * 4.0)
-#define SEED_COAT_LIGHT   mix(0.08, 0.22, SEED_HASH(2.0))
+// Coat lightness — navy must read as blue, not as abyss. Range gives meaningful
+// "deep storm vs electric cobalt" spread that's visible from across the room.
+#define SEED_COAT_LIGHT   mix(0.22, 0.42, SEED_HASH(2.0))
 
 
 #define DEBUG_OUTLINES 0
@@ -533,7 +535,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float d = min(d_body, d_curls);
 
     float body  = smoothstep(0.005, -0.005, d);
-    float curls = smoothstep(0.005, -0.005, d_curls);
+    // BRACELET-NAVY: tightened smoothstep so hair reaches full opacity faster on the
+    // inner edge — eliminates the lighter-brown band where partial-curls blends with
+    // the head/face beneath.
+    float curls = smoothstep(0.001, -0.001, d_curls);
     float coat  = smoothstep(0.006, -0.006, d_coat_fluff);
 
     // Rim light — body
@@ -600,11 +605,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // ---- COLOR ----
     float hue = mix(HUE_BASE, HUE_DROP, IS_DROP);
-    vec3 leather = hsl2rgb(vec3(hue, 0.8, mix(0.06, 0.14, spectralCentroidNormalized)));
+    // BRACELET-NAVY: body (leather) lifted from 0.06..0.14 → 0.10..0.20 so the
+    // v-neck visible under the chin reads as navy not abyss.
+    vec3 leather = hsl2rgb(vec3(hue, 0.8, mix(0.10, 0.20, spectralCentroidNormalized)));
     // BRACELET-NAVY: chrome locked to icy-white-blue rim. Slow oscillation, no rainbow prism.
     float chrome_hue = mix(0.58, 0.62, sin(time * 0.5) * 0.5 + 0.5);
     vec3 chrome  = hsl2rgb(vec3(chrome_hue, 0.35, 0.85 + max(trebleZScore, 0.0) * 0.10));
-    vec3 hair    = hsl2rgb(vec3(0.06, 0.7, 0.12));
+    // BRACELET-NAVY: hair near-black to match the navy bead's solid dark hair.
+    vec3 hair    = hsl2rgb(vec3(0.62, 0.4, 0.04));
     // SEED_EYE_BUCKET picks one of 4 eye hues — colorway-specific palette.
     float eye_hue = SEED_EYE_BUCKET < 1.0 ? 0.08      // orange (default)
                   : SEED_EYE_BUCKET < 2.0 ? 0.14      // amber-yellow
@@ -677,7 +685,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 col = bg;
     // BRACELET-NAVY: skin/body is also navy so the v-neck reads navy under the chin.
     vec3 skin = hsl2rgb(vec3(0.62, 0.65, 0.07));
-    col = mix(col, skin, body);
+    // Skin painted only OUTSIDE the hair area — so when hair blends in below at partial
+    // opacity, the underlying color is still bg (dark) rather than skin. No more lighter
+    // brown band at the hair/face overlap.
+    col = mix(col, skin, body * (1.0 - curls));
     // Coat sits OVER the body but UNDER the hair (so curls still fall)
     col = mix(col, fur_col, coat * (1.0 - curls));
     col = mix(col, hair, curls);
@@ -722,7 +733,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float mids_gain = 0.4 + midsNormalized * 0.8;
         col += ribbon_col * bands * coat * (1.0 - curls) * mids_gain * knob_14 * 1.2;
     }
-    col += rim * chrome * 1.3 * (1.0 - coat);
+    // BRACELET-NAVY: rim masked by hair so the head outline doesn't get a bright halo.
+    col += rim * chrome * 1.3 * (1.0 - coat) * (1.0 - curls);
     // VJ SUB RING — expanding cone ring on bass spikes. Iter 25: gated by drop_hit too so
     // it only fires on real drops, not every ambient bass bump (was drowning the figure).
     {
@@ -790,8 +802,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Button seam glow — chrome line down the center
     col += seam_glow * coat * chrome * 0.25 * (1.0 - curls);
     col += eyes * hot * 2.2;
-    col = mix(col, col + hot * 0.6, eye_wash);
-    col += eye_wash * hot * 0.4;
+    // BRACELET-NAVY: aggressive hair_mask — once curls > 0.5, hair fully occludes.
+    // This stops the lighter-brown band on the inner hair edge that came from
+    // partial eye-lighting bleeding into the curls transition zone.
+    float hair_mask = 1.0 - smoothstep(0.0, 0.5, curls);
+    float face_mask = body * hair_mask;
+    col = mix(col, col + hot * 0.6, eye_wash * face_mask);
+    col += eye_wash * hot * 0.4 * face_mask;
     // EYE TUNNELS composite — bright rings in hot palette, sit on top of base eye glow.
     // EYE TUNNELS color: hue cycles with depth (log-radius), so each ring band is a different color — Rezz-style harsh contrast palette instead of flat warm.
     if (tunnel > 0.001) {
@@ -802,6 +819,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         col += tunnel * tunnel_col * 1.8 * tunnel_loudness;
     }
     vec3 ray_col = mix(hot, vec3(0.4, 0.85, 1.0), smoothstep(0.45, 0.85, spectralCentroidNormalized));
+    // BRACELET-NAVY: godrays emit OVER everything (face + hair). They are the dominant
+    // light source on drops — they don't get occluded by the figure.
     col += god_rays * ray_col * GODRAY_INTENSITY;
 
     // ---- INFINITY MIRROR removed (spinning-tile repetition clashed with spacy ambient bg) ----
@@ -810,30 +829,23 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 fb_uv = fragCoord / res;
     fb_uv.x -= P.hip * 0.01;
     fb_uv.y -= 0.002 + pump * 0.003;
-    vec3 prev = getLastFrameColor(fb_uv).rgb * 0.88;
+    vec3 prev = getLastFrameColor(fb_uv).rgb * 0.75;
     float silhouette = max(body, coat);
-    // knob_9: feedback/trails (0=crisp, 1=heavy smear)
-    float feedback_amt = mix(mix(0.05, 0.65, knob_9), mix(0.03, 0.25, knob_9), silhouette);
-    // VJ GHOST ECHO — bass spikes briefly raise feedback for a coat afterimage
-    feedback_amt = mix(feedback_amt, 0.35, clamp(bassZScore - 0.4, 0.0, 1.0) * 0.5);
+    // BRACELET-NAVY: knob_9 controls trail intensity. 0 = crisp (no smear on motion),
+    // 1 = heavy smear. feedback_amt is the WEIGHT OF THE PREVIOUS FRAME, so default is small.
+    float feedback_amt = mix(mix(0.05, 0.55, knob_9), mix(0.03, 0.25, knob_9), silhouette);
+    // VJ GHOST ECHO — bass spikes briefly raise feedback for a coat afterimage (capped low at default)
+    feedback_amt = mix(feedback_amt, 0.20, clamp(bassZScore - 0.4, 0.0, 1.0) * 0.5);
     if (beat) feedback_amt *= 0.6;
     if (frame < 30) feedback_amt = 0.0;
-    col = mix(prev, col, feedback_amt);
+    // mix(prev, col, feedback_amt) → feedback_amt is weight of NEW color. Inverted so that
+    // small feedback_amt now means CRISP (most weight on new). Camera drift no longer smears.
+    col = mix(col, prev, feedback_amt);
     // VJ MERCURY FLOW — REMOVED iter 19 (user: "flannel-like diamond lattice, artifacting" — confirmed same as prior -6 journal flag)
 
 
-    // VJ TIME-ECHO — on energy surges, triple-expose previous frame around head
-    {
-        float echo = clamp(energyZScore - 0.5, 0.0, 1.0);
-        if (echo > 0.05) {
-            vec2 ec = P.head_c;
-            vec3 e1 = getLastFrameColor(fb_uv + vec2( 0.020,  0.006)).rgb;
-            vec3 e2 = getLastFrameColor(fb_uv + vec2(-0.024,  0.009)).rgb;
-            vec3 e3 = getLastFrameColor(fb_uv + vec2( 0.004, -0.018)).rgb;
-            vec3 echoed = (e1 * vec3(1.2, 0.7, 0.7) + e2 * vec3(0.7, 1.1, 0.9) + e3 * vec3(0.8, 0.9, 1.2)) * 0.34;
-            col = mix(col, col + echoed * 0.5, echo * 0.9);
-        }
-    }
+    // BRACELET-NAVY: VJ TIME-ECHO disabled — triple-exposure of previous frames was
+    // the actual source of motion blur on energy surges (independent of feedback_amt).
     // VJ BLACK HOLE — silhouette becomes a gravitational lens. Iter 25: gated by drop_hit so
     // it doesn't darken the figure during calm passages (prior lock-in hazard noted in journals).
     {
