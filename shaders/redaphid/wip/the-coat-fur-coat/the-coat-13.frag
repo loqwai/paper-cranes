@@ -88,7 +88,7 @@ uniform float drop_glow; // from the-coat controller — sustained drop with dec
 // Warp speed driven by centroid — brighter sounds = faster swirl
 #define WARP_SPEED (spectralCentroidNormalized * 0.6 + spectralFluxNormalized * 0.2)
 // Rim boost: flux + bass make the chrome edge blaze
-#define RIM_BOOST (2.5 + spectralFluxNormalized * 2.0 + clamp(bassZScore, 0.0, 1.0) * 1.0)
+#define RIM_BOOST (2.5 + spectralFluxNormalized * 2.0 + clamp(bassZScore, 0.0, 1.0) * 1.0 + smoothstep(0.4, 0.9, energyNormalized) * 1.5 + max(trebleZScore, 0.0) * 0.8)
 
 // --- DERIVED ---
 #define DROP_TRIGGER clamp(max(energyZScore, BUILD), 0.0, 1.0)
@@ -366,7 +366,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // smoothstep(0.2, 0.9) maps to 0-1, then cube kills anything below ~0.5
     float zoom_intensity = smoothstep(0.2, 0.9, intensity);
     zoom_intensity = zoom_intensity * zoom_intensity * zoom_intensity;
-    float zoomAmount = BASE_ZOOM + zoom_intensity * INTENSITY_ZOOM + drop_hit * DROP_ZOOM;
+    float zoomAmount = BASE_ZOOM + zoom_intensity * INTENSITY_ZOOM + drop_hit * DROP_ZOOM * (knob_5 * 2.0);
     vec2 zoomCenter = P.head_c;
     // VJ CAMERA DRIFT — slow lateral sway + flux nudge so the frame never sits locked
     vec2 cam_drift = vec2(
@@ -508,7 +508,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 re = P.head_c + vec2(re_local.x * ct + re_local.y * st, -re_local.x * st + re_local.y * ct);
 
     float eyes = exp(-dot(uv - le, uv - le) * 2500.0) + exp(-dot(uv - re, uv - re) * 2500.0);
-    eyes *= (0.25 + drop_hit * 1.8 + SNAP * 0.6);
+    eyes *= (0.25 + drop_hit * 1.8 + SNAP * 0.6 + smoothstep(0.5, 0.85, energyNormalized) * smoothstep(0.4, 0.8, spectralCentroidNormalized) * 0.9);
 
     vec2 d_le2 = uv - le;
     vec2 d_re2 = uv - re;
@@ -646,9 +646,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         col += swirl_col * swirl * coat * (1.0 - curls) * mids_gain * knob_14 * 1.2;
     }
     col += rim * chrome * 1.3 * (1.0 - coat);
-    // VJ SUB RING — expanding cone ring on bass spikes (gated by bassZScore)
+    // VJ SUB RING — expanding cone ring on bass spikes. Iter 25: gated by drop_hit too so
+    // it only fires on real drops, not every ambient bass bump (was drowning the figure).
     {
-        float bass_hit = clamp(bassZScore, 0.0, 2.5);
+        float bass_hit = clamp(bassZScore, 0.0, 2.5) * drop_hit;
         if (bass_hit > 0.3) {
             vec2 sub_c = vec2(0.0, -0.15);
             float sd = length(uv - sub_c);
@@ -756,9 +757,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             col = mix(col, col + echoed * 0.5, echo * 0.9);
         }
     }
-    // VJ BLACK HOLE — silhouette becomes a gravitational lens. Active on bassZ spikes.
+    // VJ BLACK HOLE — silhouette becomes a gravitational lens. Iter 25: gated by drop_hit so
+    // it doesn't darken the figure during calm passages (prior lock-in hazard noted in journals).
     {
-        float bh_strength = clamp(bassZScore - 0.3, 0.0, 1.5);
+        float bh_strength = clamp(bassZScore - 0.3, 0.0, 1.5) * drop_hit;
         if (bh_strength > 0.05 && silhouette > 0.0) {
             vec2 bh_center = P.head_c + vec2(0.0, -0.05);
             vec2 to_center = bh_center - uv;
@@ -773,59 +775,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     }
 
 
-    // VJ RGB SPLIT — chromatic aberration on high entropy/roughness moments
-    {
-        float aber = clamp(spectralRoughnessNormalized * spectralEntropyNormalized, 0.0, 1.0) * 0.012;
-        if (aber > 0.0005) {
-            vec2 dir = normalize(uv + vec2(0.01, 0.0));
-            float r = prev.r / 0.88;  // reuse prev (prev was *= 0.88, undo for RGB split)
-            float b = getLastFrameColor(fb_uv - dir * aber * 2.0).b;
-            float g = col.g;
-            col = mix(col, vec3(mix(r, col.r, 0.4), g, mix(b, col.b, 0.4)), 0.55);
-        }
-    }
-
-    // VJ SCAN LINE — hi-hat driven horizontal band sweeps down
-    {
-        float hat = clamp(trebleZScore, 0.0, 2.0);
-        if (hat > 0.15) {
-            float scan_y = uv.y - fract(time * 0.35) * 2.0 + 1.0;
-            float scan = exp(-scan_y * scan_y * 800.0);
-            col += vec3(0.3, 0.8, 1.0) * scan * hat * 0.4;
-        }
-    }
-    // VJ LIGHTNING — jagged electric branches on big treble/flux spikes
-    {
-        float strike = max(clamp(trebleZScore - 0.5, 0.0, 1.5), clamp(spectralFluxZScore - 0.4, 0.0, 1.5));
-        if (strike > 0.05) {
-            // 3 offset branches, each a warped vertical line
-            float bolt = 0.0;
-            for (int bi = 0; bi < 3; bi++) {
-                float bf = float(bi);
-                float bolt_x = (hash(vec2(bf + floor(time * 4.0), 17.3)) - 0.5) * 1.6;
-                float warp = sin(uv.y * 6.0 + bf * 3.0 + time * 2.0) * 0.08
-                           + sin(uv.y * 18.0 + bf * 5.0) * 0.02;
-                float dx = uv.x - bolt_x - warp;
-                float b = exp(-dx * dx * 1200.0);
-                bolt = max(bolt, b);
-            }
-            float flicker = step(0.4, hash(vec2(floor(time * 20.0), 7.1)));
-            col += vec3(0.8, 0.95, 1.2) * bolt * strike * flicker * 1.8;
-        }
-    }
-
-    // VJ COSMIC SHOCKWAVE — one-shot expanding ring on true beat flux spikes
-    {
-        float shock_trigger = float(beat) * clamp(spectralFluxZScore, 0.0, 1.0);
-        // lock the start time at the beat moment using a hash keyed to coarse time
-        float shock_phase = fract(time * 0.7);
-        float shock_r = shock_phase * 1.4;
-        float shock_d = length(uv) - shock_r;
-        float shock_ring = exp(-shock_d * shock_d * 300.0);
-        float shock_fade = (1.0 - shock_phase);
-        shock_fade *= shock_fade;
-        col += vec3(1.0, 1.0, 1.2) * shock_ring * shock_fade * shock_trigger * 1.4;
-    }
+    // VJ RGB SPLIT — REMOVED iter 25 (user veto from -11 carried over)
+    // VJ SCAN LINE — REMOVED iter 25 (user veto from -11 carried over)
+    // VJ LIGHTNING — REMOVED iter 25 (user veto from -11 carried over; drowns out figure)
+    // VJ COSMIC SHOCKWAVE — REMOVED iter 25 (user veto from -11 carried over; drowns out figure)
     // VJ WATER POOL — bottom-third reflective pool ripples in dark/deep phases
     {
         float pool_on = smoothstep(0.25, 0.05, spectralCentroidNormalized);
@@ -860,9 +813,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             col += beam_col * beam * dist_fade * sil_mask * beams_on * 0.45;
         }
     }
-    // VJ GROUND QUAKE — concentric amber rings from floor, bass-driven, multiple wavefronts
+    // VJ GROUND QUAKE — concentric amber rings from floor. Iter 25: gated by drop_hit so
+    // it stops competing with the figure during ambient bass passages.
     {
-        float quake_on = clamp(bassNormalized - 0.3, 0.0, 1.0);
+        float quake_on = clamp(bassNormalized - 0.3, 0.0, 1.0) * drop_hit;
         quake_on *= smoothstep(0.5, 0.15, spectralCentroidNormalized);
         if (quake_on > 0.02) {
             vec2 feet_c = vec2(0.0, -0.6);
@@ -883,27 +837,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             col += quake_col * wavefronts * quake_on * 0.55;
         }
     }
-    // VJ CHAOS HALO — concentric pulsing rings radiating from silhouette.
-    // Iter 22: knob_2 now primary gate (user: "the knob I've been twirling should control
-    // the amount and visibility of those radiating auras" — knob_2 had by far the largest
-    // delta since last snapshot, 0.52 pts). Entropy acts as a secondary modulator: the rings
-    // get denser on chaotic passages but visibility is user-controlled.
-    if (knob_2 > 0.01) {
-        float entropy_mod = 0.4 + smoothstep(0.3, 0.9, spectralEntropyNormalized) * 0.6;
-        float halo_gate = knob_2 * entropy_mod;
-        float ring_phase = fract(time * 0.35);
-        float halo = 0.0;
-        for (int i = 0; i < 3; i++) {
-            float ri = float(i);
-            float ring_r = ring_phase * 0.4 + ri * 0.18;
-            float ring_d = abs(d - ring_r);
-            halo += exp(-ring_d * ring_d * 600.0) * (1.0 - ri * 0.3);
-        }
-        float halo_mask = smoothstep(-0.005, 0.03, d) * (1.0 - smoothstep(0.5, 0.8, d));
-        vec3 halo_col = hsl2rgb(vec3(fract(0.1 + pitchClassNormalized * 1.0 + time * 0.02), 0.9, 0.55));
-        // knob_2 drives both amount (coefficient) and visibility (opacity curve).
-        col += halo_col * halo * halo_mask * halo_gate * 0.9;
-    }
+    // VJ CHAOS HALO — REMOVED iter 27 (user: "Remove that aura effect entirely")
+
     // VJ BEAT STROBE — full-frame warm bump on each beat, knob_13 gates intensity (iter 17)
     // Additive only (never darkens), uses a quick decay from beat-true so it feels like a hit.
     // Decays via BEAT_PHASE (already in scope — climbs from 0→1 over a beat period).
@@ -914,7 +849,36 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         vec3 pulse_col = vec3(1.0, 0.85, 0.65);
         col += pulse_col * beat_boost * knob_13 * 0.25;
     }
-    col *= 1.0 - smoothstep(0.7, 1.4, length(uv * vec2(1.0, 0.85)));
+    // VJ RADIAL BARS — finale laser curtain (iter 35). 128 thin rotating spears
+    // radiating from the silhouette outward, strictly masked to the background
+    // (silhouette < 0.02) so the jacket is NEVER touched. No prev-frame sampling,
+    // pure procedural math — zero gray-static risk. Energy-gated so calm passages
+    // stay clean. Pitch drives hue. knob_13 scales intensity alongside beat strobe.
+    if (knob_13 > 0.01 && silhouette < 0.02) {
+        vec2 rp = uv - vec2(P.hip * 0.7, -0.08);  // emanation center = chest
+        float ra = atan(rp.y, rp.x);
+        float rr = length(rp);
+        // 128 spears with slow rotation + treble-modulated angular twist
+        float bars_n = 128.0;
+        float twist = time * 0.08 + max(trebleZScore, 0.0) * 0.18;
+        float bar_phase = ra * bars_n / 6.2831853 + twist * bars_n;
+        float spear = 0.5 + 0.5 * cos(bar_phase * 6.2831853);
+        spear = pow(spear, 24.0);  // very thin spears
+        // Amplitude per spear varies with pitch + entropy for live chaos
+        float hash_amp = 0.5 + 0.5 * sin(floor(bar_phase) * 12.9898 + time * 0.3);
+        spear *= 0.35 + 0.65 * hash_amp;
+        // Radial falloff — travel outward and fade; treble pushes the bars longer
+        float reach = 0.6 + max(trebleZScore, 0.0) * 0.35;
+        float radial = smoothstep(0.05, 0.15, rr) * (1.0 - smoothstep(reach * 0.7, reach, rr));
+        // Energy gate keeps calm moments clean (finale-only)
+        float energy_gate = smoothstep(0.3, 0.75, energyNormalized);
+        float drive = energy_gate * (0.4 + max(trebleNormalized, 0.3) * 0.6);
+        // Pitch-tinted, saturated; cycles slowly with time so it doesn't sit static
+        float bar_hue = fract(0.7 + pitchClassNormalized * 0.45 + floor(bar_phase) * 0.004 + time * 0.03);
+        vec3 bar_col = hsl2rgb(vec3(bar_hue, 0.95, 0.62));
+        col += bar_col * spear * radial * drive * knob_13 * 1.6;
+    }
+    col *= 1.0 - smoothstep(0.7 + drop_hit * 0.3, 1.4 + drop_hit * 0.3, length(uv * vec2(1.0, 0.85)));
 
 #if DEBUG_OUTLINES
     col *= 0.25;

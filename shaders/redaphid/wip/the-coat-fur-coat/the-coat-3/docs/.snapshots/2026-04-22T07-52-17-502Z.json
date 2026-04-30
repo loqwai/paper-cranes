@@ -1,0 +1,128 @@
+{
+  "timestamp": "2026-04-22T07:52:17.502Z",
+  "shader": "redaphid/wip/the-coat-fur-coat/the-coat-3",
+  "name": null,
+  "knobs": {
+    "knob_1": 0,
+    "knob_1.min": 0,
+    "knob_1.max": 1,
+    "knob_2": 0.354,
+    "knob_2.min": 0,
+    "knob_2.max": 1,
+    "knob_3": 0.803,
+    "knob_3.min": 0,
+    "knob_3.max": 1,
+    "knob_4": 0.732,
+    "knob_4.min": 0,
+    "knob_4.max": 1,
+    "knob_5": 0.457,
+    "knob_5.min": 0,
+    "knob_5.max": 1,
+    "knob_6": 0,
+    "knob_6.min": 0,
+    "knob_6.max": 1,
+    "knob_8": 0,
+    "knob_8.min": 0,
+    "knob_8.max": 1,
+    "knob_7": 1,
+    "knob_7.min": 0,
+    "knob_7.max": 1,
+    "knob_9": 0,
+    "knob_9.min": 0,
+    "knob_9.max": 1,
+    "knob_10": 0,
+    "knob_10.min": 0,
+    "knob_10.max": 1,
+    "knob_11": 0,
+    "knob_11.min": 0,
+    "knob_11.max": 1
+  },
+  "audio": {
+    "bass": {
+      "normalized": 0.493,
+      "zScore": 0.376,
+      "slope": 0,
+      "rSquared": 0.098
+    },
+    "energy": {
+      "normalized": 0.3,
+      "zScore": -0.289,
+      "slope": 0.0001,
+      "rSquared": 0.123
+    },
+    "mids": {
+      "normalized": 0.485,
+      "zScore": 0.24,
+      "slope": -0.0001,
+      "rSquared": 0.083
+    },
+    "treble": {
+      "normalized": 0.621,
+      "zScore": -0.117,
+      "slope": 0.0001,
+      "rSquared": 0.191
+    },
+    "spectralCentroid": {
+      "normalized": 0.391,
+      "zScore": -0.441,
+      "slope": 0,
+      "rSquared": 0.007
+    },
+    "spectralFlux": {
+      "normalized": 0.11,
+      "zScore": -0.139,
+      "slope": 0,
+      "rSquared": 0
+    },
+    "spectralEntropy": {
+      "normalized": 0.395,
+      "zScore": -0.697,
+      "slope": 0,
+      "rSquared": 0.005
+    },
+    "spectralRoughness": {
+      "normalized": 0.374,
+      "zScore": -0.379,
+      "slope": 0,
+      "rSquared": 0.012
+    },
+    "spectralKurtosis": {
+      "normalized": 0.377,
+      "zScore": -0.141,
+      "slope": 0,
+      "rSquared": 0.026
+    },
+    "spectralSpread": {
+      "normalized": 0.401,
+      "zScore": -0.609,
+      "slope": 0,
+      "rSquared": 0.007
+    },
+    "spectralCrest": {
+      "normalized": 0.491,
+      "zScore": 0.424,
+      "slope": -0.0001,
+      "rSquared": 0.073
+    },
+    "spectralRolloff": {
+      "normalized": 0.407,
+      "zScore": -0.48,
+      "slope": 0,
+      "rSquared": 0.002
+    },
+    "spectralSkew": {
+      "normalized": 0.552,
+      "zScore": 0.341,
+      "slope": 0,
+      "rSquared": 0.064
+    },
+    "pitchClass": {
+      "normalized": 0.455,
+      "zScore": 0.001,
+      "slope": -0.0001,
+      "rSquared": 0.001
+    }
+  },
+  "musicTab": null,
+  "userNote": null
+}

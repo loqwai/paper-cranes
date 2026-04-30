@@ -46,6 +46,26 @@
     <canvas id="visualizer" width="2160" height="1920"></canvas>
     <script type="module" src="./index.js"></script>
     <script type="module" src="./jam.js"></script>
+    <script type="module">
+        // VJ validator: pre-save GLSL compile check. Used by the /vj skill so it
+        // never writes a broken shader to disk. Always installed on jam page so
+        // it survives reloads.
+        import { shaderWrapper } from './src/shader-transformers/shader-wrapper.js'
+        const canvas = document.createElement('canvas')
+        canvas.width = 4
+        canvas.height = 4
+        const gl = canvas.getContext('webgl2')
+        window.__vjValidate = (src) => {
+            const wrapped = shaderWrapper(src)
+            const sh = gl.createShader(gl.FRAGMENT_SHADER)
+            gl.shaderSource(sh, wrapped)
+            gl.compileShader(sh)
+            const ok = gl.getShaderParameter(sh, gl.COMPILE_STATUS)
+            const info = ok ? null : gl.getShaderInfoLog(sh)
+            gl.deleteShader(sh)
+            return { ok, info }
+        }
+    </script>
 </body>
 
 </html>
