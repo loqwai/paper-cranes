@@ -1,9 +1,11 @@
 // @fullscreen: true
 // @mobile: true
-// the-coat-23: forked from the-coat-22 mid-VJ-run during *Comments (feat. KE) – Claude VonStroke*
-// "Inky-dramatic chaos drop" preset: knob_10 (ground-quake) MAX, knob_12 (INKY BG) MAX,
-// knob_7=0.87 fur, knob_3=0.54 palette mid-rotation, knob_8=0.49 DOOM RED moderate,
-// knob_4=0.39 eye wash on, knob_15=0.39 drip mild, knob_5=0.33 drop-zoom mild.
+// the-coat-24: forked from the-coat-23 (2026-04-30, *Greedy* — bradeazy & Mike Renza).
+// Captures the "every-knob-mapped" preset after iter-2..4 wired knob_4/7/16/17 and
+// widened knob_4 fluff range. Fork moment: user exploring extremes on a 17-knob MIDI device.
+// Baked: knob_1=0.13 zoom-out, knob_2=0.66 nebula thick, knob_3=0.11 warm palette,
+// knob_4=0.19 tight fluff, knob_7=0.14 ghosted rim, knob_9=0 crisp, knob_12=0.87 INKY BG heavy,
+// knob_14=0.54 pinwheel (user-set), knob_16=0.39 godrays mid, knob_17=0 eyes embered.
 // Use with controller=the-coat for drop_glow + pitch_change.
 uniform float drop_glow; // from the-coat controller — sustained drop with decay
 uniform float pitch_change; // from the-coat controller — transient pulse on chord/pitch jumps
