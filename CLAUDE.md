@@ -264,7 +264,7 @@ Controllers are JavaScript modules (`controllers/*.js`) that run once per frame 
 ### Available Knobs
 - `knob_1` through `knob_200` — all are available as float uniforms (0-1 range)
 - Set via URL query params (e.g., `?knob_1=0.5`), MIDI controllers, or the ParamsManager API
-- MIDI controllers auto-map CCs to knobs with per-device profiles persisted in localStorage. See [docs/midi-mapping.md](docs/midi-mapping.md)
+- MIDI controllers auto-map CCs to knobs with per-device profiles persisted in localStorage. Manage mappings visually at `/midi.html`. See [docs/midi-mapping.md](docs/midi-mapping.md)
 
 ### The #define Swap Pattern (Recommended)
 
