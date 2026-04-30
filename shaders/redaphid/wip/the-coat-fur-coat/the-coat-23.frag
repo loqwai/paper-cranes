@@ -471,6 +471,19 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     }
     float rays = pow(max(0.0, 1.0 - abs(uv.x) * 1.2), 4.0) * smoothstep(0.0, 1.0, uv.y);
     bg += rays * vec3(1.0, 0.7, 0.3) * IS_DROP * 0.6;
+    // VJ_HORIZON_SCAN_71: horizon scan-bar — thin bright sweep on BG only.
+    // Gated: high centroid (treble-bright) AND rising energyZ. NOT on coat — feedback-safe.
+    {
+        float vj_scan_gate = smoothstep(0.70, 0.92, spectralCentroidNormalized)
+                           * smoothstep(-0.1, 0.6, energyZScore);
+        if (vj_scan_gate > 0.02) {
+            float scan_y = mix(-0.25, 0.45, spectralCentroidNormalized);
+            scan_y += sin(time * 1.1) * 0.04;
+            float scan_band = exp(-pow((uv.y - scan_y) * 35.0, 2.0));
+            vec3 scan_col = vec3(0.65, 0.95, 1.15);
+            bg += scan_col * scan_band * vj_scan_gate * 0.55;
+        }
+    }
 
     // VJ DOOM RED — knob_8 tints the BG blood-red on bass. Track-name move tied to
     // Armageddon-Dr.Fresch corner: heavy bass + ultra-low centroid. Bass-pulsed.
@@ -758,10 +771,26 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Coat rim pulses with spectral flux — brighter on timbral changes
     float rim_boost = RIM_BOOST;
     col += coat_rim * chrome * rim_boost * (1.0 - curls);
+    // VJ_RIM_HISS_69: rim hiss on chaos+treble pockets (treble + entropy + roughness all high).
+    // Subtle, NOT a chromatic split — we just brighten the existing rim chrome with a fast jitter.
+    float vj_rim_hiss = smoothstep(0.55, 0.95, trebleNormalized)
+                      * smoothstep(0.55, 0.92, spectralEntropyNormalized)
+                      * smoothstep(0.45, 0.85, spectralRoughnessNormalized);
+    float vj_rim_jitter = 0.5 + 0.5 * sin(time * 41.0 + uv.y * 90.0 + uv.x * 17.0);
+    col += coat_rim * chrome * vj_rim_hiss * vj_rim_jitter * 1.4 * (1.0 - curls);
     // VJ CRYSTALLINE FACETS — REMOVED iter 19 (user: "terrible flashing flannel-like diamonds and colored squares on the jacket")
 
     // Button seam glow — chrome line down the center
     col += seam_glow * coat * chrome * 0.25 * (1.0 - curls);
+    // VJ_GLADIATOR_BRASS_70: arena-brass seam pulse for high-treble, low-bass vocal/rap pockets.
+    // Region: trebleN > 0.6, bassN < 0.25, mids in 0.15..0.55 — Gladiator (Dr. Fresch x Def3) territory.
+    {
+        float vj_brass_gate = smoothstep(0.55, 0.85, trebleNormalized)
+                            * smoothstep(0.30, 0.10, bassNormalized)
+                            * smoothstep(0.15, 0.30, midsNormalized) * smoothstep(0.65, 0.45, midsNormalized);
+        vec3 vj_brass = vec3(1.0, 0.72, 0.28); // gold/bronze
+        col += seam_glow * coat * vj_brass * vj_brass_gate * 0.7 * (1.0 - curls);
+    }
     col += eyes * hot * 2.2;
     col = mix(col, col + hot * 0.6, eye_wash);
     col += eye_wash * hot * 0.4;
