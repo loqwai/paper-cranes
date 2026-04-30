@@ -22,8 +22,8 @@
 //   knob_13: drop sustain decay (the-coat controller)
 //   knob_14: PINWHEEL — leave at 0 (HATED)
 //   knob_15: drip + drip pool intensity
-//   knob_16: BRACELET_SEED — re-rolls subtle distinguishing details (eyes, rim tilt, camera, fur phase)
-//            so each wearer's bracelet looks slightly unique while staying in the navy family.
+//   knob_16: BRACELET_SEED — picks eye color (4 buckets) + coat lightness anchor (deep ↔ bright)
+//            so each wearer's skyblue bracelet feels uniquely theirs.
 uniform float drop_glow;    // from the-coat controller
 uniform float pitch_change; // from the-coat controller
 #define PI 3.14159265
@@ -35,17 +35,17 @@ uniform float pitch_change; // from the-coat controller
 #define PALETTE_WARMTH mix(-0.15, 0.15, knob_3)
 
 // ============================================================================
-// BRACELET SEED — knob_16 drives subtle per-wearer variation
+// BRACELET SEED — knob_16 drives readable per-wearer variation visible at a glance.
 // ============================================================================
 #define BRACELET_SEED (knob_16)
-// hash to several decorrelated 0..1 values
 #define SEED_HASH(n) fract(sin(BRACELET_SEED * 12.9898 + (n) * 78.233) * 43758.5453)
-// Eye separation, rim hue tilt within navy family, camera lateral nudge, fur phase, godray phase
-#define SEED_EYE_SEP    (SEED_HASH(1.0) * 0.04 - 0.02)        // ±2% eye separation
-#define SEED_RIM_TILT   (SEED_HASH(2.0) * 0.08 - 0.04)        // ±0.04 hue within blue family
-#define SEED_CAM_NUDGE  (SEED_HASH(3.0) * 0.04 - 0.02)        // ±2% horizontal cam offset
-#define SEED_FUR_PHASE  (SEED_HASH(4.0) * 6.2831)             // 0..2π fur warp phase
-#define SEED_RAY_PHASE  (SEED_HASH(5.0) * 6.2831)             // 0..2π godray rotation
+
+// Eye hue: 4 buckets — colorway-specific palette below.
+#define SEED_EYE_BUCKET   floor(SEED_HASH(1.0) * 4.0)
+// Coat lightness anchor — sky-blue spans light values (washed-pastel to bright cyan-blue).
+#define SEED_COAT_LIGHT   mix(0.45, 0.70, SEED_HASH(2.0))
+#define SEED_BG_BUCKET    floor(SEED_HASH(3.0) * 4.0)
+#define SEED_RIM_BUCKET   floor(SEED_HASH(4.0) * 3.0)
 
 
 #define DEBUG_OUTLINES 0
@@ -418,7 +418,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // VJ CAMERA DRIFT — slow lateral sway + flux nudge so the frame never sits locked
     // BRACELET_SEED nudges horizontal cam by ±2% so each wearer sees a slightly different angle
     vec2 cam_drift = vec2(
-        sin(time * 0.12) * 0.015 + spectralFluxZScore * 0.012 + SEED_CAM_NUDGE,
+        sin(time * 0.12) * 0.015 + spectralFluxZScore * 0.012,
         sin(time * 0.09 + 1.3) * 0.010
     );
     zoomCenter += cam_drift;
@@ -551,9 +551,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Eyes
     float ct = cos(P.tilt), st = sin(P.tilt);
-    // BRACELET_SEED widens/narrows eye separation by ±2% — each wearer's "face" reads slightly different
-    vec2 le_local = vec2(-0.045 - SEED_EYE_SEP, 0.02);
-    vec2 re_local = vec2( 0.045 + SEED_EYE_SEP, 0.02);
+    vec2 le_local = vec2(-0.045, 0.02);
+    vec2 re_local = vec2( 0.045, 0.02);
     vec2 le = P.head_c + vec2(le_local.x * ct + le_local.y * st, -le_local.x * st + le_local.y * ct);
     vec2 re = P.head_c + vec2(re_local.x * ct + re_local.y * st, -re_local.x * st + re_local.y * ct);
 
@@ -566,9 +565,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float r_re = length(d_re2);
     float a_le = atan(d_le2.y, d_le2.x);
     float a_re = atan(d_re2.y, d_re2.x);
-    // BRACELET_SEED rotates godray fan angle so each wearer's beams sit at a unique offset
-    float fan_le = pow(abs(cos(a_le * 6.0 + time * 0.8 + SEED_RAY_PHASE)), 14.0);
-    float fan_re = pow(abs(cos(a_re * 6.0 - time * 0.7 + 1.3 + SEED_RAY_PHASE)), 14.0);
+    float fan_le = pow(abs(cos(a_le * 6.0 + time * 0.8)), 14.0);
+    float fan_re = pow(abs(cos(a_re * 6.0 - time * 0.7 + 1.3)), 14.0);
     float fall_le = exp(-r_le * 1.2);
     float fall_re = exp(-r_re * 1.2);
     float up_le = smoothstep(-1.0, 0.3, d_le2.y / max(r_le, 0.001));
@@ -584,10 +582,16 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float hue = mix(HUE_BASE, HUE_DROP, IS_DROP);
     vec3 leather = hsl2rgb(vec3(hue, 0.8, mix(0.06, 0.14, spectralCentroidNormalized)));
     // BRACELET-SKYBLUE: chrome is soft white with cyan tint — gentler rim than navy's icy edge.
-    float chrome_hue = mix(0.52, 0.58, sin(time * 0.5) * 0.5 + 0.5) + SEED_RIM_TILT;
+    float chrome_hue = mix(0.52, 0.58, sin(time * 0.5) * 0.5 + 0.5);
     vec3 chrome  = hsl2rgb(vec3(chrome_hue, 0.20, 0.90 + max(trebleZScore, 0.0) * 0.08));
     vec3 hair    = hsl2rgb(vec3(0.06, 0.7, 0.12));
-    vec3 hot     = hsl2rgb(vec3(0.08, 1.0, 0.6));
+    // SEED_EYE_BUCKET picks one of 4 eye hues — skyblue palette: cyan, white-blue, rose-gold, pale yellow.
+    // All are light/airy in keeping with the sky-blue colorway.
+    float eye_hue = SEED_EYE_BUCKET < 1.0 ? 0.50      // cyan
+                  : SEED_EYE_BUCKET < 2.0 ? 0.58      // white-blue
+                  : SEED_EYE_BUCKET < 3.0 ? 0.95      // rose-gold
+                  :                          0.13;    // pale yellow
+    vec3 hot     = hsl2rgb(vec3(eye_hue, 1.0, 0.65));
 
     // Coat fill — audio-reactive color. Base is deep blue, but:
     // - Lightness pulses brighter on bass hits
@@ -599,9 +603,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // BRACELET-SKYBLUE: lock coat to light sky-blue. Drop pulls toward slightly more cyan.
     float fur_hue_hi = mix(0.55, 0.52, drop_color * 0.4) + (spectralCentroidNormalized - 0.5) * 0.02;
     float fur_hue_lo = mix(0.55, 0.52, drop_color * 0.4) + (spectralCentroidNormalized - 0.5) * 0.02;
-    // Lightness raised HIGH for sky-blue brightness
-    float fur_l_hi = 0.65 + bass_pulse * 0.10;
-    float fur_l_lo = 0.55 + bass_pulse * 0.08;
+    // SEED_COAT_LIGHT (0.45..0.70) anchors lightness — washed pastel ↔ bright cyan-blue.
+    float fur_l_hi = SEED_COAT_LIGHT + 0.08 + bass_pulse * 0.08;
+    float fur_l_lo = SEED_COAT_LIGHT + bass_pulse * 0.06;
     vec3 fur_hi = hsl2rgb(vec3(fur_hue_hi, clamp(0.95 + THEME_SHIFT * 0.05, 0.0, 1.0), clamp(fur_l_hi, 0.0, 0.95)));
     vec3 fur_lo = hsl2rgb(vec3(fur_hue_lo, 0.9, clamp(fur_l_lo, 0.0, 0.85)));
     vec3 fur_col = mix(fur_hi, fur_lo, coat_grad);
@@ -623,7 +627,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         // Domain warp: swirl the coords with low-freq noise so the fibers
         // look like curling fur strands, not a static grid
         vec2 fp = uv * 18.0;
-        float warp_t = time * 0.3 + WARP_SPEED + SEED_FUR_PHASE;
+        float warp_t = time * 0.3 + WARP_SPEED;
         vec2 warp = vec2(
             fbm(fp + vec2(warp_t, 0.0)),
             fbm(fp + vec2(0.0, warp_t + 3.7))
@@ -713,11 +717,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             col += vec3(1.0, 0.3, 0.1) * ring * bass_hit * ring_fade * 0.7;
         }
     }
-    // VJ HEART PULSE — red glow from chest center, pulses on bass
-    {
+    // BRACELET-SKYBLUE: HEART PULSE disabled — magenta would muddy the sky-blue colorway.
+    if (false) {
         vec2 heart_c = vec2(P.hip * 0.7, -0.08);
         float heart_d = length((uv - heart_c) * vec2(0.7, 0.6));
-        // Heart-shape-ish falloff
         float heart = exp(-heart_d * 2.6);
         float monster_breath = 0.85 + 0.15 * sin(time * 0.7);
         float heart_pulse = (0.5 + clamp(bassZScore, 0., 2.5) * 2.4 + bassNormalized * 1.0 + midsNormalized * 0.4) * monster_breath;
