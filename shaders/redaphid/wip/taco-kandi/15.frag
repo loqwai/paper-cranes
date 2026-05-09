@@ -728,8 +728,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         // when adjacent rings are saturated. Solution: pick a HARD step at
         // od=0.05 — near rings are pure warm orange, far rings are pure
         // deep indigo. No transition zone, no mid-purple, no perceived pink.
-        vec3 tunnel_near_c = oklch2rgb(vec3(0.72, 0.14, CORE_HUE + 0.05));
-        vec3 tunnel_far_c  = oklch2rgb(vec3(0.45, 0.10, CORONA_HUE - 0.4));  // indigo (3.6-4.0 rad), away from magenta
+        vec3 tunnel_near_c = oklch2rgb(vec3(0.72, 0.12, CORE_HUE + 0.05));
+        vec3 tunnel_far_c  = oklch2rgb(vec3(0.45, 0.07, CORONA_HUE - 1.0));  // teal (3.0-3.4 rad), far from magenta
         // Hard step (smoothstep with very tight transition) — just one or
         // two ring widths cross the boundary, so no extended mid zone.
         vec3 tunnel_col = mix(tunnel_near_c, tunnel_far_c, smoothstep(0.04, 0.06, od_t));
@@ -1035,9 +1035,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float eB = getEdgeGlow(uv + vec2(-prism_amt, 0.0), thin);
         float exterior = 1.0 - silhouette;
         // Map to oklch hot palette so split reads as proper prism, not raw RGB clipping
-        vec3 prism_r = oklch2rgb(vec3(0.65, 0.20, CORE_HUE + 0.3));   // warm side
-        vec3 prism_g = oklch2rgb(vec3(0.65, 0.18, CORE_HUE + 1.6));   // mid
-        vec3 prism_b = oklch2rgb(vec3(0.65, 0.20, CORONA_HUE));       // cool side
+        vec3 prism_r = oklch2rgb(vec3(0.65, 0.13, CORE_HUE + 0.3));   // warm side
+        vec3 prism_g = oklch2rgb(vec3(0.65, 0.13, CORE_HUE + 1.6));   // mid
+        vec3 prism_b = oklch2rgb(vec3(0.65, 0.13, CORONA_HUE - 1.0)); // cool/cyan side (away from magenta)
         col += (prism_r * eR + prism_g * eG + prism_b * eB) * exterior * 0.35
              * (0.5 + drop_glow + spectralFluxNormalized * 0.6);
     }
