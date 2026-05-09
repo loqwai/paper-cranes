@@ -206,8 +206,13 @@ uniform float zoom_pulse;   // taco-kandi controller (iter 67) — spring-physic
 // knob_11 → DRIFT_SPEED (auto-wired iter 6, +0.55 gesture, matches plasma iter-5 wiring)
 // 0=frozen shape, 0.5=baseline 1x rate, 1=2x faster organic morphing
 #define DRIFT_SPEED (mix(0.0, 2.0, knob_11))
-#define SHAPE_DRIFT_A (sin(iTime * 0.07 * DRIFT_SPEED) * 0.5 + sin(iTime * 0.13 * DRIFT_SPEED) * 0.3)
-#define SHAPE_DRIFT_B (cos(iTime * 0.11 * DRIFT_SPEED) * 0.4 + cos(iTime * 0.05 * DRIFT_SPEED) * 0.6)
+// Iter 77: seed phase offsets — each device's plasma drifts at the same
+// 0.05-0.13 Hz frequencies but at a different PHASE, so a group of kandi
+// bracelets in the same room reads as related-but-distinct organisms.
+// fract(seed) * TAU gives full 0..2π phase offset per axis. Bounded — the
+// frequencies are unchanged, only the starting phase differs per device.
+#define SHAPE_DRIFT_A (sin(iTime * 0.07 * DRIFT_SPEED + fract(seed)  * TAU) * 0.5 + sin(iTime * 0.13 * DRIFT_SPEED + fract(seed2) * TAU) * 0.3)
+#define SHAPE_DRIFT_B (cos(iTime * 0.11 * DRIFT_SPEED + fract(seed3) * TAU) * 0.4 + cos(iTime * 0.05 * DRIFT_SPEED + fract(seed4) * TAU) * 0.6)
 
 // ============================================================================
 // PLASMA SDF (from plasma.frag — Ether by nimitz)
