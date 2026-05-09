@@ -154,17 +154,19 @@ uniform float drop_glow;    // taco-kandi controller — sustained drop signal
 // MAX of the six spike-detectors so the strongest signal of any flavor
 // drives the pulse. energySlope*R² is bounded at 0.6 since it can be
 // near-constant during builds and we don't want the pulse pinned high.
-// Iter 61 (user: "We need it to be less shivery though. Maybe using RSlope
-// or something?"): rebalanced toward CONFIDENT TREND signals over instant
-// spikes. The shivery feel came from MAX() of six z-score channels firing
-// every frame on different transients — produced micro-jitter in the zoom.
-// New: TRENDS dominate (R²-weighted slopes — only steady builds register),
-// spikes accent (bounded ≤0.5 single channel).
+// Iter 65 (user: "We need better zooming still on the beat!! more extreme"):
+// 4-channel INSTANT kick (bassZ/energyZ/fluxZ/trebleZ MAX, full 0..1 range)
+// punches HARD on real percussion peaks. Trend baseline stays smooth between
+// beats. Pulse coefficient 0.55→0.85, cap 1.5→2.4 so kicks really contract.
 #define KICK_TREND    clamp(energySlope * energyRSquared * 12.0 + max(bassSlope, 0.0) * bassRSquared * 6.0, 0.0, 1.0)
 #define KICK_BASSSM   smoothstep(0.20, 0.85, bass_smooth)
-#define KICK_INSTANT  clamp(max(smoothstep(0.30, 0.85, max(bassZScore, 0.0)), smoothstep(0.35, 0.95, max(energyZScore, 0.0))) * 0.5, 0.0, 0.5)
-#define BASS_PEAK     (KICK_TREND * 0.7 + KICK_BASSSM * 0.6 + drop_glow * 0.5 + beat_kick * 0.5 + KICK_INSTANT * 0.6)
-#define ZOOM_INTENSITY (clamp(BASS_PEAK * 0.55, 0.0, 1.5))
+#define KICK_BASSZ    smoothstep(0.25, 0.85, max(bassZScore, 0.0))
+#define KICK_ENERGYZ  smoothstep(0.30, 0.90, max(energyZScore, 0.0))
+#define KICK_FLUXZ    smoothstep(0.35, 0.95, max(spectralFluxZScore, 0.0))
+#define KICK_TREBZ    smoothstep(0.35, 0.95, max(trebleZScore, 0.0))
+#define KICK_INSTANT  max(max(KICK_BASSZ, KICK_ENERGYZ), max(KICK_FLUXZ, KICK_TREBZ))
+#define BASS_PEAK     (KICK_INSTANT * 1.4 + KICK_TREND * 0.5 + KICK_BASSSM * 0.4 + drop_glow * 0.4 + beat_kick * 0.6)
+#define ZOOM_INTENSITY (clamp(BASS_PEAK * 0.85, 0.0, 2.4))
 
 // Pulse contraction — DOUBLED coefficient (was 0.45) so the bass kick visibly
 // punches the zoom. At PULSE_DEPTH=1.1 + heavy bass: contraction up to ~0.6
