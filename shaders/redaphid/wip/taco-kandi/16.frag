@@ -886,6 +886,18 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     col = mix(col, shell_trail,        isShell);
     col = mix(col, plasma_with_trail,  isFilling);
 
+    // Iter 75: kick-driven INTERIOR FLASH. On every detected percussion peak,
+    // briefly brighten the entire interior (shell + filling) toward warm
+    // orange. The user PERCEIVES "the taco lit up on the beat" — much
+    // stronger than zoom contraction alone. Bounded: max gain 0.35 so it's
+    // a flash, not a wash. Color in CORE_HUE (orange) so JPEG can't read pink.
+    float interior_mask = max(isShell, isFilling);
+    if (interior_mask > 0.05) {
+        vec3 flashCol = oklch2rgb(vec3(0.85, 0.14, CORE_HUE + 0.05));  // bright orange
+        float flashGain = clamp(DIRECT_KICK * 0.35, 0.0, 0.35) * interior_mask;
+        col = mix(col, max(col, col + flashCol * 0.55), flashGain);
+    }
+
     // ---- AURORA RIBBONS (iter 48 — coat-style flowing color bands inside taco) ----
     // Three thin sinuous bands threading through the taco interior, each tracking
     // an INDEPENDENT audio domain so they don't all fire in unison. Adapted from
