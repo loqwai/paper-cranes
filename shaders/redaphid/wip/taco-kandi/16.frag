@@ -924,7 +924,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float r2_y = sin(r2_a * 3.5 - iTime * 0.27 + seed3 * TAU) * 0.09;
         float r2 = exp(-pow((ru.y - 0.04 - r2_y) * 28.0, 2.0));
         float r2_amp = smoothstep(0.4, 0.9, spectralEntropyNormalized) * 0.50;
-        vec3 r2_col = oklch2rgb(vec3(0.74, 0.16, CORONA_HUE - 0.6));  // teal-cyan (CORONA - 0.6 = ~3.5 rad = cyan, NOT magenta)
+        // Iter 76 fix: was CORONA_HUE - 0.6 = ~3.5 rad which I miscommented
+        // as cyan but is actually purple-magenta territory. Pixel sampling
+        // confirmed (#3a0054 = deep purple-magenta). Moved to CORONA_HUE - 1.2
+        // = 2.8-3.2 rad = TRUE cyan, mathematically separated from magenta.
+        vec3 r2_col = oklch2rgb(vec3(0.74, 0.16, CORONA_HUE - 1.2));  // true cyan
         // Ribbon 3: counter-flowing, tonal (pitchClass)
         float r3_x_phase = iTime * 0.18 + pitchClassNormalized * TAU * 0.5 + seed4 * TAU;
         float r3_y = cos(ru.x * 3.0 + r3_x_phase) * 0.12;
