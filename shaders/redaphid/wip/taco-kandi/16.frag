@@ -1016,16 +1016,24 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // ---- OUTLINE EDGE GLOW (wooli-2 signature, tight) ----
     // knob_4 → OUTLINE GLOW intensity (auto-wired iter 38, RIM_GLOW repurposed).
     // Single very thin halo right at the silhouette edge for definition.
+    // Iter 74 fix (no-magenta + still-punchy):
+    // Bright halo at high chroma reads as pink/magenta in JPEG output.
+    // Solution: split into TWO color layers — a CONSTANT cool indigo base
+    // (won't read pink) + a KICK-PUNCH warm orange flash (warm orange can't
+    // be confused with magenta). Each kick adds an orange flare INSIDE the
+    // blue halo — reads as fire-rim, not magenta.
     {
         float edgeWidth = 0.004 + bass_smooth * 0.005;
         float edgeGlow = getEdgeGlow(uv, edgeWidth);
         edgeGlow *= (1.0 - silhouette);
-        vec3 edgeCol = oklch2rgb(vec3(0.74, 0.18, CORONA_HUE));
-        // knob_4 lets user dial the halo prominence: 0=subtle, 1=hero glow.
-        // Was hardcoded at 0.7. Now (0.3 + knob_4 * 1.5) — full range from
-        // barely-visible to dominant outline halo.
-        float edgeBoost = (0.3 + knob_4 * 1.5) + drop_glow * 0.5;
-        col += edgeCol * edgeGlow * edgeBoost;
+        // Cool BASE halo at modest chroma (won't saturate to pink).
+        vec3 baseHalo = oklch2rgb(vec3(0.62, 0.10, CORONA_HUE - 0.4));  // indigo, away from magenta
+        float baseBoost = 0.3 + knob_4 * 0.9 + drop_glow * 0.3;
+        col += baseHalo * edgeGlow * baseBoost;
+        // KICK PUNCH: warm orange flare on every kick. Hue 0.7 (orange) is
+        // 90° from magenta — JPEG saturation just makes it more orange, never pink.
+        vec3 kickFlare = oklch2rgb(vec3(0.78, 0.16, CORE_HUE + 0.1));  // hot orange
+        col += kickFlare * edgeGlow * DIRECT_KICK * 1.6;
     }
 
     // ---- PRISMATIC R/G/B EDGE SPLIT (coat-25 knob_2 PRISM signature) ----
