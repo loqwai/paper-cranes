@@ -1,0 +1,75 @@
+# taco tapestry
+
+## Origin
+
+Forked from `taco-kandi/4` on **2026-05-09** mid-`/vibej` run (iter 34) while *Better Place — Twin Diplomacy, Jack August* was playing. Captures state after the wooli scrolling tapestry line port + permanent banding fix on all feedback loops.
+
+## Inherited features (full effect inventory)
+
+Logo-aware composition for the taco branded VJ set. **All feedback paths use bounded `mix()` blends — banding is mathematically impossible regardless of knob position.**
+
+**Outline-aware effects (the killers):**
+- **Julia-warped feedback** (knob_14 intensity, knob_13 c-radius) — moody-octopus2 technique, banding-safe.
+- **Logo-shaped feedback echo** (knob_16) — sample getLastFrame at point pulled toward taco_center, FBM-jittered, banding-safe.
+- **Wooli scrolling tapestry line** — horizontal scroll trail outside silhouette, Y tracks centroidZScore.
+- **Outline edge glow** (tight wooli-2 style halo).
+- **Prismatic R/G/B edge split** (coat-25 PRISM).
+- **Sharp ink overlay** at end of main — re-asserts logo recognition through all feedback.
+
+**Coat finale ports:**
+- VJ FRY (knob_8, oklch-clean, hue-rotation capped permanent)
+- VJ INNER GLOW (chrome bloom near inside edge)
+- VJ TIME-ECHO (R/G/B prev-frame triple offset on energy surges)
+- Fringe edge perturbation (knob_9, capped 25% for logo recognition)
+- Heart pulse, Warm hearth, Calm 0.4Hz breath, Sigil swirl, Fractal fur fibers
+- Drip on knob_15
+- Photon ring (knob_12 → radius)
+- Lens warp (knob_10)
+- Kaleidoscope fold (knob_6, seam-fixed)
+
+**Atmospheric BG:**
+- Starfield (treble-gated sparkle crosses, ~18% cell density)
+- Nebula fog (treble + entropy gated, drifting cosmic haze in oklch CORONA family)
+
+**Plasma core:**
+- Raymarched accretion disk (Ether by nimitz)
+- Event horizon radial structure (core glow + photon ring)
+
+## Baked knob values (live state at fork time)
+
+| knob | value | effect |
+|---|---|---|
+| knob_1 | 0.504 | SHAPE_TWIST (mid plasma swirl) |
+| knob_2 | 0.701 | COLOR_SPIN (small drift over anchored palette) |
+| knob_3 | 0.063 | FRACTAL_DENSITY low (sparse plasma folds) |
+| knob_4 | 0.252 | RIM_GLOW low |
+| knob_5 | 0.764 | PALETTE FREEZE (locked ~3/4 toward nebula family) |
+| knob_6 | 0.835 | KALEIDOSCOPE FOLD (high — 10-fold mirror on plasma) |
+| knob_7 | 0.268 | ZOOM mid-wide |
+| knob_8 | 0.039 | VJ FRY barely on (clean) |
+| knob_9 | 0.087 | FRINGE almost off (very crisp outline) |
+| knob_10 | 0.425 | LENS_STRENGTH mid |
+| knob_11 | 0.346 | DRIFT_SPEED below baseline |
+| knob_12 | 0.441 | PHOTON_RING_RADIUS mid |
+| knob_13 | 0.016 | JULIA c-radius (compact tendrils) |
+| knob_14 | 0.937 | JULIA WARP intensity high |
+| knob_15 | 0.906 | DRIP near max |
+| knob_16 | **1.000** | LOGO ECHO maxed (banding-safe — bounded mix) |
+
+## Preset URL
+
+```
+http://localhost:6969/jam.html?shader=redaphid/taco/tapestry&image=images/taco.png&controller=taco-kandi
+```
+
+## Controller
+
+`controllers/taco-kandi.js` — latching beat_pulse + EMA bass_smooth + sustained drop_glow.
+
+## Why this fork
+
+After three banding-fix iterations (28 logo-echo, 29 julia, 30 FRY oklch, 32 mathematical bounded-mix on both feedbacks), **the shader is mathematically immune to feedback resonance bands.** Plus the wooli scrolling tapestry line just landed at iter 34 — a full second outline-aware effect referencing the silhouette via getLastFrame. This is the "all banding sources eliminated, full effect roster present" checkpoint. Future iters can experiment without losing this baseline.
+
+## Long-form set context
+
+Branded VJ set tomorrow for taco. Logo recognition is sacred (sharp ink overlay guards it). Multi-hour duration — auto-corner-gated effects (warm hearth, heart pulse, calm breath, starfield, nebula) ensure the shader self-adapts to musical character changes without manual intervention.

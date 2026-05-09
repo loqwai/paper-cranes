@@ -1,0 +1,87 @@
+# taco radiation
+
+## Origin
+
+Forked from `taco-kandi/6` on **2026-05-09** during a `/vibej` run (iter 49+) while *Westside — SIDEPIECE* was playing. Captures the post-form-port + post-flash-fix state:
+- Iter 45 — NEBULA FOG removed (was the persistent bg flash)
+- Iter 45 — chrome rim de-magenta'd, palette locked to plasma anchors
+- Iter 46 — OUTLINE_RADIATION FORM landed (logo-shape concentric waves)
+- Iter 47 — radiation reach extended (multi-band visible)
+- Iter 48 — AURORA RIBBONS interior
+- Iter 49 — OUTLINE PHOTON RING
+
+## What this fork unlocks
+
+Forked specifically to introduce **region-targeted effects** via a re-colored `images/taco.png`:
+- **SHELL region** (red mask) → wooli-style seeded fractals (per-device unique)
+- **FILLING region** (green mask) → keep plasma raymarch
+- **INK** (black) → unchanged outline guard
+- **OUTSIDE** (transparent) → outline radiation + photon ring + starfield
+
+This is the user's "target the fill of just the taco shell with the kind of fractals the wooli shaders do, that are unique on seed."
+
+## Inherited features (from /6)
+
+**Outline-aware (the core aesthetic):**
+- Julia-warped feedback (knob_14, knob_13)
+- Logo-shaped echo (knob_16)
+- Wooli scrolling tapestry line
+- Outline edge glow (knob_4)
+- Prismatic R/G/B edge split
+- Sharp ink overlay (logo recognition guard)
+- **OUTLINE_RADIATION waves** (iter 46 — slow concentric outgoing from outline)
+- **OUTLINE PHOTON RING** (iter 49 — sharp gaussian band, knob_12)
+
+**Coat finale ports:**
+- VJ FRY (knob_8, oklch-clean)
+- Inner glow + Time-echo
+- Fringe (knob_9, capped)
+- Warm hearth (oklch-locked, no-green)
+- Calm 0.4Hz breath
+- Photon ring (knob_12)
+- Lens warp (knob_10)
+- Kaleidoscope (knob_6)
+- **AURORA RIBBONS** (iter 48 — three independent interior bands)
+
+**Atmospheric BG:** Starfield (no nebula fog — was flash)
+**Plasma core:** Raymarched accretion disk + event horizon
+**Palette:** locked to plasma family — orange (CORE_HUE 0.55-0.75) + deep blue-violet (CORONA 4.0-4.4). Magenta impossible.
+
+## Baked knob values (at fork)
+
+| knob | value | effect |
+|---|---|---|
+| knob_1 | 0.937 | SHAPE_TWIST |
+| knob_2 | 0.323 | COLOR_SPIN |
+| knob_3 | 0.654 | FRACTAL_DENSITY |
+| knob_4 | 0 | OUTLINE_GLOW (off) |
+| knob_5 | 0.551 | RADIATION_RATE / palette balance (mid) |
+| knob_6 | 0.409 | KALEIDOSCOPE |
+| knob_7 | 0.362 | ZOOM mid |
+| knob_8 | 0.488 | VJ FRY mid |
+| knob_9 | 0.071 | FRINGE almost off |
+| knob_10 | 0.984 | LENS_STRENGTH near-max |
+| knob_11 | 0.819 | DRIFT_SPEED high |
+| knob_12 | 1.0 | PHOTON_RING_RADIUS max |
+| knob_13 | 0.165 | JULIA c-radius low |
+| knob_14 | 0.504 | JULIA WARP mid |
+| knob_15 | 0.63 | (drip disabled, unused) |
+| knob_16 | 0.205 | LOGO ECHO low |
+
+## Preset URL
+
+```
+http://localhost:6969/jam.html?shader=redaphid/taco/radiation&image=images/taco.png&controller=taco-kandi
+```
+
+## Controller
+
+`controllers/taco-kandi.js` — latching beat_pulse + EMA bass_smooth + sustained drop_glow.
+
+## Why this fork
+
+User: "edit the taco.png mask, giving it different colors so you can target them. I want that and target the fill of just the taco shell with the kind of fractals the wooli shaders do, that are unique on seed." Fork creates a checkpoint BEFORE introducing region-targeted fractals — if the wooli-fractal experiment doesn't land aesthetically we can return to /6 cleanly.
+
+## Long-form set context
+
+Branded VJ set tomorrow for taco. Logo recognition is sacred. All feedback paths mathematically banding-safe (bounded mix() blends). Magenta path mathematically blocked (oklab perceptual mix between locked plasma anchors).

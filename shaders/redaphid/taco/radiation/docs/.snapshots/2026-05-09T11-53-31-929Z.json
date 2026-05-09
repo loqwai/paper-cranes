@@ -1,0 +1,143 @@
+{
+  "timestamp": "2026-05-09T11:53:31.929Z",
+  "shader": "redaphid/wip/taco-kandi/7",
+  "name": null,
+  "knobs": {
+    "knob_1": 0.024,
+    "knob_1.min": 0,
+    "knob_1.max": 1,
+    "knob_2": 1,
+    "knob_2.min": 0,
+    "knob_2.max": 1,
+    "knob_3": 0.795,
+    "knob_3.min": 0,
+    "knob_3.max": 1,
+    "knob_4": 0.433,
+    "knob_4.min": 0,
+    "knob_4.max": 1,
+    "knob_5": 0.409,
+    "knob_5.min": 0,
+    "knob_5.max": 1,
+    "knob_6": 0.409,
+    "knob_6.min": 0,
+    "knob_6.max": 1,
+    "knob_7": 0.031,
+    "knob_7.min": 0,
+    "knob_7.max": 1,
+    "knob_8": 0.583,
+    "knob_8.min": 0,
+    "knob_8.max": 1,
+    "knob_9": 0.071,
+    "knob_9.min": 0,
+    "knob_9.max": 1,
+    "knob_10": 0.378,
+    "knob_10.min": 0,
+    "knob_10.max": 1,
+    "knob_11": 0.465,
+    "knob_11.min": 0,
+    "knob_11.max": 1,
+    "knob_12": 1,
+    "knob_12.min": 0,
+    "knob_12.max": 1,
+    "knob_13": 0.417,
+    "knob_13.min": 0,
+    "knob_13.max": 1,
+    "knob_14": 0,
+    "knob_14.min": 0,
+    "knob_14.max": 1,
+    "knob_15": 0.803,
+    "knob_15.min": 0,
+    "knob_15.max": 1,
+    "knob_16": 0.457,
+    "knob_16.min": 0,
+    "knob_16.max": 1
+  },
+  "audio": {
+    "bass": {
+      "normalized": 0.13,
+      "zScore": -0.114,
+      "slope": 0,
+      "rSquared": 0.058
+    },
+    "energy": {
+      "normalized": 0.656,
+      "zScore": 0.297,
+      "slope": 0,
+      "rSquared": 0.023
+    },
+    "mids": {
+      "normalized": 0.204,
+      "zScore": -0.074,
+      "slope": -0.0001,
+      "rSquared": 0.025
+    },
+    "treble": {
+      "normalized": 0.727,
+      "zScore": -0.012,
+      "slope": -0.0001,
+      "rSquared": 0.055
+    },
+    "spectralCentroid": {
+      "normalized": 0.784,
+      "zScore": 0.139,
+      "slope": 0.0001,
+      "rSquared": 0.044
+    },
+    "spectralFlux": {
+      "normalized": 0.102,
+      "zScore": -0.139,
+      "slope": 0.0001,
+      "rSquared": 0.021
+    },
+    "spectralEntropy": {
+      "normalized": 0.911,
+      "zScore": 0.118,
+      "slope": 0,
+      "rSquared": 0.007
+    },
+    "spectralRoughness": {
+      "normalized": 0.704,
+      "zScore": 0.097,
+      "slope": 0,
+      "rSquared": 0.102
+    },
+    "spectralKurtosis": {
+      "normalized": 0.419,
+      "zScore": -0.043,
+      "slope": 0,
+      "rSquared": 0.198
+    },
+    "spectralSpread": {
+      "normalized": 0.787,
+      "zScore": 0.166,
+      "slope": 0,
+      "rSquared": 0.003
+    },
+    "spectralCrest": {
+      "normalized": 0.065,
+      "zScore": -0.081,
+      "slope": 0.0001,
+      "rSquared": 0.058
+    },
+    "spectralRolloff": {
+      "normalized": 0.765,
+      "zScore": 0.168,
+      "slope": 0,
+      "rSquared": 0.015
+    },
+    "spectralSkew": {
+      "normalized": 0.15,
+      "zScore": -0.158,
+      "slope": 0,
+      "rSquared": 0.005
+    },
+    "pitchClass": {
+      "normalized": 0.455,
+      "zScore": 0.04,
+      "slope": 0.0002,
+      "rSquared": 0.015
+    }
+  },
+  "musicTab": "Tab audio",
+  "userNote": null
+}
