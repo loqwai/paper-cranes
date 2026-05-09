@@ -905,7 +905,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // a flash, not a wash. Color in CORE_HUE (orange) so JPEG can't read pink.
     float interior_mask = max(isShell, isFilling);
     if (interior_mask > 0.05) {
-        vec3 flashCol = oklch2rgb(vec3(0.85, 0.14, CORE_HUE + 0.05));  // bright orange
+        // Iter 79 fix: at chroma 0.14, additive overlay with lavender-tinted
+        // prev-frame produced bright pink-red blooms (#d82a52 — 216,42,82).
+        // Replaced colored flash with PURE LIGHTNESS (chroma 0.0) so it
+        // brightens what's there without injecting hue. The taco still
+        // visibly LIGHTS UP on every kick, but neutrally — can never
+        // saturate to pink/magenta regardless of underlying color.
+        vec3 flashCol = oklch2rgb(vec3(0.85, 0.0, 0.0));  // pure white-light, no hue
         float flashGain = clamp(DIRECT_KICK * 0.35, 0.0, 0.35) * interior_mask;
         col = mix(col, max(col, col + flashCol * 0.55), flashGain);
     }
@@ -1297,6 +1303,23 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Reinhard tonemap (from the-coat-25)
     float white = 2.0;
     col = col * (1.0 + col / (white * white)) / (1.0 + col);
+
+    // Iter 79 final guard: convert to oklch and detect magenta hue zone
+    // (4.5-5.5 rad). If a pixel lands there with high chroma, ROTATE its hue
+    // toward CORONA_HUE (deep blue-violet, ~4.2 rad — the safe-cool side).
+    // This is a safety net: any upstream effect that accidentally produces
+    // magenta gets rerouted to the plasma palette before output.
+    {
+        vec3 final_lch = rgb2oklch(max(col, vec3(0.001)));
+        float magenta_dist = abs(final_lch.z - 5.0);  // distance from middle of magenta zone
+        float in_magenta = (1.0 - smoothstep(0.0, 0.5, magenta_dist)) * smoothstep(0.05, 0.15, final_lch.y);
+        // Rotate offending pixels toward CORONA_HUE (4.2 rad) — short arc.
+        // Mix lch.z with CORONA_HUE by 'in_magenta' factor.
+        final_lch.z = mix(final_lch.z, 4.2, in_magenta);
+        // Also reduce chroma slightly so the rotation lands cleanly.
+        final_lch.y = mix(final_lch.y, final_lch.y * 0.7, in_magenta);
+        col = oklch2rgb(final_lch);
+    }
 
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

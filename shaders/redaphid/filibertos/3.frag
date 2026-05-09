@@ -1280,5 +1280,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float white = 2.0;
     col = col * (1.0 + col / (white * white)) / (1.0 + col);
 
+    // Iter 79 final guard: detect magenta hue zone (4.5-5.5 rad) and rotate
+    // toward CORONA_HUE (4.2 = deep blue-violet, the safe-cool side). Any
+    // upstream effect that accidentally produces magenta gets rerouted.
+    {
+        vec3 final_lch = rgb2oklch(max(col, vec3(0.001)));
+        float magenta_dist = abs(final_lch.z - 5.0);
+        float in_magenta = (1.0 - smoothstep(0.0, 0.5, magenta_dist)) * smoothstep(0.05, 0.15, final_lch.y);
+        final_lch.z = mix(final_lch.z, 4.2, in_magenta);
+        final_lch.y = mix(final_lch.y, final_lch.y * 0.7, in_magenta);
+        col = oklch2rgb(final_lch);
+    }
+
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
