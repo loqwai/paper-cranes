@@ -1088,20 +1088,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
                                    getTacoRegions(uv + vec2(-pxr2, 0)).y),
                                max(getTacoRegions(uv + vec2(0,  pxr2)).y,
                                    getTacoRegions(uv + vec2(0, -pxr2)).y));
-        // 2. Three-tier ink strength field:
-        //    - sharp_ink itself     → STROKE (deepest pull)
-        //    - halo_close * 0.7     → 1px dim ring
-        //    - halo_far   * 0.35    → 2-3px shallow dim halo
-        float ink_field = max(max(sharp_ink, halo_close * 0.7), halo_far * 0.35);
-        // 3. Pull color HARD toward near-black on the ink field. 95% gain so
-        //    even the shallow halo darkens visibly. Result: every ink stroke
-        //    sits in a small dim moat regardless of surrounding chaos.
-        col = mix(col, col * 0.04, ink_field * 0.95);
-        // 4. Crisp warm chrome on the CORE of each stroke (sharp_ink only,
-        //    not halo). Bass-pulsed for life. Lightness boosted so it pops
-        //    against the now-deeper shadow.
-        vec3 chromeInk = oklch2rgb(vec3(0.78, 0.16, CORE_HUE + 0.3));
-        col += chromeInk * sharp_ink * (0.30 + bass_smooth * 0.30);
+        // Iter 63: stroke → absolute black; halo → 8% darken; subtle warm
+        // sheen at L=0.42 C=0.06 keeps stroke from feeling flat without
+        // pumping color back into ink (user wanted "darker than before").
+        float ink_field_stroke = sharp_ink;
+        float ink_field_halo   = max(halo_close * 0.6, halo_far * 0.30);
+        col = mix(col, vec3(0.0), ink_field_stroke * 0.95);
+        col = mix(col, col * 0.08, ink_field_halo * 0.85);
+        vec3 chromeInk = oklch2rgb(vec3(0.42, 0.06, CORE_HUE + 0.2));
+        col += chromeInk * sharp_ink * (0.10 + bass_smooth * 0.08);
     }
 
     // Reinhard tonemap (from the-coat-25)

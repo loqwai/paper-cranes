@@ -128,22 +128,32 @@ uniform float drop_glow;    // taco-kandi controller — sustained drop signal
 // cross the bassN > 0.25 threshold. beat_pulse stays high for ~1s after each
 // beat so the zoom holds visibly through the kick. Also widened the bassN
 // smoothstep range (0.15→0.65 instead of 0.25→0.80) so quieter bass triggers.
-// Iter 55 (user: "Get the beat/zoom thing working more reliably (but don't
-// use the 'beat uniform)"):
-// PRIMARY pulse driver: in-shader z-score multi-signal kick detector.
-// We OR three independent kick-indicators here so SOMETHING almost always
-// fires on a beat across genres, WITHOUT reading the `beat` boolean uniform:
-//   1. bassZScore peaks   (bass-louder-than-recent-average kick)
-//   2. spectralFluxZScore peaks  (timbral attack — snares/claps)
-//   3. bass_smooth (controller's EMA bass — sustained bass pump)
-// All smoothstep'd for clean ramp-up, NO sin/phase argument so no strobing.
-// beat_kick is also wired (controller signal); when it lands it stacks but
-// the shader functions independently of it.
-#define KICK_BASSZ    smoothstep(0.30, 0.85, max(bassZScore, 0.0))
-#define KICK_FLUXZ    smoothstep(0.40, 1.00, max(spectralFluxZScore, 0.0))
-#define KICK_BASSSM   smoothstep(0.25, 0.75, bass_smooth)
-#define BASS_PEAK     (max(KICK_BASSZ, KICK_FLUXZ) * 1.0 + KICK_BASSSM * 0.5 + beat_kick * 0.6)
-#define ZOOM_INTENSITY (clamp(BASS_PEAK * 0.55 + drop_glow * 0.4, 0.0, 1.6))
+// Iter 60 (user: "Could we use energy? or energyZScore? Or slope?"): added
+// energyZScore (the most universal "something got louder" detector — catches
+// claps, kicks, snares, drum fills, anything percussive across the spectrum)
+// AND energySlope (sustained build-ups — captures gradual energy rises that
+// aren't single-frame spikes). Six independent kick channels now stack:
+//   1. bassZScore > 0.20            — bass kick
+//   2. spectralFluxZScore > 0.25    — timbral attack
+//   3. trebleZScore > 0.30          — high-freq burst (claps)
+//   4. spectralRoughnessZScore > 0.30 — dissonant transient (claps)
+//   5. energyZScore > 0.20          — overall loudness spike (universal)
+//   6. energySlope * R²             — confident build trend (sustained rise)
+//   plus continuous: bass_smooth + beat_kick controller signal
+// MAX of the six spike-detectors so the strongest signal of any flavor
+// drives the pulse. energySlope*R² is bounded at 0.6 since it can be
+// near-constant during builds and we don't want the pulse pinned high.
+// Iter 61 (user: "We need it to be less shivery though. Maybe using RSlope
+// or something?"): rebalanced toward CONFIDENT TREND signals over instant
+// spikes. The shivery feel came from MAX() of six z-score channels firing
+// every frame on different transients — produced micro-jitter in the zoom.
+// New: TRENDS dominate (R²-weighted slopes — only steady builds register),
+// spikes accent (bounded ≤0.5 single channel).
+#define KICK_TREND    clamp(energySlope * energyRSquared * 12.0 + max(bassSlope, 0.0) * bassRSquared * 6.0, 0.0, 1.0)
+#define KICK_BASSSM   smoothstep(0.20, 0.85, bass_smooth)
+#define KICK_INSTANT  clamp(max(smoothstep(0.30, 0.85, max(bassZScore, 0.0)), smoothstep(0.35, 0.95, max(energyZScore, 0.0))) * 0.5, 0.0, 0.5)
+#define BASS_PEAK     (KICK_TREND * 0.7 + KICK_BASSSM * 0.6 + drop_glow * 0.5 + beat_kick * 0.5 + KICK_INSTANT * 0.6)
+#define ZOOM_INTENSITY (clamp(BASS_PEAK * 0.55, 0.0, 1.5))
 
 // Pulse contraction — DOUBLED coefficient (was 0.45) so the bass kick visibly
 // punches the zoom. At PULSE_DEPTH=1.1 + heavy bass: contraction up to ~0.6
@@ -1088,12 +1098,30 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
                                    getTacoRegions(uv + vec2(-pxr2, 0)).y),
                                max(getTacoRegions(uv + vec2(0,  pxr2)).y,
                                    getTacoRegions(uv + vec2(0, -pxr2)).y));
-        // Iter 63: stroke → absolute black; halo → 8% darken; subtle warm
-        // sheen at L=0.42 C=0.06 keeps stroke from feeling flat.
-        float ink_field_stroke = sharp_ink;
+        // 2. Three-tier ink strength field:
+        //    - sharp_ink itself     → STROKE (legitimately black)
+        //    - halo_close * 0.6     → 1px dim shadow ring
+        //    - halo_far   * 0.30    → 2-3px shallow shadow
+        float ink_field_stroke = sharp_ink;                     // stroke = full pull
         float ink_field_halo   = max(halo_close * 0.6, halo_far * 0.30);
+        // 3. STROKE: pull to ABSOLUTE BLACK (vec3(0)). User flag iter 62:
+        //    "whatever is in black in the mask has to legitimately be black or
+        //    mostly black so the logo is discernable." Was `col * 0.04` (4% of
+        //    chaotic underlying color, still visibly tinted at high chroma);
+        //    now the target is vec3(0) so 95% of black + 5% of color = pure
+        //    near-black regardless of how saturated the underlying col is.
         col = mix(col, vec3(0.0), ink_field_stroke * 0.95);
+        // 4. HALO: shallow darken keeps shadow ring around strokes for
+        //    boundary contrast. Pulls toward 8% of underlying color (NOT
+        //    pure black) so the halo reads as "shadow", not "another stroke".
         col = mix(col, col * 0.08, ink_field_halo * 0.85);
+        // 5. Subtle warm sheen (iter 63 user flag: "Let's add some contrast
+        //    like we had before. Just make it darker than it was"). Brought
+        //    back the chrome highlight but at ~1/3 the previous strength and
+        //    much darker (L 0.78→0.42, C 0.16→0.06) so it's a faint warm
+        //    glint on the stroke, not a color fill. Net result: ink is much
+        //    darker than the original iter-56 chrome version but has a thin
+        //    warm "depth" to it instead of being totally flat black.
         vec3 chromeInk = oklch2rgb(vec3(0.42, 0.06, CORE_HUE + 0.2));
         col += chromeInk * sharp_ink * (0.10 + bass_smooth * 0.08);
     }

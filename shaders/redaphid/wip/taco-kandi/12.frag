@@ -128,22 +128,31 @@ uniform float drop_glow;    // taco-kandi controller — sustained drop signal
 // cross the bassN > 0.25 threshold. beat_pulse stays high for ~1s after each
 // beat so the zoom holds visibly through the kick. Also widened the bassN
 // smoothstep range (0.15→0.65 instead of 0.25→0.80) so quieter bass triggers.
-// Iter 55 (user: "Get the beat/zoom thing working more reliably (but don't
-// use the 'beat uniform)"):
-// PRIMARY pulse driver: in-shader z-score multi-signal kick detector.
-// We OR three independent kick-indicators here so SOMETHING almost always
-// fires on a beat across genres, WITHOUT reading the `beat` boolean uniform:
-//   1. bassZScore peaks   (bass-louder-than-recent-average kick)
-//   2. spectralFluxZScore peaks  (timbral attack — snares/claps)
-//   3. bass_smooth (controller's EMA bass — sustained bass pump)
-// All smoothstep'd for clean ramp-up, NO sin/phase argument so no strobing.
-// beat_kick is also wired (controller signal); when it lands it stacks but
-// the shader functions independently of it.
-#define KICK_BASSZ    smoothstep(0.30, 0.85, max(bassZScore, 0.0))
-#define KICK_FLUXZ    smoothstep(0.40, 1.00, max(spectralFluxZScore, 0.0))
+// Iter 60 (user: "Could we use energy? or energyZScore? Or slope?"): added
+// energyZScore (the most universal "something got louder" detector — catches
+// claps, kicks, snares, drum fills, anything percussive across the spectrum)
+// AND energySlope (sustained build-ups — captures gradual energy rises that
+// aren't single-frame spikes). Six independent kick channels now stack:
+//   1. bassZScore > 0.20            — bass kick
+//   2. spectralFluxZScore > 0.25    — timbral attack
+//   3. trebleZScore > 0.30          — high-freq burst (claps)
+//   4. spectralRoughnessZScore > 0.30 — dissonant transient (claps)
+//   5. energyZScore > 0.20          — overall loudness spike (universal)
+//   6. energySlope * R²             — confident build trend (sustained rise)
+//   plus continuous: bass_smooth + beat_kick controller signal
+// MAX of the six spike-detectors so the strongest signal of any flavor
+// drives the pulse. energySlope*R² is bounded at 0.6 since it can be
+// near-constant during builds and we don't want the pulse pinned high.
+#define KICK_BASSZ    smoothstep(0.20, 0.80, max(bassZScore, 0.0))
+#define KICK_FLUXZ    smoothstep(0.25, 0.90, max(spectralFluxZScore, 0.0))
+#define KICK_TREBZ    smoothstep(0.30, 0.95, max(trebleZScore, 0.0))
+#define KICK_ROUGHZ   smoothstep(0.30, 0.95, max(spectralRoughnessZScore, 0.0))
+#define KICK_ENERGYZ  smoothstep(0.20, 0.85, max(energyZScore, 0.0))
+#define KICK_BUILD    clamp(energySlope * energyRSquared * 8.0, 0.0, 0.6)
 #define KICK_BASSSM   smoothstep(0.25, 0.75, bass_smooth)
-#define BASS_PEAK     (max(KICK_BASSZ, KICK_FLUXZ) * 1.0 + KICK_BASSSM * 0.5 + beat_kick * 0.6)
-#define ZOOM_INTENSITY (clamp(BASS_PEAK * 0.55 + drop_glow * 0.4, 0.0, 1.6))
+#define KICK_SPIKE    max(max(max(KICK_BASSZ, KICK_FLUXZ), max(KICK_TREBZ, KICK_ROUGHZ)), max(KICK_ENERGYZ, KICK_BUILD))
+#define BASS_PEAK     (KICK_SPIKE * 1.0 + KICK_BASSSM * 0.5 + beat_kick * 0.6)
+#define ZOOM_INTENSITY (clamp(BASS_PEAK * 0.60 + drop_glow * 0.4, 0.0, 1.7))
 
 // Pulse contraction — DOUBLED coefficient (was 0.45) so the bass kick visibly
 // punches the zoom. At PULSE_DEPTH=1.1 + heavy bass: contraction up to ~0.6
@@ -1088,6 +1097,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
                                    getTacoRegions(uv + vec2(-pxr2, 0)).y),
                                max(getTacoRegions(uv + vec2(0,  pxr2)).y,
                                    getTacoRegions(uv + vec2(0, -pxr2)).y));
+        // 2. Three-tier ink strength field:
+        //    - sharp_ink itself     → STROKE (deepest pull)
+        //    - halo_close * 0.7     → 1px dim ring
+        //    - halo_far   * 0.35    → 2-3px shallow dim halo
         // Iter 63: stroke → absolute black; halo → 8% darken; subtle warm
         // sheen at L=0.42 C=0.06 keeps stroke from feeling flat.
         float ink_field_stroke = sharp_ink;
