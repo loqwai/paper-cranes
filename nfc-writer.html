@@ -15,10 +15,14 @@
     --skyblue: #6cb0e8;
     --shadow: #1a1a1a;
     --taco-demo: #f39c12;
-    --taco-region-mask: #6cb0e8;
-    --taco-tortilla-cosmic: #e67e22;
     --taco-direct-kick: #e74c3c;
     --taco-cubic-ease: #2ecc71;
+    --taco-outline-tunnel: #34495e;
+    --taco-rainbow-plume: #9b59b6;
+    --taco-confident-kick: #c0392b;
+    --taco-live-iter: #16a085;
+    --taco-tortilla-cosmic: #e67e22;
+    --taco-region-mask: #6cb0e8;
     --ok: #2ecc71;
     --err: #e74c3c;
     --warn: #f39c12;
@@ -65,10 +69,14 @@
   .current.color-skyblue { border-left: 4px solid var(--skyblue); }
   .current.color-shadow { border-left: 4px solid var(--shadow); }
   .current.color-taco-demo { border-left: 4px solid var(--taco-demo); }
-  .current.color-taco-region-mask { border-left: 4px solid var(--taco-region-mask); }
-  .current.color-taco-tortilla-cosmic { border-left: 4px solid var(--taco-tortilla-cosmic); }
   .current.color-taco-direct-kick { border-left: 4px solid var(--taco-direct-kick); }
   .current.color-taco-cubic-ease { border-left: 4px solid var(--taco-cubic-ease); }
+  .current.color-taco-outline-tunnel { border-left: 4px solid var(--taco-outline-tunnel); }
+  .current.color-taco-rainbow-plume { border-left: 4px solid var(--taco-rainbow-plume); }
+  .current.color-taco-confident-kick { border-left: 4px solid var(--taco-confident-kick); }
+  .current.color-taco-live-iter { border-left: 4px solid var(--taco-live-iter); }
+  .current.color-taco-tortilla-cosmic { border-left: 4px solid var(--taco-tortilla-cosmic); }
+  .current.color-taco-region-mask { border-left: 4px solid var(--taco-region-mask); }
   .label {
     font-size: 12px;
     text-transform: uppercase;
@@ -205,61 +213,65 @@
 <script>
 const QUEUES = {
   taco: [
-    // demo (locked DJ-demo build)
-    { name: "taco-1", url: "https://2cb.pw/taco-1", color: "taco-demo" },
-    { name: "taco-2", url: "https://2cb.pw/taco-2", color: "taco-demo" },
-    { name: "taco-3", url: "https://2cb.pw/taco-3", color: "taco-demo" },
-    { name: "taco-4", url: "https://2cb.pw/taco-4", color: "taco-demo" },
-    { name: "taco-5", url: "https://2cb.pw/taco-5", color: "taco-demo" },
-    { name: "taco-6", url: "https://2cb.pw/taco-6", color: "taco-demo" },
-    { name: "taco-7", url: "https://2cb.pw/taco-7", color: "taco-demo" },
-    { name: "taco-8", url: "https://2cb.pw/taco-8", color: "taco-demo" },
-    { name: "taco-9", url: "https://2cb.pw/taco-9", color: "taco-demo" },
-    { name: "taco-10", url: "https://2cb.pw/taco-10", color: "taco-demo" },
-    // direct-kick
-    { name: "taco-11", url: "https://2cb.pw/taco-11", color: "taco-direct-kick" },
-    { name: "taco-12", url: "https://2cb.pw/taco-12", color: "taco-direct-kick" },
-    { name: "taco-13", url: "https://2cb.pw/taco-13", color: "taco-direct-kick" },
-    { name: "taco-14", url: "https://2cb.pw/taco-14", color: "taco-direct-kick" },
-    { name: "taco-15", url: "https://2cb.pw/taco-15", color: "taco-direct-kick" },
-    { name: "taco-16", url: "https://2cb.pw/taco-16", color: "taco-direct-kick" },
-    { name: "taco-17", url: "https://2cb.pw/taco-17", color: "taco-direct-kick" },
-    { name: "taco-18", url: "https://2cb.pw/taco-18", color: "taco-direct-kick" },
-    { name: "taco-19", url: "https://2cb.pw/taco-19", color: "taco-direct-kick" },
-    { name: "taco-20", url: "https://2cb.pw/taco-20", color: "taco-direct-kick" },
-    // tortilla-cosmic
-    { name: "taco-21", url: "https://2cb.pw/taco-21", color: "taco-tortilla-cosmic" },
-    { name: "taco-22", url: "https://2cb.pw/taco-22", color: "taco-tortilla-cosmic" },
-    { name: "taco-23", url: "https://2cb.pw/taco-23", color: "taco-tortilla-cosmic" },
-    { name: "taco-24", url: "https://2cb.pw/taco-24", color: "taco-tortilla-cosmic" },
-    { name: "taco-25", url: "https://2cb.pw/taco-25", color: "taco-tortilla-cosmic" },
-    { name: "taco-26", url: "https://2cb.pw/taco-26", color: "taco-tortilla-cosmic" },
-    { name: "taco-27", url: "https://2cb.pw/taco-27", color: "taco-tortilla-cosmic" },
-    { name: "taco-28", url: "https://2cb.pw/taco-28", color: "taco-tortilla-cosmic" },
-    { name: "taco-29", url: "https://2cb.pw/taco-29", color: "taco-tortilla-cosmic" },
-    { name: "taco-30", url: "https://2cb.pw/taco-30", color: "taco-tortilla-cosmic" },
+    // rainbow-plume
+    { name: "taco-1", url: "https://2cb.pw/taco-1", color: "taco-rainbow-plume" },
+    { name: "taco-2", url: "https://2cb.pw/taco-2", color: "taco-rainbow-plume" },
+    { name: "taco-3", url: "https://2cb.pw/taco-3", color: "taco-rainbow-plume" },
+    { name: "taco-4", url: "https://2cb.pw/taco-4", color: "taco-rainbow-plume" },
+    { name: "taco-5", url: "https://2cb.pw/taco-5", color: "taco-rainbow-plume" },
+    { name: "taco-6", url: "https://2cb.pw/taco-6", color: "taco-rainbow-plume" },
+    { name: "taco-7", url: "https://2cb.pw/taco-7", color: "taco-rainbow-plume" },
+    { name: "taco-8", url: "https://2cb.pw/taco-8", color: "taco-rainbow-plume" },
+    // confident-kick
+    { name: "taco-9", url: "https://2cb.pw/taco-9", color: "taco-confident-kick" },
+    { name: "taco-10", url: "https://2cb.pw/taco-10", color: "taco-confident-kick" },
+    { name: "taco-11", url: "https://2cb.pw/taco-11", color: "taco-confident-kick" },
+    { name: "taco-12", url: "https://2cb.pw/taco-12", color: "taco-confident-kick" },
+    { name: "taco-13", url: "https://2cb.pw/taco-13", color: "taco-confident-kick" },
+    { name: "taco-14", url: "https://2cb.pw/taco-14", color: "taco-confident-kick" },
+    // live-iter
+    { name: "taco-15", url: "https://2cb.pw/taco-15", color: "taco-live-iter" },
+    { name: "taco-16", url: "https://2cb.pw/taco-16", color: "taco-live-iter" },
+    { name: "taco-17", url: "https://2cb.pw/taco-17", color: "taco-live-iter" },
+    { name: "taco-18", url: "https://2cb.pw/taco-18", color: "taco-live-iter" },
+    { name: "taco-19", url: "https://2cb.pw/taco-19", color: "taco-live-iter" },
+    { name: "taco-20", url: "https://2cb.pw/taco-20", color: "taco-live-iter" },
+    // cubic-ease
+    { name: "taco-21", url: "https://2cb.pw/taco-21", color: "taco-cubic-ease" },
+    { name: "taco-22", url: "https://2cb.pw/taco-22", color: "taco-cubic-ease" },
+    { name: "taco-23", url: "https://2cb.pw/taco-23", color: "taco-cubic-ease" },
+    { name: "taco-24", url: "https://2cb.pw/taco-24", color: "taco-cubic-ease" },
+    { name: "taco-25", url: "https://2cb.pw/taco-25", color: "taco-cubic-ease" },
+    { name: "taco-26", url: "https://2cb.pw/taco-26", color: "taco-cubic-ease" },
+    // outline-tunnel
+    { name: "taco-27", url: "https://2cb.pw/taco-27", color: "taco-outline-tunnel" },
+    { name: "taco-28", url: "https://2cb.pw/taco-28", color: "taco-outline-tunnel" },
+    { name: "taco-29", url: "https://2cb.pw/taco-29", color: "taco-outline-tunnel" },
+    { name: "taco-30", url: "https://2cb.pw/taco-30", color: "taco-outline-tunnel" },
+    { name: "taco-31", url: "https://2cb.pw/taco-31", color: "taco-outline-tunnel" },
+    { name: "taco-32", url: "https://2cb.pw/taco-32", color: "taco-outline-tunnel" },
     // region-mask
-    { name: "taco-31", url: "https://2cb.pw/taco-31", color: "taco-region-mask" },
-    { name: "taco-32", url: "https://2cb.pw/taco-32", color: "taco-region-mask" },
     { name: "taco-33", url: "https://2cb.pw/taco-33", color: "taco-region-mask" },
     { name: "taco-34", url: "https://2cb.pw/taco-34", color: "taco-region-mask" },
     { name: "taco-35", url: "https://2cb.pw/taco-35", color: "taco-region-mask" },
     { name: "taco-36", url: "https://2cb.pw/taco-36", color: "taco-region-mask" },
     { name: "taco-37", url: "https://2cb.pw/taco-37", color: "taco-region-mask" },
-    { name: "taco-38", url: "https://2cb.pw/taco-38", color: "taco-region-mask" },
-    { name: "taco-39", url: "https://2cb.pw/taco-39", color: "taco-region-mask" },
-    { name: "taco-40", url: "https://2cb.pw/taco-40", color: "taco-region-mask" },
-    // cubic-ease
-    { name: "taco-41", url: "https://2cb.pw/taco-41", color: "taco-cubic-ease" },
-    { name: "taco-42", url: "https://2cb.pw/taco-42", color: "taco-cubic-ease" },
-    { name: "taco-43", url: "https://2cb.pw/taco-43", color: "taco-cubic-ease" },
-    { name: "taco-44", url: "https://2cb.pw/taco-44", color: "taco-cubic-ease" },
-    { name: "taco-45", url: "https://2cb.pw/taco-45", color: "taco-cubic-ease" },
-    { name: "taco-46", url: "https://2cb.pw/taco-46", color: "taco-cubic-ease" },
-    { name: "taco-47", url: "https://2cb.pw/taco-47", color: "taco-cubic-ease" },
-    { name: "taco-48", url: "https://2cb.pw/taco-48", color: "taco-cubic-ease" },
-    { name: "taco-49", url: "https://2cb.pw/taco-49", color: "taco-cubic-ease" },
-    { name: "taco-50", url: "https://2cb.pw/taco-50", color: "taco-cubic-ease" },
+    // tortilla-cosmic
+    { name: "taco-38", url: "https://2cb.pw/taco-38", color: "taco-tortilla-cosmic" },
+    { name: "taco-39", url: "https://2cb.pw/taco-39", color: "taco-tortilla-cosmic" },
+    { name: "taco-40", url: "https://2cb.pw/taco-40", color: "taco-tortilla-cosmic" },
+    { name: "taco-41", url: "https://2cb.pw/taco-41", color: "taco-tortilla-cosmic" },
+    { name: "taco-42", url: "https://2cb.pw/taco-42", color: "taco-tortilla-cosmic" },
+    // seamless
+    { name: "taco-43", url: "https://2cb.pw/taco-43", color: "taco-seamless" },
+    { name: "taco-44", url: "https://2cb.pw/taco-44", color: "taco-seamless" },
+    { name: "taco-45", url: "https://2cb.pw/taco-45", color: "taco-seamless" },
+    { name: "taco-46", url: "https://2cb.pw/taco-46", color: "taco-seamless" },
+    // demo
+    { name: "taco-47", url: "https://2cb.pw/taco-47", color: "taco-demo" },
+    { name: "taco-48", url: "https://2cb.pw/taco-48", color: "taco-demo" },
+    { name: "taco-49", url: "https://2cb.pw/taco-49", color: "taco-demo" },
+    { name: "taco-50", url: "https://2cb.pw/taco-50", color: "taco-demo" },
   ],
   coat: [
     // navy
