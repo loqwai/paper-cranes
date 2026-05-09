@@ -162,30 +162,18 @@ uniform float zoom_pulse;   // taco-kandi controller (iter 67) — spring-physic
 // BASS_PEAK now leads with KICK_INSTANT * 1.4 (extreme kick contraction)
 // and stacks the trend/baseline at lower weights for smooth between-beat.
 // Total cap raised to 2.4 so a real drop+kick stack-up can really punch.
-// Iter 67 (user: "We still need less shivery bass response. Use one of the
-// animation functions" + "How does 'the coat' series handle the beat/zoom
-// effects? It does a pretty good job"): borrowed the-coat-25's pattern:
-//
-//   1. RAW_INTENSITY uses Normalized values (rolling-window-smoothed, NOT
-//      Z-scores which jitter per frame). energyN + trebleZ-clamped + bass.
-//   2. smoothstep(0.2, 0.9, raw) FILTERS out small fluctuations near zero.
-//   3. CUBIC EASING (x³) further squashes near-zero jitter, lets peaks pass.
-//   4. Drop and spring-pulse stack additively for sustained punches.
-//
-// Cubic easing is the animation function — it's a one-line "ease-in-cubic"
-// that produces smooth-near-zero, sharp-near-one. Same shape an animator
-// would use for a "jab" curve. Combined with Normalized inputs (already
-// EMA-smoothed via the audio pipeline's history window), the zoom feels
-// musical instead of twitchy.
+// Iter 69 (user: "I need the zoom to be scaled more"):
+// Same the-coat-25 cubic-ease pattern, but the OUTPUT is scaled HARDER.
+// EASED_INTENSITY ∈ [0,1] is multiplied by 3.5 (was 1.6) → kicks really
+// punch. Pulse contract coefficient raised in main loop too. Cap raised
+// to 2.8 so heavy stack-ups (kick + drop + sustained build) can really
+// crush the zoom.
 #define KICK_TREND    clamp(energySlope * energyRSquared * 12.0 + max(bassSlope, 0.0) * bassRSquared * 6.0, 0.0, 1.0)
 #define KICK_BASSSM   smoothstep(0.20, 0.85, bass_smooth)
-// RAW_INTENSITY: combine Normalized inputs (smooth) into a 0..~1 range.
 #define RAW_INTENSITY (bass_smooth * 0.55 + max(trebleZScore, 0.0) * 0.25 + KICK_TREND * 0.4 + drop_glow * 0.5 + zoom_pulse * 1.0)
-// EASED: smoothstep filter + cubic ease. RAW_INTENSITY can exceed 1; we
-// smoothstep into [0..0.9] window then cube — peaks pop, jitter dies.
 #define EASED_INTENSITY (smoothstep(0.15, 0.95, RAW_INTENSITY) * smoothstep(0.15, 0.95, RAW_INTENSITY) * smoothstep(0.15, 0.95, RAW_INTENSITY))
 #define BASS_PEAK     (EASED_INTENSITY)
-#define ZOOM_INTENSITY (clamp(BASS_PEAK * 1.6, 0.0, 1.6))
+#define ZOOM_INTENSITY (clamp(BASS_PEAK * 3.5, 0.0, 2.8))
 
 // Pulse contraction — DOUBLED coefficient (was 0.45) so the bass kick visibly
 // punches the zoom. At PULSE_DEPTH=1.1 + heavy bass: contraction up to ~0.6
@@ -317,9 +305,15 @@ vec3 shellFractal(vec2 fragUV) {
     // which we still want for instant melodic warmth on the cream highlight.
     float pitch_lift = (pitchClassNormalized - 0.5) * 0.18;
     float shell_lift = bass_smooth * 0.06;
-    vec3 deep   = oklch2rgb(vec3(0.30 + shell_lift, 0.10, CORE_HUE - 0.05));
-    vec3 mid    = oklch2rgb(vec3(0.55 + shell_lift, 0.15, CORE_HUE));
-    vec3 bright = oklch2rgb(vec3(0.78 + shell_lift * 0.4, 0.13, CORE_HUE + 0.10 + pitch_lift));
+    // Iter 68: knob_15 → SHELL MOOD (warm vs golden). Was dead (drip disabled
+    // since iter 38). At knob_15=0 the shell stays in its iter-57 amber/cream
+    // baseline. At knob_15=1 the shell lifts ~+0.10 rad toward gold/honey.
+    // Bounded to plasma family — magenta unreachable. Useful for the demo:
+    // turn knob_15 up for warm sunset, down for cool morning.
+    float shell_mood = knob_15 * 0.10;  // ±0.10 rad max
+    vec3 deep   = oklch2rgb(vec3(0.30 + shell_lift, 0.10, CORE_HUE - 0.05 + shell_mood));
+    vec3 mid    = oklch2rgb(vec3(0.55 + shell_lift, 0.15, CORE_HUE + shell_mood));
+    vec3 bright = oklch2rgb(vec3(0.78 + shell_lift * 0.4, 0.13, CORE_HUE + 0.10 + pitch_lift + shell_mood));
     // Iter as primary mixer; traps add detail bands.
     // spectralCrest sharpens or softens the iteration-band transitions.
     // crest 0..1 → contrast multiplier 0.6..1.4 (smooth on calm, sharp on spiky).
@@ -377,6 +371,30 @@ float getEdgeGlow(vec2 uv, float width) {
 // soft wave field — exact SDF not needed for radial sin() modulation.
 // Caller pairs with sign(silhouette - 0.5) to differentiate inside/outside.
 // ============================================================================
+
+// Iter 69: getInkDistance — distance to nearest INK stroke (silhouette
+// boundary OR any internal taco detail). Used by OUTLINE_TUNNEL so the
+// tunnel traces the WHOLE logo (lettuce ovals, fold creases — all the
+// internal taco details), not just the outer silhouette boundary.
+float getInkDistance(vec2 uv) {
+    const int N_RADII = 7;
+    float radii[7];
+    radii[0] = 0.006; radii[1] = 0.010; radii[2] = 0.017;
+    radii[3] = 0.029; radii[4] = 0.050; radii[5] = 0.085; radii[6] = 0.144;
+    float boundary = 0.144;
+    for (int ri = 0; ri < N_RADII; ri++) {
+        float r = radii[ri];
+        bool found = false;
+        for (int i = 0; i < 6; i++) {
+            float a = float(i) * PI / 3.0;
+            if (getTacoRegions(uv + vec2(cos(a), sin(a)) * r).y > 0.4) {
+                found = true; break;
+            }
+        }
+        if (found) { boundary = r; break; }
+    }
+    return boundary;
+}
 
 float getOutlineDistance(vec2 uv) {
     // 7 logarithmically-spaced radii out to ~18% screen — enough horizon for
@@ -656,6 +674,59 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // The iter-39 god rays flashed on bass_smooth + drop_glow which read as the
     // "green flash" the user keeps rejecting. The beams pulsed on every kick.
     // Try again with a different audio path that avoids on-beat flashing.
+
+    // ---- OUTLINE TUNNEL (iter 69 — taco-shaped tunnel of outline bands) ----
+    // User: "we need whatever the music features are going on now to have a
+    // tunneling effect. We've been wanting a tunneling effect using the taco
+    // outline for a while". 5 layered ink-distance gaussian rings scroll
+    // INWARD over time so the camera feels like it's flying through a tunnel
+    // whose walls are the taco's ENTIRE outline (silhouette + internal
+    // details — all the lettuce ovals, fold creases also spawn rings).
+    //
+    // SPEED is driven by the SAME signals that animate the rest of the shader
+    // ("whatever music features are going on now"):
+    //   - zoom_pulse (controller's spring-physics pulse) — kicks accelerate the camera
+    //   - drop_glow                — drops sustain accelerated flight
+    //   - bass_smooth              — baseline EMA bass speed
+    //   - spectralFluxNormalized   — timbral motion = camera motion
+    //   - spectralCentroidNormalized — bright spectra = brighter tunnel
+    //
+    // Banding-safe: bounded mix() with cap 0.42, no audio in phase argument.
+    {
+        float od_t = getInkDistance(uv);
+        float MAX_OD_T = 0.144;
+        // Camera speed reacts to the active musical content. Range 0.3..1.6
+        // cycles/sec — calm passages drift, drops fly.
+        float SPEED_T = 0.30 + bass_smooth * 0.45 + drop_glow * 0.55
+                       + zoom_pulse * 0.40 + spectralFluxNormalized * 0.30;
+        float t_t = iTime * SPEED_T;
+        float tunnel_amp = 0.0;
+        for (int i = 0; i < 5; i++) {
+            // Each layer offset by 1/5 of cycle — staggered like train cars.
+            float z_t = fract(float(i) * 0.2 + t_t);
+            float ring_od_t = z_t * MAX_OD_T;
+            // Sharp gaussian band at z_t * MAX_OD distance from outline.
+            float band_t = exp(-pow((od_t - ring_od_t) * 80.0, 2.0));
+            // Perspective: bands closer to camera (z small) brighter.
+            float persp = exp(-z_t * 3.0);
+            tunnel_amp += band_t * persp;
+        }
+        // Iter 70 (user: "No magenta border."): even though the mix between
+        // orange and deep blue-violet doesn't compute to magenta in pixels,
+        // the GRADIENT TRANSITION through desaturated midpoint READS pink
+        // when adjacent rings are saturated. Solution: pick a HARD step at
+        // od=0.05 — near rings are pure warm orange, far rings are pure
+        // deep indigo. No transition zone, no mid-purple, no perceived pink.
+        vec3 tunnel_near_c = oklch2rgb(vec3(0.72, 0.14, CORE_HUE + 0.05));
+        vec3 tunnel_far_c  = oklch2rgb(vec3(0.45, 0.10, CORONA_HUE - 0.4));  // indigo (3.6-4.0 rad), away from magenta
+        // Hard step (smoothstep with very tight transition) — just one or
+        // two ring widths cross the boundary, so no extended mid zone.
+        vec3 tunnel_col = mix(tunnel_near_c, tunnel_far_c, smoothstep(0.04, 0.06, od_t));
+        // Centroid → glow multiplier. Bright spectra = brighter tunnel.
+        float tunnel_glow = 0.85 + spectralCentroidNormalized * 0.30;
+        float gain_t = clamp(tunnel_amp * 0.32, 0.0, 0.42);
+        col = mix(col, max(col, col + tunnel_col * tunnel_glow * 0.75), gain_t);
+    }
 
     // ---- OUTLINE PHOTON RING (iter 49 — plasma signature, outline-anchored) ----
     // Plasma's photon-ring form is a sharp gaussian-bright band at a specific
