@@ -77,7 +77,11 @@ uniform float drop_glow;    // taco-kandi controller — sustained drop signal
 // MONSTER_BASS adds extra amplitude on lurking-monster pockets.
 #define RADIATION_RATE     mix(0.15, 0.65, knob_5)
 #define RADIATION_LOUDNESS (bass_smooth * 0.7 + midsNormalized * 0.5 + 0.18)
-#define RADIATION_GAIN     (0.30 * (1.0 + spectralEntropyNormalized * 0.35 + MONSTER_BASS * 0.40))
+// Iter 66 (user: "more reactivity with different audio uniforms"): added
+// spectralKurtosisZScore (peaked spectra = focused tonal center → bigger
+// ripples) and spectralRolloffNormalized (high-freq cutoff position →
+// brightens radiation). Bounded so total gain stays banding-safe (max 0.55).
+#define RADIATION_GAIN     (0.30 * (1.0 + spectralEntropyNormalized * 0.35 + MONSTER_BASS * 0.40 + max(spectralKurtosisZScore, 0.0) * 0.30 + spectralRolloffNormalized * 0.20))
 // Note: phase = iTime * RATE * TAU only. NO audio in phase. Strobe-safe.
 // Wave density (cycles across the outline-distance horizon, d∈[0, 0.144]):
 //   N=80  (seed=0) → ~1.8 cycles ≈ 3 bands
@@ -657,7 +661,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             float ring_r_base = mix(0.012, 0.045, knob_12);
             float ring_pump = bass_smooth * 0.018 + drop_glow * 0.012;
             float ring_r = ring_r_base + ring_pump;
-            float ring_sharp = mix(100.0, 60.0, bass_smooth);
+            // Iter 66: ring sharpness modulated by treble-build (treble slope ×
+            // R² — confident rising-treble = tightening ring; chaotic treble
+            // = softer ring). Bounded so ring stays visible in all regimes.
+            float treb_build = clamp(max(trebleSlope, 0.0) * trebleRSquared * 8.0, 0.0, 1.0);
+            float ring_sharp = mix(100.0, 60.0, bass_smooth) + treb_build * 25.0;
             float ring = exp(-pow((od - ring_r) * ring_sharp, 2.0));
             // Color: oklch CORONA family. seed3 is unbounded — must use fract()
             // and bound to ±0.05 rad max so we stay in the deep blue-violet family.
@@ -807,10 +815,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float r3 = exp(-pow((ru.y + 0.05 - r3_y) * 32.0, 2.0));
         float r3_amp = smoothstep(0.2, 0.8, pitchClassNormalized) * 0.40;
         vec3 r3_col = oklch2rgb(vec3(0.76, 0.17, CORE_HUE + 0.7));  // peach-coral
+        // Iter 66: spectralRolloff modulates overall ribbon brightness — when
+        // the track has high-freq content reaching far up the spectrum (bright
+        // hi-hat passages, airy synths), the ribbons GLOW brighter. Slow
+        // signal — uses normalized rolloff (rolling 500-frame baseline).
+        float rolloff_glow = 0.7 + spectralRolloffNormalized * 0.5;  // 0.7..1.2
         // Combined ribbon contribution (additive, then bounded mix)
-        vec3 ribbon = r1_col * r1 * r1_amp + r2_col * r2 * r2_amp + r3_col * r3 * r3_amp;
+        vec3 ribbon = (r1_col * r1 * r1_amp + r2_col * r2 * r2_amp + r3_col * r3 * r3_amp) * rolloff_glow;
         // Bounded blend — interior gates so it doesn't bleed past outline.
-        // Max combined gain capped at 0.45 (just below 0.5 amp-loop threshold).
         float ribbon_total = clamp(r1*r1_amp + r2*r2_amp + r3*r3_amp, 0.0, 0.45) * interior;
         col = mix(col, max(col, col + ribbon * 0.65), ribbon_total);
     }
