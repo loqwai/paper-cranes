@@ -23,6 +23,12 @@ let bassSmooth = 0
 let bassPrev = 0
 let dropGlow = 0
 
+// Spring-physics zoom_pulse state (iter 67).
+// Mass on a critically-damped spring. Kicks push velocity. Friction returns
+// to rest with smooth easing. No per-frame z-score jitter survives.
+let zoomPos = 0      // current spring position [0, 1]
+let zoomVel = 0      // current spring velocity
+
 export default (features) => {
   // User rule: NEVER use the `beat` boolean uniform. Even reading it via
   // features.beat is rejected — kick detection is from z-scores only.
@@ -68,10 +74,35 @@ export default (features) => {
   dropGlow = spike > 0.15 ? Math.max(dropGlow, Math.min(spike, 1.0)) : dropGlow * 0.96
   if (dropGlow < 0.01) dropGlow = 0
 
+  // ---- ZOOM PULSE — spring-physics animation function (iter 67) ----
+  // User: "We still need less shivery bass response. Use one of the animation
+  // functions." Critically-damped spring: kicks PUSH velocity, friction
+  // decelerates, position is the smoothed pulse the shader reads. No per-
+  // frame z-score jitter survives because the spring acts as a low-pass
+  // physical filter — it can only move so fast.
+  //
+  // Tuning:
+  //   stiffness = 0.20 — pulled toward 0 with this constant per frame.
+  //   damping   = 0.86 — velocity friction (1=no friction, 0=instant stop).
+  //                      0.86 ≈ ~0.3s decay halflife at 60fps.
+  //   kick      = max of beatKick + bassDelta * 25 → fed into velocity.
+  // Result: a real kick punches the spring upward by ~0.3-0.6, then it
+  // smoothly decays back to 0 over ~300ms with elastic easing. Multiple
+  // close kicks stack additively (each adds velocity). No twitchy jitter.
+  const kickEnvelope = Math.max(beatKick, kickFromBassDelta) * 0.35
+  zoomVel += kickEnvelope        // kick injects velocity
+  zoomVel -= zoomPos * 0.20      // spring force toward 0
+  zoomVel *= 0.86                // damping (friction)
+  zoomPos += zoomVel
+  // Clamp position so it can't blow up if a freak input lands.
+  if (zoomPos < 0) { zoomPos = 0; zoomVel *= -0.3 }  // soft bounce off floor
+  if (zoomPos > 1.5) { zoomPos = 1.5; zoomVel *= -0.3 }
+
   return {
     beat_pulse: beatPulse,
     beat_kick: beatKick,
     bass_smooth: bassSmooth,
-    drop_glow: dropGlow
+    drop_glow: dropGlow,
+    zoom_pulse: zoomPos
   }
 }

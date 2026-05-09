@@ -162,11 +162,27 @@ uniform float zoom_pulse;   // taco-kandi controller (iter 67) — spring-physic
 // BASS_PEAK now leads with KICK_INSTANT * 1.4 (extreme kick contraction)
 // and stacks the trend/baseline at lower weights for smooth between-beat.
 // Total cap raised to 2.4 so a real drop+kick stack-up can really punch.
-// Iter 67: the-coat-25's smoothstep + cubic-ease pattern. Normalized inputs
-// (smooth) → smoothstep filter (drops jitter) → cubic ease (peaks pass).
-// zoom_pulse (spring) stacks on top for kick punches.
+// Iter 67 (user: "We still need less shivery bass response. Use one of the
+// animation functions" + "How does 'the coat' series handle the beat/zoom
+// effects? It does a pretty good job"): borrowed the-coat-25's pattern:
+//
+//   1. RAW_INTENSITY uses Normalized values (rolling-window-smoothed, NOT
+//      Z-scores which jitter per frame). energyN + trebleZ-clamped + bass.
+//   2. smoothstep(0.2, 0.9, raw) FILTERS out small fluctuations near zero.
+//   3. CUBIC EASING (x³) further squashes near-zero jitter, lets peaks pass.
+//   4. Drop and spring-pulse stack additively for sustained punches.
+//
+// Cubic easing is the animation function — it's a one-line "ease-in-cubic"
+// that produces smooth-near-zero, sharp-near-one. Same shape an animator
+// would use for a "jab" curve. Combined with Normalized inputs (already
+// EMA-smoothed via the audio pipeline's history window), the zoom feels
+// musical instead of twitchy.
 #define KICK_TREND    clamp(energySlope * energyRSquared * 12.0 + max(bassSlope, 0.0) * bassRSquared * 6.0, 0.0, 1.0)
+#define KICK_BASSSM   smoothstep(0.20, 0.85, bass_smooth)
+// RAW_INTENSITY: combine Normalized inputs (smooth) into a 0..~1 range.
 #define RAW_INTENSITY (bass_smooth * 0.55 + max(trebleZScore, 0.0) * 0.25 + KICK_TREND * 0.4 + drop_glow * 0.5 + zoom_pulse * 1.0)
+// EASED: smoothstep filter + cubic ease. RAW_INTENSITY can exceed 1; we
+// smoothstep into [0..0.9] window then cube — peaks pop, jitter dies.
 #define EASED_INTENSITY (smoothstep(0.15, 0.95, RAW_INTENSITY) * smoothstep(0.15, 0.95, RAW_INTENSITY) * smoothstep(0.15, 0.95, RAW_INTENSITY))
 #define BASS_PEAK     (EASED_INTENSITY)
 #define ZOOM_INTENSITY (clamp(BASS_PEAK * 1.6, 0.0, 1.6))

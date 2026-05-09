@@ -1,19 +1,32 @@
+// @favorite: true
 // @fullscreen: true
-// @tags: taco, kandi, plasma, event-horizon, coat, fractal, unique
+// @name: filibertos taco 2
+// @tags: taco, kandi, plasma, branded, filibertos, region-tagged, unique, extreme-beat
 //
-// Taco Event Horizon — plasma accretion disk swirling inside the taco silhouette.
-// Based on shaders/plasma.frag (Ether by nimitz) + the-coat chrome rim + god rays.
-// The taco is the gravitational well; the plasma is matter falling in.
+// Filibertos taco visualization (demo build #2) — supersedes filibertos/1.
+// Adds the iter-65/66 audio-reactivity round on top of the iter-63 baseline:
+//   - EXTREME beat-zoom: 4-channel kick MAX (bassZ/energyZ/fluxZ/trebleZ)
+//     × 1.4 weight, pulse coefficient 0.85, cap 2.4 — kicks really punch.
+//   - spectralKurtosisZScore + spectralRolloffNormalized → outline-radiation
+//     amplitude (peaked spectra + bright cutoffs intensify the silhouette ripples).
+//   - trebleSlope × trebleRSquared → photon ring sharpness wobble.
+//   - spectralRolloffNormalized → aurora ribbon brightness multiplier.
 //
-// seed/seed2/seed3/seed4 = unique per device (palette + lensing seed).
+// All inputs bounded; magenta path mathematically blocked; banding-safe via
+// bounded mix() blends. Per-device uniqueness via seed/seed2/seed3/seed4
+// for kandi bracelets — bounded so brand stays in family.
 //
-// KNOBS (live jam):
-//   knob_1 — SHAPE_TWIST (plasma swirl rate)
-//   knob_2 — COLOR_SPIN (palette rotation)
-//   knob_3 — FRACTAL_DENSITY (sin-fold packing)
-//   knob_4 — RIM_GLOW (chrome edge intensity)
+// KNOBS:
+//   knob_1 — SHAPE_TWIST       knob_9 — FRINGE
+//   knob_2 — COLOR_SPIN        knob_10 — LENS_STRENGTH
+//   knob_3 — FRACTAL_DENSITY   knob_11 — DRIFT_SPEED
+//   knob_4 — OUTLINE_GLOW      knob_12 — PHOTON_RING_RADIUS (audio-pumped)
+//   knob_5 — RADIATION_RATE    knob_13 — JULIA_C_RADIUS
+//   knob_6 — KALEIDOSCOPE      knob_14 — JULIA_WARP
+//   knob_7 — ZOOM+pulse-depth  knob_16 — LOGO_ECHO
+//   knob_8 — VJ_FRY (chroma + sine breath, no audio in hue)
 //
-// http://localhost:6969/jam.html?shader=redaphid/wip/taco-kandi/1&image=images/taco.png&controller=taco-kandi
+// http://localhost:6969/jam.html?shader=redaphid/filibertos/2&controller=taco-kandi&image=images/taco.png&audio=tab
 
 uniform float beat_pulse;   // taco-kandi controller — latched beat, exp-decay (~1s)
 uniform float beat_kick;    // taco-kandi controller (iter 55) — multi-signal kick detector
@@ -162,9 +175,9 @@ uniform float zoom_pulse;   // taco-kandi controller (iter 67) — spring-physic
 // BASS_PEAK now leads with KICK_INSTANT * 1.4 (extreme kick contraction)
 // and stacks the trend/baseline at lower weights for smooth between-beat.
 // Total cap raised to 2.4 so a real drop+kick stack-up can really punch.
-// Iter 67: the-coat-25's smoothstep + cubic-ease pattern. Normalized inputs
-// (smooth) → smoothstep filter (drops jitter) → cubic ease (peaks pass).
-// zoom_pulse (spring) stacks on top for kick punches.
+// Iter 67 (the-coat-25 pattern + spring-physics zoom_pulse):
+// Normalized inputs → smoothstep filter → cubic ease. Spring zoom_pulse
+// (mass-on-spring with friction in controller) stacks on top.
 #define KICK_TREND    clamp(energySlope * energyRSquared * 12.0 + max(bassSlope, 0.0) * bassRSquared * 6.0, 0.0, 1.0)
 #define RAW_INTENSITY (bass_smooth * 0.55 + max(trebleZScore, 0.0) * 0.25 + KICK_TREND * 0.4 + drop_glow * 0.5 + zoom_pulse * 1.0)
 #define EASED_INTENSITY (smoothstep(0.15, 0.95, RAW_INTENSITY) * smoothstep(0.15, 0.95, RAW_INTENSITY) * smoothstep(0.15, 0.95, RAW_INTENSITY))

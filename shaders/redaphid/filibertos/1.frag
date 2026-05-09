@@ -30,6 +30,7 @@ uniform float beat_pulse;   // taco-kandi controller — latched beat, exp-decay
 uniform float beat_kick;    // taco-kandi controller (iter 55) — multi-signal kick detector
 uniform float bass_smooth;  // taco-kandi controller — EMA-smoothed bassNormalized
 uniform float drop_glow;    // taco-kandi controller — sustained drop signal
+uniform float zoom_pulse;   // taco-kandi controller (iter 67) — spring-physics smoothed kick envelope
 
 #define TAU 6.2831853
 #define PI 3.14159265
@@ -154,19 +155,14 @@ uniform float drop_glow;    // taco-kandi controller — sustained drop signal
 // MAX of the six spike-detectors so the strongest signal of any flavor
 // drives the pulse. energySlope*R² is bounded at 0.6 since it can be
 // near-constant during builds and we don't want the pulse pinned high.
-// Iter 65 (user: "We need better zooming still on the beat!! more extreme"):
-// 4-channel INSTANT kick (bassZ/energyZ/fluxZ/trebleZ MAX, full 0..1 range)
-// punches HARD on real percussion peaks. Trend baseline stays smooth between
-// beats. Pulse coefficient 0.55→0.85, cap 1.5→2.4 so kicks really contract.
+// Iter 67 (the-coat-25 pattern + spring-physics zoom_pulse):
+// Normalized inputs → smoothstep filter → cubic ease. Spring zoom_pulse
+// (mass-on-spring with friction in controller) stacks on top.
 #define KICK_TREND    clamp(energySlope * energyRSquared * 12.0 + max(bassSlope, 0.0) * bassRSquared * 6.0, 0.0, 1.0)
-#define KICK_BASSSM   smoothstep(0.20, 0.85, bass_smooth)
-#define KICK_BASSZ    smoothstep(0.25, 0.85, max(bassZScore, 0.0))
-#define KICK_ENERGYZ  smoothstep(0.30, 0.90, max(energyZScore, 0.0))
-#define KICK_FLUXZ    smoothstep(0.35, 0.95, max(spectralFluxZScore, 0.0))
-#define KICK_TREBZ    smoothstep(0.35, 0.95, max(trebleZScore, 0.0))
-#define KICK_INSTANT  max(max(KICK_BASSZ, KICK_ENERGYZ), max(KICK_FLUXZ, KICK_TREBZ))
-#define BASS_PEAK     (KICK_INSTANT * 1.4 + KICK_TREND * 0.5 + KICK_BASSSM * 0.4 + drop_glow * 0.4 + beat_kick * 0.6)
-#define ZOOM_INTENSITY (clamp(BASS_PEAK * 0.85, 0.0, 2.4))
+#define RAW_INTENSITY (bass_smooth * 0.55 + max(trebleZScore, 0.0) * 0.25 + KICK_TREND * 0.4 + drop_glow * 0.5 + zoom_pulse * 1.0)
+#define EASED_INTENSITY (smoothstep(0.15, 0.95, RAW_INTENSITY) * smoothstep(0.15, 0.95, RAW_INTENSITY) * smoothstep(0.15, 0.95, RAW_INTENSITY))
+#define BASS_PEAK     (EASED_INTENSITY)
+#define ZOOM_INTENSITY (clamp(BASS_PEAK * 1.6, 0.0, 1.6))
 
 // Pulse contraction — DOUBLED coefficient (was 0.45) so the bass kick visibly
 // punches the zoom. At PULSE_DEPTH=1.1 + heavy bass: contraction up to ~0.6
