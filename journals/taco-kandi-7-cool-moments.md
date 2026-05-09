@@ -14,6 +14,12 @@ Iter 50 of /vibej run. **Shader has region-aware effects now** — the re-colore
 **What was missed:** Nothing flagged.
 **Design hypothesis:** Region-tagged textures unlock per-region effect targeting cleanly. Generalizable to any logo: Pepsi cup-vs-bubbles, Apple body-vs-leaf, Nike swoosh-vs-base. The mask authoring (Python flood-fill with dilated ink) takes ~5 minutes per logo.
 
+### Iter 57 (2026-05-09) — *Tanglewood / Of The Trees* — TORTILLA-COSMIC LANDS
+**Visual:** Solid brick-orange tortilla shell (wooli fractal at full clarity), olive-green plasma filling with seared red-orange highlights, deep blue-violet outline halo, crisp ink lines — looks like a real taco viewed through a plasma lens. The platonic ideal of the filibertos brand visualization.
+**Audio fingerprint:** mid-range warm-bass + entropy passage. spectralCrest moderate (not too spiky), so contrast is gentle. Shell holds together.
+**Why it worked:** Iter 56's exclusive region tagging via channel-dominance (R−G diff) gave clean shell/filling split — no green leak, no red leak. Iter 57's fresh-feature wiring lets the shell breathe without destabilizing — kurtosis/skew/crest are slow-moving so the fractal stays coherent while subtly responding to texture changes.
+**Design hypothesis:** The brick-orange tortilla + cosmic-green lettuce contrast was always the destination. Region-tagged source PNG + exclusive R−G region detection + warm-anchored shellFractal = brand identity preserved through any audio chaos. Pattern recorded.
+
 ### Iter 52 micro-tweak — pitch-driven shell hue lift
 On chaos-bright passages with pitch=0.90, added `pitch_lift = (pitchN - 0.5) * 0.12` to the shell `bright` anchor's hue. So the cream highlight in the tortilla warms toward GOLD on high melodic notes, cools toward AMBER on bass notes. Bounded ±0.06 rad, stays in plasma family. Independent from radiation/photon — only the SHELL responds to pitch.
 

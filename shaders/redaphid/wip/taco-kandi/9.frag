@@ -15,7 +15,7 @@
 //
 // http://localhost:6969/jam.html?shader=redaphid/wip/taco-kandi/1&image=images/taco.png&controller=taco-kandi
 
-uniform float beat_pulse;   // taco-kandi controller — latched beat, exp-decay (~1s)
+uniform float beat_pulse;   // taco-kandi controller — latched bassZ-only kick, exp-decay
 uniform float beat_kick;    // taco-kandi controller (iter 55) — multi-signal kick detector
 uniform float bass_smooth;  // taco-kandi controller — EMA-smoothed bassNormalized
 uniform float drop_glow;    // taco-kandi controller — sustained drop signal
@@ -128,17 +128,7 @@ uniform float drop_glow;    // taco-kandi controller — sustained drop signal
 // cross the bassN > 0.25 threshold. beat_pulse stays high for ~1s after each
 // beat so the zoom holds visibly through the kick. Also widened the bassN
 // smoothstep range (0.15→0.65 instead of 0.25→0.80) so quieter bass triggers.
-// Iter 55 (user: "Get the beat/zoom thing working more reliably (but don't
-// use the 'beat uniform)"):
-// PRIMARY pulse driver: in-shader z-score multi-signal kick detector.
-// We OR three independent kick-indicators here so SOMETHING almost always
-// fires on a beat across genres, WITHOUT reading the `beat` boolean uniform:
-//   1. bassZScore peaks   (bass-louder-than-recent-average kick)
-//   2. spectralFluxZScore peaks  (timbral attack — snares/claps)
-//   3. bass_smooth (controller's EMA bass — sustained bass pump)
-// All smoothstep'd for clean ramp-up, NO sin/phase argument so no strobing.
-// beat_kick is also wired (controller signal); when it lands it stacks but
-// the shader functions independently of it.
+// Iter 55: in-shader multi-signal kick detector (no `beat` uniform).
 #define KICK_BASSZ    smoothstep(0.30, 0.85, max(bassZScore, 0.0))
 #define KICK_FLUXZ    smoothstep(0.40, 1.00, max(spectralFluxZScore, 0.0))
 #define KICK_BASSSM   smoothstep(0.25, 0.75, bass_smooth)
@@ -198,14 +188,10 @@ vec4 getTacoRegions(vec2 uv) {
     vec4 tex = getInitialFrameColor(imgUV);
     float silhouette = tex.a;
     float maxRGB = max(max(tex.r, tex.g), tex.b);
-    // Iter 56 fix: AA pixels at red/green boundaries had BOTH isShell AND
-    // isFilling > 0.5, causing wrong region tagging at the boundary line.
-    // Use channel DOMINANCE — region with the higher RGB component wins
-    // exclusively. This gives a clean 1px transition with no overlap.
     float ink = tex.a * (1.0 - smoothstep(0.3, 0.6, maxRGB));
+    // Iter 56: channel dominance — exclusive region tagging via R−G diff.
     float redDominant = tex.a * smoothstep(0.0, 0.2, tex.r - tex.g);
     float greenDominant = tex.a * smoothstep(0.0, 0.2, tex.g - tex.r);
-    // Both gates also require non-ink (so black isn't mistaken for either).
     float nonInk = step(0.5, maxRGB);
     float isShell   = redDominant * nonInk;
     float isFilling = greenDominant * nonInk;
@@ -223,44 +209,21 @@ vec4 getTacoRegions(vec2 uv) {
 // ============================================================================
 
 vec3 shellFractal(vec2 fragUV) {
-    // Centered, aspect-corrected coords scaled into Julia coordinate space.
+    // Iter 57: shell fractal reacts to FRESH untapped audio features —
+    // spectralKurtosis (peakedness → c-radius wobble), spectralSkew (tilt →
+    // c-coord rotation bias), spectralCrest (spikiness → iter contrast),
+    // pitchClassMean (rolling-pitch baseline → slow c-coord drift). Each is
+    // bounded; no per-frame jitter survives into the Julia constant.
     vec2 z = (fragUV - 0.5) * 3.5;
     z.x *= iResolution.x / iResolution.y;
-    // Iter 57 (user: "make the fractals inside the shell react to audio
-    // features that we haven't used yet"). Wired four fresh untapped
-    // features into different aspects of the fractal so the shell breathes
-    // with multiple independent textures of the music:
-    //
-    //   spectralKurtosis  → JULIA C-RADIUS WOBBLE (peakedness)
-    //                       Peaked spectra (tonal/centered notes) shrink
-    //                       jr → fractal becomes more SOLID/blob-like.
-    //                       Diffuse spectra (chaos) expand jr → spreading filaments.
-    //   spectralSkew      → C-COORD ROTATION BIAS (harmonic tilt)
-    //                       Dark-tilted spectra rotate fractal one way,
-    //                       bright-tilted the other → fractal "leans" with
-    //                       the music's harmonic balance.
-    //   spectralCrest     → ITERATION-CONTRAST (spiky vs smooth)
-    //                       Spiky audio (transient-rich) increases the
-    //                       contrast between fractal layers; smooth audio
-    //                       softens them. Bands sharpen on snare hits.
-    //   pitchClassMean    → SLOW C-COORD DRIFT (tonal baseline)
-    //                       The rolling-average pitch slowly drifts the
-    //                       Julia center, so different keys produce
-    //                       different fractal families over long timescales.
-    //
-    // All inputs are bounded and either smoothed or capped — no per-frame
-    // jitter survives into the Julia constant, so the fractal stays stable.
     float jt = iTime * 0.05 + bass_smooth * 0.3 + pitchClassMean * 0.6;
     float jr_base = mix(0.55, 0.85, fract(seed));
-    // spectralKurtosis ~0..1; we let it move jr by ±0.06 (so jr ∈ [0.49, 0.91]).
     float jr = jr_base + (spectralKurtosisNormalized - 0.5) * 0.12;
-    // spectralSkew can be negative; clamp to ±0.5 then bias rotation phase.
     float skew_bias = clamp(spectralSkewNormalized - 0.5, -0.5, 0.5) * 0.30;
     vec2  jc = vec2(
         cos(jt + fract(seed)  * TAU + skew_bias) * jr,
         sin(jt + fract(seed2) * TAU - skew_bias) * jr
     );
-    // 8-iter Julia with orbit traps.
     float trapO = 1e10, trapY = 1e10;
     float sIter = 8.0;
     for (int i = 0; i < 8; i++) {
@@ -270,24 +233,15 @@ vec3 shellFractal(vec2 fragUV) {
         trapY = min(trapY, abs(z.y));
         if (r2 > 64.0) { sIter = float(i) - log2(log2(r2)) + 2.0; break; }
     }
-    // Three oklch anchors in the orange-amber-cream family.
-    // pitch_lift unchanged — pitchClassNormalized is the per-frame note,
-    // which we still want for instant melodic warmth on the cream highlight.
     float pitch_lift = (pitchClassNormalized - 0.5) * 0.18;
     float shell_lift = bass_smooth * 0.06;
     vec3 deep   = oklch2rgb(vec3(0.30 + shell_lift, 0.10, CORE_HUE - 0.05));
     vec3 mid    = oklch2rgb(vec3(0.55 + shell_lift, 0.15, CORE_HUE));
     vec3 bright = oklch2rgb(vec3(0.78 + shell_lift * 0.4, 0.13, CORE_HUE + 0.10 + pitch_lift));
-    // Iter as primary mixer; traps add detail bands.
-    // spectralCrest sharpens or softens the iteration-band transitions.
-    // crest 0..1 → contrast multiplier 0.6..1.4 (smooth on calm, sharp on spiky).
     float crest_contrast = mix(0.6, 1.4, spectralCrestNormalized);
     float t1 = clamp(sIter / 8.0, 0.0, 1.0);
-    // smoothstep(0, 1/contrast) sharpens or smooths the transition: high contrast
-    // makes mid take over very fast, low contrast keeps the deep→mid blend gentle.
     vec3 col = oklabmix(deep, mid, smoothstep(0.0, 0.5 / crest_contrast, t1));
     col = oklabmix(col, bright, smoothstep(0.0, 0.20 / crest_contrast, sqrt(trapY)));
-    // Bass breathing on overall brightness — unchanged.
     col *= (0.85 + bass_smooth * 0.30);
     return col;
 }
@@ -335,6 +289,36 @@ float getEdgeGlow(vec2 uv, float width) {
 // soft wave field — exact SDF not needed for radial sin() modulation.
 // Caller pairs with sign(silhouette - 0.5) to differentiate inside/outside.
 // ============================================================================
+
+// ============================================================================
+// INK DISTANCE FIELD (iter 54 — for full-logo tunnel)
+// User: "I want the outline of the entire taco." Returns approximate distance
+// from the nearest INK stroke (silhouette boundary OR any internal detail).
+// Same binary-search shape as getOutlineDistance, but tests against `ink` mask
+// instead of `silhouette` mask — so internal taco details (the leafy oval
+// outlines, fold creases) all generate their own concentric tunnel rings.
+// ============================================================================
+
+float getInkDistance(vec2 uv) {
+    const int N_RADII = 7;
+    float radii[7];
+    radii[0] = 0.006; radii[1] = 0.010; radii[2] = 0.017;
+    radii[3] = 0.029; radii[4] = 0.050; radii[5] = 0.085; radii[6] = 0.144;
+    float boundary = 0.144;
+    for (int ri = 0; ri < N_RADII; ri++) {
+        float r = radii[ri];
+        bool found = false;
+        for (int i = 0; i < 6; i++) {
+            float a = float(i) * PI / 3.0;
+            // ink is the .y component of getTacoRegions
+            if (getTacoRegions(uv + vec2(cos(a), sin(a)) * r).y > 0.4) {
+                found = true; break;
+            }
+        }
+        if (found) { boundary = r; break; }
+    }
+    return boundary;
+}
 
 float getOutlineDistance(vec2 uv) {
     // 7 logarithmically-spaced radii out to ~18% screen — enough horizon for
@@ -614,6 +598,48 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // The iter-39 god rays flashed on bass_smooth + drop_glow which read as the
     // "green flash" the user keeps rejecting. The beams pulsed on every kick.
     // Try again with a different audio path that avoids on-beat flashing.
+
+    // ---- OUTLINE TUNNEL (iter 54 — taco-shaped tunnel of outline bands) ----
+    // User: "I want to feel like I'm going through a 'tunnel' of the outline of
+    // the taco over time, having the outline forming a tunnel the camera is
+    // always going down." Multiple outline-distance gaussian rings scroll
+    // INWARD over time so the camera feels like it's flying through a tunnel
+    // whose walls are the taco's silhouette repeated at increasing depths.
+    //
+    // Design:
+    //   * 5 layered rings, each at scrolling depth in od-space.
+    //   * Layer i's "z-depth" = fract(i*0.2 + iTime*SPEED) * MAX_OD
+    //     — meaning all 5 rings move from far→near together, with each
+    //     offset by 1/5 of the cycle. As one ring exits at od=0 (camera),
+    //     the next emerges at od=MAX_OD (far down the tunnel).
+    //   * Brightness: near rings bright, far rings dim. exp(-z*N) gradient.
+    //   * Audio modulates SPEED: bass_smooth + drop_glow accelerate the camera.
+    //   * Color: warm CORE for near rings, cool CORONA for far rings.
+    //   * Banding-safe: bounded mix() blend, max gain 0.45 (<0.5 amp loop).
+    {
+        // Iter 54 fix: use INK distance (silhouette outline + internal taco
+        // details: oval lettuce strokes, fold creases) so the tunnel traces
+        // the WHOLE logo, not just the outer boundary. Removed the
+        // silhouette<0.3 guard so the tunnel renders both inside and outside
+        // the silhouette — every ink line spawns its own concentric tunnel.
+        float od_t = getInkDistance(uv);
+        float MAX_OD_T = 0.144;
+        float SPEED_T = 0.4 + bass_smooth * 0.6 + drop_glow * 0.6;
+        float t_t = iTime * SPEED_T;
+        float tunnel_amp = 0.0;
+        for (int i = 0; i < 5; i++) {
+            float z_t = fract(float(i) * 0.2 + t_t);
+            float ring_od_t = z_t * MAX_OD_T;
+            float band_t = exp(-pow((od_t - ring_od_t) * 80.0, 2.0));
+            float persp = exp(-z_t * 3.0);
+            tunnel_amp += band_t * persp;
+        }
+        vec3 tunnel_near_c = oklch2rgb(vec3(0.78, 0.16, CORE_HUE + 0.05));
+        vec3 tunnel_far_c  = oklch2rgb(vec3(0.50, 0.13, CORONA_HUE));
+        vec3 tunnel_col = mix(tunnel_near_c, tunnel_far_c, smoothstep(0.005, 0.10, od_t));
+        float gain_t = clamp(tunnel_amp * 0.28, 0.0, 0.42);
+        col = mix(col, max(col, col + tunnel_col * 0.75), gain_t);
+    }
 
     // ---- OUTLINE PHOTON RING (iter 49 — plasma signature, outline-anchored) ----
     // Plasma's photon-ring form is a sharp gaussian-bright band at a specific
@@ -983,30 +1009,16 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // wrapping fract), so no banding at extreme knob values.
     // CAPS: knob_8 contribution to hue rotation capped at *fixed* small value so
     // even at k8=1 the hue doesn't whip-around per frame.
-    // Iter 54 fix (user: "Ah, that's driven by knob_8" + "colors are shivering
-    // and changing every frame"): VJ_FRY's per-frame audio-modulated hue
-    // rotation was causing the shivering. spectralCentroidNormalized varies
-    // every frame (~5-10% jitter), and at knob_8=1 with the chroma-boosted
-    // brightness, that jitter became VISIBLE color flicker.
-    // Replaced ALL per-frame audio inputs with stable smoothed variants:
-    //   - Removed spectralCentroidNormalized → bounded sine-breath only
-    //   - Hue uses ONLY iTime-based slow oscillator (no audio in hue)
-    //   - Chroma uses Mean (long-window average) instead of raw
-    //   - Lightness S-curve unchanged (no audio there)
-    // Result: knob_8 still gives the saturated VJ-fry feel but the colors
-    // STAY STILL frame-to-frame regardless of audio jitter.
+    // Iter 54: VJ_FRY no longer reads per-frame audio (was causing color
+    // shivering at knob_8=1). Hue is bounded sine-breath; chroma+lightness
+    // are knob-only. See /8 commit for full rationale.
     if (knob_8 > 0.001) {
         vec3 lch_fry = rgb2oklch(max(col, vec3(0.001)));
-        // Chroma boost — uses no audio, just knob (stable per-frame).
         lch_fry.y = clamp(lch_fry.y + knob_8 * 0.08, 0.0, 0.30);
-        // Lightness midtone S-curve — no audio.
         lch_fry.x = mix(lch_fry.x, smoothstep(0.0, 1.0, lch_fry.x) * 0.7 + 0.15, knob_8 * 0.4);
-        // Hue rotation: STABLE bounded sine-breath only. No audio in hue.
-        // Period 20s, peak-to-peak 0.20 rad. Cannot pass through magenta.
         float fry_breath = sin(iTime * 0.05 * TAU) * 0.5 + 0.5;
         lch_fry.z += knob_8 * 0.20 * (fry_breath - 0.5);
         col = mix(col, oklch2rgb(lch_fry), knob_8);
-        // Final contrast push — same smoothstep, no audio.
         col = mix(col, smoothstep(vec3(0.05), vec3(0.95), col), knob_8 * 0.25);
     }
 
@@ -1062,38 +1074,32 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         }
     }
 
-    // ---- CRISP INK OVERLAY (logo recognition guard, iter 56 deepened) ----
-    // User flag iter 56: ink contrast still not strong enough vs busy filling.
-    // Three-zone strategy: dim ring around stroke + DEEP shadow on stroke +
-    // bright chrome highlight on the brightest part of the stroke. The dim
-    // ring guarantees boundary contrast even when ink is plotted on white.
+    // ---- CRISP INK OVERLAY (logo recognition guard, iter 53 strengthened) ----
+    // User flag iter 53: "In this example where the lettuce etc is so crazy
+    // (which I love) We need to maintain the edge contrast of the details so
+    // we can tell it's the logo." Re-asserts the taco's ink lines with HARD
+    // contrast so the logo always reads even when the filling is going wild.
+    // Ink sampled from un-perturbed uv (sharp_ink) so internal logo lines stay
+    // crisp regardless of fringe/feedback/VJ-FRY chaos.
     {
-        // 1. Sample ink at 2px AND 4px rings → wider shadow halo. Take max so
-        //    the halo is the union of close-and-far ink.
-        float pxr  = 1.5 / min(res.x, res.y);
-        float pxr2 = 3.0 / min(res.x, res.y);
-        float halo_close = max(max(getTacoRegions(uv + vec2( pxr, 0)).y,
-                                   getTacoRegions(uv + vec2(-pxr, 0)).y),
-                               max(getTacoRegions(uv + vec2(0,  pxr)).y,
-                                   getTacoRegions(uv + vec2(0, -pxr)).y));
-        float halo_far   = max(max(getTacoRegions(uv + vec2( pxr2, 0)).y,
-                                   getTacoRegions(uv + vec2(-pxr2, 0)).y),
-                               max(getTacoRegions(uv + vec2(0,  pxr2)).y,
-                                   getTacoRegions(uv + vec2(0, -pxr2)).y));
-        // 2. Three-tier ink strength field:
-        //    - sharp_ink itself     → STROKE (deepest pull)
-        //    - halo_close * 0.7     → 1px dim ring
-        //    - halo_far   * 0.35    → 2-3px shallow dim halo
-        float ink_field = max(max(sharp_ink, halo_close * 0.7), halo_far * 0.35);
-        // 3. Pull color HARD toward near-black on the ink field. 95% gain so
-        //    even the shallow halo darkens visibly. Result: every ink stroke
-        //    sits in a small dim moat regardless of surrounding chaos.
-        col = mix(col, col * 0.04, ink_field * 0.95);
-        // 4. Crisp warm chrome on the CORE of each stroke (sharp_ink only,
-        //    not halo). Bass-pulsed for life. Lightness boosted so it pops
-        //    against the now-deeper shadow.
-        vec3 chromeInk = oklch2rgb(vec3(0.78, 0.16, CORE_HUE + 0.3));
-        col += chromeInk * sharp_ink * (0.30 + bass_smooth * 0.30);
+        // 1. SHADOW HALO: darken a 1-2px ring AROUND each ink stroke too, so
+        //    the stroke-vs-filling boundary has guaranteed contrast even when
+        //    the filling is bright. Sample ink at 4 small offsets and take max.
+        float pxr = 1.5 / min(res.x, res.y);
+        float ink_halo = max(max(getTacoRegions(uv + vec2( pxr, 0)).y,
+                                 getTacoRegions(uv + vec2(-pxr, 0)).y),
+                             max(getTacoRegions(uv + vec2(0,  pxr)).y,
+                                 getTacoRegions(uv + vec2(0, -pxr)).y));
+        // 2. Pull color HARD toward near-black on ink + halo — full contrast.
+        //    Was: mix(col, col*0.15, sharp_ink*0.75)  → only ~36% darken at peak
+        //    Now: mix(col, col*0.05, max(sharp_ink, ink_halo*0.6) * 0.92)
+        //    → 92% pull toward 5% lightness = near-black. Logo guaranteed.
+        float ink_strength = max(sharp_ink, ink_halo * 0.6);
+        col = mix(col, col * 0.05, ink_strength * 0.92);
+        // 3. Crisp warm highlight: thin chrome on the very darkest stroke
+        //    pixels (anti-flat ink). Bass-pulsed for life. Bounded.
+        vec3 chromeInk = oklch2rgb(vec3(0.70, 0.16, CORE_HUE + 0.3));
+        col += chromeInk * sharp_ink * (0.20 + bass_smooth * 0.25);
     }
 
     // Reinhard tonemap (from the-coat-25)

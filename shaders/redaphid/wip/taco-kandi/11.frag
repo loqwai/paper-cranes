@@ -622,13 +622,21 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // its contour. Provides crisp logo definition without overpowering radiation.
     // CRITICAL: brightness is CONSTANT (NOT bass-pumped) — bass-pulsed gaussian
     // bands were the iter 43 flash bug. This is purely structural texture.
-    // knob_12 → ring radius offset (0=hugging outline, 1=outer halo).
+    // knob_12 → outline photon ring base radius (0=hugging outline, 1=outer halo).
+    // Iter 58 (user: "whatever knob_12 is doing should be audio reactive"):
+    // ring radius PUMPS with bass_smooth + drop_glow on top of the knob value.
+    // Bass kicks push the ring outward, drops sustain it wider. Sharpness
+    // also breathes (tighter on calm, softer on heavy bass). All inputs are
+    // EMA/latched so no per-frame jitter. Stays inside the 0.144 horizon.
+    // Banding-safe: ring_gain still hard-capped at 0.30.
     {
         if (silhouette < 0.3) {
             float od = getOutlineDistance(uv);
-            float ring_r = mix(0.012, 0.045, knob_12);  // bounded so ring always sits in radiation horizon
-            // Sharp gaussian ring centered at ring_r — exp(-x²/sigma²) form
-            float ring = exp(-pow((od - ring_r) * 90.0, 2.0));
+            float ring_r_base = mix(0.012, 0.045, knob_12);
+            float ring_pump = bass_smooth * 0.018 + drop_glow * 0.012;
+            float ring_r = ring_r_base + ring_pump;
+            float ring_sharp = mix(100.0, 60.0, bass_smooth);
+            float ring = exp(-pow((od - ring_r) * ring_sharp, 2.0));
             // Color: oklch CORONA family. seed3 is unbounded — must use fract()
             // and bound to ±0.05 rad max so we stay in the deep blue-violet family.
             // CORONA_HUE itself is mix(4.0, 4.4); +0.10 max would push to 4.5
