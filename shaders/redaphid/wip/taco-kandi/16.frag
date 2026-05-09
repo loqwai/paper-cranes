@@ -184,17 +184,23 @@ uniform float zoom_pulse;   // taco-kandi controller (iter 67) — spring-physic
 // strong kicks punch immediately. bassZ + energyZ + fluxZ MAX, full 0..1.
 #define DIRECT_KICK   max(max(smoothstep(0.20, 0.80, max(bassZScore, 0.0)), smoothstep(0.25, 0.85, max(energyZScore, 0.0))), smoothstep(0.30, 0.90, max(spectralFluxZScore, 0.0)))
 #define BASS_PEAK     (EASED_INTENSITY * 0.8 + DIRECT_KICK * 1.0)
-#define ZOOM_INTENSITY (clamp(BASS_PEAK * 3.5, 0.0, 3.5))
+// Iter 72 (user: "Make sure we don't zoom in too far"). Tightened ceiling:
+// ZOOM_INTENSITY caps at 1.5 (was 3.5), and PULSE_CONTRACT now uses 0.40
+// coefficient. PULSE_DEPTH max ≈ 1.1, so worst-case PULSE_CONTRACT = 1.5 *
+// 0.40 * 1.1 = 0.66. With ZOOM_BASE clamped at 0.6 (knob_7=1) the floor of
+// TACO_SCALE = max(0.6 - 0.66, 0.45) = 0.45 — taco cannot shrink below 45%
+// of full size on any kick. Logo always stays clearly readable.
+#define ZOOM_INTENSITY (clamp(BASS_PEAK * 1.8, 0.0, 1.5))
 
-// Pulse contraction — DOUBLED coefficient (was 0.45) so the bass kick visibly
-// punches the zoom. At PULSE_DEPTH=1.1 + heavy bass: contraction up to ~0.6
-// (very visible — taco grows ~50% on the kick).
-#define PULSE_CONTRACT (ZOOM_INTENSITY * 0.55 * PULSE_DEPTH)
+#define PULSE_CONTRACT (ZOOM_INTENSITY * 0.40 * PULSE_DEPTH)
 
-// Taco scale: zoom base + pulse contraction
-#define TACO_SCALE    (max(ZOOM_BASE - PULSE_CONTRACT, 0.25))
-// Plasma-interior zoom: same pulse, slightly gentler
-#define ZOOM_PULSE    (1.0 - PULSE_CONTRACT * 0.4)
+// Taco scale: zoom base + pulse contraction. FLOOR raised 0.25 → 0.45 so
+// the taco never shrinks below 45% of full size — logo stays readable
+// even on monster drops. CEILING capped at 1.8 so it can't blow up either.
+#define TACO_SCALE    (clamp(ZOOM_BASE - PULSE_CONTRACT, 0.45, 1.8))
+// Plasma-interior zoom: same pulse, slightly gentler. Floor 0.65 so
+// interior plasma stays visible (doesn't compress to a dot).
+#define ZOOM_PULSE    (clamp(1.0 - PULSE_CONTRACT * 0.30, 0.65, 1.2))
 
 // Slow autonomous shape drift (plasma jam: organism breath at 0.4Hz)
 // knob_11 → DRIFT_SPEED (auto-wired iter 6, +0.55 gesture, matches plasma iter-5 wiring)

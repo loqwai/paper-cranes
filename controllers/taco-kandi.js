@@ -24,10 +24,21 @@ let bassPrev = 0
 let dropGlow = 0
 
 // Spring-physics zoom_pulse state (iter 67).
-// Mass on a critically-damped spring. Kicks push velocity. Friction returns
-// to rest with smooth easing. No per-frame z-score jitter survives.
 let zoomPos = 0      // current spring position [0, 1]
 let zoomVel = 0      // current spring velocity
+
+// BPM detection state (iter 72).
+// User: "Maybe we calculate the bpm in the controller even".
+// Track timestamps of CONFIDENT recent kicks. Median inter-kick interval
+// gives BPM. Once we have BPM we can phase-lock visuals to predicted beats
+// even when the immediate audio frame is quiet.
+let lastFrameTime = 0       // perf.now() at last call
+let kickStamps = []         // [t1, t2, ...] in seconds since module load
+let lastKickTime = 0        // for predicting next-beat
+let lastKickValue = 0       // hysteresis — only register a NEW kick after value drops
+let bpmSmoothed = 120       // EMA-smoothed BPM (default 120 until we have data)
+let beatPhasePos = 0        // 0..1, ramps with elapsed time / beat_period
+let moduleStartTime = null  // first-call performance.now()
 
 export default (features) => {
   // User rule: NEVER use the `beat` boolean uniform. Even reading it via
@@ -98,11 +109,56 @@ export default (features) => {
   if (zoomPos < 0) { zoomPos = 0; zoomVel *= -0.3 }  // soft bounce off floor
   if (zoomPos > 1.5) { zoomPos = 1.5; zoomVel *= -0.3 }
 
+  // ---- BPM DETECTION + BEAT PHASE (iter 72) ----
+  // User: "Maybe we calculate the bpm in the controller even".
+  // 1. Detect kick events (rising edge of beatKick > 0.4, with hysteresis).
+  // 2. Record timestamp; keep last ~16 kicks.
+  // 3. Compute median inter-kick interval → BPM.
+  // 4. Phase-lock beatPhasePos to a predicted beat grid: ramps 0→1 between
+  //    expected beats, snaps to the closest predicted beat-time.
+  if (moduleStartTime === null) moduleStartTime = performance.now()
+  const nowS = (performance.now() - moduleStartTime) / 1000
+
+  // Hysteresis: register a kick when beatKick crosses up through 0.45 AND
+  // hadn't been there last frame (rising edge). Avoids double-counting
+  // sustained kicks during decay.
+  if (beatKick > 0.45 && lastKickValue <= 0.45) {
+    kickStamps.push(nowS)
+    if (kickStamps.length > 16) kickStamps.shift()
+    lastKickTime = nowS
+  }
+  lastKickValue = beatKick
+
+  // Compute median inter-kick interval if we have ≥ 4 kicks
+  if (kickStamps.length >= 4) {
+    const intervals = []
+    for (let i = 1; i < kickStamps.length; i++) {
+      intervals.push(kickStamps[i] - kickStamps[i-1])
+    }
+    intervals.sort((a, b) => a - b)
+    const median = intervals[Math.floor(intervals.length / 2)]
+    // Clamp to plausible musical BPM range (60..200 → period 1.0..0.3s)
+    if (median >= 0.30 && median <= 1.0) {
+      const newBpm = 60 / median
+      // EMA smooth so BPM doesn't whiplash on a stray double-kick or skip
+      bpmSmoothed = bpmSmoothed * 0.85 + newBpm * 0.15
+    }
+  }
+
+  // BEAT PHASE: 0..1 ramp synchronized to predicted beat grid.
+  // Time elapsed since last detected kick / beat period (1/bpm * 60).
+  const beatPeriodS = 60 / bpmSmoothed
+  const tSinceLastKick = nowS - lastKickTime
+  // Position in current "beat slot": fraction 0..1 of beatPeriodS
+  beatPhasePos = (tSinceLastKick % beatPeriodS) / beatPeriodS
+
   return {
     beat_pulse: beatPulse,
     beat_kick: beatKick,
     bass_smooth: bassSmooth,
     drop_glow: dropGlow,
-    zoom_pulse: zoomPos
+    zoom_pulse: zoomPos,
+    bpm: bpmSmoothed,
+    beat_phase: beatPhasePos,
   }
 }
