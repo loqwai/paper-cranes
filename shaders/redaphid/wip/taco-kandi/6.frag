@@ -120,9 +120,12 @@ uniform float drop_glow;    // taco-kandi controller — sustained drop signal
 #define PULSE_DEPTH (0.4 + knob_7 * 0.7)       // ALWAYS some pulse, knob scales it
 
 // Pulse signal: instant bass peak detector + latching controller signals.
-// No cubic ease — linear so even moderate audio produces visible motion.
-#define BASS_PEAK     (smoothstep(0.25, 0.80, bassNormalized) + smoothstep(0.3, 0.9, bass_smooth) * 0.6)
-#define ZOOM_INTENSITY (clamp(BASS_PEAK * 0.5 + drop_glow * 0.6, 0.0, 1.4))
+// Iter 51 fix (user: "It's not zooming reliably with the beat"):
+// Added beat_pulse (controller's latched beat with exp-decay) so EVERY beat
+// fires some pulse, even on tracks with quiet bass. Widened bassN smoothstep
+// from 0.25→0.80 to 0.15→0.65 so quieter bass triggers visibly.
+#define BASS_PEAK     (smoothstep(0.15, 0.65, bassNormalized) + smoothstep(0.25, 0.85, bass_smooth) * 0.6 + beat_pulse * 0.7)
+#define ZOOM_INTENSITY (clamp(BASS_PEAK * 0.45 + drop_glow * 0.5, 0.0, 1.4))
 
 // Pulse contraction — DOUBLED coefficient (was 0.45) so the bass kick visibly
 // punches the zoom. At PULSE_DEPTH=1.1 + heavy bass: contraction up to ~0.6
