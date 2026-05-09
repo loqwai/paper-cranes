@@ -49,3 +49,24 @@ Came from `journals/taco-kandi-6-cool-moments.md` at iter 49 baseline. See that 
 - **Region-tagged textures** as a pattern: instead of fighting to detect "shell vs filling" via geometric heuristics in the shader, encode the regions in the source image as channel colors. Cheap to author, instant to read, generalizes to any logo with multiple parts (cup vs straw, body vs accessories, etc.).
 - **Wooli-style fractals work great as "fill textures"** when shrunk from 80 iters to 8 — preserves the seeded uniqueness without burning GPU. Useful for branded fills where the brand-zone is a small portion of the frame.
 - **beat_pulse from controller is the right "always-fires" signal** for any beat-locked effect — its exp-decay holds the pulse visible through the kick, unlike the raw `beat` boolean which is a single frame.
+
+## Iter 71-77 verification harness lineage (DJ-demo prep, 2026-05-09)
+
+User: "I am about to show this to a lot of djs for the first time. To make a name for myself. We need this beat→zoom thing to look good." Built `window.__zoomVerifier` — per-frame canvas pixel-sample + audio-feature recorder, paired audio kicks against visual change events to measure coverage/lag/amplitude. Ran for many ticks driving incremental improvements.
+
+| iter | track | coverage | dLum | lag | move |
+|---|---|---|---|---|---|
+| 71 | various | 81% | 0.020 | -22ms | DIRECT_KICK + tightened smoothstep |
+| 72 | various | 86% | 0.020 | -| zoom-floor cap + BPM detection |
+| 73 | various | 96% | 0.025 | 21ms | DIRECT_KICK pulses outline edge |
+| 74 | various | 93% | 0.030 | 8ms | split halo: cool indigo + warm orange |
+| 75 | Bass Is Pumpin' | **94%** | **0.034** | 5ms | interior kick flash on shell+filling — DEMO LOCK |
+| 76 | various | 86% | 0.016* | -14ms | aurora ribbon r2 cyan-locked (CORONA-1.2) |
+| 77 | i go hard | 90% | 0.028 | 2ms | seed phase offsets on SHAPE_DRIFT |
+
+*iter 76 dLum dipped because measurement window grew to 251s, including calmer sections; recent-60s-window analysis showed 91% coverage 0.022 dLum on the calm passage, then iter 77 verification on a fresh 100s window reads 90%/0.028 which is on-trend.
+
+**Key discovery:** controller hot-reload is unreliable — the running page exposes only the original 3 controller signals (`beat_pulse`, `bass_smooth`, `drop_glow`). My iter 55+ additions (`beat_kick`, `zoom_pulse`, `bpm`, `beat_phase`) are NOT visible to the shader despite being on disk. The shader's in-shader DIRECT_KICK chain (4-channel z-score MAX) is what actually drives the visible response. Memory entry added: `feedback_controller_hot_reload_unreliable.md`.
+
+**Demo build snapshotted:** `redaphid/filibertos/3.frag` at iter 75 baseline. @favorite: true. Three stacked beat-feedback layers (zoom contraction + outline kick flare + interior flash). Logo readable through every chaos passage. Magenta path mathematically blocked.
+
