@@ -15,15 +15,15 @@
 //
 // PRESETS — paste any URL into the browser (or the mobile list page).
 // Mic mode (default for NFC bracelets):
-// http://localhost:6969/?shader=redaphid/taco/plasma&image=images/taco.png&controller=taco-kandi
+// http://localhost:6969/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi
 // Tab-audio mode (Spotify/SoundCloud — Chrome desktop):
-// http://localhost:6969/?shader=redaphid/taco/plasma&image=images/taco.png&controller=taco-kandi&audio=tab
+// http://localhost:6969/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&audio=tab
 // Live jam editor:
-// http://localhost:6969/jam.html?shader=redaphid/taco/plasma&image=images/taco.png&controller=taco-kandi&audio=tab
+// http://localhost:6969/jam.html?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&audio=tab
 // Seeded variants (each phone gets a unique look):
-// http://localhost:6969/?shader=redaphid/taco/plasma&image=images/taco.png&controller=taco-kandi&seed=0.618&seed2=0.755&seed3=0.892&seed4=0.029
-// http://localhost:6969/?shader=redaphid/taco/plasma&image=images/taco.png&controller=taco-kandi&seed=0.236&seed2=0.373&seed3=0.51&seed4=0.647
-// http://localhost:6969/?shader=redaphid/taco/plasma&image=images/taco.png&controller=taco-kandi&seed=0.854&seed2=0.991&seed3=0.128&seed4=0.265
+// http://localhost:6969/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.618&seed2=0.755&seed3=0.892&seed4=0.029
+// http://localhost:6969/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.236&seed2=0.373&seed3=0.51&seed4=0.647
+// http://localhost:6969/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.854&seed2=0.991&seed3=0.128&seed4=0.265
 
 uniform float beat_pulse;   // taco-kandi controller — latched beat, exp-decay (~1s)
 uniform float bass_smooth;  // taco-kandi controller — EMA-smoothed bassNormalized
