@@ -1311,8 +1311,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // magenta gets rerouted to the plasma palette before output.
     {
         vec3 final_lch = rgb2oklch(max(col, vec3(0.001)));
-        float magenta_dist = abs(final_lch.z - 5.0);  // distance from middle of magenta zone
-        float in_magenta = (1.0 - smoothstep(0.0, 0.5, magenta_dist)) * smoothstep(0.05, 0.15, final_lch.y);
+        // Iter 81 fix: zone narrowed to 4.5-6.0 rad (true magenta-purple-pink)
+        // so we DON'T accidentally rotate legitimate CORONA_HUE blue-violet
+        // pixels (4.0-4.4 rad, the plasma palette's signature cool tone).
+        // Hard step: if pixel is in 4.5-6.0 rad AND has chroma > 0.03, fully
+        // rotate to CORONA_HUE (4.2). No partial rotations — full kill.
+        float in_magenta_zone = step(4.5, final_lch.z) * step(final_lch.z, 6.0);
+        float in_magenta = in_magenta_zone * step(0.03, final_lch.y);
         // Rotate offending pixels toward CORONA_HUE (4.2 rad) — short arc.
         // Mix lch.z with CORONA_HUE by 'in_magenta' factor.
         final_lch.z = mix(final_lch.z, 4.2, in_magenta);

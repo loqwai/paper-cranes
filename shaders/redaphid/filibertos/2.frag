@@ -1172,8 +1172,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // upstream effect that accidentally produces magenta gets rerouted.
     {
         vec3 final_lch = rgb2oklch(max(col, vec3(0.001)));
-        float magenta_dist = abs(final_lch.z - 5.0);
-        float in_magenta = (1.0 - smoothstep(0.0, 0.5, magenta_dist)) * smoothstep(0.05, 0.15, final_lch.y);
+        // Iter 81: hard-step zone 4.5-6.0 rad (true magenta-purple-pink). Does
+        // NOT touch CORONA blue-violet at 4.0-4.4 rad (the legit plasma palette).
+        float in_magenta_zone = step(4.5, final_lch.z) * step(final_lch.z, 6.0);
+        float in_magenta = in_magenta_zone * step(0.03, final_lch.y);
         final_lch.z = mix(final_lch.z, 4.2, in_magenta);
         final_lch.y = mix(final_lch.y, final_lch.y * 0.7, in_magenta);
         col = oklch2rgb(final_lch);
