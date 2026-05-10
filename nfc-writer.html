@@ -23,6 +23,8 @@
     --taco-live-iter: #16a085;
     --taco-tortilla-cosmic: #e67e22;
     --taco-region-mask: #6cb0e8;
+    --taco-plasma: #ff7eb6;
+    --taco-seamless: #5fd0c8;
     --ok: #2ecc71;
     --err: #e74c3c;
     --warn: #f39c12;
@@ -77,6 +79,8 @@
   .current.color-taco-live-iter { border-left: 4px solid var(--taco-live-iter); }
   .current.color-taco-tortilla-cosmic { border-left: 4px solid var(--taco-tortilla-cosmic); }
   .current.color-taco-region-mask { border-left: 4px solid var(--taco-region-mask); }
+  .current.color-taco-plasma { border-left: 4px solid var(--taco-plasma); }
+  .current.color-taco-seamless { border-left: 4px solid var(--taco-seamless); }
   .label {
     font-size: 12px;
     text-transform: uppercase;
@@ -151,6 +155,37 @@
     font-size: 12px;
     line-height: 1.5;
   }
+  .preview {
+    aspect-ratio: 1 / 1;
+    width: 100%;
+    max-width: 360px;
+    margin: 0 auto;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #000;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    position: relative;
+  }
+  .preview iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+    pointer-events: none;
+  }
+  .preview-label {
+    position: absolute;
+    top: 6px;
+    left: 8px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255, 255, 255, 0.6);
+    background: rgba(0, 0, 0, 0.4);
+    padding: 2px 6px;
+    border-radius: 4px;
+    pointer-events: none;
+  }
   .queue summary {
     cursor: pointer;
     color: var(--dim);
@@ -195,6 +230,11 @@
   <span class="next-url" id="next-url">—</span>
 </div>
 
+<div class="preview" id="preview-wrap">
+  <span class="preview-label" id="preview-label">preview</span>
+  <iframe id="preview" title="shader preview" sandbox="allow-scripts allow-same-origin"></iframe>
+</div>
+
 <button class="write-btn" id="write" disabled>Tap a tag to write</button>
 
 <div class="status" id="status">Ready.</div>
@@ -214,63 +254,63 @@
 const QUEUES = {
   taco: [
     // plasma
-    { name: "taco-1", url: "https://2cb.pw/taco-1", color: "taco-plasma" },
-    { name: "taco-2", url: "https://2cb.pw/taco-2", color: "taco-plasma" },
-    { name: "taco-3", url: "https://2cb.pw/taco-3", color: "taco-plasma" },
-    { name: "taco-4", url: "https://2cb.pw/taco-4", color: "taco-plasma" },
-    { name: "taco-5", url: "https://2cb.pw/taco-5", color: "taco-plasma" },
-    { name: "taco-6", url: "https://2cb.pw/taco-6", color: "taco-plasma" },
-    { name: "taco-7", url: "https://2cb.pw/taco-7", color: "taco-plasma" },
-    { name: "taco-8", url: "https://2cb.pw/taco-8", color: "taco-plasma" },
-    { name: "taco-9", url: "https://2cb.pw/taco-9", color: "taco-plasma" },
-    { name: "taco-10", url: "https://2cb.pw/taco-10", color: "taco-plasma" },
-    { name: "taco-11", url: "https://2cb.pw/taco-11", color: "taco-plasma" },
-    { name: "taco-12", url: "https://2cb.pw/taco-12", color: "taco-plasma" },
-    { name: "taco-13", url: "https://2cb.pw/taco-13", color: "taco-plasma" },
-    { name: "taco-14", url: "https://2cb.pw/taco-14", color: "taco-plasma" },
-    { name: "taco-15", url: "https://2cb.pw/taco-15", color: "taco-plasma" },
+    { name: "taco-1", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
+    { name: "taco-2", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_2=0.62&knob_5=0.07&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
+    { name: "taco-3", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_2=0.24&knob_5=0.14&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
+    { name: "taco-4", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.472&seed2=0.79&seed3=0.108&seed4=0.426&knob_2=0.85&knob_5=0.21&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
+    { name: "taco-5", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.09&seed2=0.408&seed3=0.726&seed4=0.044&knob_2=0.47&knob_5=0.29&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
+    { name: "taco-6", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.708&seed2=0.026&seed3=0.344&seed4=0.662&knob_2=0.09&knob_5=0.36&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
+    { name: "taco-7", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.326&seed2=0.644&seed3=0.962&seed4=0.28&knob_2=0.71&knob_5=0.43&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
+    { name: "taco-8", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.944&seed2=0.262&seed3=0.58&seed4=0.898&knob_2=0.33&knob_5=0.5&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
+    { name: "taco-9", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.562&seed2=0.88&seed3=0.198&seed4=0.516&knob_2=0.94&knob_5=0.57&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
+    { name: "taco-10", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.18&seed2=0.498&seed3=0.816&seed4=0.134&knob_2=0.56&knob_5=0.64&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
+    { name: "taco-11", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.798&seed2=0.116&seed3=0.434&seed4=0.752&knob_2=0.18&knob_5=0.71&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
+    { name: "taco-12", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.416&seed2=0.734&seed3=0.052&seed4=0.37&knob_2=0.8&knob_5=0.79&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
+    { name: "taco-13", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.034&seed2=0.352&seed3=0.67&seed4=0.988&knob_2=0.42&knob_5=0.86&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
+    { name: "taco-14", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.652&seed2=0.97&seed3=0.288&seed4=0.606&knob_2=0.03&knob_5=0.93&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
+    { name: "taco-15", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.271&seed2=0.589&seed3=0.907&seed4=0.225&knob_2=0.65&knob_5=1.0&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
     // seamless
-    { name: "taco-16", url: "https://2cb.pw/taco-16", color: "taco-seamless" },
-    { name: "taco-17", url: "https://2cb.pw/taco-17", color: "taco-seamless" },
-    { name: "taco-18", url: "https://2cb.pw/taco-18", color: "taco-seamless" },
-    { name: "taco-19", url: "https://2cb.pw/taco-19", color: "taco-seamless" },
-    { name: "taco-20", url: "https://2cb.pw/taco-20", color: "taco-seamless" },
-    { name: "taco-21", url: "https://2cb.pw/taco-21", color: "taco-seamless" },
-    { name: "taco-22", url: "https://2cb.pw/taco-22", color: "taco-seamless" },
-    { name: "taco-23", url: "https://2cb.pw/taco-23", color: "taco-seamless" },
-    { name: "taco-24", url: "https://2cb.pw/taco-24", color: "taco-seamless" },
-    { name: "taco-25", url: "https://2cb.pw/taco-25", color: "taco-seamless" },
+    { name: "taco-16", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_1=0.52&knob_4=0.74&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307&fft_size=2048&smoothing=0.3", color: "taco-seamless" },
+    { name: "taco-17", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=0.52&knob_2=0.62&knob_4=0.74&knob_5=0.11&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307&fft_size=2048&smoothing=0.3", color: "taco-seamless" },
+    { name: "taco-18", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=0.52&knob_2=0.24&knob_4=0.74&knob_5=0.22&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307&fft_size=2048&smoothing=0.3", color: "taco-seamless" },
+    { name: "taco-19", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.472&seed2=0.79&seed3=0.108&seed4=0.426&knob_1=0.52&knob_2=0.85&knob_4=0.74&knob_5=0.33&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307&fft_size=2048&smoothing=0.3", color: "taco-seamless" },
+    { name: "taco-20", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.09&seed2=0.408&seed3=0.726&seed4=0.044&knob_1=0.52&knob_2=0.47&knob_4=0.74&knob_5=0.44&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307&fft_size=2048&smoothing=0.3", color: "taco-seamless" },
+    { name: "taco-21", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.708&seed2=0.026&seed3=0.344&seed4=0.662&knob_1=0.52&knob_2=0.09&knob_4=0.74&knob_5=0.56&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307&fft_size=2048&smoothing=0.3", color: "taco-seamless" },
+    { name: "taco-22", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.326&seed2=0.644&seed3=0.962&seed4=0.28&knob_1=0.52&knob_2=0.71&knob_4=0.74&knob_5=0.67&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307&fft_size=2048&smoothing=0.3", color: "taco-seamless" },
+    { name: "taco-23", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.944&seed2=0.262&seed3=0.58&seed4=0.898&knob_1=0.52&knob_2=0.33&knob_4=0.74&knob_5=0.78&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307&fft_size=2048&smoothing=0.3", color: "taco-seamless" },
+    { name: "taco-24", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.562&seed2=0.88&seed3=0.198&seed4=0.516&knob_1=0.52&knob_2=0.94&knob_4=0.74&knob_5=0.89&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307&fft_size=2048&smoothing=0.3", color: "taco-seamless" },
+    { name: "taco-25", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.18&seed2=0.498&seed3=0.816&seed4=0.134&knob_1=0.52&knob_2=0.56&knob_4=0.74&knob_5=1.0&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307&fft_size=2048&smoothing=0.3", color: "taco-seamless" },
     // rainbow-plume
-    { name: "taco-26", url: "https://2cb.pw/taco-26", color: "taco-rainbow-plume" },
-    { name: "taco-27", url: "https://2cb.pw/taco-27", color: "taco-rainbow-plume" },
-    { name: "taco-28", url: "https://2cb.pw/taco-28", color: "taco-rainbow-plume" },
-    { name: "taco-29", url: "https://2cb.pw/taco-29", color: "taco-rainbow-plume" },
-    { name: "taco-30", url: "https://2cb.pw/taco-30", color: "taco-rainbow-plume" },
-    { name: "taco-31", url: "https://2cb.pw/taco-31", color: "taco-rainbow-plume" },
+    { name: "taco-26", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/rainbow-plume&image=images/taco.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_1=1.0&knob_2=0.3&knob_3=1.0&knob_4=1.0&knob_6=0.276&knob_7=0.0&knob_8=0.843&knob_9=0.575&knob_10=0.622&knob_12=0.472&knob_13=0.386&knob_14=1.0&knob_15=0.85&knob_16=0.457&fft_size=2048&smoothing=0.3", color: "taco-rainbow-plume" },
+    { name: "taco-27", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/rainbow-plume&image=images/taco.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=1.0&knob_2=0.92&knob_3=1.0&knob_4=1.0&knob_5=0.62&knob_6=0.276&knob_7=0.0&knob_8=0.843&knob_9=0.575&knob_10=0.622&knob_12=0.472&knob_13=0.386&knob_14=1.0&knob_15=0.85&knob_16=0.457&fft_size=2048&smoothing=0.3", color: "taco-rainbow-plume" },
+    { name: "taco-28", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/rainbow-plume&image=images/taco.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=1.0&knob_2=0.54&knob_3=1.0&knob_4=1.0&knob_5=0.24&knob_6=0.276&knob_7=0.0&knob_8=0.843&knob_9=0.575&knob_10=0.622&knob_12=0.472&knob_13=0.386&knob_14=1.0&knob_15=0.85&knob_16=0.457&fft_size=2048&smoothing=0.3", color: "taco-rainbow-plume" },
+    { name: "taco-29", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/rainbow-plume&image=images/taco.png&controller=taco-kandi&seed=0.472&seed2=0.79&seed3=0.108&seed4=0.426&knob_1=1.0&knob_2=0.15&knob_3=1.0&knob_4=1.0&knob_5=0.85&knob_6=0.276&knob_7=0.0&knob_8=0.843&knob_9=0.575&knob_10=0.622&knob_12=0.472&knob_13=0.386&knob_14=1.0&knob_15=0.85&knob_16=0.457&fft_size=2048&smoothing=0.3", color: "taco-rainbow-plume" },
+    { name: "taco-30", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/rainbow-plume&image=images/taco.png&controller=taco-kandi&seed=0.09&seed2=0.408&seed3=0.726&seed4=0.044&knob_1=1.0&knob_2=0.77&knob_3=1.0&knob_4=1.0&knob_5=0.47&knob_6=0.276&knob_7=0.0&knob_8=0.843&knob_9=0.575&knob_10=0.622&knob_12=0.472&knob_13=0.386&knob_14=1.0&knob_15=0.85&knob_16=0.457&fft_size=2048&smoothing=0.3", color: "taco-rainbow-plume" },
+    { name: "taco-31", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/rainbow-plume&image=images/taco.png&controller=taco-kandi&seed=0.708&seed2=0.026&seed3=0.344&seed4=0.662&knob_1=1.0&knob_2=0.39&knob_3=1.0&knob_4=1.0&knob_5=0.09&knob_6=0.276&knob_7=0.0&knob_8=0.843&knob_9=0.575&knob_10=0.622&knob_12=0.472&knob_13=0.386&knob_14=1.0&knob_15=0.85&knob_16=0.457&fft_size=2048&smoothing=0.3", color: "taco-rainbow-plume" },
     // confident-kick
-    { name: "taco-32", url: "https://2cb.pw/taco-32", color: "taco-confident-kick" },
-    { name: "taco-33", url: "https://2cb.pw/taco-33", color: "taco-confident-kick" },
-    { name: "taco-34", url: "https://2cb.pw/taco-34", color: "taco-confident-kick" },
-    { name: "taco-35", url: "https://2cb.pw/taco-35", color: "taco-confident-kick" },
+    { name: "taco-32", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/confident-kick&image=images/taco.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_1=0.5&knob_2=0.3&knob_3=0.6&knob_4=0.7&knob_7=0.0&knob_12=0.5&knob_14=0.6&fft_size=2048&smoothing=0.3", color: "taco-confident-kick" },
+    { name: "taco-33", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/confident-kick&image=images/taco.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=0.5&knob_2=0.92&knob_3=0.6&knob_4=0.7&knob_5=0.62&knob_7=0.0&knob_12=0.5&knob_14=0.6&fft_size=2048&smoothing=0.3", color: "taco-confident-kick" },
+    { name: "taco-34", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/confident-kick&image=images/taco.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=0.5&knob_2=0.54&knob_3=0.6&knob_4=0.7&knob_5=0.24&knob_7=0.0&knob_12=0.5&knob_14=0.6&fft_size=2048&smoothing=0.3", color: "taco-confident-kick" },
+    { name: "taco-35", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/confident-kick&image=images/taco.png&controller=taco-kandi&seed=0.472&seed2=0.79&seed3=0.108&seed4=0.426&knob_1=0.5&knob_2=0.15&knob_3=0.6&knob_4=0.7&knob_5=0.85&knob_7=0.0&knob_12=0.5&knob_14=0.6&fft_size=2048&smoothing=0.3", color: "taco-confident-kick" },
     // live-iter
-    { name: "taco-36", url: "https://2cb.pw/taco-36", color: "taco-live-iter" },
-    { name: "taco-37", url: "https://2cb.pw/taco-37", color: "taco-live-iter" },
-    { name: "taco-38", url: "https://2cb.pw/taco-38", color: "taco-live-iter" },
-    { name: "taco-39", url: "https://2cb.pw/taco-39", color: "taco-live-iter" },
+    { name: "taco-36", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/live-iter&image=images/taco.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_1=0.5&knob_2=0.3&knob_3=0.6&knob_4=0.6&knob_7=0.0&knob_12=0.5&knob_14=0.6&fft_size=2048&smoothing=0.3", color: "taco-live-iter" },
+    { name: "taco-37", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/live-iter&image=images/taco.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=0.5&knob_2=0.92&knob_3=0.6&knob_4=0.6&knob_5=0.62&knob_7=0.0&knob_12=0.5&knob_14=0.6&fft_size=2048&smoothing=0.3", color: "taco-live-iter" },
+    { name: "taco-38", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/live-iter&image=images/taco.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=0.5&knob_2=0.54&knob_3=0.6&knob_4=0.6&knob_5=0.24&knob_7=0.0&knob_12=0.5&knob_14=0.6&fft_size=2048&smoothing=0.3", color: "taco-live-iter" },
+    { name: "taco-39", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/live-iter&image=images/taco.png&controller=taco-kandi&seed=0.472&seed2=0.79&seed3=0.108&seed4=0.426&knob_1=0.5&knob_2=0.15&knob_3=0.6&knob_4=0.6&knob_5=0.85&knob_7=0.0&knob_12=0.5&knob_14=0.6&fft_size=2048&smoothing=0.3", color: "taco-live-iter" },
     // cubic-ease
-    { name: "taco-40", url: "https://2cb.pw/taco-40", color: "taco-cubic-ease" },
-    { name: "taco-41", url: "https://2cb.pw/taco-41", color: "taco-cubic-ease" },
-    { name: "taco-42", url: "https://2cb.pw/taco-42", color: "taco-cubic-ease" },
-    { name: "taco-43", url: "https://2cb.pw/taco-43", color: "taco-cubic-ease" },
+    { name: "taco-40", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/cubic-ease&image=images/taco.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_1=0.5&knob_2=0.3&knob_3=0.6&knob_4=0.6&knob_7=0.0&knob_12=0.5&knob_14=0.5&fft_size=2048&smoothing=0.3", color: "taco-cubic-ease" },
+    { name: "taco-41", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/cubic-ease&image=images/taco.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=0.5&knob_2=0.92&knob_3=0.6&knob_4=0.6&knob_5=0.62&knob_7=0.0&knob_12=0.5&knob_14=0.5&fft_size=2048&smoothing=0.3", color: "taco-cubic-ease" },
+    { name: "taco-42", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/cubic-ease&image=images/taco.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=0.5&knob_2=0.54&knob_3=0.6&knob_4=0.6&knob_5=0.24&knob_7=0.0&knob_12=0.5&knob_14=0.5&fft_size=2048&smoothing=0.3", color: "taco-cubic-ease" },
+    { name: "taco-43", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/cubic-ease&image=images/taco.png&controller=taco-kandi&seed=0.472&seed2=0.79&seed3=0.108&seed4=0.426&knob_1=0.5&knob_2=0.15&knob_3=0.6&knob_4=0.6&knob_5=0.85&knob_7=0.0&knob_12=0.5&knob_14=0.5&fft_size=2048&smoothing=0.3", color: "taco-cubic-ease" },
     // outline-tunnel
-    { name: "taco-44", url: "https://2cb.pw/taco-44", color: "taco-outline-tunnel" },
-    { name: "taco-45", url: "https://2cb.pw/taco-45", color: "taco-outline-tunnel" },
-    { name: "taco-46", url: "https://2cb.pw/taco-46", color: "taco-outline-tunnel" },
-    { name: "taco-47", url: "https://2cb.pw/taco-47", color: "taco-outline-tunnel" },
+    { name: "taco-44", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/outline-tunnel&image=images/taco.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_1=0.197&knob_2=0.3&knob_3=0.016&knob_4=0.803&knob_6=0.465&knob_7=0.0&knob_8=1.0&knob_9=0.071&knob_10=0.394&knob_11=1.0&knob_12=1.0&knob_13=0.543&knob_14=0.402&knob_15=0.62&knob_16=0.205&fft_size=2048&smoothing=0.3", color: "taco-outline-tunnel" },
+    { name: "taco-45", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/outline-tunnel&image=images/taco.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=0.197&knob_2=0.92&knob_3=0.016&knob_4=0.803&knob_5=0.62&knob_6=0.465&knob_7=0.0&knob_8=1.0&knob_9=0.071&knob_10=0.394&knob_11=1.0&knob_12=1.0&knob_13=0.543&knob_14=0.402&knob_15=0.62&knob_16=0.205&fft_size=2048&smoothing=0.3", color: "taco-outline-tunnel" },
+    { name: "taco-46", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/outline-tunnel&image=images/taco.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=0.197&knob_2=0.54&knob_3=0.016&knob_4=0.803&knob_5=0.24&knob_6=0.465&knob_7=0.0&knob_8=1.0&knob_9=0.071&knob_10=0.394&knob_11=1.0&knob_12=1.0&knob_13=0.543&knob_14=0.402&knob_15=0.62&knob_16=0.205&fft_size=2048&smoothing=0.3", color: "taco-outline-tunnel" },
+    { name: "taco-47", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/outline-tunnel&image=images/taco.png&controller=taco-kandi&seed=0.472&seed2=0.79&seed3=0.108&seed4=0.426&knob_1=0.197&knob_2=0.15&knob_3=0.016&knob_4=0.803&knob_5=0.85&knob_6=0.465&knob_7=0.0&knob_8=1.0&knob_9=0.071&knob_10=0.394&knob_11=1.0&knob_12=1.0&knob_13=0.543&knob_14=0.402&knob_15=0.62&knob_16=0.205&fft_size=2048&smoothing=0.3", color: "taco-outline-tunnel" },
     // region-mask
-    { name: "taco-48", url: "https://2cb.pw/taco-48", color: "taco-region-mask" },
-    { name: "taco-49", url: "https://2cb.pw/taco-49", color: "taco-region-mask" },
-    { name: "taco-50", url: "https://2cb.pw/taco-50", color: "taco-region-mask" },
+    { name: "taco-48", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/region-mask&image=images/taco.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_1=0.039&knob_2=0.3&knob_3=0.724&knob_4=0.756&knob_6=0.409&knob_7=0.0&knob_8=0.488&knob_9=0.071&knob_10=1.0&knob_11=1.0&knob_12=1.0&knob_13=0.071&knob_14=0.504&knob_15=0.63&knob_16=0.205&fft_size=2048&smoothing=0.3", color: "taco-region-mask" },
+    { name: "taco-49", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/region-mask&image=images/taco.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=0.039&knob_2=0.92&knob_3=0.724&knob_4=0.756&knob_5=0.62&knob_6=0.409&knob_7=0.0&knob_8=0.488&knob_9=0.071&knob_10=1.0&knob_11=1.0&knob_12=1.0&knob_13=0.071&knob_14=0.504&knob_15=0.63&knob_16=0.205&fft_size=2048&smoothing=0.3", color: "taco-region-mask" },
+    { name: "taco-50", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/region-mask&image=images/taco.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=0.039&knob_2=0.54&knob_3=0.724&knob_4=0.756&knob_5=0.24&knob_6=0.409&knob_7=0.0&knob_8=0.488&knob_9=0.071&knob_10=1.0&knob_11=1.0&knob_12=1.0&knob_13=0.071&knob_14=0.504&knob_15=0.63&knob_16=0.205&fft_size=2048&smoothing=0.3", color: "taco-region-mask" },
   ],
   coat: [
     // navy
@@ -329,6 +369,35 @@ const els = {
   skip: document.getElementById("skip"),
   reset: document.getElementById("reset"),
   queue: document.getElementById("queue"),
+  preview: document.getElementById("preview"),
+  previewLabel: document.getElementById("preview-label"),
+  previewWrap: document.getElementById("preview-wrap"),
+}
+
+// Map nfc-variants.json full URLs (production) onto whichever origin we're on so
+// the iframe renders locally during dev. Falls back to short URL if mapping missing.
+let VARIANTS_BY_NAME = {}
+const variantsUrl = QUEUE_NAME === "taco" ? "/shaders/redaphid/taco/nfc-variants.json" : null
+if (variantsUrl) {
+  fetch(variantsUrl)
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(list => {
+      VARIANTS_BY_NAME = Object.fromEntries(list.map(v => [v.name, v]))
+      render()
+    })
+    .catch(err => setStatus(`Could not load variants (${err}); preview disabled.`, "warn"))
+}
+
+function previewUrlFor(name) {
+  const v = VARIANTS_BY_NAME[name]
+  if (!v) return null
+  // Replace the production origin with the local one so the iframe runs against dev/this host.
+  // Add noaudio so the preview doesn't fight for the mic, and time=0 for a deterministic still.
+  const fullUrl = new URL(v.full)
+  const localUrl = new URL(fullUrl.pathname + fullUrl.search, location.origin)
+  localUrl.searchParams.set("noaudio", "true")
+  localUrl.searchParams.set("embed", "true")
+  return localUrl.toString()
 }
 
 let state = loadState()
@@ -353,6 +422,7 @@ function setStatus(msg, kind = "") {
   els.status.className = "status" + (kind ? " " + kind : "")
 }
 
+let lastPreviewKey = null
 function render() {
   const cur = QUEUE[state.index]
   if (!cur) {
@@ -361,16 +431,34 @@ function render() {
     els.write.disabled = true
     els.write.textContent = "Done"
     els.current.className = "current"
+    setPreview(null, null)
   } else {
     els.nextName.textContent = cur.name
     els.nextUrl.textContent = cur.url
     els.current.className = "current color-" + cur.color
     els.write.disabled = false
     els.write.textContent = "Tap a tag to write"
+    setPreview(cur.name, previewUrlFor(cur.name))
   }
   els.progress.textContent = `${state.done.length} / ${QUEUE.length}`
   renderQueue()
   saveState()
+}
+
+function setPreview(name, url) {
+  if (!els.preview) return
+  // Key on (name, url) so a name that was previously "unavailable" gets re-set
+  // once VARIANTS_BY_NAME finishes loading.
+  const key = name + "|" + (url || "")
+  if (key === lastPreviewKey) return
+  lastPreviewKey = key
+  if (!url) {
+    els.preview.removeAttribute("src")
+    els.previewLabel.textContent = name ? "preview loading…" : "preview"
+    return
+  }
+  els.preview.src = url
+  els.previewLabel.textContent = name
 }
 
 function renderQueue() {
