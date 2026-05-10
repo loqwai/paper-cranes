@@ -145,7 +145,7 @@ uniform float zoom_pulse;   // taco-kandi controller (iter 67) — spring-physic
 //   peak), knob_7 just controls how big it gets. At k7=0 → big still taco, no
 //   pulse. At k7=1 → tight zoom-in WITH heavy bass-driven contraction.
 // Removed bipolar split — pulse was being hidden behind the 0.5 threshold.
-#define ZOOM_BASE   (mix(1.6, 0.6, knob_7))   // larger taco at k7=0, tighter at k7=1
+#define ZOOM_BASE   (mix(0.85, 0.35, knob_7))  // iter 57b: taco fills frame at k7=0 (tighter than the old 1.6 default), even tighter at k7=1
 #define PULSE_DEPTH (0.4 + knob_7 * 0.7)       // ALWAYS some pulse, knob scales it
 
 // Pulse signal: instant bass peak detector + latching controller signals.

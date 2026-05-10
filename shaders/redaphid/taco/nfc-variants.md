@@ -1,60 +1,60 @@
-# Taco NFC Variants
+# Taco NFC Variants — Multi-color edition
 
-50 variants for `2cb.pw/taco-1` … `2cb.pw/taco-50`. **Real captured knob values** from each shader's baked-fork-state are baked into every URL.
+50 variants for `2cb.pw/taco-1` … `2cb.pw/taco-50`.
 
-Late-session-weighted (the trippiest forks dominate). Per-variant variation on knob_2/5/6/8/14/16 (±0.15) so phones in the same shader still differ visually.
+Heavy weight on `plasma` (15) and `seamless` (10) — these are the early stencil-era shaders with the auto-cycling palette modes (ember/emerald/arctic/prism via knob_5). They're the source of the multi-color visuals from the live session.
 
-| # | Shader | seed | seed2 | seed3 | seed4 | k_2 | k_5 | k_6 | k_8 | k_14 | k_16 | Short |
-|---|--------|------|-------|-------|-------|-----|-----|-----|-----|------|------|-------|
-| 1 | rainbow-plume | 0.618 | 0.755 | 0.892 | 0.029 |  | 0.891 | 0.208 | 0.816 | 1.0 | 0.513 | `https://2cb.pw/taco-1` |
-| 2 | rainbow-plume | 0.236 | 0.373 | 0.51 | 0.647 | 0.106 | 1.0 | 0.394 | 0.702 | 0.9 | 0.398 | `https://2cb.pw/taco-2` |
-| 3 | rainbow-plume | 0.854 | 0.991 | 0.128 | 0.265 |  | 0.962 | 0.279 | 0.887 | 1.0 | 0.583 | `https://2cb.pw/taco-3` |
-| 4 | rainbow-plume | 0.472 | 0.609 | 0.746 | 0.883 | 0.177 | 1.0 | 0.164 | 0.773 | 0.971 | 0.469 | `https://2cb.pw/taco-4` |
-| 5 | rainbow-plume | 0.09 | 0.227 | 0.364 | 0.501 | 0.063 | 1.0 | 0.35 | 0.958 | 0.856 | 0.354 | `https://2cb.pw/taco-5` |
-| 6 | rainbow-plume | 0.708 | 0.845 | 0.982 | 0.119 |  | 0.918 | 0.235 | 0.843 | 1.0 | 0.54 | `https://2cb.pw/taco-6` |
-| 7 | rainbow-plume | 0.326 | 0.463 | 0.6 | 0.737 | 0.133 | 1.0 | 0.421 | 0.729 | 0.927 | 0.425 | `https://2cb.pw/taco-7` |
-| 8 | rainbow-plume | 0.944 | 0.081 | 0.218 | 0.355 | 0.019 | 0.989 | 0.306 | 0.914 | 1.0 | 0.31 | `https://2cb.pw/taco-8` |
-| 9 | confident-kick | 0.618 | 0.755 | 0.892 | 0.029 | 0.35 | 0.391 | 0.432 | 0.473 | 0.614 | 0.555 | `https://2cb.pw/taco-9` |
-| 10 | confident-kick | 0.236 | 0.373 | 0.51 | 0.647 | 0.535 | 0.577 | 0.618 | 0.359 | 0.5 | 0.441 | `https://2cb.pw/taco-10` |
-| 11 | confident-kick | 0.854 | 0.991 | 0.128 | 0.265 | 0.421 | 0.462 | 0.503 | 0.544 | 0.685 | 0.626 | `https://2cb.pw/taco-11` |
-| 12 | confident-kick | 0.472 | 0.609 | 0.746 | 0.883 | 0.606 | 0.647 | 0.388 | 0.43 | 0.571 | 0.512 | `https://2cb.pw/taco-12` |
-| 13 | confident-kick | 0.09 | 0.227 | 0.364 | 0.501 | 0.492 | 0.533 | 0.574 | 0.615 | 0.456 | 0.397 | `https://2cb.pw/taco-13` |
-| 14 | confident-kick | 0.708 | 0.845 | 0.982 | 0.119 | 0.377 | 0.418 | 0.459 | 0.5 | 0.641 | 0.583 | `https://2cb.pw/taco-14` |
-| 15 | live-iter | 0.618 | 0.755 | 0.892 | 0.029 | 0.35 | 0.391 | 0.432 | 0.473 | 0.714 | 0.555 | `https://2cb.pw/taco-15` |
-| 16 | live-iter | 0.236 | 0.373 | 0.51 | 0.647 | 0.535 | 0.577 | 0.618 | 0.359 | 0.6 | 0.441 | `https://2cb.pw/taco-16` |
-| 17 | live-iter | 0.854 | 0.991 | 0.128 | 0.265 | 0.421 | 0.462 | 0.503 | 0.544 | 0.785 | 0.626 | `https://2cb.pw/taco-17` |
-| 18 | live-iter | 0.472 | 0.609 | 0.746 | 0.883 | 0.606 | 0.647 | 0.388 | 0.43 | 0.671 | 0.512 | `https://2cb.pw/taco-18` |
-| 19 | live-iter | 0.09 | 0.227 | 0.364 | 0.501 | 0.492 | 0.533 | 0.574 | 0.615 | 0.556 | 0.397 | `https://2cb.pw/taco-19` |
-| 20 | live-iter | 0.708 | 0.845 | 0.982 | 0.119 | 0.377 | 0.418 | 0.459 | 0.5 | 0.741 | 0.583 | `https://2cb.pw/taco-20` |
-| 21 | cubic-ease | 0.618 | 0.755 | 0.892 | 0.029 | 0.35 | 0.391 | 0.432 | 0.473 | 0.514 | 0.555 | `https://2cb.pw/taco-21` |
-| 22 | cubic-ease | 0.236 | 0.373 | 0.51 | 0.647 | 0.535 | 0.577 | 0.618 | 0.359 | 0.4 | 0.441 | `https://2cb.pw/taco-22` |
-| 23 | cubic-ease | 0.854 | 0.991 | 0.128 | 0.265 | 0.421 | 0.462 | 0.503 | 0.544 | 0.585 | 0.626 | `https://2cb.pw/taco-23` |
-| 24 | cubic-ease | 0.472 | 0.609 | 0.746 | 0.883 | 0.606 | 0.647 | 0.388 | 0.43 | 0.471 | 0.512 | `https://2cb.pw/taco-24` |
-| 25 | cubic-ease | 0.09 | 0.227 | 0.364 | 0.501 | 0.492 | 0.533 | 0.574 | 0.615 | 0.356 | 0.397 | `https://2cb.pw/taco-25` |
-| 26 | cubic-ease | 0.708 | 0.845 | 0.982 | 0.119 | 0.377 | 0.418 | 0.459 | 0.5 | 0.541 | 0.583 | `https://2cb.pw/taco-26` |
-| 27 | outline-tunnel | 0.618 | 0.755 | 0.892 | 0.029 |  | 0.663 | 0.397 | 0.973 | 0.416 | 0.261 | `https://2cb.pw/taco-27` |
-| 28 | outline-tunnel | 0.236 | 0.373 | 0.51 | 0.647 | 0.161 | 0.849 | 0.583 | 0.859 | 0.302 | 0.146 | `https://2cb.pw/taco-28` |
-| 29 | outline-tunnel | 0.854 | 0.991 | 0.128 | 0.265 | 0.047 | 0.734 | 0.468 | 1.0 | 0.487 | 0.331 | `https://2cb.pw/taco-29` |
-| 30 | outline-tunnel | 0.472 | 0.609 | 0.746 | 0.883 | 0.232 | 0.919 | 0.353 | 0.93 | 0.373 | 0.217 | `https://2cb.pw/taco-30` |
-| 31 | outline-tunnel | 0.09 | 0.227 | 0.364 | 0.501 | 0.118 | 0.805 | 0.539 | 1.0 | 0.258 | 0.102 | `https://2cb.pw/taco-31` |
-| 32 | outline-tunnel | 0.708 | 0.845 | 0.982 | 0.119 | 0.003 | 0.69 | 0.424 | 1.0 | 0.443 | 0.288 | `https://2cb.pw/taco-32` |
-| 33 | region-mask | 0.618 | 0.755 | 0.892 | 0.029 | 0.354 | 0.663 | 0.341 | 0.461 | 0.518 | 0.261 | `https://2cb.pw/taco-33` |
-| 34 | region-mask | 0.236 | 0.373 | 0.51 | 0.647 | 0.539 | 0.849 | 0.527 | 0.347 | 0.404 | 0.146 | `https://2cb.pw/taco-34` |
-| 35 | region-mask | 0.854 | 0.991 | 0.128 | 0.265 | 0.425 | 0.734 | 0.412 | 0.532 | 0.589 | 0.331 | `https://2cb.pw/taco-35` |
-| 36 | region-mask | 0.472 | 0.609 | 0.746 | 0.883 | 0.61 | 0.919 | 0.297 | 0.418 | 0.475 | 0.217 | `https://2cb.pw/taco-36` |
-| 37 | region-mask | 0.09 | 0.227 | 0.364 | 0.501 | 0.496 | 0.805 | 0.483 | 0.603 | 0.36 | 0.102 | `https://2cb.pw/taco-37` |
-| 38 | tortilla-cosmic | 0.618 | 0.755 | 0.892 | 0.029 | 0.322 | 0.891 |  | 0.973 | 0.353 | 0.513 | `https://2cb.pw/taco-38` |
-| 39 | tortilla-cosmic | 0.236 | 0.373 | 0.51 | 0.647 | 0.507 | 1.0 | 0.118 | 0.859 | 0.239 | 0.398 | `https://2cb.pw/taco-39` |
-| 40 | tortilla-cosmic | 0.854 | 0.991 | 0.128 | 0.265 | 0.393 | 0.962 | 0.003 | 1.0 | 0.424 | 0.583 | `https://2cb.pw/taco-40` |
-| 41 | tortilla-cosmic | 0.472 | 0.609 | 0.746 | 0.883 | 0.578 | 1.0 |  | 0.93 | 0.31 | 0.469 | `https://2cb.pw/taco-41` |
-| 42 | tortilla-cosmic | 0.09 | 0.227 | 0.364 | 0.501 | 0.464 | 1.0 | 0.074 | 1.0 | 0.195 | 0.354 | `https://2cb.pw/taco-42` |
-| 43 | seamless | 0.618 | 0.755 | 0.892 | 0.029 | 0.259 | 0.891 | 0.082 | 0.367 | 0.644 | 0.056 | `https://2cb.pw/taco-43` |
-| 44 | seamless | 0.236 | 0.373 | 0.51 | 0.647 | 0.444 | 1.0 | 0.268 | 0.253 | 0.53 |  | `https://2cb.pw/taco-44` |
-| 45 | seamless | 0.854 | 0.991 | 0.128 | 0.265 | 0.33 | 0.962 | 0.153 | 0.438 | 0.715 | 0.126 | `https://2cb.pw/taco-45` |
-| 46 | seamless | 0.472 | 0.609 | 0.746 | 0.883 | 0.515 | 1.0 | 0.038 | 0.324 | 0.601 | 0.012 | `https://2cb.pw/taco-46` |
-| 47 | demo | 0.618 | 0.755 | 0.892 | 0.029 | 0.35 | 0.391 | 0.432 | 0.473 | 0.514 | 0.555 | `https://2cb.pw/taco-47` |
-| 48 | demo | 0.236 | 0.373 | 0.51 | 0.647 | 0.535 | 0.577 | 0.618 | 0.359 | 0.4 | 0.441 | `https://2cb.pw/taco-48` |
-| 49 | demo | 0.854 | 0.991 | 0.128 | 0.265 | 0.421 | 0.462 | 0.503 | 0.544 | 0.585 | 0.626 | `https://2cb.pw/taco-49` |
-| 50 | demo | 0.472 | 0.609 | 0.746 | 0.883 | 0.606 | 0.647 | 0.388 | 0.43 | 0.471 | 0.512 | `https://2cb.pw/taco-50` |
+Late-session forks (`rainbow-plume`, `confident-kick`, `cubic-ease`, `outline-tunnel`, `region-mask`, `demo`) get fewer slots — their palette was locked to the cosmic family at iter 23 ("kill the rainbow"), so they only differ in shape/audio response, not hue.
 
-Full URLs are stored in `nfc-variants.json` (set up `2cb.pw/taco-N → full URL` in the shortener).
+| # | Shader | seed | seed2 | seed3 | seed4 | k_2 | k_5 | Short |
+|---|--------|------|-------|-------|-------|-----|-----|-------|
+| 1 | plasma | 0.618 | 0.936 | 0.254 | 0.572 | 0.0 | 0.0 | `https://2cb.pw/taco-1` |
+| 2 | plasma | 0.236 | 0.554 | 0.872 | 0.19 | 0.62 | 0.07 | `https://2cb.pw/taco-2` |
+| 3 | plasma | 0.854 | 0.172 | 0.49 | 0.808 | 0.24 | 0.14 | `https://2cb.pw/taco-3` |
+| 4 | plasma | 0.472 | 0.79 | 0.108 | 0.426 | 0.85 | 0.21 | `https://2cb.pw/taco-4` |
+| 5 | plasma | 0.09 | 0.408 | 0.726 | 0.044 | 0.47 | 0.29 | `https://2cb.pw/taco-5` |
+| 6 | plasma | 0.708 | 0.026 | 0.344 | 0.662 | 0.09 | 0.36 | `https://2cb.pw/taco-6` |
+| 7 | plasma | 0.326 | 0.644 | 0.962 | 0.28 | 0.71 | 0.43 | `https://2cb.pw/taco-7` |
+| 8 | plasma | 0.944 | 0.262 | 0.58 | 0.898 | 0.33 | 0.5 | `https://2cb.pw/taco-8` |
+| 9 | plasma | 0.562 | 0.88 | 0.198 | 0.516 | 0.94 | 0.57 | `https://2cb.pw/taco-9` |
+| 10 | plasma | 0.18 | 0.498 | 0.816 | 0.134 | 0.56 | 0.64 | `https://2cb.pw/taco-10` |
+| 11 | plasma | 0.798 | 0.116 | 0.434 | 0.752 | 0.18 | 0.71 | `https://2cb.pw/taco-11` |
+| 12 | plasma | 0.416 | 0.734 | 0.052 | 0.37 | 0.8 | 0.79 | `https://2cb.pw/taco-12` |
+| 13 | plasma | 0.034 | 0.352 | 0.67 | 0.988 | 0.42 | 0.86 | `https://2cb.pw/taco-13` |
+| 14 | plasma | 0.652 | 0.97 | 0.288 | 0.606 | 0.03 | 0.93 | `https://2cb.pw/taco-14` |
+| 15 | plasma | 0.271 | 0.589 | 0.907 | 0.225 | 0.65 | 1.0 | `https://2cb.pw/taco-15` |
+| 16 | seamless | 0.618 | 0.936 | 0.254 | 0.572 | 0.0 | 0.0 | `https://2cb.pw/taco-16` |
+| 17 | seamless | 0.236 | 0.554 | 0.872 | 0.19 | 0.62 | 0.11 | `https://2cb.pw/taco-17` |
+| 18 | seamless | 0.854 | 0.172 | 0.49 | 0.808 | 0.24 | 0.22 | `https://2cb.pw/taco-18` |
+| 19 | seamless | 0.472 | 0.79 | 0.108 | 0.426 | 0.85 | 0.33 | `https://2cb.pw/taco-19` |
+| 20 | seamless | 0.09 | 0.408 | 0.726 | 0.044 | 0.47 | 0.44 | `https://2cb.pw/taco-20` |
+| 21 | seamless | 0.708 | 0.026 | 0.344 | 0.662 | 0.09 | 0.56 | `https://2cb.pw/taco-21` |
+| 22 | seamless | 0.326 | 0.644 | 0.962 | 0.28 | 0.71 | 0.67 | `https://2cb.pw/taco-22` |
+| 23 | seamless | 0.944 | 0.262 | 0.58 | 0.898 | 0.33 | 0.78 | `https://2cb.pw/taco-23` |
+| 24 | seamless | 0.562 | 0.88 | 0.198 | 0.516 | 0.94 | 0.89 | `https://2cb.pw/taco-24` |
+| 25 | seamless | 0.18 | 0.498 | 0.816 | 0.134 | 0.56 | 1.0 | `https://2cb.pw/taco-25` |
+| 26 | rainbow-plume | 0.618 | 0.936 | 0.254 | 0.572 | 0.3 | 0.0 | `https://2cb.pw/taco-26` |
+| 27 | rainbow-plume | 0.236 | 0.554 | 0.872 | 0.19 | 0.92 | 0.62 | `https://2cb.pw/taco-27` |
+| 28 | rainbow-plume | 0.854 | 0.172 | 0.49 | 0.808 | 0.54 | 0.24 | `https://2cb.pw/taco-28` |
+| 29 | rainbow-plume | 0.472 | 0.79 | 0.108 | 0.426 | 0.15 | 0.85 | `https://2cb.pw/taco-29` |
+| 30 | rainbow-plume | 0.09 | 0.408 | 0.726 | 0.044 | 0.77 | 0.47 | `https://2cb.pw/taco-30` |
+| 31 | rainbow-plume | 0.708 | 0.026 | 0.344 | 0.662 | 0.39 | 0.09 | `https://2cb.pw/taco-31` |
+| 32 | confident-kick | 0.618 | 0.936 | 0.254 | 0.572 | 0.3 | 0.0 | `https://2cb.pw/taco-32` |
+| 33 | confident-kick | 0.236 | 0.554 | 0.872 | 0.19 | 0.92 | 0.62 | `https://2cb.pw/taco-33` |
+| 34 | confident-kick | 0.854 | 0.172 | 0.49 | 0.808 | 0.54 | 0.24 | `https://2cb.pw/taco-34` |
+| 35 | confident-kick | 0.472 | 0.79 | 0.108 | 0.426 | 0.15 | 0.85 | `https://2cb.pw/taco-35` |
+| 36 | cubic-ease | 0.618 | 0.936 | 0.254 | 0.572 | 0.3 | 0.0 | `https://2cb.pw/taco-36` |
+| 37 | cubic-ease | 0.236 | 0.554 | 0.872 | 0.19 | 0.92 | 0.62 | `https://2cb.pw/taco-37` |
+| 38 | cubic-ease | 0.854 | 0.172 | 0.49 | 0.808 | 0.54 | 0.24 | `https://2cb.pw/taco-38` |
+| 39 | cubic-ease | 0.472 | 0.79 | 0.108 | 0.426 | 0.15 | 0.85 | `https://2cb.pw/taco-39` |
+| 40 | outline-tunnel | 0.618 | 0.936 | 0.254 | 0.572 | 0.3 | 0.0 | `https://2cb.pw/taco-40` |
+| 41 | outline-tunnel | 0.236 | 0.554 | 0.872 | 0.19 | 0.92 | 0.62 | `https://2cb.pw/taco-41` |
+| 42 | outline-tunnel | 0.854 | 0.172 | 0.49 | 0.808 | 0.54 | 0.24 | `https://2cb.pw/taco-42` |
+| 43 | outline-tunnel | 0.472 | 0.79 | 0.108 | 0.426 | 0.15 | 0.85 | `https://2cb.pw/taco-43` |
+| 44 | region-mask | 0.618 | 0.936 | 0.254 | 0.572 | 0.3 | 0.0 | `https://2cb.pw/taco-44` |
+| 45 | region-mask | 0.236 | 0.554 | 0.872 | 0.19 | 0.92 | 0.62 | `https://2cb.pw/taco-45` |
+| 46 | region-mask | 0.854 | 0.172 | 0.49 | 0.808 | 0.54 | 0.24 | `https://2cb.pw/taco-46` |
+| 47 | demo | 0.618 | 0.936 | 0.254 | 0.572 | 0.3 | 0.0 | `https://2cb.pw/taco-47` |
+| 48 | demo | 0.236 | 0.554 | 0.872 | 0.19 | 0.92 | 0.62 | `https://2cb.pw/taco-48` |
+| 49 | demo | 0.854 | 0.172 | 0.49 | 0.808 | 0.54 | 0.24 | `https://2cb.pw/taco-49` |
+| 50 | demo | 0.472 | 0.79 | 0.108 | 0.426 | 0.15 | 0.85 | `https://2cb.pw/taco-50` |

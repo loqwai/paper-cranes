@@ -120,10 +120,35 @@ uniform float zoom_pulse;   // taco-kandi controller (iter 67) — spring-physic
 // Drift restricted to ±0.20 rad so the hue stays in family even with seeds + pitch.
 // seeds shrink to *0.05 so per-device tilt is barely-perceptible (was 0.15 — too loud).
 #define HUE_DRIFT (iTime * 0.004 + pitchClassNormalized * 0.03 + midsNormalized * 0.04)
-// Core: hot orange family, knob_5 nudges 0.55 → 0.75 (orange→amber). Capped, no magenta.
-#define CORE_HUE   (mix(0.55, 0.75, knob_5) + HUE_DRIFT * 0.5 + seed2 * 0.05)
-// Corona: deep blue-violet family, knob_5 nudges 4.0 → 4.4 (cobalt→indigo). No magenta path.
-#define CORONA_HUE (mix(4.0, 4.4, knob_5) + HUE_DRIFT * 0.5 + seed4 * 0.05)
+// COLOR VARIETY (iter 57b — added so the lettuce/shell get aesthetic variation across devices/knobs).
+// knob_5 sweeps a 4-mode palette via two complementary anchors. seed3 adds per-device
+// tilt up to ±0.6 rad so two phones in the same mode look distinct.
+// Modes (knob_5):
+//   0.00  cosmic       — orange CORE / blue-violet CORONA      (the original)
+//   0.33  forest-aqua  — gold CORE / teal CORONA               (warm-cool but green-ish)
+//   0.66  rose-cyan    — pink-coral CORE / cyan CORONA         (high-contrast)
+//   1.00  amber-indigo — amber CORE / indigo CORONA            (deep set-finale)
+// All anchors mathematically miss the 3.0-3.5 rad magenta band.
+#define PALETTE_MODE     (knob_5 * 3.0)  // 0..3
+#define PALETTE_FRAC     (fract(PALETTE_MODE))
+#define CORE_A 0.65
+#define CORE_B 1.20
+#define CORE_C 0.10
+#define CORE_D 0.85
+#define CORE_HUE_BASE \
+    (PALETTE_MODE < 1.0 ? mix(CORE_A, CORE_B, PALETTE_FRAC) : \
+     (PALETTE_MODE < 2.0 ? mix(CORE_B, CORE_C, PALETTE_FRAC) : \
+      mix(CORE_C, CORE_D, PALETTE_FRAC)))
+#define CORE_HUE   (CORE_HUE_BASE + HUE_DRIFT * 0.5 + (fract(seed3) - 0.5) * 0.6)
+#define CORONA_A 4.2
+#define CORONA_B 2.4
+#define CORONA_C 4.7
+#define CORONA_D 4.0
+#define CORONA_HUE_BASE \
+    (PALETTE_MODE < 1.0 ? mix(CORONA_A, CORONA_B, PALETTE_FRAC) : \
+     (PALETTE_MODE < 2.0 ? mix(CORONA_B, CORONA_C, PALETTE_FRAC) : \
+      mix(CORONA_C, CORONA_D, PALETTE_FRAC)))
+#define CORONA_HUE (CORONA_HUE_BASE + HUE_DRIFT * 0.5 + (fract(seed4) - 0.5) * 0.4)
 
 // BIPOLAR knob_7 (iter 36 — user flags "I am not seeing that zoom happening" +
 // "The knob works - just not reacting to the audio"):
@@ -132,7 +157,7 @@ uniform float zoom_pulse;   // taco-kandi controller (iter 67) — spring-physic
 //   peak), knob_7 just controls how big it gets. At k7=0 → big still taco, no
 //   pulse. At k7=1 → tight zoom-in WITH heavy bass-driven contraction.
 // Removed bipolar split — pulse was being hidden behind the 0.5 threshold.
-#define ZOOM_BASE   (mix(1.6, 0.6, knob_7))   // larger taco at k7=0, tighter at k7=1
+#define ZOOM_BASE   (mix(0.85, 0.35, knob_7))  // iter 57b: taco fills frame at k7=0 (tighter than the old 1.6 default), even tighter at k7=1
 #define PULSE_DEPTH (0.4 + knob_7 * 0.7)       // ALWAYS some pulse, knob scales it
 
 // Pulse signal: instant bass peak detector + latching controller signals.
@@ -503,7 +528,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Center the raymarch on the taco's visual center
     vec2 taco_center_uv = vec2(0.5, 0.48);
     // Zoom-pulse: contract toward center on beat — plasma swirl punches in
-    vec2 p_taco = (uv - taco_center_uv) * 2.0 * ZOOM_PULSE;
+    vec2 p_taco = (uv - taco_center_uv) * 0.55 * ZOOM_PULSE;  // iter 57d: shrunk further (was 1.05) so plasma raymarch fills the entire lettuce — mask clips to silhouette
     p_taco.x *= res.x / res.y;
 
     float r_horizon = length(p_taco);
@@ -567,15 +592,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Anchor the plasma color in the cosmic CORE_HUE family — was full-rainbow.
     // Tiny modulation only (centroid * 0.3 instead of 1.0, no COLOR_SPIN turn).
     // Coat aesthetic: stay in the magenta-violet-blue family.
-    lch.z = mix(lch.z, CORE_HUE, 0.5)
-          + (spectralCentroidNormalized * 0.15 + COLOR_SPIN * 0.1 + PITCH_FLASH * 0.3) * TAU;
+    // RELAXED iter 57b — plasma's natural color drives the look (was 50% locked to CORE_HUE).
+    lch.z = mix(lch.z, CORE_HUE, 0.15)
+          + (spectralCentroidNormalized * 0.6 + COLOR_SPIN * 0.4 + PITCH_FLASH * 0.6) * TAU;
     lch.y  = clamp(lch.y + SAT_BOOST * 0.25, 0.0, 0.4);
     lch.x  = clamp(lch.x + coreGlow * 0.25 + photonRing * 0.22 + L_LIFT + TREBLE_SHIMMER + CALM_BREATH, 0.0, 1.0);
 
     // Hue zones — core is hot (orange), corona is cool (blue)
     float coreHueBlend = smoothstep(0.4, 0.0, r_horizon);
-    lch.z = mix(lch.z, CORE_HUE, coreHueBlend * 0.7);
-    lch.z = mix(lch.z, CORONA_HUE, photonRing * 0.4);
+    // Hue zones — weakened so plasma natural colors survive (was 0.7 / 0.4)
+    lch.z = mix(lch.z, CORE_HUE, coreHueBlend * 0.35);
+    lch.z = mix(lch.z, CORONA_HUE, photonRing * 0.5);
     cl = oklch2rgb(lch);
 
     // Hot core additive bloom
