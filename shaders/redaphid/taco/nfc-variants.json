@@ -10,7 +10,7 @@
     "knob_2": 0.0,
     "knob_5": 0.0,
     "short": "https://2cb.pw/taco-1",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_7=0.0"
   },
   {
     "n": 2,
@@ -23,7 +23,7 @@
     "knob_2": 0.62,
     "knob_5": 0.07,
     "short": "https://2cb.pw/taco-2",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_2=0.62&knob_5=0.07"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_2=0.62&knob_5=0.07&knob_7=0.0"
   },
   {
     "n": 3,
@@ -36,7 +36,7 @@
     "knob_2": 0.24,
     "knob_5": 0.14,
     "short": "https://2cb.pw/taco-3",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_2=0.24&knob_5=0.14"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_2=0.24&knob_5=0.14&knob_7=0.0"
   },
   {
     "n": 4,
@@ -49,7 +49,7 @@
     "knob_2": 0.85,
     "knob_5": 0.21,
     "short": "https://2cb.pw/taco-4",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.472&seed2=0.79&seed3=0.108&seed4=0.426&knob_2=0.85&knob_5=0.21"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.472&seed2=0.79&seed3=0.108&seed4=0.426&knob_2=0.85&knob_5=0.21&knob_7=0.0"
   },
   {
     "n": 5,
@@ -62,7 +62,7 @@
     "knob_2": 0.47,
     "knob_5": 0.29,
     "short": "https://2cb.pw/taco-5",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.09&seed2=0.408&seed3=0.726&seed4=0.044&knob_2=0.47&knob_5=0.29"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.09&seed2=0.408&seed3=0.726&seed4=0.044&knob_2=0.47&knob_5=0.29&knob_7=0.0"
   },
   {
     "n": 6,
@@ -75,7 +75,7 @@
     "knob_2": 0.09,
     "knob_5": 0.36,
     "short": "https://2cb.pw/taco-6",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.708&seed2=0.026&seed3=0.344&seed4=0.662&knob_2=0.09&knob_5=0.36"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.708&seed2=0.026&seed3=0.344&seed4=0.662&knob_2=0.09&knob_5=0.36&knob_7=0.0"
   },
   {
     "n": 7,
@@ -88,7 +88,7 @@
     "knob_2": 0.71,
     "knob_5": 0.43,
     "short": "https://2cb.pw/taco-7",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.326&seed2=0.644&seed3=0.962&seed4=0.28&knob_2=0.71&knob_5=0.43"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.326&seed2=0.644&seed3=0.962&seed4=0.28&knob_2=0.71&knob_5=0.43&knob_7=0.0"
   },
   {
     "n": 8,
@@ -101,7 +101,7 @@
     "knob_2": 0.33,
     "knob_5": 0.5,
     "short": "https://2cb.pw/taco-8",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.944&seed2=0.262&seed3=0.58&seed4=0.898&knob_2=0.33&knob_5=0.5"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.944&seed2=0.262&seed3=0.58&seed4=0.898&knob_2=0.33&knob_5=0.5&knob_7=0.0"
   },
   {
     "n": 9,
@@ -114,7 +114,7 @@
     "knob_2": 0.94,
     "knob_5": 0.57,
     "short": "https://2cb.pw/taco-9",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.562&seed2=0.88&seed3=0.198&seed4=0.516&knob_2=0.94&knob_5=0.57"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.562&seed2=0.88&seed3=0.198&seed4=0.516&knob_2=0.94&knob_5=0.57&knob_7=0.0"
   },
   {
     "n": 10,
@@ -127,7 +127,7 @@
     "knob_2": 0.56,
     "knob_5": 0.64,
     "short": "https://2cb.pw/taco-10",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.18&seed2=0.498&seed3=0.816&seed4=0.134&knob_2=0.56&knob_5=0.64"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.18&seed2=0.498&seed3=0.816&seed4=0.134&knob_2=0.56&knob_5=0.64&knob_7=0.0"
   },
   {
     "n": 11,
@@ -140,7 +140,7 @@
     "knob_2": 0.18,
     "knob_5": 0.71,
     "short": "https://2cb.pw/taco-11",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.798&seed2=0.116&seed3=0.434&seed4=0.752&knob_2=0.18&knob_5=0.71"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.798&seed2=0.116&seed3=0.434&seed4=0.752&knob_2=0.18&knob_5=0.71&knob_7=0.0"
   },
   {
     "n": 12,
@@ -153,7 +153,7 @@
     "knob_2": 0.8,
     "knob_5": 0.79,
     "short": "https://2cb.pw/taco-12",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.416&seed2=0.734&seed3=0.052&seed4=0.37&knob_2=0.8&knob_5=0.79"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.416&seed2=0.734&seed3=0.052&seed4=0.37&knob_2=0.8&knob_5=0.79&knob_7=0.0"
   },
   {
     "n": 13,
@@ -166,7 +166,7 @@
     "knob_2": 0.42,
     "knob_5": 0.86,
     "short": "https://2cb.pw/taco-13",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.034&seed2=0.352&seed3=0.67&seed4=0.988&knob_2=0.42&knob_5=0.86"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.034&seed2=0.352&seed3=0.67&seed4=0.988&knob_2=0.42&knob_5=0.86&knob_7=0.0"
   },
   {
     "n": 14,
@@ -179,7 +179,7 @@
     "knob_2": 0.03,
     "knob_5": 0.93,
     "short": "https://2cb.pw/taco-14",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.652&seed2=0.97&seed3=0.288&seed4=0.606&knob_2=0.03&knob_5=0.93"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.652&seed2=0.97&seed3=0.288&seed4=0.606&knob_2=0.03&knob_5=0.93&knob_7=0.0"
   },
   {
     "n": 15,
@@ -192,7 +192,7 @@
     "knob_2": 0.65,
     "knob_5": 1.0,
     "short": "https://2cb.pw/taco-15",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.271&seed2=0.589&seed3=0.907&seed4=0.225&knob_2=0.65&knob_5=1.0"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.271&seed2=0.589&seed3=0.907&seed4=0.225&knob_2=0.65&knob_5=1.0&knob_7=0.0"
   },
   {
     "n": 16,
@@ -205,7 +205,7 @@
     "knob_2": 0.0,
     "knob_5": 0.0,
     "short": "https://2cb.pw/taco-16",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_1=0.52&knob_4=0.74&knob_6=0.15&knob_7=0.362&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_1=0.52&knob_4=0.74&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307"
   },
   {
     "n": 17,
@@ -218,7 +218,7 @@
     "knob_2": 0.62,
     "knob_5": 0.11,
     "short": "https://2cb.pw/taco-17",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=0.52&knob_2=0.62&knob_4=0.74&knob_5=0.11&knob_6=0.15&knob_7=0.362&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=0.52&knob_2=0.62&knob_4=0.74&knob_5=0.11&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307"
   },
   {
     "n": 18,
@@ -231,7 +231,7 @@
     "knob_2": 0.24,
     "knob_5": 0.22,
     "short": "https://2cb.pw/taco-18",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=0.52&knob_2=0.24&knob_4=0.74&knob_5=0.22&knob_6=0.15&knob_7=0.362&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=0.52&knob_2=0.24&knob_4=0.74&knob_5=0.22&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307"
   },
   {
     "n": 19,
@@ -244,7 +244,7 @@
     "knob_2": 0.85,
     "knob_5": 0.33,
     "short": "https://2cb.pw/taco-19",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.472&seed2=0.79&seed3=0.108&seed4=0.426&knob_1=0.52&knob_2=0.85&knob_4=0.74&knob_5=0.33&knob_6=0.15&knob_7=0.362&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.472&seed2=0.79&seed3=0.108&seed4=0.426&knob_1=0.52&knob_2=0.85&knob_4=0.74&knob_5=0.33&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307"
   },
   {
     "n": 20,
@@ -257,7 +257,7 @@
     "knob_2": 0.47,
     "knob_5": 0.44,
     "short": "https://2cb.pw/taco-20",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.09&seed2=0.408&seed3=0.726&seed4=0.044&knob_1=0.52&knob_2=0.47&knob_4=0.74&knob_5=0.44&knob_6=0.15&knob_7=0.362&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.09&seed2=0.408&seed3=0.726&seed4=0.044&knob_1=0.52&knob_2=0.47&knob_4=0.74&knob_5=0.44&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307"
   },
   {
     "n": 21,
@@ -270,7 +270,7 @@
     "knob_2": 0.09,
     "knob_5": 0.56,
     "short": "https://2cb.pw/taco-21",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.708&seed2=0.026&seed3=0.344&seed4=0.662&knob_1=0.52&knob_2=0.09&knob_4=0.74&knob_5=0.56&knob_6=0.15&knob_7=0.362&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.708&seed2=0.026&seed3=0.344&seed4=0.662&knob_1=0.52&knob_2=0.09&knob_4=0.74&knob_5=0.56&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307"
   },
   {
     "n": 22,
@@ -283,7 +283,7 @@
     "knob_2": 0.71,
     "knob_5": 0.67,
     "short": "https://2cb.pw/taco-22",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.326&seed2=0.644&seed3=0.962&seed4=0.28&knob_1=0.52&knob_2=0.71&knob_4=0.74&knob_5=0.67&knob_6=0.15&knob_7=0.362&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.326&seed2=0.644&seed3=0.962&seed4=0.28&knob_1=0.52&knob_2=0.71&knob_4=0.74&knob_5=0.67&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307"
   },
   {
     "n": 23,
@@ -296,7 +296,7 @@
     "knob_2": 0.33,
     "knob_5": 0.78,
     "short": "https://2cb.pw/taco-23",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.944&seed2=0.262&seed3=0.58&seed4=0.898&knob_1=0.52&knob_2=0.33&knob_4=0.74&knob_5=0.78&knob_6=0.15&knob_7=0.362&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.944&seed2=0.262&seed3=0.58&seed4=0.898&knob_1=0.52&knob_2=0.33&knob_4=0.74&knob_5=0.78&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307"
   },
   {
     "n": 24,
@@ -309,7 +309,7 @@
     "knob_2": 0.94,
     "knob_5": 0.89,
     "short": "https://2cb.pw/taco-24",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.562&seed2=0.88&seed3=0.198&seed4=0.516&knob_1=0.52&knob_2=0.94&knob_4=0.74&knob_5=0.89&knob_6=0.15&knob_7=0.362&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.562&seed2=0.88&seed3=0.198&seed4=0.516&knob_1=0.52&knob_2=0.94&knob_4=0.74&knob_5=0.89&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307"
   },
   {
     "n": 25,
@@ -322,7 +322,7 @@
     "knob_2": 0.56,
     "knob_5": 1.0,
     "short": "https://2cb.pw/taco-25",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.18&seed2=0.498&seed3=0.816&seed4=0.134&knob_1=0.52&knob_2=0.56&knob_4=0.74&knob_5=1.0&knob_6=0.15&knob_7=0.362&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.18&seed2=0.498&seed3=0.816&seed4=0.134&knob_1=0.52&knob_2=0.56&knob_4=0.74&knob_5=1.0&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307"
   },
   {
     "n": 26,
@@ -335,7 +335,7 @@
     "knob_2": 0.3,
     "knob_5": 0.0,
     "short": "https://2cb.pw/taco-26",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/rainbow-plume&image=images/taco.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_1=1.0&knob_2=0.3&knob_3=1.0&knob_4=1.0&knob_6=0.276&knob_7=0.102&knob_8=0.843&knob_9=0.575&knob_10=0.622&knob_12=0.472&knob_13=0.386&knob_14=1.0&knob_15=0.85&knob_16=0.457"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/rainbow-plume&image=images/taco.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_1=1.0&knob_2=0.3&knob_3=1.0&knob_4=1.0&knob_6=0.276&knob_7=0.0&knob_8=0.843&knob_9=0.575&knob_10=0.622&knob_12=0.472&knob_13=0.386&knob_14=1.0&knob_15=0.85&knob_16=0.457"
   },
   {
     "n": 27,
@@ -348,7 +348,7 @@
     "knob_2": 0.92,
     "knob_5": 0.62,
     "short": "https://2cb.pw/taco-27",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/rainbow-plume&image=images/taco.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=1.0&knob_2=0.92&knob_3=1.0&knob_4=1.0&knob_5=0.62&knob_6=0.276&knob_7=0.102&knob_8=0.843&knob_9=0.575&knob_10=0.622&knob_12=0.472&knob_13=0.386&knob_14=1.0&knob_15=0.85&knob_16=0.457"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/rainbow-plume&image=images/taco.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=1.0&knob_2=0.92&knob_3=1.0&knob_4=1.0&knob_5=0.62&knob_6=0.276&knob_7=0.0&knob_8=0.843&knob_9=0.575&knob_10=0.622&knob_12=0.472&knob_13=0.386&knob_14=1.0&knob_15=0.85&knob_16=0.457"
   },
   {
     "n": 28,
@@ -361,7 +361,7 @@
     "knob_2": 0.54,
     "knob_5": 0.24,
     "short": "https://2cb.pw/taco-28",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/rainbow-plume&image=images/taco.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=1.0&knob_2=0.54&knob_3=1.0&knob_4=1.0&knob_5=0.24&knob_6=0.276&knob_7=0.102&knob_8=0.843&knob_9=0.575&knob_10=0.622&knob_12=0.472&knob_13=0.386&knob_14=1.0&knob_15=0.85&knob_16=0.457"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/rainbow-plume&image=images/taco.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=1.0&knob_2=0.54&knob_3=1.0&knob_4=1.0&knob_5=0.24&knob_6=0.276&knob_7=0.0&knob_8=0.843&knob_9=0.575&knob_10=0.622&knob_12=0.472&knob_13=0.386&knob_14=1.0&knob_15=0.85&knob_16=0.457"
   },
   {
     "n": 29,
@@ -374,7 +374,7 @@
     "knob_2": 0.15,
     "knob_5": 0.85,
     "short": "https://2cb.pw/taco-29",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/rainbow-plume&image=images/taco.png&controller=taco-kandi&seed=0.472&seed2=0.79&seed3=0.108&seed4=0.426&knob_1=1.0&knob_2=0.15&knob_3=1.0&knob_4=1.0&knob_5=0.85&knob_6=0.276&knob_7=0.102&knob_8=0.843&knob_9=0.575&knob_10=0.622&knob_12=0.472&knob_13=0.386&knob_14=1.0&knob_15=0.85&knob_16=0.457"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/rainbow-plume&image=images/taco.png&controller=taco-kandi&seed=0.472&seed2=0.79&seed3=0.108&seed4=0.426&knob_1=1.0&knob_2=0.15&knob_3=1.0&knob_4=1.0&knob_5=0.85&knob_6=0.276&knob_7=0.0&knob_8=0.843&knob_9=0.575&knob_10=0.622&knob_12=0.472&knob_13=0.386&knob_14=1.0&knob_15=0.85&knob_16=0.457"
   },
   {
     "n": 30,
@@ -387,7 +387,7 @@
     "knob_2": 0.77,
     "knob_5": 0.47,
     "short": "https://2cb.pw/taco-30",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/rainbow-plume&image=images/taco.png&controller=taco-kandi&seed=0.09&seed2=0.408&seed3=0.726&seed4=0.044&knob_1=1.0&knob_2=0.77&knob_3=1.0&knob_4=1.0&knob_5=0.47&knob_6=0.276&knob_7=0.102&knob_8=0.843&knob_9=0.575&knob_10=0.622&knob_12=0.472&knob_13=0.386&knob_14=1.0&knob_15=0.85&knob_16=0.457"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/rainbow-plume&image=images/taco.png&controller=taco-kandi&seed=0.09&seed2=0.408&seed3=0.726&seed4=0.044&knob_1=1.0&knob_2=0.77&knob_3=1.0&knob_4=1.0&knob_5=0.47&knob_6=0.276&knob_7=0.0&knob_8=0.843&knob_9=0.575&knob_10=0.622&knob_12=0.472&knob_13=0.386&knob_14=1.0&knob_15=0.85&knob_16=0.457"
   },
   {
     "n": 31,
@@ -400,7 +400,7 @@
     "knob_2": 0.39,
     "knob_5": 0.09,
     "short": "https://2cb.pw/taco-31",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/rainbow-plume&image=images/taco.png&controller=taco-kandi&seed=0.708&seed2=0.026&seed3=0.344&seed4=0.662&knob_1=1.0&knob_2=0.39&knob_3=1.0&knob_4=1.0&knob_5=0.09&knob_6=0.276&knob_7=0.102&knob_8=0.843&knob_9=0.575&knob_10=0.622&knob_12=0.472&knob_13=0.386&knob_14=1.0&knob_15=0.85&knob_16=0.457"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/rainbow-plume&image=images/taco.png&controller=taco-kandi&seed=0.708&seed2=0.026&seed3=0.344&seed4=0.662&knob_1=1.0&knob_2=0.39&knob_3=1.0&knob_4=1.0&knob_5=0.09&knob_6=0.276&knob_7=0.0&knob_8=0.843&knob_9=0.575&knob_10=0.622&knob_12=0.472&knob_13=0.386&knob_14=1.0&knob_15=0.85&knob_16=0.457"
   },
   {
     "n": 32,
@@ -413,7 +413,7 @@
     "knob_2": 0.3,
     "knob_5": 0.0,
     "short": "https://2cb.pw/taco-32",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/confident-kick&image=images/taco.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_1=0.5&knob_2=0.3&knob_3=0.6&knob_4=0.7&knob_7=0.35&knob_12=0.5&knob_14=0.6"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/confident-kick&image=images/taco.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_1=0.5&knob_2=0.3&knob_3=0.6&knob_4=0.7&knob_7=0.0&knob_12=0.5&knob_14=0.6"
   },
   {
     "n": 33,
@@ -426,7 +426,7 @@
     "knob_2": 0.92,
     "knob_5": 0.62,
     "short": "https://2cb.pw/taco-33",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/confident-kick&image=images/taco.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=0.5&knob_2=0.92&knob_3=0.6&knob_4=0.7&knob_5=0.62&knob_7=0.35&knob_12=0.5&knob_14=0.6"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/confident-kick&image=images/taco.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=0.5&knob_2=0.92&knob_3=0.6&knob_4=0.7&knob_5=0.62&knob_7=0.0&knob_12=0.5&knob_14=0.6"
   },
   {
     "n": 34,
@@ -439,7 +439,7 @@
     "knob_2": 0.54,
     "knob_5": 0.24,
     "short": "https://2cb.pw/taco-34",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/confident-kick&image=images/taco.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=0.5&knob_2=0.54&knob_3=0.6&knob_4=0.7&knob_5=0.24&knob_7=0.35&knob_12=0.5&knob_14=0.6"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/confident-kick&image=images/taco.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=0.5&knob_2=0.54&knob_3=0.6&knob_4=0.7&knob_5=0.24&knob_7=0.0&knob_12=0.5&knob_14=0.6"
   },
   {
     "n": 35,
@@ -452,12 +452,12 @@
     "knob_2": 0.15,
     "knob_5": 0.85,
     "short": "https://2cb.pw/taco-35",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/confident-kick&image=images/taco.png&controller=taco-kandi&seed=0.472&seed2=0.79&seed3=0.108&seed4=0.426&knob_1=0.5&knob_2=0.15&knob_3=0.6&knob_4=0.7&knob_5=0.85&knob_7=0.35&knob_12=0.5&knob_14=0.6"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/confident-kick&image=images/taco.png&controller=taco-kandi&seed=0.472&seed2=0.79&seed3=0.108&seed4=0.426&knob_1=0.5&knob_2=0.15&knob_3=0.6&knob_4=0.7&knob_5=0.85&knob_7=0.0&knob_12=0.5&knob_14=0.6"
   },
   {
     "n": 36,
     "name": "taco-36",
-    "shader": "cubic-ease",
+    "shader": "live-iter",
     "seed": 0.618,
     "seed2": 0.936,
     "seed3": 0.254,
@@ -465,12 +465,12 @@
     "knob_2": 0.3,
     "knob_5": 0.0,
     "short": "https://2cb.pw/taco-36",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/cubic-ease&image=images/taco.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_1=0.5&knob_2=0.3&knob_3=0.6&knob_4=0.6&knob_7=0.4&knob_12=0.5&knob_14=0.5"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/live-iter&image=images/taco.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_1=0.5&knob_2=0.3&knob_3=0.6&knob_4=0.6&knob_7=0.0&knob_12=0.5&knob_14=0.6"
   },
   {
     "n": 37,
     "name": "taco-37",
-    "shader": "cubic-ease",
+    "shader": "live-iter",
     "seed": 0.236,
     "seed2": 0.554,
     "seed3": 0.872,
@@ -478,12 +478,12 @@
     "knob_2": 0.92,
     "knob_5": 0.62,
     "short": "https://2cb.pw/taco-37",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/cubic-ease&image=images/taco.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=0.5&knob_2=0.92&knob_3=0.6&knob_4=0.6&knob_5=0.62&knob_7=0.4&knob_12=0.5&knob_14=0.5"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/live-iter&image=images/taco.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=0.5&knob_2=0.92&knob_3=0.6&knob_4=0.6&knob_5=0.62&knob_7=0.0&knob_12=0.5&knob_14=0.6"
   },
   {
     "n": 38,
     "name": "taco-38",
-    "shader": "cubic-ease",
+    "shader": "live-iter",
     "seed": 0.854,
     "seed2": 0.172,
     "seed3": 0.49,
@@ -491,12 +491,12 @@
     "knob_2": 0.54,
     "knob_5": 0.24,
     "short": "https://2cb.pw/taco-38",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/cubic-ease&image=images/taco.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=0.5&knob_2=0.54&knob_3=0.6&knob_4=0.6&knob_5=0.24&knob_7=0.4&knob_12=0.5&knob_14=0.5"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/live-iter&image=images/taco.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=0.5&knob_2=0.54&knob_3=0.6&knob_4=0.6&knob_5=0.24&knob_7=0.0&knob_12=0.5&knob_14=0.6"
   },
   {
     "n": 39,
     "name": "taco-39",
-    "shader": "cubic-ease",
+    "shader": "live-iter",
     "seed": 0.472,
     "seed2": 0.79,
     "seed3": 0.108,
@@ -504,12 +504,12 @@
     "knob_2": 0.15,
     "knob_5": 0.85,
     "short": "https://2cb.pw/taco-39",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/cubic-ease&image=images/taco.png&controller=taco-kandi&seed=0.472&seed2=0.79&seed3=0.108&seed4=0.426&knob_1=0.5&knob_2=0.15&knob_3=0.6&knob_4=0.6&knob_5=0.85&knob_7=0.4&knob_12=0.5&knob_14=0.5"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/live-iter&image=images/taco.png&controller=taco-kandi&seed=0.472&seed2=0.79&seed3=0.108&seed4=0.426&knob_1=0.5&knob_2=0.15&knob_3=0.6&knob_4=0.6&knob_5=0.85&knob_7=0.0&knob_12=0.5&knob_14=0.6"
   },
   {
     "n": 40,
     "name": "taco-40",
-    "shader": "outline-tunnel",
+    "shader": "cubic-ease",
     "seed": 0.618,
     "seed2": 0.936,
     "seed3": 0.254,
@@ -517,12 +517,12 @@
     "knob_2": 0.3,
     "knob_5": 0.0,
     "short": "https://2cb.pw/taco-40",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/outline-tunnel&image=images/taco.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_1=0.197&knob_2=0.3&knob_3=0.016&knob_4=0.803&knob_6=0.465&knob_7=0.409&knob_8=1.0&knob_9=0.071&knob_10=0.394&knob_11=1.0&knob_12=1.0&knob_13=0.543&knob_14=0.402&knob_15=0.62&knob_16=0.205"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/cubic-ease&image=images/taco.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_1=0.5&knob_2=0.3&knob_3=0.6&knob_4=0.6&knob_7=0.0&knob_12=0.5&knob_14=0.5"
   },
   {
     "n": 41,
     "name": "taco-41",
-    "shader": "outline-tunnel",
+    "shader": "cubic-ease",
     "seed": 0.236,
     "seed2": 0.554,
     "seed3": 0.872,
@@ -530,12 +530,12 @@
     "knob_2": 0.92,
     "knob_5": 0.62,
     "short": "https://2cb.pw/taco-41",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/outline-tunnel&image=images/taco.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=0.197&knob_2=0.92&knob_3=0.016&knob_4=0.803&knob_5=0.62&knob_6=0.465&knob_7=0.409&knob_8=1.0&knob_9=0.071&knob_10=0.394&knob_11=1.0&knob_12=1.0&knob_13=0.543&knob_14=0.402&knob_15=0.62&knob_16=0.205"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/cubic-ease&image=images/taco.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=0.5&knob_2=0.92&knob_3=0.6&knob_4=0.6&knob_5=0.62&knob_7=0.0&knob_12=0.5&knob_14=0.5"
   },
   {
     "n": 42,
     "name": "taco-42",
-    "shader": "outline-tunnel",
+    "shader": "cubic-ease",
     "seed": 0.854,
     "seed2": 0.172,
     "seed3": 0.49,
@@ -543,12 +543,12 @@
     "knob_2": 0.54,
     "knob_5": 0.24,
     "short": "https://2cb.pw/taco-42",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/outline-tunnel&image=images/taco.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=0.197&knob_2=0.54&knob_3=0.016&knob_4=0.803&knob_5=0.24&knob_6=0.465&knob_7=0.409&knob_8=1.0&knob_9=0.071&knob_10=0.394&knob_11=1.0&knob_12=1.0&knob_13=0.543&knob_14=0.402&knob_15=0.62&knob_16=0.205"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/cubic-ease&image=images/taco.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=0.5&knob_2=0.54&knob_3=0.6&knob_4=0.6&knob_5=0.24&knob_7=0.0&knob_12=0.5&knob_14=0.5"
   },
   {
     "n": 43,
     "name": "taco-43",
-    "shader": "outline-tunnel",
+    "shader": "cubic-ease",
     "seed": 0.472,
     "seed2": 0.79,
     "seed3": 0.108,
@@ -556,12 +556,12 @@
     "knob_2": 0.15,
     "knob_5": 0.85,
     "short": "https://2cb.pw/taco-43",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/outline-tunnel&image=images/taco.png&controller=taco-kandi&seed=0.472&seed2=0.79&seed3=0.108&seed4=0.426&knob_1=0.197&knob_2=0.15&knob_3=0.016&knob_4=0.803&knob_5=0.85&knob_6=0.465&knob_7=0.409&knob_8=1.0&knob_9=0.071&knob_10=0.394&knob_11=1.0&knob_12=1.0&knob_13=0.543&knob_14=0.402&knob_15=0.62&knob_16=0.205"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/cubic-ease&image=images/taco.png&controller=taco-kandi&seed=0.472&seed2=0.79&seed3=0.108&seed4=0.426&knob_1=0.5&knob_2=0.15&knob_3=0.6&knob_4=0.6&knob_5=0.85&knob_7=0.0&knob_12=0.5&knob_14=0.5"
   },
   {
     "n": 44,
     "name": "taco-44",
-    "shader": "region-mask",
+    "shader": "outline-tunnel",
     "seed": 0.618,
     "seed2": 0.936,
     "seed3": 0.254,
@@ -569,12 +569,12 @@
     "knob_2": 0.3,
     "knob_5": 0.0,
     "short": "https://2cb.pw/taco-44",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/region-mask&image=images/taco.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_1=0.039&knob_2=0.3&knob_3=0.724&knob_4=0.756&knob_6=0.409&knob_7=0.331&knob_8=0.488&knob_9=0.071&knob_10=1.0&knob_11=1.0&knob_12=1.0&knob_13=0.071&knob_14=0.504&knob_15=0.63&knob_16=0.205"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/outline-tunnel&image=images/taco.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_1=0.197&knob_2=0.3&knob_3=0.016&knob_4=0.803&knob_6=0.465&knob_7=0.0&knob_8=1.0&knob_9=0.071&knob_10=0.394&knob_11=1.0&knob_12=1.0&knob_13=0.543&knob_14=0.402&knob_15=0.62&knob_16=0.205"
   },
   {
     "n": 45,
     "name": "taco-45",
-    "shader": "region-mask",
+    "shader": "outline-tunnel",
     "seed": 0.236,
     "seed2": 0.554,
     "seed3": 0.872,
@@ -582,12 +582,12 @@
     "knob_2": 0.92,
     "knob_5": 0.62,
     "short": "https://2cb.pw/taco-45",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/region-mask&image=images/taco.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=0.039&knob_2=0.92&knob_3=0.724&knob_4=0.756&knob_5=0.62&knob_6=0.409&knob_7=0.331&knob_8=0.488&knob_9=0.071&knob_10=1.0&knob_11=1.0&knob_12=1.0&knob_13=0.071&knob_14=0.504&knob_15=0.63&knob_16=0.205"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/outline-tunnel&image=images/taco.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=0.197&knob_2=0.92&knob_3=0.016&knob_4=0.803&knob_5=0.62&knob_6=0.465&knob_7=0.0&knob_8=1.0&knob_9=0.071&knob_10=0.394&knob_11=1.0&knob_12=1.0&knob_13=0.543&knob_14=0.402&knob_15=0.62&knob_16=0.205"
   },
   {
     "n": 46,
     "name": "taco-46",
-    "shader": "region-mask",
+    "shader": "outline-tunnel",
     "seed": 0.854,
     "seed2": 0.172,
     "seed3": 0.49,
@@ -595,58 +595,58 @@
     "knob_2": 0.54,
     "knob_5": 0.24,
     "short": "https://2cb.pw/taco-46",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/region-mask&image=images/taco.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=0.039&knob_2=0.54&knob_3=0.724&knob_4=0.756&knob_5=0.24&knob_6=0.409&knob_7=0.331&knob_8=0.488&knob_9=0.071&knob_10=1.0&knob_11=1.0&knob_12=1.0&knob_13=0.071&knob_14=0.504&knob_15=0.63&knob_16=0.205"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/outline-tunnel&image=images/taco.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=0.197&knob_2=0.54&knob_3=0.016&knob_4=0.803&knob_5=0.24&knob_6=0.465&knob_7=0.0&knob_8=1.0&knob_9=0.071&knob_10=0.394&knob_11=1.0&knob_12=1.0&knob_13=0.543&knob_14=0.402&knob_15=0.62&knob_16=0.205"
   },
   {
     "n": 47,
     "name": "taco-47",
-    "shader": "demo",
-    "seed": 0.618,
-    "seed2": 0.936,
-    "seed3": 0.254,
-    "seed4": 0.572,
-    "knob_2": 0.3,
-    "knob_5": 0.0,
-    "short": "https://2cb.pw/taco-47",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/demo&image=images/taco.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_1=0.5&knob_2=0.3&knob_3=0.6&knob_4=0.6&knob_7=0.35&knob_12=0.5"
-  },
-  {
-    "n": 48,
-    "name": "taco-48",
-    "shader": "demo",
-    "seed": 0.236,
-    "seed2": 0.554,
-    "seed3": 0.872,
-    "seed4": 0.19,
-    "knob_2": 0.92,
-    "knob_5": 0.62,
-    "short": "https://2cb.pw/taco-48",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/demo&image=images/taco.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=0.5&knob_2=0.92&knob_3=0.6&knob_4=0.6&knob_5=0.62&knob_7=0.35&knob_12=0.5"
-  },
-  {
-    "n": 49,
-    "name": "taco-49",
-    "shader": "demo",
-    "seed": 0.854,
-    "seed2": 0.172,
-    "seed3": 0.49,
-    "seed4": 0.808,
-    "knob_2": 0.54,
-    "knob_5": 0.24,
-    "short": "https://2cb.pw/taco-49",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/demo&image=images/taco.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=0.5&knob_2=0.54&knob_3=0.6&knob_4=0.6&knob_5=0.24&knob_7=0.35&knob_12=0.5"
-  },
-  {
-    "n": 50,
-    "name": "taco-50",
-    "shader": "demo",
+    "shader": "outline-tunnel",
     "seed": 0.472,
     "seed2": 0.79,
     "seed3": 0.108,
     "seed4": 0.426,
     "knob_2": 0.15,
     "knob_5": 0.85,
+    "short": "https://2cb.pw/taco-47",
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/outline-tunnel&image=images/taco.png&controller=taco-kandi&seed=0.472&seed2=0.79&seed3=0.108&seed4=0.426&knob_1=0.197&knob_2=0.15&knob_3=0.016&knob_4=0.803&knob_5=0.85&knob_6=0.465&knob_7=0.0&knob_8=1.0&knob_9=0.071&knob_10=0.394&knob_11=1.0&knob_12=1.0&knob_13=0.543&knob_14=0.402&knob_15=0.62&knob_16=0.205"
+  },
+  {
+    "n": 48,
+    "name": "taco-48",
+    "shader": "region-mask",
+    "seed": 0.618,
+    "seed2": 0.936,
+    "seed3": 0.254,
+    "seed4": 0.572,
+    "knob_2": 0.3,
+    "knob_5": 0.0,
+    "short": "https://2cb.pw/taco-48",
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/region-mask&image=images/taco.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_1=0.039&knob_2=0.3&knob_3=0.724&knob_4=0.756&knob_6=0.409&knob_7=0.0&knob_8=0.488&knob_9=0.071&knob_10=1.0&knob_11=1.0&knob_12=1.0&knob_13=0.071&knob_14=0.504&knob_15=0.63&knob_16=0.205"
+  },
+  {
+    "n": 49,
+    "name": "taco-49",
+    "shader": "region-mask",
+    "seed": 0.236,
+    "seed2": 0.554,
+    "seed3": 0.872,
+    "seed4": 0.19,
+    "knob_2": 0.92,
+    "knob_5": 0.62,
+    "short": "https://2cb.pw/taco-49",
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/region-mask&image=images/taco.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=0.039&knob_2=0.92&knob_3=0.724&knob_4=0.756&knob_5=0.62&knob_6=0.409&knob_7=0.0&knob_8=0.488&knob_9=0.071&knob_10=1.0&knob_11=1.0&knob_12=1.0&knob_13=0.071&knob_14=0.504&knob_15=0.63&knob_16=0.205"
+  },
+  {
+    "n": 50,
+    "name": "taco-50",
+    "shader": "region-mask",
+    "seed": 0.854,
+    "seed2": 0.172,
+    "seed3": 0.49,
+    "seed4": 0.808,
+    "knob_2": 0.54,
+    "knob_5": 0.24,
     "short": "https://2cb.pw/taco-50",
-    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/demo&image=images/taco.png&controller=taco-kandi&seed=0.472&seed2=0.79&seed3=0.108&seed4=0.426&knob_1=0.5&knob_2=0.15&knob_3=0.6&knob_4=0.6&knob_5=0.85&knob_7=0.35&knob_12=0.5"
+    "full": "https://visuals.beadfamous.com/?shader=redaphid/taco/region-mask&image=images/taco.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=0.039&knob_2=0.54&knob_3=0.724&knob_4=0.756&knob_5=0.24&knob_6=0.409&knob_7=0.0&knob_8=0.488&knob_9=0.071&knob_10=1.0&knob_11=1.0&knob_12=1.0&knob_13=0.071&knob_14=0.504&knob_15=0.63&knob_16=0.205"
   }
 ]

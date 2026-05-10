@@ -1,10 +1,8 @@
-# Taco NFC Variants — Multi-color edition
+# Taco NFC Variants
 
-50 variants for `2cb.pw/taco-1` … `2cb.pw/taco-50`.
+50 variants for `2cb.pw/taco-1` … `2cb.pw/taco-50`. **All variants force `knob_7=0`** (taco fits in frame; non-zero knob_7 cuts the taco off the edges).
 
-Heavy weight on `plasma` (15) and `seamless` (10) — these are the early stencil-era shaders with the auto-cycling palette modes (ember/emerald/arctic/prism via knob_5). They're the source of the multi-color visuals from the live session.
-
-Late-session forks (`rainbow-plume`, `confident-kick`, `cubic-ease`, `outline-tunnel`, `region-mask`, `demo`) get fewer slots — their palette was locked to the cosmic family at iter 23 ("kill the rainbow"), so they only differ in shape/audio response, not hue.
+Heavy weight on `plasma` (15) and `seamless` (10) — early stencil-era shaders with auto-cycling palette modes (ember/emerald/arctic/prism via knob_5). 6 late-fork shaders fill out variety with the relaxed-palette (iter 57b) shaders.
 
 | # | Shader | seed | seed2 | seed3 | seed4 | k_2 | k_5 | Short |
 |---|--------|------|-------|-------|-------|-----|-----|-------|
@@ -43,18 +41,18 @@ Late-session forks (`rainbow-plume`, `confident-kick`, `cubic-ease`, `outline-tu
 | 33 | confident-kick | 0.236 | 0.554 | 0.872 | 0.19 | 0.92 | 0.62 | `https://2cb.pw/taco-33` |
 | 34 | confident-kick | 0.854 | 0.172 | 0.49 | 0.808 | 0.54 | 0.24 | `https://2cb.pw/taco-34` |
 | 35 | confident-kick | 0.472 | 0.79 | 0.108 | 0.426 | 0.15 | 0.85 | `https://2cb.pw/taco-35` |
-| 36 | cubic-ease | 0.618 | 0.936 | 0.254 | 0.572 | 0.3 | 0.0 | `https://2cb.pw/taco-36` |
-| 37 | cubic-ease | 0.236 | 0.554 | 0.872 | 0.19 | 0.92 | 0.62 | `https://2cb.pw/taco-37` |
-| 38 | cubic-ease | 0.854 | 0.172 | 0.49 | 0.808 | 0.54 | 0.24 | `https://2cb.pw/taco-38` |
-| 39 | cubic-ease | 0.472 | 0.79 | 0.108 | 0.426 | 0.15 | 0.85 | `https://2cb.pw/taco-39` |
-| 40 | outline-tunnel | 0.618 | 0.936 | 0.254 | 0.572 | 0.3 | 0.0 | `https://2cb.pw/taco-40` |
-| 41 | outline-tunnel | 0.236 | 0.554 | 0.872 | 0.19 | 0.92 | 0.62 | `https://2cb.pw/taco-41` |
-| 42 | outline-tunnel | 0.854 | 0.172 | 0.49 | 0.808 | 0.54 | 0.24 | `https://2cb.pw/taco-42` |
-| 43 | outline-tunnel | 0.472 | 0.79 | 0.108 | 0.426 | 0.15 | 0.85 | `https://2cb.pw/taco-43` |
-| 44 | region-mask | 0.618 | 0.936 | 0.254 | 0.572 | 0.3 | 0.0 | `https://2cb.pw/taco-44` |
-| 45 | region-mask | 0.236 | 0.554 | 0.872 | 0.19 | 0.92 | 0.62 | `https://2cb.pw/taco-45` |
-| 46 | region-mask | 0.854 | 0.172 | 0.49 | 0.808 | 0.54 | 0.24 | `https://2cb.pw/taco-46` |
-| 47 | demo | 0.618 | 0.936 | 0.254 | 0.572 | 0.3 | 0.0 | `https://2cb.pw/taco-47` |
-| 48 | demo | 0.236 | 0.554 | 0.872 | 0.19 | 0.92 | 0.62 | `https://2cb.pw/taco-48` |
-| 49 | demo | 0.854 | 0.172 | 0.49 | 0.808 | 0.54 | 0.24 | `https://2cb.pw/taco-49` |
-| 50 | demo | 0.472 | 0.79 | 0.108 | 0.426 | 0.15 | 0.85 | `https://2cb.pw/taco-50` |
+| 36 | live-iter | 0.618 | 0.936 | 0.254 | 0.572 | 0.3 | 0.0 | `https://2cb.pw/taco-36` |
+| 37 | live-iter | 0.236 | 0.554 | 0.872 | 0.19 | 0.92 | 0.62 | `https://2cb.pw/taco-37` |
+| 38 | live-iter | 0.854 | 0.172 | 0.49 | 0.808 | 0.54 | 0.24 | `https://2cb.pw/taco-38` |
+| 39 | live-iter | 0.472 | 0.79 | 0.108 | 0.426 | 0.15 | 0.85 | `https://2cb.pw/taco-39` |
+| 40 | cubic-ease | 0.618 | 0.936 | 0.254 | 0.572 | 0.3 | 0.0 | `https://2cb.pw/taco-40` |
+| 41 | cubic-ease | 0.236 | 0.554 | 0.872 | 0.19 | 0.92 | 0.62 | `https://2cb.pw/taco-41` |
+| 42 | cubic-ease | 0.854 | 0.172 | 0.49 | 0.808 | 0.54 | 0.24 | `https://2cb.pw/taco-42` |
+| 43 | cubic-ease | 0.472 | 0.79 | 0.108 | 0.426 | 0.15 | 0.85 | `https://2cb.pw/taco-43` |
+| 44 | outline-tunnel | 0.618 | 0.936 | 0.254 | 0.572 | 0.3 | 0.0 | `https://2cb.pw/taco-44` |
+| 45 | outline-tunnel | 0.236 | 0.554 | 0.872 | 0.19 | 0.92 | 0.62 | `https://2cb.pw/taco-45` |
+| 46 | outline-tunnel | 0.854 | 0.172 | 0.49 | 0.808 | 0.54 | 0.24 | `https://2cb.pw/taco-46` |
+| 47 | outline-tunnel | 0.472 | 0.79 | 0.108 | 0.426 | 0.15 | 0.85 | `https://2cb.pw/taco-47` |
+| 48 | region-mask | 0.618 | 0.936 | 0.254 | 0.572 | 0.3 | 0.0 | `https://2cb.pw/taco-48` |
+| 49 | region-mask | 0.236 | 0.554 | 0.872 | 0.19 | 0.92 | 0.62 | `https://2cb.pw/taco-49` |
+| 50 | region-mask | 0.854 | 0.172 | 0.49 | 0.808 | 0.54 | 0.24 | `https://2cb.pw/taco-50` |

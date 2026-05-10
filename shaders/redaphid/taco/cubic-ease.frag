@@ -157,7 +157,7 @@ uniform float zoom_pulse;   // taco-kandi controller (iter 67) — spring-physic
 //   peak), knob_7 just controls how big it gets. At k7=0 → big still taco, no
 //   pulse. At k7=1 → tight zoom-in WITH heavy bass-driven contraction.
 // Removed bipolar split — pulse was being hidden behind the 0.5 threshold.
-#define ZOOM_BASE   (mix(0.85, 0.35, knob_7))  // iter 57b: taco fills frame at k7=0 (tighter than the old 1.6 default), even tighter at k7=1
+#define ZOOM_BASE   (mix(1.6, 0.6, knob_7))   // larger taco at k7=0, tighter at k7=1
 #define PULSE_DEPTH (0.4 + knob_7 * 0.7)       // ALWAYS some pulse, knob scales it
 
 // Pulse signal: instant bass peak detector + latching controller signals.
@@ -528,7 +528,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Center the raymarch on the taco's visual center
     vec2 taco_center_uv = vec2(0.5, 0.48);
     // Zoom-pulse: contract toward center on beat — plasma swirl punches in
-    vec2 p_taco = (uv - taco_center_uv) * 0.55 * ZOOM_PULSE;  // iter 57d: shrunk further (was 1.05) so plasma raymarch fills the entire lettuce — mask clips to silhouette
+    vec2 p_taco = (uv - taco_center_uv) * 2.0 * ZOOM_PULSE;
     p_taco.x *= res.x / res.y;
 
     float r_horizon = length(p_taco);
