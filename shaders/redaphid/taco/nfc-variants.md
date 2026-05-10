@@ -2,6 +2,8 @@
 
 50 variants for `2cb.pw/taco-1` … `2cb.pw/taco-50`. **All variants force `knob_7=0`** (taco fits in frame; non-zero knob_7 cuts the taco off the edges).
 
+**Audio responsiveness:** all variants include `&fft_size=2048&smoothing=0.3` for low-latency reactivity on phones (~50ms total instead of ~250ms with defaults). Lower fft_size = less buffer wait; higher smoothing = less lag in the smoothing filter.
+
 Heavy weight on `plasma` (15) and `seamless` (10) — early stencil-era shaders with auto-cycling palette modes (ember/emerald/arctic/prism via knob_5). 6 late-fork shaders fill out variety with the relaxed-palette (iter 57b) shaders.
 
 | # | Shader | seed | seed2 | seed3 | seed4 | k_2 | k_5 | Short |
