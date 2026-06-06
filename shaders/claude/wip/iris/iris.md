@@ -43,6 +43,18 @@ small sun. Mirror halo at full (`knob_15=1`), chroma maxed (`knob_4=1`).
 
 New knob since iris/1-2: **15** background mirror strength · **16** ember (fire tips).
 
+### iris/4 — open-pupil flame eye
+The final anatomical piece: a **dark dilating pupil** (`knob_14`) carved at the very center, ringed by
+a fiery orange-gold flame-petal iris (crypts read as flame tips). Reads unmistakably as a living eye —
+dark aperture + blazing stroma. Emerged during *Look Into My Eyes* (Of The Trees). knob_14 dilates the
+pupil from nothing (0) to wide (~0.16 radius).
+
+```
+?shader=claude/wip/iris/4&controller=dodeca-bloom&fullscreen=true&knob_1=1&knob_2=0&knob_3=0.78&knob_4=0.961&knob_5=0.299&knob_6=0.85&knob_7=0.598&knob_8=1&knob_9=0.811&knob_10=0.732&knob_11=0&knob_12=0.748&knob_13=0.409&knob_14=0.693&knob_15=1&knob_16=0.197&knob_21=0.35
+```
+
+New knob since iris/3: **14** pupil dilation (black aperture, 0 = none).
+
 ## Notes
 - Built from dodeca-bloom; full development history + lessons in `journals/dodeca-bloom-cool-moments.md`.
 - Color must stay Oklch (user pref). Background mirror is gated OUT of the iris so the eye reads clean.
