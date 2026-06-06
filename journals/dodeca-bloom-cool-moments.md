@@ -1,0 +1,42 @@
+# dodeca-bloom — Session Journal
+
+Seed: ShaderToy CC0 golden-dodecahedron kaleidoscope (sacred-geometry SDF, 15-fold radial repeat, golden palette `vec3(240,175,20)/255`). Brought in verbatim as `claude/wip/dodeca-bloom/1.frag`.
+
+## Status
+Iter 2 on /vibej run (cron b5c9aa7c, target 180). Remote display on projector; knobs broadcast from laptop via `edit.html?remote=control` (none received yet). Audio via Voicemeeter — normalized/zScore features swing full range, but `beat` bool does NOT fire on this material. Spectrum opened up at iter 2 (centroid 0.26→0.69).
+
+## Cool moments
+- iter31 — **breakdown that flows instead of dying.** Audio fingerprint: `energy 0.01 + centroid 0.02 + entropy 0.10` (near-silent), but `drop_glow 0.49` sustaining from a prior hit and morph/flow/hue phases still advancing (slowly, since rates ~energy_env=0.06). Result: visual eases down + keeps drifting forward with the drop bloom lingering, rather than snapping to dead. **Validates the progression model** — the smoothed-rate accumulators carry quiet passages gracefully. Design hypothesis: keep level→brightness and rate→motion strictly separated; it's what makes breakdowns read as "exhale" not "freeze."
+
+## Todo
+- `[ ] ` Move color work to Oklch when shifting hue/palette (user standing preference) — seed currently uses raw RGB golden.
+
+## History of changes
+- iter1: added `BASS_BREATH (bassZScore * 0.10)` to the dodec depth-offset `off` in `df()` — kaleidoscope geometry breathes with the kick. Chosen over the `beat` bool because beat detection isn't firing.
+- iter2: added `SHIMMER (spectralCentroidZScore * 1.2 + trebleZScore * 0.6)` into the iridescent `rgb` sin phase — rainbow bands jump/sparkle on brightness transients. Matched the spectrum opening up (centroid 0.26→0.69).
+- iter3: added `CHURN (spectralRoughnessZScore * 0.30)` to per-cell `rot(ip, TTIME/73.0 + CHURN)` — arms twist with dissonance (independent motion axis).
+- iter4: USER "less shaky" — cut coefficients (BASS_BREATH 0.10→0.06, SHIMMER halved, CHURN 0.30→0.10) and raised feature smoothing 0.15→0.25. zScore motion was too twitchy; rotation churn was the worst offender.
+- iter5: silent track gap (all features 0) — held, no edit.
+- iter6: mid-dominant + high-entropy material (mids 0.85, entropy 0.90, rough 0.68). User wants calm, so chose `MID_GLOW (0.85 + 0.30*midsNormalized)` warm bloom swell instead of the glitch/RGB-split the archetype table suggests. First brightness-axis mapping (applied as `col *= MID_GLOW` before postProcess). Realizes the "dedicated mid-warmth effect" design hypothesis.
+- iter7: bright high-energy peak (centroid 0.92, treble 0.77, energy 0.81). Added `ZOOM (1.0 - 0.06*(energyNormalized-0.5))` as `p *= ZOOM` — gentle ±3% scale-breath with loudness. Used normalized (not zScore) deliberately to avoid jitter per the less-shaky pref. Five axes now: bass→depth, brightness→shimmer, roughness→rotation, mids→glow, energy→zoom.
+- iter8: dense/bright with clear pitch (treble 0.92, pitchClass 0.82). Added `HUE_DRIFT ((pitchClassNormalized-0.5)*0.7)` ±~0.35rad in Oklch on `baseCol` (made it mutable, rgb2oklch→shift hue→oklch2rgb). Tonal color axis, stays gold-family. Sixth axis: pitch→hue. All six axes now mapped — shift to TUNING mode rather than adding more.
+- iter9: TUNING mode. Track persistently high-entropy (0.85-0.90) but entropy was unmapped. Added `IRIDESCENCE (0.7 + 0.6*spectralEntropyNormalized)` as a multiplier on the existing iridescence add (`col += IRIDESCENCE * baseCol*pow(rgb,...)`) — chaos enriches rainbow bands. Tuned an existing effect, not a new overlay.
+- iter10: warm/dark regime shift (bass 0.60, mids 0.84, centroid 0.12) — held; mappings self-calmed correctly.
+- iter11: LAPTOP KNOB CONNECTED — knob_1 broadcasting from the control page (confirmed live in messageParams, value moving 0.20→0.23). Wired knob_1 → master hue rotation (full wheel, +knob_1*6.28318 rad) folded into HUE_DRIFT in Oklch. User's hero color knob.
+
+- iter19: BIG USER-STEERED REWRITE. (1) Continuous spin — removed jerky `CHURN` (roughnessZScore wobble), replaced with `SPIN (iTime*0.18 + spectralCentroidNormalized*0.6)` — steady base rotation, brightness varies speed smoothly, never reverses. (2) Audio-reactive fractal params: `RIPPLE_FREQ (8+entropy*12)`, `LINE_THICK (width*(5+energy*5))`. (3) Dropped gold palette; recolored the whole field in Oklch with the plasma-event-horizon ramp `CORE_HUE 0.6` (orange-yellow, on structure) → `CORONA_HUE 4.2` (blue-violet, void). Restructured mainImage: fractal field → scalar `intensity`, then oklch(L,C,hue) colorize. All prior audio mappings preserved (SHIMMER, MID_GLOW, IRIDESCENCE, EDGE_GLOW, HUE_DRIFT, BASS_BREATH, ZOOM/knob_1).
+
+- iter30: ARCHITECTURE PIVOT to PROGRESSION model + first CONTROLLER (`controllers/dodeca-bloom.js`). User: "I want a flow over time without snapping back — audio z-scores fluctuate between rotation positions." Fix: controller integrates audio into MONOTONIC accumulators (rate set by music, phase only advances): `spin_angle`(knob_5 speed), `morph_phase`(geom/depth, rate~energy_env), `flow_phase`(ripple flow, rate~entropy+centroid), `hue_phase`(palette journey, rate~flux+energy). Smoothed level envelopes (`bass/energy/entropy/centroid_env`) drive only brightness/thickness. Events: `drop_glow`(latch+decay, knob_6), `pitch_pulse`(melodic flash). Shader fully rewired: spin=spin_angle, off=sin(morph_phase), ripple phase=flow_phase (stable freq), bands=flow_phase, wave=morph_phase, hue=ramp+hue_phase+knob_2, drops bloom L/intensity, pitch flashes hue/L. NO z-score drives any POSITION now. Loaded via `&controller=dodeca-bloom` (required). Knob map in vj-state.json wiredKnobs.
+
+- iter34 (LIVE YHeti set): user demanded ZERO bg flashing. Root causes found: (1) `fwave` radial wave was MIX-added to intensity -> lit whole screen; (2) `drop_glow`/`pitch_pulse` ADDED to intensity & L globally -> drops/notes flashed bg; (3) feedback trails smeared color into periphery. FIX: everything now MULTIPLIES the structure mask (`structure = edges*falloff` which ->0 in void); fwave/drops/pitch/regions all multiplicative; feedback removed. Void is mathematically L=0 black. Added bass: zoom PUNCH (bass_pump*BASS_REACT*0.12) + core depth bloom (off += bass_pump*0.06). knob_11 = BASS_REACT amount.
+- INFRA LESSON: controller (`controllers/*.js`) edits do NOT hot-reload — Vite caches the module and `watch.ignored` includes `controllers/`. Cache-bust import also fails. ONLY a dev-server restart loads new controller code. Shaders DO hot-swap (separate editor-sync path). So: keep controller stable, put tunables on KNOBS (live), restart server only if controller logic must change. Also: window.__dodecaState persists controller phase across (failed) reloads but new keys on an existing state object -> NaN unless ema coalesces (`p = p||0`).
+- TODO: feedback arm-trails can return CONFINED to structure (gate prev by structure mask, not max-blend into void) when user wants "trails back".
+
+- iter35 (LIVE, Of The Trees): COLOR OVERHAUL. User: washed out, need variety + iq-style algorithmic oklab + continuous noticeable evolution + infinity-mirror backbuffer (subtronics2). Done: (1) replaced 2-hue plasma ramp with iq-style PROCEDURAL Oklch palette — hue = TAU*fract(t) where t = abs(d)*2 + rr*0.8 + ANGLE/TAU*0.6 + hue_phase*0.15 -> rainbow spokes (radius+angle+time), vivid chroma ~0.21, L pulled to 0.66 range (was washed at L=0.80/C=0.11). (2) Infinity mirror: recursive zoom feedback `ruv=(q-0.5)*zoomF+0.5; col=max(col,getLastFrameColor(ruv)*decay)`, zoomF bass-deepened, decay 0.74 (0.82 flooded mono-blue -> lowered so fresh varied color shows + contrast returns). Verified via /__capture screenshots (toDataURL canvas -> POST /__capture -> /tmp PNG -> Read). Result: full-rainbow vivid mandala on near-black + subtle tunnel echoes. WINNER.
+- WORKFLOW: take canvas screenshots periodically to judge color (user asked). Capture: `canvas.toDataURL('image/png').split(',')[1]` -> POST /__capture {filename,b64} -> Read /tmp/<name>.png. Fullscreen via JS is BLOCKED (needs gesture) — user must press F11.
+
+## Forks
+_(none yet)_
+
+## Design hypotheses for v(next)
+- High-bass + low-centroid material (bass ~0.7, centroid ~0.26) is the baseline here — lean warm/geometric, save chaos effects (glitch/RGB-split) for high-entropy passages.
