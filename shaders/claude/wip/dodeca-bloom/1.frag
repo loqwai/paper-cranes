@@ -178,6 +178,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   float crypts = pitAng * pitRad;
   L *= (1.0 - 0.70*crypts);                            // dark pits
   C *= (1.0 - 0.30*crypts);
+  // STEP 5 — CONTRACTION FURROWS: fine concentric folds in the outer ciliary zone
+  float furrowZone = smoothstep(0.30, 0.40, irisR) * smoothstep(0.56, 0.46, irisR);
+  float furrows = 0.5 + 0.5*sin(irisR * 150.0);        // concentric rings
+  L *= (1.0 + (furrows - 0.5) * 0.30 * furrowZone);    // subtle light/dark circumferential folds
   vec3 col  = oklch2rgb(vec3(L, C, hue));
 
   col = postProcess(col, q, p);
