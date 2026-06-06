@@ -169,7 +169,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   // integer-multiple angle (rep) keeps the zigzag seamless across the atan2 wrap.
   float collR = 0.20 + 0.02*sin(atan(p.y, p.x)*float(rep));
   float collarette = smoothstep(0.045, 0.0, abs(irisR - collR));
-  L *= (1.0 + collarette*0.5);                         // raised, lighter ridge ring
+  L *= (1.0 + collarette*(0.4 + 0.5*mids_env));        // raised ridge ring — BREATHES with mids (reads in L, survives low chroma)
   C *= (1.0 + collarette*0.25);                        // a touch richer along the collarette
   // STEP 4 — CRYPTS OF FUCHS: dark oval pits in a ring just outside the collarette
   // (stroma thins -> dark epithelium shows). 12 angular pits (integer -> seamless).
