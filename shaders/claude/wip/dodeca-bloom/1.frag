@@ -189,7 +189,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   L *= (1.0 - 0.60*ruff);                              // the dark ruff framing the pupil
   // PUPIL (knob_14): a dilating black aperture at the very center — turn it up, the pupil opens.
   // step() gate keeps it fully absent at knob_14=0; reads in L so the void stays black.
-  float pupilR = knob_14 * 0.16;
+  float pupilR = knob_14 * 0.16 * (1.0 - bass_pump * BASS_REACT * 0.18);  // bass CONSTRICTS the pupil (light/sound stab)
   float pupil  = (1.0 - smoothstep(pupilR*0.6, pupilR, irisR)) * step(0.001, pupilR);
   L *= (1.0 - 0.85*pupil);                             // the dark pupil
   // EMBER (knob_16): fire warmth crackling at the iris tips with treble — for fire-themed tracks.
