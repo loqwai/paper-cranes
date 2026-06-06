@@ -159,6 +159,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   float hue = baseHue + 0.22*sin(TAU*fiber) + (knob_2 - 0.5)*0.9;   // fiber hue jitter + knob_2 nudge
   float C   = mix(0.07, 0.20, knob_4) * (0.82 + 0.18*cos(TAU*fiber)); // knob_4 chroma; gold flecks at peaks
   float L   = clamp(intensity * 0.80, 0.0, 0.95);
+  // STEP 2 — LIMBAL RING: deep blue-grey darkening at the iris rim (the dark outer ring of real irises)
+  float limbal = smoothstep(0.40, 0.56, irisR);
+  hue = mix(hue, 4.1, limbal*0.55);                   // cool the rim toward blue-grey
+  C  *= (1.0 - 0.35*limbal);                          // desaturate the ring
+  L  *= (1.0 - 0.55*limbal);                          // darken -> the limbal ring
   vec3 col  = oklch2rgb(vec3(L, C, hue));
 
   col = postProcess(col, q, p);
