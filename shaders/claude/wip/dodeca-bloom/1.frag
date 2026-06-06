@@ -46,7 +46,7 @@ uniform float pitch_pulse;   // melodic-jump flash
 #define TWIST (knob_10 * 3.14159)                        // knob_10 kaleido twist
 #define BASS_REACT (0.8 + knob_11 * 1.4)                 // knob_11 bass reactivity amount
 #define MIRROR     (knob_15 * 0.5)                        // knob_15 background infinity-mirror strength (0..0.5)
-#define GAZE       (knob_21 * 0.42)                       // knob_21 CURSOR GAZE strength (0 = off / pure VJ mode)
+#define GAZE       (knob_21 * 0.60)                       // knob_21 CURSOR GAZE strength (0 = off / pure VJ mode); higher = eye reaches further toward the pointer
 #define PARALLAX   0.7                                    // extra pupil slide -> 3D "looking at the pointer" depth
 
 // brightness (smoothed levels — never flicker)
@@ -121,10 +121,12 @@ vec3 postProcess(vec3 col, vec2 q, vec2 p) {
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   vec2 q = fragCoord.xy / iResolution.xy;
   float aspect = iResolution.x/iResolution.y;
-  // === CURSOR GAZE: the eye turns to look at the pointer (knob_21). `touch` = pointer (0..1, y-up),
-  // `touched` = pointer active on the canvas. gazeV is 0 when inactive -> eye looks forward (VJ mode safe).
-  // (Uses `touch`/`touched`, NOT iMouse: the renderer never populates iMouse.xy on this build.)
-  vec2 gazeV = (touch - 0.5) * (touched ? 1.0 : 0.0);  // pointer offset from centre (0 when inactive)
+  // === CURSOR GAZE: the eye turns to look at the pointer. `touch` = pointer (0..1, y-up).
+  // GATE is knob_21 (GAZE), NOT the `touched` bool — twgl doesn't deliver bool uniforms reliably on
+  // this build, so `touched` reads false and would kill the gaze. With knob_21 as the gate: knob_21=0
+  // -> centred (pure VJ); raise it -> the eye follows the pointer and HOLDS where you last pointed
+  // (locks onto the subject). (iMouse is unusable here — the renderer never populates iMouse.xy.)
+  vec2 gazeV = (touch - 0.5);                          // pointer offset from centre; knob_21 scales/gates it
   vec2 gazeQ = gazeV * GAZE;                           // whole-eye shift toward the pointer
   vec2 paraQ = gazeV * GAZE * PARALLAX;                // EXTRA pupil shift -> parallax depth
   vec2 qc = q - 0.5 - gazeQ;                           // screen centred on the (gaze-shifted) eye
@@ -243,6 +245,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   vec3 mirror = getLastFrameColor(ruv).rgb * 0.97;     // slight decay -> additive feedback can't runaway to white at knob_15=1
   float fg = smoothstep(0.05, 0.18, dot(col, vec3(0.33)));  // 1 = iris (bright), 0 = background
   col = mix(col + mirror*MIRROR, col, fg);                  // knob_15 mirror in the bg only; iris untouched
+
+  // CATCHLIGHT: a wet specular glint riding on the iris TOWARD the pointer — the eye's point of
+  // attention, sells the "locked-on / spotlight" read. Gated to the iris disc + active gaze so the
+  // void never lights and pure-VJ mode is untouched.
+  vec2 gdir   = gazeV / (length(gazeV) + 1e-4);            // unit direction toward the pointer
+  vec2 glintC = gdir * 0.16;                               // sits on the iris, toward the pointer (eye-centred space)
+  float glint = smoothstep(0.04, 0.0, length((qc - glintC) * vec2(aspect, 1.0)));
+  glint *= smoothstep(0.5, 0.30, irisR) * step(0.02, knob_21);
+  col += vec3(glint) * 0.55;
 
   fragColor = vec4(col, 1.0);
 }
