@@ -55,6 +55,16 @@ pupil from nothing (0) to wide (~0.16 radius).
 
 New knob since iris/3: **14** pupil dilation (black aperture, 0 = none).
 
+### iris/5 — everglade green
+The **vivid-green** member of the series (the others are gold/copper/fire). Bright green ciliary stroma
+with green-gold glowing crypt petals, a small copper-orange pupillary core, and a dark pupil. The
+entropy shimmer (high on this track) makes the stroma lush and alive. Emerged on *Everglade March (VIP)*
+(Of The Trees). Small facets (knob_7 up), tight twist (knob_10 low), full chroma (knob_4=1).
+
+```
+?shader=claude/wip/iris/5&controller=dodeca-bloom&fullscreen=true&knob_1=0.354&knob_2=0.291&knob_3=0.126&knob_4=1&knob_5=0.567&knob_6=1&knob_7=0.874&knob_8=0.354&knob_9=0.827&knob_10=0.071&knob_11=1&knob_12=0.764&knob_13=0.638&knob_14=0.551&knob_15=0.26&knob_16=0.764&knob_21=0.35
+```
+
 ## Notes
 - Built from dodeca-bloom; full development history + lessons in `journals/dodeca-bloom-cool-moments.md`.
 - Color must stay Oklch (user pref). Background mirror is gated OUT of the iris so the eye reads clean.
