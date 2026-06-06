@@ -65,6 +65,16 @@ entropy shimmer (high on this track) makes the stroma lush and alive. Emerged on
 ?shader=claude/wip/iris/5&controller=dodeca-bloom&fullscreen=true&knob_1=0.354&knob_2=0.291&knob_3=0.126&knob_4=1&knob_5=0.567&knob_6=1&knob_7=0.874&knob_8=0.354&knob_9=0.827&knob_10=0.071&knob_11=1&knob_12=0.764&knob_13=0.638&knob_14=0.551&knob_15=0.26&knob_16=0.764&knob_21=0.35
 ```
 
+### iris/6 — golden sun bloom
+A bright, symmetric **golden sunflower-eye**: radiant gold petals around a fine copper-filigree center
+and a small dark pupil, on a clean black void (mirror off). Brighter and more sun/flower than the others.
+Emerged late in the Of The Trees set. Note: knob_4 (chroma) is at 0 here, yet it reads warm gold — the
+heterochromia base hue at the low-chroma floor still tints it. High line weight (knob_12=1), fast spin.
+
+```
+?shader=claude/wip/iris/6&controller=dodeca-bloom&fullscreen=true&knob_1=0.512&knob_2=0&knob_3=1&knob_4=0&knob_5=1&knob_6=1&knob_7=0.433&knob_8=0&knob_9=0.425&knob_10=0.409&knob_11=0.85&knob_12=1&knob_13=0.047&knob_14=0.283&knob_15=0&knob_16=0.094&knob_21=0.35
+```
+
 ## Notes
 - Built from dodeca-bloom; full development history + lessons in `journals/dodeca-bloom-cool-moments.md`.
 - Color must stay Oklch (user pref). Background mirror is gated OUT of the iris so the eye reads clean.
