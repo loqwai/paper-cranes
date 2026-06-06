@@ -36,17 +36,17 @@ uniform float pitch_pulse;   // melodic-jump flash
 // === Knobs ===
 #define ZOOM        (0.35 + knob_1 * 2.65)               // knob_1 ZOOM
 #define MASTER_HUE  (knob_2 * 6.28318)                   // knob_2 palette hue
-#define LINE_THICK  (width * (5.0 + energy_env * 5.0) * (0.4 + knob_12 * 1.6))  // knob_12 line weight (moved from k3)
+#define LINE_THICK  (width * (5.0 + energy_env * 5.0) * 1.2)  // (decoupled from knob_12 — that dial now aims the EYE Y)
 #define RIPPLE_FREQ (10.0 + knob_13 * 16.0)              // knob_13 ripple density (moved from k4)
 // COLOR MIX (iq-style, driven by the fractal SDF): knob_2 = hue base, knob_3 = hue frequency, knob_4 = chroma
 // fractal exploration:
 #define size  (baseSize * mix(0.55, 1.10, knob_7))       // knob_7 facet size
 #define offc  (baseOffc * mix(0.70, 1.45, knob_8))       // knob_8 arm spread
-#define DEPTH (mix(0.18, 0.50, knob_9))                  // knob_9 depth slice
+#define DEPTH (0.34)                                     // (decoupled from knob_9 — that dial now aims the EYE X)
 #define TWIST (knob_10 * 3.14159)                        // knob_10 kaleido twist
-#define BASS_REACT (1.2)                                 // (decoupled from knob_11 — that dial now aims the EYE X)
+#define BASS_REACT (0.8 + knob_11 * 1.4)                 // knob_11 bass reactivity amount
 #define MIRROR     (knob_15 * 0.5)                        // knob_15 background infinity-mirror strength (0..0.5)
-// === EYE AIM: TWO DIALS point the eye. knob_11 = X, knob_16 = Y. 0.5 = centre/forward.
+// === EYE AIM: TWO DIALS point the eye. knob_9 = X, knob_12 = Y. 0.5 = centre/forward.
 #define GAZE       (0.55)                                 // always-on so the two aim dials are all you need
 #define PARALLAX   0.7                                    // pupil leads the iris -> 3D "looking AT it" depth
 
@@ -122,9 +122,9 @@ vec3 postProcess(vec3 col, vec2 q, vec2 p) {
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   vec2 q = fragCoord.xy / iResolution.xy;
   float aspect = iResolution.x/iResolution.y;
-  // === EYE AIM: the two dials you wiggle point the eye. knob_11 = X (left/right), knob_16 = Y (down/up).
+  // === EYE AIM: the two dials you wiggle point the eye. knob_9 = X (left/right), knob_12 = Y (down/up).
   // 0.5 = centre/forward. Broadcast-friendly (knobs stream over the remote rig; the cursor can't).
-  vec2 gazeV = vec2(knob_11 - 0.5, knob_16 - 0.5) * 2.0;  // -1..1 aim from the two dials (0.5 = centred)
+  vec2 gazeV = vec2(knob_9 - 0.5, knob_12 - 0.5) * 2.0;  // -1..1 aim from the two dials (0.5 = centred)
   vec2 gazeQ = gazeV * GAZE;                           // whole-eye shift toward the pointer
   vec2 paraQ = gazeV * GAZE * PARALLAX;                // EXTRA pupil shift -> parallax depth
   vec2 qc = q - 0.5 - gazeQ;                           // screen centred on the (gaze-shifted) eye
@@ -212,9 +212,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   float dropFlare = clamp(energy_env*0.35 + drop_glow, 0.0, 1.0) * smoothstep(0.28, 0.50, irisR);
   L *= (1.0 + dropFlare*0.5);
   C *= (1.0 + dropFlare*0.4);                           // drop also FLUSHES color into the ring (pops even at low chroma)
-  // EMBER (decoupled from knob_16 — that dial now aims the EYE Y): fire warmth at the iris tips w/ treble.
+  // EMBER (knob_16): fire warmth crackling at the iris tips with treble — for fire-themed tracks.
   // Multiplies structure-gated L so the black void stays black; hue mix only shows where lit.
-  float ember = 0.5 * tipW * (0.4 + 0.6*treble_env);
+  float ember = knob_16 * tipW * (0.4 + 0.6*treble_env);
   float emberHue = mix(0.42, 0.78, centroid_env);      // dark music -> red tips, bright -> yellow (timbral fire color)
   hue = mix(hue, emberHue, ember*0.6);                  // push tips toward the timbre-tinted ember (oklch)
   C  *= (1.0 + ember*0.5);                             // richer ember
