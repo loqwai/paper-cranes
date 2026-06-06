@@ -46,8 +46,8 @@ uniform float pitch_pulse;   // melodic-jump flash
 #define TWIST (knob_10 * 3.14159)                        // knob_10 kaleido twist
 #define BASS_REACT (0.8 + knob_11 * 1.4)                 // knob_11 bass reactivity amount
 #define MIRROR     (knob_15 * 0.5)                        // knob_15 background infinity-mirror strength (0..0.5)
-#define GAZE       (knob_21 * 0.60)                       // knob_21 CURSOR GAZE strength (0 = off / pure VJ mode); higher = eye reaches further toward the pointer
-#define PARALLAX   0.7                                    // extra pupil slide -> 3D "looking at the pointer" depth
+#define GAZE       (knob_21 * 0.60)                       // knob_21 GAZE strength (0 = off / pure VJ); higher = eye reaches further toward the aim
+#define PARALLAX   0.7                                    // extra pupil slide -> 3D "looking at it" depth (knob_19/20 aim, knob_21 strength)
 
 // brightness (smoothed levels — never flicker)
 #define IRIDESCENCE (0.7 + 0.6 * entropy_env)
@@ -121,12 +121,10 @@ vec3 postProcess(vec3 col, vec2 q, vec2 p) {
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   vec2 q = fragCoord.xy / iResolution.xy;
   float aspect = iResolution.x/iResolution.y;
-  // === CURSOR GAZE: the eye turns to look at the pointer. `touch` = pointer (0..1, y-up).
-  // GATE is knob_21 (GAZE), NOT the `touched` bool — twgl doesn't deliver bool uniforms reliably on
-  // this build, so `touched` reads false and would kill the gaze. With knob_21 as the gate: knob_21=0
-  // -> centred (pure VJ); raise it -> the eye follows the pointer and HOLDS where you last pointed
-  // (locks onto the subject). (iMouse is unusable here — the renderer never populates iMouse.xy.)
-  vec2 gazeV = (touch - 0.5);                          // pointer offset from centre; knob_21 scales/gates it
+  // === GAZE AIM: aim the eye with two knobs (broadcast-friendly for the remote rig — streams reliably
+  // from the downstairs control page, unlike the cursor which only lives on the projector machine).
+  // knob_19 = X, knob_20 = Y, BIPOLAR (0.5 = centre / forward). knob_21 = GAZE strength (0 = off / VJ).
+  vec2 gazeV = vec2(knob_19 - 0.5, knob_20 - 0.5) * 2.0;  // -1..1 aim from the XY knobs (0.5 = centred)
   vec2 gazeQ = gazeV * GAZE;                           // whole-eye shift toward the pointer
   vec2 paraQ = gazeV * GAZE * PARALLAX;                // EXTRA pupil shift -> parallax depth
   vec2 qc = q - 0.5 - gazeQ;                           // screen centred on the (gaze-shifted) eye
