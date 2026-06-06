@@ -17,6 +17,8 @@ Audio via Voicemeeter; `beat` bool unreliable, use zScore/bass_pump.
 ## Todo
 - `[ ] ` Move color work to Oklch when shifting hue/palette (user standing preference) — seed currently uses raw RGB golden.
 
+- iter57 — **wired knob_15 → background infinity-mirror strength (0..0.5).** During *Dolori* (Of The Trees, sparse/sorrowful: energy 0.15, entropy 0.94, centroid 0.82) the user kept pinning unwired knob_15 to max — a clear "give this a job" signal. Tied it to the mirror blend (`mirror*MIRROR`, was fixed 0.33) so the dreamy recursive halo behind the eye can swell/recede by hand. Mood-appropriate live control for calm passages; iris stays masked-clean in front. (knob_14/16/21 still unwired — next candidates.)
+
 ## History of changes
 - iter1: added `BASS_BREATH (bassZScore * 0.10)` to the dodec depth-offset `off` in `df()` — kaleidoscope geometry breathes with the kick. Chosen over the `beat` bool because beat detection isn't firing.
 - iter2: added `SHIMMER (spectralCentroidZScore * 1.2 + trebleZScore * 0.6)` into the iridescent `rgb` sin phase — rainbow bands jump/sparkle on brightness transients. Matched the spectrum opening up (centroid 0.26→0.69).

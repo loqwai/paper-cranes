@@ -45,6 +45,7 @@ uniform float pitch_pulse;   // melodic-jump flash
 #define DEPTH (mix(0.18, 0.50, knob_9))                  // knob_9 depth slice
 #define TWIST (knob_10 * 3.14159)                        // knob_10 kaleido twist
 #define BASS_REACT (0.8 + knob_11 * 1.4)                 // knob_11 bass reactivity amount
+#define MIRROR     (knob_15 * 0.5)                        // knob_15 background infinity-mirror strength (0..0.5)
 
 // brightness (smoothed levels — never flicker)
 #define IRIDESCENCE (0.7 + 0.6 * entropy_env)
@@ -201,7 +202,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   ruv = ruv * zoomF + CEN;
   vec3 mirror = getLastFrameColor(ruv).rgb;
   float fg = smoothstep(0.05, 0.18, dot(col, vec3(0.33)));  // 1 = iris (bright), 0 = background
-  col = mix(col + mirror*0.33, col, fg);                    // faint mirror in the bg only; iris untouched
+  col = mix(col + mirror*MIRROR, col, fg);                  // knob_15 mirror in the bg only; iris untouched
 
   fragColor = vec4(col, 1.0);
 }
