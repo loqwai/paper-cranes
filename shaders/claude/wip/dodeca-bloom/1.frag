@@ -159,25 +159,24 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
   // iq-style PROCEDURAL palette in Oklch — vivid (high chroma), varied across the fractal,
   // journeying continuously via hue_phase. t spans the field + radius + slow time.
-  // === GREEN IRIS (developing slowly) — anatomical color, SDF reads as stroma fibers ===
-  // Green eyes = low-melanin blue scatter + yellow lipochrome ("fat deposits"), with
-  // CENTRAL HETEROCHROMIA: amber/gold near the pupil -> green toward the limbus.
+  // === BONFIRE IRIS (Dark Souls firelight) — hot amber/gold core -> orange -> deep red embers ->
+  // reddy-violet dying-coal rim. Warm firelight for room ambience. All hues in Oklch (radians).
   float irisR = rr;                                    // 0 = pupil, ~0.7 = limbus
   // PARALLAX: pupil + ruff sit on a deeper plane, so they slide FURTHER toward the pointer than the iris.
   float pupilDist = length((qc - paraQ) * vec2(aspect, 1.0));
-  float GOLD  = 1.40;                                  // amber lipochrome (oklch hue, radians)
-  float GREEN = 2.45;                                  // iris green
-  float baseHue = mix(GOLD, GREEN, smoothstep(0.04, 0.45, irisR));
+  float CORE  = 1.35;                                  // hot amber/gold flame core (oklch hue, radians)
+  float EMBER = 0.55;                                  // deep red-orange ember toward the rim
+  float baseHue = mix(CORE, EMBER, smoothstep(0.04, 0.45, irisR));  // bonfire: gold core -> red embers
   float fiber = d * mix(10.0, 46.0, knob_3);           // SDF -> radial stroma fiber detail (knob_3 density)
   // fiber shimmer FLOWS (flow_phase, monotonic — crawls, never snaps) and AMPLIFIES with entropy:
   // calm track = quiet stroma; chaotic ("ghoul") passages = haunted, alive iridescent fibers.
   float hue = baseHue + (0.18 + 0.22*entropy_env)*sin(TAU*fiber + flow_phase*0.5) + (knob_2 - 0.5)*0.9;
   float C   = mix(0.07, 0.20, knob_4) * (0.82 + 0.18*cos(TAU*fiber)); // knob_4 chroma; gold flecks at peaks
   float L   = clamp(intensity * 0.80, 0.0, 0.95);
-  // STEP 2 — LIMBAL RING: deep blue-grey darkening at the iris rim (the dark outer ring of real irises)
+  // STEP 2 — EMBER RIM: the outer edge glows reddy-violet like dying coals, then darkens.
   float limbal = smoothstep(0.40, 0.56, irisR);
-  hue = mix(hue, 4.1, limbal*0.55);                   // cool the rim toward blue-grey
-  C  *= (1.0 - 0.35*limbal);                          // desaturate the ring
+  hue = mix(hue, -0.45, limbal*0.65);                 // rim -> REDDY-VIOLET (short way through red, stays warm)
+  C  *= (1.0 - 0.12*limbal);                          // keep the violet rim saturated
   L  *= (1.0 - 0.55*limbal);                          // darken -> the limbal ring
   // STEP 3 — COLLARETTE: crenelated ridge ~1/3 out, dividing pupillary (inner) & ciliary (outer) zones.
   // integer-multiple angle (rep) keeps the zigzag seamless across the atan2 wrap.
