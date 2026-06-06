@@ -194,6 +194,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   float pupilR = knob_14 * 0.16 * (1.0 - bass_pump * BASS_REACT * 0.18);  // bass CONSTRICTS the pupil (light/sound stab)
   float pupil  = (1.0 - smoothstep(pupilR*0.6, pupilR, irisR)) * step(0.001, pupilR);
   L *= (1.0 - 0.85*pupil);                             // the dark pupil
+  // DROP FLARE: the outer iris (ciliary/limbal ring) blooms brighter as energy surges — gives builds
+  // & drops a place to land. Driven by the SUSTAINED drop envelope (not spiky z) so it swells, not strobes.
+  // Multiplies structure-gated L -> the void stays black; smoothstep confines it to the outer ring.
+  float dropFlare = clamp(energy_env*0.35 + drop_glow, 0.0, 1.0) * smoothstep(0.28, 0.50, irisR);
+  L *= (1.0 + dropFlare*0.5);
   // EMBER (knob_16): fire warmth crackling at the iris tips with treble — for fire-themed tracks.
   // Multiplies structure-gated L so the black void stays black; hue mix only shows where lit.
   float ember = knob_16 * tipW * (0.4 + 0.6*treble_env);
