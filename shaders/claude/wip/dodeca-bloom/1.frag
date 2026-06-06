@@ -224,7 +224,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   vec2 ruv = q - CEN;
   ruv = mat2(cos(mrot), -sin(mrot), sin(mrot), cos(mrot)) * ruv;
   ruv = ruv * zoomF + CEN;
-  vec3 mirror = getLastFrameColor(ruv).rgb;
+  vec3 mirror = getLastFrameColor(ruv).rgb * 0.97;     // slight decay -> additive feedback can't runaway to white at knob_15=1
   float fg = smoothstep(0.05, 0.18, dot(col, vec3(0.33)));  // 1 = iris (bright), 0 = background
   col = mix(col + mirror*MIRROR, col, fg);                  // knob_15 mirror in the bg only; iris untouched
 
