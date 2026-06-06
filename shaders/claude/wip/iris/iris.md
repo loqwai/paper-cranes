@@ -23,6 +23,14 @@ anatomy + light background infinity mirror. Knob preset that produced the saved 
 Knob roles: 1 zoom · 2 hue base · 3 hue freq · 4 chroma · 5 spin speed · 6 drop sustain ·
 7 facet size · 8 arm spread · 9 depth · 10 kaleido twist · 11 bass reactivity · 12 line weight · 13 ripple.
 
+### iris/2 — copper-core green iris
+Green ciliary stroma with a **copper-orange sunburst pupillary core** (warmer/redder than iris/1's gold),
+defined crypt petals, anemone-like fibers. Smaller facets (knob_7 up).
+
+```
+?shader=claude/wip/iris/2&controller=dodeca-bloom&fullscreen=true&knob_1=0.606&knob_2=0.425&knob_3=0.449&knob_4=0.835&knob_5=0.732&knob_6=0.181&knob_7=0.827&knob_8=1&knob_9=0.811&knob_10=0.74&knob_11=1&knob_12=0.819&knob_13=0.024
+```
+
 ## Notes
 - Built from dodeca-bloom; full development history + lessons in `journals/dodeca-bloom-cool-moments.md`.
 - Color must stay Oklch (user pref). Background mirror is gated OUT of the iris so the eye reads clean.

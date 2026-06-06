@@ -11,6 +11,7 @@ Live on projector (NX/Windows, 6969, fullscreen), MIDI knobs via SSH-localhost, 
 Audio via Voicemeeter; `beat` bool unreliable, use zScore/bass_pump.
 
 ## Cool moments
+- iter53 — **iris/2 saved: copper-core green iris.** Knob preset (k2 hue base 0.425, k7 facet 0.827) shifts the pupillary core from gold (iris/1) to a copper-orange sunburst while keeping green ciliary stroma. Anemone-like crypt petals. Audio: energy 0.58 + entropy 0.93 (bright/chaotic) — but the look is knob-defined, not audio-driven. Saved to `claude/wip/iris/2` with preset in iris.md.
 - iter31 — **breakdown that flows instead of dying.** Audio fingerprint: `energy 0.01 + centroid 0.02 + entropy 0.10` (near-silent), but `drop_glow 0.49` sustaining from a prior hit and morph/flow/hue phases still advancing (slowly, since rates ~energy_env=0.06). Result: visual eases down + keeps drifting forward with the drop bloom lingering, rather than snapping to dead. **Validates the progression model** — the smoothed-rate accumulators carry quiet passages gracefully. Design hypothesis: keep level→brightness and rate→motion strictly separated; it's what makes breakdowns read as "exhale" not "freeze."
 
 ## Todo
