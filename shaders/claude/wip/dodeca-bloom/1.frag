@@ -46,7 +46,6 @@ uniform float pitch_pulse;   // melodic-jump flash
 #define TWIST (knob_10 * 3.14159)                        // knob_10 kaleido twist
 #define BASS_REACT (0.8 + knob_11 * 1.4)                 // knob_11 bass reactivity amount
 #define MIRROR     (knob_15 * 0.5)                        // knob_15 background infinity-mirror strength (0..0.5)
-#define LOOK       (knob_17 * 0.32)                       // knob_17 GAZE-FOLLOW amount (0 = centered/off) — eye looks at the cursor
 #define GAZE       (knob_21 * 0.42)                       // knob_21 CURSOR GAZE strength (0 = off / pure VJ mode)
 #define PARALLAX   0.7                                    // extra pupil slide -> 3D "looking at the pointer" depth
 
