@@ -157,7 +157,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   float GREEN = 2.45;                                  // iris green
   float baseHue = mix(GOLD, GREEN, smoothstep(0.04, 0.45, irisR));
   float fiber = d * mix(10.0, 46.0, knob_3);           // SDF -> radial stroma fiber detail (knob_3 density)
-  float hue = baseHue + 0.22*sin(TAU*fiber) + (knob_2 - 0.5)*0.9;   // fiber hue jitter + knob_2 nudge
+  // fiber shimmer FLOWS (flow_phase, monotonic — crawls, never snaps) and AMPLIFIES with entropy:
+  // calm track = quiet stroma; chaotic ("ghoul") passages = haunted, alive iridescent fibers.
+  float hue = baseHue + (0.18 + 0.22*entropy_env)*sin(TAU*fiber + flow_phase*0.5) + (knob_2 - 0.5)*0.9;
   float C   = mix(0.07, 0.20, knob_4) * (0.82 + 0.18*cos(TAU*fiber)); // knob_4 chroma; gold flecks at peaks
   float L   = clamp(intensity * 0.80, 0.0, 0.95);
   // STEP 2 — LIMBAL RING: deep blue-grey darkening at the iris rim (the dark outer ring of real irises)
