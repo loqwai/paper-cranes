@@ -170,6 +170,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   float collarette = smoothstep(0.045, 0.0, abs(irisR - collR));
   L *= (1.0 + collarette*0.5);                         // raised, lighter ridge ring
   C *= (1.0 + collarette*0.25);                        // a touch richer along the collarette
+  // STEP 4 — CRYPTS OF FUCHS: dark oval pits in a ring just outside the collarette
+  // (stroma thins -> dark epithelium shows). 12 angular pits (integer -> seamless).
+  float aa = atan(p.y, p.x);
+  float pitAng = pow(0.5 + 0.5*cos(aa*12.0), 8.0);     // sharp angular dots
+  float pitRad = smoothstep(0.07, 0.0, abs(irisR - 0.27)); // band outside the collarette
+  float crypts = pitAng * pitRad;
+  L *= (1.0 - 0.70*crypts);                            // dark pits
+  C *= (1.0 - 0.30*crypts);
   vec3 col  = oklch2rgb(vec3(L, C, hue));
 
   col = postProcess(col, q, p);
