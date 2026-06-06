@@ -31,6 +31,18 @@ defined crypt petals, anemone-like fibers. Smaller facets (knob_7 up).
 ?shader=claude/wip/iris/2&controller=dodeca-bloom&fullscreen=true&knob_1=0.606&knob_2=0.425&knob_3=0.449&knob_4=0.835&knob_5=0.732&knob_6=0.181&knob_7=0.827&knob_8=1&knob_9=0.811&knob_10=0.74&knob_11=1&knob_12=0.819&knob_13=0.024
 ```
 
+### iris/3 — flaming-eye (fire sunburst pupil)
+The pupillary core ignites into a **fiery orange-red sunburst** (oklch ember push at the tips,
+crackling with treble — `knob_16`) ringed by the green ciliary stroma and a deep green limbal ring.
+Emerged on *I See A Fire* (Of The Trees). The most dramatic of the series — reads as a flaming eye /
+small sun. Mirror halo at full (`knob_15=1`), chroma maxed (`knob_4=1`).
+
+```
+?shader=claude/wip/iris/3&controller=dodeca-bloom&fullscreen=true&knob_1=0.307&knob_2=0&knob_3=0.52&knob_4=1&knob_5=0.307&knob_6=0.37&knob_7=0.449&knob_8=0.409&knob_9=0.811&knob_10=0.937&knob_11=1&knob_12=0.748&knob_13=0.37&knob_14=0.449&knob_15=1&knob_16=0.559&knob_21=0.35
+```
+
+New knob since iris/1-2: **15** background mirror strength · **16** ember (fire tips).
+
 ## Notes
 - Built from dodeca-bloom; full development history + lessons in `journals/dodeca-bloom-cool-moments.md`.
 - Color must stay Oklch (user pref). Background mirror is gated OUT of the iris so the eye reads clean.
