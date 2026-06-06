@@ -202,7 +202,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   // EMBER (knob_16): fire warmth crackling at the iris tips with treble — for fire-themed tracks.
   // Multiplies structure-gated L so the black void stays black; hue mix only shows where lit.
   float ember = knob_16 * tipW * (0.4 + 0.6*treble_env);
-  hue = mix(hue, 0.55, ember*0.6);                     // push tips toward orange-red (oklch)
+  float emberHue = mix(0.42, 0.78, centroid_env);      // dark music -> red tips, bright -> yellow (timbral fire color)
+  hue = mix(hue, emberHue, ember*0.6);                  // push tips toward the timbre-tinted ember (oklch)
   C  *= (1.0 + ember*0.5);                             // richer ember
   L  *= (1.0 + ember*0.4);                             // glowing tips
   vec3 col  = oklch2rgb(vec3(L, C, hue));
