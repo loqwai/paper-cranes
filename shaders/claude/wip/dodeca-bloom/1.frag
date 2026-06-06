@@ -199,6 +199,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   // Multiplies structure-gated L -> the void stays black; smoothstep confines it to the outer ring.
   float dropFlare = clamp(energy_env*0.35 + drop_glow, 0.0, 1.0) * smoothstep(0.28, 0.50, irisR);
   L *= (1.0 + dropFlare*0.5);
+  C *= (1.0 + dropFlare*0.4);                           // drop also FLUSHES color into the ring (pops even at low chroma)
   // EMBER (knob_16): fire warmth crackling at the iris tips with treble — for fire-themed tracks.
   // Multiplies structure-gated L so the black void stays black; hue mix only shows where lit.
   float ember = knob_16 * tipW * (0.4 + 0.6*treble_env);
