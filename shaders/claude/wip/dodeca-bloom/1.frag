@@ -190,15 +190,18 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
   col = postProcess(col, q, p);
 
-  // === Infinity mirror (Subtronics-2 style): recursive zoom feedback receding into center ===
+  // === LIGHT infinity mirror in the BACKGROUND (Subtronics-eye style) ===
+  // Recursive zoom of the prior frame, blended ONLY into the dark surround so the iris stays
+  // clean in front (subtronics masks the eye out of the mirror — same idea via the fg mask).
   vec2 CEN = vec2(0.5);
-  float zoomF = 1.05 + bass_pump * BASS_REACT * 0.10;   // bass deepens / speeds the tunnel
-  float mrot = 0.02;                                     // gentle spiral with the spin
+  float zoomF = 1.06 + bass_pump * BASS_REACT * 0.06;   // bass subtly deepens the recursion
+  float mrot = 0.015;                                    // gentle spiral
   vec2 ruv = q - CEN;
   ruv = mat2(cos(mrot), -sin(mrot), sin(mrot), cos(mrot)) * ruv;
   ruv = ruv * zoomF + CEN;
   vec3 mirror = getLastFrameColor(ruv).rgb;
-  col = max(col, mirror * 0.74);                         // recede + fade; lower decay -> fresh varied color shows through
+  float fg = smoothstep(0.05, 0.18, dot(col, vec3(0.33)));  // 1 = iris (bright), 0 = background
+  col = mix(col + mirror*0.33, col, fg);                    // faint mirror in the bg only; iris untouched
 
   fragColor = vec4(col, 1.0);
 }
