@@ -36,8 +36,9 @@ uniform float pitch_pulse;   // melodic-jump flash
 // === Knobs ===
 #define ZOOM        (0.35 + knob_1 * 2.65)               // knob_1 ZOOM
 #define MASTER_HUE  (knob_2 * 6.28318)                   // knob_2 palette hue
-#define LINE_THICK  (width * (5.0 + energy_env * 5.0) * (0.4 + knob_3 * 1.6))  // knob_3 line weight
-#define RIPPLE_FREQ (10.0 + knob_4 * 16.0)               // knob_4 ripple density
+#define LINE_THICK  (width * (5.0 + energy_env * 5.0) * (0.4 + knob_12 * 1.6))  // knob_12 line weight (moved from k3)
+#define RIPPLE_FREQ (10.0 + knob_13 * 16.0)              // knob_13 ripple density (moved from k4)
+// COLOR MIX (iq-style, driven by the fractal SDF): knob_2 = hue base, knob_3 = hue frequency, knob_4 = chroma
 // fractal exploration:
 #define size  (baseSize * mix(0.55, 1.10, knob_7))       // knob_7 facet size
 #define offc  (baseOffc * mix(0.70, 1.45, knob_8))       // knob_8 arm spread
@@ -147,13 +148,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
   // iq-style PROCEDURAL palette in Oklch — vivid (high chroma), varied across the fractal,
   // journeying continuously via hue_phase. t spans the field + radius + slow time.
-  float ang = atan(p.y, p.x);
-  // angular coeff MUST be a whole number (2.0) so hue wraps seamlessly around the ring —
-  // a fractional coeff makes a hard color seam at the atan2 wrap (-x axis / left horizontal).
-  float t = abs(d)*2.0 + rr*0.8 + ang/TAU*2.0 + hue_phase*0.15; // radius + ANGLE(x2) + slow time
-  float hue = TAU * fract(t) + MASTER_HUE;                      // many distinct hues across the mandala at once
-  float C   = 0.21 + 0.06*cos(TAU*(t + 0.33));                  // vivid chroma
-  float L   = clamp(intensity * (0.66 + 0.12*cos(TAU*(t + 0.66))), 0.0, 0.95);
+  // --- iq-style palette driven by the FRACTAL SDF (structure-following), Oklch, knob-mixable ---
+  // Color follows the distance field `d` (not screen uv) so the bands trace the actual fractal.
+  // No atan2 -> no seam.
+  float pt = d * mix(8.0, 40.0, knob_3) + hue_phase*0.2;           // knob_3 = hue FREQUENCY (bands across the fractal)
+  float hue = TAU * fract(pt) + knob_2 * TAU;                      // knob_2 = hue BASE (rotate the whole scheme)
+  float C   = mix(0.06, 0.30, knob_4) * (0.78 + 0.22*cos(TAU*pt)); // knob_4 = CHROMA / saturation
+  float L   = clamp(intensity * 0.80, 0.0, 0.95);
   vec3 col  = oklch2rgb(vec3(L, C, hue));
 
   col = postProcess(col, q, p);
