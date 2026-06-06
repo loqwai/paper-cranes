@@ -211,6 +211,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   // resting gaze. Gated to low energy so it NEVER adds motion to busy drops; flows via morph_phase.
   float calm = 1.0 - clamp(energy_env*2.2, 0.0, 1.0);
   L *= 1.0 + calm * 0.12 * sin(morph_phase*1.5);
+  // SUB THROB: on DARK bassy grooves (low centroid + bass), the whole eye throbs with the low end —
+  // a heartbeat. Gated to low centroid so bright sections never get it; reads in L (mono-safe).
+  float deep = (1.0 - clamp(centroid_env*1.6, 0.0, 1.0)) * bass_pump;
+  L *= 1.0 + deep * 0.10;
   vec3 col  = oklch2rgb(vec3(L, C, hue));
 
   col = postProcess(col, q, p);
