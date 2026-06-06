@@ -182,6 +182,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   float furrowZone = smoothstep(0.30, 0.40, irisR) * smoothstep(0.56, 0.46, irisR);
   float furrows = 0.5 + 0.5*sin(irisR * 150.0);        // concentric rings
   L *= (1.0 + (furrows - 0.5) * 0.30 * furrowZone);    // subtle light/dark circumferential folds
+  // STEP 6 — PUPILLARY RUFF: dark crenelated collar of pigment epithelium at the pupil margin
+  float ruffR = 0.075 + 0.012*sin(atan(p.y, p.x)*float(rep)*2.0);  // crenelated inner ring (integer mult -> seamless)
+  float ruff = smoothstep(0.028, 0.0, abs(irisR - ruffR));
+  L *= (1.0 - 0.60*ruff);                              // the dark ruff framing the pupil
   vec3 col  = oklch2rgb(vec3(L, C, hue));
 
   col = postProcess(col, q, p);
