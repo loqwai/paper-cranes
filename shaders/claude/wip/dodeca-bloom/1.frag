@@ -207,6 +207,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   hue = mix(hue, emberHue, ember*0.6);                  // push tips toward the timbre-tinted ember (oklch)
   C  *= (1.0 + ember*0.5);                             // richer ember
   L  *= (1.0 + ember*(0.4 + 0.3*centroid_env));        // glowing tips — sparkle brighter on bright/airy sections
+  // CALM BREATH: when energy is low (quiet passages), the whole iris gently breathes — a hypnotic
+  // resting gaze. Gated to low energy so it NEVER adds motion to busy drops; flows via morph_phase.
+  float calm = 1.0 - clamp(energy_env*2.2, 0.0, 1.0);
+  L *= 1.0 + calm * 0.12 * sin(morph_phase*1.5);
   vec3 col  = oklch2rgb(vec3(L, C, hue));
 
   col = postProcess(col, q, p);
