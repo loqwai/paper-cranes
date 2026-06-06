@@ -205,7 +205,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   float emberHue = mix(0.42, 0.78, centroid_env);      // dark music -> red tips, bright -> yellow (timbral fire color)
   hue = mix(hue, emberHue, ember*0.6);                  // push tips toward the timbre-tinted ember (oklch)
   C  *= (1.0 + ember*0.5);                             // richer ember
-  L  *= (1.0 + ember*0.4);                             // glowing tips
+  L  *= (1.0 + ember*(0.4 + 0.3*centroid_env));        // glowing tips — sparkle brighter on bright/airy sections
   vec3 col  = oklch2rgb(vec3(L, C, hue));
 
   col = postProcess(col, q, p);
