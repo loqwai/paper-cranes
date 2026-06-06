@@ -46,6 +46,9 @@ uniform float pitch_pulse;   // melodic-jump flash
 #define TWIST (knob_10 * 3.14159)                        // knob_10 kaleido twist
 #define BASS_REACT (0.8 + knob_11 * 1.4)                 // knob_11 bass reactivity amount
 #define MIRROR     (knob_15 * 0.5)                        // knob_15 background infinity-mirror strength (0..0.5)
+#define LOOK       (knob_17 * 0.32)                       // knob_17 GAZE-FOLLOW amount (0 = centered/off) — eye looks at the cursor
+#define GAZE       (knob_21 * 0.42)                       // knob_21 CURSOR GAZE strength (0 = off / pure VJ mode)
+#define PARALLAX   0.7                                    // extra pupil slide -> 3D "looking at the pointer" depth
 
 // brightness (smoothed levels — never flicker)
 #define IRIDESCENCE (0.7 + 0.6 * entropy_env)
@@ -118,8 +121,16 @@ vec3 postProcess(vec3 col, vec2 q, vec2 p) {
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   vec2 q = fragCoord.xy / iResolution.xy;
-  vec2 p = 2.0*(q - 0.5);
-  p.x *= iResolution.x/iResolution.y;
+  float aspect = iResolution.x/iResolution.y;
+  // === CURSOR GAZE: the eye turns to look at the pointer (knob_21). `touch` = pointer (0..1, y-up),
+  // `touched` = pointer active on the canvas. gazeV is 0 when inactive -> eye looks forward (VJ mode safe).
+  // (Uses `touch`/`touched`, NOT iMouse: the renderer never populates iMouse.xy on this build.)
+  vec2 gazeV = (touch - 0.5) * (touched ? 1.0 : 0.0);  // pointer offset from centre (0 when inactive)
+  vec2 gazeQ = gazeV * GAZE;                           // whole-eye shift toward the pointer
+  vec2 paraQ = gazeV * GAZE * PARALLAX;                // EXTRA pupil shift -> parallax depth
+  vec2 qc = q - 0.5 - gazeQ;                           // screen centred on the (gaze-shifted) eye
+  vec2 p = 2.0 * qc;
+  p.x *= aspect;
   p *= ZOOM * (1.0 - bass_pump * BASS_REACT * 0.12);   // bass ZOOM PUNCH — sub hits push in
   float d = df(p);
 
@@ -136,7 +147,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   structure *= mix(1.0, fwave, 0.22);   // radial wave SHADES the structure; never lights the void
 
   // feature FAMILY -> fractal REGION: bass=core (pumped), mids=arms, treble=tips
-  float rr = length((q - 0.5) * vec2(iResolution.x/iResolution.y, 1.0));
+  float rr = length(qc * vec2(aspect, 1.0));           // iris zones follow the gaze shift
   float coreW = smoothstep(0.34, 0.0, rr);
   float tipW  = smoothstep(0.22, 0.62, rr);
   float armW  = clamp(1.0 - coreW - tipW, 0.0, 1.0);
@@ -153,6 +164,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   // Green eyes = low-melanin blue scatter + yellow lipochrome ("fat deposits"), with
   // CENTRAL HETEROCHROMIA: amber/gold near the pupil -> green toward the limbus.
   float irisR = rr;                                    // 0 = pupil, ~0.7 = limbus
+  // PARALLAX: pupil + ruff sit on a deeper plane, so they slide FURTHER toward the pointer than the iris.
+  float pupilDist = length((qc - paraQ) * vec2(aspect, 1.0));
   float GOLD  = 1.40;                                  // amber lipochrome (oklch hue, radians)
   float GREEN = 2.45;                                  // iris green
   float baseHue = mix(GOLD, GREEN, smoothstep(0.04, 0.45, irisR));
@@ -187,12 +200,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   L *= (1.0 + (furrows - 0.5) * 0.30 * furrowZone);    // subtle light/dark circumferential folds
   // STEP 6 — PUPILLARY RUFF: dark crenelated collar of pigment epithelium at the pupil margin
   float ruffR = 0.075 + 0.012*sin(atan(p.y, p.x)*float(rep)*2.0);  // crenelated inner ring (integer mult -> seamless)
-  float ruff = smoothstep(0.028, 0.0, abs(irisR - ruffR));
+  float ruff = smoothstep(0.028, 0.0, abs(pupilDist - ruffR));     // ruff rides with the parallax pupil
   L *= (1.0 - 0.60*ruff);                              // the dark ruff framing the pupil
   // PUPIL (knob_14): a dilating black aperture at the very center — turn it up, the pupil opens.
   // step() gate keeps it fully absent at knob_14=0; reads in L so the void stays black.
-  float pupilR = knob_14 * 0.16 * (1.0 - bass_pump * BASS_REACT * 0.18);  // bass CONSTRICTS the pupil (light/sound stab)
-  float pupil  = (1.0 - smoothstep(pupilR*0.6, pupilR, irisR)) * step(0.001, pupilR);
+  float pupilRad = knob_14 * 0.16 * (1.0 - bass_pump * BASS_REACT * 0.18);  // bass CONSTRICTS the pupil (light/sound stab)
+  float pupil  = (1.0 - smoothstep(pupilRad*0.6, pupilRad, pupilDist)) * step(0.001, pupilRad);  // parallax pupil
   L *= (1.0 - 0.85*pupil);                             // the dark pupil
   // DROP FLARE: the outer iris (ciliary/limbal ring) blooms brighter as energy surges — gives builds
   // & drops a place to land. Driven by the SUSTAINED drop envelope (not spiky z) so it swells, not strobes.
