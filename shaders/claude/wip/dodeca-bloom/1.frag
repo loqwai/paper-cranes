@@ -164,6 +164,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   hue = mix(hue, 4.1, limbal*0.55);                   // cool the rim toward blue-grey
   C  *= (1.0 - 0.35*limbal);                          // desaturate the ring
   L  *= (1.0 - 0.55*limbal);                          // darken -> the limbal ring
+  // STEP 3 — COLLARETTE: crenelated ridge ~1/3 out, dividing pupillary (inner) & ciliary (outer) zones.
+  // integer-multiple angle (rep) keeps the zigzag seamless across the atan2 wrap.
+  float collR = 0.20 + 0.02*sin(atan(p.y, p.x)*float(rep));
+  float collarette = smoothstep(0.045, 0.0, abs(irisR - collR));
+  L *= (1.0 + collarette*0.5);                         // raised, lighter ridge ring
+  C *= (1.0 + collarette*0.25);                        // a touch richer along the collarette
   vec3 col  = oklch2rgb(vec3(L, C, hue));
 
   col = postProcess(col, q, p);
