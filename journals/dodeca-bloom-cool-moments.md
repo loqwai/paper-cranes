@@ -35,6 +35,22 @@ Iter 2 on /vibej run (cron b5c9aa7c, target 180). Remote display on projector; k
 - iter35 (LIVE, Of The Trees): COLOR OVERHAUL. User: washed out, need variety + iq-style algorithmic oklab + continuous noticeable evolution + infinity-mirror backbuffer (subtronics2). Done: (1) replaced 2-hue plasma ramp with iq-style PROCEDURAL Oklch palette — hue = TAU*fract(t) where t = abs(d)*2 + rr*0.8 + ANGLE/TAU*0.6 + hue_phase*0.15 -> rainbow spokes (radius+angle+time), vivid chroma ~0.21, L pulled to 0.66 range (was washed at L=0.80/C=0.11). (2) Infinity mirror: recursive zoom feedback `ruv=(q-0.5)*zoomF+0.5; col=max(col,getLastFrameColor(ruv)*decay)`, zoomF bass-deepened, decay 0.74 (0.82 flooded mono-blue -> lowered so fresh varied color shows + contrast returns). Verified via /__capture screenshots (toDataURL canvas -> POST /__capture -> /tmp PNG -> Read). Result: full-rainbow vivid mandala on near-black + subtle tunnel echoes. WINNER.
 - WORKFLOW: take canvas screenshots periodically to judge color (user asked). Capture: `canvas.toDataURL('image/png').split(',')[1]` -> POST /__capture {filename,b64} -> Read /tmp/<name>.png. Fullscreen via JS is BLOCKED (needs gesture) — user must press F11.
 
+- iter40: BUG FIX — hard horizontal color SEAM on the left half (across center). Cause: hue used `ang/TAU*0.6` where `ang=atan(p.y,p.x)` — atan2 wraps +pi/-pi on the -x axis, and a FRACTIONAL angular coefficient makes the hue jump there. Fix: angular coeff must be a WHOLE NUMBER (used 2.0) so the rainbow completes integer cycles around the ring -> seamless wrap. LESSON: any atan2-driven periodic quantity (hue/anything mod 1) needs integer cycles-per-revolution or it seams at the -x axis.
+- COMMITTED + pushed to branch `dodeca-bloom` (off main). Preview: https://dodeca-bloom.paper-cranes-visuals.pages.dev/?shader=claude/wip/dodeca-bloom/1&controller=dodeca-bloom . Committing frequently per user request during live set.
+
+- iter42: USER "screen-uv palette looks too basic — drive it off the fractal features like plasma uses sdf, with a knob-mixable scheme (k2-5)". Replaced screen-uv hue (abs(d)+rr+ang) with SDF-driven iq-style Oklch palette: `pt = d*mix(8,40,knob_3) + hue_phase*0.2; hue = TAU*fract(pt)+knob_2*TAU; C = mix(0.06,0.30,knob_4)*(...)`. Color bands now trace the distance field = the actual fractal structure. Bonus: no atan2 -> seam impossible. Knob remap: k2=hue base, k3=hue freq, k4=chroma; line weight->k12, ripple->k13. k5 stays spin (controller-bound; restart needed to free for a 4th color knob = brightness). Committed+pushed.
+
+- iter43: NEW CREATIVE THREAD — user: "looks like an eye; follow that slowly, think about green-eye anatomy, the fat deposits etc." Step 1 (color): green-iris palette — CENTRAL HETEROCHROMIA gold/amber lipochrome ("fat deposits", oklch hue 1.40) near pupil -> iris GREEN (hue 2.45) toward limbus via smoothstep(rr); SDF `d` reads as radial stroma fibers (knob_3 density), knob_4 chroma. Landed beautifully — gold core + green fibers + dark pupil.
+
+## GREEN-IRIS roadmap (build slowly, one per tick)
+- [x] Step 1: green/gold heterochromia palette + SDF stroma fibers (iter43)
+- [ ] Limbal ring: darken outer rim (rr > ~0.55) to a deep blue-grey ring
+- [ ] Collarette: crenelated ring ~1/3 out dividing pupillary (inner) / ciliary (outer) zones — slight lightness ridge
+- [ ] Crypts of Fuchs: dark oval pits near the collarette (gate dark spots off SDF + angle)
+- [ ] Contraction furrows: concentric circular folds in the outer ciliary zone
+- [ ] Pupillary ruff: dark crenelated edge right at the pupil rim
+- Keep it anatomical, not cartoonish. Audio: subtle pupil dilation on bass (pupil = the infinity-tunnel center / zoom) could be the bass mapping for the eye.
+
 ## Forks
 _(none yet)_
 

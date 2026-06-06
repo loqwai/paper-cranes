@@ -148,12 +148,16 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
   // iq-style PROCEDURAL palette in Oklch — vivid (high chroma), varied across the fractal,
   // journeying continuously via hue_phase. t spans the field + radius + slow time.
-  // --- iq-style palette driven by the FRACTAL SDF (structure-following), Oklch, knob-mixable ---
-  // Color follows the distance field `d` (not screen uv) so the bands trace the actual fractal.
-  // No atan2 -> no seam.
-  float pt = d * mix(8.0, 40.0, knob_3) + hue_phase*0.2;           // knob_3 = hue FREQUENCY (bands across the fractal)
-  float hue = TAU * fract(pt) + knob_2 * TAU;                      // knob_2 = hue BASE (rotate the whole scheme)
-  float C   = mix(0.06, 0.30, knob_4) * (0.78 + 0.22*cos(TAU*pt)); // knob_4 = CHROMA / saturation
+  // === GREEN IRIS (developing slowly) — anatomical color, SDF reads as stroma fibers ===
+  // Green eyes = low-melanin blue scatter + yellow lipochrome ("fat deposits"), with
+  // CENTRAL HETEROCHROMIA: amber/gold near the pupil -> green toward the limbus.
+  float irisR = rr;                                    // 0 = pupil, ~0.7 = limbus
+  float GOLD  = 1.40;                                  // amber lipochrome (oklch hue, radians)
+  float GREEN = 2.45;                                  // iris green
+  float baseHue = mix(GOLD, GREEN, smoothstep(0.04, 0.45, irisR));
+  float fiber = d * mix(10.0, 46.0, knob_3);           // SDF -> radial stroma fiber detail (knob_3 density)
+  float hue = baseHue + 0.22*sin(TAU*fiber) + (knob_2 - 0.5)*0.9;   // fiber hue jitter + knob_2 nudge
+  float C   = mix(0.07, 0.20, knob_4) * (0.82 + 0.18*cos(TAU*fiber)); // knob_4 chroma; gold flecks at peaks
   float L   = clamp(intensity * 0.80, 0.0, 0.95);
   vec3 col  = oklch2rgb(vec3(L, C, hue));
 
