@@ -3,7 +3,12 @@
 Seed: ShaderToy CC0 golden-dodecahedron kaleidoscope (sacred-geometry SDF, 15-fold radial repeat, golden palette `vec3(240,175,20)/255`). Brought in verbatim as `claude/wip/dodeca-bloom/1.frag`.
 
 ## Status
-Iter 2 on /vibej run (cron b5c9aa7c, target 180). Remote display on projector; knobs broadcast from laptop via `edit.html?remote=control` (none received yet). Audio via Voicemeeter — normalized/zScore features swing full range, but `beat` bool does NOT fire on this material. Spectrum opened up at iter 2 (centroid 0.26→0.69).
+Iter 52, LIVE Of The Trees set. Shader evolved: golden dodeca kaleidoscope -> progression-model plasma
+mandala (controller `dodeca-bloom.js`, monotonic phases) -> full GREEN HUMAN IRIS (6 anatomical layers)
+with SDF-driven Oklch palette (knobs 2/3/4 mix) + light background infinity mirror (subtronics-eye style).
+Live on projector (NX/Windows, 6969, fullscreen), MIDI knobs via SSH-localhost, committing to branch
+`dodeca-bloom`. **Started an `iris` series** (`claude/wip/iris/N`) to snapshot great looks — iris/1 saved.
+Audio via Voicemeeter; `beat` bool unreliable, use zScore/bass_pump.
 
 ## Cool moments
 - iter31 — **breakdown that flows instead of dying.** Audio fingerprint: `energy 0.01 + centroid 0.02 + entropy 0.10` (near-silent), but `drop_glow 0.49` sustaining from a prior hit and morph/flow/hue phases still advancing (slowly, since rates ~energy_env=0.06). Result: visual eases down + keeps drifting forward with the drop bloom lingering, rather than snapping to dead. **Validates the progression model** — the smoothed-rate accumulators carry quiet passages gracefully. Design hypothesis: keep level→brightness and rate→motion strictly separated; it's what makes breakdowns read as "exhale" not "freeze."
@@ -44,15 +49,17 @@ Iter 2 on /vibej run (cron b5c9aa7c, target 180). Remote display on projector; k
 
 ## GREEN-IRIS roadmap (build slowly, one per tick)
 - [x] Step 1: green/gold heterochromia palette + SDF stroma fibers (iter43)
-- [ ] Limbal ring: darken outer rim (rr > ~0.55) to a deep blue-grey ring
-- [ ] Collarette: crenelated ring ~1/3 out dividing pupillary (inner) / ciliary (outer) zones — slight lightness ridge
-- [ ] Crypts of Fuchs: dark oval pits near the collarette (gate dark spots off SDF + angle)
-- [ ] Contraction furrows: concentric circular folds in the outer ciliary zone
-- [ ] Pupillary ruff: dark crenelated edge right at the pupil rim
+- [x] Step 2: LIMBAL RING (iter44) — smoothstep(0.40,0.56,rr): cool hue->4.1, desaturate, darken at rim. Looked great. (Track was literally "Look Into My Eyes" — Of The Trees. Synchronicity.)
+- [x] Step 3: COLLARETTE (iter45) — crenelated ridge at irisR~0.20, collR jittered by sin(angle*rep) [seamless], multiplicative L*1.5/C*1.25. Reads as full iris now: pupil/pupillary/collarette/ciliary/limbus.
+- [x] Step 4: CRYPTS OF FUCHS (iter46) — pow(0.5+0.5*cos(angle*12),8) angular pits * smoothstep band at irisR~0.27, darken L*0.3/C. Subtle but present. (Track: "I See A Fire" — synchronicity theme continues.)
+- [x] Step 5: CONTRACTION FURROWS (iter47) — sin(rr*150) concentric folds * outer-band smoothstep gate, subtle L mod. Detailed iris now.
+- [x] Step 6: PUPILLARY RUFF (iter48) — dark crenelated collar at irisR~0.075, sin(angle*rep*2) crenel, L*0.4. **GREEN IRIS COMPLETE** — all 6 anatomical layers in. Track "Park Exit (Outro)" as it finished. Next-level idea (not yet done): make it ALIVE — bass->pupil dilation, slow look-around drift (offset the center), saccade flicks on flux spikes.
 - Keep it anatomical, not cartoonish. Audio: subtle pupil dilation on bass (pupil = the infinity-tunnel center / zoom) could be the bass mapping for the eye.
 
+- iter50: user "need the infinity mirror lightly in the BACKGROUND; look at subtronics-eye". Subtronics-eye masks the eye OUT of the mirror (eyeMask) and fills the surround. Did the same: `fg = smoothstep(0.05,0.18,luma(col))` (1=iris, 0=bg), `col = mix(col + mirror*0.33, col, fg)` so the recursive zoom shows ONLY in the dark surround, iris untouched. Bass (bass_pump) subtly deepens zoomF. Faint teal recursion behind a clean iris. Replaced the old frame-filling max-blend.
+
 ## Forks
-_(none yet)_
+- `claude/wip/iris/1 ← claude/wip/dodeca-bloom/1` (iter52): first snapshot of the green/gold iris look into the new **iris series**. Uses `&controller=dodeca-bloom`. Knob preset + series doc in `shaders/claude/wip/iris/iris.md`. Save further great looks as iris/2, iris/3, …
 
 ## Design hypotheses for v(next)
 - High-bass + low-centroid material (bass ~0.7, centroid ~0.26) is the baseline here — lean warm/geometric, save chaos effects (glitch/RGB-split) for high-entropy passages.
