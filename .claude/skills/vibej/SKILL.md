@@ -1,7 +1,7 @@
 ---
 name: vibej
 description: "VJ a shader live at a party — auto-mutates the shader every minute to match the track. Reads audio features + Spotify track name from the jam page, edits the .frag via /__save-shader (HMR hot-swaps). Invoked as `/vibej` or its alias `/vj`. Usage: `/vibej [N-iterations] [shader-path-or-name]` (default 180, most-recent .frag). `/vibej stop` ends early. `/vibej tick` runs one iteration (what the cron fires)."
-allowed-tools: Bash Read Write Edit Grep Glob CronCreate CronList CronDelete mcp__claude-in-chrome__tabs_context_mcp mcp__claude-in-chrome__tabs_create_mcp mcp__claude-in-chrome__navigate mcp__claude-in-chrome__javascript_tool
+allowed-tools: Bash Read Write Edit Grep Glob CronCreate CronList CronDelete mcp__chrome-devtools__list_pages mcp__chrome-devtools__new_page mcp__chrome-devtools__select_page mcp__chrome-devtools__navigate_page mcp__chrome-devtools__evaluate_script mcp__chrome-devtools__take_screenshot mcp__chrome-devtools__wait_for mcp__chrome-devtools__list_console_messages
 ---
 
 # vibej — Live Auto-VJ Loop for the Jam Page
@@ -57,7 +57,7 @@ Examples:
 - `/vibej tick` — what cron fires; reads state, runs one iteration
 - `/vj …` — legacy alias, all forms above work identically
 
-If a shader arg is passed mid-run (skill re-invoked while state exists), treat it as a shader-swap: update `shaderPath` in state and navigate the jam tab to the new shader URL without reloading the whole page (use `window.cranes.shader = <code>` + `history.replaceState` pattern).
+If a shader arg is passed mid-run (skill re-invoked while state exists), treat it as a shader-swap: update `shaderPath` in state, `select_page` the jam page, and `navigate_page` to the new shader URL (`type: "url"`, full jam URL with new shader path). For lossless hot-swaps without reloading, use `evaluate_script` to set `window.cranes.shader = <code>` plus `history.replaceState`.
 
 ## Setup (once, at start)
 
@@ -77,13 +77,15 @@ Poll with curl (max 10 seconds).
 
 ### 3. Ensure jam page + Spotify tabs exist
 
-- `tabs_context_mcp` with `createIfEmpty: true`
-- Find or create a jam tab: `http://localhost:$PORT/jam.html?shader=<path>&controller=<name>`
+- Call `list_pages` to enumerate open pages.
+- **Jam page** — match by URL substring `jam.html?shader=`. If none exists, `new_page` with `http://localhost:$PORT/jam.html?shader=<path>&controller=<name>`.
   - Default shader: most recently modified `.frag` in the worktree, else `redaphid/wip/the-coat-fur-coat/the-coat-3`
   - Default controller: match shader name (e.g. `the-coat-3` → `the-coat`) if a matching `controllers/*.js` exists
-- Find or create a Spotify tab: `https://open.spotify.com`
+- **Spotify page** — match by URL substring `open.spotify.com`. If none, `new_page` with `https://open.spotify.com`.
 
-Record the **jam tab ID** and **spotify tab ID** — you'll reuse them every iteration.
+Record the **jam pageId** and **spotify pageId** — you'll `select_page` to switch between them each iteration.
+
+> chrome-devtools is **page-stateful**: every `evaluate_script` / `take_screenshot` / `navigate_page` runs against the currently selected page. Always `select_page` before doing per-page work, even if you think the right one is already active.
 
 ### 4. Schedule the minute cron
 
@@ -105,12 +107,14 @@ Record the returned **job ID**.
   "iteration": 0,
   "target": 180,
   "shaderPath": "redaphid/wip/the-coat-fur-coat/the-coat-3",
-  "jamTabId": 653089308,
-  "spotifyTabId": 653089312,
+  "jamPageId": 0,
+  "spotifyPageId": 1,
   "port": 4788,
   "startedAt": "<ISO timestamp>"
 }
 ```
+
+> Field names are `jamPageId` / `spotifyPageId` (not `jamTabId` / `spotifyTabId`) since chrome-devtools uses `pageId`. Existing in-progress state files from the claude-in-chrome era using the old field names should be migrated on first read — if you see `jamTabId`, treat it as stale and re-discover via `list_pages` (pageIds are not stable across browser restarts anyway).
 
 ### 6. Run iteration 1 immediately (don't wait for first cron fire)
 
@@ -126,11 +130,12 @@ If `iteration >= target`, call `CronDelete(jobId)`, delete the state file, print
 
 ### B. Read state from browser
 
-Run on the jam tab:
+`select_page` → jam pageId, then `evaluate_script`:
+
 ```javascript
-(() => {
+() => {
   const f = window.cranes.flattenFeatures();
-  return JSON.stringify({
+  return {
     bass: f.bassNormalized?.toFixed(2), bassZ: f.bassZScore?.toFixed(2),
     treb: f.trebleNormalized?.toFixed(2), trebZ: f.trebleZScore?.toFixed(2),
     mids: f.midsNormalized?.toFixed(2),
@@ -140,14 +145,20 @@ Run on the jam tab:
     centroid: f.spectralCentroidNormalized?.toFixed(2),
     pitch: f.pitchClassNormalized?.toFixed(2),
     beat: f.beat,
-  });
-})()
+  };
+}
 ```
 
-Read the track name on the Spotify tab:
+`select_page` → spotify pageId, then `evaluate_script`:
+
 ```javascript
-document.querySelector('[data-testid="now-playing-widget"]')?.textContent?.trim().slice(0, 100)
+() => document.querySelector('[data-testid="now-playing-widget"]')?.textContent?.trim().slice(0, 100) ?? null
 ```
+
+> Differences vs the old `javascript_tool`:
+> - `evaluate_script` takes a **function declaration string** (`() => {...}`), not a raw expression.
+> - You must explicitly `return` a value (no implicit last-expression return).
+> - The return value must be **JSON-serializable** — return plain objects/arrays/primitives, not Promises (use `async () => {...}` if you need to `await`).
 
 ### C. Pick ONE move
 
@@ -179,9 +190,9 @@ To find which knobs are already in the shader, grep the `.frag` for `knob_N`. Ex
 
 **Validate BEFORE saving** — never write a broken shader to disk. The static linter doesn't catch forward-reference or type errors; only the real GLSL compiler does. Use `window.__vjValidate` installed on the jam tab.
 
-**One-time install per jam-tab reload:**
+**One-time install per jam-page reload** (`select_page` jam, then `evaluate_script`):
 ```javascript
-(async () => {
+async () => {
   if (typeof window.__vjValidate === 'function') return 'already installed';
   const mod = await import('/src/shader-transformers/shader-wrapper.js');
   const wrap = mod.shaderWrapper;
@@ -199,25 +210,28 @@ To find which knobs are already in the shader, grep the `.frag` for `knob_N`. Ex
     return { ok, info };
   };
   return 'installed';
-})()
+}
 ```
 
-Then each tick:
+Then each tick (also `evaluate_script` on the jam page). Note: instead of inlining the edited source into a long string-replacement chain in JS, prepare the edited shader text in Claude's context first via `Read` + `Edit`, then pass the final source as an argument:
+
 ```javascript
-(async () => {
-  const src = await (await fetch('/shaders/<shader-path>.frag?t=' + Date.now())).text();
-  let edited = src;
-  // ... string replacements ...
-  const v = window.__vjValidate(edited);
-  if (!v.ok) return 'COMPILE FAIL (not saved): ' + v.info;
+// function:
+async (shaderPath, editedSrc) => {
+  const v = window.__vjValidate(editedSrc);
+  if (!v.ok) return { ok: false, reason: 'COMPILE FAIL', info: v.info };
   const res = await fetch('/__save-shader', {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ shader: '<shader-path>', code: edited })
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ shader: shaderPath, code: editedSrc }),
   });
-  return await res.text();
-})()
+  const text = await res.text();
+  return { ok: res.ok, status: res.status, body: text };
+}
+// args: ["redaphid/wip/the-coat-fur-coat/the-coat-3", "<full edited shader source>"]
 ```
+
+The `evaluate_script` `args` array passes through to the function — use it for any input that would otherwise have to be string-escaped into the function body. The function still needs to be JSON-serializable in its return (no Promises directly, but `async` is fine because the result is awaited before serialization).
 
 Note: the `/__save-shader` `shader` field takes the path WITHOUT `.frag`.
 
@@ -303,6 +317,15 @@ Accumulated one-liners from cool moments. Read this when designing the next shad
 
 Skip the journal only on totally ordinary parameter nudges with nothing learned. Otherwise write.
 
+## Cursor hygiene (LIVE-SHOW RULE)
+
+**At the start of every tick, and after every screenshot/hover, park the cursor at the extreme bottom-right corner** (`hover` to coords near `(viewportWidth-1, viewportHeight-1)` — e.g. `(1517, 809)` on a 1518×810 viewport). The user is projecting the jam page; a visible mouse pointer on the projected output is distracting. The user has asked for this multiple times — bake it into the loop.
+
+Notes:
+- `mcp__claude-in-chrome__computer` action: `hover` to the bottom-right corner is the right call. It clamps to viewport (it's a synthetic DOM hover, not a real OS-level mouse move), but corner-clamped is acceptable — the cursor sits in the corner instead of over content.
+- If you need the cursor literally off-screen, only the user's physical mouse can do that. State this explicitly when relevant.
+- Apply this rule for ALL jam-projecting sessions, not just /vibej. Park the cursor before any screenshot you take during the show.
+
 ## Stop conditions
 
 - `iteration >= target` → `CronDelete(jobId)`, delete state file
@@ -314,7 +337,7 @@ Skip the journal only on totally ordinary parameter nudges with nothing learned.
 
 If the user says "switch shaders":
 1. Pick a different base shader from `shaders/<user>/` or `shaders/wip/`.
-2. Update the jam tab URL via `navigate` → `http://localhost:$PORT/jam.html?shader=<new-path>&controller=<match>`
+2. `select_page` jam → `navigate_page` with `type: "url"`, url=`http://localhost:$PORT/jam.html?shader=<new-path>&controller=<match>`.
 3. Update `shaderPath` in `.claude/vj-state.json`.
 4. Read the new shader's structure first (don't blind-edit), then continue iterations.
 
@@ -326,6 +349,9 @@ If the user says "switch shaders":
 - **Bass pulse stacking**: ember floor × sunburst × bass bloom × kick pulse all firing on the same bass spike → saturation. Pick one primary bass visualizer per session.
 - **Kaleidoscope tiling persists via feedback**: even after disabling kaleido, the backdrop keeps the tile pattern until feedback decays. Lower `prev *` for a few iterations to shake it off.
 - **Port is branch-derived**: main = 6969, other branches hash to 1024–65534. Always use `./scripts/dev-port` — never hardcode 6969.
+- **chrome-devtools is page-stateful**: every action runs on the currently selected page. Always `select_page` before `evaluate_script` / `take_screenshot` / `navigate_page` even if you think the right one is selected — a `select_page` is cheap and prevents reading audio features off the Spotify tab by accident.
+- **`evaluate_script` returns must be JSON-serializable**: don't return DOM nodes, Promises (raw), Maps, or class instances. Return plain objects with primitive fields. For Promises, declare the function `async` so chrome-devtools awaits before serializing.
+- **pageIds are not stable across browser restarts**. If the state file has a `jamPageId` that no longer resolves (or `list_pages` returns a different URL for that id), re-discover from `list_pages` rather than trusting the cached id.
 
 ## Example `/vibej tick` output
 

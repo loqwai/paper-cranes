@@ -1,7 +1,7 @@
 ---
 name: vj
 description: "Legacy alias for /vibej. Same skill, same behavior — VJ a shader live at a party, auto-mutating it every minute to match the track. Usage: `/vj [N-iterations] [shader-path-or-name]`. `/vj stop`, `/vj tick`. Identical to `/vibej`."
-allowed-tools: Bash Read Write Edit Grep Glob CronCreate CronList CronDelete mcp__claude-in-chrome__tabs_context_mcp mcp__claude-in-chrome__tabs_create_mcp mcp__claude-in-chrome__navigate mcp__claude-in-chrome__javascript_tool
+allowed-tools: Bash Read Write Edit Grep Glob CronCreate CronList CronDelete mcp__chrome-devtools__list_pages mcp__chrome-devtools__new_page mcp__chrome-devtools__select_page mcp__chrome-devtools__navigate_page mcp__chrome-devtools__evaluate_script mcp__chrome-devtools__take_screenshot mcp__chrome-devtools__wait_for mcp__chrome-devtools__list_console_messages
 ---
 
 # /vj — alias for /vibej
