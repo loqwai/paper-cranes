@@ -1,5 +1,5 @@
 // @fullscreen: true
-//https://visuals.beadfamous.com/?shader=claude/wip/iris/wavelet&wavelet=true&controller=wavelet-ease&fullscreen=true&knob_1=0.45&knob_2=0.1&knob_4=1.0&knob_5=0.2&knob_7=0.66&knob_8=1&knob_11=1&knob_17=0.7&knob_18=0.8&knob_20=0.6&knob_21=0.7&knob_22=0.6&knob_23=0.6&knob_24=0.6&knob_25=0.6&knob_26=1.0&knob_27=0.4
+//https://visuals.beadfamous.com/?shader=claude/wip/iris/wavelet&wavelet=true&controller=wavelet-ease&fullscreen=true&knob_1=0.45&knob_2=0.1&knob_4=1.0&knob_5=0.2&knob_7=0.66&knob_8=1&knob_11=1&knob_17=0.7&knob_18=0.8&knob_20=0.6&knob_21=0.7&knob_22=0.6&knob_23=0.6&knob_24=0.6&knob_25=0.6&knob_26=1.0&knob_27=0.4&knob_28=0.5&knob_29=0.4
 // @mobile: false
 // License: CC0
 //  iris/7 driven by the WAVELET + SPECTRAL features (forked from iris/7, swapping the
@@ -67,6 +67,8 @@ uniform float waveletBassZScore;       // self-calibrating bass spike — kick z
 //    knob_25 = ROLLOFF → outer reach
 //    knob_26 = energy/band level reactivity (size/depth breathing)
 //    knob_27 = TILT → hue sub-lean
+//    knob_28 = TUNNEL zoom speed (feedback push — a big part of apparent SPEED)
+//    knob_29 = TUNNEL swirl speed (feedback rotation — the OTHER fast-spin source)
 // Each knob is a 0→1 depth: 0 = that effect OFF, 1 = full. The preset URL sets good starting
 // values; turn any knob down live to calm that effect, up to intensify it. Direct + simple.
 #define MOD_SPIN_AUDIO  (knob_20)
@@ -621,14 +623,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   // (iter8 swap — drop_glow drives the held-drop "we're falling into it" feel without a new layer)
   // iter79 add flux + roughness to the tunnel-rush velocity. Timbral motion and
   // dissonance deepen the tunnel — feels like the eye "reacts" to texture changes.
-  float rush = 0.025
-             + ZOOM_DEEP * 0.040
-             + bass_pump * BASS_REACT * 0.020
-             + drop_glow * 0.030
-             + clamp(spectralFluxZScore, 0.0, 1.0) * 0.025
-             + spectralRoughnessSmooth * 0.018;
+  // FEEDBACK TUNNEL motion — this is the dominant apparent SPEED (the prior frame zooming +
+  // swirling every frame at 60fps), NOT the geometry phases. knob_28 = tunnel zoom speed,
+  // knob_29 = tunnel swirl speed. Both were way too fast; scaled down + knob-controlled.
+  float rush = (0.008
+             + ZOOM_DEEP * 0.020
+             + bass_pump * BASS_REACT * 0.012
+             + drop_glow * 0.015
+             + clamp(spectralFluxZScore, 0.0, 1.0) * 0.012
+             + spectralRoughnessSmooth * 0.010) * knob_28;
   float zoomF = 1.0 - rush;                              // <1 = prior frame zooms outward
-  float mrot = 0.015 + ZOOM_DEEP * 0.035 + drop_glow * 0.020;  // drop also adds swirl
+  float mrot = (0.004 + ZOOM_DEEP * 0.012 + drop_glow * 0.010) * knob_29;  // tunnel swirl (was 0.015 base — far too fast)
   vec2 ruv = q - CEN;
   ruv = mat2(cos(mrot), -sin(mrot), sin(mrot), cos(mrot)) * ruv;
   ruv = ruv * zoomF + CEN;
