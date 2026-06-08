@@ -96,6 +96,22 @@ export class WaveletProcessor {
         out.wavelet_bassHit = bassHit
         out.wavelet_bassHitSmooth = this.hitSmooth
 
+        // ---- CROSS-DOMAIN COMBINATIONS (wavelet WHEN × FFT WHAT) ----
+        // The harness showed wavelet onsets are independent from all FFT features, so
+        // these blends genuinely add information rather than averaging noise. FFT features
+        // are read live from the FFT pipeline (measuredAudioFeatures) on the same frame.
+        const fft = window.cranes?.measuredAudioFeatures
+        if (fft) {
+            const band0Z = bandStats[0]?.zScore ?? 0
+            const bassLevel = fft.bass ?? 0
+            const energyZ = fft.energyZScore ?? 0
+            // punch: wavelet's FAST bass onset + FFT's ACCURATE bass level → snappy AND precise.
+            out.wavelet_punch = (band0Z * 0.2 + 0.5) * 0.5 + bassLevel * 0.5
+            // confirmedDrop: the wavelet bass-hit, GATED by FFT energy rising. Both domains
+            // must agree → a higher-confidence drop than either alone (independent from all).
+            out.wavelet_confirmedDrop = bassHit * Math.max(0, energyZ)
+        }
+
         window.cranes.waveletFeatures = out
     }
 
