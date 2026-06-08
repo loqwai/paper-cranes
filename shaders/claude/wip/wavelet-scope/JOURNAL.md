@@ -26,6 +26,21 @@ The maximally-independent smooth set that survived multiple loop iterations:
 ### Smoothing
 - Wavelet features were 6-7× jitterier than FFT until I added EMA (a=0.18) in WaveletProcessor (FFT pipeline already smooths). Triggers (`bassHit`/`confirmedDrop`) exempt — sharpness is the point.
 
+### Sawtooth problem → use Median variant (NOT invented smoothing)
+User: the Normalized lines are sawtooth-y (sharp kick attack, then decay) — bad for
+animation. Key: don't hand-roll smoothing in the shader; use the stat variants we already
+compute. Live-measured maxJump/sd ratio (lower = more eased):
+- `Normalized`: ratio 1.0–1.8 → SAWTOOTH (the cliffs)
+- `Mean`: ratio 0.1, but sd ~0.005 → too FLAT (dead)
+- `Median`: ratio 0.4–0.5, sd up to 0.11 → **the sweet spot (eased + still moves)**
+Best eased+independent median movers on mic: `tiltMedian` (sd 0.112!), `centroidMedian`,
+`spreadMedian`, `bassMedian`. → `eased.frag`. Tradeoff: eased lines move LESS than
+Normalized — pick Median for smooth flowing visuals, Normalized for punchy ones.
+
+### Trigger fire bug
+zMap(z)>0.4 fired ~99% of the time (zMap(0)=0.5). Fixed: fire on RAW z>0.8. `energyZScore`
+is the best trigger (11 hits/5s); `band5ZScore` good for treble; `bassZScore`/`fluxZ` poor.
+
 ## Shader lineage
 - `independent.frag` — pure-wavelet smooth tapestry (synthetic-tuned 6 features + EMA)
 - `combined.frag` — wavelet vs FFT vs combos (punch, confirmedDrop)

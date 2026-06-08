@@ -296,13 +296,17 @@ const loadController = async () => {
         const controllerModule = await import(/* @vite-ignore */ controllerUrl)
 
         // Handle different module formats:
-        // 1. Module exports a function directly - use it as the controller
-        // 2. Module exports a make() function - call it to get the controller
+        // 1. Module exports a function directly (default export) - use it as the controller
+        // 2. Module exports a make() function - CALL it (with cranes) to get the controller
         // 3. Module exports something else - error
+        //
+        // The make() pattern (per docs/controllers.md) returns the per-frame controller —
+        // so we must invoke make(), not return it. Returning make itself was a bug: the
+        // animation loop would call make(features) every frame, re-initializing state and
+        // returning a fresh function instead of the controller's computed values.
 
         if (typeof controllerModule.default === 'function') return controllerModule.default
-        // Default export is a function - direct controller or make function
-        if (typeof controllerModule.make === 'function') return controllerModule.make
+        if (typeof controllerModule.make === 'function') return controllerModule.make(window.cranes)
         if (typeof controllerModule === 'function') return controllerModule
         console.error('Controller must export a function directly or provide a make() function')
         return null
