@@ -97,20 +97,23 @@ export class WaveletProcessor {
         out.wavelet_bassHitSmooth = this.hitSmooth
 
         // ---- CROSS-DOMAIN COMBINATIONS (wavelet WHEN × FFT WHAT) ----
-        // The harness showed wavelet onsets are independent from all FFT features, so
-        // these blends genuinely add information rather than averaging noise. FFT features
-        // are read live from the FFT pipeline (measuredAudioFeatures) on the same frame.
-        const fft = window.cranes?.measuredAudioFeatures
-        if (fft) {
-            const band0Z = bandStats[0]?.zScore ?? 0
-            const bassLevel = fft.bass ?? 0
-            const energyZ = fft.energyZScore ?? 0
-            // punch: wavelet's FAST bass onset + FFT's ACCURATE bass level → snappy AND precise.
-            out.wavelet_punch = (band0Z * 0.2 + 0.5) * 0.5 + bassLevel * 0.5
-            // confirmedDrop: the wavelet bass-hit, GATED by FFT energy rising. Both domains
-            // must agree → a higher-confidence drop than either alone (independent from all).
-            out.wavelet_confirmedDrop = bassHit * Math.max(0, energyZ)
-        }
+        // The harness showed wavelet onsets are independent from all FFT features, so these
+        // blends add information rather than averaging noise.
+        //
+        // LATENCY NOTE (deliberate): the wavelet path (1024-window, ~21ms) is much faster
+        // than the FFT path (4096-window, ~85ms). These combos prioritize LOW LATENCY by
+        // leading with the FAST wavelet component and using the slower FFT signal only as a
+        // light confirmation/refinement — so the combined feature still reacts on the
+        // wavelet's timescale, not the FFT's.
+        const fft = window.cranes?.measuredAudioFeatures ?? {}
+        const band0Z = bandStats[0]?.zScore ?? 0
+        const bassLevel = fft.bass ?? 0
+        const energyZ = fft.energyZScore ?? 0
+        // punch: led by the wavelet's FAST bass onset; FFT bass level only trims it.
+        out.wavelet_punch = (band0Z * 0.2 + 0.5) * 0.7 + bassLevel * 0.3
+        // confirmedDrop: the FAST wavelet bass-hit, lightly gated by FFT energy. The gate
+        // softens (not zeroes) when FFT lags, so the drop still fires on wavelet timing.
+        out.wavelet_confirmedDrop = bassHit * (0.5 + Math.max(0, energyZ) * 0.5)
 
         window.cranes.waveletFeatures = out
     }
