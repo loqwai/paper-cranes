@@ -50,10 +50,15 @@ uniform float waveletBassZScore;       // self-calibrating bass spike — kick z
 // the angle — so these only ever move FORWARD, faster on louder/bassier audio, never back.
 // SPIN SPEED is now fully knob-controlled: knob_5 sets base spin (0 = nearly still), knob_20
 // sets how much the BASS speeds it up. Base rate cut way down — at knob_5=0 it barely drifts.
-#define spin_angle   (iTime * (knob_5 * 0.10 + waveletBassSpring * 0.10 * MOD_SPIN_AUDIO * quietGate))
-#define morph_phase  (iTime * (0.02 + waveletBand3Spring * 0.10 * quietGate))
-#define flow_phase   (iTime * (0.06 + energySpring * 0.15 * quietGate))
-#define hue_phase    (iTime * (0.04 + tonalStrength * 0.10 * quietGate))
+// PHASES come from the controller as MONOTONIC ACCUMULATORS (phase += rate*dt). This avoids
+// the iTime*rate ACCELERATION bug: with iTime*rate, any change in rate jumps the angle by
+// iTime*Δrate, and that jump grows as iTime grows → the spin speeds up over time. Accumulated
+// phases never do that — the bass-speedup is baked into the accumulator's RATE in the
+// controller, so here we only scale by the STATIC knob (a constant factor can't accelerate).
+#define spin_angle   (spinPhase * knob_5 * 2.0)
+#define morph_phase  (morphPhase)
+#define flow_phase   (flowPhase)
+#define hue_phase    (huePhase)
 
 // ════════════════════════════════════════════════════════════════════════════════════════
 //  LIVE MODULATION KNOBS — dial each audio effect's DEPTH (0 = off, 1 = full). Map these to
@@ -106,6 +111,10 @@ uniform float spectralCrestSmooth;      // smoothed spectral crest (was jittery 
 uniform float spectralRoughnessSmooth;  // smoothed spectral roughness (was jittery raw)
 uniform float spectralEntropySmooth;    // smoothed spectral entropy (was jittery raw)
 uniform float quietGate;                // 0 in quiet → 1 loud; gates audio offsets (no quiet-noise flashing)
+uniform float spinPhase;                // monotonic spin accumulator (rate*dt — no iTime*rate acceleration)
+uniform float morphPhase;               // monotonic morph accumulator
+uniform float flowPhase;                // monotonic flow accumulator
+uniform float huePhase;                 // monotonic hue accumulator
 // NEW fractal-complexity dimensions — measured lively AND smooth on melodic audio (jit<0.06):
 uniform float spectralSkewNormalized;       // spectral tilt/asymmetry → petal lean
 uniform float spectralKurtosisNormalized;   // peakedness → focus vs diffuse petals

@@ -67,6 +67,7 @@ export function make() {
     let tonalSmooth = 0       // smoothed tonal strength
     const spectralSmooth = { crest: 0, rough: 0, entropy: 0 } // smoothed jittery spectral texture
     let quietGate = 0         // 0 in silence → 1 when loud; fades reactivity to stop quiet-noise flashing
+    const phase = { spin: 0, morph: 0, flow: 0, hue: 0 } // monotonic accumulators (rate*dt) — no iTime*rate acceleration
     let bassNoteFlow = null   // flowing bassline-pitch contour
     let wubBaseline = 0       // slow bass average, for wub-depth detection
     let wubDepth = 0          // smoothed wobble amplitude
@@ -88,6 +89,22 @@ export function make() {
             s.pos += s.vel * dt
             out[`${f}Spring`] = s.pos
         }
+
+        // ── MONOTONIC PHASE ACCUMULATORS ── phase += rate*dt, so a CHANGING rate only changes
+        // the speed FROM NOW ON. (A shader doing `iTime * rate` instead jumps the whole angle
+        // by iTime*Δrate whenever the rate changes — and that jump GROWS as iTime grows, so the
+        // spin appears to ACCELERATE over time. Accumulating here fixes that at the source.)
+        const bassS = spring.waveletBass?.pos ?? 0
+        const band3S = spring.waveletBand3?.pos ?? 0
+        const energyS = spring.energy?.pos ?? 0
+        phase.spin  += (0.02 + bassS  * 0.10) * dt
+        phase.morph += (0.02 + band3S * 0.10) * dt
+        phase.flow  += (0.06 + energyS * 0.15) * dt
+        phase.hue   += (0.04 + tonalSmooth * 0.10) * dt
+        out.spinPhase  = phase.spin
+        out.morphPhase = phase.morph
+        out.flowPhase  = phase.flow
+        out.huePhase   = phase.hue
 
         // ── MELODY FLOW: ease the (categorical, circular) pitch into a flowing contour ──
         const pitch = features.pitchClassNormalized ?? 0
