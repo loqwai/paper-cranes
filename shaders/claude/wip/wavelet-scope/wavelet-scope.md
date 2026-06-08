@@ -137,6 +137,40 @@ trace. For deep-bass-drop reliability the wavelet line wins; the gap should wide
 phone mic where the spectral features get even mushier. Worth re-running this exact 3.frag
 comparison live through a phone to confirm.
 
+## First-class features + headless harness (the big refactor)
+
+The wavelet bands are now FIRST-CLASS features: each octave band runs through
+hypnosound's `makeCalculateStats` (the same path as bass/mids/treble), so it exposes
+the full 11 stats under FFT naming (`waveletBand0`, `waveletBand0ZScore`, ...). This
+fixed the near-zero-std z-score noise blowup on quiet material.
+
+Pure modules extracted for the eventual library: `src/audio/dwt.js` (transform) and
+`src/audio/waveletAnalyzer.js` (per-frame feature computation). The worker is a thin
+shell around `createWaveletAnalyzer`, so the headless harness runs the EXACT live code.
+
+`scripts/wavelet-harness.mjs` reads ffmpeg f32 PCM and scores every feature for
+animation quality (range/liveliness/jitter) + independence (correlation matrix). Across
+8 varied signals it found:
+- ZScores are the cleanest reactive lines (jitter 0.06-0.11).
+- Derived `waveletCentroid` (brightness) + `waveletSpread` (complexity) are lively AND
+  independent from the raw bands — added to the analyzer with full stats.
+- Maximally-independent set (all pairwise |corr|<0.45): band0Z, centroid, band1Z,
+  spread, band2Z, band3N, bassHit.
+
+## Variant choice matters (user's ear caught this)
+
+A frequency glide (sweep) was NOT visible when plotting ZScores — z-score measures
+"unusual vs baseline" so it HIDES steady trends. Use the right variant for the intent:
+- **RAW / Normalized** → "where is the frequency / level right now" (shows glides)
+- **Slope** → "is it rising or falling" (the trend itself)
+- **ZScore** → "is this unusual right now" (punchy reactive hits, drops)
+
+`independent.frag` v2 plots raw centroid + centroidSlope + raw band levels for the
+glide-sensitive lanes, z-scores only for reactive bass. Verified: raw centroid rises
+0.09→0.83 monotonically on a calibrated 50-2000Hz sweep.
+
+Test audio (gitignored, in public/test-audio/): varied-loop.mp3, sweep-demo.mp3.
+
 ## Next steps (not done — prototype only)
 
 - Decide: add wavelet features *alongside* FFT (lowest risk) vs build a kick-detection
