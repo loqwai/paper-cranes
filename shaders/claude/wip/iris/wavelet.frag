@@ -1,5 +1,5 @@
 // @fullscreen: true
-//https://visuals.beadfamous.com/?shader=claude/wip/iris/wavelet&wavelet=true&controller=wavelet-ease&fullscreen=true&knob_1=0.45&knob_2=0.1&knob_4=1.0&knob_5=0.4&knob_7=0.66&knob_8=1&knob_11=1&knob_17=0.7&knob_18=0.8
+//https://visuals.beadfamous.com/?shader=claude/wip/iris/wavelet&wavelet=true&controller=wavelet-ease&fullscreen=true&knob_1=0.45&knob_2=0.1&knob_4=1.0&knob_5=0.2&knob_7=0.66&knob_8=1&knob_11=1&knob_17=0.7&knob_18=0.8&knob_20=0.6&knob_21=0.7&knob_22=0.6&knob_23=0.6&knob_24=0.6&knob_25=0.6&knob_26=1.0&knob_27=0.4
 // @mobile: false
 // License: CC0
 //  iris/7 driven by the WAVELET + SPECTRAL features (forked from iris/7, swapping the
@@ -48,10 +48,35 @@ uniform float waveletBassZScore;       // self-calibrating bass spike — kick z
 // drive fast spin / hue flashing — at low energy these fall back to their gentle base rate.
 // STRICTLY MONOTONIC: audio modulates the RATE (inside the iTime multiplier), never adds to
 // the angle — so these only ever move FORWARD, faster on louder/bassier audio, never back.
-#define spin_angle   (iTime * (0.04 + knob_5 * 0.12 + waveletBassSpring * 0.12 * quietGate))
-#define morph_phase  (iTime * (0.035 + waveletBand3Spring * 0.10 * quietGate))
+// SPIN SPEED is now fully knob-controlled: knob_5 sets base spin (0 = nearly still), knob_20
+// sets how much the BASS speeds it up. Base rate cut way down — at knob_5=0 it barely drifts.
+#define spin_angle   (iTime * (knob_5 * 0.10 + waveletBassSpring * 0.10 * MOD_SPIN_AUDIO * quietGate))
+#define morph_phase  (iTime * (0.02 + waveletBand3Spring * 0.10 * quietGate))
 #define flow_phase   (iTime * (0.06 + energySpring * 0.15 * quietGate))
 #define hue_phase    (iTime * (0.04 + tonalStrength * 0.10 * quietGate))
+
+// ════════════════════════════════════════════════════════════════════════════════════════
+//  LIVE MODULATION KNOBS — dial each audio effect's DEPTH (0 = off, 1 = full). Map these to
+//  MIDI or set in the URL. Defaults below give the current look; turn any to 0 to disable it.
+//    knob_5  = SPIN base speed       (0 = nearly still)        ← slow the spin here
+//    knob_20 = how much BASS speeds the spin
+//    knob_21 = MELODY → hue amount
+//    knob_22 = SKEW → petal lean (shape shear)
+//    knob_23 = KURTOSIS → focus/diffuse
+//    knob_24 = SPREAD → ring spacing
+//    knob_25 = ROLLOFF → outer reach
+//    knob_26 = energy/band level reactivity (size/depth breathing)
+//    knob_27 = TILT → hue sub-lean
+// Each knob is a 0→1 depth: 0 = that effect OFF, 1 = full. The preset URL sets good starting
+// values; turn any knob down live to calm that effect, up to intensify it. Direct + simple.
+#define MOD_SPIN_AUDIO  (knob_20)
+#define MOD_HUE         (knob_21)
+#define MOD_SKEW        (knob_22)
+#define MOD_KURT        (knob_23)
+#define MOD_SPREAD      (knob_24)
+#define MOD_REACH       (knob_25)
+#define MOD_LEVEL       (knob_26)
+#define MOD_TILT        (knob_27)
 
 // LEVELS — map our smooth wavelet/spectral features onto iris's reactive envelopes.
 #define bass_env     (waveletBassSpring)                  // core thickness / bass reactivity
@@ -111,19 +136,19 @@ uniform float spectralRolloffNormalized;    // high-freq cutoff → outer reach
 
 // PITCH FAMILY → COLOR. melody + brightness set the palette + SUB_LEAN (bass↔treble tilt);
 // GATED by loudness so quiet noise can't flash the hue (offset fades to 0 when quiet).
-#define MASTER_HUE  (knob_2 * 6.28318 + (melodyFlow * 0.8 + waveletCentroidSpring * 0.4) * quietGate + SUB_LEAN)
+#define MASTER_HUE  (knob_2 * 6.28318 + (melodyFlow * 0.8 + waveletCentroidSpring * 0.4) * MOD_HUE * quietGate + SUB_LEAN)
 
 // LEVEL FAMILY → SIZE / DEPTH / THICKNESS. Band energies set how BIG/BOLD/DEEP, by region.
 #define LINE_THICK  (width * (5.0 + energy_env * 5.0) * (0.4 + knob_18 * 1.6))            // loudness = line weight
-#define size  (baseSize * mix(0.55, 1.10, knob_7) * (1.0 + waveletBand2Spring * 0.18))   // mid energy = facet size
-#define offc  (baseOffc * mix(0.70, 1.45, knob_8) * (1.0 + waveletBand5Spring * 0.15))   // treble energy = arm spread
-#define DEPTH (mix(0.18, 0.50, knob_17) + waveletBassSpring * 0.14)                       // bass energy = core depth
+#define size  (baseSize * mix(0.55, 1.10, knob_7) * (1.0 + waveletBand2Spring * 0.18 * MOD_LEVEL))   // mid energy = facet size
+#define offc  (baseOffc * mix(0.70, 1.45, knob_8) * (1.0 + waveletBand5Spring * 0.15 * MOD_LEVEL))   // treble energy = arm spread
+#define DEPTH (mix(0.18, 0.50, knob_17) + waveletBassSpring * 0.14 * MOD_LEVEL)                       // bass energy = core depth
 
 // TEXTURE FAMILY → DETAIL / SPARKLE / EDGE. Transients/grit set fine structure (below + IRIDESCENCE/EDGE_GLOW).
 // SHAPE FAMILY (NEW): spectral SPREAD/ROLLOFF → ring spacing & outer reach (how wide the spectrum = how far the structure spreads).
-#define RIPPLE_FREQ (10.0 + knob_13 * 16.0 + ZOOM_DEEP * 32.0 + waveletBand4Spring * 8.0 + spectralRoughnessSmooth * 6.0 + (spectralSpreadNormalized - 0.5) * 8.0 * quietGate) // spread = ring spacing
-#define RING_REACH  (1.0 + (spectralRolloffNormalized - 0.5) * 0.18 * quietGate)  // rolloff = how far the iris reaches outward
-#define SUB_LEAN    ((waveletTiltNormalized - 0.5) * 0.25 * quietGate)            // bass↔treble lean tints the hue (small — tilt is the jitteriest of the new set, 0.075/frame)
+#define RIPPLE_FREQ (10.0 + knob_13 * 16.0 + ZOOM_DEEP * 32.0 + waveletBand4Spring * 8.0 + spectralRoughnessSmooth * 6.0 + (spectralSpreadNormalized - 0.5) * 8.0 * MOD_SPREAD * quietGate) // spread = ring spacing
+#define RING_REACH  (1.0 + (spectralRolloffNormalized - 0.5) * 0.18 * MOD_REACH * quietGate)  // rolloff = how far the iris reaches outward
+#define SUB_LEAN    ((waveletTiltNormalized - 0.5) * 0.25 * MOD_TILT * quietGate)            // bass↔treble lean tints the hue
 #define TWIST (knob_10 * 3.14159 + ZOOM_DEEP * 1.6)  // STATIC twist (knob only) — NO audio, so the petals never rock back. Audio drives SHAPE, not this rotation.
 #define BASS_REACT (0.8 + knob_11 * 1.4)
 
@@ -180,8 +205,8 @@ float df(vec2 p) {
   // IMPORTANT: skew does NOT rotate the petals (that made them rock BACK when skew slid down).
   // Instead SKEW stretches the petal SHAPE asymmetrically — a lean you can see, but no spin-back.
   // KURTOSIS → FOCUS vs DIFFUSE: pulls petals inward (focused star) or pushes out (open flower).
-  float petalFocus = 1.0 + (spectralKurtosisNormalized - 0.5) * 0.22 * quietGate;
-  float skewStretch = (spectralSkewNormalized - 0.5) * 0.18 * quietGate;   // asymmetric SHAPE, not rotation
+  float petalFocus = 1.0 + (spectralKurtosisNormalized - 0.5) * 0.22 * MOD_KURT * quietGate;
+  float skewStretch = (spectralSkewNormalized - 0.5) * 0.18 * MOD_SKEW * quietGate;   // asymmetric SHAPE, not rotation
   for (int i = 0; i < rep; ++i) {
     vec2 ip = p;
     float petalI = float(i);
