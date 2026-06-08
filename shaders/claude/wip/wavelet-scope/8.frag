@@ -7,9 +7,12 @@
 //
 //   TOP GROUP (wavelet)        BOTTOM GROUP (FFT, the method we use now)
 //   ─────────────────────      ─────────────────────────────────────────
-//   0  wavelet_bassZ           3  bassZScore         (bass dynamics)
-//   1  wavelet_band2Z          4  midsZScore         (low-mid / body)
-//   2  wavelet_band5Z          5  trebleZScore       (treble / air)
+//   0  waveletBassZScore       3  bassZScore         (bass dynamics)
+//   1  waveletBand2ZScore      4  midsZScore         (low-mid / body)
+//   2  waveletBand5ZScore      5  trebleZScore       (treble / air)
+//
+// (wavelet bands are first-class features now; old wavelet_bandNZ names were renamed
+//  to the FFT convention waveletBandNZScore — this shader was updated to match.)
 //
 // Lane = a horizontal band. A bright line traces the feature's z-score within its lane
 // (center = z0, up = positive). Each lane is color-coded; the wavelet group runs warm
@@ -18,9 +21,9 @@
 //
 // Run with ?wavelet=true (+ ?audio=tab for live Spotify).
 
-uniform float wavelet_bassZ;
-uniform float wavelet_band2Z;
-uniform float wavelet_band5Z;
+uniform float waveletBassZScore;
+uniform float waveletBand2ZScore;
+uniform float waveletBand5ZScore;
 
 #define NUM_LANES 6.0
 #define MARGIN 0.02
@@ -77,9 +80,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // WAVELET group — warm hues (lanes 0..2)
     vec4 r;
-    r = lane(uv, wavelet_bassZ,  LANE_Y(0.0), vec3(1.0, 0.30, 0.20)); fragColor.rgb = mix(fragColor.rgb, r.rgb, r.a); // red
-    r = lane(uv, wavelet_band2Z, LANE_Y(1.0), vec3(1.0, 0.65, 0.15)); fragColor.rgb = mix(fragColor.rgb, r.rgb, r.a); // orange
-    r = lane(uv, wavelet_band5Z, LANE_Y(2.0), vec3(1.0, 0.85, 0.30)); fragColor.rgb = mix(fragColor.rgb, r.rgb, r.a); // gold
+    r = lane(uv, waveletBassZScore,  LANE_Y(0.0), vec3(1.0, 0.30, 0.20)); fragColor.rgb = mix(fragColor.rgb, r.rgb, r.a); // red
+    r = lane(uv, waveletBand2ZScore, LANE_Y(1.0), vec3(1.0, 0.65, 0.15)); fragColor.rgb = mix(fragColor.rgb, r.rgb, r.a); // orange
+    r = lane(uv, waveletBand5ZScore, LANE_Y(2.0), vec3(1.0, 0.85, 0.30)); fragColor.rgb = mix(fragColor.rgb, r.rgb, r.a); // gold
 
     // FFT group — cool hues (lanes 3..5)
     r = lane(uv, bassZScore,   LANE_Y(3.0), vec3(0.25, 0.55, 1.0)); fragColor.rgb = mix(fragColor.rgb, r.rgb, r.a); // blue
