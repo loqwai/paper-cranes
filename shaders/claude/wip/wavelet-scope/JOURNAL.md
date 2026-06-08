@@ -114,3 +114,14 @@ it (averaging across unrelated notes = mush). Plot raw/stepped.
 TODO: raw pitchClass flickers frame-to-frame when ambiguous — for animation it needs a
 DEBOUNCE ("current note, held until a clear change") rather than per-frame flicker. Pitch
 needs different treatment than the smooth energy lines.
+
+### FLOWING melody line (melodyFlow) — user wanted flow + identifiable musical key
+Brightness/centroid does NOT track pitch (corr |0.06-0.16| with raw note — timbre ≠ note).
+The only way to a FLOWING melody line is to smooth the pitch ITSELF, handling its quirks:
+- pitch is CIRCULAR (note 11→0 adjacent): ease along the SHORTER arc around the circle.
+- gate by tonal confidence (spectralCrest): only chase pitch when there's a clear tonal
+  note, else HOLD — stops drums/noise from yanking it.
+melodyFlow (in wavelet-ease controller) does this → melody.frag. Result: a smooth contour
+that holds on sustained notes, glides on melodic movement, ignores drum hits. It's a
+CONTOUR (rough up-down melody shape), not transcription — but "line rises when riff climbs"
+is the identifiable musical motion wanted. Also exposes tonalStrength (how melodic vs noisy).

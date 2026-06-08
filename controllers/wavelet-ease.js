@@ -41,6 +41,8 @@ export function make() {
     const spring = {}   // {pos, vel}
     const ar = {}       // attack/release value
     const slew = {}     // slew-rate-limited value (the headless grid winner)
+    let melodyFlow = null   // flowing pitch contour (eased around the pitch circle)
+    let tonalSmooth = 0     // smoothed tonal strength
     let lastT = performance.now() / 1000
 
     const SLEW_MAX = 0.06 // max change per frame — grid optimum (avg score 0.932)
@@ -83,6 +85,27 @@ export function make() {
             slew[f] = sp + Math.max(-SLEW_MAX, Math.min(SLEW_MAX, d))
             out[`${f}Slew`] = slew[f]
         }
+
+        // --- MELODY FLOW: a FLOWING line that tracks the synth melody/key ---
+        // pitchClass is categorical (0-1 = note 0-11) and JUMPS, so it can't flow directly.
+        // We ease toward the current note — but pitch is CIRCULAR (note 11 → 0 is adjacent),
+        // so we move along the SHORTER arc around the circle. Gated by tonal confidence
+        // (spectralCrest): only chase the pitch when there's a clear tonal note, else HOLD —
+        // this stops drum hits / noise from yanking the line around. Result: a smooth contour
+        // that rises and falls WITH the melody, identifiable by ear.
+        const pitch = features.pitchClassNormalized ?? 0
+        const tonal = features.spectralCrest ?? 0          // high = tonal/melodic, low = noisy
+        const confident = Math.min(1, Math.max(0, (tonal - 0.3) * 2)) // 0..1 confidence gate
+        if (melodyFlow === null) melodyFlow = pitch
+        // shortest circular step from melodyFlow toward pitch (wrap at 1.0)
+        let diff = pitch - melodyFlow
+        if (diff > 0.5) diff -= 1.0
+        if (diff < -0.5) diff += 1.0
+        melodyFlow += diff * 0.12 * confident // ease only when confident; hold otherwise
+        melodyFlow = (melodyFlow + 1.0) % 1.0  // keep in 0..1
+        out.melodyFlow = melodyFlow
+        out.tonalStrength = (tonalSmooth = tonalSmooth * 0.85 + tonal * 0.15) // flowing "how melodic"
+
         return out
     }
 }
