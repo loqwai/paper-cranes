@@ -55,7 +55,7 @@ export const shaderWrapper = (shader) => {
     }
     if (shader.includes('mainImage')) {
         const compatUniforms = shaderToyCompatibilityUniforms()
-        const audioUniforms = getAudioUniforms()
+        const audioUniforms = getAudioUniforms(shader)
         const knobUniforms = getKnobUniforms(shader)
         const pcUniforms = paperCranes()
         const otherUniforms = compatUniforms + audioUniforms + knobUniforms + pcUniforms
@@ -97,9 +97,24 @@ uniform sampler2D iChannel2;
 uniform sampler2D iChannel3;
 uniform int iFrame;
 `
-const getAudioUniforms = () => {
-    return [...Object.keys(getFlatAudioFeatures()), 'beat']
+// Wavelet (DWT) features published by WaveletProcessor when ?wavelet=true. They aren't in
+// hypnosound's AudioFeatures list, so they must be enumerated here to auto-declare as uniforms
+// just like the FFT features — otherwise every wavelet shader has to declare them by hand.
+const STAT_SUFFIXES = ['', 'Normalized', 'Mean', 'Median', 'Min', 'Max', 'StandardDeviation', 'ZScore', 'Slope', 'Intercept', 'RSquared']
+const WAVELET_BASES = ['waveletBand0', 'waveletBand1', 'waveletBand2', 'waveletBand3', 'waveletBand4', 'waveletBand5', 'waveletBass', 'waveletTilt', 'waveletCentroid', 'waveletSpread']
+const getWaveletUniforms = () => {
+    const stat = WAVELET_BASES.flatMap(base => STAT_SUFFIXES.map(s => `${base}${s}`))
+    const trigger = ['wavelet_bassHit', 'wavelet_bassHitSmooth', 'wavelet_punch', 'wavelet_confirmedDrop']
+    return [...stat, ...trigger]
+}
+
+const getAudioUniforms = (shader = '') => {
+    // Skip any uniform the shader already declares itself, so explicit declarations (common
+    // in wavelet shaders written before these auto-declared) don't cause a redefinition error.
+    const code = shader.replace(/\s+/g, ' ')
+    return [...Object.keys(getFlatAudioFeatures()), ...getWaveletUniforms(), 'beat']
         .sort()
+        .filter(f => !code.includes(`uniform float ${f};`) && !code.includes(`uniform bool ${f};`))
         .map(f => `uniform ${f === 'beat' ? 'bool' : 'float'} ${f};`)
         .join('\n')
 }
