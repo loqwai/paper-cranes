@@ -103,3 +103,14 @@ hear. Abstract features (tilt, spread, z-scores) wiggle without obvious musical 
 Tradeoff: legible features correlate a bit more (bass & loudness both rise on a drop) than
 abstract ones — but "drive size off bass, hue off brightness" is PREDICTABLE, which is
 what makes animation make sense. Legibility wins for usable animation.
+
+### MISSING DIMENSION: pitch/key (user heard synths in different keys)
+The energy/timbre features (bass/loudness/brightness/treble/low-mid) completely MISS which
+NOTE a synth plays — a melody is invisible to them. Confirmed live: `pitchClass` hit all 12
+notes in 6s (range 0.00-0.92) while the synth riff played. Added pitchClassNormalized as a
+PITCH/KEY lane in legible.frag.
+IMPORTANT: pitch is CATEGORICAL (which note) — it JUMPS, doesn't flow. So do NOT spring/EMA
+it (averaging across unrelated notes = mush). Plot raw/stepped.
+TODO: raw pitchClass flickers frame-to-frame when ambiguous — for animation it needs a
+DEBOUNCE ("current note, held until a clear change") rather than per-frame flicker. Pitch
+needs different treatment than the smooth energy lines.

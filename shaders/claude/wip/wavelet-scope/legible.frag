@@ -1,33 +1,29 @@
 // @fullscreen: true
 // @tags: diagnostic, wavelet, oscilloscope, graph, debug
 //
-// LEGIBLE — animation lines you can MAP to what you HEAR. Independence matters, but a
-// line is only useful for animation if you can tell what it's doing relative to the music.
-// So these are the MUSICALLY INTERPRETABLE features (not abstract tilt/spread/z-scores):
+// LEGIBLE — animation lines you can MAP to what you HEAR, now including PITCH (the synth
+// melody/key, which the energy/timbre features completely miss). Each line is verifiable
+// by ear.
 //
 // Run: ?shader=claude/wip/wavelet-scope/legible&wavelet=true&controller=wavelet-ease
 //
-//   lane 0  waveletBassSpring     BASS — follows the bassline/low thump      RED
-//            → verify: hear the bass, watch it rise/fall with the low end
-//   lane 1  wavelet_bassHit       KICK/BEAT — flashes on each kick           ORANGE
-//            → verify: hear the kick drum, see the bar flash in time
-//   lane 2  energySpring          LOUDNESS — overall intensity               YELLOW
-//            → verify: quiet section → low, drop/chorus → high
+//   lane 0  waveletBassSpring     BASS — the low thump/bassline               RED
+//   lane 1  wavelet_bassHit       KICK/BEAT — flashes on each kick            ORANGE
+//   lane 2  pitchClassNormalized  PITCH/KEY — which NOTE the synth plays      YELLOW
+//            → NOT smoothed: pitch is categorical (jumps between notes), so it STEPS.
+//            → verify: synth plays a melody → line steps up/down with the notes
 //   lane 3  waveletCentroidSpring BRIGHTNESS — bright (cymbals) vs muddy      GREEN
-//            → verify: hi-hats/cymbals → rises; bass-only → falls
-//   lane 4  waveletBand5Spring    TREBLE/AIR — the high-end shimmer          CYAN
-//            → verify: hi-hats and "air" → moves
-//   lane 5  waveletBand2Spring    LOW-MID — vocal/instrument body            MAGENTA
-//            → verify: vocals/melody body → moves
+//   lane 4  waveletBand5Spring    TREBLE/AIR — high-end shimmer               CYAN
+//   lane 5  energySpring          LOUDNESS — overall intensity               MAGENTA
 //
-// Smooth lines = spring-eased. Each maps to a thing you can point to in the music.
+// Smooth lines = spring-eased. Pitch = raw stepped. Each maps to a thing you can hear.
 
 uniform float waveletBassSpring;
 uniform float wavelet_bassHit;
-uniform float energySpring;
 uniform float waveletCentroidSpring;
 uniform float waveletBand5Spring;
-uniform float waveletBand2Spring;
+uniform float energySpring;
+// pitchClassNormalized is an FFT feature — auto-declared by the wrapper, just referenced.
 
 #define NUM_LANES 6.0
 #define MARGIN 0.012
@@ -68,11 +64,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec3 col = vec3(0.02, 0.02, 0.03);
     vec4 r;
-    r = lane(uv, clamp(waveletBassSpring*2.0,0.0,1.0),     LANE_Y(0.0), vec3(0.6,0.05,0.1), vec3(1.0,0.25,0.2));  col = mix(col, r.rgb, r.a); // red BASS
-    r = beatLane(uv, wavelet_bassHit,                      LANE_Y(1.0), vec3(1.0,0.55,0.1));                      col = mix(col, r.rgb, r.a); // orange KICK
-    r = lane(uv, energySpring,                             LANE_Y(2.0), vec3(0.6,0.55,0.0), vec3(1.0,0.95,0.2));  col = mix(col, r.rgb, r.a); // yellow LOUDNESS
-    r = lane(uv, clamp(waveletCentroidSpring,0.0,1.0),     LANE_Y(3.0), vec3(0.1,0.5,0.1),  vec3(0.4,1.0,0.35));  col = mix(col, r.rgb, r.a); // green BRIGHTNESS
-    r = lane(uv, waveletBand5Spring,                       LANE_Y(4.0), vec3(0.0,0.45,0.5), vec3(0.2,1.0,0.95));  col = mix(col, r.rgb, r.a); // cyan TREBLE
-    r = lane(uv, waveletBand2Spring,                       LANE_Y(5.0), vec3(0.6,0.0,0.5),  vec3(1.0,0.3,1.0));   col = mix(col, r.rgb, r.a); // magenta LOW-MID
+    r = lane(uv, clamp(waveletBassSpring*2.0,0.0,1.0), LANE_Y(0.0), vec3(0.6,0.05,0.1), vec3(1.0,0.25,0.2));  col = mix(col, r.rgb, r.a); // red BASS
+    r = beatLane(uv, wavelet_bassHit,                 LANE_Y(1.0), vec3(1.0,0.55,0.1));                      col = mix(col, r.rgb, r.a); // orange KICK
+    // PITCH: raw (NOT smoothed) — categorical note, steps between values.
+    r = lane(uv, clamp(pitchClassNormalized,0.0,1.0), LANE_Y(2.0), vec3(0.6,0.55,0.0), vec3(1.0,0.95,0.2));  col = mix(col, r.rgb, r.a); // yellow PITCH/KEY
+    r = lane(uv, clamp(waveletCentroidSpring,0.0,1.0),LANE_Y(3.0), vec3(0.1,0.5,0.1),  vec3(0.4,1.0,0.35));  col = mix(col, r.rgb, r.a); // green BRIGHTNESS
+    r = lane(uv, waveletBand5Spring,                  LANE_Y(4.0), vec3(0.0,0.45,0.5), vec3(0.2,1.0,0.95));  col = mix(col, r.rgb, r.a); // cyan TREBLE
+    r = lane(uv, energySpring,                        LANE_Y(5.0), vec3(0.6,0.0,0.5),  vec3(1.0,0.3,1.0));   col = mix(col, r.rgb, r.a); // magenta LOUDNESS
     fragColor = vec4(clamp(col, 0.0, 1.6), 1.0);
 }
