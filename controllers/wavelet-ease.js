@@ -20,7 +20,20 @@
  * Shader declares e.g.: uniform float waveletBand1Spring;
  */
 
-const FEATURES = ['waveletBand1', 'waveletBand3', 'waveletBand5', 'waveletCentroid', 'waveletBass', 'energy']
+// Each entry: [outputBaseName, sourceFeatureKey]. The controller exposes <base>Spring etc.
+// Band/derived levels use their Normalized variant; exotic ones use their natural key.
+const FEATURES = [
+    // level features (use Normalized as the low-latency input)
+    ['waveletBand0', 'waveletBand0Normalized'], ['waveletBand1', 'waveletBand1Normalized'],
+    ['waveletBand2', 'waveletBand2Normalized'], ['waveletBand3', 'waveletBand3Normalized'],
+    ['waveletBand4', 'waveletBand4Normalized'], ['waveletBand5', 'waveletBand5Normalized'],
+    ['waveletCentroid', 'waveletCentroidNormalized'], ['waveletBass', 'waveletBassNormalized'],
+    ['energy', 'energyNormalized'],
+    // exotic / derived features (use their natural variant)
+    ['waveletTilt', 'waveletTilt'], ['waveletSpread', 'waveletSpread'],
+    ['waveletCentroidSlope', 'waveletCentroidSlope'], ['waveletBassRSquared', 'waveletBassRSquared'],
+    ['waveletPunch', 'wavelet_punch'], ['waveletConfirmedDrop', 'wavelet_confirmedDrop'],
+]
 
 export function make() {
     // per-feature persistent state for each strategy
@@ -44,15 +57,14 @@ export function make() {
         lastT = now
 
         const out = {}
-        for (const f of FEATURES) {
-            // use the fast Normalized variant as the low-latency input
-            const target = features[`${f}Normalized`] ?? 0
+        for (const [f, srcKey] of FEATURES) {
+            const target = features[srcKey] ?? 0
 
             // --- EMA ---
             ema[f] = ema[f] === undefined ? target : ema[f] * (1 - EMA_ALPHA) + target * EMA_ALPHA
             out[`${f}Ema`] = ema[f]
 
-            // --- critically-damped spring ---
+            // --- critically-damped spring (best general animation easing) ---
             const s = spring[f] ?? (spring[f] = { pos: target, vel: 0 })
             const force = SPRING_STIFF * (target - s.pos) - SPRING_DAMP * s.vel
             s.vel += force * dt
@@ -65,7 +77,7 @@ export function make() {
             ar[f] = prev + (target - prev) * rate
             out[`${f}AttackRelease`] = ar[f]
 
-            // --- slew-rate-limited (HEADLESS GRID WINNER: best lively+eased+low-latency) ---
+            // --- slew-rate-limited (low-latency alt; tight cap stays curvy) ---
             const sp = slew[f] ?? (slew[f] = target)
             const d = target - sp
             slew[f] = sp + Math.max(-SLEW_MAX, Math.min(SLEW_MAX, d))
