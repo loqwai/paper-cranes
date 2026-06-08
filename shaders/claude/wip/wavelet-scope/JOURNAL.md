@@ -41,6 +41,27 @@ Normalized — pick Median for smooth flowing visuals, Normalized for punchy one
 zMap(z)>0.4 fired ~99% of the time (zMap(0)=0.5). Fixed: fire on RAW z>0.8. `energyZScore`
 is the best trigger (11 hits/5s); `band5ZScore` good for treble; `bassZScore`/`fluxZ` poor.
 
+### EXHAUSTIVE easing grid (scripts/easing-grid.mjs) — slew-limiting wins
+Tested 7 features × 12 temporal easings over the 22-signal synthetic battery, scored on
+lively (sd) + eased (maxJump/sd ratio) + low-latency (lag frames) + range. Leaderboard:
+  1. slew_06 (0.932) — slew-rate limit, cap 0.06/frame  ← WINNER
+  2. slew_04 (0.925), slew_02 (0.914), slew_08 (0.911)
+  5. slewEma (0.873), ema_heavy (0.824)
+  7. spring_smooth (0.788) ← my earlier EYEBALL pick, beaten by data
+  ... ema_light (0.785), spring_snappy (0.782), raw (0.650), attackRelease (0.614)
+**Slew-rate limiting** (cap max change/frame) is best: kills sawtooth cliffs (ratio
+0.13-0.18) while staying lively (sd 0.22-0.30) AND low-latency (0-3 frames). It only
+intervenes on too-fast jumps, leaving everything else untouched. Fancier variants
+(adaptive slew, slew+ema) were WORSE — simple wins. Optimum cap ≈ 0.06/frame.
+
+### AudioProcessor already smooths — but with EMA (the weak one)
+AudioProcessor.js line ~109 applies EXPONENTIAL smoothing to every FFT feature
+(α=0.10, ×1.5 for ZScore/Normalized → ~0.15). That's exactly `ema_light` in the grid =
+7th place. So the existing engine smoothing kills raw jitter (good baseline) but is NOT
+the good-animation easing. Slew-limiting beats it. The wavelet path's added EMA matches
+AudioProcessor (consistent baseline); the WINNER to graduate is slew, not EMA/spring.
+**DO NOT graduate without user sign-off** — still exhaustively exploring.
+
 ## Shader lineage
 - `independent.frag` — pure-wavelet smooth tapestry (synthetic-tuned 6 features + EMA)
 - `combined.frag` — wavelet vs FFT vs combos (punch, confirmedDrop)

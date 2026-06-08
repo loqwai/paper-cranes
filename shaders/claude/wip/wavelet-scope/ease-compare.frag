@@ -19,9 +19,9 @@
 uniform float waveletBand1Normalized;
 uniform float waveletBand1Ema;
 uniform float waveletBand1Spring;
-uniform float waveletBand1AttackRelease;
-uniform float waveletCentroidSpring;
-uniform float energySpring;
+uniform float waveletBand1Slew;
+uniform float waveletCentroidSlew;
+uniform float energySlew;
 
 #define NUM_LANES 6.0
 #define MARGIN 0.012
@@ -56,11 +56,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec3 col = vec3(0.02, 0.02, 0.03);
     vec4 r;
-    r = lane(uv, waveletBand1Normalized,      LANE_Y(0.0), vec3(0.6,0.05,0.1), vec3(1.0,0.3,0.25)); col = mix(col, r.rgb, r.a); // red RAW
-    r = lane(uv, waveletBand1Ema,             LANE_Y(1.0), vec3(0.6,0.3,0.0),  vec3(1.0,0.6,0.15)); col = mix(col, r.rgb, r.a); // orange EMA
-    r = lane(uv, waveletBand1Spring,          LANE_Y(2.0), vec3(0.1,0.5,0.1),  vec3(0.4,1.0,0.35)); col = mix(col, r.rgb, r.a); // green SPRING
-    r = lane(uv, waveletBand1AttackRelease,   LANE_Y(3.0), vec3(0.0,0.45,0.5), vec3(0.2,1.0,0.95)); col = mix(col, r.rgb, r.a); // cyan A/R
-    r = lane(uv, waveletCentroidSpring,       LANE_Y(4.0), vec3(0.6,0.4,0.0),  vec3(1.0,0.9,0.2));  col = mix(col, r.rgb, r.a); // gold CENTROID spring
-    r = lane(uv, energySpring,                LANE_Y(5.0), vec3(0.6,0.0,0.5),  vec3(1.0,0.3,1.0));  col = mix(col, r.rgb, r.a); // magenta ENERGY spring
+    r = lane(uv, waveletBand1Normalized,  LANE_Y(0.0), vec3(0.6,0.05,0.1), vec3(1.0,0.3,0.25)); col = mix(col, r.rgb, r.a); // red RAW (sawtooth ref)
+    r = lane(uv, waveletBand1Ema,         LANE_Y(1.0), vec3(0.6,0.3,0.0),  vec3(1.0,0.6,0.15)); col = mix(col, r.rgb, r.a); // orange EMA (what AudioProcessor uses)
+    r = lane(uv, waveletBand1Spring,      LANE_Y(2.0), vec3(0.1,0.5,0.1),  vec3(0.4,1.0,0.35)); col = mix(col, r.rgb, r.a); // green SPRING
+    r = lane(uv, waveletBand1Slew,        LANE_Y(3.0), vec3(0.0,0.45,0.5), vec3(0.2,1.0,0.95)); col = mix(col, r.rgb, r.a); // cyan SLEW (grid winner)
+    r = lane(uv, waveletCentroidSlew,     LANE_Y(4.0), vec3(0.6,0.4,0.0),  vec3(1.0,0.9,0.2));  col = mix(col, r.rgb, r.a); // gold CENTROID slew
+    r = lane(uv, energySlew,              LANE_Y(5.0), vec3(0.6,0.0,0.5),  vec3(1.0,0.3,1.0));  col = mix(col, r.rgb, r.a); // magenta ENERGY slew
     fragColor = vec4(clamp(col, 0.0, 1.6), 1.0);
 }

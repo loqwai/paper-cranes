@@ -27,7 +27,10 @@ export function make() {
     const ema = {}
     const spring = {}   // {pos, vel}
     const ar = {}       // attack/release value
+    const slew = {}     // slew-rate-limited value (the headless grid winner)
     let lastT = performance.now() / 1000
+
+    const SLEW_MAX = 0.06 // max change per frame — grid optimum (avg score 0.932)
 
     const EMA_ALPHA = 0.15        // ema smoothing
     const SPRING_STIFF = 120      // spring stiffness (higher = snappier)
@@ -61,6 +64,12 @@ export function make() {
             const rate = target > prev ? ATTACK : RELEASE
             ar[f] = prev + (target - prev) * rate
             out[`${f}AttackRelease`] = ar[f]
+
+            // --- slew-rate-limited (HEADLESS GRID WINNER: best lively+eased+low-latency) ---
+            const sp = slew[f] ?? (slew[f] = target)
+            const d = target - sp
+            slew[f] = sp + Math.max(-SLEW_MAX, Math.min(SLEW_MAX, d))
+            out[`${f}Slew`] = slew[f]
         }
         return out
     }
