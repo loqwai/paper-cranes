@@ -53,36 +53,43 @@ uniform float melodyFlow;              // flowing melody/pitch contour
 #define entropy_env  (clamp(spectralEntropyNormalized, 0.0, 1.0)) // iridescence — tonal vs noisy
 #define centroid_env (waveletCentroidSpring)              // brightness
 #define bass_pump    (clamp(wubDepth + waveletBassSpring * 0.5, 0.0, 1.0)) // FAST punch + wub
-#define drop_glow    (clamp(max(spectralFluxZScore, 0.0) * 0.6 + knob_6, 0.0, 1.0)) // transient bloom
-#define pitch_pulse  (clamp(spectralCrestNormalized, 0.0, 1.0)) // CREST flashes on each articulated note
+// drop_glow & pitch_pulse SMOOTHED (not raw z-scores) so the iris breathes, doesn't strobe:
+#define drop_glow    (clamp(energySpring * 0.5 + spectralCrestNormalized * 0.4 + knob_6, 0.0, 1.0))
+#define pitch_pulse  (clamp(spectralCrestNormalized * 0.6 + tonalStrength * 0.4, 0.0, 1.0))
+
+// ── MANY-FEATURE MODULATION ──────────────────────────────────────────────────────────────
+// Spread reactivity across the WHOLE iris: each shape/color constant is a knob BASE plus a
+// gentle audio offset from a DIFFERENT smooth feature, so every aspect breathes independently
+// with its own part of the music. Kept small (additive offsets) so it modulates, never strobes.
+uniform float tonalStrength;            // how melodic vs noisy (from wavelet-ease)
+uniform float waveletBand4Spring;       // high-mid
+uniform float waveletBand1Spring;       // low-bass
 
 // === Knobs ===
 // knob_1 ZOOM: 0=zoomed-out flat, 1=plunged deep into the fractal tunnel.
 // Compounds detail on the way in (more ripple density + sub-layer + deeper twist).
+// Every constant below = knob BASE + a gentle offset from a DISTINCT feature, so the iris
+// reacts across its whole structure to many parts of the music at once (not one flashy thing).
 #define ZOOM_K      (knob_1)
-#define ZOOM        (0.35 + ZOOM_K * 2.65)
-#define ZOOM_DEEP   (ZOOM_K * ZOOM_K)                    // eased — detail blooms in the back half of the dial
-#define MASTER_HUE  (knob_2 * 6.28318)                   // knob_2 palette hue
-// LINE_THICK moved to knob_18 (knob_12 is now gaze X — the user keeps turning it)
+#define ZOOM        (0.35 + ZOOM_K * 2.65 + energySpring * 0.4)        // loudness pushes you in
+#define ZOOM_DEEP   (ZOOM_K * ZOOM_K)
+#define MASTER_HUE  (knob_2 * 6.28318 + melodyFlow * 1.6)             // MELODY shifts the master hue
 #define LINE_THICK  (width * (5.0 + energy_env * 5.0) * (0.4 + knob_18 * 1.6))
-#define RIPPLE_FREQ (10.0 + knob_13 * 16.0 + ZOOM_DEEP * 32.0)  // more nested ringing on zoom-in
-// COLOR MIX (iq-style, driven by the fractal SDF): knob_2 = hue base, knob_3 = hue frequency, knob_4 = chroma
+#define RIPPLE_FREQ (10.0 + knob_13 * 16.0 + ZOOM_DEEP * 32.0 + waveletBand4Spring * 20.0) // high-mid = ring density
 // fractal exploration:
-#define size  (baseSize * mix(0.55, 1.10, knob_7))       // knob_7 facet size
-#define offc  (baseOffc * mix(0.70, 1.45, knob_8))       // knob_8 arm spread
-// DEPTH moved to knob_17 (knob_9 is now gaze Y — the user keeps turning it)
-#define DEPTH (mix(0.18, 0.50, knob_17))
-// knob_10 base twist + zoom-deep adds curl (deeper = more spiral pull into the recursion)
-#define TWIST (knob_10 * 3.14159 + ZOOM_DEEP * 1.6)
-#define BASS_REACT (0.8 + knob_11 * 1.4)                 // knob_11 bass reactivity amount
+#define size  (baseSize * mix(0.55, 1.10, knob_7) * (1.0 + waveletBand2Spring * 0.18)) // mids breathe facet size
+#define offc  (baseOffc * mix(0.70, 1.45, knob_8) * (1.0 + waveletBand5Spring * 0.15)) // treble spreads the arms
+#define DEPTH (mix(0.18, 0.50, knob_17) + waveletBand1Spring * 0.12)  // low-bass deepens the core
+#define TWIST (knob_10 * 3.14159 + ZOOM_DEEP * 1.6 + tonalStrength * 0.8)  // tonal-ness curls the spiral
+#define BASS_REACT (0.8 + knob_11 * 1.4)
 
 // brightness (smoothed levels — never flicker)
-#define IRIDESCENCE (0.7 + 0.6 * entropy_env)
-#define EDGE_GLOW   (0.9 + 0.4 * energy_env)
+#define IRIDESCENCE (0.7 + 0.6 * entropy_env + spectralRoughnessNormalized * 0.3) // grit adds shimmer
+#define EDGE_GLOW   (0.9 + 0.4 * energy_env + waveletCentroidSpring * 0.3)         // brightness lifts edges
 
-// plasma palette — Oklch hue in radians
-#define CORE_HUE   0.6
-#define CORONA_HUE 4.2
+// plasma palette — Oklch hue in radians; centroid warms the core, crest cools the corona
+#define CORE_HUE   (0.6 + waveletCentroidSpring * 0.8)
+#define CORONA_HUE (4.2 - spectralCrestNormalized * 0.6)
 
 const vec3 plnormal = normalize(vec3(1, 1, -1));
 const vec3 n1 = normalize(vec3(-PHI,PHI-1.0,1.0));
