@@ -79,6 +79,12 @@ uniform float spectralCrestSmooth;      // smoothed spectral crest (was jittery 
 uniform float spectralRoughnessSmooth;  // smoothed spectral roughness (was jittery raw)
 uniform float spectralEntropySmooth;    // smoothed spectral entropy (was jittery raw)
 uniform float quietGate;                // 0 in quiet → 1 loud; gates audio offsets (no quiet-noise flashing)
+// NEW fractal-complexity dimensions — measured lively AND smooth on melodic audio (jit<0.06):
+uniform float spectralSkewNormalized;       // spectral tilt/asymmetry → petal lean
+uniform float spectralKurtosisNormalized;   // peakedness → focus vs diffuse petals
+uniform float spectralSpreadNormalized;     // spectral width → ring spread
+uniform float spectralRolloffNormalized;    // high-freq cutoff → outer reach
+// waveletTilt (bass↔treble lean) + waveletBand1 (sub layer) auto-declare.
 
 // === Knobs ===
 // knob_1 ZOOM: 0=zoomed-out flat, 1=plunged deep into the fractal tunnel.
@@ -99,13 +105,13 @@ uniform float quietGate;                // 0 in quiet → 1 loud; gates audio of
 // across unrelated aspects.
 
 #define ZOOM_K      (knob_1)
-// ZOOM ← LEVEL (loudness): louder pushes the camera in.
-#define ZOOM        (0.35 + ZOOM_K * 2.65 + energySpring * 0.2)
+// ZOOM ← LEVEL (loudness) × RING_REACH (rolloff sets outer reach — defined just below).
+#define ZOOM        ((0.35 + ZOOM_K * 2.65 + energySpring * 0.2) * RING_REACH)
 #define ZOOM_DEEP   (ZOOM_K * ZOOM_K)
 
-// PITCH FAMILY → COLOR. melody + brightness set the palette; GATED by loudness so quiet
-// noise can't flash the hue (the audio offset fades to 0 when quiet, leaving the knob base).
-#define MASTER_HUE  (knob_2 * 6.28318 + (melodyFlow * 0.8 + waveletCentroidSpring * 0.4) * quietGate)
+// PITCH FAMILY → COLOR. melody + brightness set the palette + SUB_LEAN (bass↔treble tilt);
+// GATED by loudness so quiet noise can't flash the hue (offset fades to 0 when quiet).
+#define MASTER_HUE  (knob_2 * 6.28318 + (melodyFlow * 0.8 + waveletCentroidSpring * 0.4) * quietGate + SUB_LEAN)
 
 // LEVEL FAMILY → SIZE / DEPTH / THICKNESS. Band energies set how BIG/BOLD/DEEP, by region.
 #define LINE_THICK  (width * (5.0 + energy_env * 5.0) * (0.4 + knob_18 * 1.6))            // loudness = line weight
@@ -114,7 +120,10 @@ uniform float quietGate;                // 0 in quiet → 1 loud; gates audio of
 #define DEPTH (mix(0.18, 0.50, knob_17) + waveletBassSpring * 0.14)                       // bass energy = core depth
 
 // TEXTURE FAMILY → DETAIL / SPARKLE / EDGE. Transients/grit set fine structure (below + IRIDESCENCE/EDGE_GLOW).
-#define RIPPLE_FREQ (10.0 + knob_13 * 16.0 + ZOOM_DEEP * 32.0 + waveletBand4Spring * 8.0 + spectralRoughnessSmooth * 6.0) // grit = ring detail
+// SHAPE FAMILY (NEW): spectral SPREAD/ROLLOFF → ring spacing & outer reach (how wide the spectrum = how far the structure spreads).
+#define RIPPLE_FREQ (10.0 + knob_13 * 16.0 + ZOOM_DEEP * 32.0 + waveletBand4Spring * 8.0 + spectralRoughnessSmooth * 6.0 + (spectralSpreadNormalized - 0.5) * 8.0 * quietGate) // spread = ring spacing
+#define RING_REACH  (1.0 + (spectralRolloffNormalized - 0.5) * 0.18 * quietGate)  // rolloff = how far the iris reaches outward
+#define SUB_LEAN    ((waveletTiltNormalized - 0.5) * 0.25 * quietGate)            // bass↔treble lean tints the hue (small — tilt is the jitteriest of the new set, 0.075/frame)
 #define TWIST (knob_10 * 3.14159 + ZOOM_DEEP * 1.6 + tonalStrength * 0.5)  // static twist; melody drives SHAPE (above), not rotation — no rocking back
 #define BASS_REACT (0.8 + knob_11 * 1.4)
 
@@ -167,12 +176,17 @@ float df(vec2 p) {
   // chrysanthemum geometry slowly opening/closing — classic DMT-aesthetic move.
   // Amplitude tiny (~0.05 rad ≈ 3°), phase from morph_phase + per-petal offset (golden-ratio
   // step to avoid resonance), so each petal moves independently.
+  // NEW dimensions (subtle, quietGate-protected so they don't blow up in quiet):
+  // SKEW → petals LEAN: an extra rotational offset that tilts the whole flower one way.
+  float petalLean = (spectralSkewNormalized - 0.5) * 0.5 * quietGate;
+  // KURTOSIS → FOCUS vs DIFFUSE: pulls petals inward (focused star) or pushes out (open flower).
+  float petalFocus = 1.0 + (spectralKurtosisNormalized - 0.5) * 0.22 * quietGate;
   for (int i = 0; i < rep; ++i) {
     vec2 ip = p;
     float petalI = float(i);
     float petalBreath = 0.05 * sin(morph_phase * 0.7 + petalI * 2.39996);  // golden-angle phase
-    rot(ip, petalI * TAU/float(rep) + TWIST + petalBreath);
-    ip -= vec2(offc*size, 0.0);
+    rot(ip, petalI * TAU/float(rep) + TWIST + petalBreath + petalLean);     // SKEW leans the flower
+    ip -= vec2(offc*size*petalFocus, 0.0);                                  // KURTOSIS focuses/diffuses
     vec2 cp = ip;
     rot(ip, spin_angle);                         // continuous monotonic spin
     float dd = dodec(vec3(ip, off*size));
