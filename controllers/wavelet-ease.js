@@ -65,6 +65,7 @@ export function make() {
     const spring = {}        // per-feature { pos, vel }
     let melodyFlow = null     // flowing pitch contour
     let tonalSmooth = 0       // smoothed tonal strength
+    const spectralSmooth = { crest: 0, rough: 0, entropy: 0 } // smoothed jittery spectral texture
     let bassNoteFlow = null   // flowing bassline-pitch contour
     let wubBaseline = 0       // slow bass average, for wub-depth detection
     let wubDepth = 0          // smoothed wobble amplitude
@@ -98,10 +99,25 @@ export function make() {
         let diff = pitch - melodyFlow            // step along the SHORTER arc (pitch wraps at 1.0)
         if (diff > 0.5) diff -= 1.0
         if (diff < -0.5) diff += 1.0
-        melodyFlow += diff * 0.18 * confident    // ease toward the note when confident, else hold
+        // RATE-LIMIT the step so a melodic LEAP (or pitch jumping to the opposite side of the
+        // circle) can't teleport melodyFlow ~1.0 in one frame — that flashed everything driven
+        // by it. Now it always GLIDES between notes, even across big intervals (slew cap 0.03/frame).
+        let step = diff * 0.18 * confident
+        step = Math.max(-0.03, Math.min(0.03, step))
+        melodyFlow += step
         melodyFlow = (melodyFlow + 1.0) % 1.0
         out.melodyFlow = melodyFlow
         out.tonalStrength = (tonalSmooth = tonalSmooth * 0.85 + tonal * 0.15)
+
+        // ── SMOOTHED SPECTRAL TEXTURE features ── these raw FFT features (crest/roughness/
+        // entropy) are JITTERY frame-to-frame (jump 0.12-0.17/frame) and make any visual they
+        // drive SHIVER. EMA-smooth them here so shaders can use texture features without flicker.
+        spectralSmooth.crest = spectralSmooth.crest * 0.85 + (features.spectralCrestNormalized ?? 0) * 0.15
+        spectralSmooth.rough = spectralSmooth.rough * 0.85 + (features.spectralRoughnessNormalized ?? 0) * 0.15
+        spectralSmooth.entropy = spectralSmooth.entropy * 0.85 + (features.spectralEntropyNormalized ?? 0) * 0.15
+        out.spectralCrestSmooth = spectralSmooth.crest
+        out.spectralRoughnessSmooth = spectralSmooth.rough
+        out.spectralEntropySmooth = spectralSmooth.entropy
 
         // ── BASS NOTE FLOW: energy-weighted "bass centroid" across the low bands ──
         const e0 = features.waveletBand0 ?? 0, e1 = features.waveletBand1 ?? 0

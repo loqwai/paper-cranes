@@ -37,7 +37,7 @@ uniform float wubDepth;                // dubstep wobble intensity
 uniform float melodyFlow;              // flowing melody/pitch contour
 uniform float wavelet_bassHit;         // sharp kick/drop trigger — drives the zoom punch
 uniform float waveletBassZScore;       // self-calibrating bass spike — kick zoom (works at any gain)
-// spectralCrestNormalized, spectralRoughnessNormalized, spectralEntropyNormalized,
+// spectralCrestSmooth, spectralRoughnessSmooth, spectralEntropyNormalized,
 // spectralFluxZScore are FFT features — auto-declared by the wrapper.
 
 // MOTION phases — monotonic from iTime (the controller did this in JS; iTime is monotonic).
@@ -56,12 +56,15 @@ uniform float waveletBassZScore;       // self-calibrating bass spike — kick z
 #define mids_env     (waveletBand2Spring)                 // arms — vocal/instrument body
 #define treble_env   (waveletBand5Spring)                 // tips — horn air / sibilance
 #define energy_env   (energySpring)                       // overall edge glow / line weight
-#define entropy_env  (clamp(spectralEntropyNormalized, 0.0, 1.0)) // iridescence — tonal vs noisy
+// entropy_env was spectralEntropyNormalized — raw & JITTERY (jumped 0.17/frame, 20x the others)
+// and it drives IRIDESCENCE, so it made the shimmer SHIVER. Use smooth tonalStrength instead
+// (also "tonal vs noisy", but eased) so iridescence breathes smoothly.
+#define entropy_env  (clamp(1.0 - tonalStrength, 0.0, 1.0)) // low tonal = high "entropy" (noisy), smooth
 #define centroid_env (waveletCentroidSpring)              // brightness
 #define bass_pump    (clamp(wubDepth + waveletBassSpring * 0.5, 0.0, 1.0)) // FAST punch + wub
 // drop_glow & pitch_pulse SMOOTHED (not raw z-scores) so the iris breathes, doesn't strobe:
-#define drop_glow    (clamp(energySpring * 0.5 + spectralCrestNormalized * 0.4 + knob_6, 0.0, 1.0))
-#define pitch_pulse  (clamp(spectralCrestNormalized * 0.6 + tonalStrength * 0.4, 0.0, 1.0))
+#define drop_glow    (clamp(energySpring * 0.5 + spectralCrestSmooth * 0.4 + knob_6, 0.0, 1.0))
+#define pitch_pulse  (clamp(spectralCrestSmooth * 0.6 + tonalStrength * 0.4, 0.0, 1.0))
 
 // ── MANY-FEATURE MODULATION ──────────────────────────────────────────────────────────────
 // Spread reactivity across the WHOLE iris: each shape/color constant is a knob BASE plus a
@@ -70,6 +73,9 @@ uniform float waveletBassZScore;       // self-calibrating bass spike — kick z
 uniform float tonalStrength;            // how melodic vs noisy (from wavelet-ease)
 uniform float waveletBand4Spring;       // high-mid
 uniform float waveletBand1Spring;       // low-bass
+uniform float spectralCrestSmooth;      // smoothed spectral crest (was jittery raw)
+uniform float spectralRoughnessSmooth;  // smoothed spectral roughness (was jittery raw)
+uniform float spectralEntropySmooth;    // smoothed spectral entropy (was jittery raw)
 
 // === Knobs ===
 // knob_1 ZOOM: 0=zoomed-out flat, 1=plunged deep into the fractal tunnel.
@@ -81,31 +87,40 @@ uniform float waveletBand1Spring;       // low-bass
 // spring features already ride the self-calibrating Normalized variants (so they sit ~0-1
 // on both mic AND direct-in), so reactivity is consistent across environments — these
 // gains just set how much that 0-1 swing moves the geometry.
+// ── COHERENT MAPPING: SIMILAR AUDIO FEATURES → SIMILAR FRACTAL FEATURES ──────────────────
+// Three families, each driving one coherent aspect of the iris:
+//   PITCH family  (melody, centroid)  → COLOR + angular position (pitch is circular = hue wheel)
+//   LEVEL family  (bass/mids/treble/energy) → SIZE / DEPTH / THICKNESS (more energy = bigger/bolder)
+//   TEXTURE family (flux/crest/roughness/wub) → DETAIL / SPARKLE / EDGE (sharp sound = sharp detail)
+// This keeps related sounds moving related parts together, instead of one feature scattered
+// across unrelated aspects.
+
 #define ZOOM_K      (knob_1)
-#define ZOOM        (0.35 + ZOOM_K * 2.65 + energySpring * 0.2)        // loudness pushes you in (gentler)
+// ZOOM ← LEVEL (loudness): louder pushes the camera in.
+#define ZOOM        (0.35 + ZOOM_K * 2.65 + energySpring * 0.2)
 #define ZOOM_DEEP   (ZOOM_K * ZOOM_K)
-// FLUTE/MELODIC tailoring: this audio is all gliding melody, so the MELODY drives the
-// fractal SHAPE — facet size, arm spread, ripple density, core depth all morph with the
-// pitch slide (these are non-rotational, so going up/down with the melody is GOOD — the
-// fractal flowers/contracts with the line). Hue still sweeps with melody (color, not spin).
-// Rotation phases stay monotonic (rate-modulated), so NOTHING rotates back. Bass zoom kept.
-#define MASTER_HUE  (knob_2 * 6.28318 + melodyFlow * 0.8)             // MELODY gently tints the palette (small sweep — no full-cycle color flash)
-#define LINE_THICK  (width * (5.0 + energy_env * 5.0) * (0.4 + knob_18 * 1.6))
-#define RIPPLE_FREQ (10.0 + knob_13 * 16.0 + ZOOM_DEEP * 32.0 + waveletBand4Spring * 10.0 + melodyFlow * 14.0) // MELODY rings the iris
-// fractal exploration — MELODY drives these hard (this is melodic audio):
-#define size  (baseSize * mix(0.55, 1.10, knob_7) * (1.0 + waveletBand2Spring * 0.10 + (melodyFlow - 0.5) * 0.30)) // melody flowers the facets
-#define offc  (baseOffc * mix(0.70, 1.45, knob_8) * (1.0 + waveletBand5Spring * 0.08 + (melodyFlow - 0.5) * 0.25)) // melody spreads/closes the arms
-#define DEPTH (mix(0.18, 0.50, knob_17) + waveletBand1Spring * 0.07 + (melodyFlow - 0.5) * 0.16)  // melody breathes the core depth
+
+// PITCH FAMILY → COLOR. melody + brightness set the palette position; nothing else.
+#define MASTER_HUE  (knob_2 * 6.28318 + melodyFlow * 0.8 + waveletCentroidSpring * 0.4)  // pitch & brightness tint the palette
+
+// LEVEL FAMILY → SIZE / DEPTH / THICKNESS. Band energies set how BIG/BOLD/DEEP, by region.
+#define LINE_THICK  (width * (5.0 + energy_env * 5.0) * (0.4 + knob_18 * 1.6))            // loudness = line weight
+#define size  (baseSize * mix(0.55, 1.10, knob_7) * (1.0 + waveletBand2Spring * 0.18))   // mid energy = facet size
+#define offc  (baseOffc * mix(0.70, 1.45, knob_8) * (1.0 + waveletBand5Spring * 0.15))   // treble energy = arm spread
+#define DEPTH (mix(0.18, 0.50, knob_17) + waveletBassSpring * 0.14)                       // bass energy = core depth
+
+// TEXTURE FAMILY → DETAIL / SPARKLE / EDGE. Transients/grit set fine structure (below + IRIDESCENCE/EDGE_GLOW).
+#define RIPPLE_FREQ (10.0 + knob_13 * 16.0 + ZOOM_DEEP * 32.0 + waveletBand4Spring * 8.0 + spectralRoughnessSmooth * 6.0) // grit = ring detail
 #define TWIST (knob_10 * 3.14159 + ZOOM_DEEP * 1.6 + tonalStrength * 0.5)  // static twist; melody drives SHAPE (above), not rotation — no rocking back
 #define BASS_REACT (0.8 + knob_11 * 1.4)
 
-// brightness (smoothed levels — never flicker)
-#define IRIDESCENCE (0.7 + 0.6 * entropy_env + spectralRoughnessNormalized * 0.3) // grit adds shimmer
-#define EDGE_GLOW   (0.9 + 0.4 * energy_env + waveletCentroidSpring * 0.3 + spectralCrestNormalized * 0.35) // flute articulation glints the edges
+// TEXTURE FAMILY → SHIMMER / SPARKLE (continued). Grit & articulation drive the fine glints.
+#define IRIDESCENCE (0.7 + 0.6 * entropy_env + spectralRoughnessSmooth * 0.3) // grit adds shimmer
+#define EDGE_GLOW   (0.9 + 0.4 * energy_env + spectralCrestSmooth * 0.4)       // articulation glints the edges
 
-// plasma palette — Oklch hue in radians; centroid warms the core, crest cools the corona
+// PITCH FAMILY → COLOR (continued). Brightness/crest set the core & corona hues.
 #define CORE_HUE   (0.6 + waveletCentroidSpring * 0.8)
-#define CORONA_HUE (4.2 - spectralCrestNormalized * 0.6)
+#define CORONA_HUE (4.2 - spectralCrestSmooth * 0.6)
 
 const vec3 plnormal = normalize(vec3(1, 1, -1));
 const vec3 n1 = normalize(vec3(-PHI,PHI-1.0,1.0));
@@ -224,7 +239,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   // iter79 PLASMA-SOFT EDGES: widen the edge anti-alias and modulate with roughness.
   // Plasma's signature is glowing softness, not sharp lines. Was 0.0025 (razor); now
   // 0.0065 baseline + roughness expands it further on dissonant passages.
-  float fuzzy = 0.0065 + 0.012 * spectralRoughnessNormalized;
+  float fuzzy = 0.0065 + 0.012 * spectralRoughnessSmooth;
   float edges = smoothstep(fuzzy, -fuzzy, d);
   vec3 rgb = 0.5 + 0.5*vec3(sin(TAU*vec3(50.0, 49.0, 48.0)*(d - 0.050) + flow_phase*0.6));
   float bands = pow(clamp(dot(rgb, vec3(0.34)), 0.0, 1.0), 8.0);
@@ -460,7 +475,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
                     + max(bassZScore, 0.0) * 0.5
                     + dropLift * 0.4
                     + clamp(spectralFluxZScore, 0.0, 1.0) * 0.35
-                    + spectralRoughnessNormalized * 0.25;
+                    + spectralRoughnessSmooth * 0.25;
   float rimAmp      = mix(0.0, 0.55, knob_49) * rimPulse;
   float rimHue      = mix(CORE_HUE, CORONA_HUE, 0.85) + (knob_46 - 0.5) * 1.2
                     + pitchClassNormalized * 0.5;                   // pitch tints rim hue
@@ -495,11 +510,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
       else if (slot ==  4) audioL = spectralEntropyNormalized;
       else if (slot ==  5) audioL = spectralCentroidNormalized;
       else if (slot ==  6) audioL = pitchClassNormalized;
-      else if (slot ==  7) audioL = spectralRoughnessNormalized;
+      else if (slot ==  7) audioL = spectralRoughnessSmooth;
       else if (slot ==  8) audioL = spectralSpreadNormalized;
       else if (slot ==  9) audioL = spectralKurtosisNormalized;
       else if (slot == 10) audioL = clamp(spectralSkewZScore*0.5+0.5, 0.0, 1.0);
-      else if (slot == 11) audioL = spectralCrestNormalized;
+      else if (slot == 11) audioL = spectralCrestSmooth;
       else if (slot == 12) audioL = spectralRolloffNormalized;
       else if (slot == 13) audioL = clamp(energyZScore*0.5+0.5, 0.0, 1.0);
       else                 audioL = clamp(bassZScore*0.5+0.5, 0.0, 1.0);
@@ -566,7 +581,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
              + bass_pump * BASS_REACT * 0.020
              + drop_glow * 0.030
              + clamp(spectralFluxZScore, 0.0, 1.0) * 0.025
-             + spectralRoughnessNormalized * 0.018;
+             + spectralRoughnessSmooth * 0.018;
   float zoomF = 1.0 - rush;                              // <1 = prior frame zooms outward
   float mrot = 0.015 + ZOOM_DEEP * 0.035 + drop_glow * 0.020;  // drop also adds swirl
   vec2 ruv = q - CEN;
@@ -590,11 +605,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   // Reads as the eye "reacting" without anything moving. iter33: ALSO pulses on flux events
   // (dialogue / foley / cuts) so movie audio drives a visible eye reaction even when bass
   // isn't kicking. The two terms cover music + movie audio independently.
-  // iter79 add spectralCrestNormalized (peakiness) — spiky audio = sharper glint.
+  // iter79 add spectralCrestSmooth (peakiness) — spiky audio = sharper glint.
   float catchPulse = 1.0
                    + bass_pump * BASS_REACT * 0.6
                    + clamp(spectralFluxZScore, 0.0, 1.0) * 0.8
-                   + spectralCrestNormalized * 0.45;
+                   + spectralCrestSmooth * 0.45;
   // iter53: knob_36 catchlight intensity master — user pinned at ~0.6, give them control.
   float catchlight = (1.0 - smoothstep(0.008, 0.022, catchD)) * knob_19 * onEye * catchPulse * mix(0.4, 1.8, knob_36);
   col += vec3(0.85, 0.88, 0.95) * catchlight;                   // bright cool-white specular
