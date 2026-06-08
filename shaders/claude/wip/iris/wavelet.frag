@@ -147,7 +147,10 @@ uniform float spectralRolloffNormalized;    // high-freq cutoff → outer reach
 
 // PITCH FAMILY → COLOR. melody + brightness set the palette + SUB_LEAN (bass↔treble tilt);
 // GATED by loudness so quiet noise can't flash the hue (offset fades to 0 when quiet).
-#define MASTER_HUE  (knob_2 * 6.28318 + (melodyFlow * 0.8 + waveletCentroidSpring * 0.4) * MOD_HUE * quietGate + SUB_LEAN)
+// Like iris/7, MASTER_HUE is primarily the knob_2 palette rotation. Audio only GENTLY tints it
+// (small coefficients) so the color stays inside iris/7's tuned Oklab journey instead of swinging
+// into harsh RGB primaries (the "cheap" look). melodyFlow gives a subtle melodic drift, no more.
+#define MASTER_HUE  (knob_2 * 6.28318 + (melodyFlow - 0.5) * 0.5 * MOD_HUE * quietGate + SUB_LEAN)
 
 // LEVEL FAMILY → SIZE / DEPTH / THICKNESS. Band energies set how BIG/BOLD/DEEP, by region.
 #define LINE_THICK  (width * (5.0 + energy_env * 5.0) * (0.4 + knob_18 * 1.6))            // loudness = line weight
@@ -399,7 +402,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   float t = 0.05 * fiber
           + 0.55 * irisR
           + 0.20 * hue_phase / TAU                   // monotonic palette drift
-          + (knob_2 - 0.5)                           // hue base
+          // (removed `+ (knob_2 - 0.5)` — that shoved the palette zone off iris/7's tuned
+          //  warm-gold↔green↔teal↔violet journey into harsh zones. knob_2 rotates the FINAL
+          //  hue via MASTER_HUE instead, like iris/7 — keeps the refined palette intact.)
           // iter63 OF THE TREES PREP — HAUNTED SHIMMER: amplitude quadratic in entropy.
           // Calm passages (entropy_env<0.5) keep the iter19 amount; eerie/chaotic passages
           // (Ghoul-type tracks at entropy_env>0.7) get up to 2x the iris-fiber hue jitter.
