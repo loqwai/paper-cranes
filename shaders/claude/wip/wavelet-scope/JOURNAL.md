@@ -145,3 +145,12 @@ the signal). wub.frag plots wubPulse as a scrolling oscilloscope → you SEE the
 waveform wiggling. Measured a ~2.2Hz bass oscillation live (1/8 notes @ ~130bpm). wubDepth
 gives "how hard is it wobbling" for driving intensity. Mic note: laptop mic flattens deep
 wobs somewhat, but the oscillation rate is clearly captured.
+
+### WUB caught on a real drop (8.9Hz)
+Earlier "looks like noise" verdict was because there was NO strong wub in the quiet passage
+— the raw wubPulse was mostly jitter because the signal was jitter. On an actual drop:
+measured a REAL wub at 8.9Hz (autocorr 0.49 in the 1-10Hz band), wubDepth jumped 0.05→0.42.
+KEY: raw wubPulse reads busy even on a real wub (8.9Hz is fast); the WUB DEPTH signal (gold
+lane) is the legible/animatable one — it cleanly rises with wob intensity. For animation use
+wubDepth ("how hard is it wobbling"), not the raw oscilloscope wiggle. The raw line is for
+SEEING the wob exists; depth is for DRIVING visuals.
