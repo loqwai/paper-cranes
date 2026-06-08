@@ -1,25 +1,26 @@
 // @fullscreen: true
 // @tags: diagnostic, wavelet, oscilloscope, graph, debug
 //
-// BASS ACTIVITY — animation lines tuned for a LAPTOP MIC environment, where deep bass
-// is attenuated so the sharp bass-HIT trigger barely fires. Instead of the trigger, this
-// plots bass ENERGY LEVELS (which the mic captures fine and swing plenty) as bright
-// flowing lines. These are the bass-reactive signals that actually work here.
+// INDEPENDENT ACTIVITY — animation lines that move INDEPENDENTLY (not in sync). The old
+// version plotted 4 flavors of bass, which all spike together on a kick (live corr 0.7-0.9)
+// — useless for driving distinct visuals. These lanes each measure a DIFFERENT axis
+// (verified low cross-correlation live), so they animate independently:
 //
-//   lane 0  waveletBassNormalized    harmonic-weighted bass LEVEL (0..1)        RED
-//   lane 1  waveletBand0Normalized   deep bass 43-86Hz level                    ORANGE
-//   lane 2  waveletBand1Normalized   low bass 86-172Hz (survives mic best)      GOLD
-//   lane 3  waveletBassZScore        bass anomaly — spikes on bass swells       GREEN
-//   lane 4  energyNormalized         overall loudness (FFT) for reference       CYAN
-//   lane 5  waveletBass              raw bass energy, scaled — biggest mover     MAGENTA
+//   lane 0  waveletBassNormalized    BASS level                                 RED
+//   lane 1  waveletSpread            COMPLEXITY (corr 0.05 vs bass — independent) GOLD
+//   lane 2  waveletCentroid          BRIGHTNESS (corr 0.21 vs bass)             GREEN
+//   lane 3  waveletBand5Normalized   TREBLE level (corr 0.37 vs bass)           CYAN
+//   lane 4  energyNormalized         LOUDNESS (FFT) — song dynamics             BLUE
+//   lane 5  waveletBand3Normalized   MID level                                  MAGENTA
 //
-// History scrolls right->left, bright persistent lines. Run with ?wavelet=true.
+// History scrolls right->left, bright persistent lines. Features are EMA-smoothed in
+// WaveletProcessor so they flow. Run with ?wavelet=true.
 
 uniform float waveletBassNormalized;
-uniform float waveletBand0Normalized;
-uniform float waveletBand1Normalized;
-uniform float waveletBassZScore;
-uniform float waveletBass;
+uniform float waveletSpread;
+uniform float waveletCentroid;
+uniform float waveletBand5Normalized;
+uniform float waveletBand3Normalized;
 // energyNormalized is a known FFT feature — auto-declared by the wrapper, just referenced.
 
 #define NUM_LANES 6.0
@@ -29,18 +30,8 @@ uniform float waveletBass;
 #define LANE_H (USABLE / NUM_LANES)
 #define LANE_Y(i) (1.0 - MARGIN - LANE_H*0.5 - (i)*(LANE_H + GAP))
 
-// EMA-smooth toward the previous column's plotted height so lines flow.
-float smoothLane(float v01, float cy) {
-    float prevLocal = 0.5, best = 0.0;
-    for (int i = 0; i < 48; i++) {
-        float local = float(i) / 47.0;
-        float y = cy + (local - 0.5) * LANE_H;
-        vec3 pc = getLastFrameColor(vec2(1.0 - 1.5 / iResolution.x, y)).rgb;
-        float b = pc.r + pc.g + pc.b;
-        if (b > best) { best = b; prevLocal = local; }
-    }
-    return (best > 0.3) ? mix(prevLocal, clamp(v01, 0.0, 1.0), 0.35) : clamp(v01, 0.0, 1.0);
-}
+// (Smoothing now happens in WaveletProcessor — the published features are already
+// EMA-smoothed to match the FFT pipeline, so the shader just plots them directly.)
 
 vec4 lane(vec2 uv, float v01, float cy, vec3 cLo, vec3 cHi) {
     if (abs(uv.y - cy) > LANE_H * 0.5) return vec4(0.0);
@@ -70,12 +61,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec3 col = vec3(0.02, 0.02, 0.03);
     vec4 r;
-    r = lane(uv, smoothLane(waveletBassNormalized,  LANE_Y(0.0)), LANE_Y(0.0), vec3(0.6,0.05,0.1), vec3(1.0,0.3,0.25)); col = mix(col, r.rgb, r.a); // red
-    r = lane(uv, smoothLane(waveletBand0Normalized, LANE_Y(1.0)), LANE_Y(1.0), vec3(0.6,0.25,0.0), vec3(1.0,0.6,0.15)); col = mix(col, r.rgb, r.a); // orange
-    r = lane(uv, smoothLane(waveletBand1Normalized, LANE_Y(2.0)), LANE_Y(2.0), vec3(0.6,0.5,0.0),  vec3(1.0,0.9,0.2));  col = mix(col, r.rgb, r.a); // gold
-    r = lane(uv, zMap(waveletBassZScore),                         LANE_Y(3.0), vec3(0.1,0.5,0.1),  vec3(0.4,1.0,0.35)); col = mix(col, r.rgb, r.a); // green (reactive)
-    r = lane(uv, smoothLane(clamp(energyNormalized,0.0,1.0), LANE_Y(4.0)), LANE_Y(4.0), vec3(0.0,0.45,0.5), vec3(0.2,1.0,0.95)); col = mix(col, r.rgb, r.a); // cyan
-    r = lane(uv, smoothLane(clamp(waveletBass*0.4,0.0,1.0), LANE_Y(5.0)), LANE_Y(5.0), vec3(0.6,0.0,0.5), vec3(1.0,0.3,1.0)); col = mix(col, r.rgb, r.a); // magenta
+    r = lane(uv, waveletBassNormalized,           LANE_Y(0.0), vec3(0.6,0.05,0.1), vec3(1.0,0.3,0.25)); col = mix(col, r.rgb, r.a); // red   BASS
+    r = lane(uv, waveletSpread,                   LANE_Y(1.0), vec3(0.6,0.4,0.0),  vec3(1.0,0.9,0.2));  col = mix(col, r.rgb, r.a); // gold  COMPLEXITY
+    r = lane(uv, waveletCentroid,                 LANE_Y(2.0), vec3(0.1,0.5,0.1),  vec3(0.4,1.0,0.35)); col = mix(col, r.rgb, r.a); // green BRIGHTNESS
+    r = lane(uv, waveletBand5Normalized,          LANE_Y(3.0), vec3(0.0,0.45,0.5), vec3(0.2,1.0,0.95)); col = mix(col, r.rgb, r.a); // cyan  TREBLE
+    r = lane(uv, clamp(energyNormalized,0.0,1.0), LANE_Y(4.0), vec3(0.05,0.2,0.6), vec3(0.4,0.6,1.0));  col = mix(col, r.rgb, r.a); // blue  LOUDNESS
+    r = lane(uv, waveletBand3Normalized,          LANE_Y(5.0), vec3(0.6,0.0,0.5),  vec3(1.0,0.3,1.0));  col = mix(col, r.rgb, r.a); // magenta MID
 
     fragColor = vec4(clamp(col, 0.0, 1.6), 1.0);
 }

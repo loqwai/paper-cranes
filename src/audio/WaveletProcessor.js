@@ -49,6 +49,12 @@ const flattenStats = (out, base, stats) => {
     }
 }
 
+// Exponential smoothing factor for the published features. The wavelet path updates at
+// the fast ~344Hz sliding-window rate, so raw per-frame values are jittery (6-7x noisier
+// than the FFT features, which the FFT pipeline already smooths). This matches that:
+// lower = smoother/flowing, higher = snappier. The bassHit trigger is exempt (stays raw).
+const SMOOTHING = 0.18
+
 export class WaveletProcessor {
     constructor(audioContext, sourceNode, historySize = 500) {
         this.audioContext = audioContext
@@ -57,7 +63,22 @@ export class WaveletProcessor {
         this.worker = new Worker(new URL('./waveletWorker.js', import.meta.url), { type: 'module' })
         this.latest = null
         this.hitSmooth = 0
+        this.smoothed = {} // per-feature EMA state
         this.worker.onmessage = (e) => { this.latest = e.data }
+    }
+
+    // EMA-smooth all numeric features in `out` (except the sharp trigger keys), so the
+    // published wavelet lines flow like the FFT features instead of jittering.
+    smooth = (out) => {
+        for (const key in out) {
+            const v = out[key]
+            if (typeof v !== 'number' || !isFinite(v)) continue
+            if (key === 'wavelet_bassHit' || key === 'wavelet_confirmedDrop') continue // keep sharp
+            if (!(key in this.smoothed)) this.smoothed[key] = v
+            this.smoothed[key] = this.smoothed[key] * (1 - SMOOTHING) + v * SMOOTHING
+            out[key] = this.smoothed[key]
+        }
+        return out
     }
 
     start = async () => {
@@ -115,7 +136,7 @@ export class WaveletProcessor {
         // softens (not zeroes) when FFT lags, so the drop still fires on wavelet timing.
         out.wavelet_confirmedDrop = bassHit * (0.5 + Math.max(0, energyZ) * 0.5)
 
-        window.cranes.waveletFeatures = out
+        window.cranes.waveletFeatures = this.smooth(out)
     }
 
     cleanup = () => {
