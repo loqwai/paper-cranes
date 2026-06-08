@@ -1,140 +1,122 @@
 /**
- * wavelet-ease — easing controller for wavelet features.
+ * wavelet-ease — smooth, animation-ready features from the wavelet audio pipeline.
  *
- * Goal: turn the FAST, low-latency wavelet Normalized features (which are lively but
- * sawtooth-y — sharp kick attack then decay) into SMOOTH, eased animation lines, WITHOUT
- * adding complexity to shaders. The shader author just reads e.g. `waveletBand1Eased`.
+ * Load with: ?controller=wavelet-ease  (requires ?wavelet=true for the inputs)
  *
- * This is an experiment harness: it exposes several easing STRATEGIES side by side so we
- * can compare which gives the best animation feel, then graduate the winner into the
- * audio engine as a first-class feature variant.
+ * WHY THIS EXISTS
+ * The raw wavelet features (waveletBand0..5, etc.) are fast and low-latency but SAWTOOTH-Y:
+ * a kick makes them snap up then decay, which lurches when used to animate. This controller
+ * smooths them into flowing lines WITHOUT adding any easing code to your shader — you just
+ * read a clean uniform. It also derives a few musical signals the raw features can't express
+ * (melody contour, bassline contour, wub/wobble detection).
  *
- * Strategies (each applied to the same fast inputs):
- *   *Ema      — exponential moving average (simple low-pass). Smooth but symmetric.
- *   *Spring   — critically-damped spring toward the target. Eases in AND out, no overshoot.
- *               Reacts fast on big jumps, settles gently — the most "animation-grade" feel.
- *   *AttackRelease — fast attack (snap up on hits, low latency), slow release (smooth decay).
- *               Best when you want punch on the hit but no sawtooth cliff on the way down.
+ * Smoothing method: a critically-damped SPRING. We compared spring vs EMA vs slew-limiting
+ * vs attack/release (headless over 22 signals + live), and the spring won for general
+ * animation — it eases in AND out with gentle accel/decel (silky curves), reacts fast on
+ * big jumps, and never overshoots. So every feature below gets a `*Spring` variant.
  *
- * Load: ?controller=wavelet-ease  (needs ?wavelet=true for the inputs)
- * Shader declares e.g.: uniform float waveletBand1Spring;
+ * ─────────────────────────────────────────────────────────────────────────────────────────
+ * WHAT YOU GET (declare each as `uniform float <name>;` in your shader)
+ *
+ * SMOOTH LEVELS — spring-eased, 0..1, flowing. Drive size/brightness/intensity off these:
+ *   waveletBand0Spring .. waveletBand5Spring   per-octave energy, low→high (bass→treble)
+ *   waveletBassSpring                          harmonic-weighted deep-bass energy
+ *   waveletCentroidSpring                      spectral brightness (bright vs muddy)
+ *   energySpring                               overall loudness / song dynamics
+ *
+ * MUSICAL CONTOURS — flowing lines that track PITCH (which the level/energy features miss):
+ *   melodyFlow      the synth MELODY/KEY as a smooth contour. pitchClass is categorical
+ *                   (jumps between notes) and circular (note 11→0 adjacent); we ease along
+ *                   the shorter arc, gated by tonal confidence so drums don't yank it. Holds
+ *                   on sustained notes, glides on melodic movement. A contour, not transcription.
+ *   bassNoteFlow    the BASSLINE notes as a contour — an energy-weighted "bass centroid"
+ *                   across the low bands (low note→0, higher bass note→1). Distinct from bass
+ *                   ENERGY (how much) — this tracks WHICH note. Coarse (band-resolution).
+ *   tonalStrength   how MELODIC the audio is right now (tonal/sustained vs noisy/percussive).
+ *
+ * WUB / WOBBLE-BASS (dubstep) — a wub is an LFO modulating the bass, so the low end pulses:
+ *   wubDepth        HOW HARD it's wobbling (smoothed wobble amplitude, 0..1). The animatable
+ *                   one — point glow/scale/distortion intensity at this and it pumps with the
+ *                   wob. Stays near 0 when there's no wob, rises on a real wobble drop.
+ *   wubPulse        the RAW wob throb (0.5 = center, oscillates with each wob). Un-smoothed —
+ *                   use to SEE the wobble waveform; for driving visuals prefer wubDepth.
+ *
+ * Mic note: a laptop/phone mic flattens the deepest sub-bass, so wub/bass features are
+ * weaker than with line-in or ?audio=tab. The wob RATE still comes through; depth is muted.
+ * ─────────────────────────────────────────────────────────────────────────────────────────
  */
 
-// Each entry: [outputBaseName, sourceFeatureKey]. The controller exposes <base>Spring etc.
-// Band/derived levels use their Normalized variant; exotic ones use their natural key.
-const FEATURES = [
-    // level features (use Normalized as the low-latency input)
+// Features that get a spring-smoothed `*Spring` variant. Each: [outputBase, sourceKey].
+// Levels use their Normalized variant (the low-latency 0..1 input).
+const SPRING_FEATURES = [
     ['waveletBand0', 'waveletBand0Normalized'], ['waveletBand1', 'waveletBand1Normalized'],
     ['waveletBand2', 'waveletBand2Normalized'], ['waveletBand3', 'waveletBand3Normalized'],
     ['waveletBand4', 'waveletBand4Normalized'], ['waveletBand5', 'waveletBand5Normalized'],
     ['waveletCentroid', 'waveletCentroidNormalized'], ['waveletBass', 'waveletBassNormalized'],
     ['energy', 'energyNormalized'],
-    // exotic / derived features (use their natural variant)
-    ['waveletTilt', 'waveletTilt'], ['waveletSpread', 'waveletSpread'],
-    ['waveletCentroidSlope', 'waveletCentroidSlope'], ['waveletBassRSquared', 'waveletBassRSquared'],
-    ['waveletPunch', 'wavelet_punch'], ['waveletConfirmedDrop', 'wavelet_confirmedDrop'],
 ]
 
 export function make() {
-    // per-feature persistent state for each strategy
-    const ema = {}
-    const spring = {}   // {pos, vel}
-    const ar = {}       // attack/release value
-    const slew = {}     // slew-rate-limited value (the headless grid winner)
-    let melodyFlow = null   // flowing pitch contour (eased around the pitch circle)
-    let tonalSmooth = 0     // smoothed tonal strength
-    let bassNoteFlow = null // flowing bassline-pitch contour (low-band centroid)
-    let wubBaseline = 0     // slow bass baseline for wub-depth detection
-    let wubDepth = 0        // smoothed wobble amplitude
+    // critically-damped spring constants. DAMP ≈ 2*sqrt(STIFF) → critical (no overshoot).
+    const SPRING_STIFF = 120
+    const SPRING_DAMP = 22
+
+    // persistent state across frames
+    const spring = {}        // per-feature { pos, vel }
+    let melodyFlow = null     // flowing pitch contour
+    let tonalSmooth = 0       // smoothed tonal strength
+    let bassNoteFlow = null   // flowing bassline-pitch contour
+    let wubBaseline = 0       // slow bass average, for wub-depth detection
+    let wubDepth = 0          // smoothed wobble amplitude
     let lastT = performance.now() / 1000
-
-    const SLEW_MAX = 0.06 // max change per frame — grid optimum (avg score 0.932)
-
-    const EMA_ALPHA = 0.15        // ema smoothing
-    const SPRING_STIFF = 120      // spring stiffness (higher = snappier)
-    const SPRING_DAMP = 22        // damping (critically damped ~ 2*sqrt(stiff))
-    const ATTACK = 0.6            // fast attack toward rising target
-    const RELEASE = 0.06          // slow release when target falls
 
     return function controller(features) {
         const now = performance.now() / 1000
-        const dt = Math.min(0.05, now - lastT) // clamp dt for stability
+        const dt = Math.min(0.05, now - lastT) // clamp dt so a long frame can't blow up the spring
         lastT = now
 
         const out = {}
-        for (const [f, srcKey] of FEATURES) {
+
+        // ── spring-smooth each level feature ──
+        for (const [f, srcKey] of SPRING_FEATURES) {
             const target = features[srcKey] ?? 0
-
-            // --- EMA ---
-            ema[f] = ema[f] === undefined ? target : ema[f] * (1 - EMA_ALPHA) + target * EMA_ALPHA
-            out[`${f}Ema`] = ema[f]
-
-            // --- critically-damped spring (best general animation easing) ---
             const s = spring[f] ?? (spring[f] = { pos: target, vel: 0 })
             const force = SPRING_STIFF * (target - s.pos) - SPRING_DAMP * s.vel
             s.vel += force * dt
             s.pos += s.vel * dt
             out[`${f}Spring`] = s.pos
-
-            // --- attack/release (fast up, slow down) ---
-            const prev = ar[f] ?? target
-            const rate = target > prev ? ATTACK : RELEASE
-            ar[f] = prev + (target - prev) * rate
-            out[`${f}AttackRelease`] = ar[f]
-
-            // --- slew-rate-limited (low-latency alt; tight cap stays curvy) ---
-            const sp = slew[f] ?? (slew[f] = target)
-            const d = target - sp
-            slew[f] = sp + Math.max(-SLEW_MAX, Math.min(SLEW_MAX, d))
-            out[`${f}Slew`] = slew[f]
         }
 
-        // --- MELODY FLOW: a FLOWING line that tracks the synth melody/key ---
-        // pitchClass is categorical (0-1 = note 0-11) and JUMPS, so it can't flow directly.
-        // We ease toward the current note — but pitch is CIRCULAR (note 11 → 0 is adjacent),
-        // so we move along the SHORTER arc around the circle. Gated by tonal confidence
-        // (spectralCrest): only chase the pitch when there's a clear tonal note, else HOLD —
-        // this stops drum hits / noise from yanking the line around. Result: a smooth contour
-        // that rises and falls WITH the melody, identifiable by ear.
+        // ── MELODY FLOW: ease the (categorical, circular) pitch into a flowing contour ──
         const pitch = features.pitchClassNormalized ?? 0
-        const tonal = features.spectralCrest ?? 0          // high = tonal/melodic, low = noisy
-        const confident = Math.min(1, Math.max(0, (tonal - 0.3) * 2)) // 0..1 confidence gate
+        const tonal = features.spectralCrest ?? 0
+        const confident = Math.min(1, Math.max(0, (tonal - 0.3) * 2)) // only chase a clear tonal note
         if (melodyFlow === null) melodyFlow = pitch
-        // shortest circular step from melodyFlow toward pitch (wrap at 1.0)
-        let diff = pitch - melodyFlow
+        let diff = pitch - melodyFlow            // step along the SHORTER arc (pitch wraps at 1.0)
         if (diff > 0.5) diff -= 1.0
         if (diff < -0.5) diff += 1.0
-        melodyFlow += diff * 0.12 * confident // ease only when confident; hold otherwise
-        melodyFlow = (melodyFlow + 1.0) % 1.0  // keep in 0..1
+        melodyFlow += diff * 0.12 * confident    // ease toward the note when confident, else hold
+        melodyFlow = (melodyFlow + 1.0) % 1.0
         out.melodyFlow = melodyFlow
-        out.tonalStrength = (tonalSmooth = tonalSmooth * 0.85 + tonal * 0.15) // flowing "how melodic"
+        out.tonalStrength = (tonalSmooth = tonalSmooth * 0.85 + tonal * 0.15)
 
-        // --- BASS NOTE FLOW: a flowing line that follows the BASSLINE (which low note) ---
-        // Energy bass (waveletBass) tells you HOW MUCH low end, not WHICH note. To track the
-        // bassline's pitch, compute an energy-weighted "bass centroid" across the low bands:
-        // a low note sits in band0 (43-86Hz), a higher bass note shifts energy toward band2/3.
-        // So the weighted band index ≈ how HIGH the current bass note is. Then flow-smooth it,
-        // gated by bass presence so it holds when the bass is silent (no random jumps).
+        // ── BASS NOTE FLOW: energy-weighted "bass centroid" across the low bands ──
         const e0 = features.waveletBand0 ?? 0, e1 = features.waveletBand1 ?? 0
         const e2 = features.waveletBand2 ?? 0, e3 = features.waveletBand3 ?? 0
         const lowTot = e0 + e1 + e2 + e3 + 1e-6
-        const bassCentroid = (e0 * 0 + e1 * 0.33 + e2 * 0.66 + e3 * 1.0) / lowTot // 0(low)..1(high)
-        const bassPresent = Math.min(1, (e0 + e1) * 2) // gate: is there actually bass energy?
+        const bassCentroid = (e1 * 0.33 + e2 * 0.66 + e3 * 1.0) / lowTot // 0 (low note) .. 1 (higher)
+        const bassPresent = Math.min(1, (e0 + e1) * 2)                   // gate: is there bass energy?
         if (bassNoteFlow === null) bassNoteFlow = bassCentroid
-        bassNoteFlow += (bassCentroid - bassNoteFlow) * 0.1 * bassPresent // ease only when bass present
+        bassNoteFlow += (bassCentroid - bassNoteFlow) * 0.1 * bassPresent // hold when bass is silent
         out.bassNoteFlow = bassNoteFlow
 
-        // --- WUB detection: the dubstep wobble = bass energy OSCILLATING fast ---
-        // A wub is an LFO modulating the bass amplitude/filter, so the bass pulses up-down
-        // at the wobble rate. We track: (1) wubDepth = how much the bass is oscillating
-        // around its own slow baseline (the wobble amplitude), and (2) wubPulse = the raw
-        // fast oscillation centered, so a shader can throb WITH each wob.
+        // ── WUB detection: bass oscillating around its slow baseline = the wobble ──
         const bassNow = features.waveletBass ?? 0
-        wubBaseline = wubBaseline * 0.92 + bassNow * 0.08      // slow baseline (the average bass)
-        const deviation = bassNow - wubBaseline                // how far above/below baseline now
-        wubDepth = wubDepth * 0.9 + Math.abs(deviation) * 0.1  // smoothed wobble amplitude
-        out.wubDepth = Math.min(1, wubDepth * 4)               // 0..1 "how hard is it wobbling"
-        out.wubPulse = Math.max(0, Math.min(1, deviation * 6 + 0.5)) // the raw wob throb (0.5=center)
+        wubBaseline = wubBaseline * 0.92 + bassNow * 0.08    // slow average bass
+        const deviation = bassNow - wubBaseline              // current swing above/below baseline
+        wubDepth = wubDepth * 0.9 + Math.abs(deviation) * 0.1
+        out.wubDepth = Math.min(1, wubDepth * 4)             // "how hard is it wobbling" (animatable)
+        out.wubPulse = Math.max(0, Math.min(1, deviation * 6 + 0.5)) // raw wob throb (0.5 = center)
 
         return out
     }

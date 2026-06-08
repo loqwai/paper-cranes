@@ -11,7 +11,7 @@
 //   lane 0  waveletBassSpring     WAVELET BASS (smooth, the deep-bass level)     RED
 //   lane 1  wavelet_bassHit       BEAT/DROP detection (sharp trigger — flashes)  ORANGE
 //   lane 2  energySpring          LOUDNESS / song dynamics                       YELLOW
-//   lane 3  waveletTiltSpring     bass↔treble balance (independent axis)         GREEN
+//   lane 3  waveletTilt     bass↔treble balance (independent axis)         GREEN
 //   lane 4  waveletBand2Spring    low-mid level (independent)                    CYAN
 //   lane 5  waveletBand5Spring    treble level (independent)                     VIOLET
 //
@@ -20,7 +20,7 @@
 uniform float waveletBassSpring;
 uniform float wavelet_bassHit;
 uniform float energySpring;
-uniform float waveletTiltSpring;
+uniform float waveletTilt;
 uniform float waveletBand2Spring;
 uniform float waveletBand5Spring;
 
@@ -67,7 +67,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     r = lane(uv, clamp(waveletBassSpring*2.0,0.0,1.0), LANE_Y(0.0), vec3(0.6,0.05,0.1), vec3(1.0,0.25,0.2));  col = mix(col, r.rgb, r.a); // red WAVELET BASS
     r = beatLane(uv, wavelet_bassHit,                 LANE_Y(1.0), vec3(1.0,0.55,0.1));                       col = mix(col, r.rgb, r.a); // orange BEAT/DROP
     r = lane(uv, energySpring,                        LANE_Y(2.0), vec3(0.6,0.55,0.0), vec3(1.0,0.95,0.2));   col = mix(col, r.rgb, r.a); // yellow LOUDNESS
-    r = lane(uv, clamp(waveletTiltSpring*0.5+0.5,0.0,1.0), LANE_Y(3.0), vec3(0.1,0.5,0.1), vec3(0.4,1.0,0.35)); col = mix(col, r.rgb, r.a); // green TILT
+    r = lane(uv, clamp(waveletTilt*0.5+0.5,0.0,1.0), LANE_Y(3.0), vec3(0.1,0.5,0.1), vec3(0.4,1.0,0.35)); col = mix(col, r.rgb, r.a); // green TILT
     r = lane(uv, waveletBand2Spring,                  LANE_Y(4.0), vec3(0.0,0.45,0.5), vec3(0.2,1.0,0.95));   col = mix(col, r.rgb, r.a); // cyan BAND2
     r = lane(uv, waveletBand5Spring,                  LANE_Y(5.0), vec3(0.4,0.1,0.6),  vec3(0.8,0.4,1.0));    col = mix(col, r.rgb, r.a); // violet BAND5
     fragColor = vec4(clamp(col, 0.0, 1.6), 1.0);
