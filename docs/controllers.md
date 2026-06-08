@@ -80,6 +80,12 @@ export function make(cranes) {
 }
 ```
 
+`make()` is a **factory**: the loader calls it **once** (with `cranes`) and runs the
+function it returns every frame. Put per-run state in the closure — it persists across
+frames. (Prior to mid-2026 the loader returned `make` itself instead of calling it, so
+`make`-pattern controllers re-initialized every frame; both `index.js` and the jam-page
+hot-swap path now invoke `make()` correctly.)
+
 ### Loading
 
 Add `?controller=<name>` to the URL (without `.js`):
@@ -174,3 +180,33 @@ GLSL floats are 32-bit, which limits zoom depth. The controller tracks camera po
 ### State Machine
 
 A controller could track musical structure (verse → chorus → drop) and output a `section` float that the shader uses to crossfade between visual modes. This requires temporal memory that GLSL doesn't have.
+
+### Smooth, animation-ready audio features (wavelet-ease.js)
+
+`controllers/wavelet-ease.js` takes the fast [wavelet features](wavelet-analysis.md) and
+makes them pleasant to animate with, without adding any easing code to your shader. Load it
+with `?controller=wavelet-ease` (alongside `?wavelet=true`), then read the smoothed uniforms.
+
+**Why a controller for this:** raw audio features are sawtooth-y — a kick snaps them up then
+they decay, which makes visuals lurch. Smoothing needs frame-to-frame state, which GLSL
+can't hold. The controller eases them once, centrally.
+
+**Easing method — critically-damped spring.** We compared spring vs EMA vs slew-rate-limiting
+vs attack/release (offline over 22 synthetic signals, then live). The **spring won for general
+animation**: it eases in *and* out with gentle accel/decel (silky curves, no kinks), reacts
+fast on big jumps, and never overshoots. A few practical findings worth keeping:
+- **EMA** (a simple low-pass — what the FFT pipeline already applies) is fine for killing
+  jitter but leaves sharp corners; it scored mid-pack. Don't expect it to look *flowing*.
+- **Slew-rate limiting** (cap the per-frame change) is lowest-latency, but a loose cap reads
+  as *angular* (constant-rate segments look like kinks). A tight cap is competitive with spring.
+- **Use the right variant for the intent:** raw/`Normalized` shows "where the value *is*" (good
+  for level/pitch — flows, shows glides); `ZScore` shows "is this *unusual* now" (spiky — use
+  for triggers, hides steady trends); `Slope` shows "is it trending."
+
+**It also derives signals the raw features can't express** (these need temporal state, so they
+belong in a controller): `melodyFlow` (the synth melody/key as a flowing contour — pitch is
+categorical and circular, so it's eased along the shorter arc and gated by tonal confidence),
+`bassNoteFlow` (the bassline notes via a low-band energy centroid), `tonalStrength` (how
+melodic vs noisy), and **wub detection** for dubstep — `wubDepth` ("how hard is it wobbling",
+the animatable one) and `wubPulse` (the raw wob throb). See the file header for the full uniform
+list and per-feature usage notes.

@@ -35,9 +35,17 @@ Wavelet bands are **first-class features** — each runs through the same statis
 
 The wavelet path uses a **128-sample sliding window** (analysis every ~3ms), independent of the FFT's larger window. The FFT×wavelet combinations lead with the fast wavelet component so they react on the wavelet timescale, not the FFT's ~85ms.
 
+## Smoothing for animation
+
+The raw wavelet features are fast but sawtooth-y. To get flowing, animation-ready lines (plus
+derived musical signals like melody contour and dubstep wub detection), load the
+[`wavelet-ease` controller](controllers.md#smooth-animation-ready-audio-features-wavelet-easejs):
+`?controller=wavelet-ease`. It spring-smooths the features and exposes `*Spring` uniforms,
+`melodyFlow`, `bassNoteFlow`, `wubDepth`, and more.
+
 ## Diagnostic shaders
 
-`shaders/claude/wip/wavelet-scope/` contains scopes for inspecting the features: band meters, scrolling oscilloscopes, and the `independent` / `combined` tapestries. Load e.g. `?shader=claude/wip/wavelet-scope/independent&wavelet=true&audio=tab`.
+`shaders/claude/wip/wavelet-scope/` contains scopes for inspecting the features: band meters, scrolling oscilloscopes, and the `independent` / `combined` tapestries. The mic-tuned ones (`legible`, `proof`, `melody`, `bassline`, `wub`) pair with the `wavelet-ease` controller. Load e.g. `?shader=claude/wip/wavelet-scope/legible&wavelet=true&controller=wavelet-ease&audio=tab`.
 
 ## Headless analysis
 

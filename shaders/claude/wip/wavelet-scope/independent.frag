@@ -1,4 +1,5 @@
 // @fullscreen: true
+//https://visuals.beadfamous.com/?shader=claude/wip/wavelet-scope/independent&wavelet=true&fullscreen=true
 // @tags: diagnostic, wavelet, oscilloscope, graph, debug
 //
 // WAVELET TAPESTRY — iter: top animation features + per-lane EMA smoothing. Headless

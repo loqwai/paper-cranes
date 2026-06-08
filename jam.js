@@ -500,7 +500,8 @@ if (import.meta.hot) {
         if (!currentController || controller !== currentController) return
         try {
             const mod = await import(/* @vite-ignore */ `/controllers/${controller}.js?t=${Date.now()}`)
-            const fn = mod.default || mod.make || mod
+            // make() is a factory — CALL it to get the per-frame controller (matches loadController).
+            const fn = mod.default ?? (typeof mod.make === 'function' ? mod.make(window.cranes) : mod)
             if (typeof fn !== 'function') return
             window._hotController = fn
             flashToast(`Controller updated: ${controller}`)
