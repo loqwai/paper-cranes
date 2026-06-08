@@ -44,6 +44,8 @@ export function make() {
     let melodyFlow = null   // flowing pitch contour (eased around the pitch circle)
     let tonalSmooth = 0     // smoothed tonal strength
     let bassNoteFlow = null // flowing bassline-pitch contour (low-band centroid)
+    let wubBaseline = 0     // slow bass baseline for wub-depth detection
+    let wubDepth = 0        // smoothed wobble amplitude
     let lastT = performance.now() / 1000
 
     const SLEW_MAX = 0.06 // max change per frame — grid optimum (avg score 0.932)
@@ -121,6 +123,18 @@ export function make() {
         if (bassNoteFlow === null) bassNoteFlow = bassCentroid
         bassNoteFlow += (bassCentroid - bassNoteFlow) * 0.1 * bassPresent // ease only when bass present
         out.bassNoteFlow = bassNoteFlow
+
+        // --- WUB detection: the dubstep wobble = bass energy OSCILLATING fast ---
+        // A wub is an LFO modulating the bass amplitude/filter, so the bass pulses up-down
+        // at the wobble rate. We track: (1) wubDepth = how much the bass is oscillating
+        // around its own slow baseline (the wobble amplitude), and (2) wubPulse = the raw
+        // fast oscillation centered, so a shader can throb WITH each wob.
+        const bassNow = features.waveletBass ?? 0
+        wubBaseline = wubBaseline * 0.92 + bassNow * 0.08      // slow baseline (the average bass)
+        const deviation = bassNow - wubBaseline                // how far above/below baseline now
+        wubDepth = wubDepth * 0.9 + Math.abs(deviation) * 0.1  // smoothed wobble amplitude
+        out.wubDepth = Math.min(1, wubDepth * 4)               // 0..1 "how hard is it wobbling"
+        out.wubPulse = Math.max(0, Math.min(1, deviation * 6 + 0.5)) // the raw wob throb (0.5=center)
 
         return out
     }

@@ -136,3 +136,12 @@ Movement is modest on a static-bassline track (correct: held note → held line)
 contour when the bassline actually moves. Coarse (band-resolution), not exact note, but
 follows the bass groove's up/down. Pairs with melodyFlow (treble melody) — now both
 registers have a flowing pitch-contour line.
+
+### WUB / wobble-bass visualizer (dubstep)
+A wub = LFO modulating the bass → low end pulses up-down at the wobble rate. Tracked in
+controller: wubBaseline (slow bass average), wubDepth (smoothed |bass - baseline| = wobble
+amplitude), wubPulse (raw centered deviation = the wob throb, NOT smoothed — the wobble IS
+the signal). wub.frag plots wubPulse as a scrolling oscilloscope → you SEE the wobble
+waveform wiggling. Measured a ~2.2Hz bass oscillation live (1/8 notes @ ~130bpm). wubDepth
+gives "how hard is it wobbling" for driving intensity. Mic note: laptop mic flattens deep
+wobs somewhat, but the oscillation rate is clearly captured.
