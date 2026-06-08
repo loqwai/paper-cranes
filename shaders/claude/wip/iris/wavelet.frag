@@ -46,11 +46,11 @@ uniform float waveletBassZScore;       // self-calibrating bass spike — kick z
 // gently modulates SPEED via a small +term, never the angle (so no rotate-back).
 // quietGate (0 in quiet, 1 when loud) multiplies the AUDIO offsets so quiet-noise can't
 // drive fast spin / hue flashing — at low energy these fall back to their gentle base rate.
-#define spin_angle   (iTime * (0.04 + knob_5 * 0.12) + waveletBassSpring * 0.12 * quietGate)
-#define morph_phase  (iTime * 0.035 + waveletBand3Spring * 0.2 * quietGate)
-#define flow_phase   (iTime * 0.06 + energySpring * 0.25 * quietGate)
-// hue_phase MONOTONIC — melody modulates the RATE (always forward), never the angle, so
-// the palette journeys forward and never rotates back when the melody slides down.
+// STRICTLY MONOTONIC: audio modulates the RATE (inside the iTime multiplier), never adds to
+// the angle — so these only ever move FORWARD, faster on louder/bassier audio, never back.
+#define spin_angle   (iTime * (0.04 + knob_5 * 0.12 + waveletBassSpring * 0.12 * quietGate))
+#define morph_phase  (iTime * (0.035 + waveletBand3Spring * 0.10 * quietGate))
+#define flow_phase   (iTime * (0.06 + energySpring * 0.15 * quietGate))
 #define hue_phase    (iTime * (0.04 + tonalStrength * 0.10 * quietGate))
 
 // LEVELS — map our smooth wavelet/spectral features onto iris's reactive envelopes.
@@ -124,7 +124,7 @@ uniform float spectralRolloffNormalized;    // high-freq cutoff → outer reach
 #define RIPPLE_FREQ (10.0 + knob_13 * 16.0 + ZOOM_DEEP * 32.0 + waveletBand4Spring * 8.0 + spectralRoughnessSmooth * 6.0 + (spectralSpreadNormalized - 0.5) * 8.0 * quietGate) // spread = ring spacing
 #define RING_REACH  (1.0 + (spectralRolloffNormalized - 0.5) * 0.18 * quietGate)  // rolloff = how far the iris reaches outward
 #define SUB_LEAN    ((waveletTiltNormalized - 0.5) * 0.25 * quietGate)            // bass↔treble lean tints the hue (small — tilt is the jitteriest of the new set, 0.075/frame)
-#define TWIST (knob_10 * 3.14159 + ZOOM_DEEP * 1.6 + tonalStrength * 0.5)  // static twist; melody drives SHAPE (above), not rotation — no rocking back
+#define TWIST (knob_10 * 3.14159 + ZOOM_DEEP * 1.6)  // STATIC twist (knob only) — NO audio, so the petals never rock back. Audio drives SHAPE, not this rotation.
 #define BASS_REACT (0.8 + knob_11 * 1.4)
 
 // TEXTURE FAMILY → SHIMMER / SPARKLE (continued). Grit & articulation drive the fine glints.
@@ -176,19 +176,21 @@ float df(vec2 p) {
   // chrysanthemum geometry slowly opening/closing — classic DMT-aesthetic move.
   // Amplitude tiny (~0.05 rad ≈ 3°), phase from morph_phase + per-petal offset (golden-ratio
   // step to avoid resonance), so each petal moves independently.
-  // NEW dimensions (subtle, quietGate-protected so they don't blow up in quiet):
-  // SKEW → petals LEAN: an extra rotational offset that tilts the whole flower one way.
-  float petalLean = (spectralSkewNormalized - 0.5) * 0.5 * quietGate;
+  // NEW dimensions (subtle, quietGate-protected so they don't blow up in quiet).
+  // IMPORTANT: skew does NOT rotate the petals (that made them rock BACK when skew slid down).
+  // Instead SKEW stretches the petal SHAPE asymmetrically — a lean you can see, but no spin-back.
   // KURTOSIS → FOCUS vs DIFFUSE: pulls petals inward (focused star) or pushes out (open flower).
   float petalFocus = 1.0 + (spectralKurtosisNormalized - 0.5) * 0.22 * quietGate;
+  float skewStretch = (spectralSkewNormalized - 0.5) * 0.18 * quietGate;   // asymmetric SHAPE, not rotation
   for (int i = 0; i < rep; ++i) {
     vec2 ip = p;
     float petalI = float(i);
-    float petalBreath = 0.05 * sin(morph_phase * 0.7 + petalI * 2.39996);  // golden-angle phase
-    rot(ip, petalI * TAU/float(rep) + TWIST + petalBreath + petalLean);     // SKEW leans the flower
-    ip -= vec2(offc*size*petalFocus, 0.0);                                  // KURTOSIS focuses/diffuses
+    float petalBreath = 0.05 * sin(morph_phase * 0.7 + petalI * 2.39996);  // golden-angle phase (a slow oscillation — intentional)
+    rot(ip, petalI * TAU/float(rep) + TWIST + petalBreath);                // only static knob TWIST + the breath; NO audio rotation
+    ip -= vec2(offc*size*petalFocus, 0.0);                                 // KURTOSIS focuses/diffuses
+    ip.y += ip.x * skewStretch;                                            // SKEW shears the petal shape (leans, never spins back)
     vec2 cp = ip;
-    rot(ip, spin_angle);                         // continuous monotonic spin
+    rot(ip, spin_angle);                         // the ONLY continuous rotation — monotonic
     float dd = dodec(vec3(ip, off*size));
     float cd = length(cp - vec2(0.2*sin(morph_phase*0.7), 0.0)) - 0.125*size;
     cd = abs(cd) - width*0.5;
