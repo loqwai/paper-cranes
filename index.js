@@ -6,7 +6,8 @@ import { createAudioFileSource, initAudioFromFile } from './src/audio/audioFileS
 const maybeStartWavelet = async (params, audioContext, sourceNode) => {
     if (params.get('wavelet') !== 'true') return
     const { WaveletProcessor } = await import('./src/audio/WaveletProcessor.js')
-    const wavelet = new WaveletProcessor(audioContext, sourceNode)
+    const historySize = parseInt(params.get('history_size') ?? '500')
+    const wavelet = new WaveletProcessor(audioContext, sourceNode, historySize)
     await wavelet.start()
     window.cranes.waveletProcessor = wavelet
 }

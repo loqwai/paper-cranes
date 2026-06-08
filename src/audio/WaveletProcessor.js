@@ -1,35 +1,67 @@
 // WaveletProcessor.js
-// PROTOTYPE — isolated multiresolution (DWT) analysis running alongside the FFT
-// pipeline. Gated behind ?wavelet=true. Publishes octave-band energies + a sharp
-// onset signal as float uniforms via window.cranes.waveletFeatures.
+// Multiresolution (DWT) analysis running alongside the FFT pipeline. Gated behind
+// ?wavelet=true. Each octave band is a FIRST-CLASS feature: it goes through the same
+// hypnosound stats path as the FFT features (via waveletWorker.js → makeCalculateStats),
+// so it exposes the full 11 statistical variations under the FFT naming convention.
 //
-// Exposed uniforms (low→high octave band):
-//   wavelet_band0 .. wavelet_band5      RMS energy per octave detail band
-//   wavelet_band0Z .. wavelet_band5Z    per-band z-score (spiking vs own baseline)
-//   wavelet_onset                       sharp transient signal (finest-band positive flux)
-//   wavelet_onsetSmooth                 lightly smoothed onset (for non-strobing visuals)
-//   wavelet_bass                        coarse approximation energy
+// Exposed features (i = 0..5, low→high octave; band0 = 43-86Hz deep bass):
+//   waveletBand{i}                 raw RMS energy of the octave's detail coefficients
+//   waveletBand{i}ZScore           is this band unusual vs its own rolling baseline
+//   waveletBand{i}Normalized       0-1 within recent range
+//   waveletBand{i}Mean/Median/Min/Max/StandardDeviation/Slope/Intercept/RSquared
+//   waveletBass + waveletBass{Stat} harmonic-weighted deep-bass energy (full stats)
+//   wavelet_bassHit                sharp UN-smoothed deep-bass drop trigger (raw)
+//   wavelet_bassHitSmooth          lightly smoothed trigger (for non-strobing visuals)
 //
-// Nothing here touches AudioProcessor.js or hypnosound.
+// Names match the FFT convention (camelCase, capitalized stat suffix) so shaders and
+// controllers treat wavelet bands exactly like bass/mids/treble. The two wavelet_bassHit
+// keys keep the underscore form since they're a bespoke trigger, not a stat feature.
 
-const NUM_BANDS = 6 // we surface this many bands; deeper ones are merged into bass
+const NUM_BANDS = 6 // surface the 6 lowest octave bands (43Hz → ~2.8kHz)
+
+// makeCalculateStats stat keys → flattened feature-name suffix (capitalized).
+// 'current' becomes the bare feature name; the rest get a capitalized suffix.
+const STAT_SUFFIX = {
+    normalized: 'Normalized',
+    mean: 'Mean',
+    median: 'Median',
+    min: 'Min',
+    max: 'Max',
+    standardDeviation: 'StandardDeviation',
+    zScore: 'ZScore',
+    slope: 'Slope',
+    intercept: 'Intercept',
+    rSquared: 'RSquared',
+}
+
+// Flatten one stats object into feature keys: base name + each suffixed stat.
+const flattenStats = (out, base, stats) => {
+    out[base] = stats.current
+    for (const [key, suffix] of Object.entries(STAT_SUFFIX)) {
+        out[`${base}${suffix}`] = stats[key]
+    }
+}
 
 export class WaveletProcessor {
-    constructor(audioContext, sourceNode) {
+    constructor(audioContext, sourceNode, historySize = 500) {
         this.audioContext = audioContext
         this.sourceNode = sourceNode
+        this.historySize = historySize
         this.worker = new Worker(new URL('./waveletWorker.js', import.meta.url), { type: 'module' })
         this.latest = null
-        this.onsetSmooth = 0
+        this.hitSmooth = 0
         this.worker.onmessage = (e) => { this.latest = e.data }
     }
 
     start = async () => {
+        // Mirror the FFT worker config handshake — tell the DWT worker the history size
+        // so its per-band makeCalculateStats windows match the rest of the pipeline.
+        this.worker.postMessage({ type: 'config', historySize: this.historySize })
+
         await this.audioContext.audioWorklet.addModule('/raw-tap-processor.js')
         const tapNode = new AudioWorkletNode(this.audioContext, 'raw-tap-processor')
         tapNode.port.onmessage = (e) => this.worker.postMessage(e.data)
-        // Tap the source directly (raw, un-windowed). The node has no audible output
-        // path of its own — we don't connect it to destination.
+        // Tap the source directly (raw, un-windowed). No output path — not connected to destination.
         this.sourceNode.connect(tapNode)
         this.publish()
     }
@@ -38,22 +70,20 @@ export class WaveletProcessor {
         requestAnimationFrame(this.publish)
         if (!this.latest) return
 
-        const { bands, zScores, onset, bassEnergy, bassZ, approxEnergy } = this.latest
-        // onset here = the deep-bass HIT signal (sharp positive jump in low-band energy).
-        // Intentionally NOT smoothed hard — sharpness is the whole point of a hit.
-        this.onsetSmooth = this.onsetSmooth * 0.7 + onset * 0.3
-
+        const { bandStats, bassStats, bassHit } = this.latest
         const out = {}
+
+        // Each octave band → full 11-stat feature set under FFT naming.
         for (let i = 0; i < NUM_BANDS; i++) {
-            out[`wavelet_band${i}`] = bands[i] ?? 0
-            out[`wavelet_band${i}Z`] = zScores[i] ?? 0
+            if (bandStats[i]) flattenStats(out, `waveletBand${i}`, bandStats[i])
         }
-        out.wavelet_onset = onset            // deep-bass hit (raw, sharp)
-        out.wavelet_onsetSmooth = this.onsetSmooth
-        out.wavelet_bassHit = onset          // alias — clearer name for the bass-drop use case
-        out.wavelet_bassEnergy = bassEnergy  // harmonic-weighted low-band energy
-        out.wavelet_bassZ = bassZ            // self-calibrating hit strength (mic-agnostic)
-        out.wavelet_bass = approxEnergy      // raw sub-approximation (<43Hz)
+        // Harmonic-weighted deep-bass energy → its own full-stats feature.
+        if (bassStats) flattenStats(out, 'waveletBass', bassStats)
+
+        // Sharp drop trigger (kept raw — sharpness is the point) + a smoothed variant.
+        this.hitSmooth = this.hitSmooth * 0.7 + bassHit * 0.3
+        out.wavelet_bassHit = bassHit
+        out.wavelet_bassHitSmooth = this.hitSmooth
 
         window.cranes.waveletFeatures = out
     }

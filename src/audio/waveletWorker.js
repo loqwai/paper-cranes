@@ -15,10 +15,16 @@
 //   level N detail = lowest detail band
 //   final approximation = bass / sub
 //
-// Per frame we emit:
-//   bands[]      — RMS energy of each octave's detail coefficients (low→high)
-//   onset        — sharp transient signal from the finest detail band's peak energy
-//   approxEnergy — the coarse approximation (bass) energy
+// Each octave band's RMS energy is run through hypnosound's makeCalculateStats —
+// the SAME stats path the FFT features use — so wavelet bands get the full 11
+// statistical variations (mean, median, zScore, normalized, slope, rSquared, ...)
+// over a rolling history window. This is what makes them first-class features that
+// shaders can treat exactly like bass/mids/treble, and it fixes the near-zero-std
+// z-score blowup the hand-rolled version had on quiet material.
+//
+// The bass-HIT trigger stays a separate, deliberately UN-smoothed sharp signal.
+
+import { makeCalculateStats } from 'hypnosound'
 
 // D4 scaling (low-pass) coefficients
 const SQRT3 = Math.sqrt(3)
@@ -72,83 +78,73 @@ const rms = (arr, start, end) => {
 
 // Track per-band history for a cheap z-score so the scope can show "is this band
 // spiking vs its own recent baseline" — the same statistical idea as the FFT side.
-const HISTORY = 120 // ~2.5s of frames
-const bandHistory = []
-const bassEnergyHistory = []
-let prevBassEnergy = 0
-let bassHitRaw = 0
+// Per-band stats functions (one per octave band + one for the harmonic bass energy),
+// each holding its own rolling history. Built lazily once we know historySize and how
+// many bands the frame produces. This mirrors the FFT side: one calculateStats per
+// feature, fed one scalar per frame.
+let DEFAULT_HISTORY = 500 // matches the FFT default (history_size)
+let bandStats = null      // array of calculateStats fns, one per band
+let bassStats = null      // calculateStats for the harmonic-weighted bass energy
+let bandCount = 0
 
-const analyze = (frame) => {
+const buildStats = (count, historySize) => {
+    bandCount = count
+    bandStats = Array.from({ length: count }, () => makeCalculateStats(historySize))
+    bassStats = makeCalculateStats(historySize)
+}
+
+// The bass-HIT trigger is deliberately NOT run through stats — it's a sharp,
+// un-smoothed rising-edge signal so drops pop instantly.
+let prevBassEnergy = 0
+
+const bandEnergies = (frame) => {
     const N = frame.length
     const coeffs = dwt(frame)
-
-    // Detail bands, finest first. Band b occupies [N>>(b+1) .. N>>b).
-    // b=0 is the finest (highest freq), increasing b → lower freq.
+    // Detail bands, finest first; band b occupies [N>>(b+1) .. N>>b).
     const bands = []
     let n = N
     while (n >= 4) {
         const half = n >> 1
-        bands.push(rms(coeffs, half, n)) // detail coeffs for this octave
+        bands.push(rms(coeffs, half, n))
         n = half
     }
-    // bands is currently high→low; reverse to low→high so band0 = bass-ish.
-    bands.reverse()
+    bands.reverse() // low→high so band0 = deep bass
     const approxEnergy = rms(coeffs, 0, Math.max(2, N >> bands.length))
+    return { bands, approxEnergy }
+}
 
-    // ---- DEEP BASS HIT DETECTION ----
-    // band0 = 43-86Hz (deep bass), band1 = 86-172Hz (low bass / first harmonic).
-    // Phone mics roll off hard below ~100Hz, so the 48Hz fundamental of a drop is
-    // heavily attenuated — but its harmonic in band1 survives. We combine band0,
-    // band1, and the sub-approximation, weighting the harmonic so the detector still
-    // fires when the fundamental is mic-murdered. This is the whole point for the
-    // live-phone use case: detect the HIT even when the sub-tone barely arrives.
-    const sub = approxEnergy           // below ~43Hz (mostly gone on phone mics)
-    const b0 = bands[0] ?? 0           // 43-86Hz  deep bass
-    const b1 = bands[1] ?? 0           // 86-172Hz low bass — survives the mic best
-    // Harmonic-weighted bass energy: lean on b1 (survives) + b0, sub as a bonus.
+const analyze = (frame, historySize) => {
+    const { bands, approxEnergy } = bandEnergies(frame)
+    if (!bandStats || bandCount !== bands.length) buildStats(bands.length, historySize)
+
+    // Full 11-stat object per octave band — identical path to the FFT features.
+    const bandStatsOut = bands.map((v, i) => bandStats[i](v))
+
+    // ---- DEEP BASS HIT (harmonic-weighted) ----
+    // Phone mics roll off below ~100Hz, so a drop's 48Hz fundamental is attenuated but
+    // its harmonic in band1 (86-172Hz) survives. Weight band1 highest so the detector
+    // still fires when the fundamental is mic-murdered.
+    const sub = approxEnergy
+    const b0 = bands[0] ?? 0
+    const b1 = bands[1] ?? 0
     const bassEnergy = b1 * 1.0 + b0 * 0.8 + sub * 0.5
+    const bassStatsOut = bassStats(bassEnergy) // bass energy gets full stats too
 
-    // BASS HIT: sharp POSITIVE jump in bass energy above an adaptive baseline.
-    // The baseline tracks the room's bass floor slowly, so a hit is the spike above it.
-    bassHitRaw = Math.max(0, bassEnergy - prevBassEnergy)
-    // Slow baseline (0.85 decay) so sustained bass doesn't keep re-triggering — only
-    // the rising EDGE of a hit fires. Fast enough to re-arm between drops (~0.5s).
+    // Sharp un-smoothed hit: positive jump above a slow adaptive baseline.
+    const bassHit = Math.max(0, bassEnergy - prevBassEnergy)
     prevBassEnergy = prevBassEnergy * 0.85 + bassEnergy * 0.15
 
-    // Per-band z-scores against rolling history.
-    bandHistory.push(bands)
-    if (bandHistory.length > HISTORY) bandHistory.shift()
-    const zScores = bands.map((v, i) => {
-        let mean = 0
-        for (const h of bandHistory) mean += h[i] ?? 0
-        mean /= bandHistory.length
-        let varSum = 0
-        for (const h of bandHistory) {
-            const d = (h[i] ?? 0) - mean
-            varSum += d * d
-        }
-        const std = Math.sqrt(varSum / bandHistory.length)
-        return std > 1e-6 ? (v - mean) / (std * 2.5) : 0
-    })
-
-    // Bass z-score: self-calibrating hit strength relative to the recent bass floor.
-    // This is what makes it work across wildly different mic levels (line-in vs phone
-    // in a loud club) — it measures "is this bass UNUSUAL for right now", not absolute level.
-    bassEnergyHistory.push(bassEnergy)
-    if (bassEnergyHistory.length > HISTORY) bassEnergyHistory.shift()
-    let bMean = 0
-    for (const v of bassEnergyHistory) bMean += v
-    bMean /= bassEnergyHistory.length
-    let bVar = 0
-    for (const v of bassEnergyHistory) bVar += (v - bMean) * (v - bMean)
-    const bStd = Math.sqrt(bVar / bassEnergyHistory.length)
-    const bassZ = bStd > 1e-6 ? (bassEnergy - bMean) / (bStd * 2.5) : 0
-
-    return { bands, zScores, onset: bassHitRaw, bassEnergy, bassZ, approxEnergy }
+    return { bandStats: bandStatsOut, bassStats: bassStatsOut, approxEnergy, bassHit }
 }
 
 self.onmessage = (e) => {
+    // Config message: set history size (mirrors the FFT worker's config path).
+    if (e.data && e.data.type === 'config') {
+        DEFAULT_HISTORY = e.data.historySize ?? DEFAULT_HISTORY
+        bandStats = null // rebuild on next frame with the new history size
+        return
+    }
     const frame = e.data
     if (!(frame instanceof Float32Array)) return
-    self.postMessage(analyze(frame))
+    self.postMessage(analyze(frame, DEFAULT_HISTORY))
 }

@@ -91,6 +91,14 @@ export const setupTabAudio = ({ params, AudioProcessor }) => {
             processor.smoothingFactor = smoothing
             await processor.start()
 
+            // PROTOTYPE: opt-in wavelet (DWT) analysis on the same tab source.
+            if (params.get('wavelet') === 'true') {
+                const { WaveletProcessor } = await import('./WaveletProcessor.js')
+                const wavelet = new WaveletProcessor(audioContext, sourceNode, historySize)
+                await wavelet.start()
+                if (window.cranes) window.cranes.waveletProcessor = wavelet
+            }
+
             holder.getFeatures = processor.getFeatures
 
             // If the user clicks "Stop sharing" in the browser, re-prompt so
