@@ -334,6 +334,7 @@ uniform float another;   // = 1.2
 - `remote` - Remote mode: `display` (receive commands) or `control` (send commands)
 - `audio=tab` - Capture audio from a browser tab instead of mic. Chrome/Edge only. See [docs/tab-audio.md](docs/tab-audio.md)
 - `audio_file=<url>` - Play a deterministic audio file through the analyzer. See [docs/audio-file-playback.md](docs/audio-file-playback.md)
+- `wavelet=true` - Enable opt-in wavelet (DWT) analysis alongside FFT. Adds `wavelet*` uniforms (octave bands, centroid/spread, bassHit trigger, FFT×wavelet combos). See [docs/wavelet-analysis.md](docs/wavelet-analysis.md)
 - `audio_time=<seconds>` - Start audio file playback at this offset (default: 0)
 - `time=<seconds>` - Hold time constant (useful for deterministic screenshots/testing)
 

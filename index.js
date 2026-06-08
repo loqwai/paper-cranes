@@ -1,5 +1,16 @@
 import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { createAudioFileSource, initAudioFromFile } from './src/audio/audioFileSource.js'
+
+// PROTOTYPE: opt-in multiresolution (wavelet) analysis alongside the FFT pipeline.
+// Gated behind ?wavelet=true. Starts a DWT processor on the same context/source.
+const maybeStartWavelet = async (params, audioContext, sourceNode) => {
+    if (params.get('wavelet') !== 'true') return
+    const { WaveletProcessor } = await import('./src/audio/WaveletProcessor.js')
+    const historySize = parseInt(params.get('history_size') ?? '500')
+    const wavelet = new WaveletProcessor(audioContext, sourceNode, historySize)
+    await wavelet.start()
+    window.cranes.waveletProcessor = wavelet
+}
 import { makeVisualizer, askForWakeLock } from './src/Visualizer.js'
 import { getInitialShader } from './src/shaderLoader.js'
 
@@ -130,6 +141,7 @@ const setupAudio = async () => {
             await audioProcessor.start()
             // Route through speakers (unlike mic input, file playback has no feedback risk)
             audioProcessor.fftAnalyzer.connect(audioContext.destination)
+            await maybeStartWavelet(params, audioContext, sourceNode)
             return audioProcessor
         } catch (err) {
             console.error('Audio file initialization failed:', err)
@@ -162,6 +174,7 @@ const setupAudio = async () => {
         audioProcessor.smoothingFactor = smoothing;
         audioProcessor.start();
 
+        await maybeStartWavelet(params, audioContext, sourceNode);
         return audioProcessor;
     } catch (err) {
         console.error('Audio initialization failed:', err);
@@ -187,6 +200,7 @@ export const getCranesState = () => {
         seed3: s3,
         seed4: s4,
         ...window.cranes.measuredAudioFeatures, // Audio features (lowest precedence)
+        ...window.cranes.waveletFeatures,       // PROTOTYPE: wavelet band/onset features
         ...window.cranes.controllerFeatures,    // Controller-computed features
         ...parseUrlParams(params),              // URL parameters (parsed as numbers or strings)
         ...window.cranes.manualFeatures,        // Manual features
@@ -201,6 +215,7 @@ const setupCranesState = () => {
     window.cranes = {
         seeds: loadOrCreateSeeds(),
         measuredAudioFeatures: {},  // Audio features (lowest precedence)
+        waveletFeatures: {},        // PROTOTYPE: wavelet band/onset features
         controllerFeatures: {},     // Controller-computed features
         manualFeatures: {},         // Manual features
         messageParams: {},          // Message parameters (highest precedence)
