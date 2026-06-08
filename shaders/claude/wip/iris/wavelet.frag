@@ -42,10 +42,14 @@ uniform float waveletBassZScore;       // self-calibrating bass spike — kick z
 
 // MOTION phases — monotonic from iTime (the controller did this in JS; iTime is monotonic).
 // Speed modulated by audio LEVELS so motion quickens with intensity, knob_5 = base speed.
-#define spin_angle   (iTime * (0.15 + knob_5 * 0.6) + waveletBassSpring * 0.4)
-#define morph_phase  (iTime * 0.08 + waveletBand3Spring * 0.5)
-#define flow_phase   (iTime * 0.12 + energySpring * 0.6)
-#define hue_phase    (iTime * 0.04 + melodyFlow * 1.2)   // MELODY drives the palette journey
+// Slowed way down — was spinning too fast. Rates are monotonic (always forward); audio
+// gently modulates SPEED via a small +term, never the angle (so no rotate-back).
+#define spin_angle   (iTime * (0.04 + knob_5 * 0.12) + waveletBassSpring * 0.12)
+#define morph_phase  (iTime * 0.035 + waveletBand3Spring * 0.2)
+#define flow_phase   (iTime * 0.06 + energySpring * 0.25)
+// hue_phase MONOTONIC — melody modulates the RATE (always forward), never the angle, so
+// the palette journeys forward and never rotates back when the melody slides down.
+#define hue_phase    (iTime * (0.04 + tonalStrength * 0.10))
 
 // LEVELS — map our smooth wavelet/spectral features onto iris's reactive envelopes.
 #define bass_env     (waveletBassSpring)                  // core thickness / bass reactivity
@@ -80,19 +84,24 @@ uniform float waveletBand1Spring;       // low-bass
 #define ZOOM_K      (knob_1)
 #define ZOOM        (0.35 + ZOOM_K * 2.65 + energySpring * 0.2)        // loudness pushes you in (gentler)
 #define ZOOM_DEEP   (ZOOM_K * ZOOM_K)
-#define MASTER_HUE  (knob_2 * 6.28318 + melodyFlow * 1.6)             // MELODY shifts the master hue
+// FLUTE/MELODIC tailoring: this audio is all gliding melody, so the MELODY drives the
+// fractal SHAPE — facet size, arm spread, ripple density, core depth all morph with the
+// pitch slide (these are non-rotational, so going up/down with the melody is GOOD — the
+// fractal flowers/contracts with the line). Hue still sweeps with melody (color, not spin).
+// Rotation phases stay monotonic (rate-modulated), so NOTHING rotates back. Bass zoom kept.
+#define MASTER_HUE  (knob_2 * 6.28318 + melodyFlow * 0.8)             // MELODY gently tints the palette (small sweep — no full-cycle color flash)
 #define LINE_THICK  (width * (5.0 + energy_env * 5.0) * (0.4 + knob_18 * 1.6))
-#define RIPPLE_FREQ (10.0 + knob_13 * 16.0 + ZOOM_DEEP * 32.0 + waveletBand4Spring * 10.0) // high-mid = ring density (gentler)
-// fractal exploration:
-#define size  (baseSize * mix(0.55, 1.10, knob_7) * (1.0 + waveletBand2Spring * 0.10)) // mids breathe facet size (gentler)
-#define offc  (baseOffc * mix(0.70, 1.45, knob_8) * (1.0 + waveletBand5Spring * 0.08)) // treble spreads the arms (gentler)
-#define DEPTH (mix(0.18, 0.50, knob_17) + waveletBand1Spring * 0.07)  // low-bass deepens the core (gentler)
-#define TWIST (knob_10 * 3.14159 + ZOOM_DEEP * 1.6 + tonalStrength * 0.5)  // tonal-ness curls the spiral (gentler)
+#define RIPPLE_FREQ (10.0 + knob_13 * 16.0 + ZOOM_DEEP * 32.0 + waveletBand4Spring * 10.0 + melodyFlow * 14.0) // MELODY rings the iris
+// fractal exploration — MELODY drives these hard (this is melodic audio):
+#define size  (baseSize * mix(0.55, 1.10, knob_7) * (1.0 + waveletBand2Spring * 0.10 + (melodyFlow - 0.5) * 0.30)) // melody flowers the facets
+#define offc  (baseOffc * mix(0.70, 1.45, knob_8) * (1.0 + waveletBand5Spring * 0.08 + (melodyFlow - 0.5) * 0.25)) // melody spreads/closes the arms
+#define DEPTH (mix(0.18, 0.50, knob_17) + waveletBand1Spring * 0.07 + (melodyFlow - 0.5) * 0.16)  // melody breathes the core depth
+#define TWIST (knob_10 * 3.14159 + ZOOM_DEEP * 1.6 + tonalStrength * 0.5)  // static twist; melody drives SHAPE (above), not rotation — no rocking back
 #define BASS_REACT (0.8 + knob_11 * 1.4)
 
 // brightness (smoothed levels — never flicker)
 #define IRIDESCENCE (0.7 + 0.6 * entropy_env + spectralRoughnessNormalized * 0.3) // grit adds shimmer
-#define EDGE_GLOW   (0.9 + 0.4 * energy_env + waveletCentroidSpring * 0.3)         // brightness lifts edges
+#define EDGE_GLOW   (0.9 + 0.4 * energy_env + waveletCentroidSpring * 0.3 + spectralCrestNormalized * 0.35) // flute articulation glints the edges
 
 // plasma palette — Oklch hue in radians; centroid warms the core, crest cools the corona
 #define CORE_HUE   (0.6 + waveletCentroidSpring * 0.8)
@@ -244,7 +253,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
   // EVERYTHING multiplies the structure -> void is ALWAYS 0 -> ZERO background activity.
   // drops + pitch brighten ONLY where structure already exists.
-  float intensity = clamp(structure * (0.55 + 0.9*regionGlow) * (1.0 + drop_glow*0.9 + pitch_pulse*0.6), 0.0, 1.0);
+  // GENTLER global brightness response — drop_glow/pitch_pulse ride crest, which spikes on
+  // each flute note; at the old 0.9/0.6 gains that flashed the whole iris. Halved so it lifts softly.
+  float intensity = clamp(structure * (0.55 + 0.9*regionGlow) * (1.0 + drop_glow*0.4 + pitch_pulse*0.25), 0.0, 1.0);
 
   // === iter19 IQ-STYLE OKLAB PALETTE (rewrite, no multiplier cascade) ===
   // All previous L *= and C *= mods were stacking past saturation -> persistent washout.

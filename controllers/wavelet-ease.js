@@ -90,12 +90,15 @@ export function make() {
         // ── MELODY FLOW: ease the (categorical, circular) pitch into a flowing contour ──
         const pitch = features.pitchClassNormalized ?? 0
         const tonal = features.spectralCrest ?? 0
-        const confident = Math.min(1, Math.max(0, (tonal - 0.3) * 2)) // only chase a clear tonal note
+        // Looser gate (was tonal>0.3) so melodic instruments with MODERATE crest — flutes,
+        // strings, pads, slides — still drive the melody, and a faster chase (0.18) so the
+        // contour follows gliding/portamento pitch instead of lagging behind it.
+        const confident = Math.min(1, Math.max(0, (tonal - 0.15) * 2.5))
         if (melodyFlow === null) melodyFlow = pitch
         let diff = pitch - melodyFlow            // step along the SHORTER arc (pitch wraps at 1.0)
         if (diff > 0.5) diff -= 1.0
         if (diff < -0.5) diff += 1.0
-        melodyFlow += diff * 0.12 * confident    // ease toward the note when confident, else hold
+        melodyFlow += diff * 0.18 * confident    // ease toward the note when confident, else hold
         melodyFlow = (melodyFlow + 1.0) % 1.0
         out.melodyFlow = melodyFlow
         out.tonalStrength = (tonalSmooth = tonalSmooth * 0.85 + tonal * 0.15)
