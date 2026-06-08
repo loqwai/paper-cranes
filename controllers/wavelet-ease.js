@@ -43,6 +43,7 @@ export function make() {
     const slew = {}     // slew-rate-limited value (the headless grid winner)
     let melodyFlow = null   // flowing pitch contour (eased around the pitch circle)
     let tonalSmooth = 0     // smoothed tonal strength
+    let bassNoteFlow = null // flowing bassline-pitch contour (low-band centroid)
     let lastT = performance.now() / 1000
 
     const SLEW_MAX = 0.06 // max change per frame — grid optimum (avg score 0.932)
@@ -105,6 +106,21 @@ export function make() {
         melodyFlow = (melodyFlow + 1.0) % 1.0  // keep in 0..1
         out.melodyFlow = melodyFlow
         out.tonalStrength = (tonalSmooth = tonalSmooth * 0.85 + tonal * 0.15) // flowing "how melodic"
+
+        // --- BASS NOTE FLOW: a flowing line that follows the BASSLINE (which low note) ---
+        // Energy bass (waveletBass) tells you HOW MUCH low end, not WHICH note. To track the
+        // bassline's pitch, compute an energy-weighted "bass centroid" across the low bands:
+        // a low note sits in band0 (43-86Hz), a higher bass note shifts energy toward band2/3.
+        // So the weighted band index ≈ how HIGH the current bass note is. Then flow-smooth it,
+        // gated by bass presence so it holds when the bass is silent (no random jumps).
+        const e0 = features.waveletBand0 ?? 0, e1 = features.waveletBand1 ?? 0
+        const e2 = features.waveletBand2 ?? 0, e3 = features.waveletBand3 ?? 0
+        const lowTot = e0 + e1 + e2 + e3 + 1e-6
+        const bassCentroid = (e0 * 0 + e1 * 0.33 + e2 * 0.66 + e3 * 1.0) / lowTot // 0(low)..1(high)
+        const bassPresent = Math.min(1, (e0 + e1) * 2) // gate: is there actually bass energy?
+        if (bassNoteFlow === null) bassNoteFlow = bassCentroid
+        bassNoteFlow += (bassCentroid - bassNoteFlow) * 0.1 * bassPresent // ease only when bass present
+        out.bassNoteFlow = bassNoteFlow
 
         return out
     }

@@ -125,3 +125,14 @@ melodyFlow (in wavelet-ease controller) does this → melody.frag. Result: a smo
 that holds on sustained notes, glides on melodic movement, ignores drum hits. It's a
 CONTOUR (rough up-down melody shape), not transcription — but "line rises when riff climbs"
 is the identifiable musical motion wanted. Also exposes tonalStrength (how melodic vs noisy).
+
+### BASSLINE NOTE tracker (user: plot the bassline notes, not just bass energy)
+waveletBass = how MUCH low end, not WHICH bass note. To follow the bassLINE: compute a
+"bass centroid" = energy-weighted index across the low bands (band0 43-86Hz=low note →
+band3=higher bass note). The weighted position ≈ how high the current bass note is. Flow-
+smooth it, gated by bass presence (hold when bass silent). → bassNoteFlow in controller,
+bassline.frag. Verified DISTINCT from bass energy (corr -0.49) = tracks note not level.
+Movement is modest on a static-bassline track (correct: held note → held line); shows more
+contour when the bassline actually moves. Coarse (band-resolution), not exact note, but
+follows the bass groove's up/down. Pairs with melodyFlow (treble melody) — now both
+registers have a flowing pitch-contour line.
