@@ -520,7 +520,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
       float emit = (0.35 + 0.55 * audioL) * outsideMask * voidFade;
       // tendril hue rides the peach palette (mostly CORONA blue-violet, peach core warming closer in)
       // — multiply col3 (which is already blue-bias) by a peach-tinted lift on transients
-      vec3 warmLift = oklch2rgb(vec3(0.75, 0.14, CORE_HUE + float(slot) * 0.25)) * clamp(spectralFluxZScore, 0.0, 1.0) * 0.3;
+      // SMOOTH driver for this GLOBAL background tint (was raw spectralFluxZScore — it spiked
+      // on every cymbal and flashed the whole void peach for a frame). Use smooth energy +
+      // treble so it still LIFTS on bright/loud sections, but eases instead of strobing.
+      // (The local rim/catchlight/feedback terms keep their raw snappy flux — reactivity stays.)
+      vec3 warmLift = oklch2rgb(vec3(0.75, 0.14, CORE_HUE + float(slot) * 0.25)) * clamp(energySpring * 0.4 + waveletBand5Spring * 0.3, 0.0, 1.0) * 0.3;
       col += col3 * emit + warmLift * outsideMask * voidFade;
     }
   }
