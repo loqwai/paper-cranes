@@ -92,3 +92,14 @@ vite. `?t=` cache-bust params do NOT defeat either cache.
 - centroid + slope features for "frequency gliding" lanes (worked on synthetic sweeps)
 - a "drama" shader: only the most reactive independent features for high-energy music
 - cross-domain combos as smooth lines (not just triggers)
+
+### LEGIBILITY > pure independence (user insight)
+User: "I can't tell how some lines relate to the music." Key realization: a
+mathematically-independent line is useless for animation if you can't MAP it to what you
+hear. Abstract features (tilt, spread, z-scores) wiggle without obvious musical meaning.
+→ legible.frag uses only INTERPRETABLE features, each verifiable by ear:
+  bass (low thump) · kick (beat flash) · loudness (intensity) · brightness/centroid
+  (cymbals vs muddy) · treble (air) · low-mid (vocal/instrument body).
+Tradeoff: legible features correlate a bit more (bass & loudness both rise on a drop) than
+abstract ones — but "drive size off bass, hue off brightness" is PREDICTABLE, which is
+what makes animation make sense. Legibility wins for usable animation.
