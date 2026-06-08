@@ -44,12 +44,14 @@ uniform float waveletBassZScore;       // self-calibrating bass spike — kick z
 // Speed modulated by audio LEVELS so motion quickens with intensity, knob_5 = base speed.
 // Slowed way down — was spinning too fast. Rates are monotonic (always forward); audio
 // gently modulates SPEED via a small +term, never the angle (so no rotate-back).
-#define spin_angle   (iTime * (0.04 + knob_5 * 0.12) + waveletBassSpring * 0.12)
-#define morph_phase  (iTime * 0.035 + waveletBand3Spring * 0.2)
-#define flow_phase   (iTime * 0.06 + energySpring * 0.25)
+// quietGate (0 in quiet, 1 when loud) multiplies the AUDIO offsets so quiet-noise can't
+// drive fast spin / hue flashing — at low energy these fall back to their gentle base rate.
+#define spin_angle   (iTime * (0.04 + knob_5 * 0.12) + waveletBassSpring * 0.12 * quietGate)
+#define morph_phase  (iTime * 0.035 + waveletBand3Spring * 0.2 * quietGate)
+#define flow_phase   (iTime * 0.06 + energySpring * 0.25 * quietGate)
 // hue_phase MONOTONIC — melody modulates the RATE (always forward), never the angle, so
 // the palette journeys forward and never rotates back when the melody slides down.
-#define hue_phase    (iTime * (0.04 + tonalStrength * 0.10))
+#define hue_phase    (iTime * (0.04 + tonalStrength * 0.10 * quietGate))
 
 // LEVELS — map our smooth wavelet/spectral features onto iris's reactive envelopes.
 #define bass_env     (waveletBassSpring)                  // core thickness / bass reactivity
@@ -76,6 +78,7 @@ uniform float waveletBand1Spring;       // low-bass
 uniform float spectralCrestSmooth;      // smoothed spectral crest (was jittery raw)
 uniform float spectralRoughnessSmooth;  // smoothed spectral roughness (was jittery raw)
 uniform float spectralEntropySmooth;    // smoothed spectral entropy (was jittery raw)
+uniform float quietGate;                // 0 in quiet → 1 loud; gates audio offsets (no quiet-noise flashing)
 
 // === Knobs ===
 // knob_1 ZOOM: 0=zoomed-out flat, 1=plunged deep into the fractal tunnel.
@@ -100,8 +103,9 @@ uniform float spectralEntropySmooth;    // smoothed spectral entropy (was jitter
 #define ZOOM        (0.35 + ZOOM_K * 2.65 + energySpring * 0.2)
 #define ZOOM_DEEP   (ZOOM_K * ZOOM_K)
 
-// PITCH FAMILY → COLOR. melody + brightness set the palette position; nothing else.
-#define MASTER_HUE  (knob_2 * 6.28318 + melodyFlow * 0.8 + waveletCentroidSpring * 0.4)  // pitch & brightness tint the palette
+// PITCH FAMILY → COLOR. melody + brightness set the palette; GATED by loudness so quiet
+// noise can't flash the hue (the audio offset fades to 0 when quiet, leaving the knob base).
+#define MASTER_HUE  (knob_2 * 6.28318 + (melodyFlow * 0.8 + waveletCentroidSpring * 0.4) * quietGate)
 
 // LEVEL FAMILY → SIZE / DEPTH / THICKNESS. Band energies set how BIG/BOLD/DEEP, by region.
 #define LINE_THICK  (width * (5.0 + energy_env * 5.0) * (0.4 + knob_18 * 1.6))            // loudness = line weight
@@ -119,8 +123,8 @@ uniform float spectralEntropySmooth;    // smoothed spectral entropy (was jitter
 #define EDGE_GLOW   (0.9 + 0.4 * energy_env + spectralCrestSmooth * 0.4)       // articulation glints the edges
 
 // PITCH FAMILY → COLOR (continued). Brightness/crest set the core & corona hues.
-#define CORE_HUE   (0.6 + waveletCentroidSpring * 0.8)
-#define CORONA_HUE (4.2 - spectralCrestSmooth * 0.6)
+#define CORE_HUE   (0.6 + waveletCentroidSpring * 0.8 * quietGate)
+#define CORONA_HUE (4.2 - spectralCrestSmooth * 0.6 * quietGate)
 
 const vec3 plnormal = normalize(vec3(1, 1, -1));
 const vec3 n1 = normalize(vec3(-PHI,PHI-1.0,1.0));
@@ -478,7 +482,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
                     + spectralRoughnessSmooth * 0.25;
   float rimAmp      = mix(0.0, 0.55, knob_49) * rimPulse;
   float rimHue      = mix(CORE_HUE, CORONA_HUE, 0.85) + (knob_46 - 0.5) * 1.2
-                    + pitchClassNormalized * 0.5;                   // pitch tints rim hue
+                    + melodyFlow * 0.5;                             // SMOOTH melody tints rim (was raw pitchClassNormalized — flashed in quiet)
   vec3  rimColor    = oklch2rgb(vec3(0.78, 0.18, rimHue));
   col += rimColor * (rimGauss + rimHalo) * rimAmp;
 

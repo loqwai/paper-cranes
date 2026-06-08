@@ -66,6 +66,7 @@ export function make() {
     let melodyFlow = null     // flowing pitch contour
     let tonalSmooth = 0       // smoothed tonal strength
     const spectralSmooth = { crest: 0, rough: 0, entropy: 0 } // smoothed jittery spectral texture
+    let quietGate = 0         // 0 in silence → 1 when loud; fades reactivity to stop quiet-noise flashing
     let bassNoteFlow = null   // flowing bassline-pitch contour
     let wubBaseline = 0       // slow bass average, for wub-depth detection
     let wubDepth = 0          // smoothed wobble amplitude
@@ -118,6 +119,16 @@ export function make() {
         out.spectralCrestSmooth = spectralSmooth.crest
         out.spectralRoughnessSmooth = spectralSmooth.rough
         out.spectralEntropySmooth = spectralSmooth.entropy
+
+        // ── QUIET GATE ── In quiet passages (only cymbals/hiss), the Normalized & z-score
+        // features divide by a near-zero recent range and BLOW UP — pure noise becomes wild
+        // full-range swings, flashing hue & spinning fast. quietGate smoothly fades 0→1 with
+        // loudness so shaders can multiply their audio offsets by it: at low energy the
+        // reactivity fades out (visual holds calm) instead of being driven by noise.
+        const eRaw = features.energy ?? 0                       // absolute loudness (gain-independent enough at the low end)
+        const gateTarget = Math.min(1, Math.max(0, (eRaw - 0.015) / 0.05)) // 0 below ~0.015, 1 by ~0.065
+        quietGate = quietGate * 0.9 + gateTarget * 0.1          // smooth so the gate itself never flashes
+        out.quietGate = quietGate
 
         // ── BASS NOTE FLOW: energy-weighted "bass centroid" across the low bands ──
         const e0 = features.waveletBand0 ?? 0, e1 = features.waveletBand1 ?? 0
