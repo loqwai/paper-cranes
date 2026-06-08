@@ -31,7 +31,7 @@ uniform float waveletBand5ZScore;
 uniform float waveletBassZScore;
 // energyNormalized is a known FFT feature — auto-declared by the wrapper, just referenced.
 
-#define TRIGGER_THRESH 0.4 // z-score level (after zMap) above which a trigger "fires"
+#define Z_FIRE 0.8 // raw z-score above which a trigger fires (a genuine positive spike)
 
 #define NUM_LANES 6.0
 #define MARGIN 0.012
@@ -59,15 +59,15 @@ vec4 lane(vec2 uv, float v01, float cy, vec3 cLo, vec3 cHi) {
 
 float zMap(float z) { return clamp(z * 0.2 + 0.5, 0.0, 1.0); }
 
-// Trigger lane: renders a CLEAN full-lane flash when z crosses the threshold, instead of
-// a noisy wandering line. The flash brightness scales with how far past threshold it is.
+// Trigger lane: flashes when the RAW z-score spikes POSITIVE (a real hit), not on the
+// baseline. Bug fix: previously fired on zMap(z)>0.4, but zMap(0)=0.5 so it was on ~99%
+// of the time. Now fires only when z > Z_FIRE (a genuine positive anomaly).
 vec4 triggerLane(vec2 uv, float z, float cy, vec3 color) {
     if (abs(uv.y - cy) > LANE_H * 0.5) return vec4(0.0);
-    float v = zMap(z);
-    float fire = smoothstep(TRIGGER_THRESH, TRIGGER_THRESH + 0.25, v); // 0..1 above thresh
-    vec3 col = color * 0.06;                       // dim lane background
-    col += color * fire * 1.8;                     // bright flash on fire
-    return vec4(col, clamp(0.08 + fire, 0.0, 1.0));
+    float fire = smoothstep(Z_FIRE, Z_FIRE + 0.5, z); // fires on positive z-spikes only
+    vec3 col = color * 0.05;                          // dim lane background
+    col += color * fire * 2.0;                        // bright flash on a real hit
+    return vec4(col, clamp(0.06 + fire, 0.0, 1.0));
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
@@ -87,9 +87,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     r = lane(uv, waveletBand5Normalized,          LANE_Y(1.0), vec3(0.0,0.45,0.5), vec3(0.2,1.0,0.95)); col = mix(col, r.rgb, r.a); // cyan  TREBLE
     r = lane(uv, waveletBand3Normalized,          LANE_Y(2.0), vec3(0.1,0.5,0.1),  vec3(0.4,1.0,0.35)); col = mix(col, r.rgb, r.a); // green MID
     r = lane(uv, waveletBand1Normalized,          LANE_Y(3.0), vec3(0.6,0.3,0.0),  vec3(1.0,0.6,0.15)); col = mix(col, r.rgb, r.a); // orange LOW
-    // TRIGGERS (clean threshold flashes)
+    // TRIGGERS (fire only on real positive z-spikes — energyZ has the best hit structure)
     r = triggerLane(uv, waveletBand5ZScore,       LANE_Y(4.0), vec3(1.0,0.9,0.2));  col = mix(col, r.rgb, r.a); // yellow TREBLE hit
-    r = triggerLane(uv, waveletBassZScore,        LANE_Y(5.0), vec3(1.0,0.3,1.0));  col = mix(col, r.rgb, r.a); // magenta BASS hit
+    r = triggerLane(uv, energyZScore,             LANE_Y(5.0), vec3(1.0,0.3,1.0));  col = mix(col, r.rgb, r.a); // magenta ENERGY hit
 
     fragColor = vec4(clamp(col, 0.0, 1.6), 1.0);
 }
