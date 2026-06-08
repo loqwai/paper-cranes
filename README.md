@@ -2,11 +2,11 @@
 
 ## What's New
 
+- **[Wavelet audio analysis](docs/wavelet-analysis.md)** — Opt-in `?wavelet=true` multiresolution DWT alongside the FFT: octave bands, brightness/complexity axes, and a sharp low-latency deep-bass drop trigger
 - **[MIDI mapping page](docs/midi-mapping.md#mapping-page-midihtml)** — Visual `/midi.html` UI: see every device + mapping at once, click-to-learn knobs, edit indices inline
 - **[Jam page](docs/jam-page.md)** — Lean live session page: fullscreen shader + knob drawer + spacebar snapshot queue. No editor overhead.
 - **[Multiplayer editor](docs/multiplayer-editor.md)** — Edit shaders together with live cursors and real-time sync
 - **[Tab audio capture](docs/tab-audio.md)** — Visualize Spotify or any browser tab with `?audio=tab`, no drivers needed
-- **[Editor-filesystem sync](docs/editor-filesystem-sync.md)** — Ctrl+S writes to disk, external edits push back to the browser
 
 See the full [changelog](docs/CHANGELOG.md) for more.
 

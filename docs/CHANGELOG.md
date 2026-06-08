@@ -2,6 +2,16 @@
 
 All notable non-shader feature changes to this project will be documented in this file.
 
+## 2026-06-07
+
+### Features
+
+- **[Wavelet (DWT) audio analysis](wavelet-analysis.md) (`?wavelet=true`)** — Opt-in multiresolution analysis running alongside the FFT pipeline. A Daubechies-4 wavelet transform gives octave bands at their own time resolution (smooth bass, sharp treble) for better deep-bass-drop detection and frequency-motion features. Bands are first-class features with the full 11 stat variations (`waveletBand0ZScore`, etc.), plus derived axes (`waveletCentroid`/`waveletSpread`/`waveletTilt`), a sharp `wavelet_bassHit` drop trigger, and FFT×wavelet combinations (`wavelet_punch`, `wavelet_confirmedDrop`). Uses a 128-sample sliding window for ~3ms-latency updates. ([#123](https://github.com/loqwai/paper-cranes/pull/123))
+
+### Developer Experience
+
+- **Headless wavelet feature harnesses** — `scripts/wavelet-harness2.mjs` and `scripts/wavelet-fft-cross.mjs` score audio features for animation quality and cross-domain independence from ffmpeg-decoded PCM, running the exact `createWaveletAnalyzer` that runs live. ([#123](https://github.com/loqwai/paper-cranes/pull/123))
+
 ## 2026-04-30
 
 ### Features
