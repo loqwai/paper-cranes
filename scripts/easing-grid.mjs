@@ -47,6 +47,10 @@ const mean = (xs) => xs.reduce((s, x) => s + x, 0) / xs.length
 const sd = (xs) => { const m = mean(xs); return Math.sqrt(xs.reduce((s, x) => s + (x - m) ** 2, 0) / xs.length) }
 const range = (xs) => Math.max(...xs) - Math.min(...xs)
 const maxJump = (xs) => { let m = 0; for (let i = 1; i < xs.length; i++) m = Math.max(m, Math.abs(xs[i] - xs[i - 1])); return m }
+// curviness: mean abs 2nd-difference relative to range. LOW = silky curves (gentle accel),
+// HIGH = angular/kinky (sharp direction changes — slew's constant-rate segments score high).
+// This captures what the EYE reads as "smooth" that maxJump/sd misses.
+const curviness = (xs) => { const r = range(xs) || 1e-9; let a = 0; for (let i = 2; i < xs.length; i++) a += Math.abs(xs[i] - 2 * xs[i - 1] + xs[i - 2]); return (a / (xs.length - 2)) / r }
 // latency: lag (in frames) where eased best correlates with raw — how far it trails.
 const latency = (raw, eased) => {
     const n = raw.length, mr = mean(raw), me = mean(eased)
@@ -94,15 +98,17 @@ for (const feat of FEATURES) {
     for (const [ename, makeFn] of Object.entries(EASINGS)) {
         const fn = makeFn()
         const eased = rawXs.map(fn)
-        const s = sd(eased), mj = maxJump(eased), r = range(eased), lat = latency(rawXs, eased)
+        const s = sd(eased), mj = maxJump(eased), r = range(eased), lat = latency(rawXs, eased), curv = curviness(eased)
         const ratio = s > 1e-4 ? mj / s : 9          // sawtooth-ness (low = eased)
-        // composite: lively (sd) + eased (low ratio) + low latency. Normalize-ish.
+        // composite now includes CURVINESS (silkiness to the eye), which the earlier metric
+        // missed — that's why slew won headlessly but spring looked smoother live.
         const livelyScore = Math.min(s / 0.12, 1)
         const easedScore = Math.max(0, 1 - ratio / 1.2)
         const latScore = Math.max(0, 1 - lat / 12)
         const rangeScore = Math.min(r / 0.4, 1)
-        const score = livelyScore * 0.3 + easedScore * 0.35 + latScore * 0.2 + rangeScore * 0.15
-        rows.push({ feat, ename, sd: s, ratio, lat, range: r, score })
+        const curvScore = Math.max(0, 1 - curv / 0.04)   // low curviness = silky = high score
+        const score = livelyScore * 0.25 + easedScore * 0.25 + latScore * 0.15 + rangeScore * 0.10 + curvScore * 0.25
+        rows.push({ feat, ename, sd: s, ratio, lat, range: r, curv, score })
     }
 }
 

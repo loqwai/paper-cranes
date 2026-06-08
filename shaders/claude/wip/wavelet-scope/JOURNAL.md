@@ -62,6 +62,26 @@ the good-animation easing. Slew-limiting beats it. The wavelet path's added EMA 
 AudioProcessor (consistent baseline); the WINNER to graduate is slew, not EMA/spring.
 **DO NOT graduate without user sign-off** — still exhaustively exploring.
 
+### EYE vs DATA: slew (grid winner) vs spring (looks best) — they DISAGREE
+Viewed all 4 easings on the same band1 feature live (ease-compare.frag, jam page):
+- RAW: jagged fuzz. EMA: smoother but kinky corners.
+- SPRING: **smoothest to the EYE** — rounded flowing curves, no fuzz, no cliffs.
+- SLEW (headless #1): eased but slightly ANGULAR — the constant-rate cap makes near-
+  straight segments that read as subtle kinks, not silky curves.
+The grid ranked slew #1 because it penalizes LATENCY (slew ~0f lag) and measures sawtooth
+via maxJump/sd — but that metric doesn't capture "curviness." Spring's gentle accel/decel
+looks smoother even though it lags a few frames more.
+**Takeaway:** "best easing" depends on the visual. Fast-reactive effect → slew (low
+latency, snappy). Flowing/organic effect → spring (silky curves). Both should be offered.
+TODO: add a "curviness" metric (2nd-derivative smoothness) to the grid so it captures
+what the eye sees, and re-score.
+
+### Service worker / cache gotcha
+Controller edits weren't reaching the browser — NOT a code bug. Cause chain: Vite caches
+module transforms (clear node_modules/.vite + restart dev server), AND an aggressive
+service worker can serve stale JS. Fix reflex: unregister SWs + clear caches() + restart
+vite. `?t=` cache-bust params do NOT defeat either cache.
+
 ## Shader lineage
 - `independent.frag` — pure-wavelet smooth tapestry (synthetic-tuned 6 features + EMA)
 - `combined.frag` — wavelet vs FFT vs combos (punch, confirmedDrop)
