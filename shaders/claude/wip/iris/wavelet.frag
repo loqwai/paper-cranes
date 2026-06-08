@@ -35,6 +35,7 @@ uniform float waveletCentroidSpring;   // wavelet brightness
 uniform float energySpring;            // loudness
 uniform float wubDepth;                // dubstep wobble intensity
 uniform float melodyFlow;              // flowing melody/pitch contour
+uniform float wavelet_bassHit;         // sharp kick/drop trigger — drives the zoom punch
 // spectralCrestNormalized, spectralRoughnessNormalized, spectralEntropyNormalized,
 // spectralFluxZScore are FFT features — auto-declared by the wrapper.
 
@@ -185,7 +186,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   vec2  q2 = q - gazeV * 0.25;                              // recentre screen-space lookup for rr
   vec2 p = 2.0*(q - 0.5 - gazeV * 0.5);                     // shift fractal space (whole eye turns)
   p.x *= iResolution.x/iResolution.y;
-  p *= ZOOM * (1.0 - bass_pump * BASS_REACT * 0.12);   // bass ZOOM PUNCH — sub hits push in
+  // KICK = ZOOM (not a color flash). The kick punches the camera IN, then it springs back.
+  // Uses the smooth bass_pump (no one-frame strobe) + a touch of the sharp hit for snap.
+  float kickZoom = bass_pump * BASS_REACT * 0.22 + clamp(wavelet_bassHit, 0.0, 1.0) * 0.08;
+  p *= ZOOM * (1.0 - kickZoom);                        // sub/kick hits push the camera in
   float d = df(p);
   // ZOOM-DEEP SUB-LAYER — compound nested fractal: a second pass at half scale, rotated,
   // blended in by ZOOM_DEEP. As knob_1 climbs, more recursion levels accumulate.
@@ -312,7 +316,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
           + 0.18 * knob_16 * tipW * (0.4 + 0.6*treble_env) * (1.0 - 0.45 * centroid_env)
           + 0.12 * limbal                            // limbal shifts hue toward blue
           - 0.06 * crypts
-          + 0.08 * pitch_pulse                       // melodic jumps shift palette zone
+          + 0.08 * (melodyFlow - 0.5)                 // MELODY (smooth) shifts palette zone — not the kick
           // PLASMA MIX-IN (iter31): on sub-bass passages, pull t toward the orange→blue
           // gradient zone of the plasma series. CORE_HUE 0.6 rad / CORONA 4.2 rad map into
           // t-space at roughly t=0.10 (orange) ↔ t=0.67 (blue-violet). monsterBass biases
