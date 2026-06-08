@@ -53,6 +53,23 @@ const runSignal = (samples) => {
         out.bandStats.slice(0, 6).forEach((s, i) => flatten(series, `waveletBand${i}`, s))
         flatten(series, 'waveletBass', out.bassStats)
         ;(series.wavelet_bassHit ??= []).push(out.bassHit)
+
+        // ---- DERIVED candidate features (might be more independent/musical) ----
+        const b = out.bandStats
+        const cur = (i) => b[i]?.current ?? 0
+        // spectral TILT: low-band vs high-band balance (bass-heavy → +, bright → -)
+        const lowE = cur(0) + cur(1) + cur(2)
+        const highE = cur(3) + cur(4) + cur(5)
+        ;(series.waveletTilt ??= []).push((lowE - highE) / (lowE + highE + 1e-6))
+        // spectral CENTROID-ish: energy-weighted band index, 0(bass)..5(treble)
+        let num = 0, den = 0
+        for (let i = 0; i < 6; i++) { num += i * cur(i); den += cur(i) }
+        ;(series.waveletCentroid ??= []).push(den > 1e-6 ? num / den / 5 : 0)
+        // spectral SPREAD: how many bands are active at once (flat vs peaky)
+        const total = den + 1e-6
+        let ent = 0
+        for (let i = 0; i < 6; i++) { const p = cur(i) / total; if (p > 1e-6) ent -= p * Math.log(p) }
+        ;(series.waveletSpread ??= []).push(ent / Math.log(6))
     }
     return series
 }
@@ -98,8 +115,13 @@ for (const f of files) {
     console.log(`  loaded ${basename(f)}: ${Object.values(series)[0]?.length ?? 0} frames`)
 }
 
-// Focus on the most animation-relevant stats: ZScore + Normalized of each band/bass.
-const FOCUS = Object.keys(agg).filter(k => /ZScore$|Normalized$/.test(k)).concat(['wavelet_bassHit'])
+// Animation-relevant: ZScore/Normalized/Slope of bands/bass, the bassHit, and the
+// derived tilt/centroid/spread features.
+const FOCUS = Object.keys(agg).filter(k =>
+    /ZScore$|Normalized$|Slope$/.test(k) ||
+    /^wavelet(Tilt|Centroid|Spread)$/.test(k) ||
+    k === 'wavelet_bassHit'
+)
 
 console.log('\n=== ANIMATION QUALITY (per feature, across all signals) ===')
 console.log('feature'.padEnd(34), 'range'.padStart(8), 'lively'.padStart(8), 'jitter'.padStart(8), 'verdict')
@@ -129,12 +151,18 @@ else {
         }
         console.log()
     }
-    // suggest a maximally-independent quartet (greedy: pick lowest avg |corr|)
-    console.log('\n  Suggested independent set (greedy, |corr|<0.5 pairwise):')
+    // Maximally-independent set: greedy by liveliness, reject candidates correlated
+    // (>THRESH) with anything already picked. Seed with the liveliest feature.
+    const THRESH = 0.45
+    const liveOf = (k) => liveliness(agg[k])
+    const byLive = [...good].sort((a, b) => liveOf(b) - liveOf(a))
+    console.log(`\n  Maximally-independent set (greedy by liveliness, |corr|<${THRESH}):`)
     const picked = []
-    for (const cand of good) {
-        if (picked.every(p => Math.abs(pearson(agg[cand], agg[p])) < 0.5)) picked.push(cand)
-        if (picked.length >= 5) break
+    for (const cand of byLive) {
+        if (picked.every(p => Math.abs(pearson(agg[cand], agg[p])) < THRESH)) picked.push(cand)
     }
-    picked.forEach(p => console.log('    •', p))
+    picked.forEach(p => {
+        const maxCorr = Math.max(0, ...picked.filter(q => q !== p).map(q => Math.abs(pearson(agg[p], agg[q]))))
+        console.log(`    • ${p.padEnd(26)} lively=${liveOf(p).toFixed(2)}  maxCorrInSet=${maxCorr.toFixed(2)}`)
+    })
 }

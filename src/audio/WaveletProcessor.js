@@ -10,8 +10,15 @@
 //   waveletBand{i}Normalized       0-1 within recent range
 //   waveletBand{i}Mean/Median/Min/Max/StandardDeviation/Slope/Intercept/RSquared
 //   waveletBass + waveletBass{Stat} harmonic-weighted deep-bass energy (full stats)
+//   waveletTilt{Stat}              bass-vs-treble balance  (+1 bass-heavy ↔ -1 bright)
+//   waveletCentroid{Stat}          spectral brightness     (0 bass ↔ 1 treble)
+//   waveletSpread{Stat}            spectral complexity     (0 pure/peaky ↔ 1 flat/complex)
 //   wavelet_bassHit                sharp UN-smoothed deep-bass drop trigger (raw)
 //   wavelet_bassHitSmooth          lightly smoothed trigger (for non-strobing visuals)
+//
+// The harness identified band0Z/band1Z/band2Z/band3N + centroid + spread + bassHit as a
+// maximally-independent, lively set (all pairwise |corr|<0.45) — great for driving
+// distinct visual params. tilt≈centroid (redundant) but kept for convenience.
 //
 // Names match the FFT convention (camelCase, capitalized stat suffix) so shaders and
 // controllers treat wavelet bands exactly like bass/mids/treble. The two wavelet_bassHit
@@ -70,7 +77,7 @@ export class WaveletProcessor {
         requestAnimationFrame(this.publish)
         if (!this.latest) return
 
-        const { bandStats, bassStats, bassHit } = this.latest
+        const { bandStats, bassStats, tiltStats, centroidStats, spreadStats, bassHit } = this.latest
         const out = {}
 
         // Each octave band → full 11-stat feature set under FFT naming.
@@ -79,6 +86,10 @@ export class WaveletProcessor {
         }
         // Harmonic-weighted deep-bass energy → its own full-stats feature.
         if (bassStats) flattenStats(out, 'waveletBass', bassStats)
+        // Derived cross-band features (independent animatable axes), full stats each.
+        if (tiltStats) flattenStats(out, 'waveletTilt', tiltStats)
+        if (centroidStats) flattenStats(out, 'waveletCentroid', centroidStats)
+        if (spreadStats) flattenStats(out, 'waveletSpread', spreadStats)
 
         // Sharp drop trigger (kept raw — sharpness is the point) + a smoothed variant.
         this.hitSmooth = this.hitSmooth * 0.7 + bassHit * 0.3
