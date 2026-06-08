@@ -1,4 +1,5 @@
 // @fullscreen: true
+//https://visuals.beadfamous.com/?shader=claude/wip/wavelet-scope/all-bands&wavelet=true&fullscreen=true
 // @tags: diagnostic, wavelet, oscilloscope, graph, debug
 //
 // ALL BANDS — the full octave-band spectrum, band0 (deep bass) → band5 (treble), each as

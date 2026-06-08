@@ -1,4 +1,5 @@
 // @fullscreen: true
+//https://visuals.beadfamous.com/?shader=claude/wip/wavelet-scope/wub&wavelet=true&controller=wavelet-ease&fullscreen=true
 // @tags: diagnostic, wavelet, oscilloscope, wub, dubstep, debug
 //
 // WUB — the dubstep WOBBLE BASS as a scrolling OSCILLOSCOPE. A wub is an LFO modulating

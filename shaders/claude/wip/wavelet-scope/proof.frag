@@ -1,4 +1,5 @@
 // @fullscreen: true
+//https://visuals.beadfamous.com/?shader=claude/wip/wavelet-scope/proof&wavelet=true&controller=wavelet-ease&fullscreen=true
 // @tags: diagnostic, wavelet, oscilloscope, graph, debug
 //
 // PROOF — demonstrates good animation lines from wavelet audio: spring-smoothed bass,

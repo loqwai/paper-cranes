@@ -1,4 +1,5 @@
 // @fullscreen: true
+//https://visuals.beadfamous.com/?shader=claude/wip/wavelet-scope/bassline&wavelet=true&controller=wavelet-ease&fullscreen=true
 // @tags: diagnostic, wavelet, oscilloscope, graph, debug
 //
 // BASSLINE — a FLOWING line that follows the BASSLINE NOTES (which low note is playing),

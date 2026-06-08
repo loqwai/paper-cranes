@@ -1,4 +1,5 @@
 // @fullscreen: true
+//https://visuals.beadfamous.com/?shader=claude/wip/wavelet-scope/combined&wavelet=true&fullscreen=true
 // @tags: diagnostic, wavelet, fft, oscilloscope, graph, debug
 //
 // WAVELET × FFT COMBINED SCOPE — showcases cross-domain combined features next to the

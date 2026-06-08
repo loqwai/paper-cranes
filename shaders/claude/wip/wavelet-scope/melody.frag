@@ -1,4 +1,5 @@
 // @fullscreen: true
+//https://visuals.beadfamous.com/?shader=claude/wip/wavelet-scope/melody&wavelet=true&controller=wavelet-ease&fullscreen=true
 // @tags: diagnostic, wavelet, oscilloscope, graph, debug
 //
 // MELODY — a FLOWING line that tracks the synth melody/key (not jumpy raw pitch). The

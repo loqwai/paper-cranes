@@ -1,4 +1,5 @@
 // @fullscreen: true
+//https://visuals.beadfamous.com/?shader=claude/wip/wavelet-scope/legible&wavelet=true&controller=wavelet-ease&fullscreen=true
 // @tags: diagnostic, wavelet, oscilloscope, graph, debug
 //
 // LEGIBLE — animation lines you can MAP to what you HEAR, now including PITCH (the synth
