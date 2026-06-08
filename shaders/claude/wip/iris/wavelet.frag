@@ -36,6 +36,7 @@ uniform float energySpring;            // loudness
 uniform float wubDepth;                // dubstep wobble intensity
 uniform float melodyFlow;              // flowing melody/pitch contour
 uniform float wavelet_bassHit;         // sharp kick/drop trigger — drives the zoom punch
+uniform float waveletBassZScore;       // self-calibrating bass spike — kick zoom (works at any gain)
 // spectralCrestNormalized, spectralRoughnessNormalized, spectralEntropyNormalized,
 // spectralFluxZScore are FFT features — auto-declared by the wrapper.
 
@@ -71,17 +72,22 @@ uniform float waveletBand1Spring;       // low-bass
 // Compounds detail on the way in (more ripple density + sub-layer + deeper twist).
 // Every constant below = knob BASE + a gentle offset from a DISTINCT feature, so the iris
 // reacts across its whole structure to many parts of the music at once (not one flashy thing).
+// ENVIRONMENT-ROBUST: the audio offsets below are tuned to ~half their old amount so the
+// full-range direct-in signal produces the same gentle motion the quiet mic did. The
+// spring features already ride the self-calibrating Normalized variants (so they sit ~0-1
+// on both mic AND direct-in), so reactivity is consistent across environments — these
+// gains just set how much that 0-1 swing moves the geometry.
 #define ZOOM_K      (knob_1)
-#define ZOOM        (0.35 + ZOOM_K * 2.65 + energySpring * 0.4)        // loudness pushes you in
+#define ZOOM        (0.35 + ZOOM_K * 2.65 + energySpring * 0.2)        // loudness pushes you in (gentler)
 #define ZOOM_DEEP   (ZOOM_K * ZOOM_K)
 #define MASTER_HUE  (knob_2 * 6.28318 + melodyFlow * 1.6)             // MELODY shifts the master hue
 #define LINE_THICK  (width * (5.0 + energy_env * 5.0) * (0.4 + knob_18 * 1.6))
-#define RIPPLE_FREQ (10.0 + knob_13 * 16.0 + ZOOM_DEEP * 32.0 + waveletBand4Spring * 20.0) // high-mid = ring density
+#define RIPPLE_FREQ (10.0 + knob_13 * 16.0 + ZOOM_DEEP * 32.0 + waveletBand4Spring * 10.0) // high-mid = ring density (gentler)
 // fractal exploration:
-#define size  (baseSize * mix(0.55, 1.10, knob_7) * (1.0 + waveletBand2Spring * 0.18)) // mids breathe facet size
-#define offc  (baseOffc * mix(0.70, 1.45, knob_8) * (1.0 + waveletBand5Spring * 0.15)) // treble spreads the arms
-#define DEPTH (mix(0.18, 0.50, knob_17) + waveletBand1Spring * 0.12)  // low-bass deepens the core
-#define TWIST (knob_10 * 3.14159 + ZOOM_DEEP * 1.6 + tonalStrength * 0.8)  // tonal-ness curls the spiral
+#define size  (baseSize * mix(0.55, 1.10, knob_7) * (1.0 + waveletBand2Spring * 0.10)) // mids breathe facet size (gentler)
+#define offc  (baseOffc * mix(0.70, 1.45, knob_8) * (1.0 + waveletBand5Spring * 0.08)) // treble spreads the arms (gentler)
+#define DEPTH (mix(0.18, 0.50, knob_17) + waveletBand1Spring * 0.07)  // low-bass deepens the core (gentler)
+#define TWIST (knob_10 * 3.14159 + ZOOM_DEEP * 1.6 + tonalStrength * 0.5)  // tonal-ness curls the spiral (gentler)
 #define BASS_REACT (0.8 + knob_11 * 1.4)
 
 // brightness (smoothed levels — never flicker)
@@ -188,8 +194,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   p.x *= iResolution.x/iResolution.y;
   // KICK = ZOOM (not a color flash). The kick punches the camera IN, then it springs back.
   // Uses the smooth bass_pump (no one-frame strobe) + a touch of the sharp hit for snap.
-  float kickZoom = bass_pump * BASS_REACT * 0.22 + clamp(wavelet_bassHit, 0.0, 1.0) * 0.08;
-  p *= ZOOM * (1.0 - kickZoom);                        // sub/kick hits push the camera in
+  // SLIGHT zoom on the WAVELET BEAT. waveletBassZScore is the self-calibrating bass-spike —
+  // it fires on the beat at ANY input gain (mic OR direct-in), so the pulse is consistent
+  // across environments. Kept slight (max ~8% push-in) + a little raw hit/pump when present.
+  float waveletBeat = clamp(max(waveletBassZScore, 0.0), 0.0, 1.0);   // the beat, self-calibrating
+  float kickZoom = clamp(waveletBeat * 0.07
+                       + bass_pump * BASS_REACT * 0.05
+                       + clamp(wavelet_bassHit, 0.0, 1.0) * 0.04, 0.0, 0.12);
+  p *= ZOOM * (1.0 - kickZoom);                        // beat pushes the camera slightly in
   float d = df(p);
   // ZOOM-DEEP SUB-LAYER — compound nested fractal: a second pass at half scale, rotated,
   // blended in by ZOOM_DEEP. As knob_1 climbs, more recursion levels accumulate.
