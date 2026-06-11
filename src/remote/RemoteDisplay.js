@@ -1,5 +1,6 @@
 import { WebSocketClient } from './WebSocketClient.js'
 import { loadShader } from '../shaderLoader.js'
+import { setHashParams } from '../params/urlParams.js'
 
 /**
  * Initialize remote display mode
@@ -101,16 +102,12 @@ const applyParams = async (data) => {
 
 const syncParamsToUrl = (data) => {
   try {
-    const url = new URL(window.location.href)
+    const updates = {}
     for (const [key, value] of Object.entries(data)) {
       if (key === 'shaderCode') continue
-      if (value === null || value === undefined) {
-        url.searchParams.delete(key)
-      } else {
-        url.searchParams.set(key, value)
-      }
+      updates[key] = value
     }
-    window.history.replaceState({}, '', url.toString())
+    setHashParams(updates)
   } catch (e) {
     console.warn('[Remote Display] URL sync failed:', e)
   }

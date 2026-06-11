@@ -12,7 +12,7 @@ const getKnownUniforms = () => {
 // Generate uniform declarations for query params (excluding known params)
 const getQueryParamUniforms = (shader, otherUniforms = '') => {
     if (typeof window === 'undefined') return ''
-    const params = new URLSearchParams(window.location.search)
+    const params = new URLSearchParams(window.location.hash.slice(1))
     const knownParams = new Set(['shader', 'audio', 'noaudio', 'embed', 'fullscreen', 'remote', 'fft_size', 'smoothing', 'history_size', 'controller', 'performance'])
     const knownUniforms = getKnownUniforms()
 
