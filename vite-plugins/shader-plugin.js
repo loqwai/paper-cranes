@@ -4,6 +4,7 @@ import chokidar from 'chokidar'
 import { extractMetadata } from '../scripts/shader-utils.js'
 
 const SHADER_DIR = 'shaders'
+const CONTROLLER_DIR = 'controllers'
 const OUTPUT_FILE = 'shaders.json'
 const MANIFESTS_DIR = 'manifests'
 
@@ -179,6 +180,12 @@ export function shaderPlugin() {
       const outDir = options.dir || 'dist'
       await cp(SHADER_DIR, join(outDir, SHADER_DIR), { recursive: true })
       console.log(`[shaders] Copied ${SHADER_DIR}/ to ${outDir}/`)
+      // Controllers are imported at runtime from /controllers/<name>.js (see jam.js / index.js).
+      // Like shaders, they live in the repo root and Vite won't bundle them — copy to dist so
+      // they exist on the deployed site. Without this, every controller 404s in production and
+      // controllerFeatures is empty (all quietGate/wavelet-driven effects silently dead).
+      await cp(CONTROLLER_DIR, join(outDir, CONTROLLER_DIR), { recursive: true })
+      console.log(`[shaders] Copied ${CONTROLLER_DIR}/ to ${outDir}/`)
       const count = await generateShadersJson(outDir)
       console.log(`[shaders] Generated ${outDir}/shaders.json with ${count} shaders`)
       const manifestCount = await generateManifests(outDir)

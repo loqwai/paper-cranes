@@ -103,10 +103,14 @@ uniform float energyLong;  // minutes-long energy average (set intensity)
 #define FIGURE_ZOOM (1.22 - waveletBassSpring * 0.22 * quietGate - clamp(waveletBassZScore, 0.0, 1.0) * 0.22 * quietGate - clamp(wavelet_bassHit, 0.0, 1.0) * 0.14)
 // #define FIGURE_ZOOM 1.22
 
-// Figure BOUNCE — bass physically lifts the whole silhouette (a kick = a hop).
-// Smooth swell rides under it; the kick spike snaps it up hard. Sampled center is
-// shifted UP (negative y in img space) so the dancer bounces on every bass hit.
-#define FIGURE_BOUNCE ((waveletBassSpring * 0.05 + clamp(waveletBassZScore, 0.0, 1.0) * 0.07 + clamp(wavelet_bassHit, 0.0, 1.0) * 0.05) * quietGate)
+// Figure BOUNCE — bass physically lifts the whole silhouette (a kick = a hop). CRANKED:
+// the kick terms (zScore/hit = the BEAT) now dominate and are only lightly gated, so the
+// dancer visibly HOPS on every beat instead of a subtle nudge. Swell rides under it.
+// Kick gate floors at 0.4 (not full quietGate) so a beat still bounces when the gate is shy.
+#define FIGURE_BOUNCE ( waveletBassSpring * 0.06 * quietGate \
+                      + clamp(waveletBassZScore, 0.0, 1.0) * 0.16 * max(quietGate, 0.4) \
+                      + clamp(wavelet_bassHit, 0.0, 1.0) * 0.12 * max(quietGate, 0.4) \
+                      + clamp(bassZScore, 0.0, 1.0) * 0.08 )
 // #define FIGURE_BOUNCE 0.0
 
 // Figure WOBBLE — THE dubstep signature. wubPulse (0.5=center) sways the silhouette
