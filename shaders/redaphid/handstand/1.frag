@@ -311,12 +311,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float riserFlick = 0.5 + 0.5 * sin(iTime * (24.0 + riser * 40.0));   // flicker speeds up as it builds
     col += rimCol * rim * riser * riserFlick * 0.9;
 
-    // RIM GRIT — gnarly textured leads (high roughness + entropy) buzz the rim apart into
-    // dissonant flickering fragments, like the silhouette vibrating. Brightness-only on the
-    // existing red rim (no channel split → chromadepth depth order stays clean).
-    float grit = clamp(spectralRoughnessNormalized * spectralEntropyNormalized * 1.6, 0.0, 1.0) * quietGate;
-    float gritN = hash21(floor(uv * res / 2.0) + floor(iTime * 40.0));   // fast spatial buzz
-    col += rimCol * rim * grit * step(0.55, gritN) * 0.7;
+    // RIM GRIT — the outline BREAKS APART into jagged, buzzing fragments. Cranked for
+    // mobile: bigger ~5px cells (read on a phone), fires on roughness OR entropy (not
+    // both), ~60% of cells lit, strong gain. Brightness-only on the red rim (no channel
+    // split → chromadepth order stays clean). This is the headline "fuzzing" of the edge.
+    float grit = clamp(max(spectralRoughnessNormalized, spectralEntropyNormalized) * 1.5
+                     + spectralRoughnessNormalized * spectralEntropyNormalized * 0.8, 0.0, 1.0) * quietGate;
+    float gritN = hash21(floor(uv * res / 5.0) + floor(iTime * 38.0));   // chunkier, phone-visible buzz
+    col += rimCol * rim * grit * step(0.4, gritN) * 1.6;
+    // also CHEW the silhouette edge itself — knock jagged dark bites out near the outline so
+    // the edge visibly frays (not just glowing dots outside it). Scaled by grit, edge-only.
+    col *= 1.0 - rim * grit * step(0.62, hash21(floor(uv * res / 5.0) + floor(iTime * 31.0) + 9.0)) * 0.55;
 
     // ---- BASS BLOOM — kick-gated red halo from the core, only in DARK passages ----
     // High bass + low centroid (the skill's classic pairing): a near-field (red) radial
