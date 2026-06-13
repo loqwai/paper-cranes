@@ -26,7 +26,7 @@
 //   quietGate           → mutes ALL reactivity in silence (no flashing in quiet passages)
 //
 // PRESET (wavelet + handstand mask):
-// https://visuals.beadfamous.com/?shader=redaphid/wip/handstand-portal/1&wavelet=true&controller=wavelet-ease&image=images/handstand.png&fullscreen=true
+// https://visuals.beadfamous.com/?shader=redaphid/handstand/1&wavelet=true&controller=wavelet-ease&image=images/handstand.png&fullscreen=true
 
 #define PI 3.14159265
 #define PHI 1.61803398
