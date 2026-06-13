@@ -82,6 +82,7 @@ export function make() {
     let sectionMix = 1        // 0→1 crossfade after a mode change (eases up as we settle into the new mode)
     let quietRun = 0          // seconds of sustained quiet (for detecting a build-from-silence → drop)
     let sectionCooldown = 0   // seconds since last section change (debounce so we don't flip every drop)
+    let lastEvoCell = 0       // last integer evoPhase crossed — re-roll motion targets each crossing
     let lastT = performance.now() / 1000
 
     return function controller(features) {
@@ -185,12 +186,23 @@ export function make() {
         // The shader reads evoPhase to slowly rotate the *character* of idle motion (flow dir,
         // warp scale, plasma speed) so even held/calm moments are never the same twice.
         energyLong = energyLong * 0.9995 + (features.energyNormalized ?? 0) * 0.0005 // ~minutes avg
-        // base rate ≈ 1 unit / 6 min; energetic stretches up to ~3x faster. quietGate so silence doesn't advance it.
-        evoPhase += (1 / 360 + energyLong * (1 / 180)) * dt * quietGate
+        // base rate ≈ 1 unit / ~2.5 min; energetic stretches up to ~2.5x faster (re-roll ~1-2 min in).
+        // quietGate so silence doesn't advance it. Tuned faster so the morph reads within a few songs.
+        evoPhase += (1 / 150 + energyLong * (1 / 100)) * dt * quietGate
         out.evoPhase = evoPhase
         out.energyLong = energyLong
-        // evoDrift wanders slowly toward evoTarget (re-rolled on section change) → smooth param morph
-        for (const k in evoDrift) evoDrift[k] += (evoTarget[k] - evoDrift[k]) * 0.0008
+        // re-roll the motion targets every time evoPhase crosses an integer (~every few minutes),
+        // so the look morphs CONTINUOUSLY over a set — not only when a clean breakdown→drop fires.
+        const evoCell = Math.floor(evoPhase)
+        if (evoCell !== lastEvoCell) {
+            lastEvoCell = evoCell
+            evoTarget.flow = Math.random()
+            evoTarget.warp = Math.random()
+            evoTarget.plasma = Math.random()
+        }
+        // evoDrift wanders slowly toward evoTarget → smooth param morph (no jumps). 0.0025/frame
+        // ≈ reaches the target over ~30-60s, so the morph is perceptible between re-rolls.
+        for (const k in evoDrift) evoDrift[k] += (evoTarget[k] - evoDrift[k]) * 0.0025
         out.evoFlow = evoDrift.flow      // 0..1 — shader: bias the flow/scroll direction
         out.evoWarp = evoDrift.warp      // 0..1 — shader: domain-warp scale / turbulence character
         out.evoPlasma = evoDrift.plasma  // 0..1 — shader: internal plasma speed / scale
