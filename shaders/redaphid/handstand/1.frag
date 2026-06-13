@@ -102,10 +102,13 @@ uniform float energyLong;  // minutes-long energy average (set intensity)
 // terms (zScore/hit = the BEAT) dominate and only floor-gate at 0.4 (not full quietGate, which
 // reads shy through a mic), plus an FFT bassZScore fallback, so the figure visibly PUMPS bigger
 // on every beat. Smooth swell rides under it. (1.22 base → as low as ~0.85 on a hard hit.)
-#define FIGURE_ZOOM (1.22 - waveletBassSpring * 0.10 * quietGate \
-                          - clamp(waveletBassZScore, 0.0, 1.0) * 0.20 * max(quietGate, 0.4) \
-                          - clamp(wavelet_bassHit, 0.0, 1.0) * 0.14 * max(quietGate, 0.4) \
-                          - clamp(bassZScore, 0.0, 1.0) * 0.10)
+// AMPLITUDE CRANKED (user: "the zoom needs more amplitude with the bass"). Coefficients ~2× and
+// clamp ranges widened to 1.5 so strong hits push further — the figure PUMPS much bigger on the kick.
+// Base 1.22 → as low as ~0.45 on a hard slam (was ~0.85). Smooth swell rides under the punchy spikes.
+#define FIGURE_ZOOM (1.22 - waveletBassSpring * 0.20 * quietGate \
+                          - clamp(waveletBassZScore, 0.0, 1.5) * 0.40 * max(quietGate, 0.4) \
+                          - clamp(wavelet_bassHit, 0.0, 1.5) * 0.28 * max(quietGate, 0.4) \
+                          - clamp(bassZScore, 0.0, 1.5) * 0.20)
 // #define FIGURE_ZOOM 1.22
 
 // Figure BOUNCE — kept SMALL: a tiny vertical lift so the pump isn't perfectly centered, but
@@ -254,7 +257,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // capped, so it shimmers without washing out. The figure stays the focal point.
     float highEnd = clamp(spectralCentroidNormalized * clamp(energyNormalized, 0.0, 1.0), 0.0, 1.0) * quietGate;
     float fieldLit = FIELD_BRIGHT + filament * (0.12 + waveletBand5Spring * 0.10 * quietGate + highEnd * 0.10) - calm * 0.04;
-    fieldLit = min(fieldLit, 0.26);                                      // hard cap: far field stays DARK so it recedes
+    // CHAOS RECEDE (iter11, extended iter14) — the busier the nebula gets, the HARDER it recedes:
+    // drop the brightness cap so an active far field sinks back instead of competing with the figure.
+    // iter14: extended the trigger from entropy-only to ALSO high centroid (brightness) — measured the
+    // background sitting at ~25% in bright-but-not-chaotic passages (centroid 0.75), where the field's
+    // PRISM/STEP glow was lifting it. Now bright OR chaotic both push it back. Cap 0.26 → 0.16 at peak.
+    float chaosRecede = max(smoothstep(0.55, 0.95, spectralEntropyNormalized),
+                            smoothstep(0.55, 0.85, spectralCentroidNormalized)) * quietGate;
+    fieldLit = min(fieldLit, mix(0.26, 0.16, chaosRecede));              // hard cap: far field stays DARK, darker on activity
     // SECTION MODE shifts the field's saturation character per section (cool-band only → no warm wash).
     float fieldSat = clamp(0.92 - tonalStrength * 0.05 + sin(sectionMode * 1.7) * 0.06 * sectionMix, 0.6, 1.0);
     vec3 background = chromadepth(fieldT, fieldSat, fieldLit);
@@ -303,11 +313,20 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // MID WARMTH — when mids dominate over brightness (warm, bodied passage, not screechy)
     // the whole interior swells with a soft inner glow. Fills the mid feature-gap; pure
     // lightness on the figure's red→green band → chromadepth read holds.
-    float warmth = clamp(midsNormalized - spectralCentroidNormalized, 0.0, 1.0) * quietGate;
+    // iter18: floor quietGate (mids-heavy warm passages read mic-quiet too — same quietGate under-read
+    // as the solo-bass case in iter15). Caught live at mids 0.93 / centroid 0.16 / quietGate 0.00 — the
+    // warm-dark corner the figure's MID WARMTH was built for but never fired because quietGate zeroed it.
+    float warmth = clamp(midsNormalized - spectralCentroidNormalized, 0.0, 1.0) * max(quietGate, 0.45);
     // QUIET BREATH — in breakdowns/silence (quietGate low) the figure isn't frozen: a slow
     // time-driven swell makes it gently "breathe" so the dancer stays alive between sections.
     // Gated by (1-quietGate) so it fades out the moment the music kicks back in. Slow → no flash.
     float breath = (0.5 + 0.5 * sin(iTime * 0.8)) * (1.0 - quietGate) * 0.08;
+    // MELODIC BREATH (iter12 refinement) — in breakdowns the music is often melodic (pitch swings
+    // wide). Let the note gently shift the figure's DEPTH so the quiet sections feel musical, not just
+    // a fixed sine: the body drifts a touch nearer/further with the melody. Pure figT (hue band) nudge,
+    // tiny (±0.03), gated to quiet passages only → chromadepth-correct, no lightness/white risk.
+    figT += (pitchClassNormalized - 0.5) * 0.06 * (1.0 - quietGate);
+    figT = clamp(figT, 0.0, 0.45);
     float figLit = 0.32 + plasma * 0.22 + waveletBand2Spring * 0.10 * quietGate
                  + smoothstep(0.6, 1.0, fill) * 0.06        // dense core glows a bit hotter
                  + warmth * 0.14                             // mid-dominant warm body swell
@@ -318,7 +337,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Airy/bright passages (treble + roughness) make the thin limbs (low fill = the
     // green mid-depth band) twinkle with fine high-freq sparkle. Brightness-only,
     // confined to the figure's extremities → green=mid chromadepth read deepens.
-    float airy = clamp(trebleNormalized * 0.7 + spectralRoughnessNormalized * 0.5, 0.0, 1.0) * quietGate;
+    // ENERGY-LIFT (iter13 refinement) — sustained bright high-energy passages (this corner: energy
+    // 0.85, treble 0.79, bass quiet) left the figure feeling static since its big moves are bass-gated.
+    // Now overall energy intensifies the limb shimmer so the extremities CRACKLE when the track is
+    // driving but bass-light. Energy term added on top of the treble/roughness gate.
+    float airy = clamp(trebleNormalized * 0.7 + spectralRoughnessNormalized * 0.5
+                     + smoothstep(0.55, 0.9, energyNormalized) * 0.4, 0.0, 1.3) * quietGate;
     float limb = figMask * (1.0 - smoothstep(0.15, 0.55, fill));   // thin extremities only
     float spark = flow2(ip * 6.0 + vec2(FLOW * 2.0, -melodyFlow));
     spark = pow(spark, 3.0) * (0.5 + 0.5 * sin(FLOW * 9.0 + uv.x * 24.0));
@@ -330,6 +354,57 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float scanY = fract(uv.y * 1.5 - iTime * (0.6 + scanBright * 1.2));
     float scanBand = smoothstep(0.96, 1.0, scanY) * scanBright;
     figLit += figMask * scanBand * 0.3;
+
+    // ---- FUR FIBERS (ported from the-coat) — interior DEPTH strands, NOT light ----
+    // The coat's headline effect: double domain-warped flow shaped into sharp ridges that
+    // read as individual fur strands. CHROMADEPTH FIX (user: "the water-like effect washes out
+    // the inside of the handstand — colors less vibrant, lowers the chromadepth"): the strands
+    // used to ADD lightness, and raising HSL-L past ~0.5 desaturates toward white = the wash-out.
+    // Now the strands carve DEPTH + SATURATION instead of brightness: each strand pulls figT
+    // toward RED (nearer) and BOOSTS figSat, so the body gets vibrant near-red fiber detail that
+    // DEEPENS the 3D read rather than bleaching it. Brightness barely moves (tiny dark-biased ripple).
+    float fiberTrig = clamp(spectralEntropyNormalized * 0.8 + spectralRoughnessNormalized * 0.6, 0.0, 1.0) * quietGate;
+    float fiberAmt = smoothstep(0.45, 0.85, fiberTrig);
+    if (fiberAmt > 0.01) {
+        vec2 fp = (uv - 0.5) * vec2(aspect, 1.0) * 16.0;
+        float warpT = FLOW * 0.6 + spectralCentroidNormalized * 1.5;   // pitch-aware swirl rate (coat trick)
+        vec2 fwarp = vec2(flow2(fp + vec2(warpT, 0.0)), flow2(fp + vec2(0.0, warpT + 3.7))) - 0.5;
+        vec2 fp2 = fp + fwarp * 3.5;                                    // second domain warp = deeper swirl
+        float fibers = flow2(fp2 + (vec2(flow2(fp2 + vec2(warpT * 0.7, 1.3)),
+                                         flow2(fp2 + vec2(2.1, warpT * 0.5))) - 0.5) * 1.5);
+        float strand = pow(abs(sin(fibers * PI * (4.0 + clamp(spectralFluxZScore, 0.0, 2.0) * 1.5))), 3.0);
+        float strandM = figMask * strand * fiberAmt;
+        // BULLETPROOF (user: "the water effect can still make the inside greyish — make sure this
+        // can't happen"). Greyish = desaturated. So the fibers now ONLY pull toward red (depth) and
+        // ONLY ADD saturation — they contribute ZERO lightness. With no lightness term and figSat that
+        // can only RISE, the interior is mathematically incapable of going grey/washed from this effect.
+        figT -= strandM * 0.10;                                        // toward red (nearer) → 3D pops
+        figT = max(figT, 0.0);
+        figSat = clamp(figSat + strandM * 0.10, figSat, 1.0);          // strictly MORE vibrant, never less
+        // (no figLit term — lightness add is what greyed it; removed entirely)
+    }
+
+    // ---- SIGIL SWIRL (ported from the-coat) — iridescent body spiral ----
+    // Radial spiral wave on the figure surface, hue cycling with angle + time. The coat
+    // used full hue; here we keep it a SUBTLE warm-tint brightness boost so the figure's
+    // red→green chromadepth read isn't overwritten — the swirl shows as a glinting spiral
+    // of light, brightest on mid-dominant groove passages + harmony-ish pitch motion.
+    {
+        vec2 sc = (uv - vec2(0.5, 0.5)) * vec2(aspect, 1.0);
+        float sr = length(sc);
+        float sa = atan(sc.y, sc.x);
+        float spiral = sin(sa * 5.0 + sr * 14.0 - FLOW * 1.4 + midsNormalized * 3.0);
+        float swirlBand = smoothstep(0.02, 0.18, sr) * smoothstep(0.42, 0.20, sr);
+        float swirl = pow(0.5 + 0.5 * spiral, 3.0) * swirlBand;
+        float swirlGain = (0.3 + midsNormalized * 0.7 + clamp(bassZScore, 0.0, 1.5) * 0.4) * quietGate;
+        // Same bulletproof rule as FUR FIBERS: ZERO lightness, saturation can only rise → can't grey out.
+        float swirlM = figMask * swirl * swirlGain;
+        figSat = clamp(figSat + swirlM * 0.08, figSat, 1.0);           // strictly more vibrant
+        figT -= swirlM * 0.05;                                         // toward red (nearer)
+        figT = max(figT, 0.0);
+        // (no figLit term)
+    }
+    figLit = min(figLit, 0.62);                                        // keep within chromadepth lightness band
     figure = chromadepth(figT, figSat, figLit);
 
     // ---- COMPOSITE figure over field ----
@@ -342,6 +417,16 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float scoop = clamp(trebleNormalized * (1.0 - midsNormalized), 0.0, 1.0) * quietGate;
     float rimPulse = 0.6 + 0.4 * sin(FLOW * 3.0 + uv.y * 6.0);
     vec3 rimCol = chromadepth(scoop * 0.06, 0.96, 0.5);     // t≈0 → reddest, heats to red-orange
+    // ---- PRISM RIM (ported from the-coat) — iridescent edge on bright/airy passages ----
+    // The coat's chrome rim cycled a FULL rainbow by uv-angle + time. On chromadepth a full
+    // rainbow rim is forbidden (blue rim = far = contradicts "edge pops forward"). So the hue
+    // cycle is CLAMPED to the NEAR band only (t 0.0→0.14 = red→orange→yellow): the edge
+    // shimmers with prismatic motion while every hue still reads as "near". Gated by the bright
+    // corner (treble + centroid) so it appears on airy/screechy passages like the coat intended.
+    float prismGate = clamp(trebleNormalized * smoothstep(0.45, 0.80, spectralCentroidNormalized), 0.0, 1.0) * quietGate;
+    float prismAngle = atan(uv.y - 0.5, (uv.x - 0.5) * aspect);       // edge position around the figure
+    float prismT = fract(prismAngle / 6.2831853 + FLOW * 0.4 + pitchClassNormalized * 0.2) * 0.14;  // cycle, NEAR band only
+    rimCol = mix(rimCol, chromadepth(prismT, 0.98, 0.52), prismGate);
     // RISER — build-up tension. flux + energy rising together (the climb before a drop)
     // pumps a fast-flickering charge into the rim, so the figure visibly "charges up"
     // before the DROP PUNCH releases it. Near-band red flicker → chromadepth safe.
@@ -353,8 +438,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Driven by GNARLINESS alone (entropy+roughness) so it isn't strangled by quietGate; entropy
     // is ~0 in true silence so it's its own quiet guard. The texture comes from smooth value-
     // noise (flow2) with SOFT thresholds → irregular chunky blobs that crawl, not 1px dots.
+    // GATE RAISED (user: "grit outline should happen less frequently") — now needs genuinely
+    // gnarly passages: high entropy AND high roughness both required, threshold pushed up so it
+    // fires only on the truly chaotic moments instead of most of the track.
     float grit = clamp(spectralEntropyNormalized * 1.3 + spectralRoughnessNormalized * 0.7, 0.0, 1.0)
-               * smoothstep(0.20, 0.45, spectralEntropyNormalized);
+               * smoothstep(0.55, 0.80, spectralEntropyNormalized)
+               * smoothstep(0.40, 0.70, spectralRoughnessNormalized);
     // organic noise field: low spatial freq (~big blobs) scrolling/boiling over time
     vec2 gp = uv * vec2(aspect, 1.0) * 14.0;
     float gN = flow2(gp + vec2(iTime * 1.7, -iTime * 1.3));
@@ -369,11 +458,145 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // ---- BASS BLOOM — kick-gated red halo from the core, only in DARK passages ----
     // High bass + low centroid (the skill's classic pairing): a near-field (red) radial
     // glow blooms out of the figure on each kick, then it's gone. Reinforces red=near.
-    float kick = clamp(waveletBassZScore, 0.0, 1.0) * quietGate;
+    // iter15: floor the quietGate (like FIGURE_ZOOM/HEART PULSE already do) + FFT bassZ fallback, so a
+    // deep SOLO-BASS intro (bass 0.96 but quietGate ~0 because the mix is otherwise empty) still blooms
+    // the red core. Observed live: sparse bassy passages were leaving the bloom fully muted by quietGate.
+    float kick = clamp(max(waveletBassZScore, bassZScore * 0.7), 0.0, 1.0) * max(quietGate, 0.4);
     float darkness = 1.0 - smoothstep(0.10, 0.40, spectralCentroidNormalized);
     float bloomR = length((uv - 0.5) * vec2(aspect, 1.0));
     float bloom = exp(-bloomR * bloomR * 9.0) * kick * darkness;
     col += chromadepth(0.0, 0.95, 0.5) * bloom * 0.45;
+
+    // ---- HEART PULSE (ported from the-coat) — pure-red core glow pulsing on bass ----
+    // The coat pulsed a red glow from the chest center on bass. Here it beats from the figure's
+    // CORE (center of mass) in the PUREST red (t=0 = nearest), so on a bass hit the dancer's
+    // center throbs forward — the single strongest chromadepth pop. Bass-gated with a floor
+    // (mic reads bass passages as quiet, so don't fully trust quietGate) like FIGURE_ZOOM does.
+    {
+        vec2 heartC = vec2(0.5, 0.46);                              // a touch above center = chest/core
+        float heartD = length((uv - heartC) * vec2(aspect, 1.0) * vec2(1.2, 1.0));
+        float heart = exp(-heartD * heartD * 16.0);                // tight core falloff
+        float heartPulse = (clamp(bassZScore, 0.0, 2.0) * 0.6 + waveletBassSpring * 0.5 + bassNormalized * 0.3)
+                         * max(quietGate, 0.35);
+        // confine to the figure so it reads as the dancer's heart, pure red = near
+        col += chromadepth(0.0, 1.0, 0.5) * heart * heartPulse * figMask * 0.5;
+    }
+
+    // ---- EMBER RISE (ported from the-coat) — sparks drifting up the far-field ----
+    // 6 deterministic embers rising through the lower nebula on the warm-low corner
+    // (mids-dominant + low centroid). The coat used pure amber; here the embers ride the
+    // chromadepth FAR band (violet/blue) so they read as distant glints receding behind
+    // the dancer rather than warm fire in front. Masked outside the figure, lower half only.
+    {
+        float emberGate = smoothstep(0.45, 0.75, midsNormalized)
+                        * smoothstep(0.30, 0.10, spectralCentroidNormalized) * quietGate;
+        if (emberGate > 0.02) {
+            float emberEmit = 0.0;
+            for (int i = 0; i < 6; i++) {
+                float fi = float(i);
+                float ex = (fract(fi * 0.31) - 0.5) * 1.6 + sin(iTime * 1.7 + fi * 1.3) * 0.04;
+                float speed = 0.16 + fract(fi * 0.13) * 0.18;
+                float phase = fract(FLOW * speed * 4.0 + fi * 0.27);
+                float ey = -0.5 + phase * 1.0;
+                vec2 dE = (uv - 0.5) * vec2(aspect, 1.0) - vec2(ex * 0.5, ey);
+                emberEmit += exp(-dot(dE, dE) * 700.0) * pow(1.0 - phase, 1.5);
+            }
+            float lowerMask = smoothstep(0.6, 0.1, uv.y);
+            // far-field violet glint (chromadepth far) so embers recede behind the figure
+            col += chromadepth(0.88, 0.8, 0.6) * emberEmit * emberGate * lowerMask * (1.0 - figMask) * 0.9;
+        }
+    }
+
+    // ---- WARM HEARTH (ported from the-coat) — near-red glow radiating from the silhouette ----
+    // The coat's signature mid-dominant move: a slow amber glow blooming OUTWARD from the figure
+    // on warm-dark-instrumental passages (mids dominant, low centroid, moderate energy). On
+    // chromadepth we keep it firmly in the NEAR red/orange band (t≈0.05) so the halo reads as the
+    // figure's own warmth pushing toward the viewer — never white, never blue. The outward glow
+    // uses the rim's outer presence (already a dilation of the silhouette) as its falloff.
+    {
+        float warmGate = smoothstep(0.40, 0.70, midsNormalized)
+                       * smoothstep(0.55, 0.25, spectralCentroidNormalized)
+                       * smoothstep(0.70, 0.20, energyNormalized) * max(quietGate, 0.45);  // iter18: floor (mids-heavy reads mic-quiet)
+        if (warmGate > 0.02) {
+            // soft outward halo: sample the mask in a wider ring than the rim to get a glow band
+            float halo = 0.0;
+            for (int i = 0; i < 8; i++) {
+                float a = float(i) * PI * 0.25;
+                vec2 d = vec2(cos(a), sin(a));
+                halo = max(halo, sampleMask(uv + d * 0.05) );
+                halo = max(halo, sampleMask(uv + d * 0.10) * 0.6);
+            }
+            halo *= (1.0 - figMask);                                   // only OUTSIDE the silhouette
+            float breathe = 0.85 + 0.15 * sin(iTime * 0.4);            // slow alive breathing
+            // near red-orange band → pops toward viewer, stays vibrant (sat 0.95), capped lightness
+            col += chromadepth(0.05, 0.95, 0.42) * halo * warmGate * breathe * 0.5;
+        }
+    }
+
+    // ---- GROUND QUAKE (ported from the-coat) — concentric floor rings on bass+low-centroid ----
+    // The coat rumbled amber wavefronts up from the floor on bass drops. Here they're recast as
+    // far-VIOLET elliptical rings expanding from below the figure — a deep-bass shockwave receding
+    // into the background (chromadepth far). Gated by bass × low-centroid (sub territory) so it only
+    // fires on real low-end. Masked outside the figure + lower-biased so it never washes the red core.
+    {
+        float quakeGate = clamp(bassNormalized - 0.25, 0.0, 1.0)
+                        * smoothstep(0.55, 0.15, spectralCentroidNormalized)
+                        * max(quietGate, 0.35);
+        quakeGate += clamp(waveletBassZScore, 0.0, 1.0) * smoothstep(0.55, 0.15, spectralCentroidNormalized) * 0.5;
+        if (quakeGate > 0.02) {
+            vec2 feetC = vec2(0.5, 0.92);                              // below the figure (screen-bottom)
+            vec2 dvec = (uv - feetC) * vec2(aspect, 1.0);
+            dvec.y *= 2.0;                                            // squash → ground-wave ellipse
+            float r = length(dvec);
+            float wavefronts = 0.0;
+            for (int wi = 0; wi < 3; wi++) {
+                float ringR = fract(FLOW * 2.4 + float(wi) * 0.33) * 1.2;
+                float dr = r - ringR;
+                wavefronts += exp(-dr * dr * 90.0) * (1.0 - ringR / 1.2);
+            }
+            // far violet band so the shockwave recedes; never touches the figure's near red
+            col += chromadepth(0.84, 0.85, 0.55) * wavefronts * quakeGate * (1.0 - figMask) * 0.7;
+        }
+    }
+
+    // ---- SUB RING (ported from the-coat) — single drop shockwave from the figure base ----
+    // The coat fired an expanding cone ring on bass spikes, but gated it to REAL drops so it didn't
+    // drown the figure on every ambient bass bump — same discipline here. This is the last distinct
+    // coat motif; it's deliberately gated TIGHT (energyZ × bassZ = a genuine drop) so it does NOT
+    // stack with the per-kick HEART PULSE / GROUND QUAKE / BASS BLOOM (the skill's bass-stacking
+    // pitfall). One clean far-violet ring sweeps out from the figure's base on the big moments only.
+    {
+        float dropHit = clamp(energyZScore, 0.0, 1.5) * clamp(waveletBassZScore + clamp(bassZScore,0.0,1.5)*0.5, 0.0, 1.5) * quietGate;
+        if (dropHit > 0.3) {
+            vec2 baseC = vec2(0.5, 0.75);                             // figure base
+            float sd = length((uv - baseC) * vec2(aspect, 1.0));
+            float ringSpeed = 1.2 + clamp(energyZScore, 0.0, 1.5) * 0.6;
+            float ringRadius = 0.15 + fract(FLOW * ringSpeed * 2.0) * 0.6;
+            float ringD = sd - ringRadius;
+            float ring = exp(-ringD * ringD * 350.0);
+            float ringFade = 1.0 - fract(FLOW * ringSpeed * 2.0);     // fades as it expands
+            col += chromadepth(0.84, 0.85, 0.55) * ring * dropHit * ringFade * (1.0 - figMask) * 0.6;
+        }
+    }
+
+    // ---- STEP RIPPLE (ported from the-coat) — lateral energy wave in the far field ----
+    // The coat radiated a horizontal beat-wave from the chest (a "1,2-step" dance move). Here it
+    // becomes a pair of vertical bands sweeping OUTWARD from the figure's centerline through the
+    // nebula — energy rippling away from the dancer into space. Gated by the BRIGHT corner
+    // (treble × centroid × energy) since that's where this airy passage lives. Tinted in the FAR
+    // violet band + masked outside the figure, so it reads as receding background motion (chromadepth-safe).
+    {
+        float stepGate = clamp(trebleNormalized * smoothstep(0.45, 0.80, spectralCentroidNormalized), 0.0, 1.0)
+                       * smoothstep(0.35, 0.75, energyNormalized) * quietGate;
+        if (stepGate > 0.02) {
+            float sweep = abs((uv.x - 0.5) * aspect);                  // distance from the figure's vertical axis
+            float wave = sin(sweep * 16.0 - FLOW * 5.0 + energyNormalized * 4.0);
+            wave = pow(0.5 + 0.5 * wave, 4.0);                         // sharp crests, dark troughs
+            float outward = smoothstep(0.05, 0.7, sweep) * smoothstep(1.1, 0.6, sweep);  // ring out, fade at edges
+            // far violet band so the ripple recedes behind the figure
+            col += chromadepth(0.86, 0.85, 0.55) * wave * outward * stepGate * (1.0 - figMask) * 0.5;
+        }
+    }
 
     // ---- FEEDBACK trail (subtle refraction, decays in HSL to avoid white-out) ----
     float lum = dot(col, vec3(0.3, 0.6, 0.1));
@@ -384,13 +607,36 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     prevHSL.z = min(prevHSL.z, 0.55);
     prevHSL.x = fract(prevHSL.x + 0.0015);                 // age trails toward blue (recede)
     prev = hsl2rgb(prevHSL);
-    col = mix(prev, col, 1.0 - FB_BLEND);
+    // GHOST ECHO (ported from the-coat) — a bass spike briefly retains MORE of the previous frame,
+    // leaving an afterimage of the figure that lingers and trails. The coat raised feedback on bass;
+    // here it rides the same idea but stays chromadepth-correct for free: the feedback path already
+    // ages trails toward BLUE + dims them, so the echo recedes into the far band as it fades — a
+    // ghost peeling off the dancer into the distance, not a bright smear. Gated with a quietGate floor
+    // (mic reads bass as quiet) so it fires on the real kick.
+    float ghost = clamp(bassZScore - 0.3, 0.0, 1.0) * max(quietGate, 0.35)
+                + clamp(waveletBassZScore, 0.0, 1.0) * max(quietGate, 0.35);
+    float fbBlend = mix(FB_BLEND, 0.42, clamp(ghost, 0.0, 1.0));    // up to ~0.42 retained on a kick
+    col = mix(prev, col, 1.0 - fbBlend);
 
     // ---- BEAT — brightness pulse only (hue is reserved for depth) ----
     if (beat) {
         vec3 bHSL = rgb2hsl(max(col, vec3(0.001)));
         bHSL.z = min(bHSL.z * 1.06, 0.6);
         col = hsl2rgb(bHSL);
+    }
+
+    // ---- GROOVE BREATH (ported from the-coat) — slow full-frame breath on calm-groove ----
+    // The coat added a slow brightness breath during mid-energy groove passages. On chromadepth
+    // an ADDITIVE white breath would wash, so this is MULTIPLICATIVE (col *= 1+tiny*breath) — it
+    // scales existing colors up/down, preserving hue + saturation perfectly = zero white risk.
+    // Bell-curve energy gate (peaks ~0.45, the groove pocket) + mids presence; suppressed on builds.
+    {
+        float grooveGate = smoothstep(0.20, 0.45, energyNormalized)
+                         * smoothstep(0.70, 0.45, energyNormalized)      // bell curve, peaks mid-energy
+                         * smoothstep(0.30, 0.55, midsNormalized)
+                         * smoothstep(0.6, 0.2, max(energyZScore, 0.0)) * quietGate;  // not during surges
+        float breathOsc = 0.5 + 0.5 * sin(iTime * 1.6);
+        col *= 1.0 + grooveGate * breathOsc * 0.10;                       // ±10% multiplicative, hue-safe
     }
 
     // ---- VIGNETTE — darken corners so the figure reads as the focal portal ----
