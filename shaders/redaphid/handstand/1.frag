@@ -315,8 +315,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // mobile: bigger ~5px cells (read on a phone), fires on roughness OR entropy (not
     // both), ~60% of cells lit, strong gain. Brightness-only on the red rim (no channel
     // split → chromadepth order stays clean). This is the headline "fuzzing" of the edge.
+    // gated by energy too: the edge frays HARD when the track drives, stays clean on mellow
+    // grooves — so the prominent mobile fuzz reads on the gnarly bits without a permanently
+    // dirty outline during calm sections.
+    float gritEnergy = smoothstep(0.30, 0.70, energyNormalized);
     float grit = clamp(max(spectralRoughnessNormalized, spectralEntropyNormalized) * 1.5
-                     + spectralRoughnessNormalized * spectralEntropyNormalized * 0.8, 0.0, 1.0) * quietGate;
+                     + spectralRoughnessNormalized * spectralEntropyNormalized * 0.8, 0.0, 1.0) * quietGate * gritEnergy;
     float gritN = hash21(floor(uv * res / 5.0) + floor(iTime * 38.0));   // chunkier, phone-visible buzz
     col += rimCol * rim * grit * step(0.4, gritN) * 1.6;
     // also CHEW the silhouette edge itself — knock jagged dark bites out near the outline so
