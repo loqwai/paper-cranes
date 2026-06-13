@@ -131,8 +131,9 @@ uniform float energyLong;  // minutes-long energy average (set intensity)
 // Internal plasma inside the figure.
 #define PLASMA_WOB ((wubPulse - 0.5) * 0.5 * quietGate)
 
-// Far-field character.
-#define FIELD_BRIGHT (0.10 + waveletCentroidSpring * 0.18 * quietGate + waveletBand5Spring * 0.14 * quietGate)
+// Far-field character. DARK is the whole point for chromadepth: a bright background reads as
+// "present" and kills the pop. Kept dim (base 0.05, gentle audio lift) so the field RECEDES.
+#define FIELD_BRIGHT (0.05 + waveletCentroidSpring * 0.08 * quietGate + waveletBand5Spring * 0.06 * quietGate)
 #define FIELD_TURB   (0.5 + spectralEntropyNormalized * 1.2 + spectralRoughnessNormalized * 0.6)
 #define VIOLET_SHIFT (waveletBand5Spring * 0.10 * quietGate)  // treble pushes background toward violet (further)
 
@@ -241,15 +242,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // DEEPER: push further toward violet + dim slightly, so the figure reads as the
     // focal portal against a receding field. Pure depth/brightness, palette unchanged.
     float calm = (1.0 - smoothstep(0.05, 0.45, energyNormalized)) * (1.0 - spectralEntropyNormalized);
-    // far depth band — filaments only sit a TOUCH nearer; clamped to stay COOL (≥0.78 →
-    // blue/violet) so the background can never warm up and compete with the figure.
-    float fieldT = 0.92 - filament * 0.18 + VIOLET_SHIFT + calm * 0.05;   // was *0.30 (warmed too far)
-    fieldT = max(fieldT, 0.78);                                          // hard floor: never leave the cool/far band
+    // far depth band — pinned to DEEP VIOLET (t≈0.85-0.95), the true "far" chromadepth hue, so
+    // the background sits maximally far behind the figure. Filaments barely vary it; floor 0.82.
+    float fieldT = 0.95 - filament * 0.12 + VIOLET_SHIFT + calm * 0.04;
+    fieldT = max(fieldT, 0.82);                                          // hard floor: deep violet, never blue-bright
     // HIGH-END SURGE — bright chaotic peaks energize the field's filaments, but GENTLY now and
     // capped, so it shimmers without washing out. The figure stays the focal point.
     float highEnd = clamp(spectralCentroidNormalized * clamp(energyNormalized, 0.0, 1.0), 0.0, 1.0) * quietGate;
-    float fieldLit = FIELD_BRIGHT + filament * (0.18 + waveletBand5Spring * 0.15 * quietGate + highEnd * 0.16) - calm * 0.04;
-    fieldLit = min(fieldLit, 0.40);                                      // cap: far field can't blow bright
+    float fieldLit = FIELD_BRIGHT + filament * (0.12 + waveletBand5Spring * 0.10 * quietGate + highEnd * 0.10) - calm * 0.04;
+    fieldLit = min(fieldLit, 0.26);                                      // hard cap: far field stays DARK so it recedes
     // SECTION MODE shifts the field's saturation character per section (cool-band only → no warm wash).
     float fieldSat = clamp(0.92 - tonalStrength * 0.05 + sin(sectionMode * 1.7) * 0.06 * sectionMix, 0.6, 1.0);
     vec3 background = chromadepth(fieldT, fieldSat, fieldLit);
@@ -281,8 +282,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float plasma = flow2(ip + vec2(MORPH * 0.5, (FLOW * 0.4 + bassSurge) * EVO_PLASMA_SP) + PLASMA_WOB);
     plasma = mix(plasma, flow2(ip * 1.9 - melodyFlow * 0.6 * EVO_PLASMA_SP), 0.4);
 
-    // deep interior (fill→1) = reddest/nearest; thin limbs (fill low) → green
-    float figT = mix(0.34, 0.0, smoothstep(0.15, 1.0, fill));
+    // deep interior (fill→1) = reddest/nearest; thin limbs (fill low) → green. Widened the
+    // range (0.40→0.0) and steepened so the dense CORE reads pure red (nearest) while only the
+    // thin extremities go green — more chromadepth depth across the body, redder core = pops more.
+    float figT = mix(0.40, 0.0, smoothstep(0.10, 0.85, fill));
     // BASS POP — the whole figure LUNGES toward RED (chromadepth near) on bass, so through
     // 3D glasses the dancer punches out of the screen. Strong smooth swell + hard kick snap
     // + bass-hit slam, all driving t toward 0 (reddest = nearest). Clamped so it pins at red.
