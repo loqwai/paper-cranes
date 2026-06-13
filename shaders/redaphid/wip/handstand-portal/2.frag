@@ -233,8 +233,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // deep interior (fill→1) = reddest/nearest; thin limbs (fill low) → green
     float figT = mix(0.34, 0.0, smoothstep(0.15, 1.0, fill));
-    figT -= waveletBassSpring * 0.05 * quietGate;          // bass pulls the whole body nearer
+    // BASS POP — the whole figure LUNGES toward RED (chromadepth near) on bass, so through
+    // 3D glasses the dancer punches out of the screen. Strong smooth swell + hard kick snap
+    // + bass-hit slam, all driving t toward 0 (reddest = nearest). Clamped so it pins at red.
+    float bassPop = (waveletBassSpring * 0.18
+                   + clamp(waveletBassZScore, 0.0, 1.0) * 0.22
+                   + clamp(wavelet_bassHit, 0.0, 1.0) * 0.16) * quietGate;
+    figT -= bassPop;                                        // toward red → pops forward
     figT += (plasma - 0.5) * 0.10;                          // plasma ripples local depth
+    figT = max(figT, 0.0);                                  // can't go past pure red
     float figSat = 0.92;
     // MID WARMTH — when mids dominate over brightness (warm, bodied passage, not screechy)
     // the whole interior swells with a soft inner glow. Fills the mid feature-gap; pure
@@ -254,6 +261,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float spark = flow2(ip * 6.0 + vec2(FLOW * 2.0, -melodyFlow));
     spark = pow(spark, 3.0) * (0.5 + 0.5 * sin(FLOW * 9.0 + uv.x * 24.0));
     figLit += limb * airy * spark * 0.25;
+    // SCAN SWEEP — bright treble passages race a thin electric band UP through the figure,
+    // like the body's energy is being scanned. Confined to figMask, brightness-only on the
+    // existing figT depth → chromadepth read untouched. Faster sweep when treble is hotter.
+    float scanBright = clamp(trebleNormalized * smoothstep(0.4, 0.8, spectralCentroidNormalized), 0.0, 1.0) * quietGate;
+    float scanY = fract(uv.y * 1.5 - iTime * (0.6 + scanBright * 1.2));
+    float scanBand = smoothstep(0.96, 1.0, scanY) * scanBright;
+    figLit += figMask * scanBand * 0.3;
     figure = chromadepth(figT, figSat, figLit);
 
     // ---- COMPOSITE figure over field ----
@@ -266,7 +280,19 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float scoop = clamp(trebleNormalized * (1.0 - midsNormalized), 0.0, 1.0) * quietGate;
     float rimPulse = 0.6 + 0.4 * sin(FLOW * 3.0 + uv.y * 6.0);
     vec3 rimCol = chromadepth(scoop * 0.06, 0.96, 0.5);     // t≈0 → reddest, heats to red-orange
-    col += rimCol * rim * RIM_GAIN * rimPulse * (1.0 + scoop * 0.6);
+    // RISER — build-up tension. flux + energy rising together (the climb before a drop)
+    // pumps a fast-flickering charge into the rim, so the figure visibly "charges up"
+    // before the DROP PUNCH releases it. Near-band red flicker → chromadepth safe.
+    float riser = clamp(spectralFluxZScore * 0.6 + clamp(energyZScore, 0.0, 1.0) * 0.6, 0.0, 1.0) * quietGate;
+    float riserFlick = 0.5 + 0.5 * sin(iTime * (24.0 + riser * 40.0));   // flicker speeds up as it builds
+    col += rimCol * rim * riser * riserFlick * 0.9;
+
+    // RIM GRIT — gnarly textured leads (high roughness + entropy) buzz the rim apart into
+    // dissonant flickering fragments, like the silhouette vibrating. Brightness-only on the
+    // existing red rim (no channel split → chromadepth depth order stays clean).
+    float grit = clamp(spectralRoughnessNormalized * spectralEntropyNormalized * 1.6, 0.0, 1.0) * quietGate;
+    float gritN = hash21(floor(uv * res / 2.0) + floor(iTime * 40.0));   // fast spatial buzz
+    col += rimCol * rim * grit * step(0.55, gritN) * 0.7;
 
     // ---- BASS BLOOM — kick-gated red halo from the core, only in DARK passages ----
     // High bass + low centroid (the skill's classic pairing): a near-field (red) radial
