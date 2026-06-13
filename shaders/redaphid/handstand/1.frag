@@ -267,7 +267,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // ---- FIGURE INTERIOR (chromadepth red→green, pops forward) ----
     // internal plasma churn: warm energy flowing through the body
-    vec2 ip = (uv - 0.5) * vec2(aspect, 1.0) * 3.5;
+    // SECTION MODE changes the interior TEXTURE per section so the figure looks genuinely
+    // different across the set: the plasma scale cycles smooth→fine→coarse→… on each
+    // breakdown→drop, crossfaded by sectionMix. Texture/brightness only → chromadepth intact.
+    float modeScale = mix(2.4, 5.0, 0.5 + 0.5 * sin(sectionMode * 2.39959));   // per-section spatial freq
+    float ipScale = mix(3.5, modeScale, sectionMix);
+    vec2 ip = (uv - 0.5) * vec2(aspect, 1.0) * ipScale;
     // bass surges the internal plasma upward — warm energy pumps THROUGH the body
     // with each kick (rides the same bass that bounces the silhouette). Pure light,
     // no hue shift, so the chromadepth red→green interior read stays intact.
