@@ -33,10 +33,19 @@ If the user clicks "Stop sharing" in the browser chrome, the system automaticall
 |---------|-----------|-------|
 | Chrome | Yes | Full support |
 | Edge | Yes | Full support (Chromium-based) |
-| Firefox | No | `getDisplayMedia` doesn't expose audio tracks |
-| Safari | No | `getDisplayMedia` doesn't expose audio tracks |
+| Firefox | Falls back to mic | `getDisplayMedia` doesn't expose audio tracks |
+| Safari | Falls back to mic | `getDisplayMedia` doesn't expose audio tracks |
 
 Desktop only. Mobile browsers do not support `getDisplayMedia`.
+
+### Microphone Fallback
+
+When `?audio=tab` is requested in a browser that can't capture tab audio (Firefox,
+Safari, mobile — anywhere `getDisplayMedia` is unavailable), the system falls back
+to **microphone input** instead of leaving the visualizer silent. A warning is
+logged to the console, and the visualization reacts to whatever the mic picks up.
+This is detected up front via `isTabAudioSupported()`, so no "Share tab audio"
+overlay appears in unsupported browsers.
 
 ## vs. Virtual Audio Loopback
 

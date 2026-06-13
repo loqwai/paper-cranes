@@ -116,39 +116,10 @@ const setupCanvasEvents = (canvas) => {
 
 const noAudio = { getFeatures: () => ({}) }
 
-const setupAudio = async () => {
-    // audio=none disables audio input (consistent with audio=tab pattern)
-    // noaudio=true and embed=true are kept for backwards compatibility
-    if (params.get('audio') === 'none' || params.get('noaudio') === 'true' || params.get('embed') === 'true') {
-        return noAudio
-    }
-
-    if (params.get('audio') === 'tab') {
-        const { setupTabAudio } = await import('./src/audio/tabAudioSource.js')
-        return setupTabAudio({ params, AudioProcessor })
-    }
-
-    const fileConfig = createAudioFileSource({ params })
-    if (fileConfig) {
-        try {
-            const audioContext = new AudioContext()
-            const { sourceNode, audioBuffer, startSource } = await initAudioFromFile({ config: fileConfig, audioContext })
-            window.cranes.audioBuffer = audioBuffer
-            window.cranes.startSource = startSource
-
-            const audioProcessor = new AudioProcessor(audioContext, sourceNode, fileConfig.historySize, fileConfig.fftSize)
-            audioProcessor.smoothingFactor = fileConfig.smoothing
-            await audioProcessor.start()
-            // Route through speakers (unlike mic input, file playback has no feedback risk)
-            audioProcessor.fftAnalyzer.connect(audioContext.destination)
-            await maybeStartWavelet(params, audioContext, sourceNode)
-            return audioProcessor
-        } catch (err) {
-            console.error('Audio file initialization failed:', err)
-            return noAudio
-        }
-    }
-
+// Mic capture path. Acquires getUserMedia, builds an AudioProcessor, and wires
+// up the optional wavelet pass. This is the default audio source and also the
+// fallback when ?audio=tab is requested in a browser that can't capture tab audio.
+const setupMicAudio = async () => {
     try {
         // get the default audio input
         const devices = await navigator.mediaDevices.enumerateDevices();
@@ -180,6 +151,49 @@ const setupAudio = async () => {
         console.error('Audio initialization failed:', err);
         return noAudio
     }
+}
+
+const setupAudio = async () => {
+    // audio=none disables audio input (consistent with audio=tab pattern)
+    // noaudio=true and embed=true are kept for backwards compatibility
+    if (params.get('audio') === 'none' || params.get('noaudio') === 'true' || params.get('embed') === 'true') {
+        return noAudio
+    }
+
+    if (params.get('audio') === 'tab') {
+        const { setupTabAudio, isTabAudioSupported } = await import('./src/audio/tabAudioSource.js')
+        // Tab audio relies on getDisplayMedia exposing audio tracks — only
+        // Chromium desktop does. Everywhere else (Firefox, Safari, mobile)
+        // fall back to the mic so the visualizer still reacts to sound.
+        if (!isTabAudioSupported()) {
+            console.warn('Tab audio capture unsupported in this browser — falling back to microphone input.')
+            return setupMicAudio()
+        }
+        return setupTabAudio({ params, AudioProcessor })
+    }
+
+    const fileConfig = createAudioFileSource({ params })
+    if (fileConfig) {
+        try {
+            const audioContext = new AudioContext()
+            const { sourceNode, audioBuffer, startSource } = await initAudioFromFile({ config: fileConfig, audioContext })
+            window.cranes.audioBuffer = audioBuffer
+            window.cranes.startSource = startSource
+
+            const audioProcessor = new AudioProcessor(audioContext, sourceNode, fileConfig.historySize, fileConfig.fftSize)
+            audioProcessor.smoothingFactor = fileConfig.smoothing
+            await audioProcessor.start()
+            // Route through speakers (unlike mic input, file playback has no feedback risk)
+            audioProcessor.fftAnalyzer.connect(audioContext.destination)
+            await maybeStartWavelet(params, audioContext, sourceNode)
+            return audioProcessor
+        } catch (err) {
+            console.error('Audio file initialization failed:', err)
+            return noAudio
+        }
+    }
+
+    return setupMicAudio()
 };
 
 // Parse URL params as numbers when possible
