@@ -71,6 +71,17 @@ export function make() {
     let bassNoteFlow = null   // flowing bassline-pitch contour
     let wubBaseline = 0       // slow bass average, for wub-depth detection
     let wubDepth = 0          // smoothed wobble amplitude
+
+    // ── LONG-TERM EVOLUTION (minutes-scale) ── persistent state so the look is never the same
+    // twice and drifts over a set. Two layers: (1) slow MOTION morph, (2) SECTION mode shifts.
+    let evoPhase = 0          // monotonic, advances ~per-minute, energy-weighted → slow motion morph
+    const evoDrift = { flow: 0.5, warp: 0.5, plasma: 0.5 } // slowly wandering motion-character params (0..1)
+    const evoTarget = { flow: 0.5, warp: 0.5, plasma: 0.5 } // re-rolled each section; drift eases toward these
+    let energyLong = 0        // minutes-long energy average (set intensity)
+    let sectionMode = 0       // discrete visual mode index (float; shader does mode = mod(sectionMode, N))
+    let sectionMix = 1        // 0→1 crossfade after a mode change (eases up as we settle into the new mode)
+    let quietRun = 0          // seconds of sustained quiet (for detecting a build-from-silence → drop)
+    let sectionCooldown = 0   // seconds since last section change (debounce so we don't flip every drop)
     let lastT = performance.now() / 1000
 
     return function controller(features) {
@@ -164,6 +175,47 @@ export function make() {
         wubDepth = wubDepth * 0.9 + Math.abs(deviation) * 0.1
         out.wubDepth = Math.min(1, wubDepth * 4)             // "how hard is it wobbling" (animatable)
         out.wubPulse = Math.max(0, Math.min(1, deviation * 6 + 0.5)) // raw wob throb (0.5 = center)
+
+        // ════════════════════════════════════════════════════════════════════════════════════
+        // LONG-TERM EVOLUTION — the look drifts over MINUTES, not just reacting frame-to-frame.
+        // ════════════════════════════════════════════════════════════════════════════════════
+
+        // (1) SLOW MOTION MORPH ──────────────────────────────────────────────────────────────
+        // evoPhase advances ~one full unit every several minutes, faster when the set is hot.
+        // The shader reads evoPhase to slowly rotate the *character* of idle motion (flow dir,
+        // warp scale, plasma speed) so even held/calm moments are never the same twice.
+        energyLong = energyLong * 0.9995 + (features.energyNormalized ?? 0) * 0.0005 // ~minutes avg
+        // base rate ≈ 1 unit / 6 min; energetic stretches up to ~3x faster. quietGate so silence doesn't advance it.
+        evoPhase += (1 / 360 + energyLong * (1 / 180)) * dt * quietGate
+        out.evoPhase = evoPhase
+        out.energyLong = energyLong
+        // evoDrift wanders slowly toward evoTarget (re-rolled on section change) → smooth param morph
+        for (const k in evoDrift) evoDrift[k] += (evoTarget[k] - evoDrift[k]) * 0.0008
+        out.evoFlow = evoDrift.flow      // 0..1 — shader: bias the flow/scroll direction
+        out.evoWarp = evoDrift.warp      // 0..1 — shader: domain-warp scale / turbulence character
+        out.evoPlasma = evoDrift.plasma  // 0..1 — shader: internal plasma speed / scale
+
+        // (2) SECTION-AWARE MODE SHIFTS ────────────────────────────────────────────────────────
+        // Detect a structural reset: a sustained QUIET stretch (breakdown/build) followed by a
+        // big ENERGY SURGE (the drop). On that event, advance the discrete visual mode and
+        // re-roll the motion targets, then crossfade in. Debounced so normal kicks don't flip it.
+        sectionCooldown += dt
+        if (quietGate < 0.25) quietRun += dt; else quietRun = Math.max(0, quietRun - dt * 0.5)
+        const dropSurge = (features.energyZScore ?? 0) > 0.8 && quietGate > 0.4
+        const hadBreakdown = quietRun > 4.0      // ≥4s of quiet beforehand = a real section break
+        if (dropSurge && hadBreakdown && sectionCooldown > 20) {
+            sectionMode += 1                      // next visual mode (shader wraps with mod)
+            sectionMix = 0                        // restart the crossfade
+            quietRun = 0
+            sectionCooldown = 0
+            // re-roll the slow-motion targets so the new section also FEELS different in motion
+            evoTarget.flow = Math.random()
+            evoTarget.warp = Math.random()
+            evoTarget.plasma = Math.random()
+        }
+        sectionMix = Math.min(1, sectionMix + dt * 0.25) // ~4s ease into the new mode
+        out.sectionMode = sectionMode
+        out.sectionMix = sectionMix
 
         return out
     }

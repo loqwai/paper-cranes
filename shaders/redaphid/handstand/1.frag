@@ -70,6 +70,15 @@ uniform float wavelet_bassHit;         // sharp kick/drop trigger
 uniform float waveletBand5Normalized;  // treble band, normalized
 uniform float waveletTiltNormalized;   // bass↔treble lean (0..1)
 
+// LONG-TERM EVOLUTION (wavelet-ease, minutes-scale) — the look drifts over a whole set.
+uniform float evoPhase;    // monotonic, ~1 unit / few min (energy-weighted) — slow motion morph
+uniform float evoFlow;     // 0..1 slowly-wandering flow/scroll direction bias
+uniform float evoWarp;     // 0..1 slowly-wandering domain-warp character
+uniform float evoPlasma;   // 0..1 slowly-wandering internal plasma speed
+uniform float sectionMode; // discrete visual-mode index (advances on breakdown→drop); wrap with mod
+uniform float sectionMix;  // 0→1 crossfade after a mode change (~4s ease-in)
+uniform float energyLong;  // minutes-long energy average (set intensity)
+
 // ============================================================================
 // AUDIO-REACTIVE PARAMETERS (#define swap pattern — comment audio, uncomment const)
 // ============================================================================
@@ -79,6 +88,14 @@ uniform float waveletTiltNormalized;   // bass↔treble lean (0..1)
 #define FLOW   (flowPhase  + iTime * 0.06)
 #define MORPH  (morphPhase + iTime * 0.04)
 #define HUEDR  (huePhase   + iTime * 0.02)
+
+// LONG-TERM EVOLUTION macros — drift the CHARACTER of motion over minutes (evo* from the
+// controller wander slowly; evoPhase is a slow monotonic clock). Defaults (evo*≈0.5) reproduce
+// the original look, so the shader still works with no controller.
+#define EVO_FLOWDIR  (evoFlow * 6.2831853)              // slow-wandering scroll direction (radians)
+#define EVO_WARPAMT  (1.0 + (evoWarp - 0.5) * 1.2)      // domain-warp scale drifts ~0.4..1.6×
+#define EVO_PLASMA_SP (0.6 + evoPlasma * 1.2)           // internal plasma speed drifts 0.6..1.8×
+#define EVO_DRIFT    (vec2(cos(EVO_FLOWDIR), sin(EVO_FLOWDIR)) * evoPhase * 0.15)  // slow nebula glide
 
 // Figure pulse — bass shrinks the zoom multiplier → the body zooms toward you.
 // Smooth swell (waveletBassSpring) + punchy kick (waveletBassZScore / wavelet_bassHit).
@@ -209,10 +226,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float figMask = smoothstep(0.5 - aa - edgeTight, 0.5 + aa, m);
 
     // ---- FAR-FIELD NEBULA (chromadepth blue→violet, recedes) ----
-    vec2 fp = (uv - 0.5) * vec2(aspect, 1.0);
+    // EVO_DRIFT slowly glides the whole field over minutes; EVO_WARPAMT drifts how turbulent
+    // the domain-warp reads — so the nebula's motion-character is never the same across a set.
+    vec2 fp = (uv - 0.5) * vec2(aspect, 1.0) + EVO_DRIFT;
     // domain-warped flow, scrolled by monotonic phases + light turbulence
     vec2 warp = vec2(flow2(fp * 2.5 + FLOW * 0.3), flow2(fp * 2.5 - FLOW * 0.27 + 3.3)) - 0.5;
-    float neb = flow2(fp * 3.0 * FIELD_TURB + warp * 1.4 + MORPH * 0.2);
+    float neb = flow2(fp * 3.0 * FIELD_TURB + warp * (1.4 * EVO_WARPAMT) + MORPH * 0.2);
     // ENTROPY FRACTURE — high entropy sharpens the nebula into finer, more crystalline
     // filaments (exponent 2.2 → up to ~4.0); ordered passages stay soft haze. Stays in
     // the far blue/violet band, no hue change — just texture detail riding chaos.
@@ -222,14 +241,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // DEEPER: push further toward violet + dim slightly, so the figure reads as the
     // focal portal against a receding field. Pure depth/brightness, palette unchanged.
     float calm = (1.0 - smoothstep(0.05, 0.45, energyNormalized)) * (1.0 - spectralEntropyNormalized);
-    // far depth band 0.55..0.95, brighter filaments sit a touch nearer (greener)
-    float fieldT = 0.92 - filament * 0.30 + VIOLET_SHIFT + calm * 0.05;
-    // HIGH-END SURGE — screaming bright chaotic peaks (high centroid + energy) energize the
-    // far field: its filaments flare brighter so the whole nebula comes alive with the
-    // high-frequency madness while the figure holds focus. Stays in the far violet band.
+    // far depth band — filaments only sit a TOUCH nearer; clamped to stay COOL (≥0.78 →
+    // blue/violet) so the background can never warm up and compete with the figure.
+    float fieldT = 0.92 - filament * 0.18 + VIOLET_SHIFT + calm * 0.05;   // was *0.30 (warmed too far)
+    fieldT = max(fieldT, 0.78);                                          // hard floor: never leave the cool/far band
+    // HIGH-END SURGE — bright chaotic peaks energize the field's filaments, but GENTLY now and
+    // capped, so it shimmers without washing out. The figure stays the focal point.
     float highEnd = clamp(spectralCentroidNormalized * clamp(energyNormalized, 0.0, 1.0), 0.0, 1.0) * quietGate;
-    float fieldLit = FIELD_BRIGHT + filament * (0.22 + waveletBand5Spring * 0.25 * quietGate + highEnd * 0.30) - calm * 0.04;
-    float fieldSat = 0.90 - tonalStrength * 0.05;
+    float fieldLit = FIELD_BRIGHT + filament * (0.18 + waveletBand5Spring * 0.15 * quietGate + highEnd * 0.16) - calm * 0.04;
+    fieldLit = min(fieldLit, 0.40);                                      // cap: far field can't blow bright
+    // SECTION MODE shifts the field's saturation character per section (cool-band only → no warm wash).
+    float fieldSat = clamp(0.92 - tonalStrength * 0.05 + sin(sectionMode * 1.7) * 0.06 * sectionMix, 0.6, 1.0);
     vec3 background = chromadepth(fieldT, fieldSat, fieldLit);
 
     // sparse twinkling stars (far → violet) — treble makes them sparkle FASTER + brighter;
@@ -250,8 +272,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // with each kick (rides the same bass that bounces the silhouette). Pure light,
     // no hue shift, so the chromadepth red→green interior read stays intact.
     float bassSurge = (waveletBassSpring * 0.8 + clamp(waveletBassZScore, 0.0, 1.0) * 0.6) * quietGate;
-    float plasma = flow2(ip + vec2(MORPH * 0.5, FLOW * 0.4 + bassSurge) + PLASMA_WOB);
-    plasma = mix(plasma, flow2(ip * 1.9 - melodyFlow * 0.6), 0.4);
+    // EVO_PLASMA_SP slowly drifts the internal flow speed over minutes (idle churn evolves).
+    float plasma = flow2(ip + vec2(MORPH * 0.5, (FLOW * 0.4 + bassSurge) * EVO_PLASMA_SP) + PLASMA_WOB);
+    plasma = mix(plasma, flow2(ip * 1.9 - melodyFlow * 0.6 * EVO_PLASMA_SP), 0.4);
 
     // deep interior (fill→1) = reddest/nearest; thin limbs (fill low) → green
     float figT = mix(0.34, 0.0, smoothstep(0.15, 1.0, fill));
