@@ -12,18 +12,32 @@
 // A multi-tap "interior fill" turns the flat stencil into a 3D-ish depth bulge:
 // deep body = reddest/nearest, thin limbs fade to green, the rim flares pure red.
 //
-// FEATURE MAPPING — wavelet (DWT) drives motion/energy, FFT spectral drives texture:
-//   waveletBassSpring   → the body breathes (scale) + reddens (pulls nearer)
-//   wavelet_bassHit /   → rim flares forward on each kick/drop
-//   waveletBassZScore
-//   waveletBand5Spring  → treble/air brightens + violet-shifts the far field
-//   waveletCentroidSpring → overall brightness of the nebula
-//   wubPulse / wubDepth → internal plasma wobble inside the figure
-//   melodyFlow/flowPhase→ monotonic phases scroll the internal energy (no rocking back)
-//   tonalStrength       → melodic passages saturate; noisy passages desaturate
-//   spectralEntropy/    → far-field turbulence + filament chaos
-//   spectralRoughness
-//   quietGate           → mutes ALL reactivity in silence (no flashing in quiet passages)
+// FEATURE MAPPING — wavelet (DWT) drives motion/energy, FFT spectral drives texture.
+// Tuned for a Subdocta (heavy dubstep) show. Every effect stays in its chromadepth
+// depth band so the 3D read sharpens with the music instead of muddying.
+//   BASS → red/near (the headline):
+//     BASS POP        — drives the figure's depth t→0 = it punches OUT of the screen
+//     FIGURE_BOUNCE   — kick lifts the silhouette (a hop)
+//     FIGURE_WOBBLE   — wubPulse×wubDepth sways the body side-to-side (wobble bass)
+//     FIGURE_SHAKE    — convulsive rotation on kicks/wub/roughness
+//     bassSurge       — bass scrolls the interior plasma upward
+//     BASS BLOOM      — kick-gated red core halo, dark passages only
+//     DROP PUNCH      — energy surge + kick zooms the whole frame IN (figure lunges)
+//   BUILD: RISER      — flux+energy rising charges a flicker into the rim → DROP PUNCH
+//   MIDS:  MID WARMTH — mids-over-centroid swells a warm interior glow
+//   TREBLE → green limbs / sparkle:
+//     TREBLE SHIMMER  — airy passages twinkle the thin extremities
+//     SCOOP HEAT      — scooped screech leads heat the rim red→red-orange
+//     SCAN SWEEP      — bright treble races an electric band up the figure
+//     star sparkle    — far-field stars twinkle faster/brighter with treble
+//   TEXTURE/FAR-FIELD: ENTROPY FRACTURE (crystalline filaments), RIM GRIT (gnarly
+//     buzz), HIGH-END SURGE (bright peaks energize the nebula), CALM RECEDE (quiet
+//     tonal → violet/dim), pitchTint (note nudges the whole palette, depth order held)
+//   QUIET BREATH      — in silence the figure gently breathes so it's never frozen
+//   SAFETY: PEAK ROLLOFF soft-knees hot pixels on big drops (no white-out); the figure
+//     coverage tracks the real silhouette with a tight fwidth edge (always reads crisp);
+//     DROP-TIGHTEN vignette closes in on drops to pull focus to the figure.
+//   quietGate           → mutes reactivity in silence (no flashing in quiet passages)
 //
 // PRESET (wavelet + handstand mask):
 // https://visuals.beadfamous.com/?shader=redaphid/handstand/1&wavelet=true&controller=wavelet-ease&image=images/handstand.png&fullscreen=true
