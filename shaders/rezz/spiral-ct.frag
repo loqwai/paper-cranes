@@ -2,6 +2,7 @@
 // @mobile: true
 // @tags: rezz, spiral, hypnotic, trance, dubstep
 // @name: rezz trance
+// https://visuals.beadfamous.com/?shader=rezz/spiral-ct&controller=spiral-ct&knob_40=0.35&knob_40.min=0&knob_40.max=1&name=slow%20spiral
 
 // ============================================================================
 // REZZ TRANCE — one large central spiral with sophisticated stripe variation:
@@ -57,6 +58,15 @@
 #define VOID_DARK       0.04
 #define TWO_PI          6.28318530718
 #define PHI             1.61803398875
+
+// Slow, continuous spiral creep from controllers/spiral-ct.js.
+// Ever-increasing phase that rides under the audio-reactive spin so the spiral
+// keeps drifting even on quiet passages. Load with ?controller=spiral-ct
+uniform float spiral_drift;
+// Per-device drift: each install gets a slightly different creep rate and a
+// unique starting rotation from the random seeds, so no two screens lock in
+// phase. Stays continuous because spiral_drift only ever increases.
+#define DEVICE_DRIFT (spiral_drift * (0.85 + seed * 0.30) + seed2 * TWO_PI)
 
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -163,7 +173,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // ---- Layer 1: main spiral with rich per-arm modulation ----
     vec2 warpV = vec2(fbm(uv * 6.0 + t), fbm(uv * 6.0 - t)) - 0.5;
     vec2 sp1 = uv + warpV * (0.020 + GRIT_LEVEL * 0.020);
-    float phase1 = spiralPhase(sp1, arms, SPIRAL_TIGHT) - spinT;
+    float phase1 = spiralPhase(sp1, arms, SPIRAL_TIGHT) - spinT - DEVICE_DRIFT;
     vec2 armRes1 = armBandRich(phase1, uv, baseThick, time,
                                 WIDTH_PULSE, LENGTH_TAPER,
                                 0.020 + GRIT_LEVEL * 0.030);
@@ -173,13 +183,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // ---- Layer 2: medium counter-rotating spiral ----
     float arms2  = floor(arms * 2.0 + 1.0);
     float tight2 = SPIRAL_TIGHT * 1.6;
-    float phase2 = spiralPhase(uv * 1.05, arms2, tight2) + spinT * 1.6;
+    float phase2 = spiralPhase(uv * 1.05, arms2, tight2) + spinT * 1.6 + DEVICE_DRIFT * 1.6;
     float arm2 = spiralBand(phase2, baseThick * 0.55);
 
     // ---- Layer 3: fine outline spiral + boundary modulator ----
     float arms3  = floor(arms * 4.0 + 1.0);
     float tight3 = SPIRAL_TIGHT * 2.2;
-    float phase3 = spiralPhase(uv * 1.10, arms3, tight3) - spinT * 2.4;
+    float phase3 = spiralPhase(uv * 1.10, arms3, tight3) - spinT * 2.4 - DEVICE_DRIFT * 2.4;
     float arm3 = spiralBand(phase3, baseThick * 0.40);
     float wave3 = sin(phase3 * TWO_PI);
 
