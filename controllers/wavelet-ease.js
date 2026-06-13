@@ -82,7 +82,8 @@ export function make() {
     let sectionMix = 1        // 0→1 crossfade after a mode change (eases up as we settle into the new mode)
     let quietRun = 0          // seconds of sustained quiet (for detecting a build-from-silence → drop)
     let sectionCooldown = 0   // seconds since last section change (debounce so we don't flip every drop)
-    let lastEvoCell = 0       // last integer evoPhase crossed — re-roll motion targets each crossing
+    let lastEvoCell = -1      // last half-unit evoPhase cell — re-roll motion targets each crossing.
+                              // -1 so the FIRST frame (cell 0) re-rolls immediately off dead-neutral.
     let lastT = performance.now() / 1000
 
     return function controller(features) {
@@ -191,9 +192,10 @@ export function make() {
         evoPhase += (1 / 150 + energyLong * (1 / 100)) * dt * quietGate
         out.evoPhase = evoPhase
         out.energyLong = energyLong
-        // re-roll the motion targets every time evoPhase crosses an integer (~every few minutes),
-        // so the look morphs CONTINUOUSLY over a set — not only when a clean breakdown→drop fires.
-        const evoCell = Math.floor(evoPhase)
+        // re-roll the motion targets every HALF-unit of evoPhase (~every ~1.3 min), so the look
+        // morphs CONTINUOUSLY over a set — not only when a clean breakdown→drop fires. lastEvoCell
+        // starts at -1 so cell 0 re-rolls on the FIRST frame (no dead-neutral 0.5/0.5/0.5 at startup).
+        const evoCell = Math.floor(evoPhase * 2.0)
         if (evoCell !== lastEvoCell) {
             lastEvoCell = evoCell
             evoTarget.flow = Math.random()
