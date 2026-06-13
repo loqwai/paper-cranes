@@ -349,25 +349,22 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float riserFlick = 0.5 + 0.5 * sin(iTime * (24.0 + riser * 40.0));   // flicker speeds up as it builds
     col += rimCol * rim * riser * riserFlick * 0.9;
 
-    // RIM GRIT — the outline BREAKS APART into jagged, buzzing fragments. Cranked for
-    // mobile: bigger ~5px cells (read on a phone), fires on roughness OR entropy (not
-    // both), ~60% of cells lit, strong gain. Brightness-only on the red rim (no channel
-    // split → chromadepth order stays clean). This is the headline "fuzzing" of the edge.
-    // gated by energy too: the edge frays HARD when the track drives, stays clean on mellow
-    // grooves — so the prominent mobile fuzz reads on the gnarly bits without a permanently
-    // dirty outline during calm sections.
-    float gritEnergy = smoothstep(0.30, 0.70, energyNormalized);
-    // gate LEADS with entropy (the gnarliness signal) so ordered/warm passages keep a clean
-    // edge; roughness only adds on top. Was max(roughness,entropy) which let loud-but-ordered
-    // moments speckle. Genuinely gnarly (high-entropy) bits still fray hard on mobile.
-    float gritGnarl = clamp(spectralEntropyNormalized * 1.7 + spectralRoughnessNormalized * 0.5, 0.0, 1.0);
-    gritGnarl *= smoothstep(0.35, 0.65, spectralEntropyNormalized);   // hard floor: ordered = no grit
-    float grit = gritGnarl * quietGate * gritEnergy;
-    float gritN = hash21(floor(uv * res / 5.0) + floor(iTime * 38.0));   // chunkier, phone-visible buzz
-    col += rimCol * rim * grit * step(0.4, gritN) * 1.6;
-    // also CHEW the silhouette edge itself — knock jagged dark bites out near the outline so
-    // the edge visibly frays (not just glowing dots outside it). Scaled by grit, edge-only.
-    col *= 1.0 - rim * grit * step(0.62, hash21(floor(uv * res / 5.0) + floor(iTime * 31.0) + 9.0)) * 0.55;
+    // RIM GRIT — the outline frays into ORGANIC, blobby fragments (not a hard pixel lattice).
+    // Driven by GNARLINESS alone (entropy+roughness) so it isn't strangled by quietGate; entropy
+    // is ~0 in true silence so it's its own quiet guard. The texture comes from smooth value-
+    // noise (flow2) with SOFT thresholds → irregular chunky blobs that crawl, not 1px dots.
+    float grit = clamp(spectralEntropyNormalized * 1.3 + spectralRoughnessNormalized * 0.7, 0.0, 1.0)
+               * smoothstep(0.20, 0.45, spectralEntropyNormalized);
+    // organic noise field: low spatial freq (~big blobs) scrolling/boiling over time
+    vec2 gp = uv * vec2(aspect, 1.0) * 14.0;
+    float gN = flow2(gp + vec2(iTime * 1.7, -iTime * 1.3));
+    float gN2 = flow2(gp * 2.1 - vec2(iTime * 2.3, iTime * 1.9));   // second octave, boils faster
+    float fray = smoothstep(0.45, 0.75, gN * 0.6 + gN2 * 0.4);       // soft → blobby fragments, not dots
+    col += rimCol * rim * grit * fray * 1.5;
+    // CHEW the edge: knock soft dark bites out of the outline (organic, anti-correlated noise) so
+    // it reads as crumbling/fraying rather than a clean glowing line.
+    float chew = smoothstep(0.55, 0.85, flow2(gp * 1.6 + vec2(-iTime * 1.1, iTime * 2.0)));
+    col *= 1.0 - rim * grit * chew * 0.5;
 
     // ---- BASS BLOOM — kick-gated red halo from the core, only in DARK passages ----
     // High bass + low centroid (the skill's classic pairing): a near-field (red) radial
