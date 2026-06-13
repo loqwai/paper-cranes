@@ -97,20 +97,20 @@ uniform float energyLong;  // minutes-long energy average (set intensity)
 #define EVO_PLASMA_SP (0.6 + evoPlasma * 1.2)           // internal plasma speed drifts 0.6..1.8×
 #define EVO_DRIFT    (vec2(cos(EVO_FLOWDIR), sin(EVO_FLOWDIR)) * evoPhase * 0.15)  // slow nebula glide
 
-// Figure pulse — bass shrinks the zoom multiplier → the body zooms toward you.
-// Smooth swell (waveletBassSpring) + punchy kick (waveletBassZScore / wavelet_bassHit).
-// Deepened the kick punches so the body visibly PUMPS on each hit.
-#define FIGURE_ZOOM (1.22 - waveletBassSpring * 0.22 * quietGate - clamp(waveletBassZScore, 0.0, 1.0) * 0.22 * quietGate - clamp(wavelet_bassHit, 0.0, 1.0) * 0.14)
+// Figure PUMP — the "bounce" is a ZOOM toward you on the beat, NOT a vertical move. Bass
+// shrinks the zoom multiplier → the body scales up / lunges at the viewer. CRANKED: the kick
+// terms (zScore/hit = the BEAT) dominate and only floor-gate at 0.4 (not full quietGate, which
+// reads shy through a mic), plus an FFT bassZScore fallback, so the figure visibly PUMPS bigger
+// on every beat. Smooth swell rides under it. (1.22 base → as low as ~0.85 on a hard hit.)
+#define FIGURE_ZOOM (1.22 - waveletBassSpring * 0.10 * quietGate \
+                          - clamp(waveletBassZScore, 0.0, 1.0) * 0.20 * max(quietGate, 0.4) \
+                          - clamp(wavelet_bassHit, 0.0, 1.0) * 0.14 * max(quietGate, 0.4) \
+                          - clamp(bassZScore, 0.0, 1.0) * 0.10)
 // #define FIGURE_ZOOM 1.22
 
-// Figure BOUNCE — bass physically lifts the whole silhouette (a kick = a hop). CRANKED:
-// the kick terms (zScore/hit = the BEAT) now dominate and are only lightly gated, so the
-// dancer visibly HOPS on every beat instead of a subtle nudge. Swell rides under it.
-// Kick gate floors at 0.4 (not full quietGate) so a beat still bounces when the gate is shy.
-#define FIGURE_BOUNCE ( waveletBassSpring * 0.06 * quietGate \
-                      + clamp(waveletBassZScore, 0.0, 1.0) * 0.16 * max(quietGate, 0.4) \
-                      + clamp(wavelet_bassHit, 0.0, 1.0) * 0.12 * max(quietGate, 0.4) \
-                      + clamp(bassZScore, 0.0, 1.0) * 0.08 )
+// Figure BOUNCE — kept SMALL: a tiny vertical lift so the pump isn't perfectly centered, but
+// the figure should NOT visibly travel up the screen (user: "bounce = zoom, not move").
+#define FIGURE_BOUNCE ((waveletBassSpring * 0.02 + clamp(waveletBassZScore, 0.0, 1.0) * 0.03) * quietGate)
 // #define FIGURE_BOUNCE 0.0
 
 // Figure WOBBLE — THE dubstep signature. wubPulse (0.5=center) sways the silhouette
