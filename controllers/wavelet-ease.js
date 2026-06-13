@@ -65,6 +65,9 @@ export function make() {
     const spring = {}        // per-feature { pos, vel }
     let melodyFlow = null     // flowing pitch contour
     let tonalSmooth = 0       // smoothed tonal strength
+    const spectralSmooth = { crest: 0, rough: 0, entropy: 0 } // smoothed jittery spectral texture
+    let quietGate = 0         // 0 in silence → 1 when loud; fades reactivity to stop quiet-noise flashing
+    const phase = { spin: 0, morph: 0, flow: 0, hue: 0 } // monotonic accumulators (rate*dt) — no iTime*rate acceleration
     let bassNoteFlow = null   // flowing bassline-pitch contour
     let wubBaseline = 0       // slow bass average, for wub-depth detection
     let wubDepth = 0          // smoothed wobble amplitude
@@ -87,18 +90,62 @@ export function make() {
             out[`${f}Spring`] = s.pos
         }
 
+        // ── MONOTONIC PHASE ACCUMULATORS ── phase += rate*dt, so a CHANGING rate only changes
+        // the speed FROM NOW ON. (A shader doing `iTime * rate` instead jumps the whole angle
+        // by iTime*Δrate whenever the rate changes — and that jump GROWS as iTime grows, so the
+        // spin appears to ACCELERATE over time. Accumulating here fixes that at the source.)
+        const bassS = spring.waveletBass?.pos ?? 0
+        const band3S = spring.waveletBand3?.pos ?? 0
+        const energyS = spring.energy?.pos ?? 0
+        phase.spin  += (0.02 + bassS  * 0.10) * dt
+        phase.morph += (0.02 + band3S * 0.10) * dt
+        phase.flow  += (0.06 + energyS * 0.15) * dt
+        phase.hue   += (0.04 + tonalSmooth * 0.10) * dt
+        out.spinPhase  = phase.spin
+        out.morphPhase = phase.morph
+        out.flowPhase  = phase.flow
+        out.huePhase   = phase.hue
+
         // ── MELODY FLOW: ease the (categorical, circular) pitch into a flowing contour ──
         const pitch = features.pitchClassNormalized ?? 0
         const tonal = features.spectralCrest ?? 0
-        const confident = Math.min(1, Math.max(0, (tonal - 0.3) * 2)) // only chase a clear tonal note
+        // Looser gate (was tonal>0.3) so melodic instruments with MODERATE crest — flutes,
+        // strings, pads, slides — still drive the melody, and a faster chase (0.18) so the
+        // contour follows gliding/portamento pitch instead of lagging behind it.
+        const confident = Math.min(1, Math.max(0, (tonal - 0.15) * 2.5))
         if (melodyFlow === null) melodyFlow = pitch
         let diff = pitch - melodyFlow            // step along the SHORTER arc (pitch wraps at 1.0)
         if (diff > 0.5) diff -= 1.0
         if (diff < -0.5) diff += 1.0
-        melodyFlow += diff * 0.12 * confident    // ease toward the note when confident, else hold
+        // RATE-LIMIT the step so a melodic LEAP (or pitch jumping to the opposite side of the
+        // circle) can't teleport melodyFlow ~1.0 in one frame — that flashed everything driven
+        // by it. Now it always GLIDES between notes, even across big intervals (slew cap 0.03/frame).
+        let step = diff * 0.18 * confident
+        step = Math.max(-0.03, Math.min(0.03, step))
+        melodyFlow += step
         melodyFlow = (melodyFlow + 1.0) % 1.0
         out.melodyFlow = melodyFlow
         out.tonalStrength = (tonalSmooth = tonalSmooth * 0.85 + tonal * 0.15)
+
+        // ── SMOOTHED SPECTRAL TEXTURE features ── these raw FFT features (crest/roughness/
+        // entropy) are JITTERY frame-to-frame (jump 0.12-0.17/frame) and make any visual they
+        // drive SHIVER. EMA-smooth them here so shaders can use texture features without flicker.
+        spectralSmooth.crest = spectralSmooth.crest * 0.85 + (features.spectralCrestNormalized ?? 0) * 0.15
+        spectralSmooth.rough = spectralSmooth.rough * 0.85 + (features.spectralRoughnessNormalized ?? 0) * 0.15
+        spectralSmooth.entropy = spectralSmooth.entropy * 0.85 + (features.spectralEntropyNormalized ?? 0) * 0.15
+        out.spectralCrestSmooth = spectralSmooth.crest
+        out.spectralRoughnessSmooth = spectralSmooth.rough
+        out.spectralEntropySmooth = spectralSmooth.entropy
+
+        // ── QUIET GATE ── In quiet passages (only cymbals/hiss), the Normalized & z-score
+        // features divide by a near-zero recent range and BLOW UP — pure noise becomes wild
+        // full-range swings, flashing hue & spinning fast. quietGate smoothly fades 0→1 with
+        // loudness so shaders can multiply their audio offsets by it: at low energy the
+        // reactivity fades out (visual holds calm) instead of being driven by noise.
+        const eRaw = features.energy ?? 0                       // absolute loudness (gain-independent enough at the low end)
+        const gateTarget = Math.min(1, Math.max(0, (eRaw - 0.015) / 0.05)) // 0 below ~0.015, 1 by ~0.065
+        quietGate = quietGate * 0.9 + gateTarget * 0.1          // smooth so the gate itself never flashes
+        out.quietGate = quietGate
 
         // ── BASS NOTE FLOW: energy-weighted "bass centroid" across the low bands ──
         const e0 = features.waveletBand0 ?? 0, e1 = features.waveletBand1 ?? 0
