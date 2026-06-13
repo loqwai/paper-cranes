@@ -232,10 +232,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float fieldSat = 0.90 - tonalStrength * 0.05;
     vec3 background = chromadepth(fieldT, fieldSat, fieldLit);
 
-    // sparse twinkling stars (far → violet) — treble makes them sparkle FASTER + brighter
+    // sparse twinkling stars (far → violet) — treble makes them sparkle FASTER + brighter;
+    // high entropy spawns MORE of them (denser glitter) even at low energy, so bright-but-
+    // sparse chaotic passages shimmer where the energy-gated effects stay quiet.
     float trebAir = trebleNormalized * quietGate;
+    float starfield = (spectralEntropyNormalized * 0.6 + trebAir * 0.4) * quietGate;
     vec2 sg = floor(uv * res / 3.0);
-    float star = step(0.9985, hash21(sg));
+    float star = step(0.9985 - starfield * 0.0020, hash21(sg));   // entropy lowers threshold → more stars
     float twSpeed = 6.0 + trebAir * 10.0;                  // bright passages = fast twinkle
     float tw = 0.5 + 0.5 * sin(FLOW * twSpeed + hash21(sg + 1.7) * 6.28);
     background += chromadepth(0.85, 0.7, 0.6) * star * tw * (0.7 + trebAir * 0.6);
