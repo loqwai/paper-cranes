@@ -322,8 +322,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // grooves — so the prominent mobile fuzz reads on the gnarly bits without a permanently
     // dirty outline during calm sections.
     float gritEnergy = smoothstep(0.30, 0.70, energyNormalized);
-    float grit = clamp(max(spectralRoughnessNormalized, spectralEntropyNormalized) * 1.5
-                     + spectralRoughnessNormalized * spectralEntropyNormalized * 0.8, 0.0, 1.0) * quietGate * gritEnergy;
+    // gate LEADS with entropy (the gnarliness signal) so ordered/warm passages keep a clean
+    // edge; roughness only adds on top. Was max(roughness,entropy) which let loud-but-ordered
+    // moments speckle. Genuinely gnarly (high-entropy) bits still fray hard on mobile.
+    float gritGnarl = clamp(spectralEntropyNormalized * 1.7 + spectralRoughnessNormalized * 0.5, 0.0, 1.0);
+    gritGnarl *= smoothstep(0.35, 0.65, spectralEntropyNormalized);   // hard floor: ordered = no grit
+    float grit = gritGnarl * quietGate * gritEnergy;
     float gritN = hash21(floor(uv * res / 5.0) + floor(iTime * 38.0));   // chunkier, phone-visible buzz
     col += rimCol * rim * grit * step(0.4, gritN) * 1.6;
     // also CHEW the silhouette edge itself — knock jagged dark bites out near the outline so
