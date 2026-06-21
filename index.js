@@ -307,7 +307,11 @@ const loadController = async () => {
             controllerUrl = `/controllers/${controllerPath}`
         }
 
-        const controllerModule = await import(/* @vite-ignore */ controllerUrl)
+        // Cache-bust the import: vite/the browser key ES modules by URL, so after editing a
+        // controller a reload would otherwise load the STALE cached version (controllers
+        // silently not updating on the jam/index page). Append a timestamp to force a fresh load.
+        const cacheBust = (controllerUrl.includes('?') ? '&' : '?') + 't=' + Date.now()
+        const controllerModule = await import(/* @vite-ignore */ controllerUrl + cacheBust)
 
         // Handle different module formats:
         // 1. Module exports a function directly (default export) - use it as the controller
