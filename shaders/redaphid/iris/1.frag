@@ -1,7 +1,8 @@
 // @fullscreen: true
 //https://visuals.beadfamous.com/?shader=redaphid/iris/1&wavelet=true&controller=wavelet-ease&fullscreen=true&knob_1=0.45&knob_20=0.1&knob_21=1.0&knob_2=0.2&knob_3=0.66&knob_27=1&knob_8=1&knob_18=0.7&knob_26=0.8&knob_41=0.6&knob_9=0.7&knob_10=0.6&knob_11=0.6&knob_12=0.6&knob_13=0.6&knob_6=1.0&knob_14=0.4&knob_15=0.5&knob_16=0.4
-// GOOD REACTIVE PRESET — tuned live look with full music response (knob_6 band-reactivity up, knob_7 drop_glow restored to full range, skew/spread enabled, chroma back):
-//https://visuals.beadfamous.com/?shader=redaphid/iris/1&wavelet=true&controller=wavelet-ease&fullscreen=true&knob_1=0.921&knob_2=1&knob_3=0.496&knob_4=0.551&knob_5=1&knob_6=1.0&knob_7=0.1&knob_8=1&knob_9=1&knob_10=0.6&knob_11=0.197&knob_12=0.6&knob_13=0.323&knob_14=0.283&knob_15=0.378&knob_16=0.063&knob_17=0.646&knob_18=0.69&knob_19=0.37&knob_20=0.457&knob_21=0.5&knob_22=0.315&knob_23=0.661&knob_24=1&knob_25=0.315&knob_26=0.79&knob_27=0.346&knob_28=0.079&knob_30=0.354&knob_31=0.339&knob_32=0.079&knob_33=0.268&knob_34=0
+// GOOD REACTIVE PRESET — tuned live look with full music response (knob_6 band-reactivity up, knob_7 drop_glow restored to full range, skew/spread enabled, chroma back).
+// Gaze centered (knob_24/25=0.5) so the iris sits center-frame; catchlight on its own gate (knob_31), independent of gaze (knob_5). Turn knob_5 down to calm the eye-shiver without losing the glint.
+//https://visuals.beadfamous.com/?shader=redaphid/iris/1&wavelet=true&controller=wavelet-ease&fullscreen=true&knob_1=0.921&knob_2=1&knob_3=0.496&knob_4=0.551&knob_5=1&knob_6=1.0&knob_7=0.1&knob_8=1&knob_9=1&knob_10=0.6&knob_11=0.197&knob_12=0.6&knob_13=0.323&knob_14=0.283&knob_15=0.378&knob_16=0.063&knob_17=0.646&knob_18=0.69&knob_19=0.37&knob_20=0.457&knob_21=0.5&knob_22=0.315&knob_23=0.661&knob_24=0.5&knob_25=0.5&knob_26=0.79&knob_27=0.346&knob_28=0.079&knob_30=0.354&knob_31=0.5&knob_32=0.079&knob_33=0.268&knob_34=0
 // @mobile: false
 // License: CC0
 //  iris/7 driven by the WAVELET + SPECTRAL features (forked from iris/7, swapping the
@@ -672,8 +673,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // CATCHLIGHT (iter16 — moved AFTER mirror so it survives feedback wash).
     // Tiny bright specular dot positioned upper-left of pupil toward gaze. Real-eye cue.
-    // Pure RGB add (not L mod), tight ~1.5% radius, gated by knob_5 and by pupil proximity
-    // so it never shows on the void. Saccade-tracking via gazeV so it drifts with the eye.
+    // Pure RGB add (not L mod), tight ~1.5% radius, gated by knob_31 (its own master) and by
+    // pupil proximity so it never shows on the void. DECOUPLED from knob_5: gaze (knob_5) and
+    // catchlight reactivity (knob_31) are now independent — moving the eye no longer dims the
+    // glint, and the glint can stay live with the eye centered. Saccade-tracking via gazeV.
     vec2 catchCentre = q - 0.5 - gazeV * 0.30 + vec2(-0.05, 0.07);
     catchCentre *= vec2(iResolution.x / iResolution.y, 1.0);
     float catchD = length(catchCentre);
@@ -688,8 +691,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             + bass_pump * BASS_REACT * 0.6
             + clamp(spectralFluxZScore, 0.0, 1.0) * 0.8
             + spectralCrestSmooth * 0.45;
-    // iter53: knob_31 catchlight intensity master — user pinned at ~0.6, give them control.
-    float catchlight = (1.0 - smoothstep(0.008, 0.022, catchD)) * knob_5 * onEye * catchPulse * mix(0.4, 1.8, knob_31);
+    // knob_31 = catchlight intensity master AND its on/off gate (0 = off, 1 = 1.8x). No longer
+    // multiplied by knob_5 — the catchlight is fully independent of where the eye is looking.
+    float catchlight = (1.0 - smoothstep(0.008, 0.022, catchD)) * onEye * catchPulse * knob_31 * 1.8;
     col += vec3(0.85, 0.88, 0.95) * catchlight; // bright cool-white specular
 
     fragColor = vec4(col, 1.0);
