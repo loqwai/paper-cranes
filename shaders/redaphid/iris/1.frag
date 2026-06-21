@@ -1,5 +1,5 @@
 // @fullscreen: true
-//https://visuals.beadfamous.com/?shader=claude/wip/iris/wavelet&wavelet=true&controller=wavelet-ease&fullscreen=true&knob_1=0.45&knob_2=0.1&knob_4=1.0&knob_5=0.2&knob_7=0.66&knob_8=1&knob_11=1&knob_17=0.7&knob_18=0.8&knob_20=0.6&knob_21=0.7&knob_22=0.6&knob_23=0.6&knob_24=0.6&knob_25=0.6&knob_26=1.0&knob_27=0.4&knob_28=0.5&knob_29=0.4
+//https://visuals.beadfamous.com/?shader=claude/wip/iris/wavelet&wavelet=true&controller=wavelet-ease&fullscreen=true&knob_1=0.45&knob_7=0.1&knob_19=1.0&knob_2=0.2&knob_3=0.66&knob_8=1&knob_11=1&knob_17=0.7&knob_18=0.8&knob_20=0.6&knob_21=0.7&knob_22=0.6&knob_23=0.6&knob_24=0.6&knob_25=0.6&knob_6=1.0&knob_27=0.4&knob_28=0.5&knob_29=0.4
 // @mobile: false
 // License: CC0
 //  iris/7 driven by the WAVELET + SPECTRAL features (forked from iris/7, swapping the
@@ -41,21 +41,21 @@ uniform float waveletBassZScore; // self-calibrating bass spike — kick zoom (w
 // spectralFluxZScore are FFT features — auto-declared by the wrapper.
 
 // MOTION phases — monotonic from iTime (the controller did this in JS; iTime is monotonic).
-// Speed modulated by audio LEVELS so motion quickens with intensity, knob_5 = base speed.
+// Speed modulated by audio LEVELS so motion quickens with intensity, knob_2 = base speed.
 // Slowed way down — was spinning too fast. Rates are monotonic (always forward); audio
 // gently modulates SPEED via a small +term, never the angle (so no rotate-back).
 // quietGate (0 in quiet, 1 when loud) multiplies the AUDIO offsets so quiet-noise can't
 // drive fast spin / hue flashing — at low energy these fall back to their gentle base rate.
 // STRICTLY MONOTONIC: audio modulates the RATE (inside the iTime multiplier), never adds to
 // the angle — so these only ever move FORWARD, faster on louder/bassier audio, never back.
-// SPIN SPEED is now fully knob-controlled: knob_5 sets base spin (0 = nearly still), knob_20
-// sets how much the BASS speeds it up. Base rate cut way down — at knob_5=0 it barely drifts.
+// SPIN SPEED is now fully knob-controlled: knob_2 sets base spin (0 = nearly still), knob_20
+// sets how much the BASS speeds it up. Base rate cut way down — at knob_2=0 it barely drifts.
 // PHASES come from the controller as MONOTONIC ACCUMULATORS (phase += rate*dt). This avoids
 // the iTime*rate ACCELERATION bug: with iTime*rate, any change in rate jumps the angle by
 // iTime*Δrate, and that jump grows as iTime grows → the spin speeds up over time. Accumulated
 // phases never do that — the bass-speedup is baked into the accumulator's RATE in the
 // controller, so here we only scale by the STATIC knob (a constant factor can't accelerate).
-#define spin_angle   (spinPhase * knob_5 * 2.0)
+#define spin_angle   (spinPhase * knob_2 * 2.0)
 #define morph_phase  (morphPhase)
 #define flow_phase   (flowPhase)
 #define hue_phase    (huePhase)
@@ -63,14 +63,14 @@ uniform float waveletBassZScore; // self-calibrating bass spike — kick zoom (w
 // ════════════════════════════════════════════════════════════════════════════════════════
 //  LIVE MODULATION KNOBS — dial each audio effect's DEPTH (0 = off, 1 = full). Map these to
 //  MIDI or set in the URL. Defaults below give the current look; turn any to 0 to disable it.
-//    knob_5  = SPIN base speed       (0 = nearly still)        ← slow the spin here
+//    knob_2  = SPIN base speed       (0 = nearly still)        ← slow the spin here
 //    knob_20 = how much BASS speeds the spin
 //    knob_21 = MELODY → hue amount
 //    knob_22 = SKEW → petal lean (shape shear)
 //    knob_23 = KURTOSIS → focus/diffuse
 //    knob_24 = SPREAD → ring spacing
 //    knob_25 = ROLLOFF → outer reach
-//    knob_26 = energy/band level reactivity (size/depth breathing)
+//    knob_6 = energy/band level reactivity (size/depth breathing)
 //    knob_27 = TILT → hue sub-lean
 //    knob_28 = TUNNEL zoom speed (feedback push — a big part of apparent SPEED)
 //    knob_29 = TUNNEL swirl speed (feedback rotation — the OTHER fast-spin source)
@@ -82,7 +82,7 @@ uniform float waveletBassZScore; // self-calibrating bass spike — kick zoom (w
 #define MOD_KURT        (knob_23)
 #define MOD_SPREAD      (knob_24)
 #define MOD_REACH       (knob_25)
-#define MOD_LEVEL       (knob_26)
+#define MOD_LEVEL       (knob_6)
 #define MOD_TILT        (knob_27)
 
 // LEVELS — map our smooth wavelet/spectral features onto iris's reactive envelopes.
@@ -97,7 +97,7 @@ uniform float waveletBassZScore; // self-calibrating bass spike — kick zoom (w
 #define centroid_env (waveletCentroidSpring)              // brightness
 #define bass_pump    (clamp(wubDepth + waveletBassSpring * 0.5, 0.0, 1.0)) // FAST punch + wub
 // drop_glow & pitch_pulse SMOOTHED (not raw z-scores) so the iris breathes, doesn't strobe:
-#define drop_glow    (clamp(energySpring * 0.5 + spectralCrestSmooth * 0.4 + knob_6, 0.0, 1.0))
+#define drop_glow    (clamp(energySpring * 0.5 + spectralCrestSmooth * 0.4 + knob_26, 0.0, 1.0))
 #define pitch_pulse  (clamp(spectralCrestSmooth * 0.6 + tonalStrength * 0.4, 0.0, 1.0))
 
 // ── MANY-FEATURE MODULATION ──────────────────────────────────────────────────────────────
@@ -147,20 +147,20 @@ uniform float spectralRolloffNormalized; // high-freq cutoff → outer reach
 
 // PITCH FAMILY → COLOR. melody + brightness set the palette + SUB_LEAN (bass↔treble tilt);
 // GATED by loudness so quiet noise can't flash the hue (offset fades to 0 when quiet).
-// Like iris/7, MASTER_HUE is primarily the knob_2 palette rotation. Audio only GENTLY tints it
+// Like iris/7, MASTER_HUE is primarily the knob_7 palette rotation. Audio only GENTLY tints it
 // (small coefficients) so the color stays inside iris/7's tuned Oklab journey instead of swinging
 // into harsh RGB primaries (the "cheap" look). melodyFlow gives a subtle melodic drift, no more.
-#define MASTER_HUE  (knob_2 * 6.28318 + (melodyFlow - 0.5) * 0.5 * MOD_HUE * quietGate + SUB_LEAN)
+#define MASTER_HUE  (knob_7 * 6.28318 + (melodyFlow - 0.5) * 0.5 * MOD_HUE * quietGate + SUB_LEAN)
 
 // LEVEL FAMILY → SIZE / DEPTH / THICKNESS. Band energies set how BIG/BOLD/DEEP, by region.
 #define LINE_THICK  (width * (5.0 + energy_env * 5.0) * (0.4 + knob_18 * 1.6))            // loudness = line weight
-#define size  (baseSize * mix(0.55, 1.10, knob_7) * (1.0 + waveletBand2Spring * 0.18 * MOD_LEVEL))   // mid energy = facet size
+#define size  (baseSize * mix(0.55, 1.10, knob_3) * (1.0 + waveletBand2Spring * 0.18 * MOD_LEVEL))   // mid energy = facet size
 #define offc  (baseOffc * mix(0.70, 1.45, knob_8) * (1.0 + waveletBand5Spring * 0.15 * MOD_LEVEL))   // treble energy = arm spread
 #define DEPTH (mix(0.18, 0.50, knob_17) + waveletBassSpring * 0.14 * MOD_LEVEL)                       // bass energy = core depth
 
 // TEXTURE FAMILY → DETAIL / SPARKLE / EDGE. Transients/grit set fine structure (below + IRIDESCENCE/EDGE_GLOW).
 // SHAPE FAMILY (NEW): spectral SPREAD/ROLLOFF → ring spacing & outer reach (how wide the spectrum = how far the structure spreads).
-#define RIPPLE_FREQ (10.0 + knob_13 * 16.0 + ZOOM_DEEP * 32.0 + waveletBand4Spring * 8.0 + spectralRoughnessSmooth * 6.0 + (spectralSpreadNormalized - 0.5) * 8.0 * MOD_SPREAD * quietGate) // spread = ring spacing
+#define RIPPLE_FREQ (10.0 + knob_4 * 16.0 + ZOOM_DEEP * 32.0 + waveletBand4Spring * 8.0 + spectralRoughnessSmooth * 6.0 + (spectralSpreadNormalized - 0.5) * 8.0 * MOD_SPREAD * quietGate) // spread = ring spacing
 #define RING_REACH  (1.0 + (spectralRolloffNormalized - 0.5) * 0.18 * MOD_REACH * quietGate)  // rolloff = how far the iris reaches outward
 #define SUB_LEAN    ((waveletTiltNormalized - 0.5) * 0.25 * MOD_TILT * quietGate)            // bass↔treble lean tints the hue
 #define TWIST (knob_10 * 3.14159 + ZOOM_DEEP * 1.6)  // STATIC twist (knob only) — NO audio, so the petals never rock back. Audio drives SHAPE, not this rotation.
@@ -267,14 +267,14 @@ vec3 postProcess(vec3 col, vec2 q, vec2 p) {
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 q = fragCoord.xy / iResolution.xy;
-    // === GAZE (knob_12 X, knob_9 Y, knob_19 strength) ===
+    // === GAZE (knob_12 X, knob_9 Y, knob_5 strength) ===
     // Rebound to the knobs the user is actively turning. Bipolar XY: 0.5 = centred.
     // Strength=0 → eye looks forward (identical to pre-gaze). The whole eye shifts toward
     // (gx, gy); pupil/ruff shift FURTHER (parallax) so the eye reads as a 3D ball turning.
     // Old k17/k18 swallow the displaced DEPTH and LINE_THICK so nothing is lost.
     float gx = (knob_12 - 0.5) * 2.0;
     float gy = (knob_9 - 0.5) * 2.0;
-    float GAZE_STR = knob_19 * 0.50; // 0..0.50 max travel in normalized screen
+    float GAZE_STR = knob_5 * 0.50; // 0..0.50 max travel in normalized screen
     // MICRO-SACCADE — real eyes drift even when fixated. Tiny sinusoid via monotonic phases
     // with incommensurate freqs so the pattern never loops. Gated by GAZE_STR so it vanishes
     // when gaze is off.
@@ -349,7 +349,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // and a SHADE float (0..1, dark anatomy regions). One oklch2rgb at the end. The palette
     // function gives L+C+hue together, bounded by design — no need for post-clamps.
     float irisR = rr;
-    float fiber = d * mix(10.0, 46.0, knob_3);
+    float fiber = d * mix(10.0, 46.0, knob_13);
 
     // SHADE — anatomical darkness amount (additive 0..1, applied as L scale at the end).
     // No L cascade: gather all dark-region weights into one number, multiply L once.
@@ -414,8 +414,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float t = 0.05 * fiber
             + 0.55 * irisR
             + 0.20 * hue_phase / TAU // monotonic palette drift
-            // (removed `+ (knob_2 - 0.5)` — that shoved the palette zone off iris/7's tuned
-            //  warm-gold↔green↔teal↔violet journey into harsh zones. knob_2 rotates the FINAL
+            // (removed `+ (knob_7 - 0.5)` — that shoved the palette zone off iris/7's tuned
+            //  warm-gold↔green↔teal↔violet journey into harsh zones. knob_7 rotates the FINAL
             //  hue via MASTER_HUE instead, like iris/7 — keeps the refined palette intact.)
             // iter63 OF THE TREES PREP — HAUNTED SHIMMER: amplitude quadratic in entropy.
             // Calm passages (entropy_env<0.5) keep the iter19 amount; eerie/chaotic passages
@@ -485,7 +485,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float sparkle = sin(irisR * 60.0 + aa * 8.0 + iTime * 2.3);
     // Mix in audio/knob chroma scale on a/b (NOT L) — keeps L bounded, lets chroma swing.
     // knob_44 (iter47): outer-halo chroma boost — user pinned at 1.0. Adds chroma swing in
-    // the limbal+outer band (irisR > 0.4), independent of audio. Together with knob_4 (base
+    // the limbal+outer band (irisR > 0.4), independent of audio. Together with knob_19 (base
     // chroma) this gives users a 2D chroma control: k4 for inner, k44 for outer.
     float outerHaloBand = smoothstep(0.40, 0.60, irisR);
     // iter53 DMT PHASE 2 — MOIRÉ SWIRL: radial+angular interference for the shimmering
@@ -493,7 +493,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // per iter19b lesson); amplitude scaled by knob_45. 0=anatomy-clean baseline, max=full
     // moiré shimmer woven through chroma. Acts on chroma only — L stays bounded.
     float moireSwirl = cos(irisR * 24.0 - aa * 7.0 + flow_phase * 0.9);
-    float chromaScale = mix(0.65, 1.30, knob_4)
+    float chromaScale = mix(0.65, 1.30, knob_19)
             * (1.0 + 0.45 * dropLift * dropFlareBand
                 + 0.35 * radiation * radiationLoudness * radiationGate
                 + 0.25 * sparkle * trebleShimmer
@@ -670,7 +670,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // CATCHLIGHT (iter16 — moved AFTER mirror so it survives feedback wash).
     // Tiny bright specular dot positioned upper-left of pupil toward gaze. Real-eye cue.
-    // Pure RGB add (not L mod), tight ~1.5% radius, gated by knob_19 and by pupil proximity
+    // Pure RGB add (not L mod), tight ~1.5% radius, gated by knob_5 and by pupil proximity
     // so it never shows on the void. Saccade-tracking via gazeV so it drifts with the eye.
     vec2 catchCentre = q - 0.5 - gazeV * 0.30 + vec2(-0.05, 0.07);
     catchCentre *= vec2(iResolution.x / iResolution.y, 1.0);
@@ -687,7 +687,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             + clamp(spectralFluxZScore, 0.0, 1.0) * 0.8
             + spectralCrestSmooth * 0.45;
     // iter53: knob_36 catchlight intensity master — user pinned at ~0.6, give them control.
-    float catchlight = (1.0 - smoothstep(0.008, 0.022, catchD)) * knob_19 * onEye * catchPulse * mix(0.4, 1.8, knob_36);
+    float catchlight = (1.0 - smoothstep(0.008, 0.022, catchD)) * knob_5 * onEye * catchPulse * mix(0.4, 1.8, knob_36);
     col += vec3(0.85, 0.88, 0.95) * catchlight; // bright cool-white specular
 
     fragColor = vec4(col, 1.0);
