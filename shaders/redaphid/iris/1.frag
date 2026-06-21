@@ -1,8 +1,8 @@
 // @fullscreen: true
 //https://visuals.beadfamous.com/?shader=redaphid/iris/1&wavelet=true&controller=wavelet-ease&fullscreen=true&knob_1=0.45&knob_20=0.1&knob_21=1.0&knob_2=0.2&knob_3=0.66&knob_27=1&knob_8=1&knob_18=0.7&knob_26=0.8&knob_41=0.6&knob_9=0.7&knob_10=0.6&knob_11=0.6&knob_12=0.6&knob_13=0.6&knob_6=1.0&knob_14=0.4&knob_15=0.5&knob_16=0.4
 // GOOD REACTIVE PRESET — tuned live look with full music response (knob_6 band-reactivity up, knob_7 drop_glow restored to full range, skew/spread enabled, chroma back).
-// Gaze centered (knob_24/25=0.5) so the iris sits center-frame; catchlight on its own gate (knob_31), independent of gaze (knob_5). Turn knob_5 down to calm the eye-shiver without losing the glint.
-//https://visuals.beadfamous.com/?shader=redaphid/iris/1&wavelet=true&controller=wavelet-ease&fullscreen=true&knob_1=0.921&knob_2=1&knob_3=0.496&knob_4=0.551&knob_5=1&knob_6=1.0&knob_7=0.1&knob_8=1&knob_9=1&knob_10=0.6&knob_11=0.197&knob_12=0.6&knob_13=0.323&knob_14=0.283&knob_15=0.378&knob_16=0.063&knob_17=0.646&knob_18=0.69&knob_19=0.37&knob_20=0.457&knob_21=0.5&knob_22=0.315&knob_23=0.661&knob_24=0.5&knob_25=0.5&knob_26=0.79&knob_27=0.346&knob_28=0.079&knob_30=0.354&knob_31=0.5&knob_32=0.079&knob_33=0.268&knob_34=0
+// Gaze centered (knob_24/25=0.5) so the iris sits center-frame; catchlight off by default (knob_31=0 — raise it to add the specular glint), independent of gaze (knob_5). Turn knob_5 down to calm the eye-shiver.
+//https://visuals.beadfamous.com/?shader=redaphid/iris/1&wavelet=true&controller=wavelet-ease&fullscreen=true&knob_1=0.921&knob_2=1&knob_3=0.496&knob_4=0.551&knob_5=1&knob_6=1.0&knob_7=0.1&knob_8=1&knob_9=1&knob_10=0.6&knob_11=0.197&knob_12=0.6&knob_13=0.323&knob_14=0.283&knob_15=0.378&knob_16=0.063&knob_17=0.646&knob_18=0.69&knob_19=0.37&knob_20=0.457&knob_21=0.5&knob_22=0.315&knob_23=0.661&knob_24=0.5&knob_25=0.5&knob_26=0.79&knob_27=0.346&knob_28=0.079&knob_30=0.354&knob_31=0&knob_32=0.079&knob_33=0.268&knob_34=0
 // @mobile: false
 // License: CC0
 //  iris/7 driven by the WAVELET + SPECTRAL features (forked from iris/7, swapping the
