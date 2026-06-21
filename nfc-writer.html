@@ -25,6 +25,7 @@
     --taco-region-mask: #6cb0e8;
     --taco-plasma: #ff7eb6;
     --taco-seamless: #5fd0c8;
+    --iris: #9b7ad0;
     --ok: #2ecc71;
     --err: #e74c3c;
     --warn: #f39c12;
@@ -81,6 +82,7 @@
   .current.color-taco-region-mask { border-left: 4px solid var(--taco-region-mask); }
   .current.color-taco-plasma { border-left: 4px solid var(--taco-plasma); }
   .current.color-taco-seamless { border-left: 4px solid var(--taco-seamless); }
+  .current.color-iris { border-left: 4px solid var(--iris); }
   .label {
     font-size: 12px;
     text-transform: uppercase;
@@ -312,6 +314,24 @@ const QUEUES = {
     { name: "taco-49", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/region-mask&image=images/taco.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=0.039&knob_2=0.92&knob_3=0.724&knob_4=0.756&knob_5=0.62&knob_6=0.409&knob_7=0.0&knob_8=0.488&knob_9=0.071&knob_10=1.0&knob_11=1.0&knob_12=1.0&knob_13=0.071&knob_14=0.504&knob_15=0.63&knob_16=0.205&fft_size=2048&smoothing=0.3", color: "taco-region-mask" },
     { name: "taco-50", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/region-mask&image=images/taco.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=0.039&knob_2=0.54&knob_3=0.724&knob_4=0.756&knob_5=0.24&knob_6=0.409&knob_7=0.0&knob_8=0.488&knob_9=0.071&knob_10=1.0&knob_11=1.0&knob_12=1.0&knob_13=0.071&knob_14=0.504&knob_15=0.63&knob_16=0.205&fft_size=2048&smoothing=0.3", color: "taco-region-mask" },
   ],
+  iris: [
+    // iris/1 — 15 shape/color permutations, written as 2cb.pw short links (KV: iris-1-N)
+    { name: "iris-1-1", url: "https://2cb.pw/iris-1-1", color: "iris" },  // Deep Tunnel Plunge
+    { name: "iris-1-2", url: "https://2cb.pw/iris-1-2", color: "iris" },  // Flat Star Mandala
+    { name: "iris-1-3", url: "https://2cb.pw/iris-1-3", color: "iris" },  // Wide Open Flower
+    { name: "iris-1-4", url: "https://2cb.pw/iris-1-4", color: "iris" },  // Tight Focused Eye
+    { name: "iris-1-5", url: "https://2cb.pw/iris-1-5", color: "iris" },  // Peach Plasma
+    { name: "iris-1-6", url: "https://2cb.pw/iris-1-6", color: "iris" },  // Violet Teal Journey
+    { name: "iris-1-7", url: "https://2cb.pw/iris-1-7", color: "iris" },  // Slow Hypnotic Spin
+    { name: "iris-1-8", url: "https://2cb.pw/iris-1-8", color: "iris" },  // Fast Kaleidoscope
+    { name: "iris-1-9", url: "https://2cb.pw/iris-1-9", color: "iris" },  // Photon Ring
+    { name: "iris-1-10", url: "https://2cb.pw/iris-1-10", color: "iris" },  // Dense Ripple Web
+    { name: "iris-1-11", url: "https://2cb.pw/iris-1-11", color: "iris" },  // Gazing Eye
+    { name: "iris-1-12", url: "https://2cb.pw/iris-1-12", color: "iris" },  // Ember Corona
+    { name: "iris-1-13", url: "https://2cb.pw/iris-1-13", color: "iris" },  // Moire Lattice (DMT)
+    { name: "iris-1-14", url: "https://2cb.pw/iris-1-14", color: "iris" },  // Calm Breath
+    { name: "iris-1-15", url: "https://2cb.pw/iris-1-15", color: "iris" },  // Chaos Bloom
+  ],
   coat: [
     // navy
     { name: "coat-navy-1",  url: "https://2cb.pw/coat-navy-1",  color: "navy" },
@@ -377,7 +397,11 @@ const els = {
 // Map nfc-variants.json full URLs (production) onto whichever origin we're on so
 // the iframe renders locally during dev. Falls back to short URL if mapping missing.
 let VARIANTS_BY_NAME = {}
-const variantsUrl = QUEUE_NAME === "taco" ? "/shaders/redaphid/taco/nfc-variants.json" : null
+const VARIANTS_URLS = {
+  taco: "/shaders/redaphid/taco/nfc-variants.json",
+  iris: "/shaders/redaphid/iris/nfc-variants.json",
+}
+const variantsUrl = VARIANTS_URLS[QUEUE_NAME] || null
 if (variantsUrl) {
   fetch(variantsUrl)
     .then(r => r.ok ? r.json() : Promise.reject(r.status))
