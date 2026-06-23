@@ -15,7 +15,7 @@
     // We load the pre-built manifest then override start_url with the current
     // page URL so the installed PWA preserves all query params (image, etc.).
     (function() {
-      var shader = new URLSearchParams(window.location.search).get('shader')
+      var shader = new URLSearchParams(window.location.hash.slice(1)).get('shader') || new URLSearchParams(window.location.search).get('shader')
       var safe = shader ? shader.replace(/\//g, '--') : 'default'
       var link = document.createElement('link')
       link.rel = 'manifest'
@@ -25,7 +25,7 @@
       // Icon srcs must be absolute since the blob URL has no origin for relative paths.
       fetch('/manifests/' + safe + '.json').then(function(r) { return r.json() }).then(function(manifest) {
         var origin = window.location.origin
-        manifest.start_url = origin + window.location.pathname + window.location.search
+        manifest.start_url = origin + window.location.pathname + (window.location.hash || window.location.search)
         manifest.icons = manifest.icons.map(function(icon) {
           icon.src = origin + icon.src
           return icon

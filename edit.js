@@ -4,6 +4,7 @@ import { html } from 'htm/preact'
 import { getRelativeOrAbsoluteShaderUrl } from './src/utils.js'
 import { createParamsManager } from './src/params/ParamsManager.js'
 import { initMultiplayerEditor } from './src/multiplayer/MultiplayerEditor.js'
+import { getHashParams, setHashParam, deleteHashParam } from './src/params/urlParams.js'
 
 // Initialize multiplayer editing as soon as Monaco is ready
 const startMultiplayer = () => {
@@ -22,8 +23,7 @@ if (window.__monacoEditor) {
 }
 
 // Check if we're in remote control mode
-const searchParams = new URLSearchParams(window.location.search)
-const isRemoteControlMode = searchParams.get('remote') === 'control'
+const isRemoteControlMode = getHashParams().get('remote') === 'control'
 
 // Create params manager - single source of truth for all params
 // Handles URL sync and remote sync automatically
@@ -165,17 +165,16 @@ const ParamNavigator = (() => {
             mkBtn('Open viewer', '#464', () => {
                 const url = new URL(window.location.href)
                 url.pathname = url.pathname.replace(/edit\.html?$/, 'index.html')
+                url.search = ''
                 window.open(url.toString(), '_blank')
             }),
             mkBtn('→ list', '#644', () => {
-                const url = new URL(window.location.href)
-                url.pathname = '/list.html'
+                const hp = getHashParams()
                 const keep = new URLSearchParams()
                 for (const k of ['remote', 'room', 'relay']) {
-                    if (url.searchParams.has(k)) keep.set(k, url.searchParams.get(k))
+                    if (hp.has(k)) keep.set(k, hp.get(k))
                 }
-                url.search = keep.toString()
-                window.location.href = url.toString()
+                window.location.href = `/list.html#${keep.toString()}`
             }),
         )
         panel.appendChild(footer)
@@ -184,13 +183,11 @@ const ParamNavigator = (() => {
     }
 
     const setParam = (key, value) => {
-        const url = new URL(window.location.href)
         if (value === '' || value === null || value === undefined) {
-            url.searchParams.delete(key)
+            deleteHashParam(key)
         } else {
-            url.searchParams.set(key, value)
+            setHashParam(key, value)
         }
-        window.history.replaceState({}, '', url.toString())
         // Also push to paramsManager so the visualizer/remote pick it up
         const num = parseFloat(value)
         if (window.paramsManager) {
@@ -205,8 +202,7 @@ const ParamNavigator = (() => {
     const render = () => {
         if (!listEl) return
         listEl.innerHTML = ''
-        const url = new URL(window.location.href)
-        const entries = Array.from(url.searchParams.entries())
+        const entries = Array.from(getHashParams().entries())
         if (entries.length === 0) {
             const empty = document.createElement('div')
             empty.style.cssText = 'opacity:0.5;font-style:italic;padding:8px 0;'
@@ -610,15 +606,12 @@ const FeatureAdder = () => {
             // Cmd/Ctrl + Shift + L: jump back to the list page (preserves remote=control)
             if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === 'l') {
                 event.preventDefault()
-                const listUrl = new URL(window.location.href)
-                listUrl.pathname = '/list.html'
-                // Drop shader-specific params, keep passthrough ones
+                const hp = getHashParams()
                 const keep = new URLSearchParams()
                 for (const k of ['remote', 'room', 'relay', 'filter', 'favoritesOnly', 'fullscreenOnly', 'wip']) {
-                    if (listUrl.searchParams.has(k)) keep.set(k, listUrl.searchParams.get(k))
+                    if (hp.has(k)) keep.set(k, hp.get(k))
                 }
-                listUrl.search = keep.toString()
-                window.location.href = listUrl.toString()
+                window.location.href = `/list.html#${keep.toString()}`
             }
         }
 
@@ -635,6 +628,7 @@ const FeatureAdder = () => {
        const url = new URL(window.location.href)
        url.pathname = url.pathname.replace(/edit\.html?$/, 'index.html').replace(/\/edit$/, '/')
        if (url.pathname === '' || url.pathname === '/edit') url.pathname = '/'
+       url.search = ''
        return url
     }
 
@@ -686,23 +680,21 @@ const FeatureAdder = () => {
         }
     }, [isDrawerOpen])
 
-    const handleShaderParam = async (searchParams) => {
-        if (!searchParams.has('shader')) return false
+    const handleShaderParam = async (hashParams) => {
+        if (!hashParams.has('shader')) return false
 
         try {
-            const shaderCode = await getRelativeOrAbsoluteShaderUrl(searchParams.get('shader'))
+            const shaderCode = await getRelativeOrAbsoluteShaderUrl(hashParams.get('shader'))
             localStorage.setItem('cranes-manual-code', shaderCode)
 
             if (import.meta.hot) {
-                // Dev mode: keep ?shader= in URL so editor-sync knows which file to save to.
-                // Monaco init will load from the filesystem via ?shader= param.
+                // Dev mode: keep #shader= in URL so editor-sync knows which file to save to.
+                // Monaco init will load from the filesystem via shader param.
                 return false
             }
 
-            // Production: strip ?shader= and reload (original behavior)
-            const newUrl = new URL(window.location)
-            newUrl.searchParams.delete('shader')
-            window.history.replaceState({}, '', newUrl)
+            // Production: strip shader param and reload (original behavior)
+            deleteHashParam('shader')
             window.location.reload()
             return true
         } catch (error) {
@@ -711,9 +703,9 @@ const FeatureAdder = () => {
         }
     }
 
-    const initializeFeatures = (searchParams) => {
+    const initializeFeatures = (hashParams) => {
         const initialFeatures = {}
-        searchParams.forEach((value, key) => {
+        hashParams.forEach((value, key) => {
             if (isNaN(value)) return
             const [featureName, paramType] = key.includes('.') ? key.split('.') : [key, 'value']
             if (!initialFeatures[featureName]) {
@@ -724,25 +716,25 @@ const FeatureAdder = () => {
         return initialFeatures
     }
 
-    const handleUIState = (searchParams) => {
-        if (searchParams.has('present')) {
+    const handleUIState = (hashParams) => {
+        if (hashParams.has('present')) {
             document.body.classList.add('present')
             setIsPresentationMode(true)
         }
-        if (searchParams.has('open_sliders')) setIsDrawerOpen(true)
+        if (hashParams.has('open_sliders')) setIsDrawerOpen(true)
     }
 
     useEffect(() => {
         const init = async () => {
-            const searchParams = new URLSearchParams(window.location.search)
+            const hp = getHashParams()
 
-            const shaderHandled = await handleShaderParam(searchParams)
+            const shaderHandled = await handleShaderParam(hp)
             if (shaderHandled) return
 
-            const initialFeatures = initializeFeatures(searchParams)
+            const initialFeatures = initializeFeatures(hp)
             setFeatures(initialFeatures)
             prevFeaturesLength.current = Object.keys(initialFeatures).length
-            handleUIState(searchParams)
+            handleUIState(hp)
         }
 
         init()
@@ -833,11 +825,13 @@ const FeatureAdder = () => {
 function stripQueryParams(url) {
     const allowedParams = new Set(['image', 'fullscreen']);
     const parsedUrl = new URL(url);
-    for (const key of parsedUrl.searchParams.keys()) {
-      if (!allowedParams.has(key)) {
-        parsedUrl.searchParams.delete(key);
-      }
+    const hashParams = new URLSearchParams(parsedUrl.hash.slice(1))
+    const kept = new URLSearchParams()
+    for (const [key, value] of hashParams) {
+      if (allowedParams.has(key)) kept.set(key, value)
     }
+    parsedUrl.search = ''
+    parsedUrl.hash = kept.toString()
     return parsedUrl.toString();
   }
 

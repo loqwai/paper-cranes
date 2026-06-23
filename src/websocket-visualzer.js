@@ -1,5 +1,5 @@
 export const addWebsocketListener = (port = 6970) => {
-  const params = new URLSearchParams(window.location.search)
+  const params = new URLSearchParams(window.location.hash.slice(1))
   const wsHost = params.get('remote')
 
   const fullUrl = `ws://${wsHost}`
@@ -21,13 +21,13 @@ export const addWebsocketListener = (port = 6970) => {
 
       try {
         const json = JSON.parse(raw)
-        // if the json has an image, just put all the variables as query params and reload the page
+        // if the json has an image, just put all the variables as hash params and reload the page
         const { data } = json
         if (data.image) {
-          const url = new URL(window.location)
-          url.searchParams.set('shader', data.shader)
-          url.searchParams.set('image', data.image)
-          window.location.href = url.toString()
+          const hp = new URLSearchParams(window.location.hash.slice(1))
+          hp.set('shader', data.shader)
+          hp.set('image', data.image)
+          window.location.href = `${window.location.pathname}#${hp.toString()}`
           return
         }
         window.postMessage(json, '*')
@@ -49,7 +49,7 @@ export const addWebsocketListener = (port = 6970) => {
 }
 
 export const addWebsocketController = () => {
-  const params = new URLSearchParams(window.location.search)
+  const params = new URLSearchParams(window.location.hash.slice(1))
   const wsHost = params.get('remote')
 
   let socket
@@ -111,7 +111,7 @@ export const interceptNavigation = () => {
     if (!link) return
 
     const url = new URL(link.href)
-    const shader = url.searchParams.get('shader')
+    const shader = new URLSearchParams(url.hash.slice(1)).get('shader')
 
     if (url.origin === location.origin && shader) {
       e.preventDefault()
