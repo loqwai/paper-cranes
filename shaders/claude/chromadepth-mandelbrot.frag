@@ -16,7 +16,7 @@
 // #define ZOOM_POWER 5.0
 
 // --- ROTATION: pitchClass rotates the view ---
-#define VIEW_ROTATION (iTime * 0.03 + pitchClassNormalized * 1.5)
+#define VIEW_ROTATION (time * 0.03 + pitchClassNormalized * 1.5)
 // #define VIEW_ROTATION 0.0
 
 // --- C-OFFSET for mini-brot exploration via regression slopes ---
@@ -86,13 +86,13 @@ vec3 chromadepth(float t) {
 // ============================================================================
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec2 screenUV = fragCoord / iResolution.xy;
-    vec2 uv = (fragCoord - 0.5 * iResolution.xy) / iResolution.y;
+    vec2 screenUV = fragCoord / resolution;
+    vec2 uv = (fragCoord - 0.5 * resolution) / resolution.y;
 
     // --- ZOOM TARGET ---
     // Wander through interesting regions of the Mandelbrot set
     // The Seahorse Valley at c ~ -0.75 + 0.1i has infinite mini-brots
-    float wanderT = iTime * 0.012;
+    float wanderT = time * 0.012;
     vec2 target = vec2(
         -0.7435669 + 0.0002 * sin(wanderT * 0.7) + TARGET_DRIFT_X,
          0.1314023 + 0.00015 * cos(wanderT * 0.9) + TARGET_DRIFT_Y
@@ -116,7 +116,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 c = target + uv / zoom;
 
     // Add flux jitter
-    c += vec2(FLUX_JITTER * sin(iTime * 7.3), FLUX_JITTER * cos(iTime * 5.7));
+    c += vec2(FLUX_JITTER * sin(time * 7.3), FLUX_JITTER * cos(time * 5.7));
 
     // --- MANDELBROT ITERATION with smooth coloring + orbit traps ---
     vec2 z = vec2(0.0);
@@ -253,7 +253,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     orbitWarp += vec2(MIDS_WARP, MIDS_WARP * 0.7);
 
     // Slow rotation prevents static feedback loops
-    float fbAngle = iTime * 0.008;
+    float fbAngle = time * 0.008;
     vec2 centered = screenUV - 0.5;
     float fbc = cos(fbAngle), fbs = sin(fbAngle);
     vec2 rotatedUV = vec2(
