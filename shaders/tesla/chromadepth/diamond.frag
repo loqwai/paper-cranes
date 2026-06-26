@@ -1,4 +1,5 @@
 // @fullscreen: true
+//https://visuals.beadfamous.com/?shader=tesla/chromadepth/diamond&wavelet=true&controller=wavelet-ease&fullscreen=true
 // @mobile: true
 // @favorite: true
 // @tags: chromadepth, 3d, diamond, tesseract, 4d, gem, tesla

@@ -1,4 +1,5 @@
 // @fullscreen: true
+//https://visuals.beadfamous.com/?shader=tesla/chromadepth/geode&wavelet=true&controller=wavelet-ease&fullscreen=true
 // @mobile: true
 // @favorite: true
 // @tags: chromadepth, 3d, geode, icosahedron, crystal, geometric, tesla

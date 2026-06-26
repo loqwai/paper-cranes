@@ -1,4 +1,5 @@
 // @fullscreen: true
+//https://visuals.beadfamous.com/?shader=claude/wip/wavelet-scope/8&wavelet=true&fullscreen=true
 // @tags: diagnostic, wavelet, oscilloscope, graph, analytics, debug
 //
 // PAIRED TAPESTRY — signal-tapestry-style lane scope (one feature per horizontal lane,

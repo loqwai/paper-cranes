@@ -1,4 +1,5 @@
 // @fullscreen: true
+//https://visuals.beadfamous.com/?shader=tesla/chromadepth/filigree&wavelet=true&controller=wavelet-ease&fullscreen=true
 // @mobile: true
 // @favorite: true
 // @tags: chromadepth, fractal, kali, filigree, tesla
