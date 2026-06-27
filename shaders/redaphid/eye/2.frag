@@ -69,7 +69,7 @@ float bandForDepth(float ld){
 }
 
 // shared per-frame state
-float gSpin, gPulse, gPop;
+float gSpin, gPulse, gPop, gKick;
 
 // Recursive hex mirror-fold lattice → front-to-back composited ChromaDepth layers.
 vec4 fractal(vec2 p){
@@ -105,11 +105,17 @@ vec4 fractal(vec2 p){
         float t = clamp(ld * (0.78 + evoPlasma * 0.20) - gPop * 0.12, 0.0, 1.0);
 
         // ── PULSE: a light wave travelling through the levels TOWARD you (far→near). ──
-        float wave = smoothstep(0.22, 0.0, abs(ld - (1.0 - gPulse)));
+        // WINDOWED with sin(gPulse·π) so it fades to zero at the fract() seam → the wrap is
+        // invisible (no snap). Wider smoothstep spans more of the 6 discrete levels so it glides
+        // instead of stepping (no shiver). The kick only scales AMPLITUDE, never the position.
+        float env = sin(gPulse * PI);
+        float wave = smoothstep(0.30, 0.0, abs(ld - (1.0 - gPulse))) * env;
         float band = bandForDepth(ld);
+        // whole lattice GLOWS with sustained bass (the pump), borders brighten on the thump
         float lit = (smoothstep(0.06 + alias, 0.06, m) * 0.5 + 0.18)
-                  * (0.7 + energySpring * 0.4 + band * 0.7);
-        lit += wave * (0.5 + gPop * 0.8 + spectralCrestSmooth * 0.5);   // the travelling wave brightens
+                  * (0.7 + energySpring * 0.4 + band * 0.7 + waveletBassSpring * quietGate * 0.6);
+        // the travelling wave FLASHES on each bass hit (gKick) — the pulse fires with the kick
+        lit += wave * (0.4 + gPop * 0.7 + gKick * 1.2 + spectralCrestSmooth * 0.35);
 
         vec3 c = chromadepth(t, lit);
         c += chromadepth(clamp(t - 0.12, 0.0, 1.0), 0.5) * wave * 0.6;  // wave front pops a touch redder
@@ -131,16 +137,22 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // ── per-frame evolving state ──
     gSpin  = iTime * 0.04 + morphPhase * 0.4 + melodyFlow * 0.5 * quietGate;
     gPop   = clamp(energySpring * 0.5 + spectralCrestSmooth * 0.45, 0.0, 1.0) * quietGate;
-    float kick = clamp(max(waveletBassZScore, 0.0), 0.0, 1.0) * 0.5 + clamp(wavelet_bassHit, 0.0, 1.0) * 0.3;
-    // PULSE clock — monotonic, energy-accelerated; the kick punches an extra forward shove.
-    gPulse = fract(flowPhase * 0.6 + iTime * 0.18 + kick * 0.15);
+    gKick  = clamp(max(waveletBassZScore, 0.0), 0.0, 1.0) * 0.5 + clamp(wavelet_bassHit, 0.0, 1.0) * 0.3;
+    // PULSE clock — STRICTLY MONOTONIC. The kick scales the wave's brightness (amplitude), never
+    // its phase: injecting a transient into the phase used to jump the wave position (the shiver),
+    // and the fract() wrap used to teleport it (the snap). Both are gone now.
+    gPulse = fract(flowPhase * 0.6 + iTime * 0.18);
 
     // BOUNDED life that keeps the eye CENTRED: a slow whole-field rotation + a tiny orbital drift
     // (never carries the focal point away), and a self-similar zoom-breath that reads as a fall.
     uv = rot2(iTime * 0.025 + morphPhase * 0.2 + (evoWarp - 0.5) * 0.4) * uv;
     uv += 0.05 * vec2(sin(iTime * 0.11 + flowPhase * 0.3), cos(iTime * 0.09 + flowPhase * 0.3));
+    // BASS DILATION — the eye breathes like a subwoofer cone: sustained bass swells it, each kick
+    // PUNCHES it toward you (zoom in), then it springs back. Smooth swell + snappy thump, no strobe.
+    float bassPulse = waveletBassSpring * quietGate;
+    float dilate = 1.0 + 0.14 * sin(iTime * 0.03 * PHI) - bassPulse * 0.13 - gKick * 0.17;
     // small uv near 0 means we're zoomed deep into the CENTRAL recursion → the eye is at centre.
-    uv *= 0.07 * (1.0 + 0.16 * sin(iTime * 0.03 * PHI) + waveletBassSpring * 0.06 * quietGate);
+    uv *= 0.07 * dilate;
 
     vec4 frac = fractal(uv);
 
