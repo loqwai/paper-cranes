@@ -13,6 +13,9 @@
 //   * LIVE & PERMANENT — an extreme sound (a big drop) PERMANENTLY rotates the palette and grows
 //     the structural warp (paletteShift / warpGrow from lattice-nav) — the look transforms over
 //     the show and never returns to where it started. People are rewarded for going hard.
+//   * UNIQUE PER DEVICE — seed..seed4 (random per device, persisted in localStorage) seed the
+//     palette (seed=base hue, seed2=saturation) AND the structure (seed3=lattice twist + region
+//     map, seed4=swirl + warp), so every phone/screen sees its own one-of-a-kind lattice.
 //   Pair with ?controller=lattice-nav (pan = drag, pinch = zoom, drops = permanent mutation).
 // License: CC BY-NC-SA 3.0 (derivative — adapted ShaderToy hex mirror-fold fractal).
 
@@ -50,15 +53,16 @@ mat2 rot2(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 vec3 lush(float s, float lit){
     float h = fract(s) * TAU;
     float L = clamp(0.40 + 0.44 * clamp(lit, 0.0, 1.0), 0.05, 0.92);
-    float C = 0.115 + 0.055 * sin(s * TAU * 0.5 + 1.3);
+    float C = (0.09 + seed2 * 0.06) + 0.05 * sin(s * TAU * 0.5 + 1.3);   // seed2 → per-device saturation
     return oklch2rgb(vec3(L, C, h));
 }
 
 // UNIQUE-PER-AREA hue offset: incommensurate low frequencies → smooth + quasi-non-repeating, so
 // every region you drag to looks different AND transitions are seamless (no sudden change).
 float regionHue(vec2 w){
-    return 0.20 * sin(w.x * 0.23) + 0.20 * cos(w.y * 0.19)
-         + 0.13 * sin((w.x - w.y) * 0.11) + 0.09 * cos((w.x + w.y) * 0.071);
+    float ph = seed3 * TAU;   // seed3 → per-device "map": the same world coords look different per device
+    return 0.20 * sin(w.x * 0.23 + ph) + 0.20 * cos(w.y * 0.19 + ph * 1.3)
+         + 0.13 * sin((w.x - w.y) * 0.11 + ph) + 0.09 * cos((w.x + w.y) * 0.071);
 }
 
 float hexDist(vec2 p){
@@ -90,7 +94,8 @@ vec4 fractal(vec2 p){
         p = 1.0 - abs(s * fract(p - 0.5) - s * 0.5);          // mirror-repeat fold
         float theta = float(i) * PI * 0.125
                     + gSpin * (0.4 + float(i) * 0.05)
-                    + (evoWarp - 0.5) * float(i) * 0.10;
+                    + (evoWarp - 0.5) * float(i) * 0.10
+                    + (seed3 - 0.5) * float(i) * 0.8;       // seed3 → per-device per-level twist (structure)
         p *= rot2(theta);
         scale *= s;
         if (i < FIRST) continue;
@@ -106,7 +111,7 @@ vec4 fractal(vec2 p){
         float ld = float(i - FIRST) / float(LEVELS - 1 - FIRST);
         // CONTINUOUS palette field: recursion depth + a smooth within-cell swirl so colour flows
         // across the structure (this is the BEAUTY — a smooth field, not a discrete depth band).
-        float swirl = 0.5 + 0.5 * sin(atan(p.y, p.x) * 2.0 + length(p) * 3.0 + float(i));
+        float swirl = 0.5 + 0.5 * sin(atan(p.y, p.x) * 2.0 + length(p) * 3.0 + float(i) + seed4 * TAU);
         float field = ld * (0.55 + evoPlasma * 0.2) + swirl * 0.45;
 
         float env = sin(gPulse * PI);
@@ -153,7 +158,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     uv *= 0.07 / navz;
     uv += world;                                              // finger PAN
     // continuous terrain warp — varies by region AND grows PERMANENTLY on big drops (warpGrow)
-    uv += (0.045 + warpGrow * 0.05) * vec2(sin(world.y * 1.0 + uv.x * 3.0), cos(world.x * 1.2 + uv.y * 3.0));
+    uv += (0.045 + warpGrow * 0.05) * vec2(sin(world.y * 1.0 + uv.x * 3.0 + seed4 * TAU), cos(world.x * 1.2 + uv.y * 3.0 + seed4 * TAU));
 
     vec4 fr = fractal(uv);
     float lum = fr.x, field = fr.y, wave = fr.z, alpha = fr.w;
@@ -163,7 +168,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
             + regionHue(world)
             + iTime * 0.012
             + melodyFlow * 0.2 * quietGate
-            + paletteShift;                                   // permanent live mutation
+            + paletteShift                                    // permanent live mutation
+            + seed;                                           // seed → per-device base palette identity
     vec3 col = lush(s, lum);
     col += lush(s + 0.12, 0.9) * wave * 0.6;                  // pulse accent (hue-shifted, brighter)
 
