@@ -30,6 +30,11 @@ export function make(cranes) {
     let mode = 0                    // 0 idle · 1 pan · 2 pinch
     const SPEED = 1.0, FRICTION = 0.90, ZMIN = 0.012, ZMAX = 12.0   // lower SPEED = calmer pan; tiny ZMIN = keep zooming out
 
+    // ── PERMANENT live mutation ── an extreme sound (a big drop) permanently rotates the palette
+    // and grows the structural warp, so the look transforms over the show and never returns to the
+    // start — rewarding people for going hard. These accumulate and never reset (within a session).
+    let paletteShift = 0, warpGrow = 0, mutation = 0, mutCooldown = 0
+
     const xy = e => { const t = e.touches ? e.touches[0] : e; return [t.clientX / innerWidth, t.clientY / innerHeight] }
     const pinch = e => Math.hypot(e.touches[0].clientX - e.touches[1].clientX,
                                   e.touches[0].clientY - e.touches[1].clientY)
@@ -69,6 +74,7 @@ export function make(cranes) {
         addEventListener('wheel', wheel, { passive: false })
     }
 
+    let lastT = performance.now() / 1000
     return function controller(features) {
         const out = audio(features) || {}
         if (mode === 0 && (velX || velY)) {           // glide after release, easing to a stop
@@ -77,7 +83,22 @@ export function make(cranes) {
             if (Math.abs(velX) < 1e-4) velX = 0
             if (Math.abs(velY) < 1e-4) velY = 0
         }
+
+        // ── detect an EXTREME sound and PERMANENTLY mutate (debounced so a normal kick won't fire) ──
+        const now = performance.now() / 1000
+        const dt = Math.min(0.05, now - lastT); lastT = now
+        mutCooldown = Math.max(0, mutCooldown - dt)
+        const ez = features.energyZScore ?? 0
+        const hit = features.wavelet_bassHit ?? 0
+        if ((ez > 1.4 || hit > 0.85) && mutCooldown <= 0) {
+            mutation += 1
+            paletteShift += 0.15 + Math.random() * 0.22   // permanent hue rotation (varied each drop)
+            warpGrow = Math.min(2.0, warpGrow + 0.18)      // permanent structural complexity (capped)
+            mutCooldown = 2.0                              // ≥2s between mutations
+        }
+
         out.navX = navX; out.navY = navY; out.navZoom = zoom
+        out.paletteShift = paletteShift; out.warpGrow = warpGrow; out.mutation = mutation
         return out
     }
 }
