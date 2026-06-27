@@ -52,8 +52,9 @@ mat2 rot2(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 // lit lifts lightness; chroma breathes for richness. Bounded away from white/black.
 vec3 lush(float s, float lit){
     float h = fract(s) * TAU;
-    float L = clamp(0.40 + 0.44 * clamp(lit, 0.0, 1.0), 0.05, 0.92);
-    float C = (0.09 + seed2 * 0.06) + 0.05 * sin(s * TAU * 0.5 + 1.3);   // seed2 → per-device saturation
+    // BRIGHT baseline so the whole thing emits light (must pop off a phone at night, read from afar)
+    float L = clamp(0.50 + 0.36 * clamp(lit, 0.0, 1.0), 0.12, 0.88);
+    float C = (0.125 + seed2 * 0.05) + 0.05 * sin(s * TAU * 0.5 + 1.3);  // high chroma = NEON, seed2 = device sat
     return oklch2rgb(vec3(L, C, h));
 }
 
@@ -171,21 +172,26 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
             + paletteShift                                    // permanent live mutation
             + seed;                                           // seed → per-device base palette identity
     vec3 col = lush(s, lum);
-    col += lush(s + 0.12, 0.9) * wave * 0.6;                  // pulse accent (hue-shifted, brighter)
+    col += lush(s + 0.12, 1.0) * wave * 0.7;                  // pulse accent (brighter)
 
-    // composite over a deep, lush background (not pure black) so the void still glows softly
-    vec3 bg = lush(s + 0.5, 0.05) * 0.5;
+    // BRIGHT, saturated background FIELD — no black voids; the whole screen emits light so it
+    // pops off the phone at night and reads from across the room.
+    vec3 bg = lush(s + 0.4, 0.45) * 0.92;
     col = mix(bg, col, clamp(alpha, 0.0, 1.0));
 
-    // bloom on the bass thump (whole frame swells with light, eased)
+    // bass bloom (whole frame swells with light on the thump)
     col *= 1.0 + bassPulse * 0.25 + gKick * 0.15;
 
-    // gentle trail smooths motion
-    vec4 prev = getLastFrameColor(fragCoord / iResolution.xy);
-    col = mix(prev.rgb * 0.86, col, 0.8);
+    // GLOW LIFT — gamma up + gain so mid-tones emit; high chroma keeps it NEON, not washed out.
+    col = pow(clamp(col, 0.0, 1.0), vec3(0.80));
+    col *= 1.15;
 
-    // vignette
-    col = mix(col, vec3(0.0), dot(sp, sp) * 0.4);
+    // gentle trail (low decay so the glow carries between frames)
+    vec4 prev = getLastFrameColor(fragCoord / iResolution.xy);
+    col = mix(prev.rgb * 0.90, col, 0.82);
+
+    // minimal vignette — barely darken the edges, it has to read from a distance
+    col = mix(col, vec3(0.0), dot(sp, sp) * 0.12);
 
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
