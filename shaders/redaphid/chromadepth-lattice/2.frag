@@ -1,9 +1,9 @@
 // @fullscreen: true
 // @mobile: true
 // @favorite: true
-// @tags: chromadepth, fractal, hex, lattice, eye, redaphid
-//https://visuals.beadfamous.com/?shader=redaphid/eye/2&wavelet=true&controller=wavelet-ease&fullscreen=true&name=Eye%20Hex
-// EYE OF GOD II — ChromaDepth hex-lattice tunnel. A recursive mirror-fold hexagonal lattice
+// @tags: chromadepth, fractal, hex, lattice, redaphid
+//https://visuals.beadfamous.com/?shader=redaphid/chromadepth-lattice/2&wavelet=true&controller=wavelet-ease&fullscreen=true&name=ChromaDepth%20Lattice
+// CHROMADEPTH LATTICE — recursive hex mirror-fold tunnel. A recursive mirror-fold hexagonal lattice
 // where each RECURSION LEVEL is a depth layer: the near layers read red (pop forward), the far
 // layers recede to violet, and a wave of light travels through the levels TOWARD you (the pulse
 // the original lattice already had — now it's a depth motion you fall into).
@@ -70,6 +70,9 @@ float bandForDepth(float ld){
 
 // shared per-frame state
 float gSpin, gPulse, gPop, gKick;
+// AUDIO → GEOMETRY: distinct features drive distinct shape elements so the LATTICE ITSELF is
+// alive (not just brightness). Shape, not rotation → it breathes/morphs, never rocks back.
+float gHexR, gBorder, gCross, gFill;
 
 // Recursive hex mirror-fold lattice → front-to-back composited ChromaDepth layers.
 vec4 fractal(vec2 p){
@@ -91,13 +94,14 @@ vec4 fractal(vec2 p){
 
         if (i < FIRST) continue;
 
-        // borders: hex ring + interior cross (the lattice texture)
+        // borders: hex ring + interior cross — audio drives the SHAPE so the lattice morphs live.
         vec2 uv = abs(p);
-        float delt1 = abs((hexDist(uv) - 0.6) - 0.1);
-        float delt2 = min(length(uv) - 0.2, min(uv.x, uv.y));
+        float delt1 = abs((hexDist(uv) - gHexR) - 0.1);     // MIDS breathe the hexagon rings out/in
+        float delt2 = min(length(uv) - gCross, min(uv.x, uv.y));  // BASS pulls the interior cross taut
         float m = min(delt1, delt2);
         float alias = aliasBase * 0.5 * scale;
-        float f = smoothstep(0.10 + alias, 0.10, m) * 0.4 + smoothstep(0.22, 0.11, m) * 0.6;
+        float f = smoothstep(gBorder + alias, gBorder, m) * 0.4
+                + smoothstep(gBorder + 0.12, gBorder + 0.01, m) * 0.6;   // TREBLE fattens the grid lines
 
         // ── DEPTH = recursion level. Near layers (i=FIRST) = red, far (i=LEVELS-1) = violet. ──
         float ld = float(i - FIRST) / float(LEVELS - 1 - FIRST);
@@ -112,7 +116,7 @@ vec4 fractal(vec2 p){
         float wave = smoothstep(0.30, 0.0, abs(ld - (1.0 - gPulse))) * env;
         float band = bandForDepth(ld);
         // whole lattice GLOWS with sustained bass (the pump), borders brighten on the thump
-        float lit = (smoothstep(0.06 + alias, 0.06, m) * 0.5 + 0.18)
+        float lit = (smoothstep(gFill + alias, gFill, m) * 0.5 + 0.18)   // TREBLE sharpens the bright fill
                   * (0.7 + energySpring * 0.4 + band * 0.7 + waveletBassSpring * quietGate * 0.6);
         // the travelling wave FLASHES on each bass hit (gKick) — the pulse fires with the kick
         lit += wave * (0.4 + gPop * 0.7 + gKick * 1.2 + spectralCrestSmooth * 0.35);
@@ -143,14 +147,21 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // and the fract() wrap used to teleport it (the snap). Both are gone now.
     gPulse = fract(flowPhase * 0.6 + iTime * 0.18);
 
+    // ── AUDIO → FRACTAL GEOMETRY (distinct features → distinct shape, iris-style; SHAPE not
+    //    rotation so it breathes and never rocks back; all quietGate-gated, neutral with no mic) ──
+    float bassPulse = waveletBassSpring * quietGate;
+    gHexR   = 0.60 + waveletBand2Spring * 0.12 * quietGate;   // MIDS breathe the hexagon rings (subtle)
+    gBorder = 0.10 + waveletBand5Spring * 0.06 * quietGate;   // TREBLE fattens the glowing grid lines
+    gCross  = 0.20 - bassPulse * 0.05;                        // BASS pulls the interior cross taut
+    gFill   = 0.06 + waveletBand5Spring * 0.035 * quietGate;  // TREBLE sharpens the bright cell fill
+
     // BOUNDED life that keeps the eye CENTRED: a slow whole-field rotation + a tiny orbital drift
     // (never carries the focal point away), and a self-similar zoom-breath that reads as a fall.
     uv = rot2(iTime * 0.025 + morphPhase * 0.2 + (evoWarp - 0.5) * 0.4) * uv;
     uv += 0.05 * vec2(sin(iTime * 0.11 + flowPhase * 0.3), cos(iTime * 0.09 + flowPhase * 0.3));
-    // BASS DILATION — the eye breathes like a subwoofer cone: sustained bass swells it, each kick
-    // PUNCHES it toward you (zoom in), then it springs back. Smooth swell + snappy thump, no strobe.
-    float bassPulse = waveletBassSpring * quietGate;
-    float dilate = 1.0 + 0.14 * sin(iTime * 0.03 * PHI) - bassPulse * 0.13 - gKick * 0.17;
+    // BASS DILATION — the lattice breathes like a subwoofer cone: sustained bass swells it, each
+    // kick PUNCHES it toward you (zoom in), then springs back. Smooth swell + snappy thump, no strobe.
+    float dilate = 1.0 + 0.14 * sin(iTime * 0.03 * PHI) - bassPulse * 0.08 - gKick * 0.11;
     // small uv near 0 means we're zoomed deep into the CENTRAL recursion → the eye is at centre.
     uv *= 0.07 * dilate;
 
