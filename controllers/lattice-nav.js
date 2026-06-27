@@ -28,7 +28,7 @@ export function make(cranes) {
     let lastX = 0, lastY = 0        // previous finger position (0..1)
     let pinchDist0 = 0, pinchZoom0 = 1
     let mode = 0                    // 0 idle · 1 pan · 2 pinch
-    const SPEED = 2.4, FRICTION = 0.90, ZMIN = 0.25, ZMAX = 8.0
+    const SPEED = 1.0, FRICTION = 0.90, ZMIN = 0.012, ZMAX = 12.0   // lower SPEED = calmer pan; tiny ZMIN = keep zooming out
 
     const xy = e => { const t = e.touches ? e.touches[0] : e; return [t.clientX / innerWidth, t.clientY / innerHeight] }
     const pinch = e => Math.hypot(e.touches[0].clientX - e.touches[1].clientX,
