@@ -53,6 +53,7 @@ uniform float sectionMode;           // section index → fractal alphabet
 float gWarpAmp, gWarpFreq, gBandNear, gBandMid, gBandDeep;
 
 float randF(int i){ return fract(sin(float(i)) * 43758.5453); }
+vec2 rot(vec2 p, float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c) * p; }
 
 // ChromaDepth palette (HSL — raw spectral order is what the glasses need). t:0=red(near)→0.72=violet(far).
 vec3 chromadepth(float t, float lit){
@@ -83,29 +84,42 @@ vec2 initUV(vec2 uv){
     return uv;
 }
 
-// Seamless recursive glyph walk. Returns structure brightness + a 0..1 recursion-depth value.
-void eyeFractal(vec2 pos, int iterations, float tp, int seedBase, out float lum, out float depth){
+// Seamless recursive glyph walk. Returns cell brightness, a detailed 0..1 depth, and the
+// glowing recursive cell-border field (the infinite nested grid that reads as "eye of god").
+void eyeFractal(vec2 pos, int iterations, float tp, int seedBase, out float lum, out float depth, out float edge){
     ivec2 gpLast = ivec2(1);
     ivec2 gp = ivec2(1);
-    lum = 0.0; depth = 0.0; float wsum = 0.0;
+    lum = 0.0; depth = 0.0; edge = 0.0; float wsum = 0.0;
     for (int r = 0; r <= RECURSE + 1; r++){
-        int hsh = iterations + r + gpLast.y + gp.y + seedBase;
+        int hsh = iterations + r + gpLast.y * 3 + gp.x * 7 + gp.y + seedBase;
         float cell = randF(hsh);
+        float cell2 = randF(hsh + 31);
         float fade = recursionFade(r, tp);
-        // each depth band reacts to its own audio family (gated so silence can't drive it).
-        // pow(cell,3) crisps the cells so the recursive glyph structure reads (not a smooth blob).
-        float cl = mix(0.06, 1.0, pow(cell, 3.0)) * (0.6 + bandForLevel(r) * 0.7);
+
+        // GLOWING CELL BORDERS — distance to this level's cell edges, fading in with depth.
+        // Stacked across levels this is an infinite nested grid rushing at you (the hypnotic bit).
+        vec2 f = fract(pos);
+        float b = min(min(f.x, f.y), min(1.0 - f.x, 1.0 - f.y));
+        edge += smoothstep(0.08, 0.0, b) * fade * (0.4 + cell);
+
+        // crisp per-cell brightness with a bright "dot" core (a glyph), depth-band reactive
+        float dot = smoothstep(0.34, 0.0, length(f - 0.5)) * cell2;
+        float cl = (mix(0.03, 1.0, pow(cell, 2.0)) + dot * 0.8) * (0.5 + bandForLevel(r) * 0.9);
         lum += cl * fade;
-        depth += (float(r) + tp) * fade;
+
+        // cells sit at DISTINCT depths → a detailed faceted depthscape, not a smooth gradient
+        depth += (float(r) + tp + (cell - 0.5) * 1.4) * fade;
         wsum += fade;
-        // descend one glyph level toward the centre cell
+
         pos *= GLYPH;
         gpLast = gp;
         gp = ivec2(pos);
         pos -= floor(pos);
     }
-    lum = clamp(lum, 0.0, 1.5);
-    depth = wsum > 0.001 ? depth / wsum / float(RECURSE + 1) : 0.5;
+    float iw = 1.0 / max(wsum, 0.001);
+    lum   = clamp(lum * iw * 1.7, 0.0, 1.8);
+    edge  = clamp(edge * iw, 0.0, 1.2);
+    depth = clamp(depth * iw / float(RECURSE + 1), 0.0, 1.0);
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord){
@@ -121,10 +135,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     gBandDeep = waveletBassSpring * quietGate;
 
     uv = initUV(uv);
+    // slow spiral so it isn't a static concentric blob — the whole field turns, faster on melody
+    uv = rot(uv, iTime * 0.05 + 0.4 * sin(iTime * 0.021 * PHI) + morphPhase * 0.3 + melodyFlow * 0.4 * quietGate);
 
     // ── DESCENT (layer 2): monotonic, energy-accelerated; per-pixel radial time-warp = the vortex ──
-    float curv = -6.0 + (evoPlasma - 0.5) * 5.0 + 1.5 * sin(iTime * 0.03 * PHI) + melodyFlow * 1.5 * quietGate;
-    float descent = iTime * 0.6 + flowPhase * 2.0;                 // base lives with NO mic; flowPhase adds audio accel
+    float curv = -7.0 + (evoPlasma - 0.5) * 6.0 + 2.0 * sin(iTime * 0.03 * PHI) + melodyFlow * 1.5 * quietGate;
+    float descent = iTime * 1.05 + flowPhase * 2.4;                // brisk hypnotic fall; flowPhase adds audio accel
     float radialWarp = curv * pow(length(uv) + 1e-4, 0.2);
 
     // SMOOTH beat pop + transient kick (a brief OUTWARD lunge in zoom space — the chromadepth pop)
@@ -147,27 +163,37 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     vec2 uvFractal = uv * zoom + offset + sac;
 
     int seedBase = int(sectionMode) * 101;                         // layer 5: section → fractal alphabet
-    float lum, cellDepth;
-    eyeFractal(uvFractal, iterations, tp, seedBase, lum, cellDepth);
+    float lum, cellDepth, edge;
+    eyeFractal(uvFractal, iterations, tp, seedBase, lum, cellDepth, edge);
 
     // ── CHROMADEPTH (hue stays LOCKED to depth — evolution never touches it) ──
-    // Radial is the PRIMARY tunnel-depth cue (edge = near = red, centre eye = far = violet) so the
-    // full red→violet range is always present and it POPS. cellDepth only adds per-cell facet
-    // jitter; evolution modulates that jitter AMOUNT (never the hue), so red=near always holds.
+    // Radial gives the macro tunnel (rim=red/near → eye=violet/far); cellDepth carries strong
+    // per-cell variation so the frame is a DETAILED faceted depthscape, not a smooth gradient.
+    // Evolution modulates the cell weight (detail), never the hue, so red=near always holds.
     float rr = length(uv);
-    float tRadial = 1.0 - smoothstep(0.0, 0.72, rr);               // tight: rim reaches red, core reaches violet
-    float jitter = (cellDepth - 0.5) * (0.20 + evoFlow * 0.30);
-    float t = clamp(tRadial * 0.92 + jitter - pop * 0.12, 0.0, 1.0);
+    // ramp only the inner radius: the whole OUTER field is red/near (a wall of cells rushing at
+    // you = the pop), grading through green→blue to a violet core. Detail comes from the grid/
+    // cells/borders below, NOT from depth — so hue stays radial-locked and red=near always holds.
+    float tRadial = 1.0 - smoothstep(0.0, 0.55, rr);
+    float t = clamp(tRadial * 0.95 + (cellDepth - 0.5) * (0.14 + evoFlow * 0.12) - pop * 0.12, 0.0, 1.0);
 
-    float lit = mix(0.05, 0.55, pow(lum, 1.1)) * (0.8 + energySpring * 0.2);
+    float lit = mix(0.05, 0.78, pow(lum, 1.0)) * (0.85 + energySpring * 0.2);
     vec3 col = chromadepth(t, lit);
+
+    // GLOWING RECURSIVE BORDERS — tinted at their own (slightly nearer) depth so the near grid
+    // lines pop red toward you. This is the structure that makes it read as an infinite fractal.
+    col += chromadepth(clamp(t - 0.14, 0.0, 1.0), 0.6) * edge * (0.7 + energySpring * 0.6);
+
+    // glowing violet PUPIL at the far centre — the eye you fall into
+    float pupil = smoothstep(0.05, 0.0, rr);
+    col += chromadepth(0.92, 0.55) * pupil;
 
     // the beat reddens + brightens the NEAR band (pops it forward), not the whole frame
     col += chromadepth(0.04, 0.5) * pop * (1.0 - t) * 0.45;
 
     // fire — warm-white sparkle on bright near cells, treble/crest gated (leans red so it pops)
-    col += vec3(1.0, 0.82, 0.6) * smoothstep(0.8, 1.0, lum)
-         * (gBandNear * 0.5 + spectralCrestSmooth * 0.4) * (1.0 - t) * 0.5;
+    col += vec3(1.0, 0.82, 0.6) * smoothstep(0.78, 1.0, lum)
+         * (0.25 + gBandNear * 0.6 + spectralCrestSmooth * 0.4) * (1.0 - t) * 0.5;
 
     // gentle motion trail smooths the descent without smearing the cells
     vec4 prev = getLastFrameColor(fragCoord / iResolution.xy);
