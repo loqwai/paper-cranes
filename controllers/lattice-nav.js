@@ -45,11 +45,11 @@ export function make(cranes) {
         }
         if (mode !== 1) return
         const p = xy(e), dx = p[0] - lastX, dy = p[1] - lastY
-        // INVERTED so it feels natural in-hand: drag the direction you want to TRAVEL (look/fly),
-        // not grab-the-map. Divided by zoom so pan speed stays consistent in screen space.
-        navX += dx * SPEED / zoom
-        navY -= dy * SPEED / zoom
-        velX = dx * SPEED / zoom; velY = -dy * SPEED / zoom
+        // Map-drag: grab the lattice and pull it with your finger (content follows the finger).
+        // Divided by zoom so pan speed stays consistent in screen space at any zoom.
+        navX -= dx * SPEED / zoom
+        navY += dy * SPEED / zoom
+        velX = -dx * SPEED / zoom; velY = dy * SPEED / zoom
         lastX = p[0]; lastY = p[1]
         e.preventDefault && e.preventDefault()
     }
