@@ -2,7 +2,7 @@
 // @mobile: true
 // @favorite: true
 // @tags: chromadepth, fractal, hex, lattice, touch, redaphid
-//https://visuals.beadfamous.com/?shader=redaphid/chromadepth-lattice/2&wavelet=true&controller=wavelet-ease&fullscreen=true&name=ChromaDepth%20Lattice
+//https://visuals.beadfamous.com/?shader=redaphid/chromadepth-lattice/2&wavelet=true&controller=lattice-nav&fullscreen=true&name=ChromaDepth%20Lattice
 // CHROMADEPTH LATTICE — recursive hex mirror-fold tunnel. A recursive mirror-fold hexagonal lattice
 // where each RECURSION LEVEL is a depth layer: the near layers read red (pop forward), the far
 // layers recede to violet, and a wave of light travels through the levels TOWARD you (the pulse
@@ -44,6 +44,10 @@ uniform float evoFlow;               // minutes-scale: pan direction
 uniform float evoWarp;               // minutes-scale: rotation curl
 uniform float evoPlasma;             // minutes-scale: depth spread
 uniform float sectionMode;           // section index → lattice re-seed
+// ── from lattice-nav controller: finger navigation (0 / 0 / treated-as-1 without it) ──
+uniform float navX;                  // accumulated world pan X (drag, no snap-back)
+uniform float navY;                  // accumulated world pan Y
+uniform float navZoom;               // pinch-zoom (>1 in); 0 when no controller → treated as 1
 // waveletBassZScore + wavelet_bassHit auto-declare (raw) — transient pulse punch only.
 
 mat2 rot2(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
@@ -159,18 +163,24 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // (never carries the focal point away), and a self-similar zoom-breath that reads as a fall.
     uv = rot2(iTime * 0.025 + morphPhase * 0.2 + (evoWarp - 0.5) * 0.4) * uv;
     uv += 0.05 * vec2(sin(iTime * 0.11 + flowPhase * 0.3), cos(iTime * 0.09 + flowPhase * 0.3));
+    // ── NAVIGATION (from lattice-nav controller; accumulates, never snaps back) ──
+    // VARIED LANDSCAPE (carpet-inspired): the lattice's STRUCTURE drifts by world position so
+    // roaming reveals genuinely different scenery — region rotation + cell size + a slow domain
+    // warp. Position drives STRUCTURE only, never hue, so red=near (ChromaDepth) always holds.
+    vec2 world = vec2(navX, navY);
+    gHexR += 0.07 * sin(world.x * 0.8 + world.y * 0.45);                  // cells grow/shrink by region
+    gSpin += 0.45 * sin(world.x * 0.35) + 0.35 * cos(world.y * 0.4);     // each region oriented differently
+
     // BASS DILATION — the lattice breathes like a subwoofer cone: sustained bass swells it, each
     // kick PUNCHES it toward you (zoom in), then springs back. Smooth swell + snappy thump, no strobe.
     float dilate = 1.0 + 0.14 * sin(iTime * 0.03 * PHI) - bassPulse * 0.08 - gKick * 0.11;
-    // small uv near 0 means we're zoomed deep into the CENTRAL recursion → the eye is at centre.
-    uv *= 0.07 * dilate;
+    float navz = navZoom < 0.01 ? 1.0 : navZoom;     // 0 (no controller) → treat as 1, no /0
+    // small uv near 0 = zoomed into the central recursion; pinch-zoom (navz) magnifies further.
+    uv *= 0.07 * dilate / navz;
 
-    // ── TOUCH: PAN AROUND to explore the lattice with your finger. Drag toward an edge to look
-    //    into that region of the infinite fold; centre (or untouched) = the home eye. Coords
-    //    persist after you lift, so you can park the view on a spot. Screen-aligned, y flipped.
-    //    (touch is a vec2 0..1 and touched a bool, both provided by the wrapper.)
-    vec2 tp = (touch - 0.5) * vec2(1.0, -1.0);
-    uv += tp * 0.85;
+    uv += world;                                     // finger PAN (drag to fly through the lattice)
+    // continuous terrain variation across the world (carpet-like) — ripples that differ by region
+    uv += 0.045 * vec2(sin(world.y * 1.0 + uv.x * 3.0), cos(world.x * 1.2 + uv.y * 3.0));
 
     vec4 frac = fractal(uv);
 
