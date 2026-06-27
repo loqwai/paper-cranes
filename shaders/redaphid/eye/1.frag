@@ -92,8 +92,9 @@ void eyeFractal(vec2 pos, int iterations, float tp, int seedBase, out float lum,
         int hsh = iterations + r + gpLast.y + gp.y + seedBase;
         float cell = randF(hsh);
         float fade = recursionFade(r, tp);
-        // each depth band reacts to its own audio family (gated so silence can't drive it)
-        float cl = mix(0.10, 1.0, cell * cell) * (0.62 + bandForLevel(r) * 0.7);
+        // each depth band reacts to its own audio family (gated so silence can't drive it).
+        // pow(cell,3) crisps the cells so the recursive glyph structure reads (not a smooth blob).
+        float cl = mix(0.06, 1.0, pow(cell, 3.0)) * (0.6 + bandForLevel(r) * 0.7);
         lum += cl * fade;
         depth += (float(r) + tp) * fade;
         wsum += fade;
@@ -150,12 +151,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     eyeFractal(uvFractal, iterations, tp, seedBase, lum, cellDepth);
 
     // ── CHROMADEPTH (hue stays LOCKED to depth — evolution never touches it) ──
+    // Radial is the PRIMARY tunnel-depth cue (edge = near = red, centre eye = far = violet) so the
+    // full red→violet range is always present and it POPS. cellDepth only adds per-cell facet
+    // jitter; evolution modulates that jitter AMOUNT (never the hue), so red=near always holds.
     float rr = length(uv);
-    float tRadial = 1.0 - smoothstep(0.0, 0.95, rr);               // centre = far(violet), edge = near(red)
-    float depthBlend = clamp(0.5 + (evoFlow - 0.5) * 0.3, 0.0, 1.0); // evolve radial-vs-cell weighting only
-    float t = clamp(mix(cellDepth, tRadial, depthBlend) - pop * 0.12, 0.0, 1.0);
+    float tRadial = 1.0 - smoothstep(0.0, 0.72, rr);               // tight: rim reaches red, core reaches violet
+    float jitter = (cellDepth - 0.5) * (0.20 + evoFlow * 0.30);
+    float t = clamp(tRadial * 0.92 + jitter - pop * 0.12, 0.0, 1.0);
 
-    float lit = mix(0.04, 0.5, pow(lum, 1.2)) * (0.8 + energySpring * 0.2);
+    float lit = mix(0.05, 0.55, pow(lum, 1.1)) * (0.8 + energySpring * 0.2);
     vec3 col = chromadepth(t, lit);
 
     // the beat reddens + brightens the NEAR band (pops it forward), not the whole frame
