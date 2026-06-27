@@ -1,7 +1,7 @@
 // @fullscreen: true
 // @mobile: true
 // @favorite: true
-// @tags: chromadepth, fractal, hex, lattice, redaphid
+// @tags: chromadepth, fractal, hex, lattice, touch, redaphid
 //https://visuals.beadfamous.com/?shader=redaphid/chromadepth-lattice/2&wavelet=true&controller=wavelet-ease&fullscreen=true&name=ChromaDepth%20Lattice
 // CHROMADEPTH LATTICE — recursive hex mirror-fold tunnel. A recursive mirror-fold hexagonal lattice
 // where each RECURSION LEVEL is a depth layer: the near layers read red (pop forward), the far
@@ -164,6 +164,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float dilate = 1.0 + 0.14 * sin(iTime * 0.03 * PHI) - bassPulse * 0.08 - gKick * 0.11;
     // small uv near 0 means we're zoomed deep into the CENTRAL recursion → the eye is at centre.
     uv *= 0.07 * dilate;
+
+    // ── TOUCH: PAN AROUND to explore the lattice with your finger. Drag toward an edge to look
+    //    into that region of the infinite fold; centre (or untouched) = the home eye. Coords
+    //    persist after you lift, so you can park the view on a spot. Screen-aligned, y flipped.
+    //    (touch is a vec2 0..1 and touched a bool, both provided by the wrapper.)
+    vec2 tp = (touch - 0.5) * vec2(1.0, -1.0);
+    uv += tp * 0.85;
 
     vec4 frac = fractal(uv);
 
