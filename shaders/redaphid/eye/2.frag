@@ -122,9 +122,11 @@ vec4 fractal(vec2 p){
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord){
-    vec2 uv = fragCoord.xy / iResolution.xy * 2.0 - 1.0;
-    vec2 p = uv;
-    uv.x *= iResolution.x / iResolution.y;
+    // CENTRED on screen for ALL aspects (height-based) → the eye sits dead-centre on mobile too.
+    // (The old `*2-1` + big constant pan landed the lattice's convergence off-centre, and where
+    //  it landed depended on aspect ratio — so on a tall phone it drifted into a corner.)
+    vec2 uv = (fragCoord - 0.5 * iResolution.xy) / iResolution.y;
+    vec2 p = (fragCoord / iResolution.xy) * 2.0 - 1.0;   // screen -1..1, for the vignette only
 
     // ── per-frame evolving state ──
     gSpin  = iTime * 0.04 + morphPhase * 0.4 + melodyFlow * 0.5 * quietGate;
@@ -133,12 +135,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // PULSE clock — monotonic, energy-accelerated; the kick punches an extra forward shove.
     gPulse = fract(flowPhase * 0.6 + iTime * 0.18 + kick * 0.15);
 
-    // pan through the infinite lattice; direction wanders over minutes (layer 4), speed audio-accel
-    float ang = evoFlow * 6.28318 + 0.6;
-    vec2 dir = vec2(cos(ang), sin(ang));
-    uv += (vec2(0.4487, 0.17567) + dir * 0.35) * (iTime * 0.28 + flowPhase * 0.4 + 10.3312);
-    // zoom breath (layer 3) — gentle, self-similar so it reads as a slow fall
-    uv *= 0.07 * (1.0 + 0.16 * sin(iTime * 0.03 * PHI) + waveletBassSpring * 0.05 * quietGate);
+    // BOUNDED life that keeps the eye CENTRED: a slow whole-field rotation + a tiny orbital drift
+    // (never carries the focal point away), and a self-similar zoom-breath that reads as a fall.
+    uv = rot2(iTime * 0.025 + morphPhase * 0.2 + (evoWarp - 0.5) * 0.4) * uv;
+    uv += 0.05 * vec2(sin(iTime * 0.11 + flowPhase * 0.3), cos(iTime * 0.09 + flowPhase * 0.3));
+    // small uv near 0 means we're zoomed deep into the CENTRAL recursion → the eye is at centre.
+    uv *= 0.07 * (1.0 + 0.16 * sin(iTime * 0.03 * PHI) + waveletBassSpring * 0.06 * quietGate);
 
     vec4 frac = fractal(uv);
 
