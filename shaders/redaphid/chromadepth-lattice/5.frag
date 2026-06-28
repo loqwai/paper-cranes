@@ -202,10 +202,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // there it FOLLOWS the structure (inversion strongest on the bright lattice lines). Dead simple.
     float roadY = 0.6 * sin(wpos.x * 0.40 + seed * TAU) + 0.32 * sin(wpos.x * 0.15 + 1.0);
     float presence = smoothstep(0.30, 0.60, 0.5 + 0.5 * sin(wpos.x * 0.06 + seed3 * TAU)); // appears in stretches
-    float corridor = smoothstep(0.018, 0.0, abs(wpos.y - roadY)) * presence;   // the winding zone
-    float onStruct = smoothstep(0.18, 0.55, lum);                             // the lattice lines/cells
-    float pathMask = corridor * (0.35 + 0.65 * onStruct);                     // whole zone inverts a bit; lines fully
-    col = mix(col, vec3(1.0) - col, pathMask);
+    float corridor = smoothstep(0.024, 0.0, abs(wpos.y - roadY)) * presence;   // the winding zone
+    float onStruct = smoothstep(0.28, 0.62, lum);                             // ONLY the bright lattice lines
+    col = mix(col, vec3(1.0) - col, corridor * onStruct);                     // invert the LATTICE LINES exactly
+    col += (vec3(1.0) - col) * corridor * 0.05;                               // faint zone hint so you can spot it
 
     // bass bloom (whole frame swells with light on the thump)
     col *= 1.0 + bassPulse * 0.25 + gKick * 0.15;
