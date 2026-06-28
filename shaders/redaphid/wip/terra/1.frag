@@ -2,7 +2,7 @@
 // @mobile: true
 // @favorite: true
 // @tags: terrain, voronoi, biome, infinite, touch, redaphid
-//https://visuals.beadfamous.com/?shader=redaphid/terra/1&wavelet=true&controller=lattice-nav&fullscreen=true&knob_1=0.21&name=Terra
+//https://visuals.beadfamous.com/?shader=redaphid/wip/terra/1&wavelet=true&controller=lattice-nav&fullscreen=true&knob_1=0.21&name=Terra
 // TERRA (1.frag) — an INFINITE, NON-REPEATING world built like Minecraft: from hash-based value
 // noise, NOT a periodic fold. Worley/Voronoi cells (each a unique hash-jittered point) make the
 // GEOMETRY itself non-repeating; a low-frequency FBM "biome" field gives regions distinct character

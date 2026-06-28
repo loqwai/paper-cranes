@@ -3,7 +3,7 @@
 An **infinite, non-repeating world** — built the way Minecraft generates terrain: from hash-based
 noise, *not* a periodic fold. This is the answer to the "breaking tiling" problem that the
 mirror-fold lattice shaders couldn't solve (see
-[advanced-shader-techniques.md §7](../../../docs/advanced-shader-techniques.md)): a kaleidoscope
+[advanced-shader-techniques.md §7](../../../../docs/advanced-shader-techniques.md)): a kaleidoscope
 always repeats when you zoom out; noise never does.
 
 ## How it works
