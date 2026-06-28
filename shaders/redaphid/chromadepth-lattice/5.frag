@@ -2,11 +2,12 @@
 // @mobile: true
 // @favorite: true
 // @tags: fractal, hex, lattice, touch, color, redaphid
-//https://visuals.beadfamous.com/?shader=redaphid/chromadepth-lattice/5&wavelet=true&controller=lattice-nav&fullscreen=true&knob_1=0.21&name=Living%20Lattice%20Trails
+//https://visuals.beadfamous.com/?shader=redaphid/chromadepth-lattice/5&wavelet=true&controller=lattice-nav&fullscreen=true&knob_1=0.21&name=Living%20Lattice%20Path
 //   * knob_1 = PAN SPEED (live: preset / URL / MIDI / jam drawer). 0 = precise/slow, 1 = fast
 //     roaming; ~0.21 ≈ 1 screen per swipe. Read by the lattice-nav controller (scales drag deltas).
-// LIVING LATTICE (5.frag) — 4.frag + GLOWING TRAILS: bright energy dashes flow ALONG the lattice
-// lines like light running through a circuit, sped up by the music. The hex mirror-fold lattice,
+// LIVING LATTICE (5.frag) — 4.frag + a PATH: a sparse winding ribbon of a DIFFERENT colour pattern
+// living in world space. You occasionally stumble across one and can FOLLOW it (somewhere to pan
+// toward). Slowed base animation (1/3). The hex mirror-fold lattice,
 // freed from ChromaDepth for BEAUTIFUL continuous colour, tuned to glow off a phone at night and
 // to pan the same way everywhere. Built to AMAZE when people play with it live:
 //   * BRIGHT — high-lightness neon palette over a lit colour field (no black voids) + glow lift +
@@ -89,15 +90,13 @@ float bandForDepth(float ld){
 }
 
 // shared per-frame state
-float gSpin, gPulse, gPop, gKick, gHexR, gBorder, gCross, gFill, gFlow;
+float gSpin, gPulse, gPop, gKick, gHexR, gBorder, gCross, gFill;
 
-// Recursive hex mirror-fold lattice. Returns vec4(lum, field, wave, alpha) + out trail:
-//   lum=brightness, field=CONTINUOUS palette coord, wave=pulse accent, alpha=coverage,
-//   trail = glowing energy flowing ALONG the lattice lines (the "paths").
-vec4 fractal(vec2 p, out float trail){
+// Recursive hex mirror-fold lattice. Returns vec4(lum, field, wave, alpha):
+//   lum=brightness, field=CONTINUOUS palette coord, wave=pulse accent, alpha=coverage.
+vec4 fractal(vec2 p){
     float scale = 1.0, aliasBase = 1.0 / iResolution.y;
     float alpha = 0.0, lumAcc = 0.0, fieldAcc = 0.0, waveAcc = 0.0;
-    trail = 0.0;
 
     for (int i = 0; i < LEVELS; i++){
         float s = 2.0;
@@ -131,20 +130,11 @@ vec4 fractal(vec2 p, out float trail){
                   * (0.7 + energySpring * 0.4 + band * 0.7 + waveletBassSpring * quietGate * 0.6);
         lit += wave * (0.4 + gPop * 0.7 + gKick * 1.2 + spectralCrestSmooth * 0.35);
 
-        // GLOWING TRAIL — bright dashes that FLOW along the lattice lines like current in a circuit.
-        // flowC runs ALONG the structure (hexDist + radius + level); gFlow sweeps it over time.
-        // pow() makes sharp, separated dashes; they only show where the structure is (f) and the
-        // bright LINE proximity (not the fill), so it reads as light running down the grid edges.
-        float flowC = hexDist(uv) * 3.0 + length(uv) * 1.6 + float(i) * 0.6;
-        float dash  = pow(0.5 + 0.5 * sin(flowC * 5.0 - gFlow), 14.0);
-        float line  = smoothstep(gBorder + 0.05, gBorder, m);   // only on the bright border lines
-
         // front-weighted accumulation (near structure leads the colour) → smooth, no band pops
         float w = (1.0 - alpha) * f;
         lumAcc   += w * lit;
         fieldAcc += w * field;
         waveAcc  += w * wave;
-        trail    += w * dash * line;
         alpha    += w;
     }
     float ia = 1.0 / max(alpha, 1e-3);
@@ -162,7 +152,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     gPop   = clamp(energySpring * 0.5 + spectralCrestSmooth * 0.45, 0.0, 1.0) * quietGate;
     gKick  = clamp(max(waveletBassZScore, 0.0), 0.0, 1.0) * 0.5 + clamp(wavelet_bassHit, 0.0, 1.0) * 0.3;
     gPulse = fract(flowPhase * 0.6 + bTime * 0.18);
-    gFlow  = bTime * 2.2 + flowPhase * 4.0;   // monotonic trail-flow clock — runs FASTER with the music
     float bassPulse = waveletBassSpring * quietGate;
     gHexR   = 0.60 + waveletBand2Spring * 0.12 * quietGate;
     gBorder = 0.10 + waveletBand5Spring * 0.06 * quietGate;
@@ -181,12 +170,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float navz = navZoom < 0.01 ? 1.0 : navZoom;
     uv *= 0.07 / navz;
     uv += world;                                              // finger PAN — screen-consistent now
+    vec2 wpos = uv;                                           // clean world position for the PATH (pre-warp)
     // gentle terrain warp for texture; grows PERMANENTLY on big drops (warpGrow). A fixed function
     // of world position, so it varies by area but never reverses the pan direction.
     uv += (0.03 + warpGrow * 0.04) * vec2(sin(uv.x * 3.0 + seed4 * TAU), cos(uv.y * 3.0 + seed4 * TAU));
 
-    float trail;
-    vec4 fr = fractal(uv, trail);
+    vec4 fr = fractal(uv);
     float lum = fr.x, field = fr.y, wave = fr.z, alpha = fr.w;
 
     // ── BEAUTIFUL COLOUR ── one smooth Oklch journey, unique per area, PERMANENTLY rotated by drops
@@ -204,9 +193,19 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     vec3 bg = lush(s + 0.4, 0.45) * 0.92;
     col = mix(bg, col, clamp(alpha, 0.0, 1.0));
 
-    // ── GLOWING TRAILS — bright energy running ALONG the lattice lines (a hue-shifted accent so
-    //    the streaks read as light flowing through the structure). Crest/treble make them sparkle.
-    col += lush(s + 0.33, 1.0) * clamp(trail, 0.0, 1.6) * (1.1 + spectralCrestSmooth * 0.8 + waveletBand5Spring * quietGate);
+    // ── PATH — a sparse winding RIBBON of a different colour pattern, living in WORLD space so
+    //    it's a stable landmark: you occasionally stumble across one and can FOLLOW it (pan along
+    //    it) when you want somewhere to head. roadY is a slow meander in world.x; you find the
+    //    path by panning in y until the ribbon enters frame, then follow it by panning in x.
+    // A sparse winding CORRIDOR in world space (you pan to find it). Within it the colour is
+    // INVERTED — unmistakable against ANY local palette, and since it inverts whatever lattice is
+    // there it FOLLOWS the structure (inversion strongest on the bright lattice lines). Dead simple.
+    float roadY = 0.6 * sin(wpos.x * 0.40 + seed * TAU) + 0.32 * sin(wpos.x * 0.15 + 1.0);
+    float presence = smoothstep(0.30, 0.60, 0.5 + 0.5 * sin(wpos.x * 0.06 + seed3 * TAU)); // appears in stretches
+    float corridor = smoothstep(0.018, 0.0, abs(wpos.y - roadY)) * presence;   // the winding zone
+    float onStruct = smoothstep(0.18, 0.55, lum);                             // the lattice lines/cells
+    float pathMask = corridor * (0.35 + 0.65 * onStruct);                     // whole zone inverts a bit; lines fully
+    col = mix(col, vec3(1.0) - col, pathMask);
 
     // bass bloom (whole frame swells with light on the thump)
     col *= 1.0 + bassPulse * 0.25 + gKick * 0.15;
