@@ -1,7 +1,7 @@
 /**
  * lattice-nav — COMPOSITE controller: wavelet-ease audio + finger navigation (pan + pinch-zoom).
  *
- * Load with: ?controller=lattice-nav&wavelet=true   (pairs with redaphid/lattice/2)
+ * Load with: ?controller=lattice-nav&wavelet=true   (pairs with redaphid/chromadepth-lattice/2)
  *
  * Demonstrates controller COMPOSITION. A controller is just an ES module; we pull in another
  * controller's make() with a STATIC top-level import and our per-frame function MERGES its

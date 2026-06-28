@@ -2,7 +2,7 @@
 // @mobile: true
 // @favorite: true
 // @tags: chromadepth, fractal, glyph, infinite-zoom, redaphid
-//https://visuals.beadfamous.com/?shader=redaphid/lattice/1&wavelet=true&controller=wavelet-ease&fullscreen=true&name=ChromaDepth%20Lattice%20Zoom
+//https://visuals.beadfamous.com/?shader=redaphid/chromadepth-lattice/1&wavelet=true&controller=wavelet-ease&fullscreen=true&name=ChromaDepth%20Lattice%20Zoom
 // CHROMADEPTH LATTICE (zoom) — ChromaDepth infinite-zoom fractal. A seamless recursive descent toward a
 // central "eye": you fall forever through self-similar 3x3 glyph cells, the violet eye is the
 // far vanishing point, red cells rush past at the periphery (near). Built on Frank Force's

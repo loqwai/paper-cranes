@@ -2,16 +2,9 @@
 // @mobile: true
 // @favorite: true
 // @tags: fractal, hex, lattice, touch, color, redaphid
-//https://visuals.beadfamous.com/?shader=redaphid/lattice/4&wavelet=true&controller=lattice-nav&fullscreen=true&knob_1=0.21&name=Living%20Lattice%20Bright
-//   * knob_1 = PAN SPEED (live: preset / URL / MIDI / jam drawer). 0 = precise/slow, 1 = fast
-//     roaming; ~0.21 ≈ 1 screen per swipe. Read by the lattice-nav controller (scales drag deltas).
-// LIVING LATTICE (4.frag) — BRIGHT build with CONSISTENT navigation. The hex mirror-fold lattice,
-// freed from ChromaDepth for BEAUTIFUL continuous colour, tuned to glow off a phone at night and
-// to pan the same way everywhere. Built to AMAZE when people play with it live:
-//   * BRIGHT — high-lightness neon palette over a lit colour field (no black voids) + glow lift +
-//     bass bloom + minimal vignette: pops off the screen at night, reads from across a room.
-//   * CONSISTENT PAN — per-area variety is colour + cell size, NOT rotation, and there is no
-//     whole-field spin, so dragging always moves the same way on screen (no inverted axes).
+//https://visuals.beadfamous.com/?shader=redaphid/chromadepth-lattice/3&wavelet=true&controller=lattice-nav&fullscreen=true&name=Living%20Lattice
+// LIVING LATTICE — the hex mirror-fold lattice (3.frag), freed from ChromaDepth for BEAUTIFUL
+// continuous colour, built to AMAZE when people play with it live:
 //   * BEAUTIFUL COLOUR — a smooth Oklch palette over a coverage-weighted continuous field, so
 //     colour glides everywhere (no discrete depth bands → no sudden colour pops).
 //   * UNIQUE EVERYWHERE — drag to explore and every area is different: the palette AND the
@@ -59,9 +52,8 @@ mat2 rot2(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 // lit lifts lightness; chroma breathes for richness. Bounded away from white/black.
 vec3 lush(float s, float lit){
     float h = fract(s) * TAU;
-    // BRIGHT baseline so the whole thing emits light (must pop off a phone at night, read from afar)
-    float L = clamp(0.50 + 0.36 * clamp(lit, 0.0, 1.0), 0.12, 0.88);
-    float C = (0.125 + seed2 * 0.05) + 0.05 * sin(s * TAU * 0.5 + 1.3);  // high chroma = NEON, seed2 = device sat
+    float L = clamp(0.40 + 0.44 * clamp(lit, 0.0, 1.0), 0.05, 0.92);
+    float C = (0.09 + seed2 * 0.06) + 0.05 * sin(s * TAU * 0.5 + 1.3);   // seed2 → per-device saturation
     return oklch2rgb(vec3(L, C, h));
 }
 
@@ -155,21 +147,18 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     gCross  = 0.20 - bassPulse * 0.05;
     gFill   = 0.06 + waveletBand5Spring * 0.035 * quietGate;
 
-    // ── UNIQUE-PER-AREA structure: world position drifts the cell SIZE only — NOT rotation.
-    //    Rotating the lattice by area made the pan axis appear to invert in different places;
-    //    colour (regionHue) + cell size carry the per-area uniqueness without that side effect.
+    // ── UNIQUE-PER-AREA structure: world position drifts rotation + cell size (gentle, smooth) ──
     vec2 world = vec2(navX, navY);
     gHexR += 0.07 * sin(world.x * 0.8 + world.y * 0.45);
+    gSpin += 0.25 * sin(world.x * 0.2) + 0.2 * cos(world.y * 0.22);
 
-    // NO whole-field rotation — it slowly drifted the pan axis. Idle life comes from the per-level
-    // kaleido churn (gSpin's iTime term) instead, so DRAGGING ALWAYS MOVES THE SAME WAY on screen.
-    uv += 0.02 * vec2(sin(iTime * 0.11 + flowPhase * 0.3), cos(iTime * 0.09 + flowPhase * 0.3));
+    uv = rot2(iTime * 0.025 + morphPhase * 0.2 + (evoWarp - 0.5) * 0.4) * uv;
+    uv += 0.05 * vec2(sin(iTime * 0.11 + flowPhase * 0.3), cos(iTime * 0.09 + flowPhase * 0.3));
     float navz = navZoom < 0.01 ? 1.0 : navZoom;
     uv *= 0.07 / navz;
-    uv += world;                                              // finger PAN — screen-consistent now
-    // gentle terrain warp for texture; grows PERMANENTLY on big drops (warpGrow). A fixed function
-    // of world position, so it varies by area but never reverses the pan direction.
-    uv += (0.03 + warpGrow * 0.04) * vec2(sin(uv.x * 3.0 + seed4 * TAU), cos(uv.y * 3.0 + seed4 * TAU));
+    uv += world;                                              // finger PAN
+    // continuous terrain warp — varies by region AND grows PERMANENTLY on big drops (warpGrow)
+    uv += (0.045 + warpGrow * 0.05) * vec2(sin(world.y * 1.0 + uv.x * 3.0 + seed4 * TAU), cos(world.x * 1.2 + uv.y * 3.0 + seed4 * TAU));
 
     vec4 fr = fractal(uv);
     float lum = fr.x, field = fr.y, wave = fr.z, alpha = fr.w;
@@ -182,26 +171,21 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
             + paletteShift                                    // permanent live mutation
             + seed;                                           // seed → per-device base palette identity
     vec3 col = lush(s, lum);
-    col += lush(s + 0.12, 1.0) * wave * 0.7;                  // pulse accent (brighter)
+    col += lush(s + 0.12, 0.9) * wave * 0.6;                  // pulse accent (hue-shifted, brighter)
 
-    // BRIGHT, saturated background FIELD — no black voids; the whole screen emits light so it
-    // pops off the phone at night and reads from across the room.
-    vec3 bg = lush(s + 0.4, 0.45) * 0.92;
+    // composite over a deep, lush background (not pure black) so the void still glows softly
+    vec3 bg = lush(s + 0.5, 0.05) * 0.5;
     col = mix(bg, col, clamp(alpha, 0.0, 1.0));
 
-    // bass bloom (whole frame swells with light on the thump)
+    // bloom on the bass thump (whole frame swells with light, eased)
     col *= 1.0 + bassPulse * 0.25 + gKick * 0.15;
 
-    // GLOW LIFT — gamma up + gain so mid-tones emit; high chroma keeps it NEON, not washed out.
-    col = pow(clamp(col, 0.0, 1.0), vec3(0.80));
-    col *= 1.15;
-
-    // gentle trail (low decay so the glow carries between frames)
+    // gentle trail smooths motion
     vec4 prev = getLastFrameColor(fragCoord / iResolution.xy);
-    col = mix(prev.rgb * 0.90, col, 0.82);
+    col = mix(prev.rgb * 0.86, col, 0.8);
 
-    // minimal vignette — barely darken the edges, it has to read from a distance
-    col = mix(col, vec3(0.0), dot(sp, sp) * 0.12);
+    // vignette
+    col = mix(col, vec3(0.0), dot(sp, sp) * 0.4);
 
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
