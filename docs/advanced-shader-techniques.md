@@ -8,7 +8,7 @@ failure modes that make them feel cheap. This complements:
 - [MAKING_A_NEW_SHADER.md](MAKING_A_NEW_SHADER.md) — uniforms, color spaces, basic ChromaDepth mapping.
 
 Reference shaders to study: `redaphid/iris/1.frag` (+ `controllers/wavelet-ease.js`),
-`redaphid/chromadepth-lattice/*.frag`, `tesla/chromadepth/*.frag`.
+`redaphid/lattice/*.frag`, `tesla/chromadepth/*.frag`.
 
 ---
 
@@ -101,7 +101,7 @@ only for the transient — and the transient drives *amplitude/zoom*, not a phas
 
 Periodic folds (mirror-fold / `fract`) **tile** when you zoom out. The obvious fix — a large-scale,
 low-frequency, incommensurate **domain warp** + per-region cell-size variation — **was tried on
-`chromadepth-lattice/6` and did not satisfy** (reverted). Honest takeaways:
+`lattice/6` and did not satisfy** (reverted). Honest takeaways:
 
 - A **bounded** warp only *softens* the tiling; it doesn't remove it. The warp is itself
   periodic/finite, and the underlying fold is still `fract`-periodic, so deep zoom-out still reveals

@@ -2,7 +2,7 @@
 // @mobile: true
 // @favorite: true
 // @tags: fractal, hex, lattice, touch, color, redaphid
-//https://visuals.beadfamous.com/?shader=redaphid/chromadepth-lattice/6&wavelet=true&controller=lattice-nav&fullscreen=true&knob_1=0.21&name=Living%20Lattice%20Still
+//https://visuals.beadfamous.com/?shader=redaphid/lattice/6&wavelet=true&controller=lattice-nav&fullscreen=true&knob_1=0.21&name=Living%20Lattice%20Still
 //   * knob_1 = PAN SPEED (live: preset / URL / MIDI / jam drawer). 0 = precise/slow, 1 = fast
 //     roaming; ~0.21 ≈ 1 screen per swipe. Read by the lattice-nav controller (scales drag deltas).
 // LIVING LATTICE (6.frag) — STILL geography: same as 5 but the landscape HOLDS STILL when you're

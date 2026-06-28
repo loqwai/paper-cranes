@@ -2,7 +2,7 @@
 // @mobile: true
 // @favorite: true
 // @tags: chromadepth, fractal, hex, lattice, touch, redaphid
-//https://visuals.beadfamous.com/?shader=redaphid/chromadepth-lattice/2&wavelet=true&controller=lattice-nav&fullscreen=true&name=ChromaDepth%20Lattice
+//https://visuals.beadfamous.com/?shader=redaphid/lattice/2&wavelet=true&controller=lattice-nav&fullscreen=true&name=ChromaDepth%20Lattice
 // CHROMADEPTH LATTICE — recursive hex mirror-fold tunnel. A recursive mirror-fold hexagonal lattice
 // where each RECURSION LEVEL is a depth layer: the near layers read red (pop forward), the far
 // layers recede to violet, and a wave of light travels through the levels TOWARD you (the pulse
