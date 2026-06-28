@@ -207,6 +207,24 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     col = mix(col, vec3(1.0) - col, corridor * onStruct);                     // invert the LATTICE LINES exactly
     col += (vec3(1.0) - col) * corridor * 0.05;                               // faint zone hint so you can spot it
 
+    // ── DESTINATION ── the path LEADS TO unique blooming landmarks set along the road at sparse
+    //    intervals. Each is different (per-feature hash): a bright radial sunburst with its own ray
+    //    count + hue + white-hot core. A far halo lets you SEE the next one coming, so the path has
+    //    somewhere to go — follow the road and you arrive at a one-of-a-kind feature.
+    float spacing = 1.6;                                                       // world units between landmarks
+    float fx = floor(wpos.x / spacing + 0.5) * spacing;                       // nearest landmark's x (on the road)
+    float fy = 0.6 * sin(fx * 0.40 + seed * TAU) + 0.32 * sin(fx * 0.15 + 1.0); // its y = roadY(fx) → on the path
+    float fh = fract(sin(fx * 91.73 + seed * 53.3) * 43758.5453);             // per-landmark randomness (unique)
+    vec2  fdv = wpos - vec2(fx, fy);
+    float fd = length(fdv);
+    float fang = atan(fdv.y, fdv.x);
+    vec3  fcol = lush(seed + fh + fang * 0.04, 1.0);                          // bright, unique hue per landmark
+    col += lush(seed + fh, 1.0) * smoothstep(0.40, 0.05, fd) * 0.10;          // FAR HALO — directional cue from afar
+    float rays  = 0.5 + 0.5 * sin(fang * (6.0 + floor(fh * 8.0)) + bTime + fh * TAU);
+    float bloom = smoothstep(0.07, 0.0, fd) * (0.35 + 0.65 * rays);           // contained radial sunburst
+    col = mix(col, fcol, bloom * 0.7);
+    col += fcol * 1.3 * smoothstep(0.012, 0.0, fd);                           // bright COLOURED core (unique, not white)
+
     // bass bloom (whole frame swells with light on the thump)
     col *= 1.0 + bassPulse * 0.25 + gKick * 0.15;
 
