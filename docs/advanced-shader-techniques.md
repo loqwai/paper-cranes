@@ -97,18 +97,27 @@ only for the transient — and the transient drives *amplitude/zoom*, not a phas
   drift) from **in-place reactivity**. For a stable, explorable world, remove the idle drift/churn
   and let life come from color/breathing/pulse that *don't translate the geography*.
 
-## 7. Breaking tiling & adding terrain variety
+## 7. Breaking tiling — a hard problem (what didn't work)
 
-- Periodic folds (mirror-fold / `fract`) **tile** when you zoom out. Break it with a **large-scale,
-  low-frequency, incommensurate domain warp** (irrational frequency ratios → quasi-non-repeating)
-  plus per-region parameter variation (cell size, etc.).
-- **Keep the warp Jacobian < 1** (roughly: sum of each octave's `amplitude × frequency`) so it never
-  *folds back on itself* — folding reverses local motion and breaks pan consistency.
-- **Seed variety with SLOW audio features.** The `*Mean` history-averages and `wavelet-ease`'s
-  `evoFlow/evoWarp/evoPlasma` drifters change over seconds-to-minutes → evolving randomness *without*
-  jitter. There are tons (every feature × Mean/Median/Slope/Intercept/RSquared). Use them as phase/
-  seed offsets so the terrain slowly *reshuffles* with the music. They're ~0 with no mic, so position
-  variation still breaks the tiling for the silent case.
+Periodic folds (mirror-fold / `fract`) **tile** when you zoom out. The obvious fix — a large-scale,
+low-frequency, incommensurate **domain warp** + per-region cell-size variation — **was tried on
+`chromadepth-lattice/6` and did not satisfy** (reverted). Honest takeaways:
+
+- A **bounded** warp only *softens* the tiling; it doesn't remove it. The warp is itself
+  periodic/finite, and the underlying fold is still `fract`-periodic, so deep zoom-out still reveals
+  repetition — now smeared, which can read as **mushy** rather than varied.
+- A bigger warp distorts cells into melt and, past a Jacobian of ~1, **folds back on itself** (which
+  also reverses local pan direction).
+- **If you genuinely need non-repeating terrain, change the base**, don't paper over a periodic one:
+  use a non-periodic field (value/FBM noise) as the structure, or accept the tiling as a *feature*
+  (kaleidoscopic symmetry) and add variety through **color / lighting / landmarks** instead of
+  geometry. The per-area `regionHue` color drift and world-space landmarks (§9) carry "every area is
+  different" far more convincingly than warping the geometry did.
+
+(Slow audio features — the `*Mean` history-averages and `wavelet-ease`'s `evoFlow/evoWarp/evoPlasma`
+drifters — are still a great *randomness source* for evolving variety without jitter; that part
+wasn't the problem. They're just better spent on color/landmarks than on a warp that fights a
+periodic fold.)
 
 ## 8. Per-device uniqueness — `seed` / `seed2` / `seed3` / `seed4`
 
