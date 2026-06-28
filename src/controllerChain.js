@@ -27,16 +27,15 @@ const resolve = async (mod, cranes) => {
     return null
 }
 
-// Load an ordered list of controller names → array of per-frame fns. Dedupes by name so listing the
-// same controller twice can't double its side-effects (e.g. touch listeners). `bust` cache-busts the
-// import (used by hot-reload to pick up edits).
+// Load an ordered list of controller names → array of per-frame fns. NO dedupe: each `?controller=`
+// is its own pipeline STAGE with its own make()/state, so listing the same controller more than once
+// runs it that many times (each instance feeds into its own stage). `bust` cache-busts the import.
 export const loadControllers = async (cranes, names, { bust = false } = {}) => {
-    const seen = new Set()
     const fns = []
     for (const name of names) {
-        if (!name || seen.has(name)) continue
-        seen.add(name)
+        if (!name) continue
         try {
+            // Module is import-cached, but every entry gets a FRESH make() → independent state/stage.
             const mod = await import(/* @vite-ignore */ toUrl(name, bust))
             const fn = await resolve(mod, cranes)
             if (typeof fn === 'function') fns.push(fn)

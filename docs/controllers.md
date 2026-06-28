@@ -105,7 +105,7 @@ Repeat `?controller=` to load several controllers — they run as a **left-fold 
 
 - **Order = URL order.** Each controller receives `{ ...base features, ...everything added by earlier controllers this frame }` and returns the features it adds. So a later controller can read an earlier one's output.
 - **Last wins on key clash.** A cross-cutting controller (smoother, recorder, clamp…) just goes **last** so it sees and can override the full accumulated bag.
-- **Deduped by name** — listing the same controller twice runs it once (no double touch-listeners/state).
+- **Each `?controller=` is its own stage** — listing the same controller more than once runs it that many times, each with its own `make()`/state, feeding into its own position in the pipeline (e.g. a transform applied twice, or a smoother before *and* after). Note: a controller that attaches global listeners/state will do so once per instance.
 - This replaces the need to *wrap* one controller in another. (Existing self-wrapping controllers like `lattice-nav` still work; chaining is additive.)
 
 ### Async `make()`
