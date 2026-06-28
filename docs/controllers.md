@@ -95,6 +95,31 @@ Add `?controller=<name>` to the URL (without `.js`):
 
 The controller runs in a `requestAnimationFrame` loop managed by `index.js`. On the jam page, controllers hot-swap on file save without page reload (via the `controller-update` HMR event).
 
+### Chaining (multiple controllers)
+
+Repeat `?controller=` to load several controllers — they run as a **left-fold pipeline** each frame (`src/controllerChain.js`):
+
+```
+?controller=wavelet-ease&controller=lattice-nav&controller=my-fx
+```
+
+- **Order = URL order.** Each controller receives `{ ...base features, ...everything added by earlier controllers this frame }` and returns the features it adds. So a later controller can read an earlier one's output.
+- **Last wins on key clash.** A cross-cutting controller (smoother, recorder, clamp…) just goes **last** so it sees and can override the full accumulated bag.
+- **Deduped by name** — listing the same controller twice runs it once (no double touch-listeners/state).
+- This replaces the need to *wrap* one controller in another. (Existing self-wrapping controllers like `lattice-nav` still work; chaining is additive.)
+
+### Async `make()`
+
+`make()` may be `async` — it's awaited before the controller joins the loop, so you can dynamic-import, fetch config, or await device permissions during setup:
+
+```js
+export async function make(cranes) {
+  const { thing } = await import('./heavy-thing.js')
+  return (features) => ({ /* per-frame output */ })
+}
+```
+Sync `make()` keeps working unchanged.
+
 ## Hot-Reload
 
 On the jam page (`jam.html`), controller files hot-swap the same way shaders do:

@@ -2,6 +2,7 @@ import { render, Fragment } from 'preact'
 import { useState, useEffect, useRef } from 'preact/hooks'
 import { html } from 'htm/preact'
 import { createParamsManager } from './src/params/ParamsManager.js'
+import { loadControllers, composeControllers } from './src/controllerChain.js'
 
 const searchParams = new URLSearchParams(window.location.search)
 
@@ -493,18 +494,17 @@ if (import.meta.hot) {
         flashToast('Shader updated')
     })
 
-    // Hot-swap controller without reloading — just replace the function reference.
-    // The animation loop in index.js reads from window._hotController each frame.
+    // Hot-swap controllers without reloading — rebuild the whole CHAIN (any `?controller=` in it may
+    // have been edited) and recompose into window._hotController, which the index.js loop reads.
     import.meta.hot.on('controller-update', async ({ controller }) => {
-        const currentController = new URLSearchParams(window.location.search).get('controller')
-        if (!currentController || controller !== currentController) return
+        const names = new URLSearchParams(window.location.search).getAll('controller')
+        if (!names.includes(controller)) return   // edited controller isn't in this page's chain
         try {
-            const mod = await import(/* @vite-ignore */ `/controllers/${controller}.js?t=${Date.now()}`)
-            // make() is a factory — CALL it to get the per-frame controller (matches loadController).
-            const fn = mod.default ?? (typeof mod.make === 'function' ? mod.make(window.cranes) : mod)
-            if (typeof fn !== 'function') return
-            window._hotController = fn
-            flashToast(`Controller updated: ${controller}`)
+            const fns = await loadControllers(window.cranes, names, { bust: true })   // fresh re-import
+            if (fns.length) {
+                window._hotController = composeControllers(fns)
+                flashToast(`Controller updated: ${controller}`)
+            }
         } catch (e) {
             flashToast(`Controller error: ${e.message}`)
         }
