@@ -28,7 +28,9 @@ export function make(cranes) {
     let lastX = 0, lastY = 0        // previous finger position (0..1)
     let pinchDist0 = 0, pinchZoom0 = 1
     let mode = 0                    // 0 idle · 1 pan · 2 pinch
-    const SPEED = 1.0, FRICTION = 0.90, ZMIN = 0.012, ZMAX = 12.0   // lower SPEED = calmer pan; tiny ZMIN = keep zooming out
+    // SPEED ≈ the shader's view window (0.07 fold-units) → ~1 screen per full swipe (1:1 grab).
+    // (Was 1.0 = ~14 screens/swipe = wildly too fast.) FRICTION = glide decay; ZMIN tiny = zoom way out.
+    const SPEED = 0.08, FRICTION = 0.90, ZMIN = 0.012, ZMAX = 12.0
 
     // ── PERMANENT live mutation ── an extreme sound (a big drop) permanently rotates the palette
     // and grows the structural warp, so the look transforms over the show and never returns to the
