@@ -95,22 +95,70 @@ Add `?controller=<name>` to the URL (without `.js`):
 
 The controller runs in a `requestAnimationFrame` loop managed by `index.js`. On the jam page, controllers hot-swap on file save without page reload (via the `controller-update` HMR event).
 
-### Chaining (multiple controllers)
+### Chaining (multiple controllers) — the pipeline
 
-Repeat `?controller=` to load several controllers — they run as a **left-fold pipeline** each frame (`src/controllerChain.js`):
+Repeat `?controller=` to load several controllers. They run as a **left-fold pipeline** every frame, implemented in `src/controllerChain.js` (`loadControllers()` builds the ordered list, `composeControllers()` folds it):
 
 ```
 ?controller=wavelet-ease&controller=lattice-nav&controller=my-fx
 ```
 
-- **Order = URL order.** Each controller receives `{ ...base features, ...everything added by earlier controllers this frame }` and returns the features it adds. So a later controller can read an earlier one's output.
-- **Last wins on key clash.** A cross-cutting controller (smoother, recorder, clamp…) just goes **last** so it sees and can override the full accumulated bag.
-- **Each `?controller=` is its own stage** — listing the same controller more than once runs it that many times, each with its own `make()`/state, feeding into its own position in the pipeline (e.g. a transform applied twice, or a smoother before *and* after). Note: a controller that attaches global listeners/state will do so once per instance.
-- This replaces the need to *wrap* one controller in another. (Existing self-wrapping controllers like `lattice-nav` still work; chaining is additive.)
+The fold is exactly this:
+
+```js
+let acc = {}
+for (const run of controllers) {
+  acc = { ...acc, ...(run({ ...baseFeatures, ...acc }) ?? {}) }
+}
+window.cranes.controllerFeatures = acc
+```
+
+Rules that follow from it (internalize these):
+
+- **URL order = pipeline order.** The 1st controller sees only `baseFeatures`; the 2nd sees `baseFeatures + what the 1st added this frame`; the 3rd sees both; etc. **So a downstream controller can read an upstream one's freshly-computed output the same frame** — this is what replaces *wrapping*.
+- **Last writer wins on a key clash.** Put a cross-cutting controller (smoother, clamp, recorder, remote-broadcast) **last** so it sees and can override the whole accumulated bag.
+- **No dedupe — each `?controller=` is its own stage** with its own `make()`/state. The same controller listed twice runs twice (e.g. a transform applied at two points, or a smoother before *and* after). A controller that attaches global listeners or holds module state does so **once per instance**, so listing a listener-based one twice double-attaches.
+- **One bad stage can't break the chain** — each step is wrapped in try/catch; a throwing controller logs and contributes nothing that frame.
+
+**Prefer chaining over wrapping.** Write a controller that does one job and reads what it needs from `features`; compose at the URL. Don't `import` one controller inside another. (A couple of older controllers — `lattice-nav`, `gesture-knobs` — still self-import `wavelet-ease`; leave them as-is, but don't copy that pattern.)
+
+#### Example A — a downstream controller that reads an upstream output
+
+```js
+// melody-pulse.js — needs wavelet-ease UPSTREAM (e.g. ?controller=wavelet-ease&controller=melody-pulse)
+export function make() {
+  return (features) => {
+    const melody = features.melodyFlow ?? 0      // ← produced by wavelet-ease earlier this frame
+    return { pulse: 0.5 + 0.5 * Math.sin(melody * 6.2831) }
+  }
+}
+```
+
+#### Example B — a cross-cutting "smoother" you place LAST
+
+```js
+// smooth-all.js — eases EVERY numeric feature the chain produced. Put it last: ?...&controller=smooth-all
+export function make() {
+  const state = {}                               // its own persistent state (why it's a controller)
+  return (features) => {
+    const out = {}
+    for (const k in features) {
+      if (typeof features[k] !== 'number') continue
+      state[k] = (state[k] ?? features[k]) * 0.9 + features[k] * 0.1   // EMA
+      out[k] = state[k]
+    }
+    return out                                   // overrides the upstream keys (last wins)
+  }
+}
+```
+
+#### Gotcha: the one-frame self-feedback loop
+
+`flattenFeatures()` folds **last frame's** `controllerFeatures` back into `baseFeatures`. So a controller can see its *own previous-frame* output in `features`. That's normally fine and useful (cheap cross-frame memory), but **don't write a stage that blindly accumulates its own key** (`x = features.x + 1`) unless you intend it to grow every frame.
 
 ### Async `make()`
 
-`make()` may be `async` — it's awaited before the controller joins the loop, so you can dynamic-import, fetch config, or await device permissions during setup:
+`make()` may be `async` — it's awaited before the controller joins the loop, so you can dynamic-import heavy deps, fetch config, or await device permissions during setup:
 
 ```js
 export async function make(cranes) {
@@ -118,7 +166,7 @@ export async function make(cranes) {
   return (features) => ({ /* per-frame output */ })
 }
 ```
-Sync `make()` keeps working unchanged.
+Sync `make()` keeps working unchanged. (The per-frame function it returns must stay synchronous — it runs every `requestAnimationFrame`.)
 
 ## Hot-Reload
 
