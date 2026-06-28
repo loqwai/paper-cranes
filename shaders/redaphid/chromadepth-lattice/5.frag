@@ -155,12 +155,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     vec2 uv = (fragCoord - 0.5 * iResolution.xy) / iResolution.y;
     vec2 sp = (fragCoord / iResolution.xy) * 2.0 - 1.0;   // for the vignette
 
-    // ── per-frame state ──
-    gSpin  = iTime * 0.04 + morphPhase * 0.4 + melodyFlow * 0.5 * quietGate;
+    // ── per-frame state ── base (idle) animation runs at 1/3 speed via bTime; the audio phases
+    //    (morphPhase / flowPhase / springs) keep full speed, so it's calm idle but still reactive.
+    float bTime = iTime / 3.0;
+    gSpin  = bTime * 0.04 + morphPhase * 0.4 + melodyFlow * 0.5 * quietGate;
     gPop   = clamp(energySpring * 0.5 + spectralCrestSmooth * 0.45, 0.0, 1.0) * quietGate;
     gKick  = clamp(max(waveletBassZScore, 0.0), 0.0, 1.0) * 0.5 + clamp(wavelet_bassHit, 0.0, 1.0) * 0.3;
-    gPulse = fract(flowPhase * 0.6 + iTime * 0.18);
-    gFlow  = iTime * 2.2 + flowPhase * 4.0;   // monotonic trail-flow clock — runs FASTER with the music
+    gPulse = fract(flowPhase * 0.6 + bTime * 0.18);
+    gFlow  = bTime * 2.2 + flowPhase * 4.0;   // monotonic trail-flow clock — runs FASTER with the music
     float bassPulse = waveletBassSpring * quietGate;
     gHexR   = 0.60 + waveletBand2Spring * 0.12 * quietGate;
     gBorder = 0.10 + waveletBand5Spring * 0.06 * quietGate;
@@ -175,7 +177,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
 
     // NO whole-field rotation — it slowly drifted the pan axis. Idle life comes from the per-level
     // kaleido churn (gSpin's iTime term) instead, so DRAGGING ALWAYS MOVES THE SAME WAY on screen.
-    uv += 0.02 * vec2(sin(iTime * 0.11 + flowPhase * 0.3), cos(iTime * 0.09 + flowPhase * 0.3));
+    uv += 0.02 * vec2(sin(bTime * 0.11 + flowPhase * 0.3), cos(bTime * 0.09 + flowPhase * 0.3));
     float navz = navZoom < 0.01 ? 1.0 : navZoom;
     uv *= 0.07 / navz;
     uv += world;                                              // finger PAN — screen-consistent now
@@ -190,7 +192,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // ── BEAUTIFUL COLOUR ── one smooth Oklch journey, unique per area, PERMANENTLY rotated by drops
     float s = field
             + regionHue(world)
-            + iTime * 0.012
+            + bTime * 0.012
             + melodyFlow * 0.2 * quietGate
             + paletteShift                                    // permanent live mutation
             + seed;                                           // seed → per-device base palette identity
