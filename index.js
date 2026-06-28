@@ -13,6 +13,7 @@ const maybeStartWavelet = async (params, audioContext, sourceNode) => {
 }
 import { makeVisualizer, askForWakeLock } from './src/Visualizer.js'
 import { getInitialShader } from './src/shaderLoader.js'
+import { loadControllers, composeControllers } from './src/controllerChain.js'
 
 
 const SEED_KEY = 'paperCranes.seeds'
@@ -293,42 +294,7 @@ const animateController = (controller) => {
     requestAnimationFrame(controllerFrame)
 }
 
-// Load a controller module from a URL (local or remote)
-const loadController = async () => {
-    const controllerPath = params.get('controller')
-    if (!controllerPath) return null
-
-    try {
-        // Handle paths with or without .js extension
-        let controllerUrl = controllerPath
-        if (!controllerPath.includes('http') && !controllerPath.endsWith('.js')) {
-            controllerUrl = `/controllers/${controllerPath}.js`
-        } else if (!controllerPath.includes('http')) {
-            controllerUrl = `/controllers/${controllerPath}`
-        }
-
-        const controllerModule = await import(/* @vite-ignore */ controllerUrl)
-
-        // Handle different module formats:
-        // 1. Module exports a function directly (default export) - use it as the controller
-        // 2. Module exports a make() function - CALL it (with cranes) to get the controller
-        // 3. Module exports something else - error
-        //
-        // The make() pattern (per docs/controllers.md) returns the per-frame controller —
-        // so we must invoke make(), not return it. Returning make itself was a bug: the
-        // animation loop would call make(features) every frame, re-initializing state and
-        // returning a fresh function instead of the controller's computed values.
-
-        if (typeof controllerModule.default === 'function') return controllerModule.default
-        if (typeof controllerModule.make === 'function') return controllerModule.make(window.cranes)
-        if (typeof controllerModule === 'function') return controllerModule
-        console.error('Controller must export a function directly or provide a make() function')
-        return null
-    } catch (error) {
-        console.error(`Failed to load controller: ${error}`)
-        return null
-    }
-}
+// Controller loading/chaining lives in src/controllerChain.js (repeated ?controller= → pipeline).
 
 
 if(navigator.connection) {
@@ -387,33 +353,10 @@ const main = async () => {
         fullscreen: params.get('fullscreen') === 'true' || shaderFullscreen
     }
 
-    // Load and initialize controller if specified
-    const controllerExport = await loadController()
-
-    if (controllerExport) {
-        try {
-            let controller
-
-            // Check if the export is a make function or direct controller
-            if (typeof controllerExport === 'function') {
-                // If it takes 0-1 arguments, it's likely a direct controller function
-                if (controllerExport.length <= 1) {
-                    controller = controllerExport
-                } else {
-                    // Otherwise it's probably a make function
-                    controller = controllerExport(window.cranes)
-                }
-            }
-
-            if (typeof controller !== 'function') {
-                throw new Error('Controller must be a function or return a function')
-            }
-
-            // Setup separate animation loop for the controller
-            animateController(controller)
-        } catch (e) {
-            console.error('Failed to initialize controller:', e)
-        }
+    // Load and CHAIN controllers — every `?controller=` runs as a left-fold pipeline each frame.
+    const controllerFns = await loadControllers(window.cranes, params.getAll('controller'))
+    if (controllerFns.length) {
+        animateController(composeControllers(controllerFns))
     }
 
     // Initialize visualizer and start shader animation loop

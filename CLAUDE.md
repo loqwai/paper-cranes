@@ -261,6 +261,8 @@ vec3 position = vec3(CIRCLE_RADIUS, 0.1, 0.1);
 
 Controllers are JavaScript modules (`controllers/*.js`) that run once per frame with persistent state. They fill gaps GLSL can't: exponential decay, accumulators, state machines, double-precision math. Loaded via `?controller=<name>`. **Default to shader logic** — only use a controller when the shader literally cannot hold the state you need. Controller outputs become shader uniforms (must be explicitly declared with `uniform float`). See [docs/controllers.md](docs/controllers.md) for the full guide.
 
+**Chaining (repeat `?controller=`):** controllers run as a **left-fold pipeline** (`src/controllerChain.js`). Each gets `{ ...base features, ...everything earlier stages added this frame }` and returns the features it adds; **URL order = pipeline order, last wins on key clash**; a cross-cutting controller (smoother/recorder/clamp) goes **last**. NOT deduped — each `?controller=` is its own stage with its own `make()`/state (so a controller listed twice runs twice, and one that attaches global listeners does so once per instance). `make()` may be `async` (awaited before joining the loop). **Prefer chaining over wrapping** — compose at the URL (`?controller=wavelet-ease&controller=my-fx`) instead of importing one controller inside another. (A few existing controllers — `lattice-nav`, `gesture-knobs` — still self-import `wavelet-ease`; leave them, but write new ones to be chained.)
+
 ## Knob/MIDI Control System
 
 ### Available Knobs
