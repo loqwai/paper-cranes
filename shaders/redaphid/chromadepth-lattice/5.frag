@@ -42,6 +42,7 @@ uniform float waveletCentroidSpring;
 uniform float energySpring;
 uniform float melodyFlow;
 uniform float spectralCrestSmooth;
+uniform float spectralRoughnessSmooth;   // smoothed grit → iridescent sparkle (texture family)
 uniform float flowPhase;
 uniform float morphPhase;
 uniform float quietGate;
@@ -178,15 +179,19 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     vec4 fr = fractal(uv);
     float lum = fr.x, field = fr.y, wave = fr.z, alpha = fr.w;
 
-    // ── BEAUTIFUL COLOUR ── one smooth Oklch journey, unique per area, PERMANENTLY rotated by drops
+    // ── BEAUTIFUL COLOUR ── one smooth Oklch journey (iris/1 PITCH→COLOUR family): the MELODY
+    //    carries the palette through the song and BRIGHTNESS (centroid) tints it, so the whole
+    //    image flows in colour with the music. Smoothed contours only — no jitter. quietGate so
+    //    a silent room can't flash the hue. Plus per-area / per-device / permanent-drop offsets.
     float s = field
             + regionHue(world)
             + bTime * 0.012
-            + melodyFlow * 0.2 * quietGate
+            + melodyFlow * 0.32 * quietGate                   // MELODY → the palette journey
+            + waveletCentroidSpring * 0.14 * quietGate        // BRIGHTNESS → hue tint
             + paletteShift                                    // permanent live mutation
-            + seed;                                           // seed → per-device base palette identity
-    vec3 col = lush(s, lum);
-    col += lush(s + 0.12, 1.0) * wave * 0.7;                  // pulse accent (brighter)
+            + seed;                                           // per-device base palette identity
+    vec3 col = lush(s, lum);                                  // (brightness handled by the bloom below)
+    col += lush(s + 0.18, 1.0) * wave * 0.7;                  // pulse accent (hue-shifted, brighter)
 
     // BRIGHT, saturated background FIELD — no black voids; the whole screen emits light so it
     // pops off the phone at night and reads from across the room.
@@ -225,8 +230,21 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     col = mix(col, fcol, bloom * 0.7);
     col += fcol * 1.3 * smoothstep(0.012, 0.0, fd);                           // bright COLOURED core (unique, not white)
 
-    // bass bloom (whole frame swells with light on the thump)
-    col *= 1.0 + bassPulse * 0.25 + gKick * 0.15;
+    // ── MUSICAL BLOOM (iris/1: smooth for global, raw only for the transient) ── a swell/drop
+    //    lifts the WHOLE image brightness smoothly (energy + articulation), the kick adds a snappy
+    //    thump on top. So it breathes with the build and punches on the hit, never strobes.
+    float dropGlow = clamp(energySpring * 0.6 + spectralCrestSmooth * 0.4, 0.0, 1.0) * quietGate;
+    col *= 1.0 + bassPulse * 0.12 + dropGlow * 0.13 + gKick * 0.10;   // gentle so loud stays saturated, not pastel
+
+    // ── IRIDESCENT SPARKLE (TEXTURE family) ── sparse dot glints that drift in PATCHES (not a grid),
+    //    on the structure, gated by treble + articulation + grit. A subtle shimmer, quietGate-calm.
+    vec2 scr = fragCoord / iResolution.xy;
+    float g1 = 0.5 + 0.5 * sin(scr.x * 190.0 + bTime * 5.0);
+    float g2 = 0.5 + 0.5 * sin(scr.y * 163.0 - bTime * 4.0);
+    float sparkPatch = 0.5 + 0.5 * sin(scr.x * 6.0 + scr.y * 4.3 - bTime * 2.0); // drifting concentration patches
+    float spark = pow(g1 * g2, 16.0) * sparkPatch;
+    col += vec3(1.0, 0.97, 0.92) * spark * clamp(alpha, 0.0, 1.0)
+         * (waveletBand5Spring * 0.25 + spectralCrestSmooth * 0.22 + spectralRoughnessSmooth * 0.12) * quietGate;
 
     // GLOW LIFT — gamma up + gain so mid-tones emit; high chroma keeps it NEON, not washed out.
     col = pow(clamp(col, 0.0, 1.0), vec3(0.80));
