@@ -50,8 +50,11 @@ uniform float spectralRoughnessSmooth;   // smoothed grit → iridescent sparkle
 uniform float flowPhase;
 uniform float morphPhase;
 uniform float quietGate;
+uniform float evoFlow;       // minutes-scale random drifter (terrain randomness)
 uniform float evoWarp;
 uniform float evoPlasma;
+// SLOW history-average features (auto-declared) used as extra randomness sources for terrain:
+// spectralCentroidMean, spectralRoughnessMean, spectralSpreadMean, spectralEntropyMean, energyMean.
 // ── lattice-nav: navigation + PERMANENT live mutation ──
 uniform float navX;          // world pan X (drag, accumulates)
 uniform float navY;          // world pan Y
@@ -169,16 +172,32 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     //    Rotating the lattice by area made the pan axis appear to invert in different places;
     //    colour (regionHue) + cell size carry the per-area uniqueness without that side effect.
     vec2 world = vec2(navX, navY);
-    gHexR += 0.07 * sin(world.x * 0.8 + world.y * 0.45);
+    // SLOW audio "randomness" sources — history-average means + the evo drifters change over
+    // seconds/minutes, so they add VARIETY without jitter (tons of sources available). ~0 with no
+    // mic → the variation falls back to position-only (still breaks the tiling).
+    float aA = spectralCentroidMean + evoFlow;
+    float aB = spectralRoughnessMean + evoWarp;
+    float aC = spectralSpreadMean + evoPlasma;
+    float aD = spectralEntropyMean + energyMean;
+    // Cell SIZE varies across regions on incommensurate frequencies (breaks "every tile identical")
+    // and the audio seeds slowly RESHUFFLE the phases so the map's character drifts over a set.
+    gHexR += 0.07 * sin(world.x * 0.80 + world.y * 0.45 + aA * TAU)
+           + 0.06 * sin(world.x * 0.37 - world.y * 0.29 + 1.7 + aB * TAU)
+           + 0.04 * cos(world.x * 0.21 + world.y * 0.60 + 3.0 + aC * TAU);
 
     // NO whole-field rotation and NO orbital drift — the geography stays put unless YOU move it.
     float navz = navZoom < 0.01 ? 1.0 : navZoom;
     uv *= 0.07 / navz;
     uv += world;                                              // finger PAN — screen-consistent now
     vec2 wpos = uv;                                           // clean world position for the PATH (pre-warp)
-    // gentle terrain warp for texture; grows PERMANENTLY on big drops (warpGrow). A fixed function
-    // of world position, so it varies by area but never reverses the pan direction.
-    uv += (0.03 + warpGrow * 0.04) * vec2(sin(uv.x * 3.0 + seed4 * TAU), cos(uv.y * 3.0 + seed4 * TAU));
+    // ── LARGE-SCALE TERRAIN WARP ── low-frequency, incommensurate, audio-seeded domain warp that
+    // breaks the period-1 TILING into flowing varied terrain (zoom out → different scenery, not a
+    // grid) which slowly reshuffles with the music. Bounded so it never folds back → pan stays
+    // consistent. Turbulence swells on wide/sectiony passages (spread) + permanently on drops.
+    float wamp = min(1.0 + warpGrow * 0.5 + aC * 0.4, 1.8);
+    uv += wamp * 0.15 * vec2(sin(uv.y * 0.73 + seed4 * TAU + aB * TAU), cos(uv.x * 0.67 + seed3 * TAU + aD * TAU));
+    uv += wamp * 0.08 * vec2(sin(uv.y * 1.31 + 2.1 + aA * TAU),         cos(uv.x * 1.17 + 0.7 + aC * TAU));
+    uv += wamp * 0.03 * vec2(sin(uv.x * 3.0 + seed4 * TAU),             cos(uv.y * 3.0 + seed4 * TAU));
 
     vec4 fr = fractal(uv);
     float lum = fr.x, field = fr.y, wave = fr.z, alpha = fr.w;
