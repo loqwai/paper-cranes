@@ -224,6 +224,8 @@ Group features by domain and pick from DIFFERENT domains for variety:
 ## Shader Development
 
 > **Full tutorial:** See [docs/MAKING_A_NEW_SHADER.md](docs/MAKING_A_NEW_SHADER.md) for the complete guide including utility functions, design patterns, and common pitfalls.
+>
+> **Advanced techniques:** See [docs/advanced-shader-techniques.md](docs/advanced-shader-techniques.md) for the hard-won stuff — signal conditioning (the iris/1 discipline: smoothed features, monotonic phases, rate-not-angle, quietGate), discontinuity fixes (fract-wrap windowing, no transients in phases), making ChromaDepth POP (and the hue-locked-to-depth + no-averaging rules), bass-you-can-feel, drag/pinch navigation (pan units, per-area rotation inverts the axis, "no idle pan"), breaking tiling (incommensurate domain warp seeded by slow audio), per-device seeds, spatial paths/landmarks, and the screenshot/feature-injection verification workflow.
 
 ### Shader Structure
 ```glsl

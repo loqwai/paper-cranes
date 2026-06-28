@@ -31,6 +31,10 @@ Paper Cranes is a real-time music visualization system that:
 
 The shader files live in `/shaders/` and are loaded via query parameter: `?shader=filename` (without `.frag` extension).
 
+> **Going beyond the basics?** Once you've got the fundamentals here, see
+> [advanced-shader-techniques.md](advanced-shader-techniques.md) for musical signal conditioning,
+> ChromaDepth that pops, drag/pinch navigation, breaking tiling, and the verification workflow.
+
 ---
 
 ## Shader Basics
