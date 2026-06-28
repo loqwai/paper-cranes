@@ -28,9 +28,11 @@ export function make(cranes) {
     let lastX = 0, lastY = 0        // previous finger position (0..1)
     let pinchDist0 = 0, pinchZoom0 = 1
     let mode = 0                    // 0 idle · 1 pan · 2 pinch
-    // SPEED ≈ the shader's view window (0.07 fold-units) → ~1 screen per full swipe (1:1 grab).
-    // (Was 1.0 = ~14 screens/swipe = wildly too fast.) FRICTION = glide decay; ZMIN tiny = zoom way out.
-    const SPEED = 0.08, FRICTION = 0.90, ZMIN = 0.012, ZMAX = 12.0
+    // PAN SPEED is live-controllable via knob_1 (preset / URL / MIDI / jam drawer). It scales the
+    // drag DELTAS (sensitivity), not the accumulated position — so turning it never teleports you.
+    // knob_1 0→1 maps to 0.02 (precise) … 0.30 (fast roaming); ~0.08 (knob_1≈0.21) ≈ 1 screen/swipe.
+    let panSpeed = 0.08
+    const FRICTION = 0.90, ZMIN = 0.012, ZMAX = 12.0
 
     // ── PERMANENT live mutation ── an extreme sound (a big drop) permanently rotates the palette
     // and grows the structural warp, so the look transforms over the show and never returns to the
@@ -53,10 +55,10 @@ export function make(cranes) {
         if (mode !== 1) return
         const p = xy(e), dx = p[0] - lastX, dy = p[1] - lastY
         // Map-drag: grab the lattice and pull it with your finger (content follows the finger).
-        // Divided by zoom so pan speed stays consistent in screen space at any zoom.
-        navX -= dx * SPEED / zoom
-        navY += dy * SPEED / zoom
-        velX = -dx * SPEED / zoom; velY = dy * SPEED / zoom
+        // panSpeed (knob_1) sets sensitivity; /zoom keeps it consistent in screen space at any zoom.
+        navX -= dx * panSpeed / zoom
+        navY += dy * panSpeed / zoom
+        velX = -dx * panSpeed / zoom; velY = dy * panSpeed / zoom
         lastX = p[0]; lastY = p[1]
         e.preventDefault && e.preventDefault()
     }
@@ -79,6 +81,9 @@ export function make(cranes) {
     let lastT = performance.now() / 1000
     return function controller(features) {
         const out = audio(features) || {}
+        // live pan-speed from knob_1 (0..1 → 0.02..0.30); default ~0.08 if the knob is unset
+        const k = features.knob_1
+        panSpeed = 0.02 + Math.min(1, Math.max(0, (k === undefined ? 0.21 : k))) * 0.28
         if (mode === 0 && (velX || velY)) {           // glide after release, easing to a stop
             navX += velX; velX *= FRICTION
             navY += velY; velY *= FRICTION

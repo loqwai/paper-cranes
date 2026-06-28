@@ -2,7 +2,9 @@
 // @mobile: true
 // @favorite: true
 // @tags: fractal, hex, lattice, touch, color, redaphid
-//https://visuals.beadfamous.com/?shader=redaphid/chromadepth-lattice/4&wavelet=true&controller=lattice-nav&fullscreen=true&name=Living%20Lattice%20Bright
+//https://visuals.beadfamous.com/?shader=redaphid/chromadepth-lattice/4&wavelet=true&controller=lattice-nav&fullscreen=true&knob_1=0.21&name=Living%20Lattice%20Bright
+//   * knob_1 = PAN SPEED (live: preset / URL / MIDI / jam drawer). 0 = precise/slow, 1 = fast
+//     roaming; ~0.21 ≈ 1 screen per swipe. Read by the lattice-nav controller (scales drag deltas).
 // LIVING LATTICE (4.frag) — BRIGHT build with CONSISTENT navigation. The hex mirror-fold lattice,
 // freed from ChromaDepth for BEAUTIFUL continuous colour, tuned to glow off a phone at night and
 // to pan the same way everywhere. Built to AMAZE when people play with it live:
