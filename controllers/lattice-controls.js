@@ -18,7 +18,7 @@
 const TAU = Math.PI * 2
 const N = 4
 const KNOB = [2, 3, 4, 5]      // node i → knob_(KNOB[i]): one event-horizon distortion flavour each
-const GRAB_R = 0.04            // world radius within which a touch grabs a node
+const GRAB_R = 0.018           // world radius within which a touch grabs a node (≈ the visible sphere)
 const VIEW = 0.07              // matches the shader's `uv *= 0.07`
 
 export function make(cranes) {
@@ -57,7 +57,11 @@ export function make(cranes) {
         e.stopPropagation(); e.preventDefault && e.preventDefault()
     }
     const onMove = e => {
-        if (grabbed < 0 || !nodes) return
+        // NOT turning a dial → preventDefault so the browser can't claim the drag as a page SCROLL
+        // (iOS commits to scrolling on the first un-prevented touchmove, which was stealing the pan),
+        // but do NOT stopPropagation — let lattice-nav's handler still run and pan. THIS is what broke
+        // panning on 2/3 vs 1 (1 has no capture listener ahead of lattice-nav).
+        if (grabbed < 0 || !nodes) { e.preventDefault && e.preventDefault(); return }
         const [cx, cy] = pt(e)
         const w = toWorld(cx, cy)
         const n = nodes[grabbed]
