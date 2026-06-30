@@ -10,10 +10,12 @@ kaleido churn + gentle orbital drift kept; 6's frozen geography was a detour).
    (contour lines of a warped field) that you rarely cross.
 2. **2.frag — the tendrils LEAD to controls you operate** ✔ — the optional-goal payoff. Tendrils
    became finite (home → a control node at the far end); follow one out and turn the dial you find.
-3. **3.frag — the controls are strange SPHERE artifacts that reshape the world** ✔ ← current. Tendrils
-   no longer radiate from home (each is a long standalone wisp out in the world); each ends at a
-   glassy sphere that BULGES the actual fractal under it and recolors its interior, and turning its
-   dial also changes the global structure / colour scheme / music-reactivity.
+3. **3.frag — the controls are strange SPHERE artifacts that reshape the world** ✔ **— GRADUATED out
+   of wip** to `shaders/redaphid/lattice-interactive/3.frag` (2026-06-30). Tendrils no longer radiate
+   from home (each is a long standalone wisp out in the world); each ends at a glassy sphere that
+   BULGES the actual fractal under it and recolors its interior, and turning its dial also changes the
+   global structure / colour scheme / music-reactivity. Pair with
+   `?controller=lattice-nav&controller=lattice-controls`.
 4. _next_ — make it a real journey: nodes hidden until discovered, a "leg" the active tendril
    brightens toward, persistence. (The abandoned `chromadepth-lattice/7` + `lattice-quest` had the
    discovery/warmth/fanfare machinery — too much, too soon; we're rebuilding up to it deliberately.)

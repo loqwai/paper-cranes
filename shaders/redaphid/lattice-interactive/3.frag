@@ -1,7 +1,7 @@
 // @fullscreen: true
 // @mobile: true
 // @tags: fractal, hex, lattice, touch, paths, controls, eventhorizon, redaphid
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-interactive/3&wavelet=true&controller=lattice-nav&controller=lattice-controls&fullscreen=true&knob_1=0.21&name=Lattice%20Horizons
+//https://visuals.beadfamous.com/?shader=redaphid/lattice-interactive/3&wavelet=true&controller=lattice-nav&controller=lattice-controls&fullscreen=true&knob_1=0.21&name=Lattice%20Horizons
 //   * knob_1 = PAN SPEED (lattice-nav). knob_2..5 = the four control DIALS (lattice-controls): each
 //     turns an EVENT-HORIZON distortion of the backbuffer around its node. 0 = off, 1 = full vortex.
 // LATTICE-INTERACTIVE (3.frag). Built off 2.frag. Two big changes:
