@@ -362,15 +362,23 @@ const getPresetUrl = (visualizerUrl, line) => {
   const baseUrl = new URL(visualizerUrl, window.location.href)
   const resultUrl = new URL(baseUrl.pathname, window.location.origin)
 
-  // Add preset parameters first
+  // Preset params first, visualizer params override. SKIP `controller` here — `.set()` collapses
+  // duplicate keys, which silently drops a chained controller (lattice-nav + lattice-controls →
+  // just the last one) and breaks panning. The chain is reattached below with `.append()`.
   for (const [key, value] of presetUrl.searchParams) {
+    if (key === 'controller') continue
+    resultUrl.searchParams.set(key, value)
+  }
+  for (const [key, value] of baseUrl.searchParams) {
+    if (key === 'controller') continue
     resultUrl.searchParams.set(key, value)
   }
 
-  // Override with visualizer parameters
-  for (const [key, value] of baseUrl.searchParams) {
-    resultUrl.searchParams.set(key, value)
-  }
+  // Reattach the controller CHAIN in order, preserving duplicates. Visualizer wins if it declares
+  // its own controllers; otherwise the preset's full pipeline is kept.
+  const baseControllers = baseUrl.searchParams.getAll('controller')
+  const controllers = baseControllers.length ? baseControllers : presetUrl.searchParams.getAll('controller')
+  controllers.forEach(c => resultUrl.searchParams.append('controller', c))
 
   resultUrl.pathname = ''
 
