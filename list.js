@@ -16,10 +16,30 @@ const LIST_UI_PARAMS = new Set(['filter', 'favoritesOnly', 'fullscreenOnly', 'wi
 const carryPassthroughParams = (url) => {
   const current = new URLSearchParams(window.location.search)
   for (const [key, value] of current) {
-    if (LIST_UI_PARAMS.has(key)) continue
+    // never let the current page clobber the preset's CONTROLLER CHAIN (multiple `controller=`).
+    if (LIST_UI_PARAMS.has(key) || key === 'controller') continue
     url.searchParams.set(key, value) // current URL wins over target/preset
   }
   return url
+}
+
+// Single place that rebuilds a visualizer URL's query string. The ONE rule that everything kept
+// getting wrong: PRESERVE chained controllers — multiple `controller=` params (the left-fold pipeline,
+// e.g. lattice-nav + lattice-controls). `URLSearchParams.set()` collapses duplicate keys, which
+// silently dropped lattice-nav and broke panning. Adds the default image; knobs are KEPT unless
+// `stripKnobs`; fullscreen is opt-in. Used by copyUrl + buildFullscreenUrl so they can't drift apart.
+const rebuildParams = (url, { stripKnobs = false, fullscreen = false } = {}) => {
+  const src = new URL(url, window.location.origin)
+  const params = new URLSearchParams()
+  for (const [key, value] of src.searchParams) {
+    if (stripKnobs && key.toLowerCase().includes('knob')) continue
+    key === 'controller' ? params.append(key, value) : params.set(key, value)
+  }
+  if (fullscreen) params.set('fullscreen', 'true')
+  if (!params.has('image')) params.set('image', 'images/rezz-full-lips-cropped.png')
+  const out = new URL(src.pathname || '/', window.location.origin)
+  out.search = params.toString()
+  return out.toString()
 }
 
 /**
@@ -97,30 +117,7 @@ const MusicVisual = ({ name, fileUrl, visualizerUrl, filterText }) => {
 
   const copyUrl = (url, options = {}) => {
     const { stripKnobs = true, addFullscreen = false } = options
-
-    const originalUrl = new URL(url)
-    const newParams = new URLSearchParams()
-
-    for (const [key, value] of originalUrl.searchParams) {
-      if (stripKnobs && key.toLowerCase().includes('knob')) {
-        continue
-      }
-      newParams.set(key, value)
-    }
-
-    if (addFullscreen) {
-      newParams.set('fullscreen', 'true')
-    }
-
-    // Add default image if not present
-    if (!newParams.has('image')) {
-      newParams.set('image', 'images/rezz-full-lips-cropped.png')
-    }
-
-    const finalUrl = new URL(originalUrl.pathname, originalUrl.origin)
-    finalUrl.search = newParams.toString()
-
-    navigator.clipboard.writeText(finalUrl.toString())
+    navigator.clipboard.writeText(rebuildParams(url, { stripKnobs, fullscreen: addFullscreen }))
 
     // Use a more robust way to get the button, maybe pass it as an argument if needed
     const button = event?.currentTarget
@@ -328,26 +325,8 @@ const filterPresetProps = ([key]) => {
  * @param {string} url - The URL to process
  * @returns {string} The fullscreen URL
  */
-const buildFullscreenUrl = (url) => {
-  const originalUrl = new URL(url, window.location.origin)
-  const newParams = new URLSearchParams()
-
-  for (const [key, value] of originalUrl.searchParams) {
-    if (key.toLowerCase().includes('knob')) continue
-    newParams.set(key, value)
-  }
-
-  newParams.set('fullscreen', 'true')
-
-  if (!newParams.has('image')) {
-    newParams.set('image', 'images/rezz-full-lips-cropped.png')
-  }
-
-  const finalUrl = new URL(originalUrl.pathname || '/', window.location.origin)
-  finalUrl.search = newParams.toString()
-  carryPassthroughParams(finalUrl)
-  return finalUrl.toString()
-}
+// KEEP knobs on fullscreen (it used to strip them). Preserves the controller chain via rebuildParams.
+const buildFullscreenUrl = (url) => rebuildParams(url, { fullscreen: true })
 
 /**
  * Extracts preset URLs from shader code
