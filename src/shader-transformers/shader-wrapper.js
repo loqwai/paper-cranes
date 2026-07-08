@@ -3,7 +3,7 @@ import { getFlatAudioFeatures } from '../audio/AudioProcessor.js'
 // All uniforms that can be referenced by string params
 const getKnownUniforms = () => {
     const audioFeatures = Object.keys(getFlatAudioFeatures())
-    const builtins = ['time', 'iTime', 'frame', 'iFrame', 'iRandom', 'beat']
+    const builtins = ['time', 'iTime', 'frame', 'iFrame', 'iRandom', 'beat', 'onset', 'timeSinceOnset', 'onsetStrength', 'onsetFlux', 'onsetThreshold']
     // Include knob_1 through knob_200
     const knobs = Array.from({ length: 200 }, (_, i) => `knob_${i + 1}`)
     return new Set([...audioFeatures, ...builtins, ...knobs])
@@ -13,7 +13,8 @@ const getKnownUniforms = () => {
 const getQueryParamUniforms = (shader, otherUniforms = '') => {
     if (typeof window === 'undefined') return ''
     const params = new URLSearchParams(window.location.search)
-    const knownParams = new Set(['shader', 'noaudio', 'embed', 'fullscreen', 'remote', 'fft_size', 'smoothing', 'history_size', 'controller', 'performance'])
+    const knownParams = new Set(['shader', 'noaudio', 'embed', 'fullscreen', 'remote', 'fft_size', 'smoothing', 'history_size', 'controller', 'performance',
+        'onset_fft_size', 'onset_sensitivity', 'onset_ratio', 'onset_refractory_ms', 'onset_flux_floor', 'onset_low_hz', 'onset_high_hz'])
     const knownUniforms = getKnownUniforms()
 
     // Combine shader and other uniform declarations, strip whitespace for matching
@@ -54,7 +55,7 @@ export const shaderWrapper = (shader) => {
     }
     if (shader.includes('mainImage')) {
         const compatUniforms = shaderToyCompatibilityUniforms()
-        const audioUniforms = getAudioUniforms()
+        const audioUniforms = getAudioUniforms(shader)
         const knobUniforms = getKnobUniforms(shader)
         const otherUniforms = compatUniforms + audioUniforms + knobUniforms
         const queryUniforms = getQueryParamUniforms(shader, otherUniforms)
@@ -95,10 +96,21 @@ uniform sampler2D iChannel2;
 uniform sampler2D iChannel3;
 uniform int iFrame;
 `
-const getAudioUniforms = () => {
+const getAudioUniforms = (shader = '') => {
+    // Onset event uniforms: onset is edge-triggered (true for exactly one frame,
+    // unlike beat which stays true while flux is high). timeSinceOnset is the
+    // primitive for designed responses — see onsetEnvelope in the paperCranes header.
+    const onsetUniforms = [
+        'uniform bool onset;',
+        'uniform float timeSinceOnset;',
+        'uniform float onsetStrength;',
+        'uniform float onsetFlux;',
+        'uniform float onsetThreshold;',
+    ].filter(declaration => !shader.includes(declaration))
     return [...Object.keys(getFlatAudioFeatures()), 'beat']
         .sort()
         .map(f => `uniform ${f === 'beat' ? 'bool' : 'float'} ${f};`)
+        .concat(onsetUniforms)
         .join('\n')
 }
 
@@ -205,6 +217,18 @@ vec3 hslmix(vec3 c1, vec3 c2, float t){
 // Utility to make any value pingpong (go forward then backward)
 float pingpong(float t) {
     return 0.5 + 0.5 * sin(3.14159265359 * t);
+}
+
+// One-shot attack/release envelope retriggered by the onset detector.
+// Unlike the animate* family (free-running oscillators over iTime), this fires
+// exactly once per detected onset: 0→1 over 'attack' seconds, then exponential
+// decay with 'release' as the time constant. Multiply by onsetStrength to scale
+// the response with how hard the hit was.
+float onsetEnvelope(float attack, float release) {
+    float t = max(timeSinceOnset, 0.0);
+    float a = max(attack, 1e-4);
+    if (t < a) return t / a;
+    return exp(-(t - a) / max(release, 1e-4));
 }
 
 // Simple animations
