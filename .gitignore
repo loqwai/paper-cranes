@@ -148,6 +148,7 @@ yarn-error.log*
 !**/.yarn/sdks/
 .playwright-mcp
 shaders.json
+images.json
 manifests/
 test-screenshots/
 screenshots/

@@ -1,12 +1,88 @@
 import { join, relative } from 'path'
-import { readdir, readFile, writeFile, mkdir, cp } from 'fs/promises'
+import { readdir, readFile, writeFile, mkdir, cp, stat } from 'fs/promises'
+import { execFile } from 'child_process'
+import { promisify } from 'util'
 import chokidar from 'chokidar'
-import { extractMetadata } from '../scripts/shader-utils.js'
+import { extractMetadata, extractPresets } from '../scripts/shader-utils.js'
+
+const execFileAsync = promisify(execFile)
 
 const SHADER_DIR = 'shaders'
 const CONTROLLER_DIR = 'controllers'
+const IMAGE_DIR = join('public', 'images')
 const OUTPUT_FILE = 'shaders.json'
+const IMAGES_FILE = 'images.json'
 const MANIFESTS_DIR = 'manifests'
+const IMAGE_EXTENSIONS = /\.(png|jpe?g|gif|webp|avif)$/i
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}T/
+
+/**
+ * Last-commit date per shader file, newest-first from a single `git log` pass.
+ *
+ * Why git and not filesystem mtime: a fresh CI checkout (Cloudflare Pages) stamps
+ * every file with the build time, which would make "recently modified" identical
+ * for all 345 shaders in production — exactly where the sort needs to work.
+ * Git dates are stable across clones. Uncommitted/untracked files fall back to
+ * mtime so work-in-progress still floats to the top during local dev.
+ * @returns {Promise<Map<string, string>>} posix path -> ISO date
+ */
+const gitModifiedDates = async () => {
+  const dates = new Map()
+  try {
+    const { stdout } = await execFileAsync(
+      'git',
+      ['log', '--format=%cI', '--name-only', '--diff-filter=AMRC', '--', SHADER_DIR],
+      { maxBuffer: 128 * 1024 * 1024 }
+    )
+    let current = null
+    for (const line of stdout.split('\n')) {
+      if (!line) continue
+      if (ISO_DATE.test(line)) {
+        current = line.trim()
+        continue
+      }
+      if (!line.endsWith('.frag')) continue
+      if (!dates.has(line)) dates.set(line, current) // log is newest-first, so first wins
+    }
+  } catch {
+    // No git (tarball install, shallow env) — every file falls back to mtime.
+  }
+  return dates
+}
+
+/**
+ * Shader files with uncommitted changes — their git date is stale, so prefer mtime.
+ * @returns {Promise<Set<string>>} posix paths
+ */
+const gitDirtyFiles = async () => {
+  const dirty = new Set()
+  try {
+    const { stdout } = await execFileAsync('git', ['status', '--porcelain', '-uall', '--', SHADER_DIR], {
+      maxBuffer: 16 * 1024 * 1024,
+    })
+    for (const line of stdout.split('\n')) {
+      if (!line.trim()) continue
+      const path = line.slice(3).trim().split(' -> ').pop().replace(/^"|"$/g, '')
+      if (path.endsWith('.frag')) dirty.add(path)
+    }
+  } catch {
+    // No git — nothing is known-dirty.
+  }
+  return dirty
+}
+
+/**
+ * Tags come from `// @tags: a, b`, but extractMetadata only splits on comma —
+ * a single tag arrives as a bare string. Normalize so consumers never branch.
+ * @param {unknown} tags
+ * @returns {string[]}
+ */
+const normalizeTags = (tags) => {
+  if (!tags) return []
+  const list = Array.isArray(tags) ? tags : String(tags).split(',')
+  return [...new Set(list.map((tag) => String(tag).trim().toLowerCase()).filter(Boolean))]
+}
 
 async function findShaderFiles(dir, files = []) {
   const entries = await readdir(dir, { withFileTypes: true })
@@ -25,12 +101,24 @@ async function findShaderFiles(dir, files = []) {
 
 async function generateShadersJson(outputDir = null) {
   const shaderFiles = await findShaderFiles(SHADER_DIR)
+  const [modifiedDates, dirtyFiles] = await Promise.all([gitModifiedDates(), gitDirtyFiles()])
+
   const shaders = await Promise.all(
     shaderFiles.sort().map(async (file) => {
       const relativePath = relative(SHADER_DIR, file)
       const content = await readFile(file, 'utf-8')
       const meta = extractMetadata(content)
       const shaderPath = relativePath.replace(/\\/g, '/').replace('.frag', '')
+      const posixPath = file.replace(/\\/g, '/')
+
+      const gitDate = dirtyFiles.has(posixPath) ? null : modifiedDates.get(posixPath)
+      const modified = gitDate ?? (await stat(file)).mtime.toISOString()
+
+      // Presets used to be discovered by the list page fetching all 345 .frag files
+      // (6.5MB) on every load. They are static — read them here, once, at build time.
+      const presets = extractPresets(content)
+      const tags = normalizeTags(meta.tags)
+
       return {
         name: shaderPath,
         fileUrl: `shaders/${relativePath.replace(/\\/g, '/')}`,
@@ -38,6 +126,10 @@ async function generateShadersJson(outputDir = null) {
         ...meta,
         // Preserve the path-based name; move @name metadata to displayName
         ...(meta.name ? { displayName: meta.name, name: shaderPath } : {}),
+        prettyName: meta.name || prettifyShaderName(shaderPath),
+        modified,
+        ...(tags.length ? { tags } : {}),
+        ...(presets.length ? { presets } : {}),
       }
     })
   )
@@ -48,6 +140,34 @@ async function generateShadersJson(outputDir = null) {
   }
   await writeFile(outputPath, JSON.stringify(shaders, null, 2))
   return shaders.length
+}
+
+/**
+ * Index of usable `?image=` textures so the list page can offer a picker
+ * instead of requiring the URL to be edited by hand.
+ * @param {string|null} outputDir
+ * @returns {Promise<number>} number of images indexed
+ */
+async function generateImagesJson(outputDir = null) {
+  let entries = []
+  try {
+    entries = await readdir(IMAGE_DIR, { withFileTypes: true })
+  } catch {
+    return 0 // no public/images — picker just renders empty
+  }
+
+  const images = entries
+    .filter((entry) => entry.isFile() && IMAGE_EXTENSIONS.test(entry.name))
+    .map((entry) => ({
+      name: entry.name.replace(IMAGE_EXTENSIONS, '').replace(/[-_]/g, ' '),
+      url: `images/${entry.name}`,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+
+  const outputPath = outputDir ? join(outputDir, IMAGES_FILE) : IMAGES_FILE
+  if (outputDir) await mkdir(outputDir, { recursive: true })
+  await writeFile(outputPath, JSON.stringify(images, null, 2))
+  return images.length
 }
 
 function prettifyShaderName(name) {
@@ -144,6 +264,8 @@ export function shaderPlugin() {
       console.log(`[shaders] Generated shaders.json with ${count} shaders`)
       const manifestCount = await generateManifests()
       console.log(`[shaders] Generated ${manifestCount} PWA manifests`)
+      const imageCount = await generateImagesJson()
+      console.log(`[shaders] Indexed ${imageCount} images`)
     },
 
     configureServer(server) {
@@ -190,6 +312,8 @@ export function shaderPlugin() {
       console.log(`[shaders] Generated ${outDir}/shaders.json with ${count} shaders`)
       const manifestCount = await generateManifests(outDir)
       console.log(`[shaders] Generated ${manifestCount} PWA manifests in ${outDir}/`)
+      const imageCount = await generateImagesJson(outDir)
+      console.log(`[shaders] Indexed ${imageCount} images in ${outDir}/`)
     },
 
     closeBundle() {

@@ -544,14 +544,51 @@ precision highp float;
 
 Metadata is extracted at build time and included in `dist/shaders.json`.
 
+`vite-plugins/shader-plugin.js` also derives, per shader:
+- `modified` — ISO date of the last commit touching the file (single `git log` pass).
+  Filesystem mtime is only a fallback, for untracked or uncommitted files. Git is the
+  primary source because a fresh CI checkout stamps every file with the build time,
+  which would make "sort by modified" identical for all 345 shaders in production.
+- `presets` — preset URLs read from the shader source. The list page used to fetch all
+  345 `.frag` files (6.5MB) on every load to find these; it now ships in `shaders.json`.
+- `prettyName` — display name, and `tags` normalised to always be an array (a single
+  `@tags: foo` used to come through as a bare string).
+
+`images.json` (from `public/images/`) is generated alongside it to power the list
+page's image picker.
+
 **Important:** The `@fullscreen: true` metadata is the recommended way to enable fullscreen for shaders that support non-square viewports. It works in both normal mode and remote display mode.
 
 ### List Page Features
-The list page (`/list.html`) has:
-- **Tap-to-copy-and-navigate**: Tapping a shader copies the fullscreen URL and navigates to it
-- **Favorites filter**: Toggle to show only `@favorite: true` shaders
-- **Fullscreen filter**: Toggle to hide `@fullscreen: false` shaders
-- **Search**: Filter shaders by name or preset parameters
+The list page (`/list.html`) is the live-performance tool: designed for one thumb,
+a phone, and a dark room. All controls sit in a fixed **bottom bar** (thumb zone):
+`FIND / SORT / FAVS / TAGS / SET / ROLL`.
+
+- **Tap-to-copy-and-navigate**: Tapping a row copies the URL and opens the shader.
+  Fullscreen-on-tap is on by default (toggle in the Sort sheet).
+- **Sort**: newest-modified (default), recently shown, A→Z, or shuffled.
+  `modified` comes from git history at build time — see below.
+- **Tag filter**: chips built from `@tags`, plus per-device tags you add yourself.
+  Tap a chip to include, again to exclude, again to reset. Multiple includes are OR.
+  Top-level folders appear as chips too.
+- **Search**: fuzzy — matches names, tags and folders, ignores case and punctuation,
+  and allows skipped letters (`chrmdpth` finds chromadepth).
+- **Favorites**: `@favorite: true` from the file, merged with stars you tap.
+- **Setlist**: `+` on any row queues a shader; `GO` plays the queue in the perform
+  overlay where **NEXT is a single tap**.
+- **Perform overlay**: runs the shader in a same-origin iframe so the list never
+  unloads. Also gives an **image picker** (replaces hand-editing `?image=`) and
+  runtime tagging.
+- **Remembered params**: returning from a shader page captures that page's URL via
+  `document.referrer`, so anything hand-edited over there (knobs, `image`,
+  `controller`) is reused next time. Rows with saved settings show a `saved` badge.
+- **Roll**: weighted random — favourites and never-played shaders float up, anything
+  played in the last couple of hours sinks.
+
+Per-device state (stars, your tags, recents, remembered params, setlist, scroll
+position) lives in `localStorage` under `cranes-list-*`. That is deliberate: at a
+party the site is static and there is no server to write to. The `.frag` metadata
+stays the permanent, shareable, in-repo truth and these merge on top of it.
 
 ### Good Example Shaders to Study
 Look at these for reference:
