@@ -373,25 +373,14 @@ const ShaderRow = ({
       ${hasPresets && isExpanded
         ? html`
           <ul class="preset-list">
-            ${presetUrls.map((preset, index) => {
-              const presetParams = new URL(preset).searchParams
-              const chips = [...presetParams.entries()].filter(
-                ([key]) => key !== 'shader' && key !== 'name' && !key.endsWith('.min') && !key.endsWith('.max')
-              )
-              return html`
-                <li>
-                  <button class="preset-link" onClick=${() => onOpen(shader, preset)}>
-                    <span>${presetParams.get('name') || `Preset ${index + 1}`}</span>
-                    <span>▶</span>
-                  </button>
-                  ${chips.length
-                    ? html`<div class="chip-list">
-                        ${chips.map(([key, value]) => html`<div class="chip">${key}: ${value}</div>`)}
-                      </div>`
-                    : null}
-                </li>
-              `
-            })}
+            ${presetUrls.map((preset, index) => html`
+              <li>
+                <button class="preset-link" onClick=${() => onOpen(shader, preset)}>
+                  <span>${new URL(preset).searchParams.get('name') || `Preset ${index + 1}`}</span>
+                  <span>▶</span>
+                </button>
+              </li>
+            `)}
           </ul>
         `
         : null}
