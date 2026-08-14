@@ -73,9 +73,9 @@
       }
       window.location.href = 'https://instagram.com/redaphid'
     }
-    // click works on desktop, touchend works on mobile (click is delayed/swallowed on canvas)
+    // click works on desktop, touchstart works on mobile (fires before gesture recognizers can swallow it)
     document.addEventListener('click', onTap)
-    document.addEventListener('touchend', onTap)
+    document.addEventListener('touchstart', onTap)
     </script>
     <script type="module" src="./src/worker-communication.js"></script>
 </head>
