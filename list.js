@@ -263,6 +263,17 @@ const worthRemembering = (search) => {
 // Data
 // ---------------------------------------------------------------------------
 const shaders = await fetch('/shaders.json').then((res) => res.json())
+
+/**
+ * Are the build's modified dates actually usable?
+ *
+ * A shallow CI clone once produced a date for every shader — all identical —
+ * so "newest first" silently sorted nothing while looking perfectly fine.
+ * Rather than present a fabricated order, detect the degenerate case and say
+ * nothing: hide the ages and disable the sort. A missing date is honest; a
+ * fake one lies about the order.
+ */
+const HAS_REAL_DATES = new Set(shaders.map((shader) => shader.modified).filter(Boolean)).size > 1
 const imageLibrary = await fetch('/images.json')
   .then((res) => (res.ok ? res.json() : []))
   .catch(() => [])
@@ -345,8 +356,10 @@ const ShaderRow = ({
         >
           <div class="row-name">${shader.prettyName || shader.name}</div>
           <div class="row-meta">
-            <span>${timeAgo(shader.modified)}</span>
-            ${visibleTags.map((tag) => html`<span class="dot">·</span><span class="tag">${tag}</span>`)}
+            ${HAS_REAL_DATES && shader.modified ? html`<span>${timeAgo(shader.modified)}</span>` : null}
+            ${visibleTags.map((tag, index) =>
+              html`${index === 0 && !(HAS_REAL_DATES && shader.modified) ? null : html`<span class="dot">·</span>`}<span class="tag">${tag}</span>`
+            )}
             ${savedParams ? html`<span class="dot">·</span><span class="badge-saved">saved</span>` : null}
           </div>
         </a>
@@ -557,19 +570,27 @@ const hashSeed = (text, seed) => {
   return hash
 }
 
-const SORT_MODES = [
+const ALL_SORT_MODES = [
   { id: 'modified', glyph: '🕒', label: 'Newest first', sub: 'Most recently edited shader at the top' },
   { id: 'shown', glyph: '↺', label: 'Recently shown', sub: 'What you played most recently' },
   { id: 'name', glyph: 'A', label: 'A → Z', sub: 'Alphabetical by path' },
   { id: 'random', glyph: '🔀', label: 'Shuffled', sub: 'Tap again to reshuffle' },
 ]
 
+// Drop "newest" entirely when the build could not produce real dates, rather
+// than offering a sort that quietly does nothing.
+const SORT_MODES = HAS_REAL_DATES ? ALL_SORT_MODES : ALL_SORT_MODES.filter((mode) => mode.id !== 'modified')
+
+const DEFAULT_SORT = HAS_REAL_DATES ? 'modified' : 'name'
+
+const validSort = (mode) => (SORT_MODES.some((entry) => entry.id === mode) ? mode : DEFAULT_SORT)
+
 const List = () => {
   const url = new URL(window.location)
   const prefs = readStore('prefs', {})
 
   const [filterText, setFilterText] = useState(url.searchParams.get('filter') || '')
-  const [sortMode, setSortMode] = useState(url.searchParams.get('sort') || prefs.sort || 'modified')
+  const [sortMode, setSortMode] = useState(validSort(url.searchParams.get('sort') || prefs.sort || DEFAULT_SORT))
   const [shuffleSeed, setShuffleSeed] = useState(1)
   const [favoritesOnly, setFavoritesOnly] = useState(url.searchParams.get('favoritesOnly') === 'true')
   const [mobileOnly, setMobileOnly] = useState(url.searchParams.get('mobileOnly') === 'true')
@@ -674,7 +695,7 @@ const List = () => {
     const next = new URL(window.location)
     const apply = (key, value) => (value ? next.searchParams.set(key, value) : next.searchParams.delete(key))
     apply('filter', filterText)
-    apply('sort', sortMode === 'modified' ? '' : sortMode)
+    apply('sort', sortMode === DEFAULT_SORT ? '' : sortMode)
     apply('favoritesOnly', favoritesOnly ? 'true' : '')
     apply('mobileOnly', mobileOnly ? 'true' : '')
     apply('wip', showWip ? 'true' : '')

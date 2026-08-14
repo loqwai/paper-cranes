@@ -1,11 +1,14 @@
 import { join, relative } from 'path'
 import { readdir, readFile, writeFile, mkdir, cp, stat } from 'fs/promises'
-import { execFile } from 'child_process'
-import { promisify } from 'util'
 import chokidar from 'chokidar'
 import { extractMetadata, extractPresets } from '../scripts/shader-utils.js'
-
-const execFileAsync = promisify(execFile)
+import {
+  resolveDates,
+  gitDirtyFiles,
+  distinctDateCount,
+  writeBakedDates,
+  DATES_FILE,
+} from '../scripts/shader-dates.js'
 
 const SHADER_DIR = 'shaders'
 const CONTROLLER_DIR = 'controllers'
@@ -14,63 +17,6 @@ const OUTPUT_FILE = 'shaders.json'
 const IMAGES_FILE = 'images.json'
 const MANIFESTS_DIR = 'manifests'
 const IMAGE_EXTENSIONS = /\.(png|jpe?g|gif|webp|avif)$/i
-
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}T/
-
-/**
- * Last-commit date per shader file, newest-first from a single `git log` pass.
- *
- * Why git and not filesystem mtime: a fresh CI checkout (Cloudflare Pages) stamps
- * every file with the build time, which would make "recently modified" identical
- * for all 345 shaders in production — exactly where the sort needs to work.
- * Git dates are stable across clones. Uncommitted/untracked files fall back to
- * mtime so work-in-progress still floats to the top during local dev.
- * @returns {Promise<Map<string, string>>} posix path -> ISO date
- */
-const gitModifiedDates = async () => {
-  const dates = new Map()
-  try {
-    const { stdout } = await execFileAsync(
-      'git',
-      ['log', '--format=%cI', '--name-only', '--diff-filter=AMRC', '--', SHADER_DIR],
-      { maxBuffer: 128 * 1024 * 1024 }
-    )
-    let current = null
-    for (const line of stdout.split('\n')) {
-      if (!line) continue
-      if (ISO_DATE.test(line)) {
-        current = line.trim()
-        continue
-      }
-      if (!line.endsWith('.frag')) continue
-      if (!dates.has(line)) dates.set(line, current) // log is newest-first, so first wins
-    }
-  } catch {
-    // No git (tarball install, shallow env) — every file falls back to mtime.
-  }
-  return dates
-}
-
-/**
- * Shader files with uncommitted changes — their git date is stale, so prefer mtime.
- * @returns {Promise<Set<string>>} posix paths
- */
-const gitDirtyFiles = async () => {
-  const dirty = new Set()
-  try {
-    const { stdout } = await execFileAsync('git', ['status', '--porcelain', '-uall', '--', SHADER_DIR], {
-      maxBuffer: 16 * 1024 * 1024,
-    })
-    for (const line of stdout.split('\n')) {
-      if (!line.trim()) continue
-      const path = line.slice(3).trim().split(' -> ').pop().replace(/^"|"$/g, '')
-      if (path.endsWith('.frag')) dirty.add(path)
-    }
-  } catch {
-    // No git — nothing is known-dirty.
-  }
-  return dirty
-}
 
 /**
  * Tags come from `// @tags: a, b`, but extractMetadata only splits on comma —
@@ -101,7 +47,14 @@ async function findShaderFiles(dir, files = []) {
 
 async function generateShadersJson(outputDir = null) {
   const shaderFiles = await findShaderFiles(SHADER_DIR)
-  const [modifiedDates, dirtyFiles] = await Promise.all([gitModifiedDates(), gitDirtyFiles()])
+  const [{ dates: modifiedDates, source, live, usable }, dirtyFiles] = await Promise.all([
+    resolveDates(),
+    gitDirtyFiles(),
+  ])
+
+  // Keep the committed fallback current, but ONLY from real history — never let a
+  // shallow CI clone overwrite it with 346 copies of the build timestamp.
+  if (usable) await writeBakedDates(live)
 
   const shaders = await Promise.all(
     shaderFiles.sort().map(async (file) => {
@@ -111,8 +64,13 @@ async function generateShadersJson(outputDir = null) {
       const shaderPath = relativePath.replace(/\\/g, '/').replace('.frag', '')
       const posixPath = file.replace(/\\/g, '/')
 
-      const gitDate = dirtyFiles.has(posixPath) ? null : modifiedDates.get(posixPath)
-      const modified = gitDate ?? (await stat(file)).mtime.toISOString()
+      // Uncommitted work really is the newest thing on disk, so mtime wins there.
+      // Otherwise take the resolved history; a shader with no history at all is
+      // one added since the last bake, so its checkout mtime is a fair estimate.
+      // If we know nothing, emit null rather than inventing "today" — a fabricated
+      // date silently lies about the sort order.
+      const known = dirtyFiles.has(posixPath) ? null : modifiedDates.get(posixPath)
+      const modified = known ?? (dirtyFiles.has(posixPath) || usable ? (await stat(file)).mtime.toISOString() : null)
 
       // Presets used to be discovered by the list page fetching all 345 .frag files
       // (6.5MB) on every load. They are static — read them here, once, at build time.
@@ -133,6 +91,21 @@ async function generateShadersJson(outputDir = null) {
       }
     })
   )
+
+  // The check that would have caught the shallow-clone bug: every shader HAD a
+  // date, so nothing looked wrong — but they were all the same date, so "newest"
+  // sorted nothing. Presence is not correctness; assert the spread.
+  const distinct = new Set(shaders.map((shader) => shader.modified).filter(Boolean)).size
+  const dated = shaders.filter((shader) => shader.modified).length
+  if (distinct > 1) {
+    console.log(`[shaders] Dates from ${source}: ${dated}/${shaders.length} dated, ${distinct} distinct`)
+  } else {
+    console.warn(
+      `[shaders] WARNING: only ${distinct} distinct modified date across ${shaders.length} shaders ` +
+        `(source: ${source}). Sort-by-newest will be meaningless. ` +
+        `Run \`npm run shader-dates\` from a full clone and commit ${DATES_FILE}.`
+    )
+  }
 
   const outputPath = outputDir ? join(outputDir, OUTPUT_FILE) : OUTPUT_FILE
   if (outputDir) {

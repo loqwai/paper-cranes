@@ -545,10 +545,18 @@ precision highp float;
 Metadata is extracted at build time and included in `dist/shaders.json`.
 
 `vite-plugins/shader-plugin.js` also derives, per shader:
-- `modified` — ISO date of the last commit touching the file (single `git log` pass).
-  Filesystem mtime is only a fallback, for untracked or uncommitted files. Git is the
-  primary source because a fresh CI checkout stamps every file with the build time,
-  which would make "sort by modified" identical for all 345 shaders in production.
+- `modified` — last-commit date, used by the list page's "newest first" sort.
+  **Cloudflare Pages clones shallow (depth 1)**, so a live `git log` there returns the
+  single build commit for every file — 346 identical dates, a sort that does nothing,
+  and no visible symptom because every shader still *has* a date. So real history is
+  baked into a committed **`shader-dates.json`** (`scripts/shader-dates.js`), and the
+  build prefers it whenever live history is shallow or degenerate. Live git still wins
+  when it is genuinely usable (local dev), and the baked file is refreshed
+  automatically on any local dev-server start or build — regenerate manually with
+  `npm run shader-dates`. The build refuses to overwrite the baked file from a shallow
+  clone, and logs a loud warning if the result has fewer than 2 distinct dates.
+  If dates are genuinely unavailable, `modified` is `null` and the list page hides ages
+  and removes the "newest" sort rather than showing a fabricated order.
 - `presets` — preset URLs read from the shader source. The list page used to fetch all
   345 `.frag` files (6.5MB) on every load to find these; it now ships in `shaders.json`.
 - `prettyName` — display name, and `tags` normalised to always be an array (a single
