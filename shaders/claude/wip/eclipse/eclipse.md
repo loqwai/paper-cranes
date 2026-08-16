@@ -195,6 +195,82 @@ constant away from being meaningless. Report several thresholds, and measure the
 - **Beat punch**: 11.5% whole-frame scale + exposure flash + hue kick + ring blaze + diamond
   supernova, all on the same transient. Obvious from across a dark room.
 
+## The square grid — two lattices, and how to prove one is gone
+
+Reported from a big screen: *"The eclipse itself has a square grid that is visible moving around
+over time."* Real, and there were **two independent lattices**, in different layers. Isolating each
+layer and rendering it alone is what separated them; editing everything at once would have fixed
+one and hidden the other.
+
+### 1. The star field was ruled into columns
+
+```glsl
+float sh1 = ehash(cell + 11.3), sh2 = ehash(cell + 41.7);
+vec2  sfr = fract(...) - vec2(0.28 + 0.44 * sh1, 0.28 + 0.44 * sh2);
+float star = step(0.962, sh1) * ...;
+```
+
+`sh1` **gated whether a star exists** *and* **placed it in x**. A star only exists where
+`sh1 > 0.962`, so every visible star's x-offset was confined to `0.28 + 0.44 × [0.962, 1]` =
+**[0.703, 0.720]** — a window 1.7% of a cell wide. Every star in the sky sat at the same x inside
+its cell: a perfect column lattice at the cell pitch. The twinkle had the identical bug
+(`sin(T * (1.1 + sh1 * 2.4) + ...)`), so with `sh1` effectively constant the entire field also
+pulsed at one rate — which is the "moving around over time" part.
+
+The fix is to give placement and twinkle **their own hashes**, so only presence reads `sh1`.
+
+**Measured, by isolating the star layer alone** at a resolution where the cell pitch is 8px (at
+the 760px render height the pitch is 5.07px, and sub-pixel histogram bins measure pixel
+quantisation rather than placement — the metric came back a meaningless ~2.0 for both versions
+and nearly hid the bug). Histogram of star-centre x-phase within a cell, 20 bins:
+
+| | stars | x-phase peak/mean | histogram |
+|---|---|---|---|
+| before | 843 | **20.0** | all 843 in ONE bin |
+| after | 860 | 3.91 | spread over every reachable bin |
+
+20.0 out of a possible 20.0 is every star in a single bin — the worst score the metric can
+produce. Only 8 bins are reachable at an 8px pitch, so a perfectly scattered field scores 2.5;
+3.91 is scattered. **This is a check that was watched going red before it was trusted.**
+
+### 2. The nebula was value noise on an axis-aligned lattice
+
+Three compounding causes, all present at once:
+
+- **The hash correlated along the axes.** `fract(p.x * p.y)` off a `fract(p * vec2(a,b))` seed
+  gives neighbouring cells in a row or column related values, so the field grew long axis-aligned
+  rectangular streaks with hard edges.
+- **Value noise bakes the lattice in by construction.** Every cell is a *constant* that the fade
+  merely blends between, so cell boundaries are structural. When the domain scrolls they slide
+  across the screen — "a grid moving around over time", precisely.
+- **The fbm octaves were scaled but never rotated** (`p = p * 2.03 + 17.1`), so every octave
+  shared one axis alignment and the grid reinforced itself instead of averaging away.
+
+Fixed by switching to **gradient (Perlin-style) noise** — the value is zero *at* each lattice
+point and is built from a random gradient dotted with the offset, so there is no per-cell plateau
+and no grid — with a **quintic fade** (`t³(t(6t-15)+10)`, C2-continuous, the correct partner for
+gradient noise), a stronger hash, and a **~36.4° rotation between octaves**.
+
+One trap worth recording: a **quintic fade on *value* noise makes the grid worse, not better.**
+Quintic has zero first *and* second derivative at the ends, so each cell plateaus around its
+constant and reads as more of a flat tile. Quintic is right for gradient noise and wrong for
+value noise. Changing the fade without changing the noise type would have looked like a fix and
+been a regression.
+
+A curvature metric (|Laplacian| bucketed by cell phase) reported ~1.0 — "clean" — for the broken
+version. It measures the *seam* at a cell boundary, and this artefact is a *structural* axis
+alignment with no seam. The images showed it instantly. **Look at the field, rendered alone.**
+
+### Re-measured after the fix
+
+Nothing regressed; motion improved slightly because the background is no longer partly
+plateaued:
+
+| | frame-to-frame quiet | loud | beat | dead pixels (quiet) |
+|---|---|---|---|---|
+| before | 7.85 | 21.58 | 31.81 | 0.3% |
+| after | **9.73** | **22.85** | **33.98** | **0.0%** |
+
 ## Always look at the frames
 
 Twice this shader shipped with a defect only the images would show: the white-out, then the dark

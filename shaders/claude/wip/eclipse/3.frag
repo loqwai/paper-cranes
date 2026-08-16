@@ -69,25 +69,52 @@ uniform float sectionMix;
 
 mat2 rot2(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 
+// A VISIBLE SQUARE GRID lived here. Three causes, all of them real, all fixed below.
+//
+//  1. The hash was `fract(p.x * p.y)` off a fract(p * vec2(a,b)) seed. That product correlates
+//     along the axes: neighbouring cells in a row or column got related values, so the field
+//     grew long axis-aligned rectangular streaks with hard edges.
+//  2. The noise was VALUE noise — every cell is a CONSTANT that the fade merely blends between,
+//     so the lattice is baked into the field by construction. When the domain scrolls, the cell
+//     boundaries slide across the screen: "a square grid moving around over time", exactly.
+//  3. The fbm octaves were scaled but never ROTATED, so every octave shared the same axis
+//     alignment and the grid reinforced itself instead of averaging away.
+
 float ehash(vec2 p){
-    p = fract(p * vec2(123.34, 456.21));
-    p += dot(p, p + 45.32);
-    return fract(p.x * p.y);
+    vec3 q = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973));
+    q += dot(q, q.yzx + 33.33);
+    return fract((q.x + q.y) * q.z);
 }
 
+// Unit gradient per lattice point, from an angle — no normalize(), so no divide-by-zero.
+vec2 ghash(vec2 p){
+    float a = ehash(p) * TAU;
+    return vec2(cos(a), sin(a));
+}
+
+// GRADIENT (Perlin-style) noise. The value is 0 AT every lattice point and is built from the
+// dot product of a random gradient with the offset, so there is no per-cell plateau and no
+// grid — the structure sits BETWEEN the lattice points instead of on them. Quintic fade
+// (C2-continuous) is the correct partner: it kills the second-derivative seam that a cubic
+// smoothstep leaves at cell borders. Remapped to [0,1] so every call site keeps its range.
 float vnoise(vec2 p){
     vec2 i = floor(p), f = fract(p);
-    f = f * f * (3.0 - 2.0 * f);
-    float a = ehash(i), b = ehash(i + vec2(1.0, 0.0));
-    float c = ehash(i + vec2(0.0, 1.0)), d = ehash(i + vec2(1.0, 1.0));
-    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+    vec2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+    float a = dot(ghash(i),                  f);
+    float b = dot(ghash(i + vec2(1.0, 0.0)), f - vec2(1.0, 0.0));
+    float c = dot(ghash(i + vec2(0.0, 1.0)), f - vec2(0.0, 1.0));
+    float d = dot(ghash(i + vec2(1.0, 1.0)), f - vec2(1.0, 1.0));
+    return clamp(mix(mix(a, b, u.x), mix(c, d, u.x), u.y) + 0.5, 0.0, 1.0);
 }
+
+// ~36.4°, irrational-ish: no octave can share an axis with another, so nothing reinforces.
+const mat2 NROT = mat2(0.8047379, -0.5936107, 0.5936107, 0.8047379);
 
 float fbm(vec2 p){
     float v = 0.0, amp = 0.5;
     for (int i = 0; i < 4; i++){
         v += amp * vnoise(p);
-        p = p * 2.03 + 17.1;
+        p = NROT * p * 2.03 + 17.1;
         amp *= 0.5;
     }
     return v;
@@ -96,7 +123,7 @@ float fbm(vec2 p){
 // cheap 2-octave version for the full-screen layers (background nebula, core ember) — those
 // cover every pixel, so they get the smaller budget.
 float fbm2(vec2 p){
-    return vnoise(p) * 0.64 + vnoise(p * 2.07 + 11.3) * 0.30;
+    return vnoise(p) * 0.64 + vnoise(NROT * p * 2.07 + 11.3) * 0.30;
 }
 
 // Depth-coherent reactivity: TREBLE shimmers the near structure at the limb, MIDS the middle,
@@ -176,12 +203,21 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
 
     // ── STARS ── they come out in the dark. Strongest when quietGate is low (a genuinely quiet
     //   passage), washed out when the corona erupts, twinkling with the air band.
+    //   THE SECOND GRID WAS HERE. sh1 both GATED the star (step(0.962, sh1)) and placed it in x
+    //   (0.28 + 0.44 * sh1). A star only exists when sh1 > 0.962, so every visible star's x was
+    //   pinned to 0.28 + 0.44 * [0.962, 1] — a 1.7%-wide window. Every star in the sky sat at the
+    //   same x inside its cell: a perfect column lattice. The twinkle had the same bug, so the
+    //   whole field also pulsed in unison. Placement and twinkle now use their OWN hashes, and
+    //   the jitter spans the cell, so the field is scattered instead of ruled.
     vec2  cell = floor(scr * vec2(iResolution.x / iResolution.y, 1.0) * 150.0);
-    float sh1 = ehash(cell + 11.3), sh2 = ehash(cell + 41.7);
+    float sh1 = ehash(cell + 11.3);                    // presence ONLY
+    float sh2 = ehash(cell + 41.7);                    // y placement
+    float sh3 = ehash(cell + 73.1);                    // x placement
+    float sh4 = ehash(cell + 97.3);                    // twinkle rate + phase
     vec2  sfr = fract(scr * vec2(iResolution.x / iResolution.y, 1.0) * 150.0)
-              - vec2(0.28 + 0.44 * sh1, 0.28 + 0.44 * sh2);
+              - vec2(0.18 + 0.64 * sh3, 0.18 + 0.64 * sh2);
     float sd  = dot(sfr, sfr);
-    float twk = 0.5 + 0.5 * sin(T * (1.1 + sh1 * 2.4) + sh2 * TAU);
+    float twk = 0.5 + 0.5 * sin(T * (1.1 + sh4 * 2.4) + sh3 * TAU);
     float star = step(0.962, sh1) * exp(-sd * 26.0) * (0.28 + 0.72 * twk);
     float night = 1.0 - clamp(gate * 0.7, 0.0, 0.8);
     col += vec3(0.80, 0.88, 1.0) * star * night * (0.85 + air * 0.7);
