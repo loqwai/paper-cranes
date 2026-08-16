@@ -154,3 +154,71 @@ frame-to-frame number: `<1` dead, `2-6` gentle but unmistakable, `>8` energetic.
 
 Note the contact-sheet page loads its tiles over `file:///` from a `setContent` document, which
 the browser blocks — it renders a grid of empty boxes and *looks* fine. Read the individual PNGs.
+
+## 3.frag — filling the disc, and how the metric nearly lied
+
+2.frag shrank the occluder correctly but **left its interior dark**, so it still read as a hole
+with a rim rather than a body in a sky. 3.frag finishes the job.
+
+### Measuring the occluder, and two ways to get it wrong
+
+**Wrong way 1 — centroid of dark pixels.** Works only while the disc dominates the dark mass. In
+a quiet passage the sky is dark too, so the centroid lands on an average of scattered background
+and the ray-cast measures a radius of *zero* while a disc is plainly on screen.
+
+**Wrong way 2 — largest connected dark blob.** Also confounded by the sky: on 2.frag's quiet
+frame it returns a blob with a bounding box 99.8% of frame width, centroid at y=0.79. That is the
+background, not the moon.
+
+**What actually worked** was tying the pixels back to the geometry. `uv.y` spans exactly 1.0 over
+the frame height, so the disc's height fraction is exactly `2R` — and on a *loud* frame, where the
+corona isolates the silhouette, the measured bounding box confirms it:
+
+| | `R` | predicted `2R` | measured bbox height |
+|---|---|---|---|
+| 1.frag | 0.208 | 41.6% | **41.7%** |
+
+Prediction and measurement agree to 0.1%, which is what licenses using `2R` for the others:
+**1.frag 41.6% of frame height → 2.frag 16.4% → 3.frag 14.0%.**
+
+### Near-black pixels, the number that answers the complaint
+
+Fraction of the frame below luma 12 (reads as pure black on a phone in a dark room):
+
+| | quiet | loud |
+|---|---|---|
+| 1.frag | **28.8%** | **24.7%** |
+| 2.frag | 1.7% | 0.4% |
+| 3.frag | **0.3%** | **0.0%** |
+
+At loud, a quarter of 1.frag's frame is pure black — that is the disc, and it is the complaint.
+
+### The threshold trap
+
+`deadFrac` uses an absolute cutoff (luma < 12). A silhouette lifted to luma 13 scores as "not
+dead" while still reading as a black hole. It was not gamed here — the drop from 28.8% to 1.7% was
+real, and `frac25`/`frac45` move the same way — but a single absolute threshold is one lucky
+constant away from being meaningless. Report several thresholds, and measure the silhouette's
+*size* independently, as `scripts/measure-disc.mjs` now does.
+
+### Changes
+
+- `R` 0.082 → 0.070; disc floor lifted (mask `0.88 + 0.12` → `0.82 + 0.18`).
+- Ember reaches much further in (`pow(ir, 1.7)` → `pow(ir, 1.05)`, threshold 0.28 → 0.20) and
+  burns nearly twice as bright, so the core is a churning body, not a silhouette.
+- Quiet floor raised: nebula 0.135 → 0.245 base, corona `rayAmp` 0.62 → 0.74 base — the audio-
+  scaled terms were trimmed to compensate so loud does not blow out again.
+
+### Always look at the frames
+
+Twice this shader shipped with a defect only the images would show: the white-out, then the dark
+disc interior. Both were invisible in the numbers and obvious in a side-by-side.
+
+Two traps in the tooling itself, both of which produce output that *looks* fine:
+- The contact sheet loaded tiles over `file:///` from a `setContent` document. Browsers block
+  that; it rendered a neat grid of empty boxes. `scripts/compare-shots.mjs` inlines the bytes as
+  base64 and asserts every image decoded before screenshotting.
+- Renders from different runs land in different directories with reusable tags —
+  `tmp/eclipse-shots/v2-*.png` is the *second tuning pass of 1.frag*, not 2.frag. Two files named
+  `v2-quiet.png` showed different shaders. Check what a render actually is before trusting it;
+  measuring it settles the question in seconds (identical disc geometry = identical shader).
