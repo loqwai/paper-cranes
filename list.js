@@ -89,16 +89,55 @@ const isSubsequence = (needle, haystack) => {
   return needle.length === 0
 }
 
+/** Every word of a path/name as its own token: `redaphid/iris/1` → redaphid, iris, 1. */
+const segmentsOf = (...texts) => [
+  ...new Set(
+    texts.flatMap((text) =>
+      String(text)
+        .toLowerCase()
+        .split(/[^a-z0-9]+/)
+        .filter(Boolean)
+    )
+  ),
+]
+
+/**
+ * Match QUALITY, not just match/no-match.
+ *
+ * The old scorer put "name contains the query" and "name is basically the query"
+ * on almost the same rung, and let subsequence matches into the same pile. A
+ * four-letter query like `iris` is a subsequence of a LOT of names, so the
+ * shaders actually called iris drowned among things that merely contain
+ * i…r…i…s in order. The ladder below is deliberately steep: an exact word hit
+ * beats a substring by hundreds of points, so no amount of weaker matches can
+ * ever push the obvious answer down the list.
+ *
+ * Subsequence matching is kept — `chrmdpth` still finds chromadepth — but it
+ * now sits at the very bottom where it belongs.
+ */
 const scoreTerm = (shader, term) => {
-  const { normName, normPath, normTags } = shader.search
-  if (normName.startsWith(term)) return 140
-  if (normName.includes(term)) return 110
-  if (normTags.some((tag) => tag === term)) return 100
-  if (normTags.some((tag) => tag.includes(term))) return 80
-  if (normPath.includes(term)) return 70
-  if (isSubsequence(term, normName)) return 40
-  if (isSubsequence(term, normPath)) return 25
-  return 0
+  const { normName, normPath, segments, normTags } = shader.search
+
+  let tier = 0
+  if (normName === term || normPath === term) tier = 1000
+  else if (segments.includes(term)) tier = 880 // `iris` in redaphid/iris/1
+  else if (normName.startsWith(term)) tier = 860
+  else if (segments.some((segment) => segment.startsWith(term))) tier = 840
+  else if (normTags.includes(term)) tier = 700
+  else if (normName.includes(term)) tier = 600
+  else if (normTags.some((tag) => tag.includes(term))) tier = 500
+  else if (normPath.includes(term)) tier = 400
+  else if (isSubsequence(term, normName)) tier = 200
+  else if (isSubsequence(term, normPath)) tier = 100
+  else return 0
+
+  // Tie-breakers inside a tier: prefer the thing whose NAME leads with the
+  // query over one that merely contains the word somewhere.
+  let bonus = 0
+  if (normName === term) bonus += 40
+  if (normName.startsWith(term)) bonus += 30
+  if (segments[0] === term) bonus += 20
+  return tier + bonus
 }
 
 const queryTerms = (text) =>
@@ -114,6 +153,10 @@ const scoreShader = (shader, terms) => {
     if (score === 0) return 0 // every term must match something
     total += score
   }
+  // A work-in-progress sketch is a real answer but a worse one than the
+  // finished shader of the same name — only ever a tie-breaker, never enough
+  // to drop it below a genuinely weaker match.
+  if (shader.isWip) total -= 15
   return total
 }
 
@@ -337,6 +380,16 @@ const ShaderRow = ({
   const href = buildShaderUrl(shader, { preset: hasPresets ? target : null, saved: savedParams })
   const visibleTags = shader.allTags.slice(0, 2)
 
+  // Nine shaders display as "iris N". Without the folder they are impossible to
+  // tell apart in a search result, which is exactly when you are looking at them.
+  const directory = shader.name.includes('/') ? shader.name.slice(0, shader.name.lastIndexOf('/')) : ''
+  const metaParts = [
+    directory ? html`<span class="path">${directory}</span>` : null,
+    HAS_REAL_DATES && shader.modified ? html`<span>${timeAgo(shader.modified)}</span>` : null,
+    ...visibleTags.map((tag) => html`<span class="tag">${tag}</span>`),
+    savedParams ? html`<span class="badge-saved">saved</span>` : null,
+  ].filter(Boolean)
+
   return html`
     <li>
       <div class="main-link">
@@ -356,11 +409,7 @@ const ShaderRow = ({
         >
           <div class="row-name">${shader.prettyName || shader.name}</div>
           <div class="row-meta">
-            ${HAS_REAL_DATES && shader.modified ? html`<span>${timeAgo(shader.modified)}</span>` : null}
-            ${visibleTags.map((tag, index) =>
-              html`${index === 0 && !(HAS_REAL_DATES && shader.modified) ? null : html`<span class="dot">·</span>`}<span class="tag">${tag}</span>`
-            )}
-            ${savedParams ? html`<span class="dot">·</span><span class="badge-saved">saved</span>` : null}
+            ${metaParts.map((part, index) => html`${index > 0 ? html`<span class="dot">·</span>` : null}${part}`)}
           </div>
         </a>
         <div class="row-actions">
@@ -708,11 +757,6 @@ const List = () => {
     writeStore('prefs', { sort: sortMode, fullscreenOnTap })
   }, [sortMode, fullscreenOnTap])
 
-  // Opening Find should put the cursor in the box — never a second tap.
-  useEffect(() => {
-    if (sheet !== 'search') return
-    requestAnimationFrame(() => searchRef.current?.focus())
-  }, [sheet])
 
   // Augment the build-time data with everything stored on this device
   const augmented = useMemo(() => {
@@ -721,18 +765,23 @@ const List = () => {
       const fileTags = shader.tags || []
       const mine = userTags[shader.name] || []
       const allTags = [...new Set([...fileTags, ...mine])]
+      const prettyName = shader.prettyName || shader.name
       return {
         ...shader,
-        prettyName: shader.prettyName || shader.name,
+        prettyName,
         tags: fileTags,
         myTags: mine,
         allTags,
         folder: folderOf(shader.name),
+        isWip: shader.name.includes('wip'),
         isStarred: starSet.has(shader.name) || shader.favorite === true,
         presetUrls: (shader.presets || []).map((preset) => getPresetUrl(shader.visualizerUrl, preset)),
         search: {
-          normName: normalizeText(shader.prettyName || shader.name),
+          normName: normalizeText(prettyName),
           normPath: normalizeText(shader.name),
+          // Both the path AND the display name contribute words, so `dance`
+          // hits `dance-hole` and `iris` hits `claude/wip/iris/3`.
+          segments: segmentsOf(shader.name, prettyName, ...allTags),
           normTags: allTags.map(normalizeText),
         },
       }
@@ -743,7 +792,7 @@ const List = () => {
   // numbers on the chips always describe what tapping them will actually do.
   const pool = useMemo(() => {
     let list = augmented
-    if (!showWip) list = list.filter((shader) => !shader.name.includes('wip'))
+    if (!showWip) list = list.filter((shader) => !shader.isWip)
     if (favoritesOnly) list = list.filter((shader) => shader.isStarred)
     if (mobileOnly) list = list.filter((shader) => shader.mobile === true)
     return list
@@ -762,8 +811,38 @@ const List = () => {
     }
   }, [pool])
 
+  /** The performer's chosen order, used for browsing and to break score ties. */
+  const chosenOrder = useMemo(() => {
+    if (sortMode === 'modified') return (a, b) => String(b.modified || '').localeCompare(String(a.modified || ''))
+    if (sortMode === 'shown') return (a, b) => (recents[b.name]?.t || 0) - (recents[a.name]?.t || 0)
+    if (sortMode === 'random') return (a, b) => hashSeed(a.name, shuffleSeed) - hashSeed(b.name, shuffleSeed)
+    return (a, b) => a.name.localeCompare(b.name)
+  }, [sortMode, recents, shuffleSeed])
+
   const visible = useMemo(() => {
     const terms = queryTerms(filterText)
+
+    /**
+     * TYPING A NAME SEARCHES THE WHOLE LIBRARY — filters do not apply.
+     *
+     * This is the bug that lost him shaders on stage. `dance-hole` carries no
+     * tags at all, so any tag chip left on from earlier browsing silently
+     * excluded it; eight of the nine `iris` shaders live under `.../wip/...`,
+     * so the WIP toggle hid the entire series. In both cases he typed a name he
+     * knew existed and the list told him nothing was there.
+     *
+     * Filters are a BROWSING aid. A typed name is an explicit request for one
+     * specific thing, and it must always win. The status strip says so out loud
+     * while a search is running, so the state is visible rather than remembered.
+     */
+    if (terms.length > 0) {
+      return augmented
+        .map((shader) => ({ shader, score: scoreShader(shader, terms) }))
+        .filter((entry) => entry.score > 0)
+        .sort((a, b) => b.score - a.score || chosenOrder(a.shader, b.shader))
+        .map((entry) => entry.shader)
+    }
+
     let list = pool
 
     if (includeTags.size > 0) {
@@ -783,27 +862,8 @@ const List = () => {
       )
     }
 
-    if (terms.length > 0) {
-      list = list
-        .map((shader) => ({ shader, score: scoreShader(shader, terms) }))
-        .filter((entry) => entry.score > 0)
-        .sort((a, b) => b.score - a.score)
-        .map((entry) => entry.shader)
-      return list // relevance order beats any sort mode while searching
-    }
-
-    const sorted = [...list]
-    if (sortMode === 'modified') {
-      sorted.sort((a, b) => String(b.modified || '').localeCompare(String(a.modified || '')))
-    } else if (sortMode === 'shown') {
-      sorted.sort((a, b) => (recents[b.name]?.t || 0) - (recents[a.name]?.t || 0))
-    } else if (sortMode === 'random') {
-      sorted.sort((a, b) => hashSeed(a.name, shuffleSeed) - hashSeed(b.name, shuffleSeed))
-    } else {
-      sorted.sort((a, b) => a.name.localeCompare(b.name))
-    }
-    return sorted
-  }, [pool, filterText, includeTags, excludeTags, sortMode, recents, shuffleSeed])
+    return [...list].sort(chosenOrder)
+  }, [augmented, pool, filterText, includeTags, excludeTags, chosenOrder])
 
   // ---- actions -----------------------------------------------------------
   const persistRecent = (name) => {
@@ -966,8 +1026,9 @@ const List = () => {
     .map((name) => augmented.find((shader) => shader.name === name))
     .filter(Boolean)
 
-  const activeFilterCount =
-    includeTags.size + excludeTags.size + (favoritesOnly ? 1 : 0) + (mobileOnly ? 1 : 0) + (filterText ? 1 : 0)
+  const browseFilterCount =
+    includeTags.size + excludeTags.size + (favoritesOnly ? 1 : 0) + (mobileOnly ? 1 : 0)
+  const activeFilterCount = browseFilterCount + (filterText ? 1 : 0)
 
   const knownTags = useMemo(() => tagCounts.tags.map(([tag]) => tag), [tagCounts])
 
@@ -979,18 +1040,38 @@ const List = () => {
         onRetry=${() => controllerRef.current?.reconnect()}
       />
 
-      <div class="status-strip">
-        <span class="status-text">
-          <b>${visible.length}</b> of ${augmented.length}
-          ${filterText ? html` · "${filterText}"` : null}
-          ${includeTags.size ? html` · ${[...includeTags].join(', ')}` : null}
-          ${excludeTags.size ? html` · not ${[...excludeTags].join(', ')}` : null}
-          ${favoritesOnly ? ' · favourites' : ''}
-          ${mobileOnly ? ' · mobile' : ''}
-        </span>
-        ${activeFilterCount > 0
-          ? html`<button class="clear-all" onClick=${clearAllFilters}>Clear</button>`
-          : null}
+      <div class="top-dock">
+        <div class=${`find-bar ${filterText ? 'searching' : ''}`}>
+          <span class="find-glyph">🔍</span>
+          <input
+            ref=${searchRef}
+            class="find-input"
+            type="search"
+            inputmode="search"
+            enterkeyhint="search"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="none"
+            spellcheck="false"
+            placeholder="type to filter…"
+            value=${filterText}
+            onInput=${(e) => setFilterText(e.target.value)}
+            onKeyDown=${(e) => e.key === 'Enter' && e.target.blur()}
+          />
+          ${filterText
+            ? html`<button class="find-clear" onClick=${() => setFilterText('')} aria-label="Clear search">✕</button>`
+            : null}
+        </div>
+        <div class="status-strip">
+          <span class="status-text">
+            ${filterText
+              ? html`<b>${visible.length}</b> ${visible.length === 1 ? 'match' : 'matches'} in all ${augmented.length}${browseFilterCount > 0 ? html`<span class="paused"> · filters paused</span>` : null}`
+              : html`<b>${visible.length}</b> of ${augmented.length}${includeTags.size ? html` · ${[...includeTags].join(', ')}` : null}${excludeTags.size ? html` · not ${[...excludeTags].join(', ')}` : null}${favoritesOnly ? ' · favourites' : ''}${mobileOnly ? ' · mobile' : ''}${showWip ? ' · +wip' : ''}`}
+          </span>
+          ${activeFilterCount > 0
+            ? html`<button class="clear-all" onClick=${clearAllFilters}>Clear</button>`
+            : null}
+        </div>
       </div>
 
       <ul class="shader-list">
@@ -1013,13 +1094,21 @@ const List = () => {
       </ul>
 
       ${visible.length === 0
-        ? html`<div class="empty">Nothing matches. Tap <b>Clear</b> up top.</div>`
+        ? html`<div class="empty">
+            ${filterText
+              ? html`Nothing named "<b>${filterText}</b>" — in any of the ${augmented.length}. Try fewer letters.`
+              : html`Nothing matches. Tap <b>Clear</b> up top.`}
+          </div>`
         : null}
 
       <div class="bottom-bar">
         <button
           class=${`bar-btn ${filterText ? 'active' : ''}`}
-          onClick=${() => setSheet(sheet === 'search' ? null : 'search')}
+          onClick=${() => {
+            setSheet(null)
+            window.scrollTo({ top: 0 })
+            searchRef.current?.focus()
+          }}
         >
           <span class="glyph">🔍</span><span class="label">Find</span>
         </button>
@@ -1054,28 +1143,11 @@ const List = () => {
           <div class="sheet">
             <div class="sheet-head">
               <span class="sheet-title">
-                ${sheet === 'search' ? 'Find' : sheet === 'sort' ? 'Sort & show' : sheet === 'tags' ? 'Tags' : 'Setlist'}
+                ${sheet === 'sort' ? 'Sort & show' : sheet === 'tags' ? 'Tags' : 'Setlist'}
               </span>
               <button class="sheet-close" onClick=${() => setSheet(null)}>✕</button>
             </div>
             <div class="sheet-body">
-              ${sheet === 'search'
-                ? html`
-                  <input
-                    ref=${searchRef}
-                    class="search-input"
-                    type="search"
-                    placeholder="name, tag, folder…"
-                    value=${filterText}
-                    onInput=${(e) => setFilterText(e.target.value)}
-                  />
-                  <div class="hint">Matches names, tags and folders. Punctuation and case are ignored, and letters can be skipped — "chrmdpth" finds chromadepth.</div>
-                  ${filterText
-                    ? html`<button class="ghost-action" onClick=${() => setFilterText('')}>Clear search</button>`
-                    : null}
-                `
-                : null}
-
               ${sheet === 'sort'
                 ? html`
                   ${SORT_MODES.map(

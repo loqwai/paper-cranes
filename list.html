@@ -65,19 +65,89 @@
       list-style: none;
     }
 
-    /* ---------------- Status strip: why is my list short? ---------------- */
-    .status-strip {
+    /* ----------------------------------------------------------------------
+       Top dock: the search box lives HERE, in the page, permanently visible —
+       not inside a sheet. A sheet plus the phone keyboard covered the results,
+       so he was typing blind and could not watch the list narrow. Sticky (not
+       fixed) so it takes real flow space and never overlaps the first row.
+       ---------------------------------------------------------------------- */
+    .top-dock {
       position: sticky;
       top: 0;
       z-index: 60;
+      background: rgba(0, 0, 0, 0.94);
+      backdrop-filter: blur(8px);
+    }
+
+    .find-bar {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 8px 10px;
-      background: rgba(0, 0, 0, 0.92);
-      backdrop-filter: blur(8px);
+      padding: 6px 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .find-glyph {
+      flex-shrink: 0;
+      font-size: var(--text-size);
+      opacity: 0.75;
+    }
+
+    .find-input {
+      flex: 1;
+      min-width: 0;
+      min-height: var(--tap);
+      font-size: calc(var(--text-size) * 1.1);
+      font-weight: 600;
+      padding: 8px 12px;
+      background: #16161c;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 12px;
+      color: #fff;
+    }
+
+    .find-input::placeholder {
+      color: rgba(255, 255, 255, 0.45);
+      font-weight: 400;
+    }
+
+    .find-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .find-bar.searching .find-input {
+      border-color: var(--accent);
+      background: #10201a;
+    }
+
+    /* Native clear "x" is a ~10px target in the dark — use our own 52px one. */
+    .find-input::-webkit-search-cancel-button {
+      display: none;
+    }
+
+    .find-clear {
+      flex-shrink: 0;
+      width: var(--tap);
+      height: var(--tap);
+      font-size: 22px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    /* ---------------- Status strip: why is my list short? ---------------- */
+    .status-strip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.15);
       font-size: var(--small-size);
+    }
+
+    .status-text .paused {
+      color: #fbbf24;
+      font-weight: 700;
     }
 
     .status-text {
@@ -177,6 +247,12 @@
 
     .row-meta .dot {
       opacity: 0.5;
+    }
+
+    /* Which "iris 1" is this one? */
+    .row-meta .path {
+      opacity: 0.62;
+      font-family: ui-monospace, monospace;
     }
 
     .row-meta .tag {
