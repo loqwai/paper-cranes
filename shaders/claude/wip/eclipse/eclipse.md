@@ -69,3 +69,88 @@ rendered frames before it went out:
 - A real second-contact moment: on the first drop after a long quiet, a single huge diamond ring
   flash timed to the transient.
 - The sky between rays could carry a faint corona-lit cloud layer for depth.
+
+## 2.frag — the motion rebuild
+
+**1.frag failed in front of a live audience.** The verdict: *"It's almost all that black circle
+with almost no movement. Terrible."*
+
+### Why it failed, and why review missed it
+
+**It was validated from still frames, and a still frame cannot validate a motion piece.** In a
+still, a black disc filling the middle of the screen reads as a dramatic eclipse. In motion it
+reads as a dead black hole with a shimmer at the edge.
+
+Two independent causes, both invisible in a screenshot:
+
+1. **A huge motionless region.** `R = 0.208` in uv units is 42% of the half-height — the disc and
+   its immediate surround were ~29% of the frame at pure black (measured: `deadFrac 0.288`).
+2. **Everything animated rode the controller's phases at their BASE rate.** `wavelet-ease`
+   advances `flowPhase` at 0.06/s and `spinPhase` at 0.02/s. 1.frag then scaled them DOWN —
+   `flowPhase * 0.42` is 0.025 noise-units per second, and `spinPhase * 0.55` gave the diamond
+   ring **one revolution every nine minutes**. The discipline "all motion comes from monotonic
+   accumulators, never `iTime`" was followed to the letter and produced a still image.
+
+Measured on the real thing (`scripts/motion-check.mjs`, mean |Δ| per channel, 0-255):
+
+| | frame-to-frame (quiet) | frame-to-frame (loud) | quiet vs loud | dead pixels |
+|---|---|---|---|---|
+| **1.frag** | **0.17** | 0.36 | 55.7 | 28.8% |
+| **2.frag** | **7.60** | 20.08 | 68.1 | 1.7% |
+
+0.17/255 is a still image. That number is the whole bug.
+
+### The rule that caused it, corrected
+
+The real rule is *never put audio into a phase or an angle* — because `iTime * <changing rate>`
+jumps the accumulated angle by `iTime * Δrate` whenever the rate changes, and that jump grows
+without bound. **A constant rate has no Δrate, so `iTime * k` is perfectly safe** and is the only
+thing that guarantees motion when the room is silent and every audio term is zero. 2.frag uses
+both, added:
+
+```glsl
+float spin  = iTime * 0.130 + spinPhase  * 2.2;   // constant floor + audio speeds it up
+float flow  = iTime * 0.560 + flowPhase  * 3.2;
+float churn = iTime * 0.230 + morphPhase * 2.6;
+```
+
+### What changed
+
+- **Core shrunk** `R 0.208 → 0.082` (~1/6 the area) and **filled** with a churning ember plasma
+  that is dark at the centre and white-hot at the limb — added *after* the moon mask, or the mask
+  crushes it. It also **drifts** on a slow constant-rate Lissajous so nothing is anchored.
+- **Background nebula** — 2-octave turbulence over the whole frame, parallaxing against the
+  drifting core. This is what guarantees no motionless region at any audio level.
+- **Shock rings** travelling outward at a constant rate, brightness detonating on the transient
+  (amplitude only — a hit never moves a ring, only lights it).
+- **Corona reaches the corners**: `rayReach` 0.26 quiet → ~1.4 loud (frame radius ≈0.57 portrait).
+- **Beat punch**: 11.5% whole-frame scale + exposure flash + hue kick + ring blaze + diamond
+  supernova, all on the same transient.
+
+### The white-out, again — and the chroma restore
+
+The first cut of 2.frag hit **mean luma 212/255** on a sustained kick: a white sheet with no
+structure, the exact failure 1.frag had already been fixed for. Half a dozen additive layers of
+different hue **sum towards white**, and the exponential exposure curve then flattens what little
+chroma survives. Trimming amplitudes got luma to 154 but left a milky grey fog. The fix that
+actually restored the colour is a post-tone-map chroma extrapolation:
+
+```glsl
+float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));
+col = clamp(mix(vec3(lum), col, 1.38), 0.0, 1.0);   // mix factor > 1 pushes AWAY from grey
+```
+
+A drop now reads as violent magenta/gold rather than as brightness.
+
+### Verifying motion (`scripts/motion-check.mjs`)
+
+Renders N frames ~90ms apart at a fixed audio level and reports the mean absolute per-pixel delta
+between **consecutive** frames, then the delta **between** audio levels. It also reports
+`deadFrac`, the fraction of pixels below luma 12.
+
+**Run it against 1.frag as a control.** A motion metric nobody has watched go red is not evidence;
+1.frag scoring 0.17 is what proves the harness measures anything at all. Rough reading of the
+frame-to-frame number: `<1` dead, `2-6` gentle but unmistakable, `>8` energetic.
+
+Note the contact-sheet page loads its tiles over `file:///` from a `setContent` document, which
+the browser blocks — it renders a grid of empty boxes and *looks* fine. Read the individual PNGs.
