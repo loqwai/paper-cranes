@@ -5,17 +5,17 @@
 // @name: totality burning
 //https://visuals.beadfamous.com/?shader=claude/wip/eclipse/3&controller=wavelet-ease&wavelet=true&fullscreen=true&name=Totality
 //
-// TOTALITY ALIVE (eclipse/2.frag) — 1.frag rebuilt for MOTION.
+// TOTALITY ALIVE — a total solar eclipse that breathes with the music, built for MOTION.
 //
-// WHAT WAS WRONG WITH 1.frag: a black disc 42% of the half-height sat dead centre and never
-// moved, and every animated quantity rode the controller's monotonic phases at their BASE rate
+// THE FAILURE THIS IS BUILT AGAINST: the first cut sat a black disc 42% of the half-height dead
+// centre, never moved it, and rode the controller's monotonic phases at their BASE rate
 // — flowPhase advances 0.06/s and the shader scaled it by 0.42, i.e. 0.025 noise-units per
 // second. spinPhase gave the diamond ONE REVOLUTION EVERY NINE MINUTES. In a still frame that
 // reads as a dramatic eclipse. In motion it reads as a black hole with a shimmer. It was
 // validated from stills, and a still cannot validate a motion piece.
 //
-// WHAT 2.frag DOES INSTEAD:
-//   * THE CORE IS SMALL (R 0.208 → 0.082, ~1/6 the area) and it is NOT dead — a churning ember
+// WHAT THIS SHADER DOES INSTEAD:
+//   * THE CORE IS SMALL (R 0.208 → 0.070, ~1/9 the area) and it is NOT dead — a churning ember
 //     plasma burns inside it, dark at the very centre so it still reads as an eclipse, hot at
 //     the limb. It also DRIFTS on a slow Lissajous, so the composition never sits still.
 //   * CONSTANT-RATE TIME BASES. Every motion is `iTime * k + <monotonicPhase> * m`. The iTime
@@ -215,7 +215,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float ring = exp(-d * 90.0);                             // the razor-thin pearly rim
 
     // AMPLITUDES ARE DELIBERATELY RESTRAINED. Every layer here stacks into the same exponential
-    // exposure, and an early cut of 2.frag hit mean luma 212/255 on a sustained kick — a white
+    // exposure, and an early cut of this hit mean luma 212/255 on a sustained kick — a white
     // sheet with no structure left. Loud must read as SATURATED COLOUR, not as brightness.
     float rayAmp  = 0.74 + 0.56 * bass + 0.35 * lift + 0.42 * band;
     float glowAmp = 0.34 + 0.30 * air + 0.22 * lift;

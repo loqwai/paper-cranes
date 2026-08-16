@@ -1,4 +1,4 @@
-// MOTION CHECK — the harness that eclipse/1.frag needed and did not have.
+// MOTION CHECK — the harness the first cut of eclipse needed and did not have.
 //
 // A still frame cannot validate a motion piece. This renders a SEQUENCE of frames at a fixed
 // audio level and measures the mean absolute per-pixel difference between CONSECUTIVE frames
@@ -16,8 +16,8 @@ import { chromium } from 'playwright'
 import { mkdir, writeFile } from 'fs/promises'
 
 const OUT = 'D:/projects/paper-cranes/tmp/eclipse-motion'
-const SHADER = process.argv[2] || 'claude/wip/eclipse/2'
-const TAG = process.argv[3] || 'v2'
+const SHADER = process.argv[2] || 'claude/wip/eclipse/3'
+const TAG = process.argv[3] || 'v3'
 const NFRAMES = 8
 const GAP_MS = 90 // ~5 rendered frames apart at 60fps
 
