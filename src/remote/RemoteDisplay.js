@@ -91,6 +91,13 @@ const applyParams = async (data) => {
   // Parse numeric strings to floats so they work as shader uniforms
   for (const [key, value] of Object.entries(data)) {
     if (key === 'shader' || key === 'shaderCode' || key === 'fullscreen') continue
+    // null = RELEASE this param. messageParams has the highest precedence in
+    // getCranesState(), so a key left here would pin the uniform forever and the
+    // controller/audio pipeline could never move it again. Deleting hands it back.
+    if (value === null) {
+      delete window.cranes.messageParams[key]
+      continue
+    }
     const num = parseFloat(value)
     window.cranes.messageParams[key] = !isNaN(num) ? num : value
   }
