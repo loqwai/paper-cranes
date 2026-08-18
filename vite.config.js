@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import { resolve } from 'path'
 import { shaderPlugin } from './vite-plugins/shader-plugin.js'
 import { remoteWsPlugin } from './vite-plugins/remote-ws-plugin.js'
+import { swVersionPlugin } from './vite-plugins/sw-version-plugin.js'
 
 export default defineConfig({
   server: {
@@ -32,5 +33,5 @@ export default defineConfig({
       external: (id) => id.startsWith('https://'),
     },
   },
-  plugins: [shaderPlugin(), remoteWsPlugin()],
+  plugins: [shaderPlugin(), remoteWsPlugin(), swVersionPlugin()],
 })
