@@ -12,7 +12,7 @@ const maybeStartWavelet = async (params, audioContext, sourceNode) => {
     window.cranes.waveletProcessor = wavelet
 }
 import { makeVisualizer, askForWakeLock } from './src/Visualizer.js'
-import { getInitialShader } from './src/shaderLoader.js'
+import { getInitialShader, loadShader } from './src/shaderLoader.js'
 import { loadControllers, composeControllers } from './src/controllerChain.js'
 
 
@@ -370,9 +370,33 @@ main()
 // Reload the page when shader files change on disk (replaces full-reload from shader-plugin).
 // Skip on the editor page — it handles shader updates via the editor-sync HMR event.
 if (import.meta.hot) {
-    import.meta.hot.on('shaders-changed', () => {
+    import.meta.hot.on('shaders-changed', async ({ path }) => {
         if (window.location.pathname.includes('edit')) return
         if (window.location.pathname.includes('jam')) return
-        location.reload()
+
+        // A full reload here costs a black frame, an audio-context restart and the
+        // entire 500-frame feature history. That is invisible while developing and
+        // ruinous during a set, because /vibej rewrites its target .frag every
+        // minute — so the display would blink and lose its statistics every minute.
+        //
+        // The event fires for ANY .frag in the tree, so first ask whether the file
+        // that changed is even the one on screen; usually it is not.
+        const changed = String(path ?? '')
+            .replace(/^.*?shaders\//, '')
+            .replace(/\.frag$/, '')
+        const showing = new URLSearchParams(window.location.search).get('shader')
+        if (!changed || !showing || changed !== showing) return
+
+        // Same shader: swap the source in place. window.cranes.shader is what
+        // animateShader reads every frame, so assigning it recompiles without
+        // touching the audio pipeline — the same trick RemoteDisplay uses.
+        try {
+            await loadShader(showing)
+        } catch (e) {
+            // Never leave the screen stuck on stale code mid-show; the reload is
+            // ugly but it is the honest fallback.
+            console.error('[hmr] hot-swap failed, falling back to reload:', e)
+            location.reload()
+        }
     })
 }
