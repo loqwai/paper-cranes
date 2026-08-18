@@ -37,13 +37,13 @@ const main = async () => {
 
     await wait(500)
     const payload = JSON.stringify({
-        type: 'params',
+        type: 'update-params',
         data: { navZoom: 1.0, paletteShift: 0.62, warpGrow: 0.9 },
     })
     phone.ws.send(payload)
     await wait(1500)
 
-    const got = display.seen.filter((m) => m.includes('"params"'))
+    const got = display.seen.filter((m) => m.includes('"update-params"'))
     console.log(`display received: ${got.length} params message(s)`)
     if (got[0]) console.log(`  payload: ${got[0]}`)
 

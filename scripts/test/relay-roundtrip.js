@@ -37,13 +37,13 @@ const main = async () => {
 
     await wait(500)
 
-    const payload = JSON.stringify({ type: 'params', data: { navZoom: 1.23, paletteShift: 0.62 } })
+    const payload = JSON.stringify({ type: 'update-params', data: { navZoom: 1.23, paletteShift: 0.62 } })
     phone.ws.send(payload)
     await wait(1200)
 
-    const gotParams = display.seen.filter((m) => m.includes('"params"'))
-    const echoed = phone.seen.filter((m) => m.includes('"params"'))
-    const leaked = stranger.seen.filter((m) => m.includes('"params"'))
+    const gotParams = display.seen.filter((m) => m.includes('"update-params"'))
+    const echoed = phone.seen.filter((m) => m.includes('"update-params"'))
+    const leaked = stranger.seen.filter((m) => m.includes('"update-params"'))
     const status = display.seen.filter((m) => m.includes('"status"'))
 
     console.log(`display received params : ${gotParams.length} ${gotParams[0] ?? ''}`)
