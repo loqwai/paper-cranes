@@ -121,6 +121,12 @@ repo. Use the full URLs.
 
 ---
 
+**Track names:** the Spotify MCP server hangs — `SpotifyPlayback` was called once and returned
+nothing for 1800s before aborting, so it likely needs re-auth. Do not wait on it. `/vibej` does not
+need it: its documented path scrapes the now-playing widget from an `open.spotify.com` tab, and
+failing that, the audio features alone are enough to pick moves (the rehearsal ran entirely that
+way).
+
 ## Test harnesses
 
 ```fish
