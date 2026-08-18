@@ -1,5 +1,3 @@
-* https://visuals.beadfamous.com/?shader=agents&fullscreen=true
-
 * https://visuals.beadfamous.com/?shader=beat-trip
 https://visuals.beadfamous.com/?shader=dance-hole
 https://visuals.beadfamous.com/?shader=melted-satin/1

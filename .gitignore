@@ -155,3 +155,6 @@ screenshots/
 public/test-audio/
 public/images/*.webp
 .claude/vj-state.json
+
+# vitest scratch output
+test-results/

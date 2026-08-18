@@ -18,16 +18,22 @@ Microphone → MediaStream → AudioContext → WindowNode (Hanning) → FFT Ana
 ### Key Components
 
 #### 1. AudioProcessor (`src/audio/AudioProcessor.js`)
-- **FFT Size**: 4096 (optimized from 32768 for ~85ms latency)
-- **Smoothing**: 0.15 exponential smoothing factor
-- **Analyzer Smoothing**: 0.2 time constant
-- Uses Web Workers for parallel feature extraction
-- Extracts 15 audio features from hypnosound library
+- **FFT Size**: 4096 (`fftSize` constructor arg, `?fft_size=` to override)
+- **Smoothing**: 0.10 exponential smoothing factor (`?smoothing=` to override).
+  ZScore/Normalized keys use `factor * 1.5` so they stay responsive; `pitchClass`
+  is categorical and is never smoothed.
+- **Analyzer Smoothing**: 0.4 `smoothingTimeConstant` on the AnalyserNode
+- **Warm-up**: features ease from neutral values to real ones over the first 120 frames (~2s)
+- Uses one Web Worker per feature for parallel extraction
+- Extracts hypnosound's 14 audio features, each with 11 variations (raw + 10 StatTypes)
 
 #### 2. WorkerRPC (`src/audio/WorkerRPC.js`)
-- Manages worker communication with 30ms timeout
-- Handles feature calculation in parallel
-- Returns smoothed default values on timeout
+- One instance per audio feature; owns that feature's worker
+- Fire-and-forget: `sendData()` posts the FFT frame, `getResult()` returns the most
+  recent message the worker sent back. There is no request/response timeout — a slow
+  worker just means the previous frame's value is reused.
+- Before the first result arrives, `getResult()` returns an all-zero default message
+- Non-finite values from the worker are coerced to 0 by `validateMessage`
 
 #### 3. Visualizer (`src/Visualizer.js`)
 - WebGL2 context with frame buffer ping-ponging
@@ -206,11 +212,12 @@ Group features by domain and pick from DIFFERENT domains for variety:
 ## Performance Optimizations
 
 ### Latency Reduction (from ~1000ms to ~100ms)
-1. **FFT Size**: Reduced from 16384 to 4096 
+1. **FFT Size**: 4096 (down from 16384)
    - Query param: `?fft_size=4096`
-2. **Smoothing**: Reduced from 0.8 to 0.05-0.2
-   - Query param: `?smoothing=0.15`
-3. **Worker Timeout**: Optimized to 30ms
+2. **Smoothing**: 0.10 (down from 0.8)
+   - Query param: `?smoothing=0.10`
+3. **Workers never block the frame**: results are read from the last message received
+   rather than awaited, so a slow feature can't stall rendering
 
 ### Jitter Reduction
 - Exponential smoothing on all features
@@ -328,9 +335,9 @@ uniform float another;   // = 1.2
 ## Query Parameters
 
 ### Core Parameters
-- `shader` - Shader file to load (e.g., `?shader=star`)
+- `shader` - Shader file to load (e.g., `?shader=plasma`)
 - `fft_size` - FFT window size (default: 4096)
-- `smoothing` - Smoothing factor (default: 0.15)
+- `smoothing` - Smoothing factor (default: 0.10)
 - `history_size` - Statistical history buffer (default: 500)
 - `noaudio` - Disable audio input (for testing)
 - `embed` - Embed mode (disables audio)
@@ -438,7 +445,7 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   └── melted-satin/2.frag
 ├── controllers/                 # JS companions to shaders (frame-persistent state)
 │   ├── example.js              # Documented example
-│   └── griz-coat.js            # Drop sustain with exponential decay
+│   └── the-coat.js             # Drop sustain + pitch-change pulse
 ├── scripts/
 │   └── remap-knobs.js          # Utility to remap knob assignments in shaders
 ├── jam.js                       # Jam page UI (knob drawer + spacebar snapshots)
@@ -636,7 +643,7 @@ The installed PWA opens with whatever URL the user was on when they installed. F
 - `index.html` — manifest link injection + 7-tap install trigger
 - `vite-plugins/shader-plugin.js` — `prettifyShaderName()`, `makeManifest()`, `generateManifests()`
 - `public/icons/` — shared PWA icons (all shaders use the same set)
-- `service-worker.js` — offline caching
+- `public/service-worker.js` — offline caching (must live in `public/` to reach `dist/`)
 
 ## ChromaDepth Shader Variants
 
@@ -681,7 +688,7 @@ ChromaDepth 3D glasses create depth from color: red=near, green=middle, blue/vio
 `?shader=plasma&fft_size=8192&smoothing=0.08`
 
 ### Balanced (default)
-`?shader=plasma&fft_size=4096&smoothing=0.15`
+`?shader=plasma&fft_size=4096&smoothing=0.10`
 
 ## Advanced Topics
 

@@ -144,14 +144,19 @@ export const detectsAspectRatio = (content) => {
  * @returns {string[]} Array of feature names
  */
 export const getUsedAudioFeatures = (content) => {
+  // hypnosound's AudioFeatures, each of which carries every variation below.
   const features = [
     'bass', 'mids', 'treble', 'energy',
     'spectralCentroid', 'spectralFlux', 'spectralSpread', 'spectralRolloff',
     'spectralRoughness', 'spectralKurtosis', 'spectralEntropy', 'spectralCrest',
-    'spectralSkew', 'pitchClass', 'beat'
+    'spectralSkew', 'pitchClass'
   ]
 
-  const variations = ['', 'Normalized', 'Mean', 'Median', 'Min', 'Max', 'StandardDeviation', 'ZScore']
+  // '' is the raw value; the rest are hypnosound's StatTypes.
+  const variations = [
+    '', 'Normalized', 'Mean', 'Median', 'Min', 'Max',
+    'StandardDeviation', 'ZScore', 'Slope', 'Intercept', 'RSquared'
+  ]
 
   const used = new Set()
 
@@ -163,6 +168,9 @@ export const getUsedAudioFeatures = (content) => {
       }
     })
   })
+
+  // beat is a bool uniform, not a statistical feature — it has no variations.
+  if (/\bbeat\b/.test(content)) used.add('beat')
 
   return Array.from(used).sort()
 }

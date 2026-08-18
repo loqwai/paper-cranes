@@ -35,18 +35,18 @@ If you've done web development before, the following steps should be pretty fami
 1. `npm install`
 2. `npm run dev`
 
-This will serve beadfamous on localhost:6969
+This will serve beadfamous on localhost:6969. The port is derived from the branch name (`main` = 6969, other branches hash to their own port) so several worktrees can run `npm run dev` at once — run `./scripts/dev-port` to print the port for the current branch.
 
 ## Viewing the visualizations
 
-Pick a shader from `shaders/` and load it via the `?shader` param — e.g. [localhost:6969/?shader=star](http://localhost:6969/?shader=star) loads `shaders/star.frag`. Browse the full gallery at [visuals.beadfamous.com](https://visuals.beadfamous.com/list.html).
+Pick a shader from `shaders/` and load it via the `?shader` param — e.g. [localhost:6969/?shader=plasma](http://localhost:6969/?shader=plasma) loads `shaders/plasma.frag`. Browse the full gallery at [visuals.beadfamous.com](https://visuals.beadfamous.com/list.html).
 
 ## Fun developer features
 
 - **Any URL param is a shader uniform** — add `?myParam=0.5` to the URL and it's instantly available as `uniform float myParam` in your GLSL. Override audio features the same way (`?bassNormalized=0.8&energyZScore=1.2`) to simulate different musical conditions without needing a microphone, making iteration fast and deterministic.
 - **Live remote control via WebSocket** — open `edit.html?remote=control` on your laptop and `?remote=display` on a TV or projector. Every shader edit and knob change broadcasts in real-time to all connected displays. Write code on your laptop and watch it update on the big screen instantly, mid-performance.
 - **[MIDI controllers](docs/midi-mapping.md) for live tweaking and debugging** — physical knobs (mapped to `knob_1`–`knob_200`) are injected as shader uniforms in real-time. Controllers auto-map and profiles persist per device. Swap out any audio feature for a knob with a one-line `#define` change (`#define BRIGHTNESS (knob_71)`) to tune constants by hand before wiring them back to audio, or to take live control of a visualization on stage without touching the keyboard.
-- **165 audio uniforms with musical intelligence** — 15 audio features (bass, treble, spectral entropy, pitch class, etc.) each expose 11 statistical variations including `zScore` (is this a drop?), `slope` (is energy building?), and `rSquared` (how confident is that trend?). Shaders can reason about where the music is _going_, not just where it is right now.
+- **154 audio uniforms with musical intelligence** — 14 audio features (bass, treble, spectral entropy, pitch class, etc.) each expose 11 statistical variations including `zScore` (is this a drop?), `slope` (is energy building?), and `rSquared` (how confident is that trend?). Shaders can reason about where the music is _going_, not just where it is right now.
 - **[Multiplayer editor](docs/multiplayer-editor.md)** — Multiple people can edit the same shader simultaneously with live cursors and real-time sync. Each tab gets a random identity with a colored cursor.
 - **[Editor-filesystem sync](docs/editor-filesystem-sync.md)** — In dev mode, Ctrl+S writes to disk and external file changes push back into the editor via HMR. Works alongside multiplayer without stomping edits.
 - **[Deterministic audio for testing](docs/audio-file-playback.md)** — Use `?audio_file=<url>` to play a specific audio file through the analyzer. Combine with `?time=10.0` for reproducible screenshots.
@@ -60,7 +60,7 @@ Pick a shader from `shaders/` and load it via the `?shader` param — e.g. [loca
 | `audio_file` | `?audio_file=test.mp3` | Play a deterministic audio file through the analyzer |
 | `noaudio` | `?noaudio=true` | Disable audio input entirely (for visual testing) |
 | `fft_size` | `?fft_size=4096` | FFT window size (default: 4096) |
-| `smoothing` | `?smoothing=0.15` | Smoothing factor (default: 0.15) |
+| `smoothing` | `?smoothing=0.1` | Smoothing factor (default: 0.10) |
 | `history_size` | `?history_size=500` | Statistical history buffer size (default: 500) |
 | `fullscreen` | `?fullscreen=true` | Start in fullscreen mode |
 | `remote` | `?remote=display` | Remote mode: `display` (receive) or `control` (send) |

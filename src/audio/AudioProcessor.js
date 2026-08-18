@@ -1,8 +1,6 @@
 import { StatTypes, AudioFeatures } from 'hypnosound'
 import { WorkerRPC } from './WorkerRPC.js'
 
-// Workers compute these but hypnosound's StatTypes doesn't include them
-const AllStatTypes = [...StatTypes, 'slope', 'intercept', 'rSquared']
 
 // Neutral values for each stat type during warm-up (what the shader sees when audio hasn't "arrived" yet)
 const neutralValues = {
@@ -32,7 +30,7 @@ export const getFlatAudioFeatures = (audioFeatures = AudioFeatures, rawFeatures 
     const features = {}
     for (const feature of audioFeatures) {
         const featureKey = feature.charAt(0).toLowerCase() + feature.slice(1)
-        for (const propertyKey of AllStatTypes) {
+        for (const propertyKey of StatTypes) {
             const key = `${featureKey}${propertyKey.charAt(0).toUpperCase() + propertyKey.slice(1)}`
             features[key] = rawFeatures[feature]?.stats[propertyKey]
         }
