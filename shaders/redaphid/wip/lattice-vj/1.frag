@@ -56,6 +56,7 @@ uniform float morphPhase;
 uniform float quietGate;
 uniform float evoWarp;
 uniform float evoPlasma;
+uniform float wubDepth;            // wobble AMPLITUDE (wavelet-ease) — deepens cell breathing on wubby tracks
 // ── lattice-nav: navigation + PERMANENT live mutation ──
 uniform float navX;          // world pan X (drag, accumulates)
 uniform float navY;          // world pan Y
@@ -164,7 +165,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     gKick  = clamp(max(waveletBassZScore, 0.0), 0.0, 1.0) * 0.5 + clamp(wavelet_bassHit, 0.0, 1.0) * 0.3;
     gPulse = fract(flowPhase * 0.6 + bTime * 0.18);
     float bassPulse = waveletBassSpring * quietGate;
-    gHexR   = 0.60 + waveletBand2Spring * 0.12 * quietGate;
+    gHexR   = 0.60 + waveletBand2Spring * 0.12 * quietGate * (1.0 + wubDepth * 0.8);
     gBorder = 0.10 + waveletBand5Spring * 0.06 * quietGate;
     gCross  = 0.20 - bassPulse * 0.05;
     gFill   = 0.06 + waveletBand5Spring * 0.035 * quietGate;
@@ -252,7 +253,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float sparkPatch = 0.5 + 0.5 * sin(scr.x * 6.0 + scr.y * 4.3 - bTime * 2.0); // drifting concentration patches
     float spark = pow(g1 * g2, 16.0) * sparkPatch;
     col += vec3(1.0, 0.97, 0.92) * spark * clamp(alpha, 0.0, 1.0)
-         * (waveletBand5Spring * 0.25 + spectralCrestSmooth * 0.22 + spectralRoughnessSmooth * 0.12) * quietGate;
+         * (waveletBand5Spring * 0.25 + spectralCrestSmooth * 0.22 + spectralRoughnessSmooth * 0.12)
+         // AIR follows BRIGHTNESS: hissy/bright passages glint, bass-heavy ones settle. Uses the
+         // centroid SPRING (smoothed, and not a fader the phone can pin) so the shimmer keeps
+         // answering the music even while the VJ is hand-driving the other two terms.
+         * (0.55 + waveletCentroidSpring * 0.9) * quietGate;
 
     // GLOW LIFT — gamma up + gain so mid-tones emit; high chroma keeps it NEON, not washed out.
     col = pow(clamp(col, 0.0, 1.0), vec3(0.80));
