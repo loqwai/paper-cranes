@@ -1,0 +1,456 @@
+/* Paper Cranes VJ PAD — a five-finger control surface for a dark room.
+   Sibling of vj.css (the dial page); deliberately a separate stylesheet so the
+   known-good dial page cannot be broken by anything in here.
+
+   The whole design rule: your hand should find a parameter by WHERE IT IS on the
+   glass, not by remembering which finger you put down first. So the pads are
+   fixed, labelled zones with permanent on-screen readouts, bright enough to read
+   at arm's length in the dark, and big enough to land a finger on without looking. */
+
+:root {
+    --bg: #000;
+    --panel: #121216;
+    --line: #33333d;
+    --ink: #fff;
+    --ink-dim: #9a9aa8;
+    --live: #22c55e;
+    --dead: #ef4444;
+    --warn: #eab308;
+    --accent: #38bdf8;
+}
+
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    overscroll-behavior: none;
+    /* Without this the browser claims the gestures for scroll/pinch-zoom and the
+       whole surface feels dead. This is the single most important line here. */
+    touch-action: none;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    overflow: hidden;
+}
+
+/* ── header ───────────────────────────────────────────────────────────── */
+#bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    flex: 0 0 auto;
+}
+
+.dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--warn);
+    flex: 0 0 auto;
+    box-shadow: 0 0 12px currentColor;
+}
+
+.dot.live { background: var(--live); color: var(--live); }
+.dot.dead { background: var(--dead); color: var(--dead); }
+.dot.wait { background: var(--warn); color: var(--warn); }
+
+#status {
+    font-size: 13px;
+    font-weight: 700;
+    flex: 1 1 auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Live count of the fingers the page is tracking. If this does not say 5 when
+   five fingers are down, the multitouch is broken and you can see it instantly. */
+.fingers {
+    flex: 0 0 auto;
+    min-width: 30px;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    padding: 3px 6px;
+    border-radius: 8px;
+    background: #000;
+    border: 1px solid var(--line);
+    color: var(--ink-dim);
+}
+
+.fingers.on {
+    color: #000;
+    background: var(--live);
+    border-color: var(--live);
+}
+
+.chip {
+    flex: 0 0 auto;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: var(--ink);
+    background: #000;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 7px 9px;
+    text-decoration: none;
+    line-height: 1;
+}
+
+.chip.on {
+    background: var(--live);
+    border-color: var(--live);
+    color: #000;
+}
+
+/* ── bank picker ──────────────────────────────────────────────────────────
+   Which bank this phone holds. Tapping pins it; otherwise phones sort it out
+   between themselves. `.taken` = another phone is already holding that bank. */
+.banks {
+    display: flex;
+    gap: 6px;
+    padding: 6px 8px 0;
+    overflow-x: auto;
+    flex: 0 0 auto;
+    background: var(--panel);
+    touch-action: pan-x;
+}
+
+.bbtn {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    color: var(--ink);
+    background: #000;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 6px 10px;
+    line-height: 1.1;
+}
+
+.bbtn small {
+    font-size: 8px;
+    font-weight: 700;
+    color: var(--ink-dim);
+    letter-spacing: 0.04em;
+}
+
+.bbtn.on {
+    background: var(--live);
+    border-color: var(--live);
+    color: #000;
+}
+
+.bbtn.on small {
+    color: #000a;
+}
+
+.bbtn.taken {
+    opacity: 0.42;
+    border-style: dashed;
+}
+
+/* the honest line: what the current bank actually drives */
+.note {
+    flex: 0 0 auto;
+    padding: 3px 10px 5px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--ink-dim);
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ── shader strip ─────────────────────────────────────────────────────── */
+.shaders {
+    display: flex;
+    gap: 6px;
+    padding: 6px 8px;
+    overflow-x: auto;
+    flex: 0 0 auto;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    /* the one place we WANT a browser gesture: sideways scroll through shaders */
+    touch-action: pan-x;
+}
+
+.sbtn {
+    flex: 0 0 auto;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--ink);
+    background: #000;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 11px;
+    line-height: 1.1;
+}
+
+.sbtn.on {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+}
+
+/* ── the pad grid ─────────────────────────────────────────────────────── */
+#pads {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1.35fr 1fr 1fr;
+    gap: 6px;
+    padding: 6px;
+}
+
+.pad {
+    position: relative;
+    overflow: hidden;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background:
+        radial-gradient(120% 90% at 50% 100%, color-mix(in srgb, var(--hue) 16%, transparent), transparent 70%),
+        #0a0a0d;
+    touch-action: none;
+}
+
+.pad.wide { grid-column: 1 / -1; }
+
+.pad.held {
+    border-color: var(--hue);
+    box-shadow: 0 0 0 1px var(--hue), inset 0 0 26px color-mix(in srgb, var(--hue) 45%, transparent);
+}
+
+/* faint grid so a moving finger reads as movement, not just a floating dot */
+.pad::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(to right, color-mix(in srgb, var(--hue) 18%, transparent) 1px, transparent 1px),
+        linear-gradient(to bottom, color-mix(in srgb, var(--hue) 18%, transparent) 1px, transparent 1px);
+    background-size: 25% 25%;
+    pointer-events: none;
+}
+
+.padname {
+    position: absolute;
+    top: 6px;
+    left: 8px;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.09em;
+    color: var(--hue);
+    pointer-events: none;
+    text-shadow: 0 0 10px color-mix(in srgb, var(--hue) 60%, transparent);
+}
+
+/* axis names live on the edges they belong to, permanently */
+.axis {
+    position: absolute;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: var(--ink-dim);
+    pointer-events: none;
+}
+
+.axis.x {
+    bottom: 4px;
+    left: 8px;
+}
+
+.axis.y {
+    top: 50%;
+    right: 2px;
+    transform: translateY(-50%);
+    writing-mode: vertical-rl;
+}
+
+/* The always-visible value line: this is the pad state when no finger is down.
+   It sits bottom-right, well clear of the pad name — at top-right a wide value
+   like "PALETTE 0.94" ran straight through the name in a dark-room screenshot. */
+.readout {
+    position: absolute;
+    bottom: 4px;
+    right: 12px;
+    font-size: 11px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    pointer-events: none;
+    text-align: right;
+    line-height: 1.25;
+}
+
+.readout .rv { color: var(--hue); }
+
+/* ── the finger ───────────────────────────────────────────────────────── */
+.cursor {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+    will-change: left, top;
+}
+
+/* crosshair rules to the pad edges — readable from across a room */
+.cursor .h,
+.cursor .v {
+    position: absolute;
+    background: var(--hue);
+    opacity: 0.45;
+}
+
+.cursor .h {
+    left: -50vw;
+    width: 100vw;
+    height: 1px;
+    top: 0;
+}
+
+.cursor .v {
+    top: -50vh;
+    height: 100vh;
+    width: 1px;
+    left: 0;
+}
+
+.cursor .ring {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 40px;
+    height: 40px;
+    margin: -20px 0 0 -20px;
+    border-radius: 50%;
+    border: 2px solid var(--hue);
+    background: color-mix(in srgb, var(--hue) 22%, transparent);
+    transition: width .12s, height .12s, margin .12s;
+}
+
+.pad.held .cursor .ring {
+    width: 74px;
+    height: 74px;
+    margin: -37px 0 0 -37px;
+    border-width: 3px;
+    box-shadow: 0 0 30px color-mix(in srgb, var(--hue) 80%, transparent);
+    background: color-mix(in srgb, var(--hue) 34%, transparent);
+}
+
+.pad.held .cursor .h,
+.pad.held .cursor .v {
+    opacity: 1;
+}
+
+/* the tag that names what THIS finger is holding, right next to the finger */
+.cursor .tag {
+    position: absolute;
+    left: 44px;
+    top: -14px;
+    padding: 3px 6px;
+    border-radius: 7px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid var(--hue);
+    color: var(--ink);
+    font-size: 11px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    opacity: 0;
+    line-height: 1.2;
+}
+
+.pad.held .cursor .tag {
+    opacity: 1;
+}
+
+/* Near the right edge the tag would run off the pad and get clipped, so it
+   flips to the other side of the finger instead. */
+.cursor.flip .tag {
+    left: auto;
+    right: 44px;
+}
+
+/* ── footer ───────────────────────────────────────────────────────────── */
+#foot {
+    display: flex;
+    gap: 6px;
+    padding: 6px;
+    flex: 0 0 auto;
+    background: var(--panel);
+    border-top: 1px solid var(--line);
+}
+
+.bigbtn {
+    flex: 1 1 0;
+    min-height: 52px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    color: var(--ink);
+    background: #000;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+}
+
+.bigbtn small {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--ink-dim);
+    letter-spacing: 0;
+}
+
+.bigbtn:active {
+    background: var(--panel);
+}
+
+/* Landscape: the pads want the height back, so they go three across. */
+@media (orientation: landscape) and (max-height: 520px) {
+    #pads {
+        grid-template-rows: 1fr 1fr;
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .pad.wide {
+        grid-column: auto;
+    }
+
+    .bigbtn {
+        min-height: 42px;
+    }
+}
