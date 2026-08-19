@@ -1,15 +1,38 @@
-# vibej v2 — Live Auto-VJ Loop (responsive-session edition) — DRAFT
+---
+name: vibej2
+description: "vibej v2 (TEST) — live auto-VJ as a responsive in-session loop instead of a cron. Burst-mode iteration (chains beats in-turn, browser-side waits), page-as-sensor wakes (?vj=1 + /__vj-signal + Monitor), atomic edit macro, ScheduleWakeup heartbeat for idle holds. Usage: `/vibej2 [duration|count] [shader-path-or-name]`, `/vibej2 stop|pause|tick`. v1 (/vibej) remains untouched until this graduates."
+allowed-tools: Bash Read Write Edit Grep Glob ScheduleWakeup Monitor TaskOutput TaskStop CronCreate CronList CronDelete mcp__chrome-devtools__list_pages mcp__chrome-devtools__new_page mcp__chrome-devtools__select_page mcp__chrome-devtools__navigate_page mcp__chrome-devtools__evaluate_script mcp__chrome-devtools__take_screenshot mcp__chrome-devtools__wait_for mcp__chrome-devtools__list_console_messages mcp__claude-in-chrome__tabs_context_mcp mcp__claude-in-chrome__tabs_create_mcp mcp__claude-in-chrome__navigate mcp__claude-in-chrome__javascript_tool mcp__claude-in-chrome__computer
+---
 
-> **NOW LIVE FOR TESTING as `/vibej2`** (`.claude/skills/vibej2/SKILL.md`, 2026-08-19). This draft
-> stays as the design reference; edits go to the vibej2 copy from here on.
+# vibej2 — Live Auto-VJ Loop (responsive-session edition)
 
 Run Claude as the VJ: one **live session** that watches the frame, listens to you, and makes at
 most one meaningful edit per beat. Non-destructive by default (edits `.frag` via `/__save-shader`,
-HMR hot-swaps). v2 replaces the per-minute cron with a self-paced in-session loop (the Relay
-coordinator pattern): **user messages reach the VJ in seconds, not at the next minute mark.**
+HMR hot-swaps). Replaces the per-minute cron with a self-paced in-session loop (the Relay
+coordinator pattern): **user messages reach the VJ in seconds, not at the next minute mark**, and
+iteration speed is maxed — burst mode chains beats without ending the turn.
 
-> **Aliases:** `/vibej` canonical, `/vj` legacy. State file stays `.claude/vj-state.json`
-> (recovery snapshot only — no longer bumped every beat).
+> **TEST SKILL.** `/vibej2` while under evaluation; v1 `/vibej` (+ `/vj`) is untouched and remains
+> the fallback. State file is SHARED: `.claude/vj-state.json` (recovery snapshot only — not bumped
+> every beat) — don't run both loops at once. Design + rationale: `.claude/skills/vibej/DESIGN-v2.md`.
+> When this graduates, its body replaces `.claude/skills/vibej/SKILL.md` and the name reverts.
+
+## Context
+
+Arguments:
+!`echo "$ARGUMENTS"`
+
+Dev server port (from `scripts/dev-port` — branch-derived, `PORT` env overrides):
+!`./scripts/dev-port`
+
+Dev server status:
+!`PORT=$(./scripts/dev-port); curl -s -o /dev/null -w "%{http_code}" http://localhost:$PORT/ 2>/dev/null || echo "not running"`
+
+Existing state file (if a run is in progress):
+!`cat .claude/vj-state.json 2>/dev/null || echo "(none)"`
+
+Recent page signals (page-as-sensor; empty until a ?vj=1 page has booted):
+!`tail -5 .claude/vj-signals.jsonl 2>/dev/null || echo "(none)"`
 
 ## Philosophy (unchanged where it worked)
 
@@ -30,7 +53,7 @@ coordinator pattern): **user messages reach the VJ in seconds, not at the next m
 
 ## Arguments
 
-`/vibej [duration|count] [shader-path-or-name] [mode]`
+`/vibej2 [duration|count] [shader-path-or-name] [mode]`
 
 - **No args** → run until stopped, shader = most recently modified `.frag`.
 - **Duration** (`90m`, `2h`) or bare integer (legacy: beat count) → soft budget; announce and
@@ -39,15 +62,15 @@ coordinator pattern): **user messages reach the VJ in seconds, not at the next m
   name / URL with `?shader=`). Normalize to no-ext form.
 - **`stop`** → end: `ScheduleWakeup(stop: true)`, TaskList → TaskStop any vibej monitors, final
   journal entry, delete `.claude/vj-state.json`, one-line wrap-up.
-- **`pause`** → `ScheduleWakeup(stop: true)` only; keep monitors + state; `/vibej` resumes.
+- **`pause`** → `ScheduleWakeup(stop: true)` only; keep monitors + state; `/vibej2` resumes.
 - **`tick`** → run exactly one Beat then return (kept for old cron fires and manual pokes).
-- **`cron`** → fallback mode: behave as v1 (CronCreate `* * * * *` + `/vibej tick`). Use ONLY
+- **`cron`** → fallback mode: behave as v1 (CronCreate `* * * * *` + `/vibej2 tick`). Use ONLY
   when ScheduleWakeup is unavailable in the harness.
 
 Mid-run re-invocation with a shader arg = shader swap (same procedure as v1, plus: bring it up
 with a known preset AND screenshot before the crowd sees three states).
 
-## Setup (once, at `/vibej` start — this is the pre-show checklist)
+## Setup (once, at `/vibej2` start — this is the pre-show checklist)
 
 1. Port from `./scripts/dev-port`; start `npm run dev &` if the server isn't answering.
 2. Ensure jam/display + music tabs exist (same as v1); record page ids. Re-discover ids via
@@ -161,7 +184,7 @@ suspicion, or every ~4th cycle. Delegate anything heavy to a subagent. If contex
 harness compacts and the wakeup prompt re-enters the skill — state must already be in the
 journal/snapshot by then (write-as-you-go, not at the end).
 
-Pass the original `/vibej …` input as the wakeup `prompt` so a post-compaction fire re-enters
+Pass the original `/vibej2 …` input as the wakeup `prompt` so a post-compaction fire re-enters
 the skill. If a beat budget/duration was set and reached → run the stop procedure instead.
 
 ### Atomic edit macro (un-skippable, one call)
@@ -199,8 +222,8 @@ with the same marker converges to live-or-reverted.
 
 - **Stop**: wakeup `stop:true` → TaskStop monitors → final journal Status line → rm
   `.claude/vj-state.json` → one-line wrap-up (+ push if the user asked for branch backups).
-- **Pause**: wakeup `stop:true` only; everything else stays; `/vibej` resumes in-context.
-- **Crash/compaction**: fresh `/vibej` reads the snapshot + journal Status, re-discovers page
+- **Pause**: wakeup `stop:true` only; everything else stays; `/vibej2` resumes in-context.
+- **Crash/compaction**: fresh `/vibej2` reads the snapshot + journal Status, re-discovers page
   ids, ensures the runtime, and — before any new move — **verifies which markers are actually in
   `window.cranes.shader`** (live-ness is exactly what an interrupt makes uncertain), then resumes
   beats. Discard the first meter window after any resume.
@@ -216,7 +239,7 @@ boot (cursor-hide, `__vjValidate`, aesthetic meter + shiver probe) and POSTs sig
   `too-dark` (lumMin < 0.06 at clean gate), `shiver` (shiverScore > 0.45), `gate-drop` /
   `gate-clean` (track boundaries — `gate-clean` is your "verification window open" starter gun).
 
-**At `/vibej` start, arm a Monitor** on `.claude/vj-signals.jsonl` (watch for appended lines) so
+**At `/vibej2` start, arm a Monitor** on `.claude/vj-signals.jsonl` (watch for appended lines) so
 these signals wake the idle session within seconds. Monitor is the accelerator; the ScheduleWakeup
 heartbeat stays armed as the guarantee. In burst mode you don't need the Monitor to react — you
 can also just `GET /__vj-signal` (last 50 signals) or read the file between beats.
