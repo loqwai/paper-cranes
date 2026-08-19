@@ -131,8 +131,12 @@ vec4 fractal(vec2 p){
         // opposite directions, and every sectionMode step swaps the parity — eased through sectionMix,
         // so on a drop the per-level spin passes through zero and re-winds the other way (visible
         // "reset + re-spin" of the whole lattice, no snap, no warp).
-        float sgnNew = (mod(float(i) + sectionMode, 2.0) < 1.0) ? 1.0 : -1.0;
-        float sgn    = sgnNew * (2.0 * sectionMix - 1.0);
+        // iter143 NO-ANGLE-AUDIO: parity is now FIXED per level. The old form multiplied by
+        // (2*sectionMix-1), so every drop drove sgn from -1 through ZERO back to +1 — the per-level
+        // spin literally reversed and re-wound. That is a bounce by construction (iris rule: never
+        // let audio/events move an ANGLE backward). Evolution on drops lives in the evoA-evoD
+        // plateaus + paletteShift instead, which are one-way.
+        float sgn = (mod(float(i), 2.0) < 1.0) ? 1.0 : -1.0;
         float theta = float(i) * PI * 0.125
                     + gSpin * (0.4 + float(i) * 0.05) * sgn
                     + (evoWarp - 0.5) * float(i) * 0.10
@@ -197,7 +201,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     gKick  = smoothstep(0.25, 0.9, max(clamp(wavelet_bassHit, 0.0, 1.0), clamp(wavelet_bassHitSmooth * 1.3, 0.0, 1.0)) * 0.6
                                  + clamp(wavelet_punch,   0.0, 1.0) * 0.6);   // vj2 iter 7: attack = raw hit, TAIL = smoothed hit (~0.2 s EMA) → each kick is a short envelope, not a 1-frame spike (meter: onset gain was 1.07 = kicks invisible)
     gPulse = fract(flowPhase * 0.6 + bTime * 0.18);
-    gSpin  = gKick * 0.015;                                   // KICK TWIST (0.04 → 0.015, vj2 iter 2: user 'twitchy' on dubstep — constant hits made the fold flick) (iter 26): every kick torques the fold a few degrees per level (structural, not colour)
+    gSpin  = 0.0;   // iter143 NO-ANGLE-AUDIO: KICK TWIST DELETED. gKick rises and FALLS, so adding it to theta torqued the fold forward on each hit then UNWOUND it — rocking, scaled by (0.4+i*0.05) so deeper levels rocked hardest = 'sections bouncing'. Iris discipline: audio drives RATE/SHAPE/amplitude, never an angle. The kick keeps its shading role (relief + lit) untouched.                                   // KICK TWIST (0.04 → 0.015, vj2 iter 2: user 'twitchy' on dubstep — constant hits made the fold flick) (iter 26): every kick torques the fold a few degrees per level (structural, not colour)
     float bassPulse = bassLive * quietGate;
     // ── SLOW SHAPE EVOLUTION (user iter 11: "a time component so we slowly see different shapes") ──
     //    Aperiodic sums of sub-0.01Hz sines (plasma-journal rule: <1Hz reads as brooding, not jittery)

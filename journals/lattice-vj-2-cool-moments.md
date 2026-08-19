@@ -412,3 +412,43 @@ Session ended at iter ~142/180 ("shutting down for the night"). Cron deleted, st
 - `[ ] controller-side "recenter" action — snap nav so a symmetry center lands at screen center (iter 137 was a hand-measured one-off).`
 - `[ ] re-measure CENTER TRIM after any nav change.`
 - `[ ] CALIBRATE the shiver probe (see explore-2026-08-18/NOTES.md addendum) — do this alongside the iter-142 live verification; the probe is the tool that turns 'is it still shivering?' into a number.`
+
+### Iter 143 (2026-08-19) — THE BOUNCE, FOUND AND KILLED: audio was still on an ANGLE
+- **User (5th escalation of the same complaint):** "I see the sections of the visual 'bouncing' still."
+  Then, after the fix, live: **"It actually stopped the bouncing somehow."** ✅
+- **Why iter 142 didn't fix it:** 142 stripped audio + oscillators from the fold PARAMS (gHexR,
+  gCross, gScale, gDepthFocus) but left two mechanisms on the **rotation ANGLE**, which is where the
+  bounce actually lived. Reading the param assignments and declaring geometry "frozen" missed it
+  because `theta` is built inside the recursion loop, not in the param block.
+- **Culprit A (the rhythmic bounce): `gSpin = gKick * 0.015`** fed into
+  `theta += gSpin*(0.4 + i*0.05)*sgn`. gKick rises AND FALLS, so every kick torqued the fold forward
+  and then **unwound it backward** — scaled by `(0.4+i*0.05)`, so the deepest levels rocked hardest.
+  That is "sections bouncing", once per kick. (The comment even said "unwinds as the kick decays" —
+  written as a feature, experienced as the complaint.) **DELETED**; gKick keeps its shading role.
+- **Culprit B (the drop bounce): `sgn = sgnNew * (2.0*sectionMix - 1.0)`.** Each sectionMode step
+  restarted sectionMix at 0, driving sgn from −1 through **zero** back to +1: the per-level spin
+  reversed and re-wound over ~4 s. A deliberate "reset + re-spin" that is, by construction, the
+  back-and-forth the user has vetoed since iter 118. **Replaced with fixed per-level parity**
+  (`mod(i,2)`), independent of sectionMode. Drop evolution still happens via the evoA–evoD plateaus.
+- **THE RULE (iris/1 §1, now proven on lattice too — generalize it):** *audio and events modulate
+  RATE / SHAPE / AMPLITUDE, never an ANGLE.* Anything added to an angle that can FALL will unwind.
+  Corollary learned here: **"geometry takes no audio" must be audited at the ANGLE, not just at the
+  parameter assignments** — check every term inside `rot2()` / `theta`, including sign factors.
+- **Meter (32 s, post-fix):** motion↔kick correlation **0.026** (was the coupling driving the rock),
+  flicker **0.75 → 0.35**, clip 0, sectionMode stepped 1→2 mid-window with no reported bounce.
+- `[x]` closes the iters 138/141/142 oscillation saga — four partial fixes; the decisive one was a
+  two-line SUBTRACTION found by reading the angle, exactly as the skill's "one decisive pass" says.
+
+### Iter 143b — BUG: lattice-nav ignores URL nav/palette presets
+- `controllers/lattice-nav.js` initialises `navX=0, navY=0, zoom=1, paletteShift=0, warpGrow=0` and
+  **never seeds from the URL**. Controller output is merged LAST, so `?navX=2.495&navY=-0.818&
+  navZoom=0.432&paletteShift=0.6&warpGrow=0.95` in the HANDOFF resume URL is silently overwritten
+  every frame. Every preset that includes nav/palette state is therefore a no-op with this controller.
+- Not fixed this iter (frame reads well centred at nav 0,0,zoom 1 — the iter-137 CENTER TRIM is a
+  world-space constant and still lands the symmetry axis on screen centre). Fix = seed the let-bindings
+  from URLSearchParams in make(), then re-measure CENTER TRIM.
+- Ops note: **controller outputs live in `window.cranes.controllerFeatures`, NOT
+  `measuredAudioFeatures`** (which holds only the 155 raw audio features). Looking in the wrong bag
+  makes sectionMode/wavelet look "missing" when they're fine.
+- Ops note: **`javascript_tool` calls die at the 45 s CDP timeout** — browser-side verification waits
+  must be ≤ ~35 s. A 70 s window kills the call and loses the observation.
