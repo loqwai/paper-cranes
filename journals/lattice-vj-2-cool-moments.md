@@ -479,3 +479,49 @@ Session ended at iter ~142/180 ("shutting down for the night"). Cron deleted, st
   gDepthFocus/band weighting shifts the `field` distribution, which feeds the palette coord `s` — so
   detail-density reactivity moves hue INDIRECTLY. Confirm over a longer clean window; if real, damp
   the field->hue coupling, not the reactivity.`
+
+### Iters 146-149b — the brightness pump, the flyby, and the blur (all in one live stretch)
+- **iter146 RELIEF NOT GAIN** (user: "the color still seems flickery on a global scale with the music
+  - like it brightens and washes out"). The per-level multiplier ran 1.03 -> 2.78 with the music and
+  multiplies EVERY pixel; `lum` feeds LIGHTNESS in lush(), so loud music raised whole-frame lightness
+  and desaturated it. Audio moved into RELIEF (line-vs-fill contrast, inside the smoothstep); the
+  global multiplier keeps only small CENTRED terms.
+- **METER LESSON (important):** `motionVsEnergy` CANNOT distinguish musical reactivity from
+  whole-frame brightness pumping. The 0.67 I celebrated at iter 144 WAS the user's complaint. Use
+  rResid as the musicality needle, and check lum-vs-energy correlation directly when the user says
+  "washes out". After the fix: lumVsEnergy 0.108, flicker 0.14 (session low), clip 0.
+- **iter148 found a SECOND global multiplier** the earlier fix missed: `col *= 1.0 + bassPulse*0.06 +
+  dropGlow*0.13 + gKick*0.05` — bass AND kick on the global mult, which directive #1 forbids outright.
+  Now `col *= 1.06 + (dropGlow-0.5)*0.05`. **Rule: when hunting a global-brightness complaint, grep
+  for EVERY `col *=` in the file — there was one per stage and fixing one felt like fixing it.**
+- **iter147 FLYBY** (user: "zoom out, fly slowly somewhere else, then zoom in. Keep state via the
+  controller so we keep going to new places" / "by chaining the query params"). New
+  `controllers/flyby.js`, chained: `?controller=lattice-nav&controller=flyby`. cruise 26s -> wide 7s
+  -> travel 13s -> in 7s; travel happens ONLY while wide (panning at full magnification is what read
+  as "scrolling" in the vj2 iter-2 veto); every leg a one-way smoothstep, rates audio-free; departs
+  early on a drop. Accumulated offset => never revisits. Single-owner guard so live hot-injection
+  can't stack two machines (it did, once — two flybys fighting over the zoom).
+- **iter149 BLUR — user: "it seems blurrier than it used to be 24h or so ago. is it?" YES.** Measured
+  edge energy vs flyby zoom and the result INVERTED my assumption: wide was the SHARPEST state
+  (0.09) and close cruise the blurriest (0.02). Root cause: the line profile was 0.4 crisp / 0.6 SOFT
+  with the soft term ramping over 0.12 world units — zoomed in that ramp covers many pixels and every
+  line smears; zoomed out it is sub-pixel. Fixed to 0.65 crisp / 0.35 soft with the ramp halved to
+  0.06. Frame came back crisp and detailed immediately (best-looking state of the session).
+- **iter149b — I had to undo my own iter148 guess.** I had biased gDepthFocus COARSE while wide,
+  assuming the wide leg aliased into mush. The measurement said the opposite, and 0.30 of coarse bias
+  stripped the wide shot to a few soft blobs. Cut to 0.08. **Rule: measure BEFORE compensating; an
+  "obvious" anti-alias compensation can be exactly backwards.**
+- **BUGFIX `controllers/lattice-nav.js`: nav/palette now SEED FROM THE URL.** They were hard-coded to
+  0/0/1 and merged last, silently overwriting `?navX=/?navY=/?navZoom=/?paletteShift=/?warpGrow=`, so
+  every preset carrying a camera position was a no-op. This is what made the shader look "blurrier
+  than yesterday": the preset's navZoom=0.432 never applied, so it sat 2.3x more zoomed in than the
+  tuned state. Symptom -> cause chain worth remembering: "looks different from yesterday" can be a
+  PRESET-RESTORE bug, not a rendering change.
+- **OPS: `document.visibilityState === 'hidden'` freezes everything.** Chrome pauses rAF on a
+  backgrounded tab: frameCount stops, the controller stops being called, meter windows go stale.
+  Check visibility BEFORE diagnosing a "dead loop" — nothing was broken. Also: the dev server died
+  mid-session (fetch failures), and restarting it re-runs index.js, which STOMPS a hot-injected
+  controller chain.
+- **OPS: always re-park the claude-in-chrome cursor after every screenshot** (user had to ask twice).
+  Two separate things: `cursor:none` CSS governs the wall and a RELOAD WIPES IT; the parked pointer
+  keeps captures clean. vibej2 SKILL.md step B0 updated from a four-word aside to an explicit rule.

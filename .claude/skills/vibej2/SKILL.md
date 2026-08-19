@@ -140,7 +140,16 @@ Order within a Beat:
 1. **Ensure page runtime** (call above). If `'reinstalled'`, note the reload, skip metric-driven
    moves this beat.
 2. **B0 LOOK** — screenshot the display tab; judge visually (clip? dark floor? focal point?
-   legible? shivering?). Re-park cursor after.
+   legible? shivering?).
+   **THEN IMMEDIATELY RE-PARK THE CURSOR — `hover` to the bottom-right corner. Every time. This is
+   part of the screenshot, not an optional follow-up.** Taking a screenshot moves the real pointer
+   onto the wall, and a pointer sitting in the middle of a projected visual is the single most
+   obvious tell that a human is not driving. The user has had to ask for this out loud; do not make
+   them ask again. Two separate things must both be true:
+   - `cursor:none` CSS present (`#__vj-nocursor`) — governs the WALL. **A page reload wipes it**, so
+     re-assert it on every `'reinstalled'` and after any navigate.
+   - the pointer parked in the corner — governs where it sits if the CSS ever fails, and keeps
+     captures clean.
 3. **Meter** — `__vjMeter.summary(50)` + `residR(50)`. **If gate < 0.9 (track boundary): make no
    metric-driven move; stay in-turn and wait ~20 s browser-side, then re-check — never burn a
    wakeup on a dirty window (and note the 60 s wakeup floor makes short wakeups impossible

@@ -80,6 +80,7 @@ uniform float evoPhase;            // wavelet-ease: monotonic set clock (~1 unit
 uniform float navX;          // world pan X (drag, accumulates)
 uniform float navY;          // world pan Y
 uniform float navZoom;       // pinch-zoom (0 → treated as 1)
+uniform float flybyZoom;     // iter148: controllers/flyby.js arc position — 1 = cruising in close, ~0.24 = wide
 uniform float paletteShift;  // PERMANENT palette rotation — grows on every big drop
 uniform float warpGrow;      // PERMANENT structural warp — grows on every big drop
 // waveletBassZScore + wavelet_bassHit auto-declare (raw) — transient pulse punch only.
@@ -155,8 +156,14 @@ vec4 fractal(vec2 p){
         float delt2 = min(length(uv) - gCross, min(uv.x, uv.y)) + gCrossBias; // BASS taut cross (+K139 hex↔cross balance)
         float m = min(delt1, delt2);
         float alias = aliasBase * 0.5 * scale;
-        float f = smoothstep(gBorder + alias, gBorder, m) * 0.4
-                + smoothstep(gBorder + 0.12, gBorder + 0.01, m) * 0.6;   // TREBLE fattens lines
+        // iter149 LINE PROFILE (user: "it seems blurrier than it used to be"): the intensity split was
+        //    0.4 crisp / 0.6 SOFT, and the soft term ramps over 0.12 world units. Zoomed in that ramp
+        //    covers a lot of screen and every line reads as a smear; zoomed out it is sub-pixel and
+        //    looks fine — which is why the flyby's WIDE leg measured SHARPER than the close cruise
+        //    (edge energy 0.09 wide vs 0.02 in). Weight moved to the crisp term and the soft ramp
+        //    halved: the glow still fattens lines on treble, it just stops dissolving them.
+        float f = smoothstep(gBorder + alias, gBorder, m) * 0.65
+                + smoothstep(gBorder + 0.06, gBorder + 0.01, m) * 0.35;   // TREBLE fattens lines
 
         float ld = float(i - FIRST) / float(LEVELS - 1 - FIRST);
         // LEVEL WINDOW (iter 14, fractal permutation): which recursion DEPTHS draw. gDepthFocus 0 →
@@ -181,7 +188,7 @@ vec4 fractal(vec2 p){
         //    Fix: audio now drives RELIEF — the CONTRAST between lattice line and fill, inside the
         //    smoothstep — which is local and per-depth. The global multiplier keeps only small
         //    CENTRED terms about a constant, so mean frame brightness no longer follows the music.
-        float relief = (band - 0.35) * 0.55 * quietGate;
+        float relief = max(0.0, (band - 0.35)) * 0.75 * quietGate;   // iter148: was signed — when `band` sat below centre it SUBTRACTED contrast and softened every edge (user: 'blurrier than 24h ago'). Relief may only ever sharpen; the quiet baseline is now the floor, not the middle.
         float lit = (smoothstep(gFill + alias, gFill, m) * (0.5 + relief) + 0.18)
                   * (1.55 + (glowLive - 0.45) * 0.12 + (bassLive - 0.45) * quietGate * 0.12);   /* iter144: band 0.55->0.95 — treble lights the NEAR levels, mids the middle, bass the FAR ones, so the instruments visibly separate across recursion depth instead of blending into one brightness */   // iter 116: floor 0.95→1.03 — lumMin 0.068 on mellow Of The Trees, just under the 0.08 line   // vj2 iter 9: was 0.7/.4/.7/.6 (range 0.7→2.4): on a quiet intro (energy 0.074) the frame fell to near-BLACK. Floor up, music range compressed (0.95→2.3) — a breakdown dims, it doesn't vanish.
         lit += wave * (0.4 + gPop * 0.7 + gKick * 1.2 + spectralCrestSmooth * 0.35);
@@ -253,7 +260,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     gHexR  += (knob_134 - 0.5) * 0.15 * bank4;                // K134 CELL RADIUS
     gScale  = 2.0 + evoC * 0.14 + (knob_131 - 0.5) * 0.5 * bank4;   /* iter 142: FOLD RATIO = section plateau. The spectral-width term moved every mirror seam at every level — the 'overlapping kaleidoscope sections breathing' the user called out. */   // vj2 iter 10: SPECTRAL WIDTH → FOLD RATIO. Wide/dense spectrum (spread ~0.85) opens the self-similarity ratio (+0.12), a narrow one tightens it (−0.15). Median → slow structural permutation, never a per-frame flick. // K131 FOLD RATIO
     gShapePhase = morphPhase * 0.85 + bTime * 0.30;   // iter 138 RATCHET: strictly increasing -> the radius wave always travels coarse->fine, reads as continuous inward progression, never a rebound
-    gDepthFocus = clamp(0.35 + evoD * 0.35 + (knob_132 - 0.5) * bank4 + (trebLive - 0.35) * 0.16 * quietGate, 0.0, 1.0);   /* iter144 */   /* iter 142: level window = section plateau. The centroid SPRING faded whole detail-levels in/out with brightness = sections appearing/vanishing. */   // vj2 iter 12: 0.35/1.0 → 0.30/0.8 — on bright tracks the finest levels filled every cell with speckle (busy wallpaper); bias coarser, brightness pushes fine less hard   // biased COARSE (0.35): bold cells by default, filigree only when bright   // K132 DEPTH FOCUS   // BRIGHTNESS → fine detail, dark → coarse (level window)                            // fractal self-similarity ratio: slow permutation of the WHOLE structure (user iter 12: fractal permutations, not warps)
+    gDepthFocus = clamp(0.35 + evoD * 0.35 + (knob_132 - 0.5) * bank4
+                      + (trebLive - 0.50) * 0.08 * quietGate          /* iter148: 0.16->0.08 and centred at 0.50 (trebLive actually runs ~0.55, so the old 0.35 centre pushed FINE almost permanently = filigree mush) */
+                      - (1.0 - clamp(flybyZoom, 0.0, 1.0)) * 0.08,    /* iter149b: was 0.30 and that was MY BAD GUESS. I assumed the wide leg aliased into mush, but the measurement said the opposite - wide was the SHARPEST state (edge energy 0.09 wide vs 0.02 at close cruise), because the soft 0.12 line ramp goes sub-pixel out there. A 0.30 coarse bias stripped the level window down to only the biggest cells, so the wide shot read as a few soft blobs instead of a landscape. Keep a token bias for anti-alias headroom only. */
+                      0.0, 1.0);   /* iter 142: level window = section plateau. The centroid SPRING faded whole detail-levels in/out with brightness = sections appearing/vanishing. */   // vj2 iter 12: 0.35/1.0 → 0.30/0.8 — on bright tracks the finest levels filled every cell with speckle (busy wallpaper); bias coarser, brightness pushes fine less hard   // biased COARSE (0.35): bold cells by default, filigree only when bright   // K132 DEPTH FOCUS   // BRIGHTNESS → fine detail, dark → coarse (level window)                            // fractal self-similarity ratio: slow permutation of the WHOLE structure (user iter 12: fractal permutations, not warps)
     gFill   = 0.06 + trebLive * 0.02 * quietGate;
 
     // ── iter144 BREATHE IN PLACE ── (user: "oscillation _can_ be ok - just not large moving pieces
@@ -364,7 +374,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     //    lifts the WHOLE image brightness smoothly (energy + articulation), the kick adds a snappy
     //    thump on top. So it breathes with the build and punches on the hit, never strobes.
     float dropGlow = clamp(glowLive * 0.6 + spectralCrestSmooth * 0.4, 0.0, 1.0) * quietGate;
-    col *= 1.0 + bassPulse * 0.06 + dropGlow * 0.13 + gKick * 0.05;   // iter 110: user 'global brightness flickering' — kick punch moved OFF global mult into local relief only   // vj2 iter 7: kick .10 → .20 (SHADING may punch; geometry may not) // gentle so loud stays saturated, not pastel
+    // iter148: THE REMAINING PUMP. iter146 fixed the per-level multiplier but this whole-image one
+    //    survived: bass + dropGlow + kick drove it 1.0 -> 1.24, and directive #1 is that bass and kick
+    //    NEVER touch the global multiplier. Now a constant with one small CENTRED articulation term,
+    //    so the frame's overall brightness no longer follows the music at all — the music is visible
+    //    in RELIEF and COLOUR instead.
+    col *= 1.06 + (dropGlow - 0.5) * 0.05;   // iter 110: user 'global brightness flickering' — kick punch moved OFF global mult into local relief only   // vj2 iter 7: kick .10 → .20 (SHADING may punch; geometry may not) // gentle so loud stays saturated, not pastel
 
     // ── RIM LIGHT (iter 15, replaces the sparkle grid the user vetoed) ── a directional light that
     //    SWEEPS around the lattice: the gradient of the structure gives an edge normal; edges facing

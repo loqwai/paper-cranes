@@ -22,9 +22,17 @@ export function make(cranes) {
     const audio = makeWaveletEase(cranes)   // the per-frame wavelet-ease function
 
     // ── navigation state (what the shader can't hold) ──
-    let navX = 0, navY = 0          // accumulated world position — never resets (no snap-back)
+    // SEED FROM THE URL (bugfix 2026-08-19): these used to start hard-coded at 0/0/1 and, because the
+    // controller's output is merged LAST each frame, they silently OVERWROTE any ?navX=/?navY=/
+    // ?navZoom= in the URL — so every saved preset that carried a camera position was a no-op with
+    // this controller, and the shader always came up at zoom 1 no matter what the preset said.
+    // (Symptom that found it: a shader looked "blurrier than yesterday" because the preset's
+    // navZoom=0.432 never applied and it was sitting 2.3x more zoomed in than the tuned state.)
+    const _q = new URLSearchParams(location.search)
+    const _num = (k, d) => { const v = parseFloat(_q.get(k)); return Number.isFinite(v) ? v : d }
+    let navX = _num('navX', 0), navY = _num('navY', 0)   // accumulated world position — never resets (no snap-back)
     let velX = 0, velY = 0          // momentum, for a glide after release
-    let zoom = 1.0                  // multiplicative zoom (1 = default; >1 zoomed in)
+    let zoom = _num('navZoom', 1.0) || 1.0   // multiplicative zoom (1 = default; >1 zoomed in)
     let lastX = 0, lastY = 0        // previous finger position (0..1)
     let pinchDist0 = 0, pinchZoom0 = 1
     let mode = 0                    // 0 idle · 1 pan · 2 pinch
@@ -37,7 +45,7 @@ export function make(cranes) {
     // ── PERMANENT live mutation ── an extreme sound (a big drop) permanently rotates the palette
     // and grows the structural warp, so the look transforms over the show and never returns to the
     // start — rewarding people for going hard. These accumulate and never reset (within a session).
-    let paletteShift = 0, warpGrow = 0, mutation = 0, mutCooldown = 0
+    let paletteShift = _num('paletteShift', 0), warpGrow = _num('warpGrow', 0), mutation = 0, mutCooldown = 0   // seeded from URL too: these are PERMANENT accumulations, so a preset that captured them mid-show must restore them
 
     const xy = e => { const t = e.touches ? e.touches[0] : e; return [t.clientX / innerWidth, t.clientY / innerHeight] }
     const pinch = e => Math.hypot(e.touches[0].clientX - e.touches[1].clientX,
