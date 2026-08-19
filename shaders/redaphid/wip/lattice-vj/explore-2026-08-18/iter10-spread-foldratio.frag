@@ -5,7 +5,7 @@
 //https://visuals.beadfamous.com/?shader=redaphid/chromadepth-lattice/6&wavelet=true&controller=lattice-nav&fullscreen=true&knob_1=0.21&name=Living%20Lattice%20Still
 //   * knob_1 = PAN SPEED (live: preset / URL / MIDI / jam drawer). 0 = precise/slow, 1 = fast
 //     roaming; ~0.21 ≈ 1 screen per swipe. Read by the lattice-nav controller (scales drag deltas).
-// LATTICE-VJ (1.frag) — a byte-copy of chromadepth-lattice/6.frag, kept as the SCRATCH COPY for
+// LATTICE-VJ (2.frag — FORK of 1.frag at /vibej iter 27, 2026-08-18 live show) — a byte-copy of chromadepth-lattice/6.frag, kept as the SCRATCH COPY for
 // /vibej to mutate during a live set. /vibej rewrites its target .frag on disk every minute; point
 // it here so the committed 6.frag (a @favorite) survives the night untouched. Everything below is
 // 6.frag's original header.
@@ -57,6 +57,7 @@ uniform float waveletBand4Spring;
 #define midsLive (0.5 * waveletBand2Spring + 0.5 * waveletBand3Spring)
 #define trebLive (0.5 * waveletBand5Spring + 0.5 * waveletBand4Spring)
 #define glowLive (0.5 * energySpring       + 0.5 * waveletBand3Spring)
+#define FLIGHT 0.0   // auto-flight amplitude (vj2 iter 2: OFF at user request; 1.0 = the iter-22 wander)
 uniform float energySpring;
 uniform float melodyFlow;
 uniform float spectralCrestSmooth;
@@ -86,7 +87,7 @@ mat2 rot2(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 vec3 lush(float s, float lit){
     float h = fract(s) * TAU;
     // BRIGHT baseline so the whole thing emits light (must pop off a phone at night, read from afar)
-    float L = clamp(0.40 + 0.44 * clamp(lit, 0.0, 1.0), 0.05, 0.92);   // MUTED (iter 17, from chromadepth-lattice/3): lower base lightness
+    float L = clamp(0.33 + 0.40 * clamp(lit, 0.0, 1.0), 0.05, 0.92);   // vj2 iter 6: 0.40+0.44 → 0.33+0.40 (max L 0.84 → 0.73). Meter on lit passages: dark 2.4 %, lum 0.30, sat 0.85 — pastel. Lower L keeps chroma, restores the floor. (Oklch: hue untouched.)   // MUTED (iter 17, from chromadepth-lattice/3): lower base lightness
     float C = (0.09 + seed2 * 0.06) + 0.05 * sin(s * TAU * 0.5 + 1.3);   // lower chroma than 6.frag's neon — user: "more muted"
     return oklch2rgb(vec3(L, C, h));
 }
@@ -161,7 +162,7 @@ vec4 fractal(vec2 p){
         float wave = smoothstep(0.30, 0.0, abs(ld - (1.0 - gPulse))) * env;
         float band = bandForDepth(ld);
         float lit = (smoothstep(gFill + alias, gFill, m) * 0.5 + 0.18)
-                  * (0.7 + glowLive * 0.4 + band * 0.7 + bassLive * quietGate * 0.6);
+                  * (0.95 + glowLive * 0.35 + band * 0.55 + bassLive * quietGate * 0.45);   // vj2 iter 9: was 0.7/.4/.7/.6 (range 0.7→2.4): on a quiet intro (energy 0.074) the frame fell to near-BLACK. Floor up, music range compressed (0.95→2.3) — a breakdown dims, it doesn't vanish.
         lit += wave * (0.4 + gPop * 0.7 + gKick * 1.2 + spectralCrestSmooth * 0.35);
 
         // front-weighted accumulation (near structure leads the colour) → smooth, no band pops
@@ -191,10 +192,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // a real onset (z > ~0.6, or a wavelet punch/hit) passes. wavelet_punch = fast wavelet onset × FFT level.
     // iter 26: the raw z-score term is GONE (it was the last per-frame jitter on geometry); only the
     // wavelet onset detectors drive the kick now — bassHit (sharp trigger) + punch (onset × level).
-    gKick  = smoothstep(0.25, 0.9, clamp(wavelet_bassHit, 0.0, 1.0) * 0.6
-                                 + clamp(wavelet_punch,   0.0, 1.0) * 0.6);
+    gKick  = smoothstep(0.25, 0.9, max(clamp(wavelet_bassHit, 0.0, 1.0), clamp(wavelet_bassHitSmooth * 1.3, 0.0, 1.0)) * 0.6
+                                 + clamp(wavelet_punch,   0.0, 1.0) * 0.6);   // vj2 iter 7: attack = raw hit, TAIL = smoothed hit (~0.2 s EMA) → each kick is a short envelope, not a 1-frame spike (meter: onset gain was 1.07 = kicks invisible)
     gPulse = fract(flowPhase * 0.6 + bTime * 0.18);
-    gSpin  = gKick * 0.04;                                    // KICK TWIST (→ 0.04, iter 26): every kick torques the fold a few degrees per level (structural, not colour)
+    gSpin  = gKick * 0.015;                                   // KICK TWIST (0.04 → 0.015, vj2 iter 2: user 'twitchy' on dubstep — constant hits made the fold flick) (iter 26): every kick torques the fold a few degrees per level (structural, not colour)
     float bassPulse = bassLive * quietGate;
     // ── SLOW SHAPE EVOLUTION (user iter 11: "a time component so we slowly see different shapes") ──
     //    Aperiodic sums of sub-0.01Hz sines (plasma-journal rule: <1Hz reads as brooding, not jittery)
@@ -206,21 +207,23 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float shapeA = 0.5 * sin(morphPhase * 0.50) + 0.5 * sin(bTime * 0.16 + 1.7);
     float shapeB = 0.5 * cos(morphPhase * 0.37 + 0.6) + 0.5 * cos(bTime * 0.11);
     gSpin  += shapeA * 0.9 + bTime * 0.08;                     // per-level fold angle drift + CONTINUOUS slow fold rotation (~1.3°/s at the deepest level: the structure is always slowly becoming something else) (theta += gSpin*(0.4+i*0.05))
-    gHexR   = 0.60 + shapeB * 0.06 + midsLive * 0.12 * quietGate * (1.0 + wubDepth * 0.8);
+    gHexR   = 0.60 + shapeB * 0.06 + midsLive * 0.05 * quietGate;   // vj2 iter 2: 0.12·(1+wub·0.8) → 0.05 — the spring (settles ~0.4s) chases a 2–4 Hz wobble, so cells PULSED at wub rate = TWITCHY. Geometry follows slow music; the wub now lives in shading only.
     gHexR  += 0.025 * sin(bTime * 0.7) * (1.0 - quietGate);   // QUIET BREATH: when the gate closes on soft music the cells keep a slow ~27s breath instead of freezing; loud = unchanged
-    gBorder = 0.10 + (trebLive * 0.06 + bassLive * 0.04 + spectralRoughnessSmooth * 0.03) * quietGate + (knob_138 - 0.5) * 0.10 * step(0.001, knob_137 + knob_138);   // K138 LINE THICKNESS (guest bank pad 4 Y, iter 24)   // GRIT fattens the lines too (roughness is not a phone fader → still listens under TAKE OVER)
-    gCross  = 0.20 + shapeA * 0.04 - bassPulse * 0.05;
+    gBorder = 0.10 + (trebLive * 0.025 + bassLive * 0.02 + spectralRoughnessSmooth * 0.03) * quietGate   /* vj2 iter 2: treb .06→.025, bass .04→.02 (hi-hats were flicking line thickness) */ + (knob_138 - 0.5) * 0.10 * step(0.001, knob_137 + knob_138);   // K138 LINE THICKNESS (guest bank pad 4 Y, iter 24)   // GRIT fattens the lines too (roughness is not a phone fader → still listens under TAKE OVER)
+    gCross  = 0.20 + shapeA * 0.04 - bassPulse * 0.02;      // vj2 iter 2: .05 → .02 (de-twitch)
     // ── GUEST BANK 1 (vjpad knob_131–136, iter 22 auto-wire: the user was riding a dead bank) ──
     //    Pad 1: X=131 FOLD RATIO   Y=132 DEPTH FOCUS      Pad 2: X=133 FOLD TWIST  Y=134 CELL RADIUS
     //    Pad 3: X=135 LIGHT ANGLE  Y=136 RELIEF DEPTH.   All centred at 0.5 = neutral; bank4 gates
     //    the whole thing off when the phone isn't there (unset knobs read 0, sum = 0).
     float bank4 = step(0.001, knob_131 + knob_132 + knob_133 + knob_134 + knob_135 + knob_136);
     gCrossBias = (knob_139 - 0.5) * 0.12 * step(0.001, knob_139 + knob_140);   // K139 HEX↔CROSS (pad 5 X, iter 25): <0.5 more cross, >0.5 more hex
+    gCrossBias -= clamp(waveletTiltMedian, -1.0, 1.0) * 0.05 * quietGate;   // vj2 iter 1: SPECTRAL TILT → cell SHAPE. Bass-heavy balance (+tilt) → the taut CROSS dominates; bright/hissy (−tilt) → HEXAGONS. Median = slow, structural (~seconds), never a per-frame flick.
     gSpin  += (knob_133 - 0.5) * 2.0 * bank4;                 // K133 FOLD TWIST
     gHexR  += (knob_134 - 0.5) * 0.15 * bank4;                // K134 CELL RADIUS
-    gScale  = 2.0 + 0.30 * shapeB + (knob_131 - 0.5) * 0.5 * bank4;   // K131 FOLD RATIO
+    gScale  = 2.0 + 0.30 * shapeB + (knob_131 - 0.5) * 0.5 * bank4
+            + (clamp(waveletSpreadMedian, 0.0, 1.0) - 0.6) * 0.5 * quietGate;   // vj2 iter 10: SPECTRAL WIDTH → FOLD RATIO. Wide/dense spectrum (spread ~0.85) opens the self-similarity ratio (+0.12), a narrow one tightens it (−0.15). Median → slow structural permutation, never a per-frame flick. // K131 FOLD RATIO
     gDepthFocus = clamp(0.35 + (waveletCentroidSpring - 0.5) * 1.0 + shapeA * 0.25 + (knob_132 - 0.5) * bank4, 0.0, 1.0);   // biased COARSE (0.35): bold cells by default, filigree only when bright   // K132 DEPTH FOCUS   // BRIGHTNESS → fine detail, dark → coarse (level window)                            // fractal self-similarity ratio: slow permutation of the WHOLE structure (user iter 12: fractal permutations, not warps)
-    gFill   = 0.06 + trebLive * 0.035 * quietGate;
+    gFill   = 0.06 + trebLive * 0.02 * quietGate;           // vj2 iter 2: .035 → .02 (de-twitch)
 
     // ── UNIQUE-PER-AREA structure: world position drifts the cell SIZE only — NOT rotation.
     //    Rotating the lattice by area made the pan axis appear to invert in different places;
@@ -231,6 +234,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     vec2 fly = vec2(0.60 * sin(bTime * 0.070) + 0.40 * sin(bTime * 0.031 + 1.3),
                     0.50 * cos(bTime * 0.053) + 0.30 * sin(bTime * 0.023 + 0.7));
     fly *= mix(1.0, knob_140 * 2.0, step(0.001, knob_139 + knob_140));   // K140 FLIGHT RANGE (pad 5 Y): 0 = hold still, 0.5 = default, 1 = double
+    fly *= FLIGHT;                                            // vj2 iter 2: user 'I don't like the scrolling right now' → auto-flight OFF (FLIGHT 0.0). Phone pan still works. Re-enable by setting FLIGHT 1.0.
     vec2 world = vec2(navX, navY) + fly;
     gHexR += 0.07 * sin(world.x * 0.8 + world.y * 0.45);
 
@@ -252,8 +256,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     //    a silent room can't flash the hue. Plus per-area / per-device / permanent-drop offsets.
     float s = field
             + regionHue(world)
-            + bTime * 0.012
-            + melodyFlow * 0.15 * quietGate                   // MELODY → the palette journey (0.32 → 0.15, iter 17: calmer palette)
+            + bTime * 0.002                                   // vj2 iter 5: was 0.012 = a full hue turn every ~4 min (0.24 turns/min — 8× the user's 'muted, slow' tolerance and the biggest single palette mover). Now ~1 turn / 25 min.
+            + (melodyFlow * 0.05 + pitchClassMean * 0.10) * quietGate   // vj2 iter 4: MELODY → palette, but SLOW. melodyFlow slews 0.03/frame (a melodic leap re-tints the whole field 0.075 in ~0.3 s = the palette 'flash' the meter caught: hue 0.46→0.61 inside one track). pitchClassMean is the ~8 s rolling KEY estimate — it carries 2/3 of the weight now. (was melodyFlow*0.15; 0.32 before iter 17)
             + waveletCentroidSpring * 0.07 * quietGate        // BRIGHTNESS → hue tint (0.14 → 0.07)
             + (bassNoteFlow - 0.5) * 0.05 * quietGate         // BASSLINE NOTE → hue tilt (was 0.16: whole-field re-tints on note changes read as colour FLASHING — user iter 9) (centred: a mid bass note is neutral; not a phone fader, so it keeps listening under TAKE OVER)
             + (sectionMode - (1.0 - sectionMix)) * 0.03       // each DROP glides the palette 0.03 further (was 0.07) over its ~4s crossfade (mix eases the step; no snap)
@@ -303,7 +307,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     //    lifts the WHOLE image brightness smoothly (energy + articulation), the kick adds a snappy
     //    thump on top. So it breathes with the build and punches on the hit, never strobes.
     float dropGlow = clamp(glowLive * 0.6 + spectralCrestSmooth * 0.4, 0.0, 1.0) * quietGate;
-    col *= 1.0 + bassPulse * 0.12 + dropGlow * 0.13 + gKick * 0.10;   // gentle so loud stays saturated, not pastel
+    col *= 1.0 + bassPulse * 0.12 + dropGlow * 0.13 + gKick * 0.20;   // vj2 iter 7: kick .10 → .20 (SHADING may punch; geometry may not) // gentle so loud stays saturated, not pastel
 
     // ── RIM LIGHT (iter 15, replaces the sparkle grid the user vetoed) ── a directional light that
     //    SWEEPS around the lattice: the gradient of the structure gives an edge normal; edges facing
@@ -330,7 +334,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // lit from one side. Depth punches on kicks (gKick, dead-zoned) and leans on the bass spring,
         // so a hit makes the structure emboss harder for a beat. Lighting reactivity, not colour.
         float shade = smoothstep(0.02, 0.25, edge) * pow(0.5 - 0.5 * dot(n, L), 2.0);
-        col *= 1.0 - shade * (0.22 + gKick * 0.40 + bassLive * 0.18) * quietGate * mix(1.0, 0.4 + knob_136 * 1.2, bank4);   // K136 RELIEF DEPTH
+        col *= 1.0 - shade * (0.22 + gKick * 0.65 + bassLive * 0.18)   /* vj2 iter 7: kick relief .40 → .65 */ * quietGate * mix(1.0, 0.4 + knob_136 * 1.2, bank4);   // K136 RELIEF DEPTH
         // SPECULAR (iter 19): a TIGHT glint on line edges facing the sun exactly — slides along the
         // structure as the sun orbits; treble spring + crest sharpen/brighten it. Palette-lit, not white.
         float spec = smoothstep(0.02, 0.25, edge) * pow(max(dot(n, L), 0.0), 14.0);
@@ -353,8 +357,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     }
 
     // GLOW LIFT — gamma up + gain so mid-tones emit; high chroma keeps it NEON, not washed out.
-    col = pow(clamp(col, 0.0, 1.0), vec3(0.92));             // iter 27: gentler lift (0.80/1.15 was flattening everything to bright pink)
-    col *= 1.02;
+    col = pow(clamp(col, 0.0, 1.0), vec3(1.18));             // vj2 iter 3: 0.92 → 1.18 — meter said dark fraction 1.4% / lum 0.30 / sat 0.81: no floor. Gamma > 1 pulls the mids down and leaves the lit lattice edges bright, so structure gets CONTRAST without touching hue. (iter 27: 0.80/1.15 gain was flattening to pink)
+    col *= 1.00;
 
     // gentle trail (low decay so the glow carries between frames)
     vec4 prev = getLastFrameColor(fragCoord / iResolution.xy);
