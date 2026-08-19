@@ -103,3 +103,111 @@ window.__vjMeter.residR = (secs=60) => {
     return num/Math.sqrt(da*db+1e-9);};
   return {rResid:+corr(resid,en).toFixed(3), rRaw:+corr(mo,en).toFixed(3), n};
 };
+
+// ── SHIVER PROBE (designed 2026-08-18 shutdown, after the 'shaking back and forth' saga) ──────────
+// Detects OSCILLATION-WITHOUT-PROGRESSION — the thing the user called "shivering" / "sections
+// breathing in and out" — and gives it a number so edits can be judged better/worse, not vibes.
+//
+// Why not pixels: translation and zoom ALSO oscillate every pixel. Shiver is structural, so we
+// track three STRUCTURAL scalars per sample and ask each one "do you retrace, or go somewhere?":
+//   edge     edge density (fraction of pixels with luma gradient > 0.12) — cell-size breathing
+//   rc       radial brightness centroid (log rings around screen center) — sections moving in/out
+//   zoomVel  per-step shift aligning consecutive log-radial profiles — signed zoom velocity
+//
+//   window.__vjMeter.shiver(60) →
+//     zoomVel / zoomAbs / zoomDirectionality   net vs total zoom; directionality 1 = one-way
+//         ratchet, ~0 = pure in-out breathing. THE ratchet needle.
+//     edgeOsc / radialOsc (+ *Period s)        strength of the worst ANTI-PHASE autocorrelation
+//         lobe on the detrended series (lags 0.3–8 s → periods up to ~16 s). > 0.35 = clear
+//         periodic retracing. Period tells you WHICH oscillator (0.5–2 s = audio-rate spring on
+//         geometry; 5–15 s = a shape clock).
+//     retraceEdge / retraceRadial              total path ÷ range: a trend ≈ 1–2, k full
+//         oscillations ≈ 2k. Catches SLOW rocking the autocorr window misses (use shiver(120+)
+//         for ~70 s sweeps).
+//     breathOsc, shiverScore, verdict          combined 0–1, gated by motion (still frame = 0).
+//         Provisional thresholds: > 0.45 SHIVERING (act) · 0.25–0.45 suspect · < 0.25 fine.
+//
+// Better/worse over time: compare shiverScore + breathOsc + zoomDirectionality across windows or
+// A/B across an edit. CALIBRATE deterministically next session: same track via ?audio_file=, run
+// 90 s each on explore-2026-08-18/iter116-musicality-recipe.frag (known breather: standing radius
+// 0.17 + audio on fold params) vs 4.frag iter-142 (plateau geometry) — thresholds get set from
+// that pair. Same caveats as the rest of the kit: discard gate < 0.9 windows and the first 60 s
+// after resume/reload.
+;(() => {
+  const M = window.__vjMeter; if (!M || M.shiver) return
+  const W = M.W, H = M.H, R = 12
+  const cv = document.querySelector('canvas')
+  const c = document.createElement('canvas'); c.width = W; c.height = H
+  const cx = c.getContext('2d', { willReadFrequently: true })
+  const cxp = (W - 1) / 2, cyp = (H - 1) / 2, rMax = Math.hypot(cxp, cyp)
+  const ring = new Int8Array(W * H)
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const lr = Math.log(Math.max(Math.hypot(x - cxp, y - cyp), 0.8)) / Math.log(rMax)
+    ring[y * W + x] = Math.min(R - 1, Math.max(0, Math.floor(lr * R)))
+  }
+  const base = M.sample.bind(M)
+  M.sample = () => {
+    base()
+    try {
+      cx.drawImage(cv, 0, 0, W, H); const d = cx.getImageData(0, 0, W, H).data
+      const L = new Float32Array(W * H)
+      for (let i = 0; i < W * H; i++) L[i] = 0.2126 * d[i * 4] / 255 + 0.7152 * d[i * 4 + 1] / 255 + 0.0722 * d[i * 4 + 2] / 255
+      let edges = 0
+      for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+        const i = y * W + x
+        if (Math.abs(L[i + 1] - L[i - 1]) + Math.abs(L[i + W] - L[i - W]) > 0.12) edges++
+      }
+      const prof = new Float32Array(R), cnt = new Float32Array(R)
+      for (let i = 0; i < W * H; i++) { prof[ring[i]] += L[i]; cnt[ring[i]]++ }
+      let rc = 0, rw = 0
+      for (let k = 0; k < R; k++) { prof[k] = cnt[k] ? prof[k] / cnt[k] : 0; rc += k * prof[k]; rw += prof[k] }
+      const s = M.buf[M.buf.length - 1]
+      if (s) { s.edge = edges / ((W - 2) * (H - 2)); s.prof = prof; s.rc = rw ? rc / rw : 0 }
+    } catch (e) { M.errShiver = String(e) }
+  }
+  const shiftOf = (a, b) => {   // fractional ring shift of b vs a; + = pattern moved outward (zoom-in)
+    const n = a.length
+    const cost = sh => { let c = 0, m = 0; for (let k = 2; k < n - 2; k++) { const j = k - sh, j0 = Math.floor(j), f = j - j0; if (j0 < 0 || j0 + 1 >= n) continue; c += Math.abs(a[k] - (b[j0] * (1 - f) + b[j0 + 1] * f)); m++ } return m ? c / m : 1e9 }
+    let best = 0, bc = Infinity
+    for (let sh = -2; sh <= 2; sh += 0.25) { const cc = cost(sh); if (cc < bc) { bc = cc; best = sh } }
+    return best
+  }
+  M.shiver = (secs = 60) => {
+    const now = performance.now() / 1000
+    const b = M.buf.filter(s => now - s.t <= secs && s.prof)
+    if (b.length < 40) return { n: b.length, note: 'need more samples' }
+    const mean = a => a.reduce((x, y) => x + y, 0) / a.length
+    const med = (a, i, w) => { const s2 = a.slice(Math.max(0, i - w), Math.min(a.length, i + w + 1)).slice().sort((x, y) => x - y); return s2[Math.floor(s2.length / 2)] }
+    const detr = a => a.map((x, i) => x - med(a, i, 15))
+    const dt = (b[b.length - 1].t - b[0].t) / (b.length - 1)
+    const ac = a => {
+      const m = mean(a), c0 = mean(a.map(x => (x - m) ** 2)) || 1e-12
+      let worst = 0, worstLag = 0
+      const l0 = Math.max(2, Math.round(0.3 / dt)), l1 = Math.min(a.length - 5, Math.round(8 / dt))
+      for (let L2 = l0; L2 <= l1; L2++) {
+        let c = 0, n = 0; for (let i = 0; i < a.length - L2; i++) { c += (a[i] - m) * (a[i + L2] - m); n++ }
+        const r = c / n / c0
+        if (r < worst) { worst = r; worstLag = L2 * dt }
+      }
+      return { osc: +Math.max(0, -worst).toFixed(2), period: +(worstLag * 2).toFixed(1) }
+    }
+    const retrace = a => { let tv = 0; for (let i = 1; i < a.length; i++) tv += Math.abs(a[i] - a[i - 1]); const s2 = a.slice().sort((x, y) => x - y); const range = (s2[Math.floor(s2.length * 0.95)] - s2[Math.floor(s2.length * 0.05)]) || 1e-9; return +(tv / range).toFixed(1) }
+    const e = b.map(s => s.edge), rc = b.map(s => s.rc)
+    const v = []; for (let i = 1; i < b.length; i++) v.push(shiftOf(b[i - 1].prof, b[i].prof))
+    const de = detr(e), drc = detr(rc)
+    const acE = ac(de), acRC = ac(drc)
+    const netV = mean(v), absV = mean(v.map(Math.abs))
+    const dir = absV > 1e-4 ? Math.abs(netV) / absV : 1
+    const breathOsc = Math.max(acE.osc, acRC.osc)
+    const mo = mean(b.map(s => s.motion || 0)), moN = Math.min(1, mo / 0.02)
+    const score = +(moN * Math.max(breathOsc, (1 - dir) * Math.min(1, absV / 0.05))).toFixed(2)
+    return {
+      n: b.length, motion: +mo.toFixed(4),
+      zoomVel: +netV.toFixed(3), zoomAbs: +absV.toFixed(3), zoomDirectionality: +dir.toFixed(2),
+      edgeOsc: acE.osc, edgePeriod: acE.period, radialOsc: acRC.osc, radialPeriod: acRC.period,
+      retraceEdge: retrace(de), retraceRadial: retrace(drc),
+      breathOsc: +breathOsc.toFixed(2), shiverScore: score,
+      verdict: score > 0.45 ? 'SHIVERING' : score > 0.25 ? 'suspect' : 'progressing/still'
+    }
+  }
+})()

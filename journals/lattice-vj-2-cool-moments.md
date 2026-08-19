@@ -411,3 +411,4 @@ Session ended at iter ~142/180 ("shutting down for the night"). Cron deleted, st
 - `[ ] bake VJ tooling into display page behind ?vj=1 (meter, validator, cursor CSS survive reloads).`
 - `[ ] controller-side "recenter" action — snap nav so a symmetry center lands at screen center (iter 137 was a hand-measured one-off).`
 - `[ ] re-measure CENTER TRIM after any nav change.`
+- `[ ] CALIBRATE the shiver probe (see explore-2026-08-18/NOTES.md addendum) — do this alongside the iter-142 live verification; the probe is the tool that turns 'is it still shivering?' into a number.`

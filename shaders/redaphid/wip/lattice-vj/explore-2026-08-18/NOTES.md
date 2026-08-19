@@ -154,3 +154,19 @@ A structure-first visual has three channels, and they must not trade jobs:
   session is to load it and watch: seams at the ~60 s zoom wrap, plateau steps on drops, and
   whether long drop-less stretches feel too static (if so: slow drift from evoPhase, not sines).
 - Cron deleted, vj-state.json removed. All work committed to `live-show-rig`.
+
+## Addendum (post-shutdown): the SHIVER PROBE
+"Shivering" now has a number: `window.__vjMeter.shiver(secs)` (scripts/vj/aesthetic-meter.js,
+bottom block). Operational definition: **oscillation without progression**, measured on
+STRUCTURAL scalars (pixels can't tell shiver from healthy translation/zoom):
+- edge density (cell-size breathing) and radial brightness centroid (sections in/out) →
+  detrended, scored by the worst ANTI-PHASE autocorrelation lobe (+ its period, which
+  fingerprints the guilty oscillator: 0.5–2 s = audio-rate spring on geometry, 5–15 s = shape
+  clock) and by a retrace ratio (path ÷ range; trend ≈ 1–2, k oscillations ≈ 2k).
+- log-radial profile shift per step → signed zoom velocity; **zoomDirectionality** = |net|/Σ|step|
+  (1 = one-way ratchet, ~0 = pure in-out breathing). This is the ratchet needle.
+- combined `shiverScore` gated by motion; provisional verdicts: >0.45 SHIVERING · 0.25–0.45
+  suspect · <0.25 progressing/still. Better/worse = compare across windows / A-B across an edit.
+UNCALIBRATED as of shutdown (browser closed before a live run). First task next session:
+deterministic A/B with ?audio_file= — 90 s on iter116-musicality-recipe.frag (known breather)
+vs 4.frag iter-142 (plateau geometry); set real thresholds from that pair.
