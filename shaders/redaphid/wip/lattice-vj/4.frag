@@ -168,7 +168,7 @@ vec4 fractal(vec2 p){
         float wave = smoothstep(0.30, 0.0, abs(ld - (1.0 - gPulse))) * env;
         float band = bandForDepth(ld);
         float lit = (smoothstep(gFill + alias, gFill, m) * 0.5 + 0.18)
-                  * (1.03 + glowLive * 0.35 + band * 0.55 + bassLive * quietGate * 0.45);   // iter 116: floor 0.95→1.03 — lumMin 0.068 on mellow Of The Trees, just under the 0.08 line   // vj2 iter 9: was 0.7/.4/.7/.6 (range 0.7→2.4): on a quiet intro (energy 0.074) the frame fell to near-BLACK. Floor up, music range compressed (0.95→2.3) — a breakdown dims, it doesn't vanish.
+                  * (1.03 + glowLive * 0.35 + band * 0.95 + bassLive * quietGate * 0.45);   /* iter144: band 0.55->0.95 — treble lights the NEAR levels, mids the middle, bass the FAR ones, so the instruments visibly separate across recursion depth instead of blending into one brightness */   // iter 116: floor 0.95→1.03 — lumMin 0.068 on mellow Of The Trees, just under the 0.08 line   // vj2 iter 9: was 0.7/.4/.7/.6 (range 0.7→2.4): on a quiet intro (energy 0.074) the frame fell to near-BLACK. Floor up, music range compressed (0.95→2.3) — a breakdown dims, it doesn't vanish.
         lit += wave * (0.4 + gPop * 0.7 + gKick * 1.2 + spectralCrestSmooth * 0.35);
 
         // front-weighted accumulation (near structure leads the colour) → smooth, no band pops
@@ -238,8 +238,20 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     gHexR  += (knob_134 - 0.5) * 0.15 * bank4;                // K134 CELL RADIUS
     gScale  = 2.0 + evoC * 0.14 + (knob_131 - 0.5) * 0.5 * bank4;   /* iter 142: FOLD RATIO = section plateau. The spectral-width term moved every mirror seam at every level — the 'overlapping kaleidoscope sections breathing' the user called out. */   // vj2 iter 10: SPECTRAL WIDTH → FOLD RATIO. Wide/dense spectrum (spread ~0.85) opens the self-similarity ratio (+0.12), a narrow one tightens it (−0.15). Median → slow structural permutation, never a per-frame flick. // K131 FOLD RATIO
     gShapePhase = morphPhase * 0.85 + bTime * 0.30;   // iter 138 RATCHET: strictly increasing -> the radius wave always travels coarse->fine, reads as continuous inward progression, never a rebound
-    gDepthFocus = clamp(0.35 + evoD * 0.35 + (knob_132 - 0.5) * bank4, 0.0, 1.0);   /* iter 142: level window = section plateau. The centroid SPRING faded whole detail-levels in/out with brightness = sections appearing/vanishing. */   // vj2 iter 12: 0.35/1.0 → 0.30/0.8 — on bright tracks the finest levels filled every cell with speckle (busy wallpaper); bias coarser, brightness pushes fine less hard   // biased COARSE (0.35): bold cells by default, filigree only when bright   // K132 DEPTH FOCUS   // BRIGHTNESS → fine detail, dark → coarse (level window)                            // fractal self-similarity ratio: slow permutation of the WHOLE structure (user iter 12: fractal permutations, not warps)
-    gFill   = 0.06 + trebLive * 0.02 * quietGate;           // vj2 iter 2: .035 → .02 (de-twitch)
+    gDepthFocus = clamp(0.35 + evoD * 0.35 + (knob_132 - 0.5) * bank4 + (trebLive - 0.35) * 0.16 * quietGate, 0.0, 1.0);   /* iter144 */   /* iter 142: level window = section plateau. The centroid SPRING faded whole detail-levels in/out with brightness = sections appearing/vanishing. */   // vj2 iter 12: 0.35/1.0 → 0.30/0.8 — on bright tracks the finest levels filled every cell with speckle (busy wallpaper); bias coarser, brightness pushes fine less hard   // biased COARSE (0.35): bold cells by default, filigree only when bright   // K132 DEPTH FOCUS   // BRIGHTNESS → fine detail, dark → coarse (level window)                            // fractal self-similarity ratio: slow permutation of the WHOLE structure (user iter 12: fractal permutations, not warps)
+    gFill   = 0.06 + trebLive * 0.02 * quietGate;
+
+    // ── iter144 BREATHE IN PLACE ── (user: "oscillation _can_ be ok - just not large moving pieces
+    //    that disrupt the sense of space. The fractal structures can breathe and morph")
+    //    The SPATIAL FRAME is the thing that must hold still: the fold ratio (gScale) and every ANGLE
+    //    term stay frozen, because those move the mirror SEAMS at every level and the error compounds
+    //    as scale^i — that is what destroyed the sense of space (iters 138-143). Everything that lives
+    //    INSIDE a cell is free to breathe, because it changes what a cell LOOKS like without moving
+    //    where any cell IS. All drivers are spring-smoothed and quietGate'd: no raw per-frame value
+    //    ever touches structure (that path is the shiver).
+    gHexR  += (midsLive - 0.35) * 0.18 * quietGate * (0.6 + wubDepth * 0.7);   // CELLS BREATHE with the mids/wobble — ring radius inside each cell; seams fixed
+    gCross += (bassLive - 0.42) * 0.11 * quietGate;                            // BASS pulls the cross taut / lets it slacken
+    gBorder += (spectralCrestSmooth - 0.2) * 0.035 * quietGate;                // spiky vs smooth timbre → line weight breathes           // vj2 iter 2: .035 → .02 (de-twitch)
 
     // ── UNIQUE-PER-AREA structure: world position drifts the cell SIZE only — NOT rotation.
     //    Rotating the lattice by area made the pan axis appear to invert in different places;
@@ -264,7 +276,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // compensation for the per-level twist step, so the seam ~vanishes and the motion is ALWAYS
     // inward toward the centered symmetry point. Zoom is applied before `uv += world`, so the world
     // point at screen center never moves and phone pan stays screen-consistent.
-    float zoomP = fract(bTime * 0.016);
+    // iter144: zoom RATE is audio-rated via flowPhase, a MONOTONIC accumulator (rate-not-angle, iris
+    // §1) — busy/loud music rushes the lattice inward, a breakdown almost stalls it. Because the
+    // phase only ever increases, speeding it up can never make the zoom run backward.
+    float zoomP = fract(bTime * 0.016 + flowPhase * 0.0045 * quietGate);
     float thetaStep = PI * 0.125;   /* iter 141b: gSpin*0.05 term was an accumulated (huge) angle -> frame spun fast + symmetry tilted. Compensate only the FIXED per-level step; the residual seam mismatch hides in the ongoing morph. */
     uv *= rot2(zoomP * thetaStep);
     uv /= pow(2.0, zoomP);   /* iter 142: FIXED base — zoom velocity must not follow gScale */

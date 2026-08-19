@@ -452,3 +452,30 @@ Session ended at iter ~142/180 ("shutting down for the night"). Cron deleted, st
   makes sectionMode/wavelet look "missing" when they're fine.
 - Ops note: **`javascript_tool` calls die at the 45 s CDP timeout** — browser-side verification waits
   must be ≤ ~35 s. A 70 s window kills the call and loses the observation.
+
+### Iter 144 — REACTIVITY RESTORED: the veto is about SPACE, not oscillation
+- **User refines the standing rule (supersedes the blanket "no oscillation" reading of iters 118-143):**
+  "oscillation _can_ be ok - just not large moving pieces that disrupt the sense of space. The fractal
+  structures can breathe and morph." Also: "I need you to be responding much faster than 2.5m."
+- **The correct distinction (write this into any structure-first shader):**
+  - FROZEN = the SPATIAL FRAME: the fold ratio (gScale) and every ANGLE term. These move the mirror
+    SEAMS at every level and the error compounds as scale^i, so modulating them slides whole sections
+    around and destroys the sense of space. This is what iters 138-143 were actually about.
+  - FREE TO BREATHE = anything INSIDE a cell: ring radius (gHexR), cross tautness (gCross), line
+    weight (gBorder), detail density (gDepthFocus, small). These change what a cell LOOKS like without
+    moving where any cell IS. Oscillation here is welcome — it reads as breathing, not as drift.
+  - Still mandatory: spring-smoothed + quietGate'd drivers only. Raw per-frame values on structure is
+    the shiver path, independent of this distinction.
+- **Moves:** mids/wub breathe gHexR (x wubDepth); bass pulls gCross taut; spectralCrestSmooth breathes
+  gBorder; treble blooms gDepthFocus (inside the clamp); zoom RATE audio-rated via flowPhase (a
+  MONOTONIC accumulator — speeding it can never run the zoom backward); per-depth band lighting
+  0.55 -> 0.95 so treble lights NEAR levels, mids middle, bass FAR — instruments separate across
+  recursion depth instead of blending into one brightness.
+- **Meter (clean gate 1.0):** motionVsEnergy 0.25 -> **0.67**, rRaw **0.889**, rResid 0.088,
+  flicker 0.25 (safe), clip 0, lumMin 0.13 (up from 0.059 — above the floor).
+- **Cool moment:** the band-lighting split gave the frame real volume — hot red/orange cell interiors
+  glowing inside violet/blue near-frames, strong centred medallion. Best-looking state since iter 134.
+- `[ ] WATCH: hueDriftPerMin read 0.665 on the post-edit window (directive is ~0 in-track). Changing
+  gDepthFocus/band weighting shifts the `field` distribution, which feeds the palette coord `s` — so
+  detail-density reactivity moves hue INDIRECTLY. Confirm over a longer clean window; if real, damp
+  the field->hue coupling, not the reactivity.`
