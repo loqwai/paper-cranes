@@ -36,6 +36,11 @@ let ranMain = false
 let startTime = 0
 const params = new URLSearchParams(window.location.search)
 
+// ?vj=1 — load the VJ runtime (validator + aesthetic meter + cursor-hide + /__vj-signal
+// watchdog) at page boot, so reloads can never strip the /vibej loop's tooling and the page
+// itself can wake the loop. Dev-only in practice (/__vj-signal exists only on the dev server).
+if (params.get('vj') === '1') import('./src/vj/runtime.js').then(m => m.startVjRuntime()).catch(e => console.warn('[vj] runtime failed', e))
+
 const getVisualizerDOMElement = () => {
     if (!window.visualizer) {
         window.visualizer = document.getElementById('visualizer')

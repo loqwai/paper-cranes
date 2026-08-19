@@ -3,6 +3,7 @@ import { resolve } from 'path'
 import { shaderPlugin } from './vite-plugins/shader-plugin.js'
 import { remoteWsPlugin } from './vite-plugins/remote-ws-plugin.js'
 import { editorSyncPlugin } from './vite-plugins/editor-sync-plugin.js'
+import { vjSignalPlugin } from './vite-plugins/vj-signal-plugin.js'
 import { getPort } from './scripts/dev-port.js'
 
 const port = getPort()
@@ -54,5 +55,5 @@ export default defineConfig({
       external: (id) => id.startsWith('https://'),
     },
   },
-  plugins: [shaderPlugin(), remoteWsPlugin(), editorSyncPlugin()],
+  plugins: [shaderPlugin(), remoteWsPlugin(), editorSyncPlugin(), vjSignalPlugin()],
 })

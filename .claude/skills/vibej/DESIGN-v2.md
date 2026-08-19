@@ -93,7 +93,7 @@ geometry/light/color channel hierarchy (2026-08-18 findings: geometry only *evol
 or event-stepped; audio lives in shading; color follows the slowest music) are unchanged and
 restated in the skill draft.
 
-## 4. The page as sensor (phase 2: `?vj=1` + `/__vj-signal`)
+## 4. The page as sensor (`?vj=1` + `/__vj-signal`) — IMPLEMENTED 2026-08-19
 
 The journal already carries the todo "bake VJ tooling into the display page behind `?vj=1`".
 v2 gives it a purpose beyond convenience — it makes the *browser* the watchdog:
@@ -149,7 +149,12 @@ edits from another session/editor).
    default — stay in-turn and chain beats; wakeups only for idle holds. Cost lever: screenshots
    are the context-expensive step, so verification cycles run on meter numbers and screenshot
    only on compositional changes / every ~4th cycle — keeps hours-long sessions viable.
-2. Phase 2 endpoint: OK to add the `/__vj-signal` dev plugin + `?vj=1` loader to the repo, or
-   keep the page untouched and stay heartbeat-only?
+2. ~~Phase 2 endpoint~~ **ANSWERED + BUILT 2026-08-19: "page should wake the loop."**
+   Implemented: `vite-plugins/vj-signal-plugin.js` (POST/GET `/__vj-signal` →
+   `.claude/vj-signals.jsonl`, gitignored), `src/vj/runtime.js` (cursor-hide + `__vjValidate` +
+   meter w/ shiver probe + boot beacon + 5 s watchdog: clip/flicker/too-dark/shiver/gate
+   transitions, 30 s per-type cooldown), `?vj=1` loader in `index.js`. Endpoint smoke-tested.
+   Also: `.claude/settings.json` now allowlists the vibej context/hot-path Bash commands, so the
+   permission classifier is out of the loop entirely. Context-burn tuning: deferred by user.
 3. Should the loop keep a **hard beat budget** (v1's `180 iterations`) at all, or run until
    `/vibej stop` / session end? (v2 draft keeps an optional duration arg, default: until stopped.)

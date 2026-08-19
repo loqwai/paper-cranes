@@ -202,13 +202,28 @@ with the same marker converges to live-or-reverted.
   `window.cranes.shader`** (live-ness is exactly what an interrupt makes uncertain), then resumes
   beats. Discard the first meter window after any resume.
 
-## Phase 2 (repo upgrade — optional, not a dependency)
+## Page-as-sensor (IMPLEMENTED — use it every run)
 
-`?vj=1` on the display URL loads the VJ runtime at page boot (reload-proof), meters
-continuously, and POSTs alerts (`flicker>0.7`, `clip>0`, `lumMin<0.08`, gate transitions,
-`reloaded` beacon) to `/__vj-signal` (tiny vite dev plugin → `.claude/vj-signals.jsonl`). A
-persistent Monitor on that file turns the page into the watchdog: Claude is woken by the frame
-itself within seconds of a breach. Until then, phase 1 heartbeat-only is fully functional.
+The display URL must include **`&vj=1`** — the page then self-installs the whole VJ runtime at
+boot (cursor-hide, `__vjValidate`, aesthetic meter + shiver probe) and POSTs signals to
+`/__vj-signal` (dev server writes `.claude/vj-signals.jsonl`, gitignored):
+- `boot` beacon on every load — a reload can never silently strip tooling again (the `typeof
+  __vjMeter` check remains as belt-and-braces, but reinstall is now the page's job, not yours),
+- health alerts on a 5 s watchdog with 30 s per-type cooldown: `clip`, `flicker` (> 0.7),
+  `too-dark` (lumMin < 0.06 at clean gate), `shiver` (shiverScore > 0.45), `gate-drop` /
+  `gate-clean` (track boundaries — `gate-clean` is your "verification window open" starter gun).
+
+**At `/vibej` start, arm a Monitor** on `.claude/vj-signals.jsonl` (watch for appended lines) so
+these signals wake the idle session within seconds. Monitor is the accelerator; the ScheduleWakeup
+heartbeat stays armed as the guarantee. In burst mode you don't need the Monitor to react — you
+can also just `GET /__vj-signal` (last 50 signals) or read the file between beats.
+
+Harness prerequisites (already committed, verify they're in place):
+- `vite-plugins/vj-signal-plugin.js` registered in `vite.config.js` (restart the dev server after
+  pulling — a running server predating the plugin 404s the endpoint),
+- `.claude/settings.json` allowlists the loop's context/hot-path Bash (`./scripts/dev-port`, the
+  curl health check, state/signal file reads, `validate-shader.js`, shader-only `git checkout`) —
+  the permission classifier is out of the loop; a classifier outage can no longer drop beats.
 
 ## Common pitfalls
 
