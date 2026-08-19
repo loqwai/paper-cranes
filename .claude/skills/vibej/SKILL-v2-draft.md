@@ -116,8 +116,9 @@ Order within a Beat:
 2. **B0 LOOK** — screenshot the display tab; judge visually (clip? dark floor? focal point?
    legible? shivering?). Re-park cursor after.
 3. **Meter** — `__vjMeter.summary(50)` + `residR(50)`. **If gate < 0.9 (track boundary): make no
-   metric-driven move; re-arm a short wakeup (~25 s) and end the beat — wait for a clean window
-   instead of burning a slot.** Thresholds: clip = 0 always; flicker > 0.7 = act, don't
+   metric-driven move; stay in-turn and wait ~20 s browser-side, then re-check — never burn a
+   wakeup on a dirty window (and note the 60 s wakeup floor makes short wakeups impossible
+   anyway).** Thresholds: clip = 0 always; flicker > 0.7 = act, don't
    rationalize; dark 0.1–0.3; lumMin ≥ 0.08; rResid is the beat-scale musicality needle.
 4. **Triage user words FIRST** if any arrived since the last beat — same table as v1 ("too
    subtle" / "shivery" / "flashing" / "washed out" / "get rid of X" / repeated asks ⇒ 3–5×
@@ -132,15 +133,30 @@ Order within a Beat:
 8. **Journal** (same rules: cool moments, user flags, removals, forks; skip only trivial nudges).
 9. **One-line summary** — `**Beat — <track> — <what changed / why holding>.**` No screenshots in
    the message.
-10. **Re-arm the wakeup — the beat's final act, never skipped** (if the loop should continue):
+10. **Choose: chain or idle.** Iteration speed is maxed (user decision 2026-08-19), so the
+    default while ANY work is active is **BURST MODE — do not end the turn**: go straight into
+    the next beat, using a browser-side wait for the observation window:
 
-| Situation | delaySeconds | reason string says |
-|---|---|---|
-| Just made an edit; verifying its effect | 30–45 | "verifying <marker> on next clean window" |
-| Waiting out a dirty meter window (gate < 0.9) | 20–30 | "waiting for clean gate" |
-| Active tuning (experiment in flight, user engaged) | 60–120 | "active tuning" |
-| Healthy ≥ 3 consecutive beats, user quiet | 240–420 | "healthy hold" |
-| User just went quiet after a burst of feedback | 60 | "post-feedback watch" |
+```javascript
+// verification wait — browser-side, no Bash, no classifier, user messages still interleave
+async (secs) => { await new Promise(r => setTimeout(r, secs * 1000));
+  return { s: window.__vjMeter.summary(secs), r: window.__vjMeter.residR(secs) }; }
+// args: [20]
+```
+
+| Situation | Do |
+|---|---|
+| Edit in flight, verifying | stay in-turn: wait 15–30 s browser-side → re-meter → next beat |
+| Dirty gate (track boundary) | stay in-turn: wait ~20 s → re-check gate |
+| User engaged / feedback burst | stay in-turn, triage-first, chain beats |
+| Healthy ≥ 3 beats AND user quiet | end turn: `ScheduleWakeup(240–420 s, "healthy hold")` |
+| Brief pause wanted, work pending | end turn: `ScheduleWakeup(60 s)` — the FLOOR; nothing shorter exists, which is why fast pacing is in-turn |
+
+**Context economy in burst mode** (the price of speed): screenshots are the expensive step.
+Verification cycles run on METER NUMBERS; screenshot only on compositional changes, on
+suspicion, or every ~4th cycle. Delegate anything heavy to a subagent. If context runs long the
+harness compacts and the wakeup prompt re-enters the skill — state must already be in the
+journal/snapshot by then (write-as-you-go, not at the end).
 
 Pass the original `/vibej …` input as the wakeup `prompt` so a post-compaction fire re-enters
 the skill. If a beat budget/duration was set and reached → run the stop procedure instead.

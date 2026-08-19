@@ -73,10 +73,17 @@ Hard-won caveats recorded in those sessions, all of which v2 inherits as rules:
 
 1. **User message** — arrives mid-turn or wakes the idle session; always triaged first
    (outranks everything, same table as v1).
-2. **ScheduleWakeup heartbeat** — the guaranteed cadence. Self-paced (see pacing table in the
-   skill draft): ~30 s while verifying a just-made edit or waiting out a dirty meter window,
-   ~90 s in active-tuning mode, 240–420 s when the frame has been healthy for 3+ beats.
-3. **Monitor events** *(bonus accelerator, phase 2)* — see §4.
+2. **The turn itself** — the fast path (DECIDED 2026-08-19: iteration speed maxed). While there
+   is active work — an edit to verify, a dirty gate to wait out, a user engaged — the session
+   does NOT end the turn: it chains beats back-to-back, using browser-side waits
+   (`evaluate_script` awaiting 10–30 s then returning fresh meter numbers) for observation
+   windows. Cycle latency ≈ 2 s (validate+swap) + the shortest meaningful observation window
+   (~15–30 s). No Bash in the hot path ⇒ no classifier dependency; user messages still land
+   mid-turn within seconds.
+3. **ScheduleWakeup heartbeat** — idle/fallback path ONLY. Hard floor is 60 s (clamped
+   [60, 3600]), so sub-minute pacing via wakeups is impossible — that is WHY fast iteration
+   lives in-turn. Arm 60 s when pausing briefly, 240–420 s on a healthy hold.
+4. **Monitor events** *(bonus accelerator, phase 2)* — see §4.
 
 **The Beat** keeps everything that worked in v1, in the same order: LOOK (screenshot, judge
 visually) → meter probes (`summary`/`residR`, discard gate < 0.9 windows) → triage user words →
@@ -138,8 +145,10 @@ edits from another session/editor).
 
 ## 7. Open questions for redaphid
 
-1. Beat cadence defaults: is ~90 s active / ~300 s healthy the right feel, or should "healthy"
-   stretch further (the meter + your messages are the real triggers)?
+1. ~~Beat cadence defaults~~ **ANSWERED 2026-08-19: "as fast as possible."** Burst mode is the
+   default — stay in-turn and chain beats; wakeups only for idle holds. Cost lever: screenshots
+   are the context-expensive step, so verification cycles run on meter numbers and screenshot
+   only on compositional changes / every ~4th cycle — keeps hours-long sessions viable.
 2. Phase 2 endpoint: OK to add the `/__vj-signal` dev plugin + `?vj=1` loader to the repo, or
    keep the page untouched and stay heartbeat-only?
 3. Should the loop keep a **hard beat budget** (v1's `180 iterations`) at all, or run until
