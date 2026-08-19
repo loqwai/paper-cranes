@@ -80,7 +80,16 @@ uniform float evoPhase;            // wavelet-ease: monotonic set clock (~1 unit
 uniform float navX;          // world pan X (drag, accumulates)
 uniform float navY;          // world pan Y
 uniform float navZoom;       // pinch-zoom (0 → treated as 1)
-uniform float flybyZoom;     // iter148: controllers/flyby.js arc position — 1 = cruising in close, ~0.24 = wide
+uniform float flybyZoom;
+// ── iter150: four MORE audio features, deliberately picked from DIFFERENT domains (CLAUDE.md's
+//    independence matrix) so they don't just re-say what bass/mids/treble already say. All are
+//    MEDIANS — multi-second rolling centres — because these drive STRUCTURE, and structure follows
+//    slow music. A median cannot jitter, so none of these can re-introduce shiver.
+uniform float spectralSkewMedian;      // SHAPE domain: harmonic tilt
+uniform float spectralEntropyMedian;   // QUALITY domain: chaos vs order
+uniform float spectralKurtosisMedian;  // SHAPE domain: peaked vs diffuse
+uniform float spectralSpreadMedian;    // SHAPE domain: harmonic width
+uniform float pitchClassMedian;        // TONAL domain: what key we are in     // iter148: controllers/flyby.js arc position — 1 = cruising in close, ~0.24 = wide
 uniform float paletteShift;  // PERMANENT palette rotation — grows on every big drop
 uniform float warpGrow;      // PERMANENT structural warp — grows on every big drop
 // waveletBassZScore + wavelet_bassHit auto-declare (raw) — transient pulse punch only.
@@ -151,7 +160,14 @@ vec4 fractal(vec2 p){
         if (i < FIRST) continue;
 
         vec2 uv = abs(p);
-        float hexR_i = gHexR;   /* iter 142: depth-wave removed entirely — it pulsed */   /* iter 141: demoted 0.13 -> 0.04 — read as pulsing, not travel; the zoom ratchet is the primary motion now */   // iter 138 RATCHET: radius modulation is a WAVE traveling through recursion depth (phase monotonic) - each level swells as the wave passes, motion always flows one way
+        // iter150 INTERLEAVED SCALES: alternate recursion levels take opposite radius offsets, so the
+        //    lattice reads as TWO interleaved structures rather than one self-similar stack. The split
+        //    is driven by harmonic TILT (spectralSkewMedian): a bass-tilted mix opens the coarse levels
+        //    and tightens the fine ones, a bright mix does the reverse. Depth is not a motion axis
+        //    (iter 138 proved that), but it IS a legible STATIC axis — the levels all overlap on
+        //    screen, so making them differ shows up as richer structure everywhere at once.
+        float lvlParity = (mod(float(i), 2.0) < 1.0) ? 1.0 : -1.0;
+        float hexR_i = gHexR + lvlParity * (spectralSkewMedian - 0.5) * 0.16 * quietGate;   /* iter 142: depth-wave removed entirely — it pulsed */   /* iter 141: demoted 0.13 -> 0.04 — read as pulsing, not travel; the zoom ratchet is the primary motion now */   // iter 138 RATCHET: radius modulation is a WAVE traveling through recursion depth (phase monotonic) - each level swells as the wave passes, motion always flows one way
         float delt1 = abs((hexDist(uv) - hexR_i) - 0.1);        // MIDS breathe the hexagons
         float delt2 = min(length(uv) - gCross, min(uv.x, uv.y)) + gCrossBias; // BASS taut cross (+K139 hex↔cross balance)
         float m = min(delt1, delt2);
@@ -172,11 +188,11 @@ vec4 fractal(vec2 p){
         f *= mix(1.0 - ld * 0.90, 0.10 + ld * 0.90, gDepthFocus);   // iter 27: stronger window (screenshot: zoomed-out finest levels read as noise)
         // CONTINUOUS palette field: recursion depth + a smooth within-cell swirl so colour flows
         // across the structure (this is the BEAUTY — a smooth field, not a discrete depth band).
-        float swirl = 0.5 + 0.5 * sin(atan(p.y, p.x) * 2.0 + length(p) * 3.0 + float(i) + seed4 * TAU);
+        float swirl = 0.5 + 0.5 * sin(atan(p.y, p.x) * 2.0 + length(p) * 3.0 + float(i) + seed4 * TAU + (pitchClassMedian - 0.5) * 1.2 * quietGate);   // iter150 KEY -> INTERIOR COLOUR FLOW: the rolling key estimate rotates the within-cell colour swirl, so a key change re-paints cell interiors without touching the global hue (which stays ~0 drift per directive).
         float field = ld * (0.55 + evoPlasma * 0.2) + swirl * 0.45;
 
         float env = sin(gPulse * PI);
-        float wave = smoothstep(0.30, 0.0, abs(ld - (1.0 - gPulse))) * env;
+        float wave = smoothstep(0.30 - (spectralKurtosisMedian - 0.48) * 0.28, 0.0, abs(ld - (1.0 - gPulse))) * env;   // iter150 PEAKEDNESS -> ACCENT WIDTH: a focused, peaky spectrum narrows the travelling accent to a tight band; a diffuse one spreads it into a broad glow.
         float band = bandForDepth(ld);
         // ── iter146 RELIEF, NOT GAIN ── (user: "the color still seems flickery on a global scale
         //    with the music - like it brightens and washes out")
@@ -255,7 +271,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     //    the whole thing off when the phone isn't there (unset knobs read 0, sum = 0).
     float bank4 = step(0.001, knob_131 + knob_132 + knob_133 + knob_134 + knob_135 + knob_136);
     gCrossBias = (knob_139 - 0.5) * 0.12 * step(0.001, knob_139 + knob_140);   // K139 HEX↔CROSS (pad 5 X, iter 25): <0.5 more cross, >0.5 more hex
-    gCrossBias -= clamp(waveletTiltMedian, -1.0, 1.0) * 0.05 * quietGate;   // vj2 iter 1: SPECTRAL TILT → cell SHAPE. Bass-heavy balance (+tilt) → the taut CROSS dominates; bright/hissy (−tilt) → HEXAGONS. Median = slow, structural (~seconds), never a per-frame flick.
+    gCrossBias -= clamp(waveletTiltMedian, -1.0, 1.0) * 0.05 * quietGate;
+    gCrossBias += (spectralEntropyMedian - 0.80) * 0.16 * quietGate;   // iter150 CHAOS -> SHAPE: a noisy, unpredictable spectrum pushes cells toward the taut CROSS; an ordered, tonal one lets the HEXAGON win. Median => a section-scale morph, never a per-beat flick.   // vj2 iter 1: SPECTRAL TILT → cell SHAPE. Bass-heavy balance (+tilt) → the taut CROSS dominates; bright/hissy (−tilt) → HEXAGONS. Median = slow, structural (~seconds), never a per-frame flick.
     gSpin  += (knob_133 - 0.5) * 2.0 * bank4;                 // K133 FOLD TWIST
     gHexR  += (knob_134 - 0.5) * 0.15 * bank4;                // K134 CELL RADIUS
     gScale  = 2.0 + evoC * 0.14 + (knob_131 - 0.5) * 0.5 * bank4;   /* iter 142: FOLD RATIO = section plateau. The spectral-width term moved every mirror seam at every level — the 'overlapping kaleidoscope sections breathing' the user called out. */   // vj2 iter 10: SPECTRAL WIDTH → FOLD RATIO. Wide/dense spectrum (spread ~0.85) opens the self-similarity ratio (+0.12), a narrow one tightens it (−0.15). Median → slow structural permutation, never a per-frame flick. // K131 FOLD RATIO
@@ -264,7 +281,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
                       + (trebLive - 0.50) * 0.08 * quietGate          /* iter148: 0.16->0.08 and centred at 0.50 (trebLive actually runs ~0.55, so the old 0.35 centre pushed FINE almost permanently = filigree mush) */
                       - (1.0 - clamp(flybyZoom, 0.0, 1.0)) * 0.08,    /* iter149b: was 0.30 and that was MY BAD GUESS. I assumed the wide leg aliased into mush, but the measurement said the opposite - wide was the SHARPEST state (edge energy 0.09 wide vs 0.02 at close cruise), because the soft 0.12 line ramp goes sub-pixel out there. A 0.30 coarse bias stripped the level window down to only the biggest cells, so the wide shot read as a few soft blobs instead of a landscape. Keep a token bias for anti-alias headroom only. */
                       0.0, 1.0);   /* iter 142: level window = section plateau. The centroid SPRING faded whole detail-levels in/out with brightness = sections appearing/vanishing. */   // vj2 iter 12: 0.35/1.0 → 0.30/0.8 — on bright tracks the finest levels filled every cell with speckle (busy wallpaper); bias coarser, brightness pushes fine less hard   // biased COARSE (0.35): bold cells by default, filigree only when bright   // K132 DEPTH FOCUS   // BRIGHTNESS → fine detail, dark → coarse (level window)                            // fractal self-similarity ratio: slow permutation of the WHOLE structure (user iter 12: fractal permutations, not warps)
-    gFill   = 0.06 + trebLive * 0.02 * quietGate;
+    gFill   = 0.06 + trebLive * 0.02 * quietGate + (spectralSpreadMedian - 0.26) * 0.05 * quietGate;   // iter150 HARMONIC WIDTH -> FILL: a wide, dense spectrum fills the cells solid; a narrow one hollows them to outlines.
 
     // ── iter144 BREATHE IN PLACE ── (user: "oscillation _can_ be ok - just not large moving pieces
     //    that disrupt the sense of space. The fractal structures can breathe and morph")

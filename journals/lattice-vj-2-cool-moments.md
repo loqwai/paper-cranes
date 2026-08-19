@@ -525,3 +525,56 @@ Session ended at iter ~142/180 ("shutting down for the night"). Cron deleted, st
 - **OPS: always re-park the claude-in-chrome cursor after every screenshot** (user had to ask twice).
   Two separate things: `cursor:none` CSS governs the wall and a RELOAD WIPES IT; the parked pointer
   keeps captures clean. vibej2 SKILL.md step B0 updated from a four-word aside to an explicit rule.
+
+### Iter 150 — the paletteShift runaway, and two INFRASTRUCTURE bugs behind it
+- **User: "Looks like there's a global brightness shift again."** (3rd report.) Root cause this time
+  was NOT a multiplier — it was the PALETTE. `paletteShift` was climbing **7.7 per minute** = ~7.7 full
+  hue turns/min. Hues differ in luminance, so a palette spinning that fast reads as the whole frame
+  shifting brightness. **Lesson: "global brightness shift" has at least two distinct causes — a gain
+  term, and a fast HUE rotation. Measure paletteShift's rate before assuming it's a multiplier.**
+- **The bug:** lattice-nav's "extreme sound" detector was `ez > 1.4 || hit > 0.85` with a 2 s cooldown.
+  On real music that is most bars, not a drop: ~330 mutations in 20 min (one per ~3.6 s), 0 -> 146.
+  A "permanent mutation" firing every few seconds is not permanent — it is a hue LFO. Now anchored to
+  wavelet-ease's `sectionMode` (the drop detector that already works), step cut to 0.05-0.12, cooldown
+  2 s -> 25 s. Verified: **paletteShiftPerMin 7.2 -> 0.000**, and it now sits at the URL seed 0.6.
+
+#### INFRA BUG 1 — `?t=` is Vite's own HMR param, so controller cache-busting was a no-op
+- `src/controllerChain.js` busted its dynamic imports with `?t=' + Date.now()`. **Vite owns `t=`** and
+  normalises it, so `import('/controllers/x.js?t=...')` resolves to the SAME cached module: the
+  "cache-busted" re-import silently returns STALE code. Proof: `import(...?t=)` -> VERSION undefined;
+  `import(...?v=...&x=1)` -> correct VERSION; raw `fetch()` showed the new file the entire time.
+- Cost: three rebuild-and-measure cycles where the fix was on disk, served correctly by the server,
+  and still not running. **When a hot-reloaded module keeps behaving like the old one, export a
+  VERSION const and check it — do not infer liveness from behaviour.**
+- Fixed: bust param is now `cb=`. This affected EVERY controller hot-reload, not just this shader.
+
+#### INFRA BUG 2 — editing anything under `src/` full-reloads the page and KILLS TAB AUDIO
+- Vite full-reloads for modules that don't accept HMR. Editing `src/controllerChain.js` mid-show
+  reloaded the display, and a reload drops the getDisplayMedia share — which cannot be restored
+  without a user gesture. The user was AFK, so the show went silent until they returned.
+- **Rule for live sessions: `.frag` edits are SAFE (editor-sync hot-swaps them). Any `.js` edit under
+  `src/` is NOT — it will reload the page and cost the audio share. Batch JS edits for between sets,
+  or hot-patch the running instance instead of editing the file.** Controllers under `controllers/`
+  are safe to EDIT (they're only loaded dynamically) as long as you re-import to pick them up.
+
+### Iter 150b — more features, from DIFFERENT domains (user: "more complex, interesting fractal
+features reacting to more audio features")
+All new drivers are MEDIANS (multi-second rolling centres) because they drive structure, and a median
+cannot jitter — so none of them can reintroduce shiver. Picked from separate domains per CLAUDE.md's
+independence matrix rather than re-saying what bass/mids/treble already say:
+- `spectralSkewMedian` -> **INTERLEAVED SCALES**: alternate recursion levels take opposite radius
+  offsets, so the lattice reads as two interleaved structures. Depth is not a MOTION axis (iter 138
+  proved that) but it is a legible STATIC one — the levels overlap on screen, so differentiating them
+  enriches structure everywhere at once.
+- `spectralEntropyMedian` -> hex↔cross balance (chaos pushes cells toward the taut cross).
+- `spectralSpreadMedian` -> cell fill density (wide spectrum fills cells, narrow hollows them).
+- `spectralKurtosisMedian` -> travelling accent band width (peaky = tight band, diffuse = broad glow).
+- `pitchClassMedian` -> within-cell colour swirl rotation (key change re-paints interiors WITHOUT
+  moving global hue, which stays ~0 drift per directive).
+- Not yet verified against live audio — the share dropped before a clean window. **First job next
+  session: confirm these read on real music and check rResid.**
+
+### Status (2026-08-19, user AFK)
+- Live target `redaphid/wip/lattice-vj/5` + `?controller=lattice-nav&controller=flyby`.
+- Frame healthy at last clean read: clip 0, flicker 0.04-0.07 (session low), lumVsEnergy 0.003.
+- **BLOCKED: tab audio share lost to a Vite full reload; needs a human click on "Share tab audio".**

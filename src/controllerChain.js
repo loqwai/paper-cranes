@@ -14,7 +14,12 @@ const toUrl = (name, bust) => {
     let url = name
     if (!name.includes('http') && !name.endsWith('.js')) url = `/controllers/${name}.js`
     else if (!name.includes('http')) url = `/controllers/${name}`
-    if (bust) url += (url.includes('?') ? '&' : '?') + 't=' + Date.now()
+    // NOT `t=` — that is VITE'S OWN HMR timestamp param. Vite normalises it, so
+    // `import('/controllers/x.js?t=' + Date.now())` resolves to the SAME cached module and the
+    // "cache-busted" import silently returns STALE code. Cost us a live debugging detour: a fixed
+    // controller was re-imported repeatedly and kept running the old logic, with the raw fetch()
+    // showing the new file the whole time. Use a param Vite does not own.
+    if (bust) url += (url.includes('?') ? '&' : '?') + 'cb=' + Date.now()
     return url
 }
 

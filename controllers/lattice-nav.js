@@ -1,3 +1,4 @@
+export const VERSION = 'iter150-paletteshift-fix'
 /**
  * lattice-nav — COMPOSITE controller: wavelet-ease audio + finger navigation (pan + pinch-zoom).
  *
@@ -45,7 +46,8 @@ export function make(cranes) {
     // ── PERMANENT live mutation ── an extreme sound (a big drop) permanently rotates the palette
     // and grows the structural warp, so the look transforms over the show and never returns to the
     // start — rewarding people for going hard. These accumulate and never reset (within a session).
-    let paletteShift = _num('paletteShift', 0), warpGrow = _num('warpGrow', 0), mutation = 0, mutCooldown = 0   // seeded from URL too: these are PERMANENT accumulations, so a preset that captured them mid-show must restore them
+    let paletteShift = _num('paletteShift', 0), warpGrow = _num('warpGrow', 0), mutation = 0, mutCooldown = 0
+    let lastMutSection = null   // sectionMode at the last mutation — one mutation per real drop   // seeded from URL too: these are PERMANENT accumulations, so a preset that captured them mid-show must restore them
 
     const xy = e => { const t = e.touches ? e.touches[0] : e; return [t.clientX / innerWidth, t.clientY / innerHeight] }
     const pinch = e => Math.hypot(e.touches[0].clientX - e.touches[1].clientX,
@@ -103,13 +105,28 @@ export function make(cranes) {
         const now = performance.now() / 1000
         const dt = Math.min(0.05, now - lastT); lastT = now
         mutCooldown = Math.max(0, mutCooldown - dt)
+        // BUGFIX 2026-08-19: this used to fire on `ez > 1.4 || hit > 0.85` with only a 2 s cooldown,
+        // which on real music is not "an extreme sound" — it is most bars. Measured live: ~330
+        // mutations in 20 minutes (one every ~3.6 s), driving paletteShift 0 -> 146 and rotating the
+        // palette ~7.7 FULL HUE TURNS PER MINUTE. Hues differ in luminance, so a palette spinning that
+        // fast reads as the whole frame shifting brightness — which is exactly what the user kept
+        // reporting as "global brightness shift". A "permanent mutation" that happens every few
+        // seconds is not permanent and is not a mutation; it is a hue LFO.
+        //
+        // Now anchored to the drop detector that already works: wavelet-ease's sectionMode, which
+        // steps once per real breakdown->surge (observed ~1 step/8 min on this set). One mutation per
+        // section step, plus a much stricter standalone fallback for a genuinely extreme hit.
         const ez = features.energyZScore ?? 0
         const hit = features.wavelet_bassHit ?? 0
-        if ((ez > 1.4 || hit > 0.85) && mutCooldown <= 0) {
+        const section = features.sectionMode ?? 0
+        const sectionStepped = lastMutSection !== null && section !== lastMutSection
+        lastMutSection = section
+        if ((sectionStepped || ez > 2.6 || hit > 0.97) && mutCooldown <= 0) {
             mutation += 1
-            paletteShift += 0.15 + Math.random() * 0.22   // permanent hue rotation (varied each drop)
+            paletteShift += 0.05 + Math.random() * 0.07   // permanent hue rotation, kept SMALL: this is a
+                                                          // landmark you notice over a set, not a colour cycle
             warpGrow = Math.min(2.0, warpGrow + 0.18)      // permanent structural complexity (capped)
-            mutCooldown = 2.0                              // ≥2s between mutations
+            mutCooldown = 25.0                             // ≥25s — a drop is not a bar
         }
 
         out.navX = navX; out.navY = navY; out.navZoom = zoom
