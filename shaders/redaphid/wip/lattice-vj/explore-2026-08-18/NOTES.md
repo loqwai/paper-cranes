@@ -91,3 +91,66 @@ with ZERO weight in red bins. Cause: the meter samples a 64×36 downscale — fi
 red+blue cells average to violet before binning. **hueHist is trustworthy for broad fields, not
 for high-frequency palette interleave. For palette identity on detailed frames, sample at higher
 res or histogram per-pixel before downscaling.**
+
+---
+
+## SESSION WRAP-UP (2026-08-18, iters 107–142) — general findings for this visual and others
+
+### The one-sentence version
+Everything the user vetoed this session was, at bottom, the same defect — **bounded parameters
+visibly retracing their path** — and everything that landed was one of two things: **motion with a
+direction** (monotonic spin, perpetual self-similar zoom, one-way plateau steps) or **audio
+confined to shading**.
+
+### The hierarchy that emerged (strongest finding)
+A structure-first visual has three channels, and they must not trade jobs:
+1. **GEOMETRY** (fold ratio, radii, level windows, symmetry) — may only EVOLVE: monotonic
+   accumulators, or one-way eased steps on musical events (drops/sections). NO sines, NO audio,
+   however smoothed. A "slow, safe" oscillator on geometry is still an oscillator; the user
+   noticed a ±0.09 fold-ratio rock and a spring-driven level window as "kaleidoscope sections
+   breathing". Fold-ratio errors compound per recursion level (scale^i), so even tiny wiggles
+   are large on screen.
+2. **LIGHT/SHADING** — where ALL audio belongs: local relief (never the global multiplier —
+   that's the strobe channel), per-depth band lighting, texture on line thickness. This is where
+   beat-scale musicality lives (verified: rResid rose when we deepened wub→shadow coupling).
+3. **COLOR** — follows the slowest music only (key ~8 s median, set clock, permanent drop
+   mutations). Hue drift within a track ≈ 0.
+
+### Ratcheting: what actually works and what doesn't
+- ✗ Standing sine on a parameter — reads as shaking, regardless of period (70 s cycles still
+  got flagged).
+- ✗ "Traveling wave through recursion depth" — depth is NOT a visible axis; every level overlaps
+  every pixel, so it reads as pulsing. Travel must be along an axis the eye can see.
+- ✓ Monotonic rotation (angle wraps invisibly).
+- ✓ **Perpetual self-similar zoom** — the natural ratchet for a fractal: magnification ramps one
+  fold-octave and wraps where the lattice maps onto itself. Center it on the composition's
+  symmetry point. (Caveat found the hard way: compensate the per-level twist with the FIXED step
+  only — never with an accumulated angle like gSpin, which is unbounded and spins the frame.)
+- ✓ One-way plateau steps on drops (hash target + ~4 s ease) — this is what "the pattern
+  evolves" means operationally: irreversible transitions, stillness between them.
+
+### Composition
+- "I'm never looking at the center" on any kaleidoscopic shader = the fold's symmetry center is
+  off screen-center. Fix empirically: measure the nearest strong symmetry center in a screenshot,
+  convert px→world via the uv scale, trim. Don't reason from the fold grid — per-level rotations
+  move the visible axes off it.
+
+### Working method (for the next VJ run)
+- User feedback in plain words maps to precise defects; triage it first, and prefer ONE decisive
+  pass over serial partial fixes (the oscillation survived four partial fixes across 3 sessions
+  of complaints before the full "no audio on geometry" pass).
+- Verify each experiment on a CLEAN meter window (gate ≈ 1) before tuning its side effects;
+  discard boundary/resume windows.
+- Meter thresholds that proved out: clip = 0 always; flicker > 0.7 = act (0.6s fine); dark
+  0.1–0.3; lumMin ≥ 0.08 (clamp stacked darkeners: min(0.85, …)); rResid is the beat-scale
+  musicality needle (0.045 → 0.115 across the wub-relief fix).
+- Hot-swap confirmation matters: the "I'm watching it shiver" report happened while a buggy
+  version was still live because the fix landed on disk but never got swapped — always confirm
+  the marker is in window.cranes.shader, especially across interrupts.
+
+### State at shutdown
+- Live target was `lattice-vj/4.frag` (fork of 3 at iter 137, preset in 4.md).
+- **iter 142 pass is in the file, GL-validated, but was never observed live** — first task next
+  session is to load it and watch: seams at the ~60 s zoom wrap, plateau steps on drops, and
+  whether long drop-less stretches feel too static (if so: slow drift from evoPhase, not sines).
+- Cron deleted, vj-state.json removed. All work committed to `live-show-rig`.

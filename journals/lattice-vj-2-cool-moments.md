@@ -389,3 +389,25 @@ faster than the user's stated tolerance (H3 FAIL — investigate which `s` term)
 - **Iris/1 connection (user's pointer, docs/advanced-shader-techniques.md §1):** "audio modulates RATE/SHAPE, never the ANGLE — adding to an angle makes it rock backward." Generalization learned today: **a bounded parameter can't ratchet monotonically, so give its modulation a propagation direction instead (standing wave → traveling wave).** That's the ratchet for radii/ratios/windows.
 - **Tension resolved:** iter 114 ("must SEE parameters change") vs iter 138 ("no back-and-forth"). Answer: visibility comes from traveling modulation + monotonic spin, not from large standing sweeps.
 - `[x]` closes the iter-118 todo "observe whether radius+cross oscillation still reads as backtracking" — it did; fixed.
+
+### Iters 139–142 + SHUTDOWN (2026-08-18) — the oscillation saga, ended mid-experiment
+Session ended at iter ~142/180 ("shutting down for the night"). Cron deleted, state file removed.
+
+**The feedback sequence (read this first next session):**
+1. Iter 138: user — "primary animation is shaking back and forth, without progression. Need a ratcheting mechanism." → I built a depth-traveling radius wave. **FAILED**: recursion depth is not a visible axis; all levels overlap at every pixel, so each scale just pulsed in place.
+2. Iter 141: user — "still oscillating, not ratcheting. Push all of our stuff to a branch." → I built the self-similar perpetual zoom (fract-wrapped octave + rotation compensation). **BUG**: compensation used gSpin·0.05 — an unbounded accumulated angle — so the frame spun fast. User then: "I'm watching it shiver." Live shader at that moment was the buggy spin version (never got the 141b hotfix hot-swapped before interrupts) — **the shiver report is partly confounded by that bug.**
+3. User's sharpest diagnosis: "It's as if sections are cut out, overlapping, like a kaleidoscope. But those overlapping sections move in and out in a breathing motion. **I want the pattern to evolve.**"
+4. Root cause finally found by reading, not patching: **audio and oscillators on FOLD-GEOMETRY params**. gScale carried a spectral-width term (±0.25, seconds-scale) — the fold ratio moves EVERY mirror seam at EVERY level (error compounds as scale^i) = the "overlapping sections breathing". gDepthFocus carried the centroid SPRING (±0.4, settles ~0.4 s) — whole detail-levels faded in/out with brightness = sections appearing/vanishing. Plus residual shapeA/B rocks and the QUIET BREATH sine.
+
+**Iter 142 pass (IN FILE, validated, NEVER SEEN LIVE — verify first thing next session):**
+- Geometry (gHexR, gCross, gScale, gDepthFocus, gSpin) now takes ZERO audio and ZERO oscillators.
+- Structure EVOLVES: each detected drop (sectionMode) eases all four params to new hash-derived plateaus over ~4 s (sectionMix) and stays — one-way transformations, exactly "I want the pattern to evolve".
+- Continuous motion = perpetual self-similar zoom (fract octave ~60 s, fixed base 2.0, thetaStep = PI/8 only) + monotonic gSpin. Zoom is centered on the (center-trimmed) symmetry point and applied before `uv += world`, so pan stays screen-consistent.
+- Audio lives ONLY in shading/light (kick/wub relief, band lighting, gBorder/gFill texture ±0.03).
+
+## Todo (next session, in order)
+- `[ ] VERIFY iter 142 live: load 4.frag, watch 2+ minutes. Check (a) no breathing seams, (b) the zoom seam at each ~60 s octave wrap — if it snaps, tune/flip the PI/8 compensation or slow the zoom, (c) a drop actually steps the plateaus (needs wavelet-ease sectionMode firing).`
+- `[ ] With geometry frozen between drops, the frame may feel too static on long no-drop stretches — if so, add SLOW plateau drift via evoPhase (monotonic set clock), not sines.`
+- `[ ] bake VJ tooling into display page behind ?vj=1 (meter, validator, cursor CSS survive reloads).`
+- `[ ] controller-side "recenter" action — snap nav so a symmetry center lands at screen center (iter 137 was a hand-measured one-off).`
+- `[ ] re-measure CENTER TRIM after any nav change.`

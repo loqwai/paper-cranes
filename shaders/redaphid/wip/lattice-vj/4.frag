@@ -142,7 +142,7 @@ vec4 fractal(vec2 p){
         if (i < FIRST) continue;
 
         vec2 uv = abs(p);
-        float hexR_i = gHexR + 0.13 * sin(gShapePhase - float(i) * 1.1);   // iter 138 RATCHET: radius modulation is a WAVE traveling through recursion depth (phase monotonic) - each level swells as the wave passes, motion always flows one way
+        float hexR_i = gHexR;   /* iter 142: depth-wave removed entirely — it pulsed */   /* iter 141: demoted 0.13 -> 0.04 — read as pulsing, not travel; the zoom ratchet is the primary motion now */   // iter 138 RATCHET: radius modulation is a WAVE traveling through recursion depth (phase monotonic) - each level swells as the wave passes, motion always flows one way
         float delt1 = abs((hexDist(uv) - hexR_i) - 0.1);        // MIDS breathe the hexagons
         float delt2 = min(length(uv) - gCross, min(uv.x, uv.y)) + gCrossBias; // BASS taut cross (+K139 hex↔cross balance)
         float m = min(delt1, delt2);
@@ -206,13 +206,23 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     //    so the lattice passes through stars / ribbons / tight hex / open cross without ever repeating.
     // (iter 13, user: "I need a time component" — the iter-11 clocks were 5–10 min, too slow to SEE.
     //  Now ~2 min shape cycles + a continuous fold rotation below, so the lattice visibly reconfigures.)
+    // ── iter 142 EVOLVE, DON'T BREATHE (written at shutdown, NOT yet seen live): geometry takes NO
+    //    audio and NO oscillators. Each detected DROP (sectionMode) eases the structure to a NEW
+    //    random plateau over ~4 s (sectionMix) and STAYS — a one-way transformation. Between drops
+    //    the lattice is rock-still except the perpetual zoom + monotonic spin. Audio -> shading only.
+    #define SECH(n, k) (fract(sin(((n) + 1.0) * (k)) * 43758.5453) - 0.5)
+    float secPrev = max(sectionMode - 1.0, 0.0);
+    float evoA = mix(SECH(secPrev, 127.1), SECH(sectionMode, 127.1), sectionMix);
+    float evoB = mix(SECH(secPrev, 311.7), SECH(sectionMode, 311.7), sectionMix);
+    float evoC = mix(SECH(secPrev, 74.7),  SECH(sectionMode, 74.7),  sectionMix);
+    float evoD = mix(SECH(secPrev, 269.5), SECH(sectionMode, 269.5), sectionMix);
     float shapeA = 0.5 * sin(morphPhase * 0.85) + 0.5 * sin(bTime * 0.28 + 1.7);   // iter 114: user 'need to SEE the fractal parameters changing' — cycles ~2min → ~70s
     float shapeB = 0.5 * cos(morphPhase * 0.62 + 0.6) + 0.5 * cos(bTime * 0.19);
-    gSpin  += shapeA * 0.35 + bTime * 0.18;   // iter 118: user 'always going FORWARD, no oscillating back' — monotonic rotation now dominates (0.08→0.18), ping-pong shapeA demoted (0.9→0.35)                     // per-level fold angle drift + CONTINUOUS slow fold rotation (~1.3°/s at the deepest level: the structure is always slowly becoming something else) (theta += gSpin*(0.4+i*0.05))
-    gHexR   = 0.60 + shapeB * 0.05 + midsLive * 0.05 * quietGate;   /* iter 138: user 'shaking back and forth without progression' — standing breath 0.17 -> 0.05; the VISIBLE radius change now comes from the depth-traveling wave below (monotonic = always forward) */   // iter 114: 0.06 → 0.17 — cell radius sweep must be VISIBLE (slow driver, safe)   // vj2 iter 2: 0.12·(1+wub·0.8) → 0.05 — the spring (settles ~0.4s) chases a 2–4 Hz wobble, so cells PULSED at wub rate = TWITCHY. Geometry follows slow music; the wub now lives in shading only.
-    gHexR  += 0.025 * sin(bTime * 0.7) * (1.0 - quietGate);   // QUIET BREATH: when the gate closes on soft music the cells keep a slow ~27s breath instead of freezing; loud = unchanged
+    gSpin  += bTime * 0.18;   /* iter 142: shapeA rock removed — spin purely monotonic */   // iter 118: user 'always going FORWARD, no oscillating back' — monotonic rotation now dominates (0.08→0.18), ping-pong shapeA demoted (0.9→0.35)                     // per-level fold angle drift + CONTINUOUS slow fold rotation (~1.3°/s at the deepest level: the structure is always slowly becoming something else) (theta += gSpin*(0.4+i*0.05))
+    gHexR   = 0.60 + evoA * 0.20;   /* iter 142: radius = section plateau; no rock, no audio breath */   /* iter 138: user 'shaking back and forth without progression' — standing breath 0.17 -> 0.05; the VISIBLE radius change now comes from the depth-traveling wave below (monotonic = always forward) */   // iter 114: 0.06 → 0.17 — cell radius sweep must be VISIBLE (slow driver, safe)   // vj2 iter 2: 0.12·(1+wub·0.8) → 0.05 — the spring (settles ~0.4s) chases a 2–4 Hz wobble, so cells PULSED at wub rate = TWITCHY. Geometry follows slow music; the wub now lives in shading only.
+    gHexR  += 0.0;   /* iter 142: QUIET BREATH sine removed (oscillator on geometry) */   // QUIET BREATH: when the gate closes on soft music the cells keep a slow ~27s breath instead of freezing; loud = unchanged
     gBorder = 0.10 + (trebLive * 0.025 + bassLive * 0.02 + spectralRoughnessSmooth * 0.03) * quietGate   /* vj2 iter 2: treb .06→.025, bass .04→.02 (hi-hats were flicking line thickness) */ + (knob_138 - 0.5) * 0.10 * step(0.001, knob_137 + knob_138);   // K138 LINE THICKNESS (guest bank pad 4 Y, iter 24)   // GRIT fattens the lines too (roughness is not a phone fader → still listens under TAKE OVER)
-    gCross  = 0.20 + shapeA * 0.04 - bassPulse * 0.02;   /* iter 138: standing sweep 0.11 -> 0.04 (same ratchet fix) */   // iter 114: 0.04 → 0.11      // vj2 iter 2: .05 → .02 (de-twitch)
+    gCross  = 0.20 + evoB * 0.12;   /* iter 142: cross = section plateau; bassPulse off geometry */   /* iter 138: standing sweep 0.11 -> 0.04 (same ratchet fix) */   // iter 114: 0.04 → 0.11      // vj2 iter 2: .05 → .02 (de-twitch)
     // ── GUEST BANK 1 (vjpad knob_131–136, iter 22 auto-wire: the user was riding a dead bank) ──
     //    Pad 1: X=131 FOLD RATIO   Y=132 DEPTH FOCUS      Pad 2: X=133 FOLD TWIST  Y=134 CELL RADIUS
     //    Pad 3: X=135 LIGHT ANGLE  Y=136 RELIEF DEPTH.   All centred at 0.5 = neutral; bank4 gates
@@ -222,10 +232,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     gCrossBias -= clamp(waveletTiltMedian, -1.0, 1.0) * 0.05 * quietGate;   // vj2 iter 1: SPECTRAL TILT → cell SHAPE. Bass-heavy balance (+tilt) → the taut CROSS dominates; bright/hissy (−tilt) → HEXAGONS. Median = slow, structural (~seconds), never a per-frame flick.
     gSpin  += (knob_133 - 0.5) * 2.0 * bank4;                 // K133 FOLD TWIST
     gHexR  += (knob_134 - 0.5) * 0.15 * bank4;                // K134 CELL RADIUS
-    gScale  = 2.0 + 0.09 * shapeB   /* iter 138b: fold-ratio rock 0.30 -> 0.09 (iris discipline: no big standing oscillation on structure) */ + (knob_131 - 0.5) * 0.5 * bank4
-            + (clamp(waveletSpreadMedian, 0.0, 1.0) - 0.6) * 0.5 * quietGate;   // vj2 iter 10: SPECTRAL WIDTH → FOLD RATIO. Wide/dense spectrum (spread ~0.85) opens the self-similarity ratio (+0.12), a narrow one tightens it (−0.15). Median → slow structural permutation, never a per-frame flick. // K131 FOLD RATIO
+    gScale  = 2.0 + evoC * 0.14 + (knob_131 - 0.5) * 0.5 * bank4;   /* iter 142: FOLD RATIO = section plateau. The spectral-width term moved every mirror seam at every level — the 'overlapping kaleidoscope sections breathing' the user called out. */   // vj2 iter 10: SPECTRAL WIDTH → FOLD RATIO. Wide/dense spectrum (spread ~0.85) opens the self-similarity ratio (+0.12), a narrow one tightens it (−0.15). Median → slow structural permutation, never a per-frame flick. // K131 FOLD RATIO
     gShapePhase = morphPhase * 0.85 + bTime * 0.30;   // iter 138 RATCHET: strictly increasing -> the radius wave always travels coarse->fine, reads as continuous inward progression, never a rebound
-    gDepthFocus = clamp(0.30 + (waveletCentroidSpring - 0.5) * 0.8 + shapeA * 0.10   /* iter 138b: level-window rock 0.25 -> 0.10 */ + (knob_132 - 0.5) * bank4, 0.0, 1.0);   // vj2 iter 12: 0.35/1.0 → 0.30/0.8 — on bright tracks the finest levels filled every cell with speckle (busy wallpaper); bias coarser, brightness pushes fine less hard   // biased COARSE (0.35): bold cells by default, filigree only when bright   // K132 DEPTH FOCUS   // BRIGHTNESS → fine detail, dark → coarse (level window)                            // fractal self-similarity ratio: slow permutation of the WHOLE structure (user iter 12: fractal permutations, not warps)
+    gDepthFocus = clamp(0.35 + evoD * 0.35 + (knob_132 - 0.5) * bank4, 0.0, 1.0);   /* iter 142: level window = section plateau. The centroid SPRING faded whole detail-levels in/out with brightness = sections appearing/vanishing. */   // vj2 iter 12: 0.35/1.0 → 0.30/0.8 — on bright tracks the finest levels filled every cell with speckle (busy wallpaper); bias coarser, brightness pushes fine less hard   // biased COARSE (0.35): bold cells by default, filigree only when bright   // K132 DEPTH FOCUS   // BRIGHTNESS → fine detail, dark → coarse (level window)                            // fractal self-similarity ratio: slow permutation of the WHOLE structure (user iter 12: fractal permutations, not warps)
     gFill   = 0.06 + trebLive * 0.02 * quietGate;           // vj2 iter 2: .035 → .02 (de-twitch)
 
     // ── UNIQUE-PER-AREA structure: world position drifts the cell SIZE only — NOT rotation.
@@ -245,6 +254,16 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // NO whole-field rotation and NO orbital drift — the geography stays put unless YOU move it.
     float navz = navZoom < 0.01 ? 1.0 : navZoom;
     uv *= 0.07 / navz;                                        // (kick zoom-punch REMOVED iter 26 — a whole-screen scale flick is what read as SHIVER)
+    // iter 141 TRUE RATCHET: perpetual SELF-SIMILAR ZOOM. The depth-wave (iter 138) failed — depth
+    // isn't a visible axis, each scale just pulsed in place. Here magnification ramps one fold-octave
+    // (~60 s) and wraps where the lattice maps onto itself (fold ratio gScale), with a rotation
+    // compensation for the per-level twist step, so the seam ~vanishes and the motion is ALWAYS
+    // inward toward the centered symmetry point. Zoom is applied before `uv += world`, so the world
+    // point at screen center never moves and phone pan stays screen-consistent.
+    float zoomP = fract(bTime * 0.016);
+    float thetaStep = PI * 0.125;   /* iter 141b: gSpin*0.05 term was an accumulated (huge) angle -> frame spun fast + symmetry tilted. Compensate only the FIXED per-level step; the residual seam mismatch hides in the ongoing morph. */
+    uv *= rot2(zoomP * thetaStep);
+    uv /= pow(2.0, zoomP);   /* iter 142: FIXED base — zoom velocity must not follow gScale */
     uv += world;                                              // finger PAN — screen-consistent now
     vec2 wpos = uv;                                           // clean world position for the PATH (pre-warp)
     // gentle terrain warp for texture; grows PERMANENTLY on big drops (warpGrow). A fixed function
