@@ -57,7 +57,11 @@ uniform float waveletBand4Spring;
 #define midsLive (0.5 * waveletBand2Spring + 0.5 * waveletBand3Spring)
 #define trebLive (0.5 * waveletBand5Spring + 0.5 * waveletBand4Spring)
 #define glowLive (0.5 * energySpring       + 0.5 * waveletBand3Spring)
-#define FLIGHT 0.0   // auto-flight amplitude (vj2 iter 2: OFF at user request; 1.0 = the iter-22 wander)
+#define FLIGHT 0.0   // shader-side auto-flight stays OFF (vj2 iter 2: "I don't like the scrolling").
+                     // iter147: TRAVEL now belongs to controllers/flyby.js — a zoom-out / fly / zoom-in
+                     // state machine. A shader can only be PERIODIC, so it would fly you back to the
+                     // same places forever; the controller remembers where it has been and always
+                     // departs from there. Chain it AFTER lattice-nav: ?controller=lattice-nav&controller=flyby
 uniform float energySpring;
 uniform float melodyFlow;
 uniform float spectralCrestSmooth;
@@ -167,8 +171,19 @@ vec4 fractal(vec2 p){
         float env = sin(gPulse * PI);
         float wave = smoothstep(0.30, 0.0, abs(ld - (1.0 - gPulse))) * env;
         float band = bandForDepth(ld);
-        float lit = (smoothstep(gFill + alias, gFill, m) * 0.5 + 0.18)
-                  * (1.03 + glowLive * 0.35 + band * 0.95 + bassLive * quietGate * 0.45);   /* iter144: band 0.55->0.95 — treble lights the NEAR levels, mids the middle, bass the FAR ones, so the instruments visibly separate across recursion depth instead of blending into one brightness */   // iter 116: floor 0.95→1.03 — lumMin 0.068 on mellow Of The Trees, just under the 0.08 line   // vj2 iter 9: was 0.7/.4/.7/.6 (range 0.7→2.4): on a quiet intro (energy 0.074) the frame fell to near-BLACK. Floor up, music range compressed (0.95→2.3) — a breakdown dims, it doesn't vanish.
+        // ── iter146 RELIEF, NOT GAIN ── (user: "the color still seems flickery on a global scale
+        //    with the music - like it brightens and washes out")
+        //    The old multiplier ran 1.03 -> 2.78 with the music. It multiplies EVERY pixel, and `lum`
+        //    feeds LIGHTNESS in lush(), so loud music raised the whole frame's lightness and washed
+        //    the colour out — the global-brightness strobe channel that directive #1 forbids. My own
+        //    iter-144 band bump (0.55 -> 0.95) made it worse, and the meter missed it: a slow pump is
+        //    not "flicker", it showed up as motionVsEnergy 0.67, which I misread as musicality.
+        //    Fix: audio now drives RELIEF — the CONTRAST between lattice line and fill, inside the
+        //    smoothstep — which is local and per-depth. The global multiplier keeps only small
+        //    CENTRED terms about a constant, so mean frame brightness no longer follows the music.
+        float relief = (band - 0.35) * 0.55 * quietGate;
+        float lit = (smoothstep(gFill + alias, gFill, m) * (0.5 + relief) + 0.18)
+                  * (1.55 + (glowLive - 0.45) * 0.12 + (bassLive - 0.45) * quietGate * 0.12);   /* iter144: band 0.55->0.95 — treble lights the NEAR levels, mids the middle, bass the FAR ones, so the instruments visibly separate across recursion depth instead of blending into one brightness */   // iter 116: floor 0.95→1.03 — lumMin 0.068 on mellow Of The Trees, just under the 0.08 line   // vj2 iter 9: was 0.7/.4/.7/.6 (range 0.7→2.4): on a quiet intro (energy 0.074) the frame fell to near-BLACK. Floor up, music range compressed (0.95→2.3) — a breakdown dims, it doesn't vanish.
         lit += wave * (0.4 + gPop * 0.7 + gKick * 1.2 + spectralCrestSmooth * 0.35);
 
         // front-weighted accumulation (near structure leads the colour) → smooth, no band pops
