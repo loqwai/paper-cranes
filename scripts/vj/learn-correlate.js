@@ -8,8 +8,13 @@
 //   4. history aggregates excluded outright (Mean/Median/Min/Max/StdDev/Slope/Intercept/RSquared drift
 //      smoothly, spuriously match any sweep, and are poor wiring targets anyway)
 //   5. hands run behind the ear — try lags 0..2 s
+// 2026-08-20, user: "your job is to try your best to 'learn', even if the data is too noisy.
+// just best fit _anything_. don't refuse." So this NEVER returns empty: the significance gate
+// became a CONFIDENCE LABEL instead of a filter. Every moved knob gets a ranked answer, tagged
+// strong / weak / guess, with clock-like channels demoted (not excluded) so a real audio feature
+// wins any tie. Refusing was never more honest than answering with the uncertainty attached.
 window.__vjLearn = (samples) => {
-  if (!samples || samples.length < 30) return { ok: false, why: `too few samples (${samples?.length || 0}) — ride the fader a few seconds longer before LEARN` }
+  if (!samples || samples.length < 8) return { ok: false, why: `only ${samples?.length || 0} samples — nothing moved at all` }
   const EXCL = /(Mean|Median|Min|Max|StandardDeviation|Slope|Intercept|RSquared)$/
   const series = (get) => {
     const o = {}
@@ -69,16 +74,27 @@ window.__vjLearn = (samples) => {
       if (!clean(fa)) continue
       const fd = detrend(fa)
       for (const shift of [0, 5, 10, 15, 20]) {         // 100 ms grid → lag 0/0.5/1/1.5/2 s
-        if (kd.length - shift < 20) continue
+        if (kd.length - shift < 8) continue
         const c = corr(kd.slice(shift), fd.slice(0, fd.length - shift))
-        if (c && c.t > 3 && Math.abs(c.r) > 0.4) hits.push({ feature: fn, lag: shift / 10, ...c })
+        if (c) hits.push({ feature: fn, lag: shift / 10, ...c })   // NO GATE — rank everything, label the confidence
       }
     }
-    // keep each feature's best lag only, then rank
+    // keep each feature's best lag only
     const best = {}
     for (const h of hits) if (!best[h.feature] || Math.abs(h.r) > Math.abs(best[h.feature].r)) best[h.feature] = h
-    const ranked = Object.values(best).sort((x, y) => Math.abs(y.r) - Math.abs(x.r))
-    out.push({ knob: kn, range: +range.toFixed(2), n: tr.length, top: ranked.slice(0, 4) })
+    // CLOCK DEMOTION: monotonic accumulators track any steady sweep (the 08-19 "eight channels tie
+    // at one r" trap). They are not excluded — a clock may genuinely be the best answer — but a real
+    // audio feature wins whenever the two are close.
+    const CLOCK = /^(evo|palette|mutation|warpGrow|morphPhase|flowPhase|spinPhase|huePhase|sectionM|bTime|iTime)/
+    const scored = Object.values(best).map(h => ({ ...h, clock: CLOCK.test(h.feature),
+      score: Math.abs(h.r) * (CLOCK.test(h.feature) ? 0.6 : 1) }))
+    scored.sort((x, y) => y.score - x.score)
+    const label = h => (h.t > 3 && Math.abs(h.r) > 0.4) ? 'strong' : (h.t > 2 && Math.abs(h.r) > 0.25) ? 'weak' : 'guess'
+    const ranked = scored.map(h => ({ ...h, confidence: label(h) }))
+    const audioTop = ranked.filter(h => !h.clock)[0] || null
+    const tie = ranked.filter(h => h.clock && Math.abs(Math.abs(h.r) - Math.abs(ranked[0].r)) < 0.05).length >= 3
+    out.push({ knob: kn, range: +range.toFixed(2), n: tr.length,
+      bestGuess: audioTop, timeTrendSuspect: tie, top: ranked.slice(0, 5) })
   }
   out.sort((x, y) => y.range - x.range)
   return { ok: true, knobs: out, secs: +((samples[samples.length - 1].ms - samples[0].ms) / 1000).toFixed(1) }

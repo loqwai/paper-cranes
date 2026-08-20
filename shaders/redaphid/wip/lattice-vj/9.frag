@@ -1,3 +1,20 @@
+// LATTICE-VJ (9.frag — FORK of 8.frag on 2026-08-20, late in the live-mic set) — THE LEARNED FORK.
+// 8.frag captured the structure run; 9 is the first iteration whose changes were DICTATED BY
+// MEASUREMENT of the user's own hands rather than by my taste. Two confirmed gestures, wired:
+//   * CHURN  = spectralFlux composite  -> LINE WEIGHT + RIM FLARE   (b10)
+//       three faders agreed: K147 r=+0.57 t=5.22, K150 r=+0.57, K149 r=-0.45
+//   * WUB    = wubDepth (floor-trimmed) -> TRAVELLING ACCENT + SPECULAR GLINT  (b11)
+//       both axes of one pad agreed: K106 r=0.521 t=5.7, K105 r=0.448 t=5.0; K148 -> wubPulse
+// Both live in the SHADING lane (geometry stays monotonic/one-way per the standing hierarchy) and
+// both ADD light, because the frame was fighting a dark floor when they were wired.
+// Also carried from 8: symmetry plateaus, spin-follows-low-end, spatial permutations, the
+// zoom x loudness clamp, the complexity ratchet + its two brightness counter-ratchets.
+// BAKED PRESET (live at fork, evoPhase 5.54 = 84% complexity):
+//   knob_1=0.429 knob_131=0.162 knob_132=0.483 knob_133=0.59 knob_134=0.507 knob_135=0.876
+//   knob_136=0.57 knob_137=0.485 knob_138=0.505 knob_139=0.216 knob_140=0.537
+//   knob_141=0.263 knob_142=0.548 knob_143=0.538 knob_144=0.41
+//   knob_147=0.472 knob_148=0.807 knob_149=0.636 knob_150=0.587
+//   navX=1.232 navY=-0.264 navZoom=0.301 paletteShift=1.96 warpGrow=2.0  <- nav/mutation are EARNED
 // LATTICE-VJ (8.frag — FORK of 7.frag on 2026-08-20, live mic set) — THE STRUCTURE SNAPSHOT.
 // 7.frag was the live scratch for the 08-20 run; this is that run's result, captured intact with
 // the session's earned state baked into the preset below. Everything the run added is here:

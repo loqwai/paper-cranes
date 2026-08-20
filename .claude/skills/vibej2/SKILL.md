@@ -34,6 +34,42 @@ Existing state file (if a run is in progress):
 Recent page signals (page-as-sensor; empty until a ?vj=1 page has booted):
 !`tail -5 .claude/vj-signals.jsonl 2>/dev/null || echo "(none)"`
 
+## Parent stays responsive; delegate everything else
+
+**User directive, 2026-08-20 (verbatim): *"maybe everything else you do, you do in a subagent. the
+parent Claude needs to always be responsive to user feedback"*.**
+
+The parent loop is a **DISPATCHER, not a worker**. Its whole job is: triage the user's words, read
+the meter, decide the ONE move — then hand execution to a subagent and get back to listening. **It
+must never block.**
+
+**Why this is structural, not stylistic:** a Monitor event, a task notification, and a user message
+all reach the parent only **between turns**. Any long parent turn is dead air on the user's side.
+Measured cost on 2026-08-20: a LEARN press the user was actively waiting on sat **~3 minutes**
+purely because the parent was mid-turn running edits and verification waits. The user's reaction
+was *"WHY HAVEN'T YOU REACTED TO THE LEARN BUTTON YET"* — the work was fine; the availability was not.
+
+**The parent NEVER runs these — they go to `Agent` with `subagent_type: "fork"`:**
+- browser-side verification waits (any `await new Promise(r => setTimeout(...))` pattern)
+- multi-step analysis, correlation passes, batch screenshot review
+- journal writing, doc writing, HANDOFF updates, repo archaeology
+- long edit → compile → verify → retune cycles
+- anything whose result the user is not waiting on *right now*
+
+**The parent DOES do, inline, because they are fast and they are the judgement:** triage a user
+message, one meter read, one screenshot when a compositional change needs judging, the decision of
+what the next move is, and the one-line summary.
+
+**Concurrency token — only ONE subagent at a time may touch the display page or the target
+`.frag`.** The parent holds that token: never spawn a second page-touching fork while one is
+running, or two agents will race on `window.cranes.shader` and on the same file. Read-only forks
+(journal, docs, analysis of already-captured data) may run alongside one page-touching fork.
+
+**LEARN is no longer on the parent's latency path at all.** The analysis now runs *in the page*
+(`window.__vjAutoLearn`; permanent version in `docs/vj-auto-learn-patch.md`) and answers the pad's
+loop strip in **~56 ms**, worst case ~450 ms. The parent's only remaining LEARN job is the
+judgement call: **is this finding worth WIRING into the shader?**
+
 ## Philosophy (unchanged where it worked)
 
 - **LOOK before you touch, LOOK after you touch.** A screenshot is the only ground truth.
@@ -164,20 +200,61 @@ Order within a Beat:
    wakeup on a dirty window (and note the 60 s wakeup floor makes short wakeups impossible
    anyway).** Thresholds: clip = 0 always; flicker > 0.7 = act, don't
    rationalize; dark 0.1–0.3; lumMin ≥ 0.08; rResid is the beat-scale musicality needle.
-4. **Triage user words FIRST** if any arrived since the last beat — same table as v1 ("too
+   **EXCEPT — flicker the USER is causing is not a defect (user, 2026-08-20): before acting on any
+   flicker reading or alert, check whether a knob/nav param changed during the window. If their
+   hands were moving, the frame churn is theirs; say nothing, log nothing, change nothing.** A
+   fader sweep moves the whole frame, and the meter cannot tell that from a strobe. Snapshot the
+   knob vector, wait a few seconds, snapshot again:
+   ```javascript
+   const kv = () => JSON.stringify(Object.fromEntries(Object.entries({...window.cranes.manualFeatures, ...window.cranes.messageParams}).filter(([k]) => /^knob_|^nav/.test(k))));
+   const a = kv(); await new Promise(r => setTimeout(r, 6000)); const b = kv(); a !== b   // true => their hands, not a defect
+   ```
+   `clip` stays 0 through hand-driven flicker, so clip > 0 is still real and still acts.
+   **Filter it at the SOURCE, not per-beat.** Two levers, in order of preference:
+   1. **The Monitor** (safe mid-show, touches nothing on the wall) — only surface big flicker,
+      keep every other alert. **Use grep, not awk: this file is a skill template, and an `awk`
+      body containing `$0` gets SUBSTITUTED at render time** (it rendered as the literal word
+      "lattice" — the skill's own argument — producing a monitor that silently matched nothing).
+      Numeric alternation in a regex does the same job with no shell variables to mangle.
+      **Anchor the flicker clause to `"type":"flicker"`** — `pulse` lines carry a nested `flicker`
+      field, so an unanchored `"flicker":1\.[2-9]` leaks a false alert on every busy pulse. Verified
+      against both forms before arming:
+      ```bash
+      tail -n 0 -F .claude/vj-signals.jsonl | grep -E --line-buffered '"type":"(clip|too-dark|shiver|boot)"|"type":"flicker","flicker":(1\.[2-9]|[2-9])'
+      ```
+   2. **The page watchdog** (`src/vj/runtime.js`) — gate the flicker alert on "no knob moved in
+      ~3 s"; the LEARN ring already tracks exactly that. **POST-SHOW ONLY: editing runtime.js
+      triggers HMR, and a reload resets `evoPhase` to 0, which destroys an accrued flow state.**
+4. **LEARN presses: ALWAYS answer, never refuse** (user, 2026-08-20: *"your job is to try your
+   best to 'learn', even if the data is too noisy. just best fit _anything_. don't refuse."*).
+   `scripts/vj/learn-correlate.js` no longer gates on significance — it ranks every channel and
+   returns `bestGuess` (top non-clock feature) plus a `confidence` label of **strong** (t>3,
+   |r|>0.4) / **weak** (t>2, |r|>0.25) / **guess** (anything else), with clock-like accumulators
+   demoted 0.6x rather than excluded and `timeTrendSuspect` set when three clocks tie. Report the
+   best guess WITH its label — "guess: spectralCentroid r=0.31, low confidence" beats "no finding".
+   The uncertainty goes in the label, never in a refusal. Wiring still needs judgment: a `guess`
+   is a conversation starter, a `strong` corroborated across two+ faders is wireable.
+   **Editing ANY file the page fetches (`scripts/vj/*.js`, `src/**`) triggers HMR and can RELOAD
+   the display — which resets `evoPhase` and destroys an accrued flow state. Learned the hard way
+   2026-08-20: a learn-correlate.js edit cost a 16.6 set clock (99.6% complexity -> 5%).** Edit
+   analysis scripts BETWEEN sets, or accept the reset knowingly. Recovery: `remote-send
+   '{"evoPhase":<value>}'` pins it back (the pad-pin path overrides controller outputs;
+   `manualFeatures` does NOT), and `null` releases it.
+
+5. **Triage user words FIRST** if any arrived since the last beat — same table as v1 ("too
    subtle" / "shivery" / "flashing" / "washed out" / "get rid of X" / repeated asks ⇒ 3–5×
    stronger). A repeated complaint means the previous fix failed: prefer ONE decisive pass over
    another partial patch (the 2026-08-18 oscillation survived four partial fixes).
-5. **Pick at most ONE move** (features + track name guide it; archetype table and hard
+6. **Pick at most ONE move** (features + track name guide it; archetype table and hard
    guardrails unchanged from v1 — no object-overlays, no screen-space warps, no transients on
    geometry, audio in amplitude/gate never in phase args, palette never white, prefer
    subtract/fix). Healthy frame + no user input + nothing learned ⇒ a no-move beat is correct.
-6. **Apply via the atomic edit macro** (below). Never edit-then-swap as separate calls.
-7. **D2 LOOK** after any compositional change; revert or retune in the same beat if worse.
-8. **Journal** (same rules: cool moments, user flags, removals, forks; skip only trivial nudges).
-9. **One-line summary** — `**Beat — <track> — <what changed / why holding>.**` No screenshots in
+7. **Apply via the atomic edit macro** (below). Never edit-then-swap as separate calls.
+8. **D2 LOOK** after any compositional change; revert or retune in the same beat if worse.
+9. **Journal** (same rules: cool moments, user flags, removals, forks; skip only trivial nudges).
+10. **One-line summary** — `**Beat — <track> — <what changed / why holding>.**` No screenshots in
    the message.
-10. **Choose: chain or idle.** Iteration speed is maxed (user decision 2026-08-19), so the
+11. **Choose: chain or idle.** Iteration speed is maxed (user decision 2026-08-19), so the
     default while ANY work is active is **BURST MODE — do not end the turn**: go straight into
     the next beat, using a browser-side wait for the observation window:
 

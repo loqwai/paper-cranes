@@ -844,6 +844,41 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 | `/changelog` | Update docs/CHANGELOG.md and README with recent features. |
 | `/pr` | Create a PR, request review, and open in browser. |
 
+## Live Sessions: the Parent Stays Responsive
+
+During any **live session** — a VJ set (`/vibej2`), a jam, a `/live-session`, anything where the
+user has a hand on a controller — the main Claude session is a **dispatcher, not a worker**. It
+triages what the user says, reads the meter, makes the ONE decision, and hands execution to a
+subagent (`Agent` tool, `subagent_type: "fork"` — a fork inherits the full session context). Then
+it goes back to listening.
+
+**The parent NEVER does inline:** browser-side verification waits (`await new Promise(r =>
+setTimeout(...))`), multi-step analysis, journal or doc writing, repo archaeology, long
+edit-then-verify cycles, batch screenshot review. All of it goes to a fork.
+
+**"However trivial they seem to you"** is the operative clause, inherited from the Relay
+coordinator role: every violation feels individually too small to delegate — one `curl` to check a
+claim, one quick file read, one 20-second wait. Each is defensible alone; together they are the
+whole failure. *The judgement "this one is small enough" is itself the thing to stop making.*
+
+**Why, mechanically:** a `<task-notification>` only reaches the parent **between turns**. A long
+parent turn is dead air — monitors fire, the user presses a button, and nothing is heard until the
+turn ends. On 2026-08-20 a LEARN press waited **~3 minutes** for a reply purely because the parent
+was mid-turn running verification waits.
+
+**The corollary that actually fixed it:** when work must be *instant*, push it out of the agent
+loop entirely and into the page. The `?vj=1` runtime now runs the LEARN correlation in-browser and
+answers the phone over the WebSocket in **177 ms** (measured), with no model in the path.
+**Delegate work that needs a model; put work that needs to be instant in the page.**
+
+**Concurrency:** only ONE subagent at a time may drive the display page or the target `.frag`. The
+parent holds that token and must not spawn a second page-touching fork while one is running.
+Doc-only forks can run in parallel, but give each one distinct files — two agents editing the same
+file is a lost edit.
+
+Full treatment, including the failure modes that produced these rules:
+[docs/live-session-architecture.md](docs/live-session-architecture.md).
+
 ## Misc Notes
 - Use far less time when running sleep than you ordinarily would; if it were 5 seconds, do 1 instead.
 - When creating a PR or pushing to one, consider whether the changes include features a user would be excited about. If so, ask the user if they'd like you to run `/changelog` to update the docs.
