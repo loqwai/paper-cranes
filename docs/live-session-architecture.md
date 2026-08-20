@@ -27,7 +27,7 @@ a verdict to the phone. Measured worst case: **~3 minutes**, all of it queueing 
 parent.
 
 Now the display page itself watches for the confirm stamp, runs `window.__vjLearn` in-browser, and
-pushes the verdict straight to the pad over the existing WebSocket. Measured: **177 ms**
+pushes the verdict straight to the pad over the existing WebSocket. Measured: **~180 ms end-to-end (56 ms of actual work)**
 (press 22:51:38.441 → answer 22:51:38.618). The parent's only remaining LEARN job is the judgement
 call — *is this finding worth wiring into the shader?* — which is exactly the thing a model should
 be doing and nothing else.

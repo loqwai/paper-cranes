@@ -868,7 +868,9 @@ was mid-turn running verification waits.
 
 **The corollary that actually fixed it:** when work must be *instant*, push it out of the agent
 loop entirely and into the page. The `?vj=1` runtime now runs the LEARN correlation in-browser and
-answers the phone over the WebSocket in **177 ms** (measured), with no model in the path.
+answers the phone over the WebSocket in **tens of milliseconds** — 56 ms measured from WebSocket
+delivery to the answer being posted, ~180 ms end-to-end including the confirm-watcher poll, worst
+case bounded at ~450 ms by the two poll intervals — with no model in the path.
 **Delegate work that needs a model; put work that needs to be instant in the page.**
 
 **Concurrency:** only ONE subagent at a time may drive the display page or the target `.frag`. The
