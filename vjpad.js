@@ -33,9 +33,14 @@
  * So a pure knob bank is DEAD on the shaders he actually plays. That is why the
  * first three banks are built on the live named uniforms and are carved up so they
  * do not overlap — three phones can all play chromadepth-lattice/6 at once, for
- * real. Banks 4+ are generic knob banks: they are honestly labelled KNOBS ONLY,
- * and they move nothing until a shader reads that range. The page says so on its
- * face rather than handing a guest a row of dead dials.
+ * real.
+ *
+ * UPDATE 2026-08-19: banks 4–6 are no longer generic. lattice-vj/5 reads knob_131–140
+ * (shape), and lattice-vj/6 additionally reads knob_141–160 (the fractal's previously
+ * hardcoded constants). They are labelled with the names the shader gives them and
+ * marked with which shader answers them, so nobody is handed a row of dead dials —
+ * the same honesty, now backed by live uniforms. EXPLORE A/B faders are CENTRED at
+ * 0.5 = the tuned constant, which is why their defaults differ from the 0/1 banks.
  */
 import { WebSocketClient } from './src/remote/WebSocketClient.js'
 
@@ -55,19 +60,6 @@ const ZOOM_FMT = (v) => v.toFixed(2) + '×'
 
 /* ── the banks ───────────────────────────────────────────────────────────── */
 const KNOB_BASE = 100 // bank i gets knob_(KNOB_BASE + (i-1)*10 + 1 .. + 10)
-
-/** a generic 5-pad bank of raw knobs, for the 4th phone onwards */
-const guestBank = (n, base) => ({
-    name: 'GUEST ' + n,
-    live: 'KNOBS ONLY',
-    note: `knob_${base + 1}–knob_${base + 10} · needs a shader that reads them`,
-    pads: [0, 1, 2, 3, 4].map((i) => ({
-        name: 'PAD ' + 'ABCDE'[i],
-        hue: ['#f472b6', '#38bdf8', '#a78bfa', '#34d399', '#fbbf24'][i],
-        x: ax(`knob_${base + i * 2 + 1}`, `K${base + i * 2 + 1}`, 0, 1, 0.5),
-        y: ax(`knob_${base + i * 2 + 2}`, `K${base + i * 2 + 2}`, 0, 1, 0.5),
-    })),
-})
 
 const BANKS = [
     {
@@ -142,19 +134,65 @@ const BANKS = [
             },
         ],
     },
-    guestBank(1, KNOB_BASE + 30),
-    guestBank(2, KNOB_BASE + 40),
-    guestBank(3, KNOB_BASE + 50),
+    /* ── LATTICE (knob_131–140) ────────────────────────────────────────────────
+       This WAS guestBank(1) — labelled "KNOBS ONLY", which stopped being true the
+       moment lattice-vj wired knob_131–140 to real shape parameters. A bank of pads
+       reading K131/K132 in a dark room is unusable; these are the same knobs with
+       the names the shader actually gives them, and the defaults are 5.frag's baked
+       preset, so a RESET here lands on the tuned look rather than on 0.5 mush. */
+    {
+        name: 'LATTICE',
+        live: 'LIVE',
+        note: 'knob_131–140 · SHAPE · lattice-vj/5 + /6',
+        pads: [
+            { name: 'FOLD',  hue: '#f472b6', x: ax('knob_131', 'FOLD RATIO', 0, 1, 0.162), y: ax('knob_132', 'DEPTH FOCUS', 0, 1, 0.483) },
+            { name: 'CELL',  hue: '#38bdf8', x: ax('knob_133', 'FOLD TWIST', 0, 1, 0.59),  y: ax('knob_134', 'CELL RADIUS', 0, 1, 0.507) },
+            { name: 'LIGHT', hue: '#a78bfa', x: ax('knob_135', 'LIGHT ANGLE', 0, 1, 0.876), y: ax('knob_136', 'RELIEF', 0, 1, 0.57) },
+            { name: 'LINE',  hue: '#34d399', x: ax('knob_137', 'AURORA', 0, 1, 0.485),     y: ax('knob_138', 'THICKNESS', 0, 1, 0.505) },
+            { name: 'SHAPE', hue: '#fbbf24', x: ax('knob_139', 'HEX↔CROSS', 0, 1, 0.216),  y: ax('knob_140', 'FLIGHT', 0, 1, 0.537) },
+        ],
+    },
+    /* ── EXPLORE A / B (knob_141–160) ──────────────────────────────────────────
+       The fractal's hardcoded CONSTANTS, exposed by lattice-vj/6 so they can be
+       hand-flown with the music off and audited one at a time. Every fader is
+       CENTRED: 0.5 is exactly the tuned 5.frag value, so RESET is a byte-identical
+       look and the distance from centre reads as "how far off the tuned number".
+       These only move on lattice-vj/6 — every other shader ignores 141–160. */
+    {
+        name: 'EXPLORE A',
+        live: 'VJ/6',
+        note: 'knob_141–150 · GEOMETRY constants · centre 0.5 = tuned · lattice-vj/6 only',
+        pads: [
+            { name: 'FOLD',    hue: '#f97316', x: ax('knob_141', 'TWIST STEP', 0, 1, 0.5), y: ax('knob_142', 'TWIST FALL', 0, 1, 0.5) },
+            { name: 'CELL',    hue: '#22d3ee', x: ax('knob_143', 'INTERLEAVE', 0, 1, 0.5), y: ax('knob_144', 'RING GAP', 0, 1, 0.5) },
+            { name: 'SPIN',    hue: '#a78bfa', x: ax('knob_145', 'LEVEL SKEW', 0, 1, 0.5), y: ax('knob_146', 'SPIN RATE', 0, 1, 0.5) },
+            { name: 'ZOOM',    hue: '#34d399', x: ax('knob_147', 'ZOOM RATE', 0, 1, 0.5),  y: ax('knob_148', 'OCTAVE', 0, 1, 0.5) },
+            { name: 'SURFACE', hue: '#f472b6', x: ax('knob_149', 'FILL', 0, 1, 0.5),       y: ax('knob_150', 'WARP', 0, 1, 0.5) },
+        ],
+    },
+    {
+        name: 'EXPLORE B',
+        live: 'VJ/6',
+        note: 'knob_151–160 · COLOUR FIELD constants · centre 0.5 = tuned · lattice-vj/6 only',
+        pads: [
+            { name: 'SWIRL',  hue: '#38bdf8', x: ax('knob_151', 'ARMS', 0, 1, 0.5),       y: ax('knob_152', 'RADIAL', 0, 1, 0.5) },
+            { name: 'FIELD',  hue: '#fbbf24', x: ax('knob_153', 'DEPTH TINT', 0, 1, 0.5), y: ax('knob_154', 'SWIRL MIX', 0, 1, 0.5) },
+            { name: 'HUE',    hue: '#f472b6', x: ax('knob_155', 'REGION', 0, 1, 0.5),     y: ax('knob_156', 'LIGHT BASE', 0, 1, 0.5) },
+            { name: 'COLOUR', hue: '#a78bfa', x: ax('knob_157', 'CHROMA', 0, 1, 0.5),     y: ax('knob_158', 'ACCENT', 0, 1, 0.5) },
+            { name: 'TONE',   hue: '#34d399', x: ax('knob_159', 'BG FLOOR', 0, 1, 0.5),   y: ax('knob_160', 'GAIN', 0, 1, 0.5) },
+        ],
+    },
 ]
 
 /* ── shaders worth having on stage (same list the dial page ships) ───────── */
 const SHADERS = [
+    { path: 'redaphid/wip/lattice-vj/6', label: 'VJ6' },   // the EXPLORE fork — the only shader that reads knob_141–160
+    { path: 'redaphid/wip/lattice-vj/5', label: 'VJ5' },   // the good snapshot
     { path: 'redaphid/chromadepth-lattice/6', label: 'L6' },
     { path: 'redaphid/chromadepth-lattice/5', label: 'L5' },
     { path: 'redaphid/chromadepth-lattice/4', label: 'L4' },
     { path: 'redaphid/lattice-interactive/3', label: 'HZN' },
     { path: 'redaphid/chromadepth-lattice/3', label: 'L3' },
-    { path: 'redaphid/wip/lattice-vj/1', label: 'VJ' },
 ]
 
 /* ── transport ────────────────────────────────────────────────────────────
