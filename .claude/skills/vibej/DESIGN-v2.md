@@ -1,7 +1,9 @@
 # vibej v2 — Design: from cron ticks to a live responsive loop
 
 **Status:** draft for review (2026-08-18, written at shutdown of the lattice-vj session).
-**Companion:** `SKILL-v2-draft.md` (full rewritten skill, does not replace `SKILL.md` until approved).
+**Companion:** `.claude/skills/vibej2/SKILL.md` — the live v2 skill. (The old `SKILL-v2-draft.md`
+was deleted 2026-08-20: it had diverged ~88 lines from the shipped v2 and its own header already
+redirected edits to the vibej2 copy. This file remains the design rationale record.)
 
 ---
 
@@ -134,7 +136,7 @@ edits from another session/editor).
 
 ## 6. Migration from v1
 
-- `SKILL.md` stays until the draft is approved; then `SKILL-v2-draft.md` → `SKILL.md` and the
+- `SKILL.md` stays until v2 is approved; then `vibej2/SKILL.md` → `vibej/SKILL.md` and the
   cron path becomes the documented **fallback mode** (`/vibej cron`) for harnesses without
   ScheduleWakeup/Monitor (e.g. the claude-in-chrome-only variant noted in v1's pitfalls).
 - `vj-state.json` keeps its name/shape (minus per-tick bumping) so an in-progress v1 run can be
