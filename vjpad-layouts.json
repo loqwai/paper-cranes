@@ -3,9 +3,10 @@
 
   "_match": "A bank appears when one of its `match` globs matches the shader selected in the strip. `*` = always. `a/b/*` = prefix.",
 
-  "defaultShader": "redaphid/wip/lattice-vj/6",
+  "defaultShader": "redaphid/wip/lattice-vj/7",
 
   "shaders": [
+    { "path": "redaphid/wip/lattice-vj/7", "label": "VJ7" },
     { "path": "redaphid/wip/lattice-vj/6", "label": "VJ6" },
     { "path": "redaphid/wip/lattice-vj/5", "label": "VJ5" },
     { "path": "redaphid/chromadepth-lattice/6", "label": "L6" },
@@ -135,8 +136,8 @@
     },
     {
       "name": "EXPLORE A",
-      "match": ["redaphid/wip/lattice-vj/6"],
-      "live": "VJ/6",
+      "match": ["redaphid/wip/lattice-vj/6", "redaphid/wip/lattice-vj/7"],
+      "live": "VJ/6+7",
       "note": "knob_141–150 · GEOMETRY constants · centre 0.5 = tuned · lattice-vj/6 only",
       "_why": "The fractal's hardcoded CONSTANTS, exposed by lattice-vj/6 so they can be hand-flown with the music off and audited one at a time. Every fader is CENTRED: 0.5 is exactly the tuned 5.frag value, so RESET is a byte-identical look and the distance from centre reads as 'how far off the tuned number'.",
       "knobBase": 141,
@@ -175,8 +176,8 @@
     },
     {
       "name": "EXPLORE B",
-      "match": ["redaphid/wip/lattice-vj/6"],
-      "live": "VJ/6",
+      "match": ["redaphid/wip/lattice-vj/6", "redaphid/wip/lattice-vj/7"],
+      "live": "VJ/6+7",
       "note": "knob_151–160 · COLOUR FIELD constants · centre 0.5 = tuned · lattice-vj/6 only",
       "knobBase": 151,
       "pads": [

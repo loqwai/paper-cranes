@@ -139,6 +139,10 @@ const client = new WebSocketClient(
             paint()
         } else if (msg.type === 'vjpad-peer' && msg.data?.id !== myId) {
             onPeer(msg.data)
+        } else if (msg.type === 'vj-status' || msg.type === 'vj-learn-result') {
+            /* the VJ loop's feedback channel (vjpad-v2 Phase 1) — beat notes, LEARN verdicts,
+               health actions. vj-learn-result kept as an alias for older loop tooling. */
+            onLoopStatus(msg.type === 'vj-status' ? msg.data : { kind: 'learn-result', text: msg.data?.text })
         }
     },
     (s) => {
@@ -512,6 +516,61 @@ $('reset').addEventListener('click', () => {
     pads.forEach((p) => p.draw())
     send(payload)
     buzz([30, 40, 30])
+})
+
+/* ── loop strip (vjpad-v2 Phase 1) ────────────────────────────────────────
+   The VJ loop's feedback on the pad itself, so the phone is the single pane
+   of glass. One glanceable line above the footer; tap it for the last 20
+   events. Protocol: vj-status {kind, text, detail?, severity?, id?, ts?} —
+   replace-by-id lets "analyzing…" morph into "wired ✓" instead of stacking. */
+const loopLog = []
+const LOOP_BUZZ = { 'learn-result': [40, 30, 40], 'learn-progress': [20], beat: [15], health: [80, 40, 80], swap: [30, 30] }
+const LOOP_SEV = { error: '#f87171', warn: '#fbbf24', ok: '#34d399' }
+const paintLoop = () => {
+    const strip = $('learnfeed')
+    if (!strip) return
+    const top = loopLog[0]
+    strip.hidden = !top
+    if (top) {
+        strip.textContent = top.text
+        strip.style.borderLeft = `3px solid ${LOOP_SEV[top.severity] ?? '#38bdf8'}`
+    }
+    const dr = $('loopdrawer')
+    if (!dr) return
+    dr.innerHTML = ''
+    loopLog.forEach((e) => {
+        const row = document.createElement('div')
+        row.style.cssText = `border-left:3px solid ${LOOP_SEV[e.severity] ?? '#38bdf8'};padding:4px 8px;margin:2px 0`
+        row.textContent = `${new Date(e.ts).toTimeString().slice(0, 5)} ${e.text}${e.detail ? ' — ' + e.detail : ''}`
+        dr.appendChild(row)
+    })
+}
+const onLoopStatus = (d) => {
+    if (!d || !d.text) return
+    d.ts = d.ts || Date.now()
+    const i = d.id ? loopLog.findIndex((e) => e.id === d.id) : -1
+    if (i >= 0) loopLog[i] = d
+    else {
+        loopLog.unshift(d)
+        if (loopLog.length > 20) loopLog.pop()
+    }
+    paintLoop()
+    buzz(LOOP_BUZZ[d.kind] ?? [20])
+}
+$('learnfeed').addEventListener('click', () => {
+    const dr = $('loopdrawer')
+    if (dr) dr.hidden = !dr.hidden
+})
+
+/* ── LEARN — confirm the gesture ──────────────────────────────────────────
+   User 2026-08-20: "I need to be able to click some button to 'confirm' the
+   learning. Sometimes I'm just playing with the knobs." Riding a fader is only
+   EVIDENCE when this button says so: the tap stamps vjConfirm on the displays,
+   whose ?vj=1 runtime then freezes the recent gesture window for the VJ loop to
+   correlate against the music. No tap → play is just play, nothing is learned. */
+$('learn').addEventListener('click', () => {
+    sendRaw('update-params', { vjConfirm: Math.round(Date.now() / 1000) })
+    buzz([60, 60, 120])
 })
 
 /* ── keep the phone awake ─────────────────────────────────────────────────

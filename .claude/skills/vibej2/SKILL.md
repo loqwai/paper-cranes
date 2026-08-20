@@ -145,7 +145,16 @@ Order within a Beat:
    part of the screenshot, not an optional follow-up.** Taking a screenshot moves the real pointer
    onto the wall, and a pointer sitting in the middle of a projected visual is the single most
    obvious tell that a human is not driving. The user has had to ask for this out loud; do not make
-   them ask again. Two separate things must both be true:
+   them ask again.
+   **CRITICAL (user, 2026-08-20, second out-loud ask): the claude-in-chrome SYNTHETIC cursor
+   overlay must be off the wall AS SOON AS POSSIBLE, always.** It is drawn by the extension in an
+   isolated world — page CSS cannot touch it (verified: no injectable element in the light DOM), so
+   the ONLY controls are behavioral:
+   - the parking `hover` goes in the SAME tool batch as the screenshot/click, never a later turn;
+   - during a show, prefer `javascript_tool` for anything it can do (meters, feature reads, edit
+     macro, waits) — a js call never summons the overlay; touch the `computer` tool only when you
+     genuinely need pixels or a real click, and end every such batch parked in the corner.
+   Two separate things must both be true:
    - `cursor:none` CSS present (`#__vj-nocursor`) — governs the WALL. **A page reload wipes it**, so
      re-assert it on every `'reinstalled'` and after any navigate.
    - the pointer parked in the corner — governs where it sits if the CSS ever fails, and keeps

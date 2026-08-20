@@ -127,6 +127,36 @@ export const startVjRuntime = async () => {
     }
     return o
   }
+  // 7b. LEARN ring + CONFIRM (user 2026-08-20: "I need a button to 'confirm' the learning —
+  //     sometimes I'm just playing with the knobs"). Gesture evidence only counts when the
+  //     vjpad's LEARN button stamps `vjConfirm`. The ring records knobs+features at 10 Hz in
+  //     MEMORY only, and only while a gesture is live (a knob moved in the last 3 s) — none of
+  //     vjtrack's per-2s serialize+POST cost, so it stays on during a show. On confirm: freeze
+  //     the last 90 s into window.__vjLearnWindow (the loop reads it via the driven tab) and
+  //     post a SMALL confirm-learn signal (never the window itself — a Monitor emits whole
+  //     lines, and a 700 KB line in a notification is its own outage).
+  {
+    const ring = []
+    let lastVec = '', lastMoveMs = 0
+    setInterval(() => {
+      const k = knobVec(), ks = JSON.stringify(k)
+      const now = performance.now()
+      if (ks !== lastVec) { lastVec = ks; lastMoveMs = now }
+      if (now - lastMoveMs > 3000) return
+      ring.push({ ms: +now.toFixed(0), k, f: featSnap() })
+      if (ring.length > 1800) ring.splice(0, 600)   // amortised trim, same rule as the jank probe
+    }, 100)
+    let lastConfirm = window.cranes?.messageParams?.vjConfirm   // a URL-mirrored stamp from before this load is stale, not a press
+    setInterval(() => {
+      const c = window.cranes?.messageParams?.vjConfirm
+      if (c === undefined || c === lastConfirm) return
+      lastConfirm = c
+      const cut = performance.now() - 90000
+      window.__vjLearnWindow = { confirmedAt: Date.now(), samples: ring.filter(s => s.ms >= cut) }
+      post({ type: 'confirm-learn', t: new Date().toISOString(), n: window.__vjLearnWindow.samples.length })
+    }, 250)
+  }
+
   // knobtrack is ANALYSIS instrumentation, not show instrumentation: 10 Hz x ~184 channels is a
   // ~17 KB log line and a JSON.stringify + fetch on the render thread every 2 s. That is a real
   // cost to pay while performing. Off unless ?vjtrack=1 is asked for explicitly.
