@@ -13,7 +13,7 @@ export const initRemoteDisplay = () => {
 
     switch (message.type) {
       case 'update-params':
-        applyParams(message.data)
+        queueParams(message.data)
         showCommandReceived()
         break
 
@@ -44,6 +44,32 @@ export const initRemoteDisplay = () => {
   window.cranes.remoteClient = client
 
   return client
+}
+
+// PERF (2026-08-19): coalesce INBOUND params to one application per animation frame.
+// vjpad already coalesces its sends to one per frame, but with several fingers down — or two
+// phones — the display can still take many messages per frame, and each one previously did the
+// full apply + URL write + indicator work synchronously. Merging per frame makes the cost
+// independent of message rate. Shader switches bypass the queue: they are rare, and ordering
+// against a knob stream matters.
+let paramsPending = null
+let paramsFrame = 0
+
+const flushParams = () => {
+  paramsFrame = 0
+  const data = paramsPending
+  paramsPending = null
+  if (data) applyParams(data)
+}
+
+const queueParams = (data) => {
+  if (!data || typeof data !== 'object') return
+  if (data.shader || data.shaderCode) {
+    applyParams(data)
+    return
+  }
+  paramsPending = paramsPending ? { ...paramsPending, ...data } : { ...data }
+  if (!paramsFrame) paramsFrame = requestAnimationFrame(flushParams)
 }
 
 /**
@@ -106,7 +132,21 @@ const applyParams = async (data) => {
   syncParamsToUrl(data)
 }
 
-const syncParamsToUrl = (data) => {
+// PERF (2026-08-19): this used to run on EVERY update-params message. vjpad coalesces to one
+// send per animation frame, so that is up to 60/second — each one parsing and re-serialising a
+// ~700-char URL carrying 30+ knobs and then touching session history, synchronously on the
+// render thread. That was enough to visibly stutter the visual while a fader was moving.
+// The URL mirror exists only so a REFRESH preserves display state, so it does not need to be
+// synchronous with the knob stream: coalesce and write on a trailing edge.
+let urlPending = null
+let urlTimer = null
+const URL_SYNC_MS = 750
+
+const flushParamsToUrl = () => {
+  urlTimer = null
+  const data = urlPending
+  urlPending = null
+  if (!data) return
   try {
     const url = new URL(window.location.href)
     for (const [key, value] of Object.entries(data)) {
@@ -123,10 +163,26 @@ const syncParamsToUrl = (data) => {
   }
 }
 
+const syncParamsToUrl = (data) => {
+  urlPending = urlPending ? { ...urlPending, ...data } : { ...data }
+  if (!urlTimer) urlTimer = setTimeout(flushParamsToUrl, URL_SYNC_MS)
+}
+
+// A refresh/close must not lose the last few hundred ms of knob movement.
+window.addEventListener('pagehide', flushParamsToUrl)
+
 /**
  * Show a brief flash when a command is received
  */
+// PERF: also ran per message — style writes plus a FRESH setTimeout each time, so a moving
+// fader stacked ~60 timers/second, each scheduling another style write. Throttled, single timer.
+let flashUntil = 0
+let flashTimer = null
 const showCommandReceived = () => {
+  const now = Date.now()
+  if (now < flashUntil) return
+  flashUntil = now + 250
+
   let indicator = document.getElementById('remote-status-indicator')
 
   if (!indicator) {
@@ -153,8 +209,10 @@ const showCommandReceived = () => {
   indicator.textContent = 'Remote'
   indicator.style.opacity = '0.8'
 
-  // Fade out after 1 second
-  setTimeout(() => {
+  // Fade out after 1 second — ONE timer, reset rather than stacked.
+  if (flashTimer) clearTimeout(flashTimer)
+  flashTimer = setTimeout(() => {
+    flashTimer = null
     indicator.style.opacity = '0'
   }, 1000)
 }

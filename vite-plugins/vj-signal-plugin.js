@@ -3,7 +3,7 @@
 // JSONL line in .claude/vj-signals.jsonl, which the vibej session watches with a Monitor —
 // so Claude is woken by the page itself within seconds of a reload or a health breach,
 // instead of discovering it a beat later. (vibej v2 design, 2026-08-19.)
-import { appendFileSync, mkdirSync, readFileSync, existsSync } from 'fs'
+import { appendFileSync, mkdirSync, readFileSync, existsSync, renameSync } from 'fs'
 import { resolve } from 'path'
 
 export const vjSignalPlugin = () => ({
@@ -11,6 +11,11 @@ export const vjSignalPlugin = () => ({
   apply: 'serve',
   configureServer(server) {
     const file = resolve(server.config.root, '.claude/vj-signals.jsonl')
+    // Rotate on dev-server boot. This is a bare appendFileSync with no bound: one session drove it
+    // to 7.3 MB / 447 lines (avg 17 KB, max 92 KB per line). The GET endpoint only ever serves the
+    // last 50 lines, and an agent reading the whole file blows its own context — so each dev
+    // session starts clean and the previous run is kept as one .prev for post-mortem.
+    try { if (existsSync(file)) renameSync(file, file + '.prev') } catch {}
     server.middlewares.use('/__vj-signal', (req, res) => {
       if (req.method === 'POST') {
         let body = ''

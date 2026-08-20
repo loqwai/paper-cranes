@@ -31,6 +31,32 @@ export const startVjRuntime = async () => {
     try { eval(await fetch('/scripts/vj/aesthetic-meter.js?t=' + Date.now()).then(r => r.text())) } catch (e) { post({ type: 'error', what: 'meter-install', info: String(e) }) }
     if (window.__vjMeter && !window.__vjMeter.timer) window.__vjMeter.timer = setInterval(window.__vjMeter.sample, 100)
   }
+  // 3b. JANK PROBE — the loop kept being told "the visual stutters" with no way to confirm it.
+  // Sample rAF deltas; report the worst frame and how many frames blew past 32 ms (2 dropped
+  // frames at 60 Hz) in the window. This turns "feels stuttery" into a number we can bisect.
+  if (!window.__vjJank) {
+    const J = window.__vjJank = { frames: [], last: 0 }
+    const tick = (t) => {
+      if (J.last) { J.frames.push(t - J.last); if (J.frames.length > 1200) J.frames.shift() }
+      J.last = t
+      requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+    J.summary = () => {
+      const f = J.frames.slice(-600)
+      if (!f.length) return null
+      const sorted = [...f].sort((a, b) => a - b)
+      return {
+        n: f.length,
+        med: +sorted[Math.floor(f.length / 2)].toFixed(1),
+        p95: +sorted[Math.floor(f.length * 0.95)].toFixed(1),
+        worst: +Math.max(...f).toFixed(1),
+        over32: f.filter(x => x > 32).length,
+        over100: f.filter(x => x > 100).length,
+      }
+    }
+  }
+
   // 4. boot beacon — a reload can never again go unnoticed (tooling wipes were silent in v1)
   // Report the NON-knob params as a parsed object, not just the href: this shader carries 30
   // knobs in its URL, so any truncation limit that fits a log line hides the flags that actually
@@ -69,7 +95,7 @@ export const startVjRuntime = async () => {
     const s = M.summary(20); if (!s || s.n < 20) return
     const k = knobVec(), ks = JSON.stringify(k)
     const changed = ks !== prevKnobs; prevKnobs = ks
-    post({ type: 'pulse', s, r: M.residR ? M.residR(20) : null, knobs: changed ? k : undefined })
+    post({ type: 'pulse', s, r: M.residR ? M.residR(20) : null, jank: window.__vjJank?.summary?.() ?? null, knobs: changed ? k : undefined })
   }, 20000)
 
   // 7. knobtrack — 2 Hz record of every knob MOVE plus what the music was doing at that instant.
@@ -99,6 +125,10 @@ export const startVjRuntime = async () => {
     }
     return o
   }
+  // knobtrack is ANALYSIS instrumentation, not show instrumentation: 10 Hz x ~184 channels is a
+  // ~17 KB log line and a JSON.stringify + fetch on the render thread every 2 s. That is a real
+  // cost to pay while performing. Off unless ?vjtrack=1 is asked for explicitly.
+  if (new URLSearchParams(location.search).get('vjtrack') !== '1') return
   let lastK = null, moves = []
   setInterval(() => {
     const k = knobVec()
