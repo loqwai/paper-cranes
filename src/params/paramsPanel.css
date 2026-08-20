@@ -1,0 +1,557 @@
+/*
+ * ParamsPanel — the visualizer's param editor.
+ *
+ * Built for a phone held in one hand in a dark room: the sheet is anchored to
+ * the bottom so every control sits in the thumb zone, targets are >=44px, and
+ * nothing is bright enough to blind the performer or bleed onto a projector.
+ */
+
+#params-panel-root {
+    /* The canvas owns the screen; only the panel's own children take pointers. */
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    pointer-events: none;
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+#params-panel-root > * {
+    pointer-events: auto;
+}
+
+/* --- the corner handle ---------------------------------------------------- */
+
+.pp-corner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 64px;
+    height: 64px;
+    pointer-events: auto;
+    /* No background: on a projector this must be invisible in practice. */
+    background: transparent;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.pp-dot {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.55);
+    /* Visible just long enough on load to be discoverable, then gone. */
+    animation: pp-dot-fade 5s ease-out forwards;
+}
+
+@keyframes pp-dot-fade {
+    0%,
+    55% {
+        opacity: 0.55;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
+.pp-corner:hover .pp-dot {
+    opacity: 0.55;
+    animation: none;
+}
+
+/* --- shell ---------------------------------------------------------------- */
+
+.pp-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+.pp-panel {
+    width: min(560px, 100%);
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    background: #0d0d10;
+    color: #e8e8ea;
+    border: 1px solid #26262c;
+    border-bottom: none;
+    border-radius: 14px 14px 0 0;
+    box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.6);
+    font-size: 14px;
+    /* Clear the home indicator / gesture bar. */
+    padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.pp-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 6px 6px 10px;
+    border-bottom: 1px solid #22222a;
+    flex: 0 0 auto;
+}
+
+.pp-tabs {
+    display: flex;
+    gap: 2px;
+}
+
+.pp-tab {
+    background: none;
+    border: none;
+    color: #8b8b96;
+    font-size: 14px;
+    padding: 10px 12px;
+    min-height: 44px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.pp-tab.pp-active {
+    color: #fff;
+    background: #1c1c22;
+}
+
+.pp-count {
+    display: inline-block;
+    min-width: 17px;
+    padding: 1px 5px;
+    margin-left: 3px;
+    border-radius: 9px;
+    background: #2c2c36;
+    color: #b6b6c2;
+    font-size: 11px;
+    line-height: 15px;
+    text-align: center;
+}
+
+.pp-close {
+    background: none;
+    border: none;
+    color: #8b8b96;
+    font-size: 26px;
+    line-height: 1;
+    width: 44px;
+    height: 44px;
+    cursor: pointer;
+    border-radius: 8px;
+}
+
+.pp-close:hover {
+    color: #fff;
+    background: #1c1c22;
+}
+
+.pp-body {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    flex: 1 1 auto;
+}
+
+.pp-section {
+    padding: 4px 0 10px;
+}
+
+/* --- rows ----------------------------------------------------------------- */
+
+.pp-row {
+    padding: 9px 12px;
+    border-bottom: 1px solid #17171d;
+}
+
+.pp-inline-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pp-row-head,
+.pp-knob-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pp-key {
+    color: #9b9ba6;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pp-key-btn {
+    background: none;
+    border: none;
+    border-bottom: 1px dashed #3a3a46;
+    text-align: left;
+    cursor: pointer;
+    padding: 0 0 1px;
+}
+
+.pp-key-edit {
+    flex: 1 1 auto;
+}
+
+/* A knob the URL actually pins, as opposed to one sitting at its default. */
+.pp-knob.pp-set .pp-key {
+    color: #7fd7c4;
+}
+
+.pp-hint {
+    color: #63636e;
+    font-size: 11.5px;
+    margin: 2px 0 6px;
+    line-height: 1.45;
+}
+
+.pp-pad {
+    padding: 10px 12px;
+}
+
+.pp-empty {
+    color: #5a5a64;
+    font-size: 12.5px;
+    font-style: italic;
+}
+
+/* --- controls ------------------------------------------------------------- */
+
+.pp-slider {
+    width: 100%;
+    margin: 8px 0 4px;
+    accent-color: #4ec9b0;
+    height: 26px;
+}
+
+.pp-range {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pp-range-label {
+    color: #4a4a54;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.pp-num,
+.pp-text,
+.pp-search,
+.pp-select {
+    background: #16161c;
+    border: 1px solid #2a2a34;
+    color: #e8e8ea;
+    border-radius: 7px;
+    padding: 9px 8px;
+    font-size: 14px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    min-height: 40px;
+    box-sizing: border-box;
+}
+
+.pp-num {
+    width: 92px;
+    text-align: right;
+    flex: 0 0 auto;
+}
+
+.pp-num-sm {
+    width: 78px;
+    font-size: 12.5px;
+    min-height: 34px;
+    padding: 6px 7px;
+}
+
+.pp-text {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.pp-select {
+    flex: 0 0 auto;
+}
+
+.pp-num:focus,
+.pp-text:focus,
+.pp-search:focus,
+.pp-select:focus {
+    outline: none;
+    border-color: #4ec9b0;
+}
+
+.pp-value-btn {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: right;
+    background: none;
+    border: none;
+    color: #e8e8ea;
+    font-size: 13.5px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    padding: 10px 4px;
+    min-height: 44px;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border-bottom: 1px dashed #3a3a46;
+}
+
+.pp-value-btn em {
+    color: #5a5a64;
+}
+
+.pp-mini {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    background: #1c1c22;
+    border: 1px solid #2a2a34;
+    border-radius: 7px;
+    color: #9b9ba6;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.pp-mini:hover {
+    color: #fff;
+    border-color: #3d3d4a;
+}
+
+.pp-toggle {
+    flex: 0 0 auto;
+    min-width: 62px;
+    min-height: 38px;
+    background: #16161c;
+    border: 1px solid #2a2a34;
+    border-radius: 19px;
+    color: #7a7a86;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.pp-toggle.pp-on {
+    background: #16403a;
+    border-color: #4ec9b0;
+    color: #7fd7c4;
+}
+
+/* --- pickers -------------------------------------------------------------- */
+
+.pp-picker {
+    margin-top: 8px;
+}
+
+.pp-search {
+    width: 100%;
+    margin-bottom: 6px;
+}
+
+.pp-picker-list {
+    max-height: 34vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 1px solid #22222a;
+    border-radius: 8px;
+    background: #101016;
+}
+
+.pp-picker-list.pp-inline {
+    margin-top: 8px;
+    max-height: 26vh;
+}
+
+.pp-picker-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    border-bottom: 1px solid #17171d;
+    color: #cfcfd8;
+    font-size: 13.5px;
+    padding: 12px 10px;
+    min-height: 44px;
+    cursor: pointer;
+}
+
+.pp-picker-item:hover {
+    background: #1a1a22;
+    color: #fff;
+}
+
+.pp-picker-item.pp-active {
+    color: #7fd7c4;
+}
+
+/* --- controller chain ----------------------------------------------------- */
+
+.pp-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.pp-chip {
+    display: inline-flex;
+    align-items: center;
+    background: #1c1c22;
+    border: 1px solid #2f2f3a;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.pp-chip-name {
+    padding: 0 6px;
+    font-size: 12.5px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: #cfcfd8;
+}
+
+.pp-chip-move,
+.pp-chip-x {
+    background: none;
+    border: none;
+    color: #7a7a86;
+    width: 30px;
+    height: 36px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.pp-chip-move:disabled {
+    color: #35353e;
+    cursor: default;
+}
+
+.pp-chip-x:hover {
+    color: #ff8a8a;
+}
+
+/* --- pending / apply ------------------------------------------------------ */
+
+/* Marks the rows that can't take effect until the page reloads. */
+.pp-pending {
+    background: rgba(255, 176, 74, 0.07);
+    box-shadow: inset 3px 0 0 #ffb04a;
+}
+
+.pp-apply-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex: 0 0 auto;
+    padding: 9px 12px;
+    background: #241d10;
+    border-top: 1px solid #4a3a1c;
+    color: #ffb04a;
+    font-size: 12.5px;
+}
+
+.pp-apply-actions {
+    display: flex;
+    gap: 6px;
+}
+
+/* --- footer --------------------------------------------------------------- */
+
+.pp-foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 9px 12px;
+    border-top: 1px solid #22222a;
+    flex: 0 0 auto;
+}
+
+.pp-btn {
+    background: #1c1c22;
+    border: 1px solid #2f2f3a;
+    color: #cfcfd8;
+    border-radius: 8px;
+    padding: 10px 12px;
+    min-height: 42px;
+    font-size: 13px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+}
+
+.pp-btn:hover {
+    border-color: #4d4d5c;
+    color: #fff;
+}
+
+.pp-primary {
+    background: #16403a;
+    border-color: #4ec9b0;
+    color: #7fd7c4;
+}
+
+.pp-add {
+    display: block;
+    width: calc(100% - 24px);
+    margin: 10px 12px 0;
+    background: none;
+    border: 1px dashed #33333f;
+    color: #7a7a86;
+    border-radius: 8px;
+    padding: 11px;
+    min-height: 44px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.pp-add:hover {
+    border-color: #4ec9b0;
+    color: #7fd7c4;
+}
+
+/* --- toast ---------------------------------------------------------------- */
+
+.pp-toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 18px;
+    background: rgba(0, 0, 0, 0.85);
+    color: #fff;
+    border-radius: 6px;
+    font-size: 13px;
+    z-index: 10001;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+}
+
+.pp-toast-on {
+    opacity: 1;
+}
+
+/* A control sitting at the app's default rather than a value the URL pins. */
+.pp-unset .pp-num,
+.pp-unset .pp-select {
+    color: #6a6a76;
+}
+
+.pp-unset .pp-slider {
+    accent-color: #4a4a56;
+}

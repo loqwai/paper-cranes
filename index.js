@@ -14,6 +14,9 @@ const maybeStartWavelet = async (params, audioContext, sourceNode) => {
 import { makeVisualizer, askForWakeLock } from './src/Visualizer.js'
 import { getInitialShader } from './src/shaderLoader.js'
 import { loadControllers, composeControllers } from './src/controllerChain.js'
+import { createParamsManager } from './src/params/ParamsManager.js'
+import { mountParamsPanel } from './src/params/ParamsPanel.js'
+import './src/params/paramsPanel.css'
 
 
 const SEED_KEY = 'paperCranes.seeds'
@@ -35,6 +38,14 @@ const events = ['touchstart', 'touchmove', 'touchstop', 'keydown', 'mousedown', 
 let ranMain = false
 let startTime = 0
 const params = new URLSearchParams(window.location.search)
+
+// The live view of the URL. `params` above stays for the things that are read
+// once at startup and for `getAll('controller')`, which is positional and can't
+// collapse to a single value. Everything that feeds the shader per frame reads
+// through the manager instead, so a param deleted in the panel actually
+// disappears rather than being resurrected from a snapshot taken at load.
+const paramsManager = createParamsManager({ syncToUrl: true, remoteMode: false })
+window.paramsManager = paramsManager
 
 const getVisualizerDOMElement = () => {
     if (!window.visualizer) {
@@ -197,16 +208,6 @@ const setupAudio = async () => {
     return setupMicAudio()
 };
 
-// Parse URL params as numbers when possible
-const parseUrlParams = (searchParams) => {
-    const result = {}
-    for (const [key, value] of searchParams) {
-        const num = parseFloat(value)
-        result[key] = !isNaN(num) ? num : value
-    }
-    return result
-}
-
 export const getCranesState = () => {
     const [s1, s2, s3, s4] = window.cranes.seeds
     return {
@@ -217,7 +218,7 @@ export const getCranesState = () => {
         ...window.cranes.measuredAudioFeatures, // Audio features (lowest precedence)
         ...window.cranes.waveletFeatures,       // PROTOTYPE: wavelet band/onset features
         ...window.cranes.controllerFeatures,    // Controller-computed features
-        ...parseUrlParams(params),              // URL parameters (parsed as numbers or strings)
+        ...paramsManager.getAll(),              // URL parameters (parsed as numbers or strings)
         ...window.cranes.manualFeatures,        // Manual features
         ...window.cranes.messageParams,         // Message parameters (highest precedence)
         touch: [coordsHandler.coords.x, coordsHandler.coords.y],
@@ -358,6 +359,10 @@ const main = async () => {
     if (controllerFns.length) {
         animateController(composeControllers(controllerFns))
     }
+
+    // Param panel: long-press the top-left corner, or press `p`.
+    // Declines to mount on pages that bring their own drawer, and in embeds.
+    mountParamsPanel(paramsManager)
 
     // Initialize visualizer and start shader animation loop
     const render = await makeVisualizer(visualizerConfig)

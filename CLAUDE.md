@@ -342,6 +342,12 @@ uniform float another;   // = 1.2
 - `audio_time=<seconds>` - Start audio file playback at this offset (default: 0)
 - `time=<seconds>` - Hold time constant (useful for deterministic screenshots/testing)
 
+**Editing params without the address bar:** the visualizer has a params panel —
+long-press the top-left corner (or press `p`) for knob sliders, typed controls for
+every known setting, and free-form rows for everything else. Knob edits apply live;
+`shader`/`image`/`controller`/`fft_size` batch into one Apply. See
+[docs/params-panel.md](docs/params-panel.md).
+
 ### Dynamic Override
 All parameters can be overridden at runtime via:
 ```javascript
