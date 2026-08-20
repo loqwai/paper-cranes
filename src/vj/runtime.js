@@ -37,7 +37,9 @@ export const startVjRuntime = async () => {
   if (!window.__vjJank) {
     const J = window.__vjJank = { frames: [], last: 0 }
     const tick = (t) => {
-      if (J.last) { J.frames.push(t - J.last); if (J.frames.length > 1200) J.frames.shift() }
+      // Array.shift() on a 1200-element array EVERY FRAME is O(n) — a probe that measures jank
+      // must not create it. Trim in amortised batches instead: one splice per 600 frames.
+      if (J.last) { J.frames.push(t - J.last); if (J.frames.length > 1800) J.frames.splice(0, 600) }
       J.last = t
       requestAnimationFrame(tick)
     }

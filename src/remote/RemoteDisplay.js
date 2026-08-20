@@ -13,7 +13,7 @@ export const initRemoteDisplay = () => {
 
     switch (message.type) {
       case 'update-params':
-        queueParams(message.data)
+        applyParams(message.data)
         showCommandReceived()
         break
 
@@ -46,32 +46,13 @@ export const initRemoteDisplay = () => {
   return client
 }
 
-// PERF (2026-08-19): coalesce INBOUND params to one application per animation frame.
-// vjpad already coalesces its sends to one per frame, but with several fingers down — or two
-// phones — the display can still take many messages per frame, and each one previously did the
-// full apply + URL write + indicator work synchronously. Merging per frame makes the cost
-// independent of message rate. Shader switches bypass the queue: they are rare, and ordering
-// against a knob stream matters.
-let paramsPending = null
-let paramsFrame = 0
-
-const flushParams = () => {
-  paramsFrame = 0
-  const data = paramsPending
-  paramsPending = null
-  if (data) applyParams(data)
-}
-
-const queueParams = (data) => {
-  if (!data || typeof data !== 'object') return
-  if (data.shader || data.shaderCode) {
-    applyParams(data)
-    return
-  }
-  paramsPending = paramsPending ? { ...paramsPending, ...data } : { ...data }
-  if (!paramsFrame) paramsFrame = requestAnimationFrame(flushParams)
-}
-
+// NOTE (2026-08-19): params are applied SYNCHRONOUSLY on arrival, deliberately. An earlier pass
+// coalesced inbound messages to one apply per requestAnimationFrame; that was wrong. This is the
+// knob -> uniform hot path, and deferring it to a rAF callback costs up to a full frame (~16 ms)
+// whenever the renderer's rAF is queued ahead of the coalescing one — added lag on a control
+// surface someone is playing in time with music. It also solved nothing: the per-message cost was
+// never this loop (a few keys and a parseFloat), it was the URL re-serialisation and the DOM
+// churn, both of which are handled below without touching latency. Keep this path immediate.
 /**
  * Apply received parameters to the visualizer
  */
