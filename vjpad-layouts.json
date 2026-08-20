@@ -1,0 +1,216 @@
+{
+  "_doc": "docs/vjpad.md — layout config for vjpad.html. Edit this file to set knob numbers, labels, banks and pads for any shader. Everything here is checked in and shared; per-phone tweaks made in the pad's EDIT screen layer on top and stay on that phone.",
+
+  "_match": "A bank appears when one of its `match` globs matches the shader selected in the strip. `*` = always. `a/b/*` = prefix.",
+
+  "defaultShader": "redaphid/wip/lattice-vj/6",
+
+  "shaders": [
+    { "path": "redaphid/wip/lattice-vj/6", "label": "VJ6" },
+    { "path": "redaphid/wip/lattice-vj/5", "label": "VJ5" },
+    { "path": "redaphid/chromadepth-lattice/6", "label": "L6" },
+    { "path": "redaphid/chromadepth-lattice/5", "label": "L5" },
+    { "path": "redaphid/chromadepth-lattice/4", "label": "L4" },
+    { "path": "redaphid/lattice-interactive/3", "label": "HZN" },
+    { "path": "redaphid/chromadepth-lattice/3", "label": "L3" }
+  ],
+
+  "banks": [
+    {
+      "name": "FLIGHT",
+      "match": ["*"],
+      "live": "LIVE",
+      "note": "navX/navY/navZoom/paletteShift/warpGrow · every lattice shader",
+      "knobBase": 101,
+      "pads": [
+        {
+          "name": "FLY",
+          "hue": "#38bdf8",
+          "x": { "key": "navX", "label": "PAN X", "min": -6, "max": 6, "def": 0 },
+          "y": { "key": "navY", "label": "PAN Y", "min": -6, "max": 6, "def": 0 }
+        },
+        {
+          "name": "ZOOM",
+          "hue": "#34d399",
+          "x": { "key": "knob_1", "label": "PAN SPD", "min": 0, "max": 1, "def": 0.21 },
+          "y": { "key": "navZoom", "label": "ZOOM", "min": 0.04, "max": 8, "def": 1, "curve": "exp", "suffix": "×" }
+        },
+        {
+          "name": "COLOUR",
+          "hue": "#f472b6",
+          "x": { "key": "paletteShift", "label": "PALETTE", "min": 0, "max": 1, "def": 0 },
+          "y": { "key": "warpGrow", "label": "WARP", "min": 0, "max": 2, "def": 0 }
+        }
+      ]
+    },
+    {
+      "name": "PULSE",
+      "match": ["*"],
+      "live": "LIVE",
+      "note": "the music channels · pins quietGate so they bite in a quiet room",
+      "_why": "Overriding these takes the channel off the music — that is the point of a second phone: one person flies, one person plays the reaction.",
+      "knobBase": 111,
+      "quietGate": true,
+      "pads": [
+        {
+          "name": "BASS",
+          "hue": "#fbbf24",
+          "x": { "key": "waveletBassSpring", "label": "BASS", "min": 0, "max": 1, "def": 0.3 },
+          "y": { "key": "waveletBand5Spring", "label": "LINES", "min": 0, "max": 1, "def": 0.3 }
+        },
+        {
+          "name": "GLOW",
+          "hue": "#a78bfa",
+          "x": { "key": "energySpring", "label": "GLOW", "min": 0, "max": 1, "def": 0.4 },
+          "y": { "key": "spectralCrestSmooth", "label": "SPARKLE", "min": 0, "max": 1, "def": 0.3 }
+        },
+        {
+          "name": "CELLS",
+          "hue": "#22d3ee",
+          "x": { "key": "waveletBand2Spring", "label": "CELLS", "min": 0, "max": 1, "def": 0.3 },
+          "y": { "key": "melodyFlow", "label": "HUE FLOW", "min": 0, "max": 1, "def": 0.5 }
+        }
+      ]
+    },
+    {
+      "name": "HORIZONS",
+      "match": ["*"],
+      "live": "HZN ONLY",
+      "note": "knob_2–knob_5 · only lattice-interactive/3 reads these",
+      "knobBase": 121,
+      "pads": [
+        {
+          "name": "SCHEME",
+          "hue": "#f97316",
+          "x": { "key": "knob_2", "label": "SCHEME", "min": 0, "max": 1, "def": 0 },
+          "y": { "key": "knob_3", "label": "CELL SIZE", "min": 0, "max": 1, "def": 0 }
+        },
+        {
+          "name": "TWIST",
+          "hue": "#60a5fa",
+          "x": { "key": "knob_4", "label": "TWIST", "min": 0, "max": 1, "def": 0 },
+          "y": { "key": "knob_5", "label": "REACT", "min": 0, "max": 1, "def": 0 }
+        }
+      ]
+    },
+    {
+      "name": "LATTICE",
+      "match": ["redaphid/wip/lattice-vj/*"],
+      "live": "LIVE",
+      "note": "knob_131–140 · SHAPE · lattice-vj/5 + /6",
+      "_why": "This WAS a generic guest bank labelled 'KNOBS ONLY', which stopped being true the moment lattice-vj wired knob_131–140 to real shape parameters. A bank of pads reading K131/K132 in a dark room is unusable; these are the same knobs with the names the shader actually gives them, and the defaults are 5.frag's baked preset, so a RESET here lands on the tuned look rather than on 0.5 mush.",
+      "knobBase": 131,
+      "pads": [
+        {
+          "name": "FOLD",
+          "hue": "#f472b6",
+          "x": { "key": "knob_131", "label": "FOLD RATIO", "min": 0, "max": 1, "def": 0.162 },
+          "y": { "key": "knob_132", "label": "DEPTH FOCUS", "min": 0, "max": 1, "def": 0.483 }
+        },
+        {
+          "name": "CELL",
+          "hue": "#38bdf8",
+          "x": { "key": "knob_133", "label": "FOLD TWIST", "min": 0, "max": 1, "def": 0.59 },
+          "y": { "key": "knob_134", "label": "CELL RADIUS", "min": 0, "max": 1, "def": 0.507 }
+        },
+        {
+          "name": "LIGHT",
+          "hue": "#a78bfa",
+          "x": { "key": "knob_135", "label": "LIGHT ANGLE", "min": 0, "max": 1, "def": 0.876 },
+          "y": { "key": "knob_136", "label": "RELIEF", "min": 0, "max": 1, "def": 0.57 }
+        },
+        {
+          "name": "LINE",
+          "hue": "#34d399",
+          "x": { "key": "knob_137", "label": "AURORA", "min": 0, "max": 1, "def": 0.485 },
+          "y": { "key": "knob_138", "label": "THICKNESS", "min": 0, "max": 1, "def": 0.505 }
+        },
+        {
+          "name": "SHAPE",
+          "hue": "#fbbf24",
+          "x": { "key": "knob_139", "label": "HEX↔CROSS", "min": 0, "max": 1, "def": 0.216 },
+          "y": { "key": "knob_140", "label": "FLIGHT", "min": 0, "max": 1, "def": 0.537 }
+        }
+      ]
+    },
+    {
+      "name": "EXPLORE A",
+      "match": ["redaphid/wip/lattice-vj/6"],
+      "live": "VJ/6",
+      "note": "knob_141–150 · GEOMETRY constants · centre 0.5 = tuned · lattice-vj/6 only",
+      "_why": "The fractal's hardcoded CONSTANTS, exposed by lattice-vj/6 so they can be hand-flown with the music off and audited one at a time. Every fader is CENTRED: 0.5 is exactly the tuned 5.frag value, so RESET is a byte-identical look and the distance from centre reads as 'how far off the tuned number'.",
+      "knobBase": 141,
+      "pads": [
+        {
+          "name": "FOLD",
+          "hue": "#f97316",
+          "x": { "key": "knob_141", "label": "TWIST STEP", "min": 0, "max": 1, "def": 0.5 },
+          "y": { "key": "knob_142", "label": "TWIST FALL", "min": 0, "max": 1, "def": 0.5 }
+        },
+        {
+          "name": "CELL",
+          "hue": "#22d3ee",
+          "x": { "key": "knob_143", "label": "INTERLEAVE", "min": 0, "max": 1, "def": 0.5 },
+          "y": { "key": "knob_144", "label": "RING GAP", "min": 0, "max": 1, "def": 0.5 }
+        },
+        {
+          "name": "SPIN",
+          "hue": "#a78bfa",
+          "x": { "key": "knob_145", "label": "LEVEL SKEW", "min": 0, "max": 1, "def": 0.5 },
+          "y": { "key": "knob_146", "label": "SPIN RATE", "min": 0, "max": 1, "def": 0.5 }
+        },
+        {
+          "name": "ZOOM",
+          "hue": "#34d399",
+          "x": { "key": "knob_147", "label": "ZOOM RATE", "min": 0, "max": 1, "def": 0.5 },
+          "y": { "key": "knob_148", "label": "OCTAVE", "min": 0, "max": 1, "def": 0.5 }
+        },
+        {
+          "name": "SURFACE",
+          "hue": "#f472b6",
+          "x": { "key": "knob_149", "label": "FILL", "min": 0, "max": 1, "def": 0.5 },
+          "y": { "key": "knob_150", "label": "WARP", "min": 0, "max": 1, "def": 0.5 }
+        }
+      ]
+    },
+    {
+      "name": "EXPLORE B",
+      "match": ["redaphid/wip/lattice-vj/6"],
+      "live": "VJ/6",
+      "note": "knob_151–160 · COLOUR FIELD constants · centre 0.5 = tuned · lattice-vj/6 only",
+      "knobBase": 151,
+      "pads": [
+        {
+          "name": "SWIRL",
+          "hue": "#38bdf8",
+          "x": { "key": "knob_151", "label": "ARMS", "min": 0, "max": 1, "def": 0.5 },
+          "y": { "key": "knob_152", "label": "RADIAL", "min": 0, "max": 1, "def": 0.5 }
+        },
+        {
+          "name": "FIELD",
+          "hue": "#fbbf24",
+          "x": { "key": "knob_153", "label": "DEPTH TINT", "min": 0, "max": 1, "def": 0.5 },
+          "y": { "key": "knob_154", "label": "SWIRL MIX", "min": 0, "max": 1, "def": 0.5 }
+        },
+        {
+          "name": "HUE",
+          "hue": "#f472b6",
+          "x": { "key": "knob_155", "label": "REGION", "min": 0, "max": 1, "def": 0.5 },
+          "y": { "key": "knob_156", "label": "LIGHT BASE", "min": 0, "max": 1, "def": 0.5 }
+        },
+        {
+          "name": "COLOUR",
+          "hue": "#a78bfa",
+          "x": { "key": "knob_157", "label": "CHROMA", "min": 0, "max": 1, "def": 0.5 },
+          "y": { "key": "knob_158", "label": "ACCENT", "min": 0, "max": 1, "def": 0.5 }
+        },
+        {
+          "name": "TONE",
+          "hue": "#34d399",
+          "x": { "key": "knob_159", "label": "BG FLOOR", "min": 0, "max": 1, "def": 0.5 },
+          "y": { "key": "knob_160", "label": "GAIN", "min": 0, "max": 1, "def": 0.5 }
+        }
+      ]
+    }
+  ]
+}

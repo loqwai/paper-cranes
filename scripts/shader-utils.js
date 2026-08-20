@@ -166,3 +166,96 @@ export const getUsedAudioFeatures = (content) => {
 
   return Array.from(used).sort()
 }
+
+/**
+ * Extracts the knob_N uniforms a shader actually reads, together with whatever
+ * human-readable name the source gives them.
+ *
+ * Two declaration forms; the explicit one wins:
+ *
+ *   // @knob: 141 TWIST STEP          <- explicit declaration, one per line
+ *   gStep = PI * knob_141;  // K141 TWIST STEP (PI*0.025 .. PI*0.225)
+ *
+ * The second form is not a new invention — it is the convention the lattice
+ * shaders already use on every knob line, so ~200 knobs across the repo are
+ * already named. We parse it rather than asking anyone to restate it.
+ *
+ * The label is the leading run of SHOUTY tokens after the K-number: uppercase
+ * words stop at the first lowercase word or punctuation blob, which is exactly
+ * where these comments stop naming and start explaining.
+ *
+ * @param {string} content - Shader source code
+ * @returns {{ n: number, label?: string }[]} sorted, one entry per knob
+ */
+export const extractKnobs = (content) => {
+  const knobs = new Map() // n -> label | null
+
+  // every knob_N the shader actually references
+  for (const match of content.matchAll(/\bknob_(\d{1,3})\b/g)) {
+    const n = Number(match[1])
+    if (!knobs.has(n)) knobs.set(n, null)
+  }
+
+  // heuristic labels from `// K141 TWIST STEP ...` trailing comments
+  for (const match of content.matchAll(/\bK(\d{1,3})\b[ \t]+([^\n]*)/g)) {
+    const n = Number(match[1])
+    if (!knobs.has(n) || knobs.get(n)) continue
+    const label = shoutyLabel(match[2])
+    if (label) knobs.set(n, label)
+  }
+
+  // explicit `// @knob: 141 TWIST STEP` always wins
+  for (const match of content.matchAll(/\/\/\s*@knob:?\s*(\d{1,3})\s+([^\n]+)/g)) {
+    knobs.set(Number(match[1]), match[2].trim().slice(0, 24))
+  }
+
+  return [...knobs.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([n, label]) => (label ? { n, label } : { n }))
+}
+
+const SHOUTY_TOKEN = /^[\p{Lu}\p{N}↔+\-/&%×°]+$/u
+
+/**
+ * Leading run of all-caps tokens, which is how these comments name a thing
+ * before they start describing it. Returns null when there is no name there.
+ * @param {string} rest - comment text following the K-number
+ * @returns {string|null}
+ */
+const shoutyLabel = (rest) => {
+  const words = []
+  for (const raw of rest.trim().split(/\s+/)) {
+    const word = raw.replace(/^[^\p{L}\p{N}]+/u, '').replace(/[^\p{L}\p{N}%×°↔]+$/u, '')
+    if (!word || !SHOUTY_TOKEN.test(word) || !/\p{Lu}/u.test(word)) break
+    words.push(word)
+    if (words.length === 3) break
+  }
+  const label = words.join(' ')
+  return label.length >= 2 && label.length <= 22 ? label : null
+}
+
+/**
+ * shaders.json is fetched in full by the list page and the VJ pad, so the knob
+ * index ships as one compact line per shader — `1|131:FOLD RATIO|132:DEPTH FOCUS`
+ * — rather than one pretty-printed object per knob (which cost 96KB across the
+ * repo, a 44% jump in the file everyone downloads).
+ * @param {{n:number,label?:string}[]} knobs
+ * @returns {string}
+ */
+export const formatKnobs = (knobs) =>
+  knobs.map(({ n, label }) => (label ? `${n}:${label.replace(/\|/g, '/')}` : String(n))).join('|')
+
+/**
+ * @param {string|undefined} text - a `knobs` field from shaders.json
+ * @returns {{n:number,label?:string}[]}
+ */
+export const parseKnobs = (text) =>
+  (text ?? '')
+    .split('|')
+    .filter(Boolean)
+    .map((part) => {
+      const [n, ...rest] = part.split(':')
+      const label = rest.join(':').trim()
+      return label ? { n: Number(n), label } : { n: Number(n) }
+    })
+    .filter((knob) => Number.isFinite(knob.n))

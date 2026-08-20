@@ -157,3 +157,4 @@ public/images/*.webp
 .claude/vj-state.json
 .wrangler/
 .claude/vj-signals.jsonl
+.claude/vj-signals.jsonl.prev

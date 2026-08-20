@@ -26,174 +26,104 @@
  *
  * ── THE HONEST CAVEAT (read this before trusting a guest bank on stage) ────
  * Knob uniforms are auto-injected, but a shader only responds to a knob it
- * actually references. Audited tonight:
+ * actually references. A bank of pads whose knobs the current shader ignores is
+ * DEAD, and in a dark room a dead pad is worse than no pad. The audit that
+ * established this, kept because it is what the `match` globs now encode:
  *   chromadepth-lattice/3,4,5,6 → read knob_1 ONLY (pan speed). Everything else
  *       they respond to is NAMED: navX, navY, navZoom, paletteShift, warpGrow.
  *   lattice-interactive/3       → reads knob_1..knob_5 (the four HORIZONS dials).
- * So a pure knob bank is DEAD on the shaders he actually plays. That is why the
- * first three banks are built on the live named uniforms and are carved up so they
- * do not overlap — three phones can all play chromadepth-lattice/6 at once, for
- * real.
+ *   lattice-vj/5                → knob_131–140 (shape).
+ *   lattice-vj/6                → additionally knob_141–160 (the fractal's
+ *       previously hardcoded constants; those faders are CENTRED, 0.5 = the
+ *       tuned value, which is why their defaults differ from the 0/1 banks).
+ * So a pure knob bank is DEAD on most of the shaders he actually plays — hence
+ * the first banks are built on live NAMED uniforms, carved up so they do not
+ * overlap (three phones can play chromadepth-lattice/6 at once, for real), and
+ * the knob banks now say which shaders answer them instead of following you
+ * everywhere.
  *
- * UPDATE 2026-08-19: banks 4–6 are no longer generic. lattice-vj/5 reads knob_131–140
- * (shape), and lattice-vj/6 additionally reads knob_141–160 (the fractal's previously
- * hardcoded constants). They are labelled with the names the shader gives them and
- * marked with which shader answers them, so nobody is handed a row of dead dials —
- * the same honesty, now backed by live uniforms. EXPLORE A/B faders are CENTRED at
- * 0.5 = the tuned constant, which is why their defaults differ from the 0/1 banks.
+ * ── WHERE THE LAYOUT COMES FROM (see src/vj/vjpad-layout.js) ───────────────
+ * Three layers, none of which you have to touch to start playing:
+ *   1. vjpad-layouts.json — checked in. Banks, pads, ranges, curves, colours and
+ *      non-knob param names (navX, waveletBassSpring…). Each bank says which
+ *      shaders it is FOR, so the lattice banks no longer follow you onto a
+ *      shader that ignores them.
+ *   2. the shader's own source — every knob_N it reads, named from its own
+ *      `// K141 TWIST STEP` comments, baked into shaders.json at build time.
+ *      This is the zero-config layer: a shader nobody wrote a layout for still
+ *      gets correctly-numbered, usually correctly-named pads.
+ *   3. this phone — per-device tweaks from the EDIT screen (long-press the
+ *      status line), stored in localStorage like the MIDI mapper's profiles.
+ * The lattice banks below moved verbatim into vjpad-layouts.json, defaults and
+ * all, and each carries an explicit `knobBase` so its mirror range stays put no
+ * matter where it lands in the list.
  */
 import { WebSocketClient } from './src/remote/WebSocketClient.js'
+import LAYOUTS from './vjpad-layouts.json'
+import { resolveBanks, loadOverrides, saveOverrides, mirrorKnob, parseKnobs } from './src/vj/vjpad-layout.js'
+import { mountEditor } from './src/vj/vjpad-edit.js'
 
 const $ = (id) => document.getElementById(id)
 const clamp01 = (t) => (t < 0 ? 0 : t > 1 ? 1 : t)
 
-/* ── axis helpers ─────────────────────────────────────────────────────────
+/* ── axis maths ──────────────────────────────────────────────────────────
    curve 'exp' = geometric. Zoom needs it: 0.04→8 mapped linearly puts every
    usable value in the first 2% of the pad. */
-const ax = (key, label, min, max, def, opt = {}) => ({ key, label, min, max, def, ...opt })
 const toValue = (a, t) => (a.curve === 'exp' ? a.min * Math.pow(a.max / a.min, t) : a.min + t * (a.max - a.min))
 const toPos = (a, v) =>
     a.curve === 'exp' ? Math.log(v / a.min) / Math.log(a.max / a.min) : (v - a.min) / (a.max - a.min)
 const fmt = (a, v) => (a.fmt ? a.fmt(v) : v.toFixed(2))
 
-const ZOOM_FMT = (v) => v.toFixed(2) + '×'
+/* ── what the pad is pointed at ───────────────────────────────────────────
+   The shader strip already existed and was already one tap; it now also decides
+   which banks are on screen, so switching shader and switching control surface
+   are the same gesture instead of two. */
+const params = new URLSearchParams(location.search)
+const SHADER_KEY = 'vjpad-shader'
+const KNOBS_KEY = 'cranes-vjpad-knobs'
 
-/* ── the banks ───────────────────────────────────────────────────────────── */
-const KNOB_BASE = 100 // bank i gets knob_(KNOB_BASE + (i-1)*10 + 1 .. + 10)
+let activeShader = params.get('shader') || localStorage.getItem(SHADER_KEY) || LAYOUTS.defaultShader || null
+let overrides = loadOverrides()
+let banks = []
 
-const BANKS = [
-    {
-        name: 'FLIGHT',
-        live: 'LIVE',
-        note: 'navX/navY/navZoom/paletteShift/warpGrow · every lattice shader',
-        pads: [
-            {
-                name: 'FLY',
-                hue: '#38bdf8',
-                x: ax('navX', 'PAN X', -6, 6, 0),
-                y: ax('navY', 'PAN Y', -6, 6, 0),
-            },
-            {
-                name: 'ZOOM',
-                hue: '#34d399',
-                x: ax('knob_1', 'PAN SPD', 0, 1, 0.21),
-                y: ax('navZoom', 'ZOOM', 0.04, 8, 1, { curve: 'exp', fmt: ZOOM_FMT }),
-            },
-            {
-                name: 'COLOUR',
-                hue: '#f472b6',
-                x: ax('paletteShift', 'PALETTE', 0, 1, 0),
-                y: ax('warpGrow', 'WARP', 0, 2, 0),
-            },
-        ],
-    },
-    {
-        name: 'PULSE',
-        live: 'LIVE',
-        note: 'the music channels · pins quietGate so they bite in a quiet room',
-        // Overriding these takes the channel off the music — that is the point of a
-        // second phone: one person flies, one person plays the reaction.
-        quietGate: true,
-        pads: [
-            {
-                name: 'BASS',
-                hue: '#fbbf24',
-                x: ax('waveletBassSpring', 'BASS', 0, 1, 0.3),
-                y: ax('waveletBand5Spring', 'LINES', 0, 1, 0.3),
-            },
-            {
-                name: 'GLOW',
-                hue: '#a78bfa',
-                x: ax('energySpring', 'GLOW', 0, 1, 0.4),
-                y: ax('spectralCrestSmooth', 'SPARKLE', 0, 1, 0.3),
-            },
-            {
-                name: 'CELLS',
-                hue: '#22d3ee',
-                x: ax('waveletBand2Spring', 'CELLS', 0, 1, 0.3),
-                y: ax('melodyFlow', 'HUE FLOW', 0, 1, 0.5),
-            },
-        ],
-    },
-    {
-        name: 'HORIZONS',
-        live: 'HZN ONLY',
-        note: 'knob_2–knob_5 · only lattice-interactive/3 reads these',
-        pads: [
-            {
-                name: 'SCHEME',
-                hue: '#f97316',
-                x: ax('knob_2', 'SCHEME', 0, 1, 0),
-                y: ax('knob_3', 'CELL SIZE', 0, 1, 0),
-            },
-            {
-                name: 'TWIST',
-                hue: '#60a5fa',
-                x: ax('knob_4', 'TWIST', 0, 1, 0),
-                y: ax('knob_5', 'REACT', 0, 1, 0),
-            },
-        ],
-    },
-    /* ── LATTICE (knob_131–140) ────────────────────────────────────────────────
-       This WAS guestBank(1) — labelled "KNOBS ONLY", which stopped being true the
-       moment lattice-vj wired knob_131–140 to real shape parameters. A bank of pads
-       reading K131/K132 in a dark room is unusable; these are the same knobs with
-       the names the shader actually gives them, and the defaults are 5.frag's baked
-       preset, so a RESET here lands on the tuned look rather than on 0.5 mush. */
-    {
-        name: 'LATTICE',
-        live: 'LIVE',
-        note: 'knob_131–140 · SHAPE · lattice-vj/5 + /6',
-        pads: [
-            { name: 'FOLD',  hue: '#f472b6', x: ax('knob_131', 'FOLD RATIO', 0, 1, 0.162), y: ax('knob_132', 'DEPTH FOCUS', 0, 1, 0.483) },
-            { name: 'CELL',  hue: '#38bdf8', x: ax('knob_133', 'FOLD TWIST', 0, 1, 0.59),  y: ax('knob_134', 'CELL RADIUS', 0, 1, 0.507) },
-            { name: 'LIGHT', hue: '#a78bfa', x: ax('knob_135', 'LIGHT ANGLE', 0, 1, 0.876), y: ax('knob_136', 'RELIEF', 0, 1, 0.57) },
-            { name: 'LINE',  hue: '#34d399', x: ax('knob_137', 'AURORA', 0, 1, 0.485),     y: ax('knob_138', 'THICKNESS', 0, 1, 0.505) },
-            { name: 'SHAPE', hue: '#fbbf24', x: ax('knob_139', 'HEX↔CROSS', 0, 1, 0.216),  y: ax('knob_140', 'FLIGHT', 0, 1, 0.537) },
-        ],
-    },
-    /* ── EXPLORE A / B (knob_141–160) ──────────────────────────────────────────
-       The fractal's hardcoded CONSTANTS, exposed by lattice-vj/6 so they can be
-       hand-flown with the music off and audited one at a time. Every fader is
-       CENTRED: 0.5 is exactly the tuned 5.frag value, so RESET is a byte-identical
-       look and the distance from centre reads as "how far off the tuned number".
-       These only move on lattice-vj/6 — every other shader ignores 141–160. */
-    {
-        name: 'EXPLORE A',
-        live: 'VJ/6',
-        note: 'knob_141–150 · GEOMETRY constants · centre 0.5 = tuned · lattice-vj/6 only',
-        pads: [
-            { name: 'FOLD',    hue: '#f97316', x: ax('knob_141', 'TWIST STEP', 0, 1, 0.5), y: ax('knob_142', 'TWIST FALL', 0, 1, 0.5) },
-            { name: 'CELL',    hue: '#22d3ee', x: ax('knob_143', 'INTERLEAVE', 0, 1, 0.5), y: ax('knob_144', 'RING GAP', 0, 1, 0.5) },
-            { name: 'SPIN',    hue: '#a78bfa', x: ax('knob_145', 'LEVEL SKEW', 0, 1, 0.5), y: ax('knob_146', 'SPIN RATE', 0, 1, 0.5) },
-            { name: 'ZOOM',    hue: '#34d399', x: ax('knob_147', 'ZOOM RATE', 0, 1, 0.5),  y: ax('knob_148', 'OCTAVE', 0, 1, 0.5) },
-            { name: 'SURFACE', hue: '#f472b6', x: ax('knob_149', 'FILL', 0, 1, 0.5),       y: ax('knob_150', 'WARP', 0, 1, 0.5) },
-        ],
-    },
-    {
-        name: 'EXPLORE B',
-        live: 'VJ/6',
-        note: 'knob_151–160 · COLOUR FIELD constants · centre 0.5 = tuned · lattice-vj/6 only',
-        pads: [
-            { name: 'SWIRL',  hue: '#38bdf8', x: ax('knob_151', 'ARMS', 0, 1, 0.5),       y: ax('knob_152', 'RADIAL', 0, 1, 0.5) },
-            { name: 'FIELD',  hue: '#fbbf24', x: ax('knob_153', 'DEPTH TINT', 0, 1, 0.5), y: ax('knob_154', 'SWIRL MIX', 0, 1, 0.5) },
-            { name: 'HUE',    hue: '#f472b6', x: ax('knob_155', 'REGION', 0, 1, 0.5),     y: ax('knob_156', 'LIGHT BASE', 0, 1, 0.5) },
-            { name: 'COLOUR', hue: '#a78bfa', x: ax('knob_157', 'CHROMA', 0, 1, 0.5),     y: ax('knob_158', 'ACCENT', 0, 1, 0.5) },
-            { name: 'TONE',   hue: '#34d399', x: ax('knob_159', 'BG FLOOR', 0, 1, 0.5),   y: ax('knob_160', 'GAIN', 0, 1, 0.5) },
-        ],
-    },
-]
+/* Which knobs each shader reads, and what it calls them, straight out of the
+   build's shaders.json. Cached on the phone because it is the ONLY part of the
+   layout that arrives over the network, and a dead wifi moment must not cost
+   you your pads. */
+const readKnobCache = () => {
+    try {
+        return JSON.parse(localStorage.getItem(KNOBS_KEY) ?? '{}') ?? {}
+    } catch {
+        return {}
+    }
+}
+let knobCache = readKnobCache()
+const shaderKnobs = () => (activeShader && knobCache[activeShader]) || []
 
-/* ── shaders worth having on stage (same list the dial page ships) ───────── */
-const SHADERS = [
-    { path: 'redaphid/wip/lattice-vj/6', label: 'VJ6' },   // the EXPLORE fork — the only shader that reads knob_141–160
-    { path: 'redaphid/wip/lattice-vj/5', label: 'VJ5' },   // the good snapshot
-    { path: 'redaphid/chromadepth-lattice/6', label: 'L6' },
-    { path: 'redaphid/chromadepth-lattice/5', label: 'L5' },
-    { path: 'redaphid/chromadepth-lattice/4', label: 'L4' },
-    { path: 'redaphid/lattice-interactive/3', label: 'HZN' },
-    { path: 'redaphid/chromadepth-lattice/3', label: 'L3' },
-]
+const rebuildLayout = () => {
+    banks = resolveBanks({ layouts: LAYOUTS, shader: activeShader, shaderKnobs: shaderKnobs(), overrides })
+}
+rebuildLayout()
+
+/* Non-blocking on purpose: the pad is fully usable from the checked-in layout
+   before this lands, and if it never lands nothing breaks. */
+const loadShaderKnobs = async () => {
+    try {
+        const list = await fetch('/shaders.json').then((res) => res.json())
+        const next = {}
+        list.forEach((entry) => {
+            const knobs = parseKnobs(entry.knobs)
+            if (knobs.length) next[entry.name] = knobs
+        })
+        knobCache = next
+        localStorage.setItem(KNOBS_KEY, JSON.stringify(next))
+        relayout()
+    } catch {
+        /* offline, or a static host without shaders.json — cache or file layout stands */
+    }
+}
+
+const SHADERS = LAYOUTS.shaders ?? []
 
 /* ── transport ────────────────────────────────────────────────────────────
    We drive WebSocketClient directly rather than initRemoteController because we
@@ -256,18 +186,25 @@ const buzz = (ms) => {
    the picker PINS the bank (remembered on that phone) and always wins over the
    automatic move, because in a loud room the person holding the phone is right. */
 const myId = Math.random().toString(36).slice(2, 8)
-const peers = new Map() // id -> { bank, manual, seen }
+const peers = new Map() // id -> { bank, name, manual, seen }
 const LS_KEY = 'vjpad-bank'
 
+/* The pinned bank is remembered BY NAME. It used to be an index, which was fine
+   while the bank list was a constant — now that the list depends on the selected
+   shader, an index silently means a different bank on a different shader. */
 let bank = 0
 let pinned = false
-const savedBank = parseInt(localStorage.getItem(LS_KEY) ?? '', 10)
-if (Number.isInteger(savedBank) && savedBank >= 0 && savedBank < BANKS.length) {
-    bank = savedBank
+const savedBank = localStorage.getItem(LS_KEY) ?? ''
+const legacyIndex = /^\d+$/.test(savedBank) ? Number(savedBank) : -1
+const savedIndex = legacyIndex >= 0 ? legacyIndex : banks.findIndex((b) => b.name === savedBank)
+if (savedIndex >= 0 && savedIndex < banks.length) {
+    bank = savedIndex
     pinned = true
 }
 
-const announce = () => sendRaw('vjpad-peer', { id: myId, bank, manual: pinned })
+const bankName = () => banks[bank]?.name ?? ''
+
+const announce = () => sendRaw('vjpad-peer', { id: myId, bank, name: bankName(), shader: activeShader, manual: pinned })
 
 const livePeers = () => {
     const now = Date.now()
@@ -275,17 +212,22 @@ const livePeers = () => {
     return peers
 }
 
+/* Two phones can now be on different shaders, so bank INDEX is not a shared
+   name any more — compare by bank name, falling back to the index for a phone
+   still running the older build. */
+const peerHoldsIndex = (p, i) => (p.name ? p.name === banks[i]?.name : p.bank === i)
+
 const freeBank = () => {
-    const taken = new Set([...livePeers().values()].map((p) => p.bank))
-    for (let i = 0; i < BANKS.length; i++) if (!taken.has(i)) return i
+    const live = [...livePeers().values()]
+    for (let i = 0; i < banks.length; i++) if (!live.some((p) => peerHoldsIndex(p, i))) return i
     return bank
 }
 
 const onPeer = (p) => {
-    peers.set(p.id, { bank: p.bank, manual: !!p.manual, seen: Date.now() })
+    peers.set(p.id, { bank: p.bank, name: p.name, manual: !!p.manual, seen: Date.now() })
     // Someone else is on my bank. If I am not pinned, and they either pinned it or
     // simply sorted first, I move. Deterministic, so we never swap forever.
-    if (p.bank === bank && !pinned && (p.manual || p.id < myId)) {
+    if (peerHoldsIndex(p, bank) && !pinned && (p.manual || p.id < myId)) {
         const next = freeBank()
         if (next !== bank) {
             setBank(next, false)
@@ -308,15 +250,17 @@ const state = {} // key -> value
 const pads = [] // live pad objects for the current bank
 const active = new Map() // pointerId -> pad
 
-const knobFor = (padIndex, isY) => `knob_${KNOB_BASE + bank * 10 + padIndex * 2 + (isY ? 2 : 1)}`
+const knobFor = (padIndex, isY) => mirrorKnob(banks[bank], padIndex, isY)
 
 /* Every axis publishes BOTH its named uniform and this bank's private knob. The
    named one is what moves tonight's shaders; the knob is what makes each phone a
-   bank of MIDI-style controls any shader can read. */
+   bank of MIDI-style controls any shader can read. Auto-generated banks set
+   `mirror: false` — their axes ARE knobs, and echoing them onto a second range
+   would write knobs the shader never asked for. */
 const payloadFor = (pad, axis, isY, value) => {
     const out = { [axis.key]: value }
     const mirror = knobFor(pad.index, isY)
-    if (mirror !== axis.key) out[mirror] = clamp01(toPos(axis, value))
+    if (mirror && mirror !== axis.key) out[mirror] = clamp01(toPos(axis, value))
     return out
 }
 
@@ -385,7 +329,7 @@ const buildPad = (def, index) => {
             el.setPointerCapture(e.pointerId)
         } catch {}
         el.classList.add('held')
-        if (BANKS[bank].quietGate && !state.__gate) {
+        if (banks[bank]?.quietGate && !state.__gate) {
             // quietGate scales nearly every audio term in the lattice shaders. Without
             // pinning it these pads would do nothing in a quiet moment.
             state.__gate = true
@@ -425,7 +369,7 @@ const buildBank = () => {
     padHost.innerHTML = ''
     pads.length = 0
     active.clear()
-    const defs = BANKS[bank].pads
+    const defs = banks[bank]?.pads ?? []
     const n = defs.length
     // Layout: an odd bank leads with one full-width pad, the rest pair up.
     padHost.style.gridTemplateColumns = n === 2 ? '1fr' : '1fr 1fr'
@@ -441,38 +385,66 @@ const buildBank = () => {
 }
 
 const setBank = (i, manual) => {
-    bank = i
+    bank = Math.max(0, Math.min(i, banks.length - 1))
     if (manual) {
         pinned = true
-        localStorage.setItem(LS_KEY, String(i))
+        localStorage.setItem(LS_KEY, bankName())
     }
     buildBank()
     announce()
     buzz(40)
 }
 
-/* ── bank picker ──────────────────────────────────────────────────────── */
+/* ── bank picker ────────────────────────────────────────────────────────
+   Rebuilt whenever the bank list changes (shader switch, an edit), because the
+   list is no longer a constant. Same chips, same one-tap switch. */
 const bankHost = $('banks')
-BANKS.forEach((b, i) => {
-    const el = document.createElement('button')
-    el.className = 'bbtn'
-    el.type = 'button'
-    el.innerHTML = `${b.name}<small>${b.live}</small>`
-    el.addEventListener('click', () => setBank(i, true))
-    bankHost.appendChild(el)
-})
+const buildBankPicker = () => {
+    bankHost.innerHTML = ''
+    banks.forEach((b, i) => {
+        const el = document.createElement('button')
+        el.className = 'bbtn'
+        el.type = 'button'
+        el.innerHTML = `${b.name}<small>${b.live}</small>`
+        el.addEventListener('click', () => setBank(i, true))
+        bankHost.appendChild(el)
+    })
+}
 
-/* ── shader strip ─────────────────────────────────────────────────────── */
+/* Re-resolve the layout and redraw the surface, holding onto the bank you were
+   already on by NAME so a shader switch never yanks the pads out from under a
+   finger that is still on the same-named bank. */
+const relayout = () => {
+    const held = bankName()
+    rebuildLayout()
+    const found = banks.findIndex((b) => b.name === held)
+    bank = found >= 0 ? found : Math.min(bank, Math.max(0, banks.length - 1))
+    buildBankPicker()
+    buildBank()
+}
+
+/* ── shader strip ───────────────────────────────────────────────────────
+   Tapping a shader still sends it to the displays; it now ALSO points the pad's
+   layout at that shader, which is the whole reason the banks stopped being
+   hardcoded. Still one tap. */
 const shaderHost = $('shaders')
-SHADERS.forEach((s) => {
+const setShader = (path, { broadcast }) => {
+    activeShader = path
+    localStorage.setItem(SHADER_KEY, path)
+    if (broadcast) sendRaw('update-params', { shader: path })
+    ;[...shaderHost.children].forEach((c) => c.classList.toggle('on', c.dataset.path === path))
+    relayout()
+}
+
+SHADERS.forEach((entry) => {
     const b = document.createElement('button')
     b.className = 'sbtn'
     b.type = 'button'
-    b.textContent = s.label
+    b.textContent = entry.label
+    b.dataset.path = entry.path
+    b.classList.toggle('on', entry.path === activeShader)
     b.addEventListener('click', () => {
-        sendRaw('update-params', { shader: s.path })
-        ;[...shaderHost.children].forEach((c) => c.classList.remove('on'))
-        b.classList.add('on')
+        setShader(entry.path, { broadcast: true })
         buzz(40)
     })
     shaderHost.appendChild(b)
@@ -493,7 +465,7 @@ const paint = () => {
     if (status !== 'connected') {
         txt.textContent = status === 'reconnecting' ? 'reconnecting…' : 'NO SERVER'
     } else {
-        const b = BANKS[bank]
+        const b = banks[bank] ?? { name: '—' }
         txt.textContent =
             `${b.name}${pinned ? ' ◉' : ''} · ` +
             (displays > 0 ? `${displays} display${displays === 1 ? '' : 's'}` : 'no display') +
@@ -501,9 +473,9 @@ const paint = () => {
     }
     ;[...bankHost.children].forEach((c, i) => {
         c.classList.toggle('on', i === bank)
-        c.classList.toggle('taken', i !== bank && [...livePeers().values()].some((p) => p.bank === i))
+        c.classList.toggle('taken', i !== bank && [...livePeers().values()].some((p) => peerHoldsIndex(p, i)))
     })
-    $('note').textContent = BANKS[bank].note
+    $('note').textContent = banks[bank]?.note ?? ''
     paintFingers()
 }
 
@@ -514,11 +486,11 @@ const paint = () => {
    go must never yank the controls out of another phone's hands. */
 const bankKeys = () => {
     const keys = []
-    BANKS[bank].pads.forEach((p, i) => {
+    ;(banks[bank]?.pads ?? []).forEach((p, i) => {
         keys.push(p.x.key, p.y.key, knobFor(i, false), knobFor(i, true))
     })
-    if (BANKS[bank].quietGate) keys.push('quietGate')
-    return [...new Set(keys)]
+    if (banks[bank]?.quietGate) keys.push('quietGate')
+    return [...new Set(keys)].filter(Boolean)
 }
 
 $('release').addEventListener('click', () => {
@@ -531,7 +503,7 @@ $('release').addEventListener('click', () => {
 
 $('reset').addEventListener('click', () => {
     const payload = {}
-    BANKS[bank].pads.forEach((p, i) => {
+    ;(banks[bank]?.pads ?? []).forEach((p, i) => {
         state[p.x.key] = p.x.def
         state[p.y.key] = p.y.def
         Object.assign(payload, payloadFor({ index: i }, p.x, false, p.x.def))
@@ -583,12 +555,71 @@ document.addEventListener('visibilitychange', async () => {
     }
 })
 
+/* ── the setup screen ──────────────────────────────────────────────────────
+   Out of the performance path by construction: it lives behind a LONG PRESS on
+   the status line — the one strip of the page with no control on it — and while
+   it is open it replaces the pad grid entirely, so there is no half-open state
+   to fumble into mid-show. Nothing here is needed to play; it exists so knob
+   numbers and names can be changed without a laptop. */
+const editor = mountEditor({
+    host: $('editor'),
+    sheet: $('sheet'),
+    getShader: () => activeShader,
+    getBank: () => banks[bank] ?? { name: '—', pads: [] },
+    getBanks: () => banks,
+    getShaderKnobs: shaderKnobs,
+    getOverrides: () => overrides,
+    setOverrides: (next) => {
+        overrides = next
+        saveOverrides(next)
+        rebuildLayout()
+    },
+    onClose: () => {
+        document.body.classList.remove('editing')
+        relayout()
+    },
+})
+
+const statusEl = $('status')
+statusEl.title = 'long-press to set up banks'
+let pressTimer = null
+const cancelPress = () => {
+    clearTimeout(pressTimer)
+    pressTimer = null
+}
+statusEl.addEventListener('pointerdown', () => {
+    cancelPress()
+    pressTimer = setTimeout(() => {
+        document.body.classList.add('editing')
+        editor.open()
+        buzz([20, 40, 20])
+    }, 800)
+})
+;['pointerup', 'pointercancel', 'pointerleave', 'pointermove'].forEach((type) =>
+    statusEl.addEventListener(type, cancelPress)
+)
+
 // Last-ditch guard: anything that escapes the pads must not scroll or zoom the page.
-document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false })
+// The setup screen is the one place that genuinely needs to scroll, so it opts out.
+document.addEventListener('touchmove', (e) => !editor.isOpen && e.preventDefault(), { passive: false })
 document.addEventListener('gesturestart', (e) => e.preventDefault())
 
-buildBank()
+relayout()
+loadShaderKnobs()
 client.connect()
 
 // handy for debugging from a desktop console / automation
-window.vjpad = { state, pads, active, send, BANKS, get bank() { return bank }, setBank, client }
+window.vjpad = {
+    state,
+    pads,
+    active,
+    send,
+    client,
+    setBank,
+    setShader,
+    relayout,
+    get banks() { return banks },
+    get bank() { return bank },
+    get shader() { return activeShader },
+    get overrides() { return overrides },
+}
