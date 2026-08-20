@@ -14,7 +14,6 @@ export const initRemoteDisplay = () => {
     switch (message.type) {
       case 'update-params':
         applyParams(message.data)
-        showCommandReceived()
         break
 
       case 'status':
@@ -151,52 +150,6 @@ const syncParamsToUrl = (data) => {
 
 // A refresh/close must not lose the last few hundred ms of knob movement.
 window.addEventListener('pagehide', flushParamsToUrl)
-
-/**
- * Show a brief flash when a command is received
- */
-// PERF: also ran per message — style writes plus a FRESH setTimeout each time, so a moving
-// fader stacked ~60 timers/second, each scheduling another style write. Throttled, single timer.
-let flashUntil = 0
-let flashTimer = null
-const showCommandReceived = () => {
-  const now = Date.now()
-  if (now < flashUntil) return
-  flashUntil = now + 250
-
-  let indicator = document.getElementById('remote-status-indicator')
-
-  if (!indicator) {
-    indicator = document.createElement('div')
-    indicator.id = 'remote-status-indicator'
-    indicator.style.cssText = `
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      padding: 6px 12px;
-      border-radius: 4px;
-      font-family: system-ui, sans-serif;
-      font-size: 12px;
-      z-index: 10000;
-      pointer-events: none;
-      transition: opacity 0.3s;
-      opacity: 0;
-    `
-    document.body.appendChild(indicator)
-  }
-
-  indicator.style.backgroundColor = '#22c55e'
-  indicator.style.color = 'white'
-  indicator.textContent = 'Remote'
-  indicator.style.opacity = '0.8'
-
-  // Fade out after 1 second — ONE timer, reset rather than stacked.
-  if (flashTimer) clearTimeout(flashTimer)
-  flashTimer = setTimeout(() => {
-    flashTimer = null
-    indicator.style.opacity = '0'
-  }, 1000)
-}
 
 /**
  * Create/update a visual status indicator
