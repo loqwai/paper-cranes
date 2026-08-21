@@ -28,9 +28,18 @@
 
     <main id="pads"></main>
 
+    <!-- SETUP screen: replaces the pad grid, reached only by a long-press on the
+         status line. Never on screen during a show unless you put it there. -->
+    <section id="editor" class="editor" hidden></section>
+    <div id="sheet" class="sheet" hidden></div>
+
+    <div id="learnfeed" class="note" hidden></div>
+    <div id="loopdrawer" class="note" hidden style="max-height:40vh;overflow-y:auto"></div>
+
     <footer id="foot">
         <button id="release" class="bigbtn" type="button">RELEASE<small>back to music</small></button>
         <button id="reset" class="bigbtn" type="button">RESET<small>neutral look</small></button>
+        <button id="learn" class="bigbtn" type="button">LEARN<small>confirm gesture</small></button>
     </footer>
 
     <script type="module" src="./vjpad.js"></script>

@@ -1,7 +1,7 @@
 import { join, relative } from 'path'
 import { readdir, readFile, writeFile, mkdir, cp, stat } from 'fs/promises'
 import chokidar from 'chokidar'
-import { extractMetadata, extractPresets } from '../scripts/shader-utils.js'
+import { extractMetadata, extractPresets, extractKnobs, formatKnobs } from '../scripts/shader-utils.js'
 import {
   resolveDates,
   gitDirtyFiles,
@@ -77,6 +77,13 @@ async function generateShadersJson(outputDir = null) {
       const presets = extractPresets(content)
       const tags = normalizeTags(meta.tags)
 
+      // Which knob_N uniforms this shader reads, and what it calls them. The VJ
+      // pad builds its control surface from this, so pointing the pad at a new
+      // shader gives correctly-numbered, correctly-named pads with no setup.
+      // `@knob:` lines are declarations, not metadata — keep them out of `meta`.
+      const knobs = extractKnobs(content)
+      delete meta.knob
+
       return {
         name: shaderPath,
         fileUrl: `shaders/${relativePath.replace(/\\/g, '/')}`,
@@ -88,6 +95,7 @@ async function generateShadersJson(outputDir = null) {
         modified,
         ...(tags.length ? { tags } : {}),
         ...(presets.length ? { presets } : {}),
+        ...(knobs.length ? { knobs: formatKnobs(knobs) } : {}),
       }
     })
   )

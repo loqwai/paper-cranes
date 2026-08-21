@@ -454,3 +454,275 @@ body {
         min-height: 42px;
     }
 }
+
+/* ── the SETUP screen ──────────────────────────────────────────────────────
+   Not part of the instrument. It is only ever on screen after a deliberate
+   long-press, and while it is, the pad grid and the transport buttons are gone
+   — you cannot be half in it with a finger on a pad. Everything is still
+   thumb-sized, because "config screen" is not an excuse for 12px controls in
+   the same dark room. */
+body.editing #pads,
+body.editing #foot,
+body.editing .shaders {
+    display: none;
+}
+
+.editor {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px;
+    overflow: hidden;
+}
+
+.editor[hidden] {
+    display: none;
+}
+
+.ehead {
+    display: flex;
+    gap: 6px;
+    align-items: stretch;
+    flex: 0 0 auto;
+}
+
+.etitle {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 2px;
+    padding: 8px 10px;
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    color: var(--ink);
+    background: #000;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    text-align: left;
+}
+
+.etitle small {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--ink-dim);
+    letter-spacing: 0;
+    max-width: 46vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ebig {
+    min-width: 84px;
+    min-height: 56px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    color: var(--ink);
+    background: #000;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+}
+
+.ebig small {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--ink-dim);
+    letter-spacing: 0;
+}
+
+.ebig.done {
+    background: var(--live);
+    border-color: var(--live);
+    color: #000;
+}
+
+.ebig.done small { color: #000a; }
+
+.ebig.danger { border-color: var(--dead); color: var(--dead); }
+
+/* the only scrolling region on the whole page */
+.erows {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+}
+
+.erow {
+    display: flex;
+    align-items: stretch;
+    gap: 4px;
+    min-height: 54px;
+}
+
+.ewhere {
+    flex: 0 0 62px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0 6px;
+    font-size: 11px;
+    font-weight: 900;
+    color: var(--hue);
+    border-left: 3px solid var(--hue);
+    background: #0a0a0d;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.ewhere small {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--ink-dim);
+}
+
+.ename {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: var(--ink);
+    background: #000;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0 8px;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ekey {
+    flex: 0 0 68px;
+    font-size: 15px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    color: #000;
+    background: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+}
+
+/* a named uniform (navX, energySpring) has no number to step through */
+.ekey.named {
+    flex: 0 0 96px;
+    font-size: 11px;
+    background: #000;
+    color: var(--ink-dim);
+    border-color: var(--line);
+}
+
+.estep {
+    flex: 0 0 52px;
+    font-size: 24px;
+    font-weight: 900;
+    color: var(--ink);
+    background: #000;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+}
+
+.estep:disabled { opacity: 0.25; }
+
+.efoot {
+    display: flex;
+    gap: 6px;
+    flex: 0 0 auto;
+}
+
+.efoot .ebig { flex: 1 1 0; }
+
+/* ── knob sheet: one tap assigns a knob the shader already named ──────── */
+.sheet {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    background: rgba(0, 0, 0, 0.92);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+}
+
+.sheet[hidden] { display: none; }
+
+.sheettitle {
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    flex: 0 0 auto;
+}
+
+.sheetlist {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    touch-action: pan-y;
+}
+
+.sheetchip {
+    flex: 0 0 auto;
+    min-height: 52px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 12px;
+    font-size: 16px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    color: var(--accent);
+    background: #0a0a0d;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    text-align: left;
+}
+
+.sheetchip small {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: 0.04em;
+}
+
+.sheetempty {
+    padding: 14px 4px;
+    font-size: 12px;
+    color: var(--ink-dim);
+}
+
+.sheetcancel {
+    flex: 0 0 auto;
+    min-height: 56px;
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    color: var(--ink);
+    background: #000;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+}
+
+.sheetchip.on {
+    border-color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--accent);
+}

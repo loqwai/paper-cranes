@@ -14,7 +14,6 @@ export const initRemoteDisplay = () => {
     switch (message.type) {
       case 'update-params':
         applyParams(message.data)
-        showCommandReceived()
         break
 
       case 'status':
@@ -46,6 +45,13 @@ export const initRemoteDisplay = () => {
   return client
 }
 
+// NOTE (2026-08-19): params are applied SYNCHRONOUSLY on arrival, deliberately. An earlier pass
+// coalesced inbound messages to one apply per requestAnimationFrame; that was wrong. This is the
+// knob -> uniform hot path, and deferring it to a rAF callback costs up to a full frame (~16 ms)
+// whenever the renderer's rAF is queued ahead of the coalescing one — added lag on a control
+// surface someone is playing in time with music. It also solved nothing: the per-message cost was
+// never this loop (a few keys and a parseFloat), it was the URL re-serialisation and the DOM
+// churn, both of which are handled below without touching latency. Keep this path immediate.
 /**
  * Apply received parameters to the visualizer
  */
@@ -106,7 +112,21 @@ const applyParams = async (data) => {
   syncParamsToUrl(data)
 }
 
-const syncParamsToUrl = (data) => {
+// PERF (2026-08-19): this used to run on EVERY update-params message. vjpad coalesces to one
+// send per animation frame, so that is up to 60/second — each one parsing and re-serialising a
+// ~700-char URL carrying 30+ knobs and then touching session history, synchronously on the
+// render thread. That was enough to visibly stutter the visual while a fader was moving.
+// The URL mirror exists only so a REFRESH preserves display state, so it does not need to be
+// synchronous with the knob stream: coalesce and write on a trailing edge.
+let urlPending = null
+let urlTimer = null
+const URL_SYNC_MS = 750
+
+const flushParamsToUrl = () => {
+  urlTimer = null
+  const data = urlPending
+  urlPending = null
+  if (!data) return
   try {
     const url = new URL(window.location.href)
     for (const [key, value] of Object.entries(data)) {
@@ -123,41 +143,13 @@ const syncParamsToUrl = (data) => {
   }
 }
 
-/**
- * Show a brief flash when a command is received
- */
-const showCommandReceived = () => {
-  let indicator = document.getElementById('remote-status-indicator')
-
-  if (!indicator) {
-    indicator = document.createElement('div')
-    indicator.id = 'remote-status-indicator'
-    indicator.style.cssText = `
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      padding: 6px 12px;
-      border-radius: 4px;
-      font-family: system-ui, sans-serif;
-      font-size: 12px;
-      z-index: 10000;
-      pointer-events: none;
-      transition: opacity 0.3s;
-      opacity: 0;
-    `
-    document.body.appendChild(indicator)
-  }
-
-  indicator.style.backgroundColor = '#22c55e'
-  indicator.style.color = 'white'
-  indicator.textContent = 'Remote'
-  indicator.style.opacity = '0.8'
-
-  // Fade out after 1 second
-  setTimeout(() => {
-    indicator.style.opacity = '0'
-  }, 1000)
+const syncParamsToUrl = (data) => {
+  urlPending = urlPending ? { ...urlPending, ...data } : { ...data }
+  if (!urlTimer) urlTimer = setTimeout(flushParamsToUrl, URL_SYNC_MS)
 }
+
+// A refresh/close must not lose the last few hundred ms of knob movement.
+window.addEventListener('pagehide', flushParamsToUrl)
 
 /**
  * Create/update a visual status indicator

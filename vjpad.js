@@ -26,136 +26,104 @@
  *
  * ── THE HONEST CAVEAT (read this before trusting a guest bank on stage) ────
  * Knob uniforms are auto-injected, but a shader only responds to a knob it
- * actually references. Audited tonight:
+ * actually references. A bank of pads whose knobs the current shader ignores is
+ * DEAD, and in a dark room a dead pad is worse than no pad. The audit that
+ * established this, kept because it is what the `match` globs now encode:
  *   chromadepth-lattice/3,4,5,6 → read knob_1 ONLY (pan speed). Everything else
  *       they respond to is NAMED: navX, navY, navZoom, paletteShift, warpGrow.
  *   lattice-interactive/3       → reads knob_1..knob_5 (the four HORIZONS dials).
- * So a pure knob bank is DEAD on the shaders he actually plays. That is why the
- * first three banks are built on the live named uniforms and are carved up so they
- * do not overlap — three phones can all play chromadepth-lattice/6 at once, for
- * real. Banks 4+ are generic knob banks: they are honestly labelled KNOBS ONLY,
- * and they move nothing until a shader reads that range. The page says so on its
- * face rather than handing a guest a row of dead dials.
+ *   lattice-vj/5                → knob_131–140 (shape).
+ *   lattice-vj/6                → additionally knob_141–160 (the fractal's
+ *       previously hardcoded constants; those faders are CENTRED, 0.5 = the
+ *       tuned value, which is why their defaults differ from the 0/1 banks).
+ * So a pure knob bank is DEAD on most of the shaders he actually plays — hence
+ * the first banks are built on live NAMED uniforms, carved up so they do not
+ * overlap (three phones can play chromadepth-lattice/6 at once, for real), and
+ * the knob banks now say which shaders answer them instead of following you
+ * everywhere.
+ *
+ * ── WHERE THE LAYOUT COMES FROM (see src/vj/vjpad-layout.js) ───────────────
+ * Three layers, none of which you have to touch to start playing:
+ *   1. vjpad-layouts.json — checked in. Banks, pads, ranges, curves, colours and
+ *      non-knob param names (navX, waveletBassSpring…). Each bank says which
+ *      shaders it is FOR, so the lattice banks no longer follow you onto a
+ *      shader that ignores them.
+ *   2. the shader's own source — every knob_N it reads, named from its own
+ *      `// K141 TWIST STEP` comments, baked into shaders.json at build time.
+ *      This is the zero-config layer: a shader nobody wrote a layout for still
+ *      gets correctly-numbered, usually correctly-named pads.
+ *   3. this phone — per-device tweaks from the EDIT screen (long-press the
+ *      status line), stored in localStorage like the MIDI mapper's profiles.
+ * The lattice banks below moved verbatim into vjpad-layouts.json, defaults and
+ * all, and each carries an explicit `knobBase` so its mirror range stays put no
+ * matter where it lands in the list.
  */
 import { WebSocketClient } from './src/remote/WebSocketClient.js'
+import LAYOUTS from './vjpad-layouts.json'
+import { resolveBanks, loadOverrides, saveOverrides, mirrorKnob, parseKnobs } from './src/vj/vjpad-layout.js'
+import { mountEditor } from './src/vj/vjpad-edit.js'
 
 const $ = (id) => document.getElementById(id)
 const clamp01 = (t) => (t < 0 ? 0 : t > 1 ? 1 : t)
 
-/* ── axis helpers ─────────────────────────────────────────────────────────
+/* ── axis maths ──────────────────────────────────────────────────────────
    curve 'exp' = geometric. Zoom needs it: 0.04→8 mapped linearly puts every
    usable value in the first 2% of the pad. */
-const ax = (key, label, min, max, def, opt = {}) => ({ key, label, min, max, def, ...opt })
 const toValue = (a, t) => (a.curve === 'exp' ? a.min * Math.pow(a.max / a.min, t) : a.min + t * (a.max - a.min))
 const toPos = (a, v) =>
     a.curve === 'exp' ? Math.log(v / a.min) / Math.log(a.max / a.min) : (v - a.min) / (a.max - a.min)
 const fmt = (a, v) => (a.fmt ? a.fmt(v) : v.toFixed(2))
 
-const ZOOM_FMT = (v) => v.toFixed(2) + '×'
+/* ── what the pad is pointed at ───────────────────────────────────────────
+   The shader strip already existed and was already one tap; it now also decides
+   which banks are on screen, so switching shader and switching control surface
+   are the same gesture instead of two. */
+const params = new URLSearchParams(location.search)
+const SHADER_KEY = 'vjpad-shader'
+const KNOBS_KEY = 'cranes-vjpad-knobs'
 
-/* ── the banks ───────────────────────────────────────────────────────────── */
-const KNOB_BASE = 100 // bank i gets knob_(KNOB_BASE + (i-1)*10 + 1 .. + 10)
+let activeShader = params.get('shader') || localStorage.getItem(SHADER_KEY) || LAYOUTS.defaultShader || null
+let overrides = loadOverrides()
+let banks = []
 
-/** a generic 5-pad bank of raw knobs, for the 4th phone onwards */
-const guestBank = (n, base) => ({
-    name: 'GUEST ' + n,
-    live: 'KNOBS ONLY',
-    note: `knob_${base + 1}–knob_${base + 10} · needs a shader that reads them`,
-    pads: [0, 1, 2, 3, 4].map((i) => ({
-        name: 'PAD ' + 'ABCDE'[i],
-        hue: ['#f472b6', '#38bdf8', '#a78bfa', '#34d399', '#fbbf24'][i],
-        x: ax(`knob_${base + i * 2 + 1}`, `K${base + i * 2 + 1}`, 0, 1, 0.5),
-        y: ax(`knob_${base + i * 2 + 2}`, `K${base + i * 2 + 2}`, 0, 1, 0.5),
-    })),
-})
+/* Which knobs each shader reads, and what it calls them, straight out of the
+   build's shaders.json. Cached on the phone because it is the ONLY part of the
+   layout that arrives over the network, and a dead wifi moment must not cost
+   you your pads. */
+const readKnobCache = () => {
+    try {
+        return JSON.parse(localStorage.getItem(KNOBS_KEY) ?? '{}') ?? {}
+    } catch {
+        return {}
+    }
+}
+let knobCache = readKnobCache()
+const shaderKnobs = () => (activeShader && knobCache[activeShader]) || []
 
-const BANKS = [
-    {
-        name: 'FLIGHT',
-        live: 'LIVE',
-        note: 'navX/navY/navZoom/paletteShift/warpGrow · every lattice shader',
-        pads: [
-            {
-                name: 'FLY',
-                hue: '#38bdf8',
-                x: ax('navX', 'PAN X', -6, 6, 0),
-                y: ax('navY', 'PAN Y', -6, 6, 0),
-            },
-            {
-                name: 'ZOOM',
-                hue: '#34d399',
-                x: ax('knob_1', 'PAN SPD', 0, 1, 0.21),
-                y: ax('navZoom', 'ZOOM', 0.04, 8, 1, { curve: 'exp', fmt: ZOOM_FMT }),
-            },
-            {
-                name: 'COLOUR',
-                hue: '#f472b6',
-                x: ax('paletteShift', 'PALETTE', 0, 1, 0),
-                y: ax('warpGrow', 'WARP', 0, 2, 0),
-            },
-        ],
-    },
-    {
-        name: 'PULSE',
-        live: 'LIVE',
-        note: 'the music channels · pins quietGate so they bite in a quiet room',
-        // Overriding these takes the channel off the music — that is the point of a
-        // second phone: one person flies, one person plays the reaction.
-        quietGate: true,
-        pads: [
-            {
-                name: 'BASS',
-                hue: '#fbbf24',
-                x: ax('waveletBassSpring', 'BASS', 0, 1, 0.3),
-                y: ax('waveletBand5Spring', 'LINES', 0, 1, 0.3),
-            },
-            {
-                name: 'GLOW',
-                hue: '#a78bfa',
-                x: ax('energySpring', 'GLOW', 0, 1, 0.4),
-                y: ax('spectralCrestSmooth', 'SPARKLE', 0, 1, 0.3),
-            },
-            {
-                name: 'CELLS',
-                hue: '#22d3ee',
-                x: ax('waveletBand2Spring', 'CELLS', 0, 1, 0.3),
-                y: ax('melodyFlow', 'HUE FLOW', 0, 1, 0.5),
-            },
-        ],
-    },
-    {
-        name: 'HORIZONS',
-        live: 'HZN ONLY',
-        note: 'knob_2–knob_5 · only lattice-interactive/3 reads these',
-        pads: [
-            {
-                name: 'SCHEME',
-                hue: '#f97316',
-                x: ax('knob_2', 'SCHEME', 0, 1, 0),
-                y: ax('knob_3', 'CELL SIZE', 0, 1, 0),
-            },
-            {
-                name: 'TWIST',
-                hue: '#60a5fa',
-                x: ax('knob_4', 'TWIST', 0, 1, 0),
-                y: ax('knob_5', 'REACT', 0, 1, 0),
-            },
-        ],
-    },
-    guestBank(1, KNOB_BASE + 30),
-    guestBank(2, KNOB_BASE + 40),
-    guestBank(3, KNOB_BASE + 50),
-]
+const rebuildLayout = () => {
+    banks = resolveBanks({ layouts: LAYOUTS, shader: activeShader, shaderKnobs: shaderKnobs(), overrides })
+}
+rebuildLayout()
 
-/* ── shaders worth having on stage (same list the dial page ships) ───────── */
-const SHADERS = [
-    { path: 'redaphid/chromadepth-lattice/6', label: 'L6' },
-    { path: 'redaphid/chromadepth-lattice/5', label: 'L5' },
-    { path: 'redaphid/chromadepth-lattice/4', label: 'L4' },
-    { path: 'redaphid/lattice-interactive/3', label: 'HZN' },
-    { path: 'redaphid/chromadepth-lattice/3', label: 'L3' },
-    { path: 'redaphid/wip/lattice-vj/1', label: 'VJ' },
-]
+/* Non-blocking on purpose: the pad is fully usable from the checked-in layout
+   before this lands, and if it never lands nothing breaks. */
+const loadShaderKnobs = async () => {
+    try {
+        const list = await fetch('/shaders.json').then((res) => res.json())
+        const next = {}
+        list.forEach((entry) => {
+            const knobs = parseKnobs(entry.knobs)
+            if (knobs.length) next[entry.name] = knobs
+        })
+        knobCache = next
+        localStorage.setItem(KNOBS_KEY, JSON.stringify(next))
+        relayout()
+    } catch {
+        /* offline, or a static host without shaders.json — cache or file layout stands */
+    }
+}
+
+const SHADERS = LAYOUTS.shaders ?? []
 
 /* ── transport ────────────────────────────────────────────────────────────
    We drive WebSocketClient directly rather than initRemoteController because we
@@ -171,6 +139,10 @@ const client = new WebSocketClient(
             paint()
         } else if (msg.type === 'vjpad-peer' && msg.data?.id !== myId) {
             onPeer(msg.data)
+        } else if (msg.type === 'vj-status' || msg.type === 'vj-learn-result') {
+            /* the VJ loop's feedback channel (vjpad-v2 Phase 1) — beat notes, LEARN verdicts,
+               health actions. vj-learn-result kept as an alias for older loop tooling. */
+            onLoopStatus(msg.type === 'vj-status' ? msg.data : { kind: 'learn-result', text: msg.data?.text })
         }
     },
     (s) => {
@@ -218,18 +190,25 @@ const buzz = (ms) => {
    the picker PINS the bank (remembered on that phone) and always wins over the
    automatic move, because in a loud room the person holding the phone is right. */
 const myId = Math.random().toString(36).slice(2, 8)
-const peers = new Map() // id -> { bank, manual, seen }
+const peers = new Map() // id -> { bank, name, manual, seen }
 const LS_KEY = 'vjpad-bank'
 
+/* The pinned bank is remembered BY NAME. It used to be an index, which was fine
+   while the bank list was a constant — now that the list depends on the selected
+   shader, an index silently means a different bank on a different shader. */
 let bank = 0
 let pinned = false
-const savedBank = parseInt(localStorage.getItem(LS_KEY) ?? '', 10)
-if (Number.isInteger(savedBank) && savedBank >= 0 && savedBank < BANKS.length) {
-    bank = savedBank
+const savedBank = localStorage.getItem(LS_KEY) ?? ''
+const legacyIndex = /^\d+$/.test(savedBank) ? Number(savedBank) : -1
+const savedIndex = legacyIndex >= 0 ? legacyIndex : banks.findIndex((b) => b.name === savedBank)
+if (savedIndex >= 0 && savedIndex < banks.length) {
+    bank = savedIndex
     pinned = true
 }
 
-const announce = () => sendRaw('vjpad-peer', { id: myId, bank, manual: pinned })
+const bankName = () => banks[bank]?.name ?? ''
+
+const announce = () => sendRaw('vjpad-peer', { id: myId, bank, name: bankName(), shader: activeShader, manual: pinned })
 
 const livePeers = () => {
     const now = Date.now()
@@ -237,17 +216,22 @@ const livePeers = () => {
     return peers
 }
 
+/* Two phones can now be on different shaders, so bank INDEX is not a shared
+   name any more — compare by bank name, falling back to the index for a phone
+   still running the older build. */
+const peerHoldsIndex = (p, i) => (p.name ? p.name === banks[i]?.name : p.bank === i)
+
 const freeBank = () => {
-    const taken = new Set([...livePeers().values()].map((p) => p.bank))
-    for (let i = 0; i < BANKS.length; i++) if (!taken.has(i)) return i
+    const live = [...livePeers().values()]
+    for (let i = 0; i < banks.length; i++) if (!live.some((p) => peerHoldsIndex(p, i))) return i
     return bank
 }
 
 const onPeer = (p) => {
-    peers.set(p.id, { bank: p.bank, manual: !!p.manual, seen: Date.now() })
+    peers.set(p.id, { bank: p.bank, name: p.name, manual: !!p.manual, seen: Date.now() })
     // Someone else is on my bank. If I am not pinned, and they either pinned it or
     // simply sorted first, I move. Deterministic, so we never swap forever.
-    if (p.bank === bank && !pinned && (p.manual || p.id < myId)) {
+    if (peerHoldsIndex(p, bank) && !pinned && (p.manual || p.id < myId)) {
         const next = freeBank()
         if (next !== bank) {
             setBank(next, false)
@@ -270,15 +254,17 @@ const state = {} // key -> value
 const pads = [] // live pad objects for the current bank
 const active = new Map() // pointerId -> pad
 
-const knobFor = (padIndex, isY) => `knob_${KNOB_BASE + bank * 10 + padIndex * 2 + (isY ? 2 : 1)}`
+const knobFor = (padIndex, isY) => mirrorKnob(banks[bank], padIndex, isY)
 
 /* Every axis publishes BOTH its named uniform and this bank's private knob. The
    named one is what moves tonight's shaders; the knob is what makes each phone a
-   bank of MIDI-style controls any shader can read. */
+   bank of MIDI-style controls any shader can read. Auto-generated banks set
+   `mirror: false` — their axes ARE knobs, and echoing them onto a second range
+   would write knobs the shader never asked for. */
 const payloadFor = (pad, axis, isY, value) => {
     const out = { [axis.key]: value }
     const mirror = knobFor(pad.index, isY)
-    if (mirror !== axis.key) out[mirror] = clamp01(toPos(axis, value))
+    if (mirror && mirror !== axis.key) out[mirror] = clamp01(toPos(axis, value))
     return out
 }
 
@@ -347,7 +333,7 @@ const buildPad = (def, index) => {
             el.setPointerCapture(e.pointerId)
         } catch {}
         el.classList.add('held')
-        if (BANKS[bank].quietGate && !state.__gate) {
+        if (banks[bank]?.quietGate && !state.__gate) {
             // quietGate scales nearly every audio term in the lattice shaders. Without
             // pinning it these pads would do nothing in a quiet moment.
             state.__gate = true
@@ -387,7 +373,7 @@ const buildBank = () => {
     padHost.innerHTML = ''
     pads.length = 0
     active.clear()
-    const defs = BANKS[bank].pads
+    const defs = banks[bank]?.pads ?? []
     const n = defs.length
     // Layout: an odd bank leads with one full-width pad, the rest pair up.
     padHost.style.gridTemplateColumns = n === 2 ? '1fr' : '1fr 1fr'
@@ -403,38 +389,66 @@ const buildBank = () => {
 }
 
 const setBank = (i, manual) => {
-    bank = i
+    bank = Math.max(0, Math.min(i, banks.length - 1))
     if (manual) {
         pinned = true
-        localStorage.setItem(LS_KEY, String(i))
+        localStorage.setItem(LS_KEY, bankName())
     }
     buildBank()
     announce()
     buzz(40)
 }
 
-/* ── bank picker ──────────────────────────────────────────────────────── */
+/* ── bank picker ────────────────────────────────────────────────────────
+   Rebuilt whenever the bank list changes (shader switch, an edit), because the
+   list is no longer a constant. Same chips, same one-tap switch. */
 const bankHost = $('banks')
-BANKS.forEach((b, i) => {
-    const el = document.createElement('button')
-    el.className = 'bbtn'
-    el.type = 'button'
-    el.innerHTML = `${b.name}<small>${b.live}</small>`
-    el.addEventListener('click', () => setBank(i, true))
-    bankHost.appendChild(el)
-})
+const buildBankPicker = () => {
+    bankHost.innerHTML = ''
+    banks.forEach((b, i) => {
+        const el = document.createElement('button')
+        el.className = 'bbtn'
+        el.type = 'button'
+        el.innerHTML = `${b.name}<small>${b.live}</small>`
+        el.addEventListener('click', () => setBank(i, true))
+        bankHost.appendChild(el)
+    })
+}
 
-/* ── shader strip ─────────────────────────────────────────────────────── */
+/* Re-resolve the layout and redraw the surface, holding onto the bank you were
+   already on by NAME so a shader switch never yanks the pads out from under a
+   finger that is still on the same-named bank. */
+const relayout = () => {
+    const held = bankName()
+    rebuildLayout()
+    const found = banks.findIndex((b) => b.name === held)
+    bank = found >= 0 ? found : Math.min(bank, Math.max(0, banks.length - 1))
+    buildBankPicker()
+    buildBank()
+}
+
+/* ── shader strip ───────────────────────────────────────────────────────
+   Tapping a shader still sends it to the displays; it now ALSO points the pad's
+   layout at that shader, which is the whole reason the banks stopped being
+   hardcoded. Still one tap. */
 const shaderHost = $('shaders')
-SHADERS.forEach((s) => {
+const setShader = (path, { broadcast }) => {
+    activeShader = path
+    localStorage.setItem(SHADER_KEY, path)
+    if (broadcast) sendRaw('update-params', { shader: path })
+    ;[...shaderHost.children].forEach((c) => c.classList.toggle('on', c.dataset.path === path))
+    relayout()
+}
+
+SHADERS.forEach((entry) => {
     const b = document.createElement('button')
     b.className = 'sbtn'
     b.type = 'button'
-    b.textContent = s.label
+    b.textContent = entry.label
+    b.dataset.path = entry.path
+    b.classList.toggle('on', entry.path === activeShader)
     b.addEventListener('click', () => {
-        sendRaw('update-params', { shader: s.path })
-        ;[...shaderHost.children].forEach((c) => c.classList.remove('on'))
-        b.classList.add('on')
+        setShader(entry.path, { broadcast: true })
         buzz(40)
     })
     shaderHost.appendChild(b)
@@ -455,7 +469,7 @@ const paint = () => {
     if (status !== 'connected') {
         txt.textContent = status === 'reconnecting' ? 'reconnecting…' : 'NO SERVER'
     } else {
-        const b = BANKS[bank]
+        const b = banks[bank] ?? { name: '—' }
         txt.textContent =
             `${b.name}${pinned ? ' ◉' : ''} · ` +
             (displays > 0 ? `${displays} display${displays === 1 ? '' : 's'}` : 'no display') +
@@ -463,9 +477,9 @@ const paint = () => {
     }
     ;[...bankHost.children].forEach((c, i) => {
         c.classList.toggle('on', i === bank)
-        c.classList.toggle('taken', i !== bank && [...livePeers().values()].some((p) => p.bank === i))
+        c.classList.toggle('taken', i !== bank && [...livePeers().values()].some((p) => peerHoldsIndex(p, i)))
     })
-    $('note').textContent = BANKS[bank].note
+    $('note').textContent = banks[bank]?.note ?? ''
     paintFingers()
 }
 
@@ -476,11 +490,11 @@ const paint = () => {
    go must never yank the controls out of another phone's hands. */
 const bankKeys = () => {
     const keys = []
-    BANKS[bank].pads.forEach((p, i) => {
+    ;(banks[bank]?.pads ?? []).forEach((p, i) => {
         keys.push(p.x.key, p.y.key, knobFor(i, false), knobFor(i, true))
     })
-    if (BANKS[bank].quietGate) keys.push('quietGate')
-    return [...new Set(keys)]
+    if (banks[bank]?.quietGate) keys.push('quietGate')
+    return [...new Set(keys)].filter(Boolean)
 }
 
 $('release').addEventListener('click', () => {
@@ -493,7 +507,7 @@ $('release').addEventListener('click', () => {
 
 $('reset').addEventListener('click', () => {
     const payload = {}
-    BANKS[bank].pads.forEach((p, i) => {
+    ;(banks[bank]?.pads ?? []).forEach((p, i) => {
         state[p.x.key] = p.x.def
         state[p.y.key] = p.y.def
         Object.assign(payload, payloadFor({ index: i }, p.x, false, p.x.def))
@@ -502,6 +516,61 @@ $('reset').addEventListener('click', () => {
     pads.forEach((p) => p.draw())
     send(payload)
     buzz([30, 40, 30])
+})
+
+/* ── loop strip (vjpad-v2 Phase 1) ────────────────────────────────────────
+   The VJ loop's feedback on the pad itself, so the phone is the single pane
+   of glass. One glanceable line above the footer; tap it for the last 20
+   events. Protocol: vj-status {kind, text, detail?, severity?, id?, ts?} —
+   replace-by-id lets "analyzing…" morph into "wired ✓" instead of stacking. */
+const loopLog = []
+const LOOP_BUZZ = { 'learn-result': [40, 30, 40], 'learn-progress': [20], beat: [15], health: [80, 40, 80], swap: [30, 30] }
+const LOOP_SEV = { error: '#f87171', warn: '#fbbf24', ok: '#34d399' }
+const paintLoop = () => {
+    const strip = $('learnfeed')
+    if (!strip) return
+    const top = loopLog[0]
+    strip.hidden = !top
+    if (top) {
+        strip.textContent = top.text
+        strip.style.borderLeft = `3px solid ${LOOP_SEV[top.severity] ?? '#38bdf8'}`
+    }
+    const dr = $('loopdrawer')
+    if (!dr) return
+    dr.innerHTML = ''
+    loopLog.forEach((e) => {
+        const row = document.createElement('div')
+        row.style.cssText = `border-left:3px solid ${LOOP_SEV[e.severity] ?? '#38bdf8'};padding:4px 8px;margin:2px 0`
+        row.textContent = `${new Date(e.ts).toTimeString().slice(0, 5)} ${e.text}${e.detail ? ' — ' + e.detail : ''}`
+        dr.appendChild(row)
+    })
+}
+const onLoopStatus = (d) => {
+    if (!d || !d.text) return
+    d.ts = d.ts || Date.now()
+    const i = d.id ? loopLog.findIndex((e) => e.id === d.id) : -1
+    if (i >= 0) loopLog[i] = d
+    else {
+        loopLog.unshift(d)
+        if (loopLog.length > 20) loopLog.pop()
+    }
+    paintLoop()
+    buzz(LOOP_BUZZ[d.kind] ?? [20])
+}
+$('learnfeed').addEventListener('click', () => {
+    const dr = $('loopdrawer')
+    if (dr) dr.hidden = !dr.hidden
+})
+
+/* ── LEARN — confirm the gesture ──────────────────────────────────────────
+   User 2026-08-20: "I need to be able to click some button to 'confirm' the
+   learning. Sometimes I'm just playing with the knobs." Riding a fader is only
+   EVIDENCE when this button says so: the tap stamps vjConfirm on the displays,
+   whose ?vj=1 runtime then freezes the recent gesture window for the VJ loop to
+   correlate against the music. No tap → play is just play, nothing is learned. */
+$('learn').addEventListener('click', () => {
+    sendRaw('update-params', { vjConfirm: Math.round(Date.now() / 1000) })
+    buzz([60, 60, 120])
 })
 
 /* ── keep the phone awake ─────────────────────────────────────────────────
@@ -545,12 +614,71 @@ document.addEventListener('visibilitychange', async () => {
     }
 })
 
+/* ── the setup screen ──────────────────────────────────────────────────────
+   Out of the performance path by construction: it lives behind a LONG PRESS on
+   the status line — the one strip of the page with no control on it — and while
+   it is open it replaces the pad grid entirely, so there is no half-open state
+   to fumble into mid-show. Nothing here is needed to play; it exists so knob
+   numbers and names can be changed without a laptop. */
+const editor = mountEditor({
+    host: $('editor'),
+    sheet: $('sheet'),
+    getShader: () => activeShader,
+    getBank: () => banks[bank] ?? { name: '—', pads: [] },
+    getBanks: () => banks,
+    getShaderKnobs: shaderKnobs,
+    getOverrides: () => overrides,
+    setOverrides: (next) => {
+        overrides = next
+        saveOverrides(next)
+        rebuildLayout()
+    },
+    onClose: () => {
+        document.body.classList.remove('editing')
+        relayout()
+    },
+})
+
+const statusEl = $('status')
+statusEl.title = 'long-press to set up banks'
+let pressTimer = null
+const cancelPress = () => {
+    clearTimeout(pressTimer)
+    pressTimer = null
+}
+statusEl.addEventListener('pointerdown', () => {
+    cancelPress()
+    pressTimer = setTimeout(() => {
+        document.body.classList.add('editing')
+        editor.open()
+        buzz([20, 40, 20])
+    }, 800)
+})
+;['pointerup', 'pointercancel', 'pointerleave', 'pointermove'].forEach((type) =>
+    statusEl.addEventListener(type, cancelPress)
+)
+
 // Last-ditch guard: anything that escapes the pads must not scroll or zoom the page.
-document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false })
+// The setup screen is the one place that genuinely needs to scroll, so it opts out.
+document.addEventListener('touchmove', (e) => !editor.isOpen && e.preventDefault(), { passive: false })
 document.addEventListener('gesturestart', (e) => e.preventDefault())
 
-buildBank()
+relayout()
+loadShaderKnobs()
 client.connect()
 
 // handy for debugging from a desktop console / automation
-window.vjpad = { state, pads, active, send, BANKS, get bank() { return bank }, setBank, client }
+window.vjpad = {
+    state,
+    pads,
+    active,
+    send,
+    client,
+    setBank,
+    setShader,
+    relayout,
+    get banks() { return banks },
+    get bank() { return bank },
+    get shader() { return activeShader },
+    get overrides() { return overrides },
+}

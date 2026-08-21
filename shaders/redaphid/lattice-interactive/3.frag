@@ -57,7 +57,7 @@ vec3 lush(float s, float lit){
 
 float regionHue(vec2 w){
     float ph = seed3 * TAU;
-    return 0.20 * sin(w.x * 0.23 + ph) + 0.20 * cos(w.y * 0.19 + ph * 1.3)
+    return 0.40 * sin(w.x * 0.23 + ph) + 0.20 * cos(w.y * 0.19 + ph * 1.3)
          + 0.13 * sin((w.x - w.y) * 0.11 + ph) + 0.09 * cos((w.x + w.y) * 0.071);
 }
 
@@ -79,7 +79,7 @@ float leadTendril(vec2 wpos, vec2 A, vec2 B, float bTime, float ph){
     float sdf = v - center;
     float aa = fwidth(sdf) + 1e-4;
     float al = u * 80.0;
-    float glow = 0.0;
+    float glow = 1.0;
     for (int k = 0; k < 3; k++){
         float fk = float(k) - 1.0;
         float off = (fk * 2.4 + 1.6 * sin(al * 0.4 + bTime * 1.4 + fk * 2.1)) * aa;

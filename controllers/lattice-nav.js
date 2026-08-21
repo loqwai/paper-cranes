@@ -1,3 +1,4 @@
+export const VERSION = 'iter150-paletteshift-fix'
 /**
  * lattice-nav — COMPOSITE controller: wavelet-ease audio + finger navigation (pan + pinch-zoom).
  *
@@ -22,9 +23,17 @@ export function make(cranes) {
     const audio = makeWaveletEase(cranes)   // the per-frame wavelet-ease function
 
     // ── navigation state (what the shader can't hold) ──
-    let navX = 0, navY = 0          // accumulated world position — never resets (no snap-back)
+    // SEED FROM THE URL (bugfix 2026-08-19): these used to start hard-coded at 0/0/1 and, because the
+    // controller's output is merged LAST each frame, they silently OVERWROTE any ?navX=/?navY=/
+    // ?navZoom= in the URL — so every saved preset that carried a camera position was a no-op with
+    // this controller, and the shader always came up at zoom 1 no matter what the preset said.
+    // (Symptom that found it: a shader looked "blurrier than yesterday" because the preset's
+    // navZoom=0.432 never applied and it was sitting 2.3x more zoomed in than the tuned state.)
+    const _q = new URLSearchParams(location.search)
+    const _num = (k, d) => { const v = parseFloat(_q.get(k)); return Number.isFinite(v) ? v : d }
+    let navX = _num('navX', 0), navY = _num('navY', 0)   // accumulated world position — never resets (no snap-back)
     let velX = 0, velY = 0          // momentum, for a glide after release
-    let zoom = 1.0                  // multiplicative zoom (1 = default; >1 zoomed in)
+    let zoom = _num('navZoom', 1.0) || 1.0   // multiplicative zoom (1 = default; >1 zoomed in)
     let lastX = 0, lastY = 0        // previous finger position (0..1)
     let pinchDist0 = 0, pinchZoom0 = 1
     let mode = 0                    // 0 idle · 1 pan · 2 pinch
@@ -37,7 +46,8 @@ export function make(cranes) {
     // ── PERMANENT live mutation ── an extreme sound (a big drop) permanently rotates the palette
     // and grows the structural warp, so the look transforms over the show and never returns to the
     // start — rewarding people for going hard. These accumulate and never reset (within a session).
-    let paletteShift = 0, warpGrow = 0, mutation = 0, mutCooldown = 0
+    let paletteShift = _num('paletteShift', 0), warpGrow = _num('warpGrow', 0), mutation = 0, mutCooldown = 0
+    let lastMutSection = null   // sectionMode at the last mutation — one mutation per real drop   // seeded from URL too: these are PERMANENT accumulations, so a preset that captured them mid-show must restore them
 
     const xy = e => { const t = e.touches ? e.touches[0] : e; return [t.clientX / innerWidth, t.clientY / innerHeight] }
     const pinch = e => Math.hypot(e.touches[0].clientX - e.touches[1].clientX,
@@ -95,13 +105,28 @@ export function make(cranes) {
         const now = performance.now() / 1000
         const dt = Math.min(0.05, now - lastT); lastT = now
         mutCooldown = Math.max(0, mutCooldown - dt)
+        // BUGFIX 2026-08-19: this used to fire on `ez > 1.4 || hit > 0.85` with only a 2 s cooldown,
+        // which on real music is not "an extreme sound" — it is most bars. Measured live: ~330
+        // mutations in 20 minutes (one every ~3.6 s), driving paletteShift 0 -> 146 and rotating the
+        // palette ~7.7 FULL HUE TURNS PER MINUTE. Hues differ in luminance, so a palette spinning that
+        // fast reads as the whole frame shifting brightness — which is exactly what the user kept
+        // reporting as "global brightness shift". A "permanent mutation" that happens every few
+        // seconds is not permanent and is not a mutation; it is a hue LFO.
+        //
+        // Now anchored to the drop detector that already works: wavelet-ease's sectionMode, which
+        // steps once per real breakdown->surge (observed ~1 step/8 min on this set). One mutation per
+        // section step, plus a much stricter standalone fallback for a genuinely extreme hit.
         const ez = features.energyZScore ?? 0
         const hit = features.wavelet_bassHit ?? 0
-        if ((ez > 1.4 || hit > 0.85) && mutCooldown <= 0) {
+        const section = features.sectionMode ?? 0
+        const sectionStepped = lastMutSection !== null && section !== lastMutSection
+        lastMutSection = section
+        if ((sectionStepped || ez > 2.6 || hit > 0.97) && mutCooldown <= 0) {
             mutation += 1
-            paletteShift += 0.15 + Math.random() * 0.22   // permanent hue rotation (varied each drop)
+            paletteShift += 0.05 + Math.random() * 0.07   // permanent hue rotation, kept SMALL: this is a
+                                                          // landmark you notice over a set, not a colour cycle
             warpGrow = Math.min(2.0, warpGrow + 0.18)      // permanent structural complexity (capped)
-            mutCooldown = 2.0                              // ≥2s between mutations
+            mutCooldown = 25.0                             // ≥25s — a drop is not a bar
         }
 
         out.navX = navX; out.navY = navY; out.navZoom = zoom

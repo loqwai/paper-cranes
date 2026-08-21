@@ -269,6 +269,23 @@ Controllers are JavaScript modules (`controllers/*.js`) that run once per frame 
 - `knob_1` through `knob_200` — all are available as float uniforms (0-1 range)
 - Set via URL query params (e.g., `?knob_1=0.5`), MIDI controllers, or the ParamsManager API
 - MIDI controllers auto-map CCs to knobs with per-device profiles persisted in localStorage. Manage mappings visually at `/midi.html`. See [docs/midi-mapping.md](docs/midi-mapping.md)
+- The phone touch surface at `/vjpad.html` builds its pads from `vjpad-layouts.json` plus whatever knobs the shader declares. See [docs/vjpad.md](docs/vjpad.md)
+
+### Naming a knob in the shader (convention)
+
+Give a knob a name on the line that uses it and the tooling picks it up — no
+separate config, no restating:
+
+```glsl
+gThetaStep = PI * (0.125 + EXA(knob_141, 0.20));   // K141 TWIST STEP (PI*0.025 .. PI*0.225)
+// @knob: 141 TWIST STEP        // explicit form; wins over the K-comment
+```
+
+`vite-plugins/shader-plugin.js` extracts every referenced `knob_N` plus its name
+into a `knobs` field in `shaders.json` (`"1|131:FOLD RATIO|…"`). The name is the
+leading run of ALL-CAPS words after the K-number — it stops at the first
+lowercase word, so the rest of the comment stays free for explanation. The VJ pad
+uses this to label pads for any shader with no setup step.
 
 ### The #define Swap Pattern (Recommended)
 
@@ -341,6 +358,8 @@ uniform float another;   // = 1.2
 - `wavelet=true` - Enable opt-in wavelet (DWT) analysis alongside FFT. Adds `wavelet*` uniforms (octave bands, centroid/spread, bassHit trigger, FFT×wavelet combos). See [docs/wavelet-analysis.md](docs/wavelet-analysis.md)
 - `audio_time=<seconds>` - Start audio file playback at this offset (default: 0)
 - `time=<seconds>` - Hold time constant (useful for deterministic screenshots/testing)
+- `vj=1` - Install the VJ runtime on the display: cursor-hide, GL validator, aesthetic meter, frame-time probe, and health signals POSTed to `/__vj-signal`. This is how the auto-VJ loop sees a page it cannot screenshot. See [docs/vj-telemetry.md](docs/vj-telemetry.md)
+- `vjtrack=1` - With `vj=1`, also log every knob move at 10Hz with the full audio-feature vector, for working out which feature a fader is imitating. **Off by default and not for use during a show** — it is a ~17KB JSON serialise + fetch every 2s on the render thread
 
 ### Dynamic Override
 All parameters can be overridden at runtime via:
@@ -388,6 +407,13 @@ Dev Server (Vite + remote-ws-plugin WebSocket server)
 Display (index.html?remote=display)
 ```
 
+**Hot-path rule (`src/remote/RemoteDisplay.js`):** inbound params are applied **synchronously on
+arrival**. This is the knob→uniform path for a control surface someone plays in time with music,
+so nothing may be deferred into it — batching applies into a `requestAnimationFrame` adds up to a
+full frame (~16ms) of lag whenever the renderer's rAF is queued first. The genuinely expensive
+per-message work has been moved out instead: the URL mirror is debounced to 750ms (it only exists
+so a refresh preserves state) and per-message DOM work was removed outright.
+
 ### ParamsManager
 The `ParamsManager` (`src/params/ParamsManager.js`) is the unified system for handling all shader parameters:
 - Single source of truth for knobs, settings, and shader code
@@ -429,6 +455,8 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   │   ├── RemoteController.js # Sends commands to displays
 │   │   ├── RemoteDisplay.js    # Receives commands from controllers
 │   │   └── WebSocketClient.js  # WebSocket client wrapper
+│   ├── vj/
+│   │   └── runtime.js          # ?vj=1 page runtime (validator, meter, jank probe, signals)
 │   ├── Visualizer.js           # WebGL rendering
 │   ├── shaderLoader.js         # Centralized shader loading
 │   └── shader-transformers/     # Shader preprocessing
@@ -440,7 +468,12 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   ├── example.js              # Documented example
 │   └── griz-coat.js            # Drop sustain with exponential decay
 ├── scripts/
-│   └── remap-knobs.js          # Utility to remap knob assignments in shaders
+│   ├── remap-knobs.js          # Utility to remap knob assignments in shaders
+│   └── vj/                     # Live-VJ tooling — see docs/vj-telemetry.md
+│       ├── aesthetic-meter.js  #   FETCHED BY URL at runtime; do not move
+│       ├── remote-send.js      #   push update-params to the display from a shell
+│       ├── watch-release.js    #   emit a line when a fader is released
+│       └── knob-correlate.js   #   which audio feature was that gesture imitating?
 ├── jam.js                       # Jam page UI (knob drawer + spacebar snapshots)
 ├── index.js                     # Main entry point
 ├── edit.js                      # Editor interface
@@ -449,6 +482,7 @@ paramsManager.setShader(code)      // Syncs shader to remote
 └── vite-plugins/
     ├── remote-ws-plugin.js      # WebSocket server for remote control
     ├── editor-sync-plugin.js    # Bidirectional editor↔disk sync (dev only)
+    ├── vj-signal-plugin.js      # /__vj-signal endpoint; writes .claude/vj-signals.jsonl (dev only)
     └── shader-plugin.js         # Shader discovery, metadata, and manifest generation
 ```
 
@@ -809,6 +843,43 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 | `/solo` | Toggle a shader between knob mode and audio mode. Auto-detects current mode and switches. Use `/solo knobs` or `/solo audio` to force a mode. Defaults to the modified `.frag` in the worktree. |
 | `/changelog` | Update docs/CHANGELOG.md and README with recent features. |
 | `/pr` | Create a PR, request review, and open in browser. |
+
+## Live Sessions: the Parent Stays Responsive
+
+During any **live session** — a VJ set (`/vibej2`), a jam, a `/live-session`, anything where the
+user has a hand on a controller — the main Claude session is a **dispatcher, not a worker**. It
+triages what the user says, reads the meter, makes the ONE decision, and hands execution to a
+subagent (`Agent` tool, `subagent_type: "fork"` — a fork inherits the full session context). Then
+it goes back to listening.
+
+**The parent NEVER does inline:** browser-side verification waits (`await new Promise(r =>
+setTimeout(...))`), multi-step analysis, journal or doc writing, repo archaeology, long
+edit-then-verify cycles, batch screenshot review. All of it goes to a fork.
+
+**"However trivial they seem to you"** is the operative clause, inherited from the Relay
+coordinator role: every violation feels individually too small to delegate — one `curl` to check a
+claim, one quick file read, one 20-second wait. Each is defensible alone; together they are the
+whole failure. *The judgement "this one is small enough" is itself the thing to stop making.*
+
+**Why, mechanically:** a `<task-notification>` only reaches the parent **between turns**. A long
+parent turn is dead air — monitors fire, the user presses a button, and nothing is heard until the
+turn ends. On 2026-08-20 a LEARN press waited **~3 minutes** for a reply purely because the parent
+was mid-turn running verification waits.
+
+**The corollary that actually fixed it:** when work must be *instant*, push it out of the agent
+loop entirely and into the page. The `?vj=1` runtime now runs the LEARN correlation in-browser and
+answers the phone over the WebSocket in **tens of milliseconds** — 56 ms measured from WebSocket
+delivery to the answer being posted, ~180 ms end-to-end including the confirm-watcher poll, worst
+case bounded at ~450 ms by the two poll intervals — with no model in the path.
+**Delegate work that needs a model; put work that needs to be instant in the page.**
+
+**Concurrency:** only ONE subagent at a time may drive the display page or the target `.frag`. The
+parent holds that token and must not spawn a second page-touching fork while one is running.
+Doc-only forks can run in parallel, but give each one distinct files — two agents editing the same
+file is a lost edit.
+
+Full treatment, including the failure modes that produced these rules:
+[docs/live-session-architecture.md](docs/live-session-architecture.md).
 
 ## Misc Notes
 - Use far less time when running sleep than you ordinarily would; if it were 5 seconds, do 1 instead.
