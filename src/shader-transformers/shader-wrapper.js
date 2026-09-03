@@ -1,9 +1,10 @@
 import { getFlatAudioFeatures } from '../audio/AudioProcessor.js'
+import { getOnsetUniformNames } from '../audio/OnsetProcessor.js'
 
 // All uniforms that can be referenced by string params
 const getKnownUniforms = () => {
     const audioFeatures = Object.keys(getFlatAudioFeatures())
-    const builtins = ['time', 'iTime', 'frame', 'iFrame', 'iRandom', 'beat']
+    const builtins = ['time', 'iTime', 'frame', 'iFrame', 'iRandom', 'beat', ...getOnsetUniformNames()]
     // Include knob_1 through knob_200
     const knobs = Array.from({ length: 200 }, (_, i) => `knob_${i + 1}`)
     return new Set([...audioFeatures, ...builtins, ...knobs])
@@ -112,7 +113,7 @@ const getAudioUniforms = (shader = '') => {
     // Skip any uniform the shader already declares itself, so explicit declarations (common
     // in wavelet shaders written before these auto-declared) don't cause a redefinition error.
     const code = shader.replace(/\s+/g, ' ')
-    return [...Object.keys(getFlatAudioFeatures()), ...getWaveletUniforms(), 'beat']
+    return [...Object.keys(getFlatAudioFeatures()), ...getWaveletUniforms(), ...getOnsetUniformNames(), 'beat']
         .sort()
         .filter(f => !code.includes(`uniform float ${f};`) && !code.includes(`uniform bool ${f};`))
         .map(f => `uniform ${f === 'beat' ? 'bool' : 'float'} ${f};`)
