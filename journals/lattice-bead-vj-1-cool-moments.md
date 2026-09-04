@@ -1,6 +1,8 @@
 # lattice-bead-vj/1 — Session Journal
 
 ## Status
+STOPPED 2026-09-04 ~14:25 by the user ("stop vibej") after 13 beats; final wall state = beat 13 (violet body,
+pink rim, echoes, carousel ground), pushed as 9815551/c3b4524. Resume with /vibej2 and this journal.
 2026-09-04 ~14:00: monthly spend limit hit - critic, gallery documenter and all variant owners terminated mid-task;
 parent continues alone at low priority. Beats 1-13 live and pushed (9815551). satellites.frag reverted to 7f07414
 (agent left it mid-edit, 3 compile errors); 2/chroma/grid/spiral committed as-is (validate clean, partial last tasks).
