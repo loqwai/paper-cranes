@@ -669,3 +669,43 @@ params, so the hue came from a random per-context seed. Not a defect.
 - [x] presets moved off the 13%-crush palette
 - [ ] theme 2 · 0.45 measures best of all (contrast 46.4, p999 180, 0% crush) but reads orange/green
       — worth a human eye on whether it is too close to the thermal look the critic rejected
+
+## Iter 19 — a still frame cannot measure flash
+
+Moved the live rig off `theme=1&paletteShift0=0.45` (iter 18 measured it near the bottom) and
+compared three palettes **live, back to back, with the same instrument** (420px 1:1 centre crop):
+
+| palette | contrast | p999 | crush | **flash sd** |
+|---|---|---|---|---|
+| **bare default** | 17.28 | 177 | 0% | **4.03** |
+| theme 1 · 0.45 (rig was here) | 13.34 | 149 | 0% | 8.97 |
+| theme 2 · 0.45 (iter 18's "best") | **29.47** | **187** | 0% | **12.48** |
+
+**The bare default has less than half the flash of what the rig was running, and a third of
+theme 2's.** Rig moved to it: lowest flash, zero crush, second-best top end.
+
+### The lesson, which is iter 18's error
+Iter 18 ranked palettes on contrast / p999 / crush from **one frozen frame** and concluded theme 2
+was best. **Flash is a temporal property — a still frame cannot contain it.** theme 2 turns out to
+be the flashiest of the three by 3×, which is the single thing the user has objected to twice.
+
+This is the fourth measurement-shape error in this run, and they all rhyme:
+- iter 12: whole-frame metric blind to an effect on 1/11 of beads
+- iter 13: luminance/contrast blind to *direction*
+- iter 14–15: downsampling blind to a 1px hairline
+- iter 19: a still frame blind to *time*
+
+**The general rule: name the property being judged, then check the instrument has that axis.**
+Contrast is spatial, flash is temporal, asymmetry is directional, a hairline is high-frequency.
+An instrument that lacks the axis returns a confident number about something else.
+
+### Caveat
+9-second windows, and correlations at this length are noisy (`corr_env_contrast` reads 0.044 /
+0.002 / 0.085 — all indistinguishable from zero here). The flash differences are 2–3×, well
+outside the ±0.5 passage noise seen across this run, so those are trusted; the correlations from
+this window are not.
+
+### Todo
+- [x] live rig moved to the bare default (lowest flash of the three)
+- [ ] theme 2 has genuinely better contrast and top end — if the flash can be tamed at its palette
+      it would be the strongest look; the flash source there has not been identified
