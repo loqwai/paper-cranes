@@ -1083,7 +1083,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // picture - which is exactly the mistake the ground-recede made on its first outing
         // (corr(energySpring, brightness) -0.68: a drop made the frame DARKER and FLATTER).
         col += lush(s, 0.95) * cov * knob_168 * (0.05 + 0.58 * pump) * mix(1.0, 1.9, LEGIBLE);
-        col += lush(s + 0.33, 1.0) * rim * knob_168 * (0.22 + 0.45 * trebLive * QGATE) * mix(1.0, 1.6, LEGIBLE);
+        col += lush(s + 0.33, 1.0) * rim * knob_168 * (0.38 + 0.60 * trebLive * QGATE) * mix(1.0, 1.6, LEGIBLE);   /* B7: rim gain 0.22/0.45 -> 0.38/0.60 (cells-lab rimboost) so the contour is the brightest thing */
         // ── OUTLINE-ECHO RINGS (lab 2026-09-04) ── concentric copies of the crest's OWN outline.
         //    Inside the silhouette: inset copies, so the fill is made of the bead. Outside: ripples
         //    that leave the bead and meet the neighbour's at the tile boundary, so every cell
