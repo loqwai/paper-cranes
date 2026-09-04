@@ -338,10 +338,11 @@ float beadDist(vec2 p, float r){
 // out-shouts the motif and the bead stops being nameable. A subject needs a subordinate ground,
 // so the field outside the silhouette is dimmed and desaturated. This is the counter-ratchet
 // partner of the interior lift -- light is moved into the bead, not added to the frame.
-#define HERO_QUIET (knob_191 > 0.001 ? knob_191 : 0.26)   // exterior brightness kept
+#define HERO_QUIET (knob_191 > 0.001 ? knob_191 : 0.26)   // K191 GROUND QUIET how much of the field survives outside the bead (default 0.26)
 #define HERO_DESAT (knob_192 > 0.001 ? knob_192 : 0.40)   // exterior saturation kept
-#define HERO_SAT   (knob_194 > 0.001 ? 0.5 + knob_194 * 2.0 : 1.55)   // hero-lab 2: interior chroma boost
-#define HERO_TOE   (knob_193 > 0.001 ? 1.0 + knob_193 * 1.5 : 2.0)   // hero-lab 1: exterior contrast curve (1 = off)
+#define HERO_SAT   (knob_194 > 0.001 ? 0.5 + knob_194 * 2.0 : 1.55)   // K194 INTERIOR CHROMA saturation of the lattice seen through the bead (default 1.55)
+#define HERO_TOE   (knob_193 > 0.001 ? 1.0 + knob_193 * 1.5 : 2.0)   // K193 GROUND CURVE contrast toe on the field, 1.0..2.5 (1 = off, default 2.0)
+#define HERO_KEYHUE (knob_195 > 0.001 ? knob_195 * 0.8 : 0.35)   // K195 KEY HUE how far the outline colour travels with the song's key (turns over the pitch-class range)
 
 // Signed distance to the WHOLE motif, screen units, for a bead of radius r.
 // Same one-tile clamped lookup + analytic monotone exterior as beadDist (lab/whole),
@@ -780,7 +781,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // hero-lab 3 (2026-09-04): lush(..., 1.0) is the lightness ceiling = a near-WHITE stroke.
         // A saturated palette hue just under white keeps "palette-lit" true and off the no-white
         // rule; wavelet brightness (centroid spring) tints it, the iris CORE_HUE idea, gated.
-        float lineH = fract(s + HERO_HUE + 0.33 + (waveletCentroidSpring - 0.45) * 0.20 * quietGate) * TAU;
+        // hero-lab 4 (2026-09-04): the outline follows the KEY. pitchClassMedian is a 500-frame
+        // median (moves over seconds, never per frame): the slowest colour driver in the file.
+        float lineH = fract(s + HERO_HUE + 0.33 + (waveletCentroidSpring - 0.45) * 0.20 * quietGate
+                            + (pitchClassMedian - 0.5) * HERO_KEYHUE) * TAU;
         vec3  lineC = clamp(oklch2rgb(vec3(0.80, 0.15, lineH)), 0.0, 1.0);
         col += lineC * line
              * (0.85 + trebLive * 0.55 + CHURN * 0.85 + gKick * 0.45 + WUB * 0.35) * HERO_RIM;

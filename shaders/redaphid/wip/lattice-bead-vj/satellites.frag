@@ -1,4 +1,5 @@
-// LATTICE-BEAD (hero.frag - 2026-09-04) - THE HERO BEAD AND ITS SATELLITES.
+// LATTICE-BEAD (satellites.frag - 2026-09-04, from hero.frag) - THE HERO BEAD AND ITS SATELLITES.
+// @name: bead satellites
 // @fullscreen: true
 // @mobile: false
 // @tags: bead, mon, hero, orbit, redaphid
@@ -62,7 +63,7 @@ uniform float drop_glow;
 uniform float pitch_pulse;
 
 uniform float satellites;    // ?satellites=0..9 how many orbit (default 6)
-uniform float heroScale;     // ?heroScale= hero size (default 0.62)
+uniform float heroScale;     // ?heroScale= hero size (default 0.20; the 0.62 first cut more than filled the frame)
 uniform float bgAmount;      // ?bgAmount=0..1 background presence (default 0.7)
 
 #define TAU 6.28318530718
@@ -151,7 +152,12 @@ vec3 drawBead(vec2 p, vec2 centre, float r, float idx, float slowDrive, inout fl
     // pixel is BEAD_RANGE/iResolution.y of d.
     float aa = max(BEAD_RANGE * 2.5 / iResolution.y, 1e-4);
     float cov = smoothstep(aa, -aa, d);
-    float rim = smoothstep(aa * 9.0, 0.0, abs(d));
+    // RIM - THE FLASH FIX (2026-09-04). The first cut used a symmetric aa*9 band with punch up to
+    // 4.2x, and hero-deaf.mjs measured the fast channels repainting 53% of the frame: the halo
+    // WAS the background flash the user forbade. "Confined to drawBead" is not "confined to the
+    // bead" - measure the extent, never reason from the call site. Now a 3-px band, and the part
+    // OUTSIDE the silhouette is referenced to coverage so the swing lives on the contour.
+    float rim = smoothstep(aa * 3.0, 0.0, abs(d)) * mix(0.30, 1.0, cov);
 
     // TINT: each bead sits at its own place on the palette journey. hue_phase is monotonic,
     // so the whole group drifts through colour together without any of them jumping.
@@ -165,9 +171,13 @@ vec3 drawBead(vec2 p, vec2 centre, float r, float idx, float slowDrive, inout fl
     // FAST channels, confined here and masked. drop_glow is a LATCHED envelope with decay, so
     // it swells and falls rather than strobing; bass_pump lifts the contour, which is a thin
     // high-contrast line and therefore reads as punch without lifting frame luminance much.
-    float punch = 0.55 + 1.30 * bass_pump + 1.90 * drop_glow + 0.80 * pitch_pulse;
+    float punch = 0.55 + 0.45 * bass_pump + 0.75 * drop_glow + 0.30 * pitch_pulse;   // was 1.30/1.90/0.80 (7.6x swing)
+    // interior relief on the kick - masked by coverage, so it is local light inside the bead
+    // (the hero-folded "dome" rule), and it keeps the beads visibly answering the music now that
+    // the halo no longer carries the punch.
+    float lift  = 0.85 + 0.30 * bass_pump + 0.45 * drop_glow;
 
-    vec3 col = body * cov * 0.85 + edge * rim * punch;
+    vec3 col = body * cov * lift + edge * rim * punch;
     cover = max(cover, cov);
     return col;
 }

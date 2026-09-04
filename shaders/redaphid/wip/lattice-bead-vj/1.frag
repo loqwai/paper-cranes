@@ -810,7 +810,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     //    geometry channel. Saturating exponential: ~30% in a few minutes, ~85% deep into a set,
     //    never past 1. Two structural payoffs, both bounded:
     float gComplex = 1.0 - exp(-max(0.0, evoPhase) * 0.33);
-    gLevelOpen  = gComplex * 0.45;          // more recursion generations drawn at once (see fractal())
+    gLevelOpen  = min(gComplex * 0.45, 0.25);   /* B8: cap — every fine level open was the ground speckle (cells-lab) */          // more recursion generations drawn at once (see fractal())
     gInterleave += gComplex * 0.05;         // and the two interleaved sub-lattices separate further
     gShapePhase = morphPhase * 0.85 + bTime * 0.30;   // iter 138 RATCHET: strictly increasing -> the radius wave always travels coarse->fine, reads as continuous inward progression, never a rebound
     gDepthFocus = clamp(0.35 + evoD * 0.12 /* B3: 0.35->0.12, level-window plateau read as a texture swap */ + (knob_132 - 0.5) * bank4
@@ -883,7 +883,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // of world position, so it varies by area but never reverses the pan direction.
     uv += max(0.0, 0.03 + warpGrow * 0.012 /* B3: 0.04->0.012 */ + EXA(knob_150, 0.10)) * vec2(sin(uv.x * 3.0 + seed4 * TAU), cos(uv.y * 3.0 + seed4 * TAU));   // K150 TERRAIN WARP: the fixed positional wobble. 0 = a perfectly rigid lattice; high = the whole plane sags between landmarks.
 
-    vec4 fr = fractal(uv);
+    vec4 fr = fractal(rot2(bTime * 0.04 + flowPhase * 0.01) * (uv - world) + world);   // B8 CAROUSEL: the fold GROUND turns one way (~0.8 deg/s) about the screen centre; crests (seed grid) and the pan axis are untouched
     float lum = fr.x, field = fr.y, wave = fr.z, alpha = fr.w;
 
     // ── BEAUTIFUL COLOUR ── one smooth Oklch journey (iris/1 PITCH→COLOUR family): the MELODY
@@ -1099,7 +1099,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
             float rq      = abs(fract(sdn / ringP - ph) - 0.5) * ringP * seedPitch;   // distance to nearest echo, uv units
             float ring    = smoothstep(aaBase * 2.5, 0.0, rq);
             float reach   = exp(-abs(sdn) / mix(0.10, 0.22, cov)); // inside reaches further than outside
-            col += lush(s + mix(0.12, 0.33, cov), 0.9) * ring * reach * mix(0.30, 0.55, cov) * knob_168 * (0.55 + 0.45 * bassLive * QGATE) * echoAmt;
+            col += lush(s + mix(0.12, 0.33, cov), 0.9) * ring * reach * mix(0.15, 0.55, cov) /* B8: exterior echoes quieter, critic: rust dust */ * knob_168 * (0.55 + 0.45 * bassLive * QGATE) * echoAmt;
         }
         // ── DROP FLARE (K179) ──────────────────────────────────────────────────
         // energyZScore was measured as the STRONGEST fast signal on this input (live

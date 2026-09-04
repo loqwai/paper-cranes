@@ -70,6 +70,24 @@ const run = async () => {
   const B = await shot(p, loud)
   // a slow-channel move, for scale: this one is ALLOWED to repaint the whole frame
   const S = await shot(p, quiet + '&morph_phase=1.55&flow_phase=0.95')
+  // bead COVERAGE: same pose with the background nearly off (0 means unset, so 0.001)
+  const C = await shot(p, quiet + '&bgAmount=0.001')
+  const lumAt = (px, i) => 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]
+  let covN = 0, covT = 0
+  for (let i = 0; i < C.px.length; i += 4) { covT++; if (lumAt(C.px, i) > 6) covN++ }
+  const coverage = 100 * covN / covT
+  // reactivity (HANDOFF-substrate2 s4): centre luminance quiet -> loud, frame contrast quiet -> loud
+  const stats = (F) => {
+    const w = F.w, h = F.h; let s1 = 0, s2 = 0, n = 0, cs = 0, cn = 0
+    for (let i = 0, q = 0; i < F.px.length; i += 4, q++) {
+      const l = lumAt(F.px, i); s1 += l; s2 += l * l; n++
+      const x = q % w, y = (q / w) | 0
+      if (Math.abs(x - w / 2) < 20 && Math.abs(y - h / 2) < 20) { cs += l; cn++ }
+    }
+    const m = s1 / n
+    return { centre: cs / cn, contrast: Math.sqrt(Math.max(s2 / n - m * m, 0)), mean: m }
+  }
+  const sa = stats(A), sb = stats(B)
 
   const floor = compare(A.px, A2.px, A.w, A.h)
   const fast = compare(A.px, B.px, A.w, A.h)
@@ -86,8 +104,9 @@ const run = async () => {
   console.log(`    slow: ${slow.radial.map(v => v.toFixed(0).padStart(3)).join(' ')}`)
   console.log('\n  VERDICT')
   console.log(`    fast channels touch ${fast.pct.toFixed(1)}% of the frame; slow phases touch ${slow.pct.toFixed(1)}%.`)
-  console.log(`    ${fast.pct < slow.pct * 0.5 ? 'FAST IS LOCALISED - the background is not driven by the beat.'
-    : 'FAST IS AS BROAD AS SLOW - the background does see the beat (shudder risk).'}`)
+  const outer = fast.radial.slice(6).reduce((a, b) => a + b, 0) / 4
+  console.log(`    ${(fast.pct <= coverage * 1.6 && outer < 2.0) ? 'FAST IS LOCALISED to the beads (footprint <= 1.6x coverage, outer bands quiet).'
+    : 'FAST EXCEEDS THE BEADS - halo or background is seeing the beat (shudder risk).'}`)
   console.log('\nconsole errors:', errs.length ? errs.slice(0, 3) : 'none')
   await br.close()
 }
