@@ -828,7 +828,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     //    INSIDE a cell is free to breathe, because it changes what a cell LOOKS like without moving
     //    where any cell IS. All drivers are spring-smoothed and QGATE'd: no raw per-frame value
     //    ever touches structure (that path is the shiver).
-    gHexR  += (midsLive - 0.35) * 0.18 * QGATE * (0.6 + wubDepth * 0.7);   // CELLS BREATHE with the mids/wobble — ring radius inside each cell; seams fixed
+    gHexR  += (midsLive - 0.35) * 0.08 * QGATE /* B6: 0.18->0.08, critic: cells pulse in-out */ * (0.6 + wubDepth * 0.7);   // CELLS BREATHE with the mids/wobble — ring radius inside each cell; seams fixed
     gCross += (bassLive - 0.42) * 0.11 * QGATE;                            // BASS pulls the cross taut / lets it slacken
     gBorder += (spectralCrestSmooth - 0.2) * 0.035 * QGATE;
     gBorder += CHURN * 0.035;   // vj8-b10d LEARNED, PRIMARY (moved here from FILL): churn FATTENS the lattice lines. FILL turned out to be a dead channel in this preset — the user's own K149 sits at 0, so a subtractive term there has nothing left to remove and only darkens. Line weight always has headroom, is pure shading, and reads from across a room: on a churny passage the whole lattice thickens and glows, on a clean one it goes fine and precise.                // spiky vs smooth timbre → line weight breathes           // vj2 iter 2: .035 → .02 (de-twitch)
@@ -890,7 +890,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     //    carries the palette through the song and BRIGHTNESS (centroid) tints it, so the whole
     //    image flows in colour with the music. Smoothed contours only — no jitter. QGATE so
     //    a silent room can't flash the hue. Plus per-area / per-device / permanent-drop offsets.
-    float s = field
+    float s = field * 0.65   /* B6: narrower hue spread across the crest so one colour family is the body (critic r4) */
             + regionHue(world) * max(0.0, 1.0 + EXB(knob_155, 2.0))   // K155 REGION HUE: how strongly WORLD POSITION re-paints the palette. 0 = one colour everywhere;
             + bTime * 0.002                                   // vj2 iter 5: was 0.012 = a full hue turn every ~4 min (0.24 turns/min — 8× the user's 'muted, slow' tolerance and the biggest single palette mover). Now ~1 turn / 25 min.
             + (melodyFlow * 0.05 + pitchClassMean * 0.10) * QGATE   // vj2 iter 4: MELODY → palette, but SLOW. melodyFlow slews 0.03/frame (a melodic leap re-tints the whole field 0.075 in ~0.3 s = the palette 'flash' the meter caught: hue 0.46→0.61 inside one track). pitchClassMean is the ~8 s rolling KEY estimate — it carries 2/3 of the weight now. (was melodyFlow*0.15; 0.32 before iter 17)

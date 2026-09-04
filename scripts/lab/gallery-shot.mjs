@@ -102,10 +102,24 @@ const probe = () => {
   return { lum: +m.toFixed(1), contrast: +Math.sqrt(Math.max(s2 / n - m * m, 0)).toFixed(1), ink: +(100 * ink / n).toFixed(1) }
 }
 
+// Which variants are new, or have been written since their tile was taken.
+const changed = all => {
+  const f = join(OUT, 'shots.json')
+  const prev = existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : {}
+  return all.filter(v => !prev[v.id] || prev[v.id].mtime !== v.mtime || !existsSync(join(OUT, `${v.id}.jpg`)))
+}
+
 const run = async () => {
-  const only = process.argv.slice(2)
+  const argv = process.argv.slice(2)
   const all = variants()
-  const todo = only.length ? all.filter(v => only.includes(v.id) || only.includes(v.name)) : all
+
+  // --changed lists what a refresh would re-render, without launching a browser.
+  if (argv[0] === '--changed') return console.log(changed(all).map(v => v.id).join('\n'))
+
+  const only = argv.filter(a => !a.startsWith('--'))
+  const todo = argv.includes('--stale') ? changed(all)
+    : only.length ? all.filter(v => only.includes(v.id) || only.includes(v.name)) : all
+  if (!todo.length) return console.log('nothing changed')
   console.log(`rendering ${todo.length} of ${all.length} variants at ${W}x${H}`)
 
   // Chromium caps the number of live WebGL contexts per process, and a shader page never
