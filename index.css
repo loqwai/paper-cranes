@@ -21,6 +21,14 @@ canvas {
 }
 
 canvas.fullscreen {
-  height: 100vh;
+  /* Pin to the VISIBLE viewport. Plain 100vh on a phone is the large viewport (URL bar hidden), so the
+     canvas ran taller than the screen: the picture's centre sat below the visible centre and the bottom
+     was cut off. dvh tracks the bar; fixed + inset kills any body scroll offset. */
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100vw;
+  height: 100vh;
+  width: 100dvw;
+  height: 100dvh;
 }

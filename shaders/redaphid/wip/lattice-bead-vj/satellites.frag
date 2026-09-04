@@ -139,27 +139,32 @@ vec3 drawBead(vec2 p, vec2 centre, float r, float idx, float slowDrive, inout fl
     // FLEX: a gentle anisotropic squash on this bead's own slow driver, plus an always-on
     // breath so a bead is never frozen when its feature happens to sit still. Capped at 12%
     // because this is geometry, and geometry only evolves.
+    // BREATH, isotropic (2026-09-04): the old anisotropic squash distorted the crest's aspect ratio, which the user forbade.
     float flex = 1.0 + 0.08 * (slowDrive - 0.5) * 2.0 + 0.04 * sin(morph_phase * 0.7 + h3 * TAU);
-    q.x /= max(flex, 0.6);
-    q.y *= max(flex, 0.6);
+    q /= max(flex, 0.6);
 
     // GROW / SHRINK: also on the slow driver. Same reasoning, same cap.
     float rr = r * (1.0 + 0.16 * (slowDrive - 0.5));
 
     float d  = beadDist(q, rr);
+    // PUMP (2026-09-04): the SILHOUETTE swells on the kick (hero ~7% + 10% on a drop, satellites ~4%) via a
+    // second, pumped distance field. The ground echoes and the drop ring keep the un-pumped d: when the pump
+    // was applied to the radius itself, every echo ring shifted and the floor repainted on each beat (70%).
+    float pumpS = idx < 0.5 ? (1.0 + 0.07 * bass_pump + 0.10 * drop_glow) : (1.0 + 0.04 * bass_pump);
+    float dP = beadDist(q, rr * pumpS);
     // AA FROM SCREEN SIZE, NOT FROM d. The mon SDF is uploaded NEAREST with no mipmaps, so at
     // this magnification d is stair-stepped and fwidth(d) reports the STEP, not the true
     // gradient - which rendered as heavy dither along every edge on the first look. d runs at
     // roughly BEAD_RANGE per uv unit regardless of r, and uv is normalised by height, so one
     // pixel is BEAD_RANGE/iResolution.y of d.
     float aa = max(BEAD_RANGE * 2.5 / iResolution.y, 1e-4);
-    float cov = smoothstep(aa, -aa, d);
+    float cov = smoothstep(aa, -aa, dP);
     // RIM - THE FLASH FIX (2026-09-04). The first cut used a symmetric aa*9 band with punch up to
     // 4.2x, and hero-deaf.mjs measured the fast channels repainting 53% of the frame: the halo
     // WAS the background flash the user forbade. "Confined to drawBead" is not "confined to the
     // bead" - measure the extent, never reason from the call site. Now a 3-px band, and the part
     // OUTSIDE the silhouette is referenced to coverage so the swing lives on the contour.
-    float rim = smoothstep(aa * 3.0, 0.0, abs(d)) * mix(0.30, 1.0, cov);
+    float rim = smoothstep(aa * 3.0, 0.0, abs(dP)) * mix(0.30, 1.0, cov);
 
     // TINT: each bead sits at its own place on the palette journey. hue_phase is monotonic,
     // so the whole group drifts through colour together without any of them jumping.
@@ -178,18 +183,18 @@ vec3 drawBead(vec2 p, vec2 centre, float r, float idx, float slowDrive, inout fl
     // FAST channels, confined here and masked. drop_glow is a LATCHED envelope with decay, so
     // it swells and falls rather than strobing; bass_pump lifts the contour, which is a thin
     // high-contrast line and therefore reads as punch without lifting frame luminance much.
-    float punch = 0.55 + 0.35 * bass_pump + 0.55 * drop_glow + 0.25 * pitch_pulse;   // was 1.30/1.90/0.80 (7.6x swing); max 1.7 so the rim never clips white
+    float punch = 0.55 + 0.80 * bass_pump + 1.00 * drop_glow + 0.40 * pitch_pulse;   /* 2026-09-04 PUMP: 0.35/0.55/0.25 -> 0.80/1.00/0.40; rim is 3 px and coverage-referenced so this stays on the bead */   // was 1.30/1.90/0.80 (7.6x swing); max 1.7 so the rim never clips white
     // interior relief on the kick - masked by coverage, so it is local light inside the bead
     // (the hero-folded "dome" rule), and it keeps the beads visibly answering the music now that
     // the halo no longer carries the punch.
-    float lift  = 0.85 + 0.30 * bass_pump + 0.45 * drop_glow;
+    float lift  = 0.85 + 0.65 * bass_pump + 0.80 * drop_glow;   /* PUMP: 0.30/0.45 -> 0.65/0.80, interior only */
 
     // MADE OF THE BEAD: inset copies of the crest's own outline inside the silhouette, so the
     // fill is thematically the bead rather than a flat disc. Static in d, lit by the slow driver.
     float ringP  = rr * 1.15;                                  // spacing in d units: first echo at -1.15 rr is still star-shaped, ~3 per bead
-    float inset  = smoothstep(aa * 2.0, 0.0, abs(fract(-d / ringP + 0.5) - 0.5) * ringP) * cov
-                 * smoothstep(0.0, aa * 6.0, -d);              // fade at the true edge so it never doubles the rim
-    col += edge * inset * (0.18 + 0.22 * slowDrive);
+    float inset  = smoothstep(aa * 2.0, 0.0, abs(fract(-dP / ringP + 0.5) - 0.5) * ringP) * cov
+                 * smoothstep(0.0, aa * 6.0, -dP);              // fade at the true edge so it never doubles the rim
+    col += edge * inset * (0.18 + 0.22 * slowDrive + 0.35 * bass_pump);   /* PUMP: inset echoes flash with the kick, inside the bead */
 
     // GROUND ECHOES (hero only): the hero's outline ripples OUTWARD into the field on flow_phase,
     // a monotonic phase - so the ground is patterned by the bead and drifts one way, never
@@ -199,6 +204,12 @@ vec3 drawBead(vec2 p, vec2 centre, float r, float idx, float slowDrive, inout fl
         float gq   = abs(fract(d / (ringP * 1.6) - ph) - 0.5) * ringP * 1.6;
         float echo = smoothstep(aa * 3.0, 0.0, gq) * (1.0 - cov) * exp(-max(d, 0.0) / (rr * 6.5));
         col += lch(hueBase + 0.5, 0.05, 0.32) * echo * (0.55 + 0.40 * energy_env) * BG_AMT;
+        // DROP RING (2026-09-04): once per drop the hero's OWN outline leaves the rim and runs outward
+        // as drop_glow decays (tRing = 1 - drop_glow): one-way by construction, gone when the latch is spent.
+        float tRing = 1.0 - clamp(drop_glow, 0.0, 1.0);
+        float dropR = rr * mix(1.25, 7.0, tRing);
+        float dring = smoothstep(aa * 4.0, 0.0, abs(d - dropR)) * (1.0 - cov);
+        col += edge * dring * clamp(drop_glow, 0.0, 1.0) * 1.4;
     }
 
     vec3 col2 = body * cov * lift + edge * rim * punch;
@@ -265,7 +276,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // ── THE HERO ─────────────────────────────────────────────────────────────────────────
     // Centred, large, spinning slowest of anything on screen so it reads as the still point.
     float heroCover = 0.0;
-    col += drawBead(uv, vec2(0.0), HERO_R * fit, 0.0, clamp(energy_env, 0.0, 1.0), heroCover);
+    // PUMP (2026-09-04, user: "the heroes need to pump a little"): the hero swells ~7% on the kick and ~10% on a drop.
+    col += drawBead(uv, vec2(0.0), HERO_R * fit, 0.0, clamp(energy_env, 0.0, 1.0), heroCover);   // the pump itself lives inside drawBead (pumpS)
 
     // Counter-ratchet: the vignette and the satellites both take light out of the frame, so
     // the hero's own ground lifts a little as the music does - a drop buys contrast rather
