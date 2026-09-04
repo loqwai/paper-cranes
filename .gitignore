@@ -158,3 +158,6 @@ public/images/*.webp
 .wrangler/
 .claude/vj-signals.jsonl
 .claude/vj-signals.jsonl.prev
+
+# recorded clips (large binaries)
+journals/clips/

@@ -58,7 +58,7 @@ uniform float entropy_env;
 uniform float centroid_env;
 uniform float flux_env;
 
-uniform float knob_1; uniform float knob_2; uniform float knob_3; uniform float knob_4; uniform float knob_7;   // K-knobs, see the KNOBS block
+uniform float knob_1; uniform float knob_2; uniform float knob_3; uniform float knob_4; uniform float knob_7; uniform float knob_8; uniform float knob_9; uniform float knob_10; uniform float knob_11;   // K-knobs, see the KNOBS block
 uniform float bass_pump;     // FAST - beads only
 uniform float drop_glow;
 uniform float pitch_pulse;
@@ -83,6 +83,10 @@ uniform float bgAmount;      // ?bgAmount=0..1 background presence (default 0.7)
 #define RING      (knob_3 > 0.001 ? knob_3 * 2.4 : 1.0)   // K3 RING     brightness of the once-per-drop outline ring; 0.42 = baked
 #define GLOW      (knob_4 > 0.001 ? knob_4 * 1.8 : 1.0)   // K4 GLOW     ground field and echo amount; 0.55 = baked
 #define SIZE      (knob_7 > 0.001 ? 0.5 + knob_7 : 1.0)   // K7 SIZE     hero size multiplier 0.5..1.5; 0.5 = baked
+#define SPARK     (knob_8 > 0.001 ? knob_8 * 2.4 : 1.0)   // K8 SPARK    treble -> outline and inset brightness; 0.42 = baked
+#define HUESPREAD (knob_9 > 0.001 ? knob_9 * 2.4 : 1.0)   // K9 HUE SPREAD how far the satellites' hues fan out from the hero's; 0.42 = baked
+#define ORBIT     (knob_10 > 0.001 ? 0.5 + knob_10 : 1.0) // K10 ORBIT   satellite orbit radius 0.5..1.5; 0.5 = baked
+#define TILT      (knob_11 > 0.001 ? knob_11 * 2.0 : 0.0) // K11 TILT    interior hue lean with treble (0 = off)
 #define BG_AMT    ((bgAmount  > 0.0 ? bgAmount  : 0.7) * GLOW)
 
 // Stable hash. NEVER fract(sin(x)*43758.5453): it is unstable in float32 - its ULP near the
@@ -180,8 +184,8 @@ vec3 drawBead(vec2 p, vec2 centre, float r, float idx, float slowDrive, inout fl
     // (monotonic) and the KEY median (moves over seconds) - and each bead sits within +/-0.14
     // of it; the hero (idx 0) sits at the base. Warmth follows the centroid median.
     float hueBase = hue_phase * 0.08 + (pitchClassMedian - 0.5) * 0.30 + (spectralCentroidMedian - 0.3) * 0.12;
-    float hue = hueBase + (idx < 0.5 ? 0.0 : (h1 - 0.5) * 0.28) + centroid_env * 0.04;
-    float L   = 0.36 + 0.26 * slowDrive + 0.08 * treble_env;
+    float hue = hueBase + (idx < 0.5 ? 0.0 : (h1 - 0.5) * 0.28 * HUESPREAD) + centroid_env * 0.04 + treble_env * 0.06 * TILT;
+    float L   = 0.36 + 0.26 * slowDrive + 0.08 * treble_env * SPARK;
     float C   = 0.11 + 0.05 * entropy_env;
 
     vec3 body = lch(hue, C, L);
@@ -202,7 +206,7 @@ vec3 drawBead(vec2 p, vec2 centre, float r, float idx, float slowDrive, inout fl
     float ringP  = rr * 1.15;                                  // spacing in d units: first echo at -1.15 rr is still star-shaped, ~3 per bead
     float inset  = smoothstep(aa * 2.0, 0.0, abs(fract(-dP / ringP + 0.5) - 0.5) * ringP) * cov
                  * smoothstep(0.0, aa * 6.0, -dP);              // fade at the true edge so it never doubles the rim
-    col += edge * inset * (0.18 + 0.22 * slowDrive + 0.35 * bass_pump * IMPACT);   /* PUMP: inset echoes flash with the kick, inside the bead */
+    col += edge * inset * (0.18 + 0.22 * slowDrive + 0.35 * bass_pump * IMPACT + 0.25 * treble_env * SPARK);   /* PUMP: inset echoes flash with the kick, inside the bead */
 
     // GROUND ECHOES (hero only): the hero's outline ripples OUTWARD into the field on flow_phase,
     // a monotonic phase - so the ground is patterned by the bead and drifts one way, never
@@ -268,7 +272,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         float hh = hash11(i * 5.17 + 2.3);
         // ORBIT: angle is a monotonic phase plus a fixed per-bead offset. Never a feature.
         float ang = spin_angle * (0.12 + hh * 0.10) + t * TAU;
-        float orb = (0.335 + 0.030 * sin(morph_phase * 0.33 + t * TAU)) * fit;
+        float orb = (0.335 + 0.030 * sin(morph_phase * 0.33 + t * TAU)) * fit * ORBIT;
         vec2  c   = vec2(cos(ang), sin(ang)) * orb;
 
         // one slow driver per bead, six ways
