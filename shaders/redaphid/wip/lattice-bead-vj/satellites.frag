@@ -58,6 +58,7 @@ uniform float entropy_env;
 uniform float centroid_env;
 uniform float flux_env;
 
+uniform float knob_1; uniform float knob_2; uniform float knob_3; uniform float knob_4; uniform float knob_7;   // K-knobs, see the KNOBS block
 uniform float bass_pump;     // FAST - beads only
 uniform float drop_glow;
 uniform float pitch_pulse;
@@ -74,8 +75,15 @@ uniform float bgAmount;      // ?bgAmount=0..1 background presence (default 0.7)
 // uv is normalised by iResolution.y, so the visible frame is +/-0.5 vertically. The first
 // version used 0.62 here and an orbit of 0.86 - the hero more than filled the screen and
 // every satellite sat outside it. Sizes are in those half-height units.
-#define HERO_R    (heroScale > 0.0 ? heroScale : 0.20)
-#define BG_AMT    (bgAmount  > 0.0 ? bgAmount  : 0.7)
+#define HERO_R    ((heroScale > 0.0 ? heroScale : 0.20) * SIZE)
+// ── KNOBS (2026-09-04) ── URL ?knob_N=0..1 or the pad. 0 = unset = baked default (the house convention).
+//   knob_5 SPIN RATE and knob_6 DROP SUSTAIN belong to the dodeca-bloom controller.
+#define IMPACT    (knob_1 > 0.001 ? knob_1 * 2.4 : 1.0)   // K1 IMPACT   how hard the beat hits the beads (rim punch, interior lift, inset flash); 0.42 = baked
+#define PUMP      (knob_2 > 0.001 ? knob_2 * 2.4 : 1.0)   // K2 PUMP     size swell on the kick and on drops; 0.42 = baked
+#define RING      (knob_3 > 0.001 ? knob_3 * 2.4 : 1.0)   // K3 RING     brightness of the once-per-drop outline ring; 0.42 = baked
+#define GLOW      (knob_4 > 0.001 ? knob_4 * 1.8 : 1.0)   // K4 GLOW     ground field and echo amount; 0.55 = baked
+#define SIZE      (knob_7 > 0.001 ? 0.5 + knob_7 : 1.0)   // K7 SIZE     hero size multiplier 0.5..1.5; 0.5 = baked
+#define BG_AMT    ((bgAmount  > 0.0 ? bgAmount  : 0.7) * GLOW)
 
 // Stable hash. NEVER fract(sin(x)*43758.5453): it is unstable in float32 - its ULP near the
 // values this shader produces is comparable to sin's own error - and it caused a two-state
@@ -150,7 +158,7 @@ vec3 drawBead(vec2 p, vec2 centre, float r, float idx, float slowDrive, inout fl
     // PUMP (2026-09-04): the SILHOUETTE swells on the kick (hero ~7% + 10% on a drop, satellites ~4%) via a
     // second, pumped distance field. The ground echoes and the drop ring keep the un-pumped d: when the pump
     // was applied to the radius itself, every echo ring shifted and the floor repainted on each beat (70%).
-    float pumpS = idx < 0.5 ? (1.0 + 0.07 * bass_pump + 0.10 * drop_glow) : (1.0 + 0.04 * bass_pump);
+    float pumpS = 1.0 + (idx < 0.5 ? (0.07 * bass_pump + 0.10 * drop_glow) : (0.04 * bass_pump)) * PUMP;
     float dP = beadDist(q, rr * pumpS);
     // AA FROM SCREEN SIZE, NOT FROM d. The mon SDF is uploaded NEAREST with no mipmaps, so at
     // this magnification d is stair-stepped and fwidth(d) reports the STEP, not the true
@@ -183,18 +191,18 @@ vec3 drawBead(vec2 p, vec2 centre, float r, float idx, float slowDrive, inout fl
     // FAST channels, confined here and masked. drop_glow is a LATCHED envelope with decay, so
     // it swells and falls rather than strobing; bass_pump lifts the contour, which is a thin
     // high-contrast line and therefore reads as punch without lifting frame luminance much.
-    float punch = 0.55 + 0.80 * bass_pump + 1.00 * drop_glow + 0.40 * pitch_pulse;   /* 2026-09-04 PUMP: 0.35/0.55/0.25 -> 0.80/1.00/0.40; rim is 3 px and coverage-referenced so this stays on the bead */   // was 1.30/1.90/0.80 (7.6x swing); max 1.7 so the rim never clips white
+    float punch = 0.55 + (0.80 * bass_pump + 1.00 * drop_glow + 0.40 * pitch_pulse) * IMPACT;   /* 2026-09-04 PUMP: 0.35/0.55/0.25 -> 0.80/1.00/0.40; rim is 3 px and coverage-referenced so this stays on the bead */   // was 1.30/1.90/0.80 (7.6x swing); max 1.7 so the rim never clips white
     // interior relief on the kick - masked by coverage, so it is local light inside the bead
     // (the hero-folded "dome" rule), and it keeps the beads visibly answering the music now that
     // the halo no longer carries the punch.
-    float lift  = 0.85 + 0.65 * bass_pump + 0.80 * drop_glow;   /* PUMP: 0.30/0.45 -> 0.65/0.80, interior only */
+    float lift  = 0.85 + (0.65 * bass_pump + 0.80 * drop_glow) * IMPACT;   /* PUMP: 0.30/0.45 -> 0.65/0.80, interior only */
 
     // MADE OF THE BEAD: inset copies of the crest's own outline inside the silhouette, so the
     // fill is thematically the bead rather than a flat disc. Static in d, lit by the slow driver.
     float ringP  = rr * 1.15;                                  // spacing in d units: first echo at -1.15 rr is still star-shaped, ~3 per bead
     float inset  = smoothstep(aa * 2.0, 0.0, abs(fract(-dP / ringP + 0.5) - 0.5) * ringP) * cov
                  * smoothstep(0.0, aa * 6.0, -dP);              // fade at the true edge so it never doubles the rim
-    col += edge * inset * (0.18 + 0.22 * slowDrive + 0.35 * bass_pump);   /* PUMP: inset echoes flash with the kick, inside the bead */
+    col += edge * inset * (0.18 + 0.22 * slowDrive + 0.35 * bass_pump * IMPACT);   /* PUMP: inset echoes flash with the kick, inside the bead */
 
     // GROUND ECHOES (hero only): the hero's outline ripples OUTWARD into the field on flow_phase,
     // a monotonic phase - so the ground is patterned by the bead and drifts one way, never
@@ -211,7 +219,7 @@ vec3 drawBead(vec2 p, vec2 centre, float r, float idx, float slowDrive, inout fl
         // width in PIXELS via the screen-space gradient: the exterior SDF flattens with distance, so a fixed
         // band in d units grew into a frame-filling bloom mid-decay (seen on the phone render).
         float dring = smoothstep(4.0, 0.0, abs(d - dropR) / max(fwidth(d), 1e-5)) * (1.0 - cov);
-        col += edge * dring * clamp(drop_glow, 0.0, 1.0) * 1.4;
+        col += edge * dring * clamp(drop_glow, 0.0, 1.0) * 1.4 * RING;
     }
 
     vec3 col2 = body * cov * lift + edge * rim * punch;
