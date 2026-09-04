@@ -6,7 +6,7 @@ const frames = +framesArg, gap = +gapArg
 const PORT = process.env.PORT || 6969
 const img = process.env.IMG || 'mon-hakkaku'
 const url = `http://localhost:${PORT}/?shader=redaphid/wip/lattice-bead-vj/chroma&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls`
-  + `&image=images/beads/${img}.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&wavelet=true&noaudio=true&onset_refractory_ms=380`
+  + `&image=images/beads/${img}.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=${process.env.NAVZ || "0.14"}&wavelet=true&noaudio=true&onset_refractory_ms=380`
   + '&seed=0.618&seed2=0.755&seed3=0.31&seed4=0.47'
   + '&quietGate=1&energySpring=0.4&waveletBassSpring=0.45&waveletBand1Spring=0.4&waveletBand2Spring=0.35&waveletBand3Spring=0.35'
   + '&waveletBand4Spring=0.3&waveletBand5Spring=0.3&waveletCentroidSpring=0.4&melodyFlow=0.3&spectralCrestSmooth=0.3&spectralRoughnessSmooth=0.3&spectralEntropySmooth=0.5'

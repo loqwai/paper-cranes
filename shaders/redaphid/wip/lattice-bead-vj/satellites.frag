@@ -62,6 +62,8 @@ uniform float bass_pump;     // FAST - beads only
 uniform float drop_glow;
 uniform float pitch_pulse;
 
+uniform float pitchClassMedian;        // SLOW tonal: what key we are in (500-frame median) -> palette base
+uniform float spectralCentroidMedian;  // SLOW timbre: brightness median -> palette warmth
 uniform float satellites;    // ?satellites=0..9 how many orbit (default 6)
 uniform float heroScale;     // ?heroScale= hero size (default 0.20; the 0.62 first cut more than filled the frame)
 uniform float bgAmount;      // ?bgAmount=0..1 background presence (default 0.7)
@@ -161,23 +163,46 @@ vec3 drawBead(vec2 p, vec2 centre, float r, float idx, float slowDrive, inout fl
 
     // TINT: each bead sits at its own place on the palette journey. hue_phase is monotonic,
     // so the whole group drifts through colour together without any of them jumping.
-    float hue = hue_phase * 0.08 + h1 * 0.55 + centroid_env * 0.06;
-    float L   = 0.34 + 0.30 * slowDrive + 0.10 * treble_env;
-    float C   = 0.10 + 0.05 * entropy_env;
+    // PALETTE: one FAMILY, not a rainbow. The base hue follows the slowest music - hue_phase
+    // (monotonic) and the KEY median (moves over seconds) - and each bead sits within +/-0.14
+    // of it; the hero (idx 0) sits at the base. Warmth follows the centroid median.
+    float hueBase = hue_phase * 0.08 + (pitchClassMedian - 0.5) * 0.30 + (spectralCentroidMedian - 0.3) * 0.12;
+    float hue = hueBase + (idx < 0.5 ? 0.0 : (h1 - 0.5) * 0.28) + centroid_env * 0.04;
+    float L   = 0.36 + 0.26 * slowDrive + 0.08 * treble_env;
+    float C   = 0.11 + 0.05 * entropy_env;
 
     vec3 body = lch(hue, C, L);
-    vec3 edge = lch(hue + 0.10, C * 1.25, min(L + 0.30, 0.86));
+    vec3 edge = lch(hue + 0.06, C * 1.3, min(L + 0.26, 0.80));   // outline = brightest thing, never white
+    vec3 col  = vec3(0.0);
 
     // FAST channels, confined here and masked. drop_glow is a LATCHED envelope with decay, so
     // it swells and falls rather than strobing; bass_pump lifts the contour, which is a thin
     // high-contrast line and therefore reads as punch without lifting frame luminance much.
-    float punch = 0.55 + 0.45 * bass_pump + 0.75 * drop_glow + 0.30 * pitch_pulse;   // was 1.30/1.90/0.80 (7.6x swing)
+    float punch = 0.55 + 0.35 * bass_pump + 0.55 * drop_glow + 0.25 * pitch_pulse;   // was 1.30/1.90/0.80 (7.6x swing); max 1.7 so the rim never clips white
     // interior relief on the kick - masked by coverage, so it is local light inside the bead
     // (the hero-folded "dome" rule), and it keeps the beads visibly answering the music now that
     // the halo no longer carries the punch.
     float lift  = 0.85 + 0.30 * bass_pump + 0.45 * drop_glow;
 
-    vec3 col = body * cov * lift + edge * rim * punch;
+    // MADE OF THE BEAD: inset copies of the crest's own outline inside the silhouette, so the
+    // fill is thematically the bead rather than a flat disc. Static in d, lit by the slow driver.
+    float ringP  = rr * 2.6;                                   // spacing in d units (~2 echoes per bead)
+    float inset  = smoothstep(aa * 2.0, 0.0, abs(fract(-d / ringP + 0.5) - 0.5) * ringP) * cov
+                 * smoothstep(0.0, aa * 6.0, -d);              // fade at the true edge so it never doubles the rim
+    col += edge * inset * (0.18 + 0.22 * slowDrive);
+
+    // GROUND ECHOES (hero only): the hero's outline ripples OUTWARD into the field on flow_phase,
+    // a monotonic phase - so the ground is patterned by the bead and drifts one way, never
+    // breathes. No fast channel here; this is background and reads slow channels only.
+    if (idx < 0.5){
+        float ph   = flow_phase * 0.16;
+        float gq   = abs(fract(d / (ringP * 1.6) - ph) - 0.5) * ringP * 1.6;
+        float echo = smoothstep(aa * 3.0, 0.0, gq) * (1.0 - cov) * exp(-max(d, 0.0) / (rr * 4.5));
+        col += lch(hueBase + 0.5, 0.05, 0.30) * echo * (0.35 + 0.35 * energy_env) * BG_AMT;
+    }
+
+    vec3 col2 = body * cov * lift + edge * rim * punch;
+    col += col2;
     cover = max(cover, cov);
     return col;
 }

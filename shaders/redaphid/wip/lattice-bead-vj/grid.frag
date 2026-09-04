@@ -1,114 +1,130 @@
-// GRID (lab/tile) -- the dumbest possible thing that could work: tile the
-// initial-frame texture (a baked mon SDF PNG) into an N x N grid, crisp,
-// square, centred, no fractal, no audio, no frame feedback. Written to
-// answer one question before touching the real lattice: exactly what
-// coordinate-space arithmetic turns "one mon PNG" into "a plain periodic
-// grid of mon", so that arithmetic can be reused as a SEED for
-// lattice-bead/2.frag instead of the recursive-fold-and-sample path it
-// uses today.
+// GRID BEAD LATTICE (lattice-bead-vj/grid, 2026-09-04) -- the clearest "lattice of bead cells":
+// a translation-repeat grid of WHOLE mon crests (one per cell, never mirrored, never folded), so
+// every cell is nameable at a glance. Built on lattice-bead/grid.frag's coordinate proof (grid.md):
+// aspect-corrected ndc scaled by N/2 makes one p-unit = one tile pitch on both axes, so tiles stay
+// square and the crest keeps its aspect ratio on any viewport.
 //
-// See grid.md for the full methods writeup (coordinate spaces, mirror vs
-// translation repeat, seam analysis, scale invariance, filtering, and the
-// seeding recommendation).
+// What the cells DO (all shading, no audio on geometry, monotonic phases only):
+//   * OUTLINE-ECHO RINGS -- concentric copies of the crest's OWN outline: inset inside (the fill is
+//     made of the bead), ripples outside that meet the neighbour's at the tile boundary (every cell
+//     interaction on screen IS the crest). They travel one way on flowPhase; spacing follows the
+//     spectral-spread MEDIAN (a slow shape); audio touches amplitude only.
+//   * PER-CELL TINT -- golden-ratio spread over the tile id, so neighbours always differ but stay
+//     one family. Per-cell slow spin on spinPhase with a tiny rate spread, never in unison.
+//   * SLOW PALETTE -- hue from the key median + timbre median + a monotonic hue tide. Blue body,
+//     warm heart at the core, crisp palette-lit rim as the ONLY bright line, dark plum ground.
+//   * TOUCH -- lattice-nav: drag pans (navX/navY), pinch zooms (navZoom). One-way tide otherwise.
 //
 // @fullscreen: true
 // @mobile: true
-// @tags: lab, tiling, mon, redaphid
+// @tags: mogee, lattice-bead, mon, redaphid
 //
-// KNOBS:
-//   knob_1  = tile count N.  0 -> 1 tile, 1 -> 12 tiles. Sweep this.
-//   knob_2  = fold mode.     < 0.5 = TRANSLATION REPEAT (tc = f+0.5, whole
-//                             motif once per cell, unmirrored -- what we
-//                             want for seeding). >= 0.5 = MIRROR REPEAT
-//                             (per-tile parity flip, algebraically the
-//                             same triangle wave 2.frag's fractal() fold
-//                             uses) -- kept here ONLY as an A/B control,
-//                             see grid.md Q2.
-//   knob_3  = AA width in screen pixels (0 -> 0.5px, 1 -> 3px). Debug only;
-//             default (knob_3 unset = 0) gives a tight ~0.5px edge.
+// URL: ?shader=redaphid/wip/lattice-bead-vj/grid&controller=wavelet-ease&controller=lattice-nav
+//      &image=images/beads/mon-hakkaku.png&wavelet=true
+// KNOBS (0 = baked default):
+//   knob_1 TILES      crests across the screen height (baked 3.2; 0.1..1 -> 1.5..8)
+//   knob_2 ECHO       ring amount (baked 1.0; dial 0..2)
+//   knob_3 TINT       per-cell hue spread (baked 1.0; dial 0..2)
+//   knob_4 GROUND     ground light (baked 1.0; dial 0..2)
+//   knob_5 DRIFT      tide rate (baked 1.0; dial 0..2)
+
+uniform float flowPhase;              // wavelet-ease: monotonic
+uniform float spinPhase;              // wavelet-ease: monotonic
+uniform float huePhase;               // wavelet-ease: monotonic
+uniform float quietGate;              // wavelet-ease: 0 in silence
+uniform float energySpring;           // wavelet-ease: smoothed level
+uniform float waveletBassSpring;
+uniform float waveletBand1Spring;
+uniform float waveletBand2Spring;
+uniform float waveletBand3Spring;
+uniform float waveletCentroidSpring;
+uniform float navX;                   // lattice-nav: world pan
+uniform float navY;
+uniform float navZoom;                // lattice-nav: pinch zoom (1 = rest)
+uniform float pitchClassMedian;       // SLOW: what key we are in
+uniform float spectralCentroidMedian; // SLOW: timbre brightness
+uniform float spectralSpreadMedian;   // SLOW: harmonic width -> echo spacing
+
+#define TAU 6.283185307
+#define LVK(k, def, expr) (((k) > 0.001) ? (expr) : (def))
+
+// oklch2rgb(vec3(L, C, hueRadians)) comes from the shader wrapper.
+// palette: s in hue turns, lit 0..1 -> lightness 0.10..0.80 (never white, never black)
+vec3 lush(float s, float lit){
+    float L = mix(0.10, 0.86, clamp(lit, 0.0, 1.0));
+    float C = 0.11 + 0.05 * sin(s * TAU * 0.5 + 1.3);
+    C *= smoothstep(0.0, 0.25, L) * (1.0 - 0.45 * smoothstep(0.62, 0.95, L));   // no grey crush, no white wash
+    return oklch2rgb(vec3(L, C, fract(s) * TAU));
+}
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord){
-    // ---- SPACE 1: screen pixels -----------------------------------------
-    // fragCoord in [0, iResolution.xy], origin bottom-left (GL convention).
+    // ---- screen -> aspect-corrected ndc (tiles stay square on any viewport) ----
+    vec2 ndc = fragCoord / iResolution.xy * 2.0 - 1.0;
+    ndc.x *= iResolution.x / iResolution.y;
 
-    // ---- SPACE 2: normalised device coords, centred, ASPECT-CORRECTED ---
-    // uv01 in [0,1]^2 -> ndc in [-1,1]^2 -> ndc.x scaled by the screen aspect
-    // ratio so a unit step in x and a unit step in y cover the SAME physical
-    // screen distance. This is what keeps tiles square on a non-square
-    // viewport (e.g. 1200x500) instead of stretched.
-    vec2 uv01 = fragCoord / iResolution.xy;
-    vec2 ndc  = uv01 * 2.0 - 1.0;
-    ndc.x *= iResolution.x / iResolution.y;               // range: x in [-aspect,aspect], y in [-1,1]
+    // ---- tile-pitch space: 1 p-unit = 1 tile on both axes ----
+    float nz    = navZoom > 0.001 ? navZoom : 1.0;
+    float N     = LVK(knob_1, 3.2, mix(1.5, 8.0, knob_1)) / nz;              // K1 TILES
+    float drift = LVK(knob_5, 1.0, knob_5 * 2.0);                            // K5 DRIFT
+    vec2  tide  = vec2(0.030, 0.012) * flowPhase * drift;                   // one-way tide, never back
+    vec2  p     = ndc * (N * 0.5) + tide + vec2(navX, navY) * (N * nz / 0.07);   // lattice-nav pan in the lattice's own units
 
-    // ---- SPACE 3: tile-pitch space p --------------------------------------
-    // N tiles span the screen HEIGHT (y in [-1,1]); N is swept 1..12 by knob_1.
-    // Scaling ndc by N/2 makes ONE unit of p equal to ONE tile pitch on both
-    // axes (since ndc was already aspect-corrected, this scale is isotropic).
-    float N = mix(1.0, 12.0, clamp(knob_1, 0.0, 1.0));
-    vec2 p = ndc * (N * 0.5);                              // range: y spans [-N/2, N/2), x spans [-aspect*N/2, aspect*N/2)
+    vec2  tileIndex = floor(p + 0.5);
+    vec2  f         = fract(p + 0.5) - 0.5;                                  // in-tile, [-0.5, 0.5)
 
-    // ---- SPACE 4: tile index + in-tile coord ------------------------------
-    // Each tile occupies p in [i-0.5, i+0.5). f is the in-tile offset,
-    // centred at 0, range [-0.5, 0.5) -- ONE tile pitch wide, the same units
-    // hexDist/beadDist call "lattice units" in the real lattice shader.
-    vec2 tileIndex = floor(p + 0.5);
-    vec2 f         = fract(p + 0.5) - 0.5;                 // range: [-0.5, 0.5) per axis
+    // ---- per-cell identity: golden-ratio spread, neighbours always differ, nothing flickers ----
+    float gid  = fract(dot(tileIndex, vec2(0.618034, 0.381966)) + seed);
+    float gid2 = fract(dot(tileIndex, vec2(0.246979, 0.554958)) + seed2);
+    float ang  = spinPhase * (0.06 + 0.05 * gid2) * (gid2 < 0.5 ? -1.0 : 1.0);   // slow, monotonic, constant direction per cell
+    float ca = cos(ang), sa = sin(ang);
+    vec2  fr = mat2(ca, -sa, sa, ca) * f;
 
-    // MIRROR REPEAT (knob_2 >= 0.5): flip f's sign on odd tiles. This is
-    // algebraically the same triangle wave 2.frag's fractal() fold uses
-    // (p = 1 - abs(s*fract(p-0.5) - s*0.5) with s=2) decomposed into
-    // "per-tile parity flip" -- see grid.md Q2 for the derivation and why
-    // it is NOT what we want to feed the lattice.
-    float foldOn = step(0.5, knob_2);
-    vec2 parity  = mod(tileIndex, 2.0);                    // 0 or 1 per axis
-    vec2 fMirror = mix(f, -f, parity);
-    vec2 fUsed   = mix(f, fMirror, foldOn);
+    // ---- whole crest per cell: sample the baked SDF once, clamped to the tile, extended outside ----
+    vec2  tc  = fr + 0.5;                                                    // r = 0.5 -> q*0.5+0.5 == f+0.5
+    vec2  tcc = clamp(tc, 0.0, 1.0);
+    float d   = (getInitialFrameColor(tcc).g - 0.5) + length(tc - tcc);     // tile units, < 0 inside, monotone outside
+    float pxPerUnit = iResolution.y / N;
+    float dPx = d * pxPerUnit;
 
-    // ---- SPACE 5: bead-normalised space q, then texture coord tc ---------
-    // Tile half-pitch r = 0.5 (by construction: SPACE 3 defined 1 p-unit =
-    // 1 tile). q = f / r puts the in-tile coord on [-1,1) regardless of N --
-    // this is the SAME "sample at p/r" step beadDist() in 2.frag uses to
-    // make a fixed-scale SDF bake usable at an arbitrary cell radius r. Here
-    // r is a constant 0.5 (the grid has one fixed pitch), so the rescale is
-    // trivial in VALUE, but the SHAPE of the operation is identical and is
-    // exactly what the seeding step will need once r varies per lattice cell.
-    float r = 0.5;
-    vec2 q  = fUsed / r;                                    // [-1,1)
-    vec2 tc = q * 0.5 + 0.5;                                // [0,1) -- direct texture coord, no clamping needed:
-                                                              // f already stays inside one tile by construction, so
-                                                              // there is no cross-tile bleed to clamp against (contrast
-                                                              // with beadDist's ONETILE clamp, which exists because ITS
-                                                              // upstream coord can wrap past 1 period -- see grid.md Q3).
+    float cov     = 1.0 - smoothstep(-1.0, 1.0, dPx);                        // 1 px edge
+    float rim     = 1.0 - smoothstep(0.8, 3.4, abs(dPx));                    // the crisp outline, ~3 px
+    float rimSoft = exp(-abs(dPx) / 16.0);                                   // glow either side
+    float inner   = clamp(-d / 0.30, 0.0, 1.0);                              // 0 at the outline -> 1 at the core
 
-    vec4 tex = getInitialFrameColor(tc);
-    float G = tex.g;                                        // baked SDF, 0.5 == boundary
+    // ---- slow palette parameter: key + timbre medians, hue tide, per-cell tint ----
+    float tintAmt = LVK(knob_3, 1.0, knob_3 * 2.0);                          // K3 TINT
+    float s = seed + (pitchClassMedian - 0.5) * 0.30 + (spectralCentroidMedian - 0.35) * 0.25
+            + huePhase * 0.02 + (gid - 0.5) * 0.20 * tintAmt;
 
-    // signed distance in BAKE-NORMALISED units: 0 at boundary, +-1 at the
-    // 1.12x bleed edge. Convert to LATTICE (p-space) units the same way
-    // beadDist() does: multiply by r. Here r is constant so this is a no-op
-    // in value (r=0.5 always) but it is the correct general form.
-    float dNorm  = (G - 0.5) * 2.0;                          // bake-normalised, unitless
-    float dTile  = dNorm * r;                                // p-space (tile-pitch) units
+    // ---- outline-echo rings: one-way outward on flowPhase, spacing from the spread MEDIAN ----
+    float echoAmt = LVK(knob_2, 1.0, knob_2 * 2.0);                          // K2 ECHO
+    float ringP   = mix(0.07, 0.11, clamp((spectralSpreadMedian - 0.20) * 2.5, 0.0, 1.0));
+    float ph      = flowPhase * 0.25;
+    float rq      = abs(fract(d / ringP - ph) - 0.5) * ringP * pxPerUnit;    // px to the nearest echo
+    float ring    = 1.0 - smoothstep(0.4, 2.2, rq);
+    float reachIn  = exp(-max(-d, 0.0) / 0.30);
+    float reachOut = exp(-max( d, 0.0) / 0.34);
 
-    // Convert p-space units to SCREEN-space (pixel) units for antialiasing.
-    // 1 p-unit = (iResolution.y / N) screen pixels (that's how SPACE 3 was
-    // built: N p-units of height = iResolution.y pixels).
-    float pxPerTileUnit = iResolution.y / N;
-    float dPx = dTile * pxPerTileUnit;
+    // ---- ground: dark plum complement, ripples between neighbours ----
+    float groundLit = LVK(knob_4, 1.0, knob_4 * 2.0);                        // K4 GROUND
+    vec3 col = lush(s + 0.5, 0.10 * groundLit);
+    col += lush(s + 0.33, 0.55) * ring * reachOut * (1.0 - cov) * echoAmt
+         * (0.60 + 0.40 * waveletBand2Spring * quietGate);
 
-    // Crisp SDF edge via smoothstep, antialiasing width in real SCREEN
-    // PIXELS regardless of N -- this is the "SDF buys a clean edge" case:
-    // the boundary is exactly G==0.5, and because dPx is already in pixel
-    // units, a fixed +-0.5px smoothstep width stays ~1px wide whether the
-    // grid is 3x3 or 8x8. A hard step() on alpha cannot do this: alpha is
-    // a coverage value with no notion of "how many texels to the edge", so
-    // its step boundary aliases identically at every N.
-    float aaWidth = mix(0.5, 3.0, clamp(knob_3, 0.0, 1.0));
-    float covered = 1.0 - smoothstep(-aaWidth, aaWidth, dPx);
+    // ---- body: blue family, warm heart at the core, inset echoes made of the outline ----
+    vec3 body = lush(s, mix(0.40, 0.50, inner));
+    body = mix(body, lush(s + 0.42, 0.68), smoothstep(0.45, 1.0, inner) * 0.90);
+    body += lush(s + 0.42, 0.80) * smoothstep(0.55, 1.0, inner) * energySpring * quietGate * 0.30;   // the heart breathes with level
+    body += lush(s + 0.12, 0.88) * ring * reachIn * echoAmt * (0.55 + 0.35 * waveletBand3Spring * quietGate);
+    col = mix(col, body, cov);
 
-    vec3 fg = vec3(0.95, 0.85, 0.55);                        // warm silhouette
-    vec3 bg = vec3(0.04, 0.05, 0.08);                        // near-black field
-    vec3 col = mix(bg, fg, covered);
+    // ---- rim: the only bright line; bass lights it, centroid tilts its hue a touch ----
+    float rimHue = s + 0.30 + 0.05 * (waveletCentroidSpring - 0.5) * quietGate;
+    col += lush(rimHue, 1.0) * rim * (1.0 + 0.40 * waveletBassSpring * quietGate);
+    col += lush(rimHue, 0.75) * rimSoft * (0.28 + 0.22 * waveletBand1Spring * quietGate);
 
-    fragColor = vec4(col, 1.0);
+    // ---- keep a floor: gentle spatial vignette (constant mask, not audio) ----
+    col *= 1.0 - 0.35 * smoothstep(0.7, 1.7, length(ndc));
+
+    fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

@@ -102,6 +102,9 @@ const run = async () => {
   console.log('\n  radial profile of % pixels changed (centre -> corner, 10 bands)')
   console.log(`    fast: ${fast.radial.map(v => v.toFixed(0).padStart(3)).join(' ')}`)
   console.log(`    slow: ${slow.radial.map(v => v.toFixed(0).padStart(3)).join(' ')}`)
+  console.log(`
+  bead coverage (bg off, lum>6): ${coverage.toFixed(2)}%   fast footprint / coverage = ${(fast.pct / Math.max(coverage, 0.01)).toFixed(2)}`)
+  console.log(`  reactivity: centre lum ${sa.centre.toFixed(1)} -> ${sb.centre.toFixed(1)}   contrast ${sa.contrast.toFixed(1)} -> ${sb.contrast.toFixed(1)}   mean ${sa.mean.toFixed(1)} -> ${sb.mean.toFixed(1)}`)
   console.log('\n  VERDICT')
   console.log(`    fast channels touch ${fast.pct.toFixed(1)}% of the frame; slow phases touch ${slow.pct.toFixed(1)}%.`)
   const outer = fast.radial.slice(6).reduce((a, b) => a + b, 0) / 4

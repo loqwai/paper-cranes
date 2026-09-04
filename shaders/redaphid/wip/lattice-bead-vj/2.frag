@@ -115,6 +115,8 @@
 // Defaults to 0 so a page opened WITHOUT ?image= still shows the known-good lattice
 // instead of a field of garbage sampled from placeholder-image.png.
 #define BEAD_MIX (knob_161)
+#define BEAD_LEVELS (knob_163 > 0.001 ? floor(knob_163 * 6.0) + 1.0 : 3.0)   // K163 BEAD LEVELS how many coarse fold levels carry the bead outline (1..6, default 3)
+#define FINE_FADE   (knob_196 > 0.001 ? knob_196 : 0.85)                    // K196 FINE FADE how fully sub-pixel fold levels fade out (0.001 = draw them as speckle)
 
 // ── wavelet-ease controller outputs (declared by hand; 0 without the controller / a mic) ──
 uniform float waveletBassSpring;
@@ -416,8 +418,14 @@ vec4 fractal(vec2 p){
         // a drop — it must NEVER take a per-frame audio value. A bead morphing back and
         // forth with the kick is the exact failure that was fixed four times (iters 138–142).
         float hexTerm  = hexDist(uv) - hexR_i;
-        float beadTerm = beadDist(uv, hexR_i);
-        float cellD    = mix(hexTerm, beadTerm, BEAD_MIX);
+        // hero-lab 5 (2026-09-04): REAL uniform branch (lab/revsplit). mix() evaluates both operands,
+        // so the bead texture fetch ran on every level even at BEAD_MIX = 0. The condition depends
+        // only on the loop index and uniforms (warp-coherent), so the fetch now happens on the coarse
+        // BEAD_LEVELS levels only and the fine levels are pure-ALU hex. Measured before this change:
+        // exterior roughness 6.43 (hex ground) vs 6.32 (bead ground) — the ground speckle is NOT the
+        // texture, it is sub-pixel line aliasing (see FINE_FADE below); this branch is the cost saving.
+        float cellD = hexTerm;
+        if (BEAD_MIX > 0.001 && i < FIRST + int(BEAD_LEVELS)) cellD = mix(hexTerm, beadDist(uv, hexR_i), BEAD_MIX);
         float delt1 = abs(cellD - gRingGap);   // K144 RING GAP: distance from the hex ring to the drawn line — sets how HOLLOW each cell is, independently of its radius.        // MIDS breathe the hexagons
         float delt2 = min(length(uv) - gCross, min(uv.x, uv.y)) + gCrossBias; // BASS taut cross (+K139 hex↔cross balance)
         float m = min(delt1, delt2);
@@ -436,6 +444,12 @@ vec4 fractal(vec2 p){
         // coarse levels dominate (big bold cells), 1 → fine levels dominate (filigree). Driven by
         // smoothed spectral brightness + the slow shape clock, so dark passages go bold, bright go lacy.
         f *= mix(mix(1.0 - ld * 0.90, 0.10 + ld * 0.90, gDepthFocus), 1.0, gLevelOpen);   // vj7-b7 COMPLEXITY RATCHET: the level WINDOW dissolves as the set clock advances, so deeper and shallower generations join the picture together instead of one band at a time — the structure literally gains detail over the night. Bounded (<=0.45) so the finest levels can never fully take over into speckle.   // iter 27: stronger window (screenshot: zoomed-out finest levels read as noise)
+        // hero-lab 5 (2026-09-04): FINE-LEVEL FADE. `alias` is the pixel footprint in lattice units;
+        // once it passes the line half-width that level's lines are sub-pixel and rasterise as speckle
+        // (measured 6.4 exterior roughness with hex OR bead ground — line aliasing, not the texture).
+        // Fade those levels out instead of drawing noise. A pure function of zoom and depth, so it is
+        // geometry-static: no audio, nothing per frame.
+        f *= 1.0 - smoothstep(0.45, 1.4, alias / max(gBorder, 1e-4)) * FINE_FADE;
         // CONTINUOUS palette field: recursion depth + a smooth within-cell swirl so colour flows
         // across the structure (this is the BEAUTY — a smooth field, not a discrete depth band).
         float swirl = 0.5 + 0.5 * sin(atan(p.y, p.x) * gSwirlArms + length(p) * gSwirlRadial + float(i) + seed4 * TAU + (pitchClassMedian - 0.5) * 1.2 * quietGate);   // iter150 KEY -> INTERIOR COLOUR FLOW: the rolling key estimate rotates the within-cell colour swirl, so a key change re-paints cell interiors without touching the global hue (which stays ~0 drift per directive).

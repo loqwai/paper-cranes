@@ -30,7 +30,7 @@
 // Requires ?controller=dodeca-bloom (or the phases pinned as URL params). wavelet not needed.
 // Params (0 = default): ?beads=4..48 (28)  ?turns= (2.2)  ?arms=1..4 (1)  ?sizeExp= (0.6)
 //   ?flow= (0.015 - travel rate on flow_phase)  ?heroScale= (0.20)  ?hueSpan= (0.32)
-//   ?align=0..1 (1)  ?tail=0..1 (1)  ?dust= (0.45; 0.001 = off)  ?surge= (0.03; 0.001 = off)
+//   ?align=0..1 (1)  ?tail=0..1 (1)  ?dust= (1.0; 0.001 = off)  ?surge= (0.03; 0.001 = off)
 //   ?chiral=0..1 (1 - mirror odd arms; 0.001 = off)
 //
 // Best look (2026-09-04): the tomoe galaxy
@@ -80,7 +80,7 @@ uniform float chiral;
 #define HUE_SPAN (hueSpan   > 0.0 ? hueSpan   : 0.32)
 #define ALIGN    (align     > 0.0 ? align     : 1.0)
 #define TAIL     (tail      > 0.0 ? tail      : 1.0)
-#define DUST     (dust      > 0.0 ? dust      : 0.45)
+#define DUST     (dust      > 0.0 ? dust      : 1.0)
 #define SURGE    (surge     > 0.0 ? surge     : 0.03)
 #define CHIRAL   (chiral    > 0.0 ? chiral    : 1.0)
 #define R0       (HERO_R * 1.55)
@@ -107,4 +107,108 @@ float beadDist(vec2 p, float r){
     float d  = (getInitialFrameColor(tcc).g - 0.5) * 2.0 * BEAD_RANGE;
     d += length(tc - tcc) * 2.0;
     return d * r;
+}
+
+// ONE BEAD. The only place the fast channels appear; every fast term is on the contour band.
+//   mirror  +1 / -1 flips the sampled shape (chirality)     born  1 for a newborn, 0 otherwise
+vec3 drawBead(vec2 p, vec2 centre, float r, float orient, float mirror, float hue, float slowDrive,
+              float w, float born, inout vec3 col){
+    vec2 q = p - centre;
+    if (length(q) > r * 1.55) return col;             // bounding circle: skip the fetch
+    q = rot(orient) * q;
+    q.x *= mirror;
+
+    float d   = beadDist(q, r);
+    float px  = 1.0 / iResolution.y;                  // one pixel in uv (true distance units)
+    float aa  = px * 1.25;
+    float cov = smoothstep(aa, -aa, d);
+    float rim = smoothstep(px * 3.0, 0.0, abs(d));    // narrow: ~3 px, never a halo
+    float ins = smoothstep(px * 2.0, 0.0, abs(d + r * 0.16)) * cov;   // inset echo of the outline
+
+    float L = 0.40 + 0.16 * slowDrive + 0.05 * treble_env;
+    float C = 0.10 + 0.05 * entropy_env;
+    vec3 body = lch(hue, C, L);
+    vec3 edge = lch(hue + 0.08, C * 1.35, min(L + 0.40, 0.84));
+
+    // fast channels: contour only. Newborns flare on drop_glow (latched + decay, never a strobe).
+    float punch = 0.55 + 0.45 * bass_pump + 0.65 * drop_glow + 0.25 * pitch_pulse + 1.1 * drop_glow * born;
+
+    col = mix(col, body * 0.9, cov * w);
+    col += edge * (0.35 * ins + rim * punch) * w;
+    return col;
+}
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord){
+    vec2 uv = (fragCoord - 0.5 * iResolution.xy) / iResolution.y;
+
+    float n  = N_BEADS;
+    float na = ARMS;
+    float hueBase = 0.62 + hue_phase * 0.07;
+
+    // BACKGROUND - slow only, and dark: the outline must be the brightest thing on screen.
+    float rad = length(uv);
+    float ang = atan(uv.y, uv.x);
+    float f1 = sin(rad * 4.7 - flow_phase * 0.30 + ang * 2.0);
+    float f2 = sin(rad * 7.9 + morph_phase * 0.19 - ang * 3.0);
+    float field = 0.5 + 0.25 * f1 + 0.25 * f2;
+    float bgHue = hue_phase * 0.05 + 0.60 + centroid_env * 0.08 + field * 0.05;
+    float bgL   = 0.210 + 0.050 * field + 0.040 * energy_env + 0.020 * mids_env;
+    vec3 col = lch(bgHue, 0.045 + 0.020 * entropy_env, bgL);
+    col *= 1.0 - 0.45 * smoothstep(0.30, 0.85, rad);
+
+    // DUST RIBBON - the radial gap from this pixel to the nearest turn of each arm's log spiral,
+    // from the same equation the beads ride (r = R0 * (R1/R0)^t, theta = t*TURNS*TAU + offset).
+    float kk = log(R1 / R0) / (TURNS * TAU);
+    float uu = log(max(rad, 1e-4) / R0) / kk;         // spiral angle reaching this radius
+    float tt = clamp(uu / (TURNS * TAU), 0.0, 1.0);    // 0 at the hero, 1 at the rim
+    float ribbon = 0.0;
+    for (float a = 0.0; a < 4.0; a += 1.0){
+        if (a >= na) break;
+        float off  = a * TAU / na + spin_angle * 0.12;
+        float dphi = uu - (ang - off);
+        float wr   = (fract(dphi / TAU + 0.5) - 0.5) * TAU;
+        float gap  = rad * kk * wr;
+        ribbon = max(ribbon, exp(-gap * gap / 0.0006));
+    }
+    ribbon *= smoothstep(0.0, 0.15, tt) * smoothstep(1.0, 0.85, tt) * smoothstep(R0 * 0.8, R0, rad);
+    float rh = hueBase + (tt - hue_phase * 0.10) * HUE_SPAN;
+    col += lch(rh, 0.08, 0.40) * ribbon * DUST * (0.75 + 0.25 * energy_env);
+
+    // THE SPIRAL - beads born at the hero's rim, travelling outward on flow_phase, surging on
+    // hue_phase (both monotonic).
+    for (float a = 0.0; a < 4.0; a += 1.0){
+        if (a >= na) break;
+        float mirror = (CHIRAL > 0.5 && mod(a, 2.0) > 0.5) ? -1.0 : 1.0;
+        for (float i = 0.0; i < 48.0; i += 1.0){
+            if (i >= n) break;
+            float id = i + a * 100.0 + 1.0;
+            float h1 = hash11(id * 12.9898 + 3.1);
+            float h2 = hash11(id * 78.233  + 7.7);
+
+            float t   = fract((i + 0.5) / n + flow_phase * FLOW + hue_phase * SURGE + a * 0.5 / na);
+            float w   = mix(1.0, smoothstep(0.0, 0.10, t) * smoothstep(1.0, 0.82, t), TAIL);
+
+            float th  = t * TURNS * TAU + a * TAU / na + spin_angle * 0.12;
+            float sr  = R0 * pow(R1 / R0, t);
+            float br  = B0 * pow(sr / R0, SIZE_EXP);
+            vec2  c   = vec2(cos(th), sin(th)) * sr;
+
+            float dir    = (h1 < 0.75 ? -1.0 : 1.0) * mirror;   // most beads counter-spin the arm
+            float orient = ALIGN * th + spin_angle * (0.20 + h2 * 0.35) * dir;
+
+            float hue = hueBase + (t - hue_phase * 0.10) * HUE_SPAN + a * 0.5 / na * HUE_SPAN;
+
+            float k = mod(i, 6.0);
+            float drive = k < 0.5 ? bass_env : k < 1.5 ? mids_env : k < 2.5 ? treble_env
+                        : k < 3.5 ? entropy_env : k < 4.5 ? centroid_env : flux_env;
+
+            float born = smoothstep(0.30, 0.0, t);
+            drawBead(uv, c, br, orient, mirror, hue, clamp(drive, 0.0, 1.0), w, born, col);
+        }
+    }
+
+    // THE HERO - centred, slowest spin, the still point everything is born from.
+    drawBead(uv, vec2(0.0), HERO_R, spin_angle * 0.05, 1.0, hueBase + 0.02, clamp(energy_env, 0.0, 1.0), 1.0, 0.0, col);
+
+    fragColor = vec4(pow(clamp(softClip(col), 0.0, 1.0), vec3(0.85)), 1.0);
 }
