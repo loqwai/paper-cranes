@@ -208,7 +208,9 @@ vec3 drawBead(vec2 p, vec2 centre, float r, float idx, float slowDrive, inout fl
         // as drop_glow decays (tRing = 1 - drop_glow): one-way by construction, gone when the latch is spent.
         float tRing = 1.0 - clamp(drop_glow, 0.0, 1.0);
         float dropR = rr * mix(1.25, 7.0, tRing);
-        float dring = smoothstep(aa * 4.0, 0.0, abs(d - dropR)) * (1.0 - cov);
+        // width in PIXELS via the screen-space gradient: the exterior SDF flattens with distance, so a fixed
+        // band in d units grew into a frame-filling bloom mid-decay (seen on the phone render).
+        float dring = smoothstep(4.0, 0.0, abs(d - dropR) / max(fwidth(d), 1e-5)) * (1.0 - cov);
         col += edge * dring * clamp(drop_glow, 0.0, 1.0) * 1.4;
     }
 
