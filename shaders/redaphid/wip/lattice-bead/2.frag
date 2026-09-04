@@ -142,6 +142,7 @@ uniform float spectralRoughnessSmooth;   // smoothed grit → iridescent sparkle
 // So the Z-score now punches the RELIEF depth: grit embosses the lattice harder for a moment.
 // Shading channel per the hierarchy — never geometry. max() keeps it one-sided; the pre-existing
 // min(0.85,...) clamp still protects lumMin.
+uniform float theme;       // ?theme=0..3 selects a palette from the lattice family
 uniform float divePhase;   // dive scrub offset; any numeric query param becomes a float
                            // uniform, and getQueryParamUniforms skips names already declared
                            // here, so ?divePhase= drives this with no knob spent and no clash.
@@ -285,11 +286,39 @@ vec3 fitGamut(vec3 rgb, float L){
     return mix(vec3(g), rgb, clamp(t, 0.0, 1.0));
 }
 
+// ── PALETTE THEMES ─────────────────────────────────────────────────────────────
+// The lattice family's variety is NOT in lush()'s shape — every lattice shader in this
+// repo has the identical function. It is entirely in four (L base, L slope, L clamp,
+// C base, C amp) sets. These are the real constants, lifted verbatim:
+//
+//   0 vj9        L 0.33 +0.40  [0.05,0.92]  C 0.075+s2*0.05 +0.04  lattice-vj/9 — moody, deep
+//   1 luminous   L 0.50 +0.36  [0.12,0.88]  C 0.125+s2*0.05 +0.05  chromadepth-lattice/6 AND
+//                                                                  lattice-interactive/3 — the
+//                                                                  brightest, highest-chroma look
+//   2 midtone    L 0.40 +0.44  [0.05,0.92]  C 0.090+s2*0.06 +0.05  chromadepth-lattice/3
+//   3 contrast   L 0.10 +1.20  [0.05,0.92]  C 0.075+s2*0.05 +0.04  lattice-bead H10 — low floor,
+//                                                                  steep slope, most contrast
+//
+// ?theme=<0..3>. seed2 still shifts chroma per device and regionHue(world) still repaints
+// by location, so each theme is a family of looks, not one colour.
+void themeConsts(float t, out float lb, out float ls, out float lo, out float hi, out float cb, out float cs, out float ca){
+    if      (t < 0.5) { lb = 0.33; ls = 0.40; lo = 0.05; hi = 0.92; cb = 0.075; cs = 0.05; ca = 0.04; }
+    else if (t < 1.5) { lb = 0.50; ls = 0.36; lo = 0.12; hi = 0.88; cb = 0.125; cs = 0.05; ca = 0.05; }
+    else if (t < 2.5) { lb = 0.40; ls = 0.44; lo = 0.05; hi = 0.92; cb = 0.090; cs = 0.06; ca = 0.05; }
+    else              { lb = 0.10; ls = 1.20; lo = 0.05; hi = 0.92; cb = 0.075; cs = 0.05; ca = 0.04; }
+}
+
 vec3 lush(float s, float lit){
     float h = fract(s) * TAU;
-    // BRIGHT baseline so the whole thing emits light (must pop off a phone at night, read from afar)
-    float L = clamp(LV_LBASE + EXB(knob_156, 0.40) + LV_LSLOPE * clamp(lit, 0.0, 1.0), 0.05, LV_LCEIL);   // LV_LBASE (H10)   // K156 LIGHT BASE: the palette's baseline lightness (the tuned 0.33 was five iterations of 'less washed out').   // vj2 iter 6: 0.40+0.44 → 0.33+0.40 (max L 0.84 → 0.73). Meter on lit passages: dark 2.4 %, lum 0.30, sat 0.85 — pastel. Lower L keeps chroma, restores the floor. (Oklch: hue untouched.)   // MUTED (iter 17, from chromadepth-lattice/3): lower base lightness
-    float C = max(0.0, (0.075 + seed2 * 0.05) + EXB(knob_157, 0.14)) + 0.04 * sin(s * TAU * 0.5 + 1.3);   // K157 CHROMA: saturation. 0 = greyscale structure (a genuinely useful way to READ the geometry).   // vj2 iter 11: chroma 0.09+.06/.05 → 0.075+.05/.04. Meter sat 0.93–0.94 since the L/gamma changes (low L + same C = gamut-edge neon). User wants MUTED; sat target ~0.8.   // lower chroma than 6.frag's neon — user: "more muted"
+    float lb, ls, lo, hi, cb, cs, ca;
+    themeConsts(theme, lb, ls, lo, hi, cb, cs, ca);
+    // knobs still win over the theme, so any look stays hand-tunable live
+    lb = mix(lb, knob_173,       step(0.001, knob_173));   // K173 LIGHT BASE
+    ls = mix(ls, knob_174 * 1.6, step(0.001, knob_174));   // K174 LIGHT SLOPE
+    hi = mix(hi, LV_LCEIL,       step(0.001, knob_164));   // K164 LIGHT CEILING
+
+    float L = clamp(lb + EXB(knob_156, 0.40) + ls * clamp(lit, 0.0, 1.0), lo, hi);
+    float C = max(0.0, (cb + seed2 * cs) + EXB(knob_157, 0.14)) + ca * sin(s * TAU * 0.5 + 1.3);
     C *= LV_RICH;
     return fitGamut(oklch2rgb(vec3(L, C, h)), L);
 }
