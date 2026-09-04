@@ -963,27 +963,22 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // anything sampled (1.372) and was also unused: a drop is both LOUDER and
         // BRIGHTER, so the pair fires far more reliably than either alone.
         // Still clamped to positives, so it remains one-way and can only ever ADD light.
-        // ── SHUTTER FIX (docs/debugging-twitchy-shaders.md, Fix 1) ────────────────
-        // This drove the flare from (energyZScore + spectralCentroidZScore) as a
-        // CONTINUOUS SCALE. That is the documented cause of twitchy output, in the doc's
-        // own words: "Use Normalized for smooth modulation. Use ZScore ONLY for event
-        // detection" — `float scale = energyZScore * 0.5;` is listed as the bad example.
-        // z-scores are near-zero during normal audio and spike on anomalies, so scaling a
-        // brightness by one makes the contours stutter frame to frame. User called it
-        // "shuttery"; the doc had already called it, and I wrote it anyway two ticks ago.
+        // ── EVENT-DRIVEN FLARE (onsetEnvelope) ────────────────────────────────────
+        // This escapes the shudder-vs-lag dilemma instead of picking a side. History:
+        //   z-score drive  -> shuddered (docs/debugging-twitchy-shaders.md Fix 1)
+        //   energySpring   -> smooth, but smoothing IS the ~1s lag (mindmeld 9442)
+        // The fix is to stop driving from a MEASUREMENT and drive from an EVENT: the
+        // onset detector runs off a second AnalyserNode with smoothingTimeConstant = 0,
+        // so the trigger is low-latency, and the shader SYNTHESISES the response curve
+        // rather than inheriting the audio's own shape. No jitter, no lag.
         //
-        // energySpring is the controller's spring-SMOOTHED energy — purpose-built for
-        // exactly this, and already driving the ground pump above, so flare and ground now
-        // move together coherently instead of fighting. The knee is kept: it is what makes
-        // the flare punctuate rather than glow (duty above 0.2 went 53% -> 36%).
-        // Gate placement matters: applying QGATE BEFORE the threshold shrank the drive
-        // below it (energySpring 0.31 * gate 0.35 = 0.108, never clearing 0.18) and the
-        // flare measured dead — max 0.01, 0% duty. The jitter number looked wonderful
-        // precisely because the signal was gone. Threshold on the RAW spring, then gate
-        // the result, so a silent room still cannot flash but real music still fires.
-        float flareZ = clamp((energySpring - 0.20) * 3.0, 0.0, 1.0);
-        flareZ *= flareZ;          // knee: punctuate, don't glow
-        flareZ *= QGATE;           // silence guard, applied AFTER the shaping
+        // 12ms attack = effectively instant; 160ms release decays well clear of the
+        // 479ms beat gap measured on this set, so hits read as separate punches rather
+        // than smearing together. onsetStrength scales the flare to how hard the hit was.
+        // Needs ?onset_refractory_ms=380 — at the default the detector free-runs at
+        // ~213 BPM (it catches hats); at 380 it locks to 125.3 BPM, the actual tempo.
+        float flareZ = onsetEnvelope(0.012, 0.16) * clamp(onsetStrength * 1.8, 0.0, 1.0);
+        flareZ *= QGATE;
         col += lush(s + 0.33, 1.0) * rim * knob_168 * flareZ * LVK(knob_179, 0.55, knob_179);
     }
 
