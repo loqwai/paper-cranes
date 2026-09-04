@@ -19,7 +19,7 @@ const ORIGINS = { preview: 'https://mogee.paper-cranes-visuals.pages.dev', prod:
 const img = b => `image=images/beads/mon-${b}.png`
 // Keep in sync with SHADERS in nfc-writer.html
 const SHADERS = {
-  satellites: (o, b) => `${o}/?shader=redaphid/wip/lattice-bead-vj/satellites&controller=dodeca-bloom&${img(b)}&satellites=6&wavelet=true&onset_refractory_ms=380&fullscreen=true`,
+  satellites: (o, b) => `${o}/?shader=redaphid/wip/lattice-bead-vj/satellites&controller=dodeca-bloom&${img(b)}&satellites=6&knob_1=0.75&knob_2=0.7&knob_3=0.6&wavelet=true&onset_refractory_ms=380&fullscreen=true`,
   hero:       (o, b) => `${o}/?shader=redaphid/wip/lattice-bead-vj/2&${img(b)}&controller=wavelet-ease&controller=lattice-nav&navZoom0=0.218&knob_1=0.429&knob_134=0.507&wavelet=true&fullscreen=true`,
   wall:       (o, b) => `${o}/?shader=redaphid/wip/lattice-bead-vj/1&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&${img(b)}&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&wavelet=true&onset_refractory_ms=380&fullscreen=true`,
   spiral:     (o, b) => `${o}/?shader=redaphid/wip/lattice-bead-vj/spiral&${img(b)}&controller=dodeca-bloom&arms=2&beads=20&turns=1.6&wavelet=true&fullscreen=true`,
