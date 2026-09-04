@@ -321,6 +321,7 @@ uniform float spectralRoughnessSmooth;   // smoothed grit → iridescent sparkle
 // min(0.85,...) clamp still protects lumMin.
 uniform float autofly;     // ?autofly=0..1 enables the camera wander (default 0 = off)
 uniform float detail;      // ?detail=0..1 the five quiet channels (default 0.75)
+uniform float spec;        // ?spec=0..1 hairline specular on the contour (default 0.7)
 uniform float sweep;       // ?sweep=0..1 travelling light across the bead wall (default 0.6)
 uniform float breathe;     // ?breathe=0..1 per-bead slow scaling (default 0.85)
 // Controller / regression outputs the wrapper does NOT auto-declare, so they must be
@@ -481,6 +482,8 @@ mat2 rot2(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 #define BREATHE (clamp(max(knob_184, breathe > 0.0 ? breathe : 0.85), 0.0, 1.0))
 // SWEEP: a light that TRAVELS across the wall of beads. max() so 0 is reachable.
 #define SWEEP (clamp(max(knob_185, sweep > 0.0 ? sweep : 0.6), 0.0, 1.0))
+// SPEC: the hairline highlight. max() so 0 is reachable.
+#define SPEC (clamp(max(knob_186, spec > 0.0 ? spec : 0.7), 0.0, 1.0))
 #define ARR_SPEED   (arriveSpeed > 0.0 ? arriveSpeed : 2.6)
 // THE RELEASE MUST BE SHORT RELATIVE TO THE BEAT. First attempt used 0.62s reasoning that the
 // crest should "hold for a beat" at ~125 BPM. That was backwards and measurement caught it: one
@@ -1423,7 +1426,24 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // follows the slowest music as the hierarchy requires.
         float rimHue = s + 0.33 + hueTilt;
         col += lush(rimHue, 1.0) * rim * seedAmt * (0.22 + 0.45 * trebLive * QGATE) * mix(1.0, 1.6, legNow)
-             * (1.0 + arrival * 4.0);   // 2.2 -> 4.0: the frame's fast energy now lives HERE
+             * (1.0 + arrival * 4.0); 
+        // ── HIGHLIGHT: THE FRAME HAD NO TOP END ──────────────────────────────────
+        // MEASURED tone histogram over 9s of live audio, in eighths of the 0-255 range:
+        //     28.4 / 51.7 / 17.5 / 2.2 / 0.2 / 0 / 0 / 0
+        // 98% of the frame sat in the bottom THREE buckets and 0.01% of pixels were above 160.
+        // Deep blacks were already there (5.3% true black) but there were no HIGHLIGHTS at all,
+        // so the picture lived entirely in the shadows - the critic's "murk", and the reason
+        // contrast stayed low however the midtones were pushed.
+        //
+        // The fix is not more brightness, which is the dimmer switch the critic already rejected.
+        // It is a SMALL AREA AT A HIGH VALUE: pow(rim, 7) keeps only the very centre of the
+        // contour band, a hairline a pixel or two wide, and drives it hard. Deep blacks plus a
+        // thin specular IS value contrast. Because the area is tiny it cannot raise frame
+        // luminance much, so it buys contrast without buying flash - which the numbers have to
+        // confirm, not the intention.
+        float specCore = pow(rim, 7.0);
+        col += lush(rimHue, 1.0) * specCore * seedAmt * SPEC * (0.55 + 1.10 * arrival) * QGATE;
+  // 2.2 -> 4.0: the frame's fast energy now lives HERE
         // ── DROP FLARE (K179) ──────────────────────────────────────────────────
         // energyZScore was measured as the STRONGEST fast signal on this input (live
         // range 1.20 over 8s) and the shader ignored it completely — 0 references. On a

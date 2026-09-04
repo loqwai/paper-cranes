@@ -438,3 +438,54 @@ read as success.
 - [ ] a repo hook blocks commits by scanning the SESSION cwd (`D:/Projects/paper-cranes`), where
       the user's uncommitted `tools/` and `docs/stream-audio.md` carry absolute paths with the
       username. Nothing in `pc-lab-sub2` matches — use `git -C` and avoid `cd`.
+
+## Iter 14 — the frame had no top end
+
+Tone histogram over 9s of live audio, in eighths of the 0–255 range:
+
+```
+0-31   32-63  64-95  96-127  128-159  160-191  192-223  224+
+28.4   51.7   17.5    2.2      0.2       0        0       0
+```
+
+**98% of the frame in the bottom three buckets; 0.01% of pixels above 160.** Deep blacks were
+already there (5.3% true black) but there were **no highlights at all** — the picture lived
+entirely in the shadows. That is the critic's "murk", and it is why contrast stayed low no matter
+how the midtones were pushed. *Value contrast needs both ends, and only one end existed.*
+
+### The move: a hairline specular, not more brightness
+
+More brightness is the dimmer switch the critic already rejected. What was missing was **a small
+area at a high value**: `pow(rim, 7.0)` keeps only the very centre of the contour band — a
+hairline a pixel or two wide — and drives it hard. Deep blacks plus a thin specular *is* value
+contrast, and because the area is tiny it cannot lift frame luminance much, so it buys contrast
+without buying flash.
+
+| | spec off | spec on |
+|---|---|---|
+| p99.9 luminance | 121.8 | **132.6** |
+| max luminance | 149.6 | **161.7** |
+| contrast | 22.49 | **23.37** |
+| flash sd | 3.84 | **3.77** (lower) |
+
+### Two measurement lessons
+
+1. **Sampling resolution hid it.** At 90×90 the effect measured as nothing (contrast +0.1, bright
+   pixels *down*). The canvas is 1278px, so a 1–2px hairline is averaged across a ~14×14 block and
+   diluted ~200×. At 360×360 it is clearly there. This is the same class of error as the breathing
+   measurement two ticks ago: **check the instrument can resolve the effect before believing a
+   null result.**
+2. **My `above160_pct` metric was broken** — `findIndex` on an ascending sorted array returns −1
+   when nothing exceeds the threshold, which made the percentage read ~100%. The numbers in that
+   column are garbage; percentiles (p99/p999/max) are the trustworthy ones. Recorded so the
+   figure is not reused.
+
+### The remaining ceiling
+Even with the specular, the brightest pixel in frame is only ~162/255. The binding constraint is
+the palette's own lightness cap (`LV_LCEIL` plus `softClip`'s roll-off above 0.75), not the
+highlight term. That is the next lever for the value-contrast complaint — but it changes every
+colour in the frame, so it wants its own fork rather than a tick.
+
+### Todo
+- [ ] frame ceiling ~162/255; raising `LV_LCEIL` for the specular path only would give true
+      highlights without repainting the whole palette
