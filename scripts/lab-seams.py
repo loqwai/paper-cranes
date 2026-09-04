@@ -8,7 +8,7 @@ LEVELS, FIRST = 10, 4
 GSCALE, THETA_STEP, TWIST_FALL = 2.0, np.pi/8, 0.05
 HEXR, RINGGAP, BORDER = 0.60, 0.064, 0.10
 SEED3, SEED4 = 0.33, 0.44
-N = 4096          # samples per axis (row-chunked)
+N = 16384         # samples per axis, row-chunked (resolves every level 4-9)
 SPAN = float(__import__("os").environ.get("SPAN","1.0"))
 
 def hexdist(x, y):

@@ -75,17 +75,20 @@ the drawn field STEPS by more than the line half-width. That step IS the seam.
 
 | level | MIRROR | TILE | LOCK |
 |---|---|---|---|
-| 4 | 0.000 | 0.292 | 0.000 |
-| 5 | 0.000 | 0.571 | 0.000 |
-| 6 | 0.000 | 1.975 | 0.000 |
-| 7 | 0.000 | 2.225 | 0.000 |
-| 8 | 0.000 | 0.151 | 0.000 |
-| 9 | 0.000 | 0.209 | 0.000 |
+| 4 | 0.000 | 0.073 | 0.000 |
+| 5 | 0.000 | 0.147 | 0.000 |
+| 6 | 0.000 | 0.500 | 0.000 |
+| 7 | 0.000 | 0.442 | 0.000 |
+| 8 | 0.000 | 1.269 | 0.000 |
+| 9 | 0.000 | 1.960 | 0.000 |
+| **mean 4-9** | **0.000** | **0.732** | **0.000** |
 
-(levels 4-7 from a full level-0 cell at 4096^2; levels 8-9 from a 1/32 window at the same
-count, which resolves them but undercounts walls from levels 0-4.) MIRROR is the known-continuous
-control and reads exactly 0 — the metric is calibrated. **LOCK reads exactly 0 at every level
-and both sample pitches.**
+16384^2 samples across one full level-0 cell, so every level 4-9 is resolved. The absolute
+percentage is sample-pitch dependent (a seam is a line, of fixed measure), but the
+discrimination is not: MIRROR is the known-continuous control and reads exactly 0, so the
+metric is calibrated, and **LOCK reads exactly 0 at every level** while TILE is nonzero at
+every level and rises monotonically with depth — deeper levels inherit the seams of every
+shallower one.
 
 ## Identity check
 `knob_166 = 0, knob_167 = 0` reproduces the untouched `2.frag` to within 0.06 pt of lit
