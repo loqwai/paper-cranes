@@ -50,6 +50,17 @@ Aspect: the crest is the same shape at 1200×900 and 900×1600 (aspect-corrected
 one tile on both axes). Motion (`PIN=0`, controller running, 4 frames 1.5 s apart): echoes travel
 outward, cells turn a few degrees each, ~8 px diagonal tide, no snap.
 
+## Hero cell (critic round 1: "wallpaper, no hero, no path for the eye")
+
+One lit crest travels a gentle diagonal across the screen, corridor-light style. The traverse runs on
+`u = fract(flowPhase * 0.06 + seed)` (one direction, ~80 s per pass) and is fract-wrapped the
+documented way: its brightness envelope is `sin(u * PI)`, so the hero fades in at the bottom-left,
+peaks at SCREEN CENTRE, fades out top-right, and the wrap is invisible. The cell hand-off is a
+continuous distance weight `smoothstep(1.35, 0.15, |tileIndex - heroP|)`, never a jump. Lighting
+only: rim and interior lifted, neighbours dimmed up to 18% in a soft local falloff (`heroDim`),
+audio (bass spring) touches the hero rim only. Screen-relative, so it stays near the centre under
+pan. Frames `grid-5m-1..4.jpg`: lum 31, dark 50%, bright 16%, white 0.1%.
+
 ## Traps
 
 - The wrapper already defines `oklch2rgb`; defining another is a compile error.

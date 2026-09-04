@@ -183,7 +183,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // new drop simply starts a new ring. On the ground it rides the ribbon only (local, thin).
     float tRing = clamp(1.0 - drop_glow, 0.0, 1.0);
     float ringG = exp(-pow((tt - tRing) / 0.05, 2.0));
-    col += lch(rh, 0.10, 0.62) * ribbon * ringG * drop_glow * 1.6 / sqrt(na);
+    col += lch(rh, 0.10, 0.62) * ribbon * ringG * drop_glow * 1.0 / sqrt(na);
 
     // THE SPIRAL - beads born at the hero's rim, travelling outward on flow_phase, surging on
     // hue_phase (both monotonic).

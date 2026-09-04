@@ -26,6 +26,19 @@ twisting lines, `t = fract(i/N - time)`, one hue offset per line, max-composited
 - **Chirality** (`chiral`, default 1): with 2+ arms, odd arms are mirrored and spin the other way.
   Tomoe curls both ways across the galaxy.
 
+- **Drop ripple** (critic's ask): `tRing = 1 - drop_glow`. A drop latches `drop_glow` high, so a
+  ring is born near the hero and `drop_glow`'s decay carries it outward once while it fades; it
+  lights each bead outline it passes (`ringBoost`, contour only) and glows on the ribbon (thin,
+  local). One-way by construction; a new drop starts a new ring. `scripts/spiral-motion.mjs`
+  with `DROP=1` walks `drop_glow` 0.85 → 0.12 across the four frames to show the travel.
+- **Hero as outline**: near-black fill (`fill` 0.15), radius 0.22, brighter rim (+2.0·drop_glow),
+  so it reads as the crest and not a filled badge. Ribbon now carries the hero's blue outward and
+  fades to nothing by the red beads (one continuous stroke per arm).
+
+Critic verdicts (art-critic agent, 2026-09-04): m1dust still 8 / motion 8, m2surge 8 / 6 ("the
+drop does not read as an event"), m3chiral 8 / 7 ("a connoisseur's secret; project m3chiral; the
+drop ripple is the real upgrade"). Ripple + outline hero added in response.
+
 Measured with dodeca-bloom running, envelopes pinned mid-energy, `knob_5=1`, 1280×720, 4 frames
 1.5 s apart (`scripts/spiral-motion.mjs`): lum 23.2 (dust) / 25.5 (drop) / 23.2 (all on), max
 pixel 136–160 = the outline, phases strictly increasing frame to frame.

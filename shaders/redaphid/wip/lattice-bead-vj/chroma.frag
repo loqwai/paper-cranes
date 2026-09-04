@@ -1371,7 +1371,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // mean depth of every point stays its true distance and nothing drifts. No audio in depth.
         float tunnel  = step(1.5, CD_MODE_RAW);
         float ringP   = CD_RINGP;
-        float ph      = flowPhase * 0.12 + bTime * 0.05;
+        float ph      = flowPhase * 0.25 + bTime * 0.25;   // ~one terrace per 12 s at rest: the drain must be FELT within 10 s (critic r2: "water down a plughole")
         // inside: ring INDEX with spacing that GROWS toward the centre (sqrt warp) - wider, darker steps
         // inward, a staircase down into shadow (critic). Terraced in index space, mapped back exactly.
         float uIn     = sqrt(1.0 + 2.0 * inside / ringP) - 1.0;
@@ -1385,7 +1385,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         float tunIn   = mix(0.03, 0.46, clamp(terrIn / 0.36, 0.0, 1.0));            // rim red -> centre green
         float tunOut  = mix(CD_LAT_N, CD_GND_F, clamp(terrOut / CD_GAP, 0.0, 1.0));  // cyan just outside -> violet far
         float depthT  = mix(tunOut, tunIn, covM);
-        float rimT    = smoothstep(0.55, 0.95, gRim);                                // thinner than the legible band
+        float rimT    = smoothstep(0.66, 0.74, gRim);   // thin AND hard-edged: a soft rim mask blended depth 0.01 with 0.56 and painted a yellow-green fringe outside the rim (critic r2) - one AA pixel only
         depthT        = mix(depthT, CD_FRES, rimT);                                  // the outline: nearest of all
         depth         = mix(depth, depthT, tunnel);
         // echo LINES (exposure only): a thin bright line on every terrace edge, fading with distance

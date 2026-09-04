@@ -72,12 +72,20 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     vec2  tileIndex = floor(p + 0.5);
     vec2  f         = fract(p + 0.5) - 0.5;                                  // in-tile, [-0.5, 0.5)
 
-    // ---- HERO CELL: one lit crest circles the screen centre on a monotonic angle (never reverses),
-    //      handing over to the next cell by a continuous crossfade, so the wall has a subject and a
-    //      direction. Screen-relative, so it stays near the centre under pan (user: centre the bead).
-    float th      = flowPhase * 0.12 + seed * TAU;
-    vec2  heroP   = vec2(cos(th), sin(th)) * 0.55 * (N * 0.5) + tide + vec2(navX, navY) * (N * nz / 0.07);
-    float hero    = smoothstep(1.35, 0.15, length(tileIndex - heroP));
+    // ---- HERO CELL, corridor-light style: ONE lit crest travels a gentle diagonal across the screen
+    //      on a monotonic phase (one direction, never back). The traverse is fract-wrapped, so its
+    //      brightness envelope is sin(u*PI): it fades in at the bottom-left, peaks at SCREEN CENTRE
+    //      (user: centre the bead in many cases), fades out top-right, and the wrap is invisible.
+    //      Cell-to-cell hand-off is a continuous crossfade of a distance weight, never a jump.
+    //      Lighting only: no geometry moves, no audio on the path.
+    float aspect  = iResolution.x / iResolution.y;
+    float u       = fract(flowPhase * 0.06 + seed);
+    float heroEnv = sin(u * 3.14159265);
+    vec2  heroNdc = mix(vec2(-0.85 * aspect, -0.80), vec2(0.85 * aspect, 0.80), u);
+    vec2  heroP   = heroNdc * (N * 0.5) + tide + vec2(navX, navY) * (N * nz / 0.07);
+    float heroD   = length(tileIndex - heroP);
+    float hero    = heroEnv * smoothstep(1.35, 0.15, heroD);
+    float heroDim = heroEnv * smoothstep(3.0, 0.9, heroD) * (1.0 - smoothstep(1.35, 0.15, heroD)) * 0.18;   // neighbours softly dimmed
 
     // ---- per-cell identity: golden-ratio spread, neighbours always differ, nothing flickers ----
     float gid  = fract(dot(tileIndex, vec2(0.618034, 0.381966)) + seed);
@@ -127,7 +135,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
 
     // ---- rim: the only bright line; bass lights it, centroid tilts its hue a touch ----
     float rimHue = s + 0.30 + 0.05 * (waveletCentroidSpring - 0.5) * quietGate;
-    col += lush(rimHue, 0.90) * rim * (1.0 + 0.40 * waveletBassSpring * quietGate + 0.6 * hero);   // palette-lit, never white
+    col *= 1.0 - heroDim;                                                                          // local, slow: not a global multiplier
+    col += lush(rimHue, 0.90) * rim * (1.0 + 0.40 * waveletBassSpring * quietGate + 0.45 * hero * (1.0 + 0.5 * waveletBassSpring * quietGate));   // palette-lit, never white; audio on the hero rim only
     col += lush(rimHue, 0.75) * rimSoft * (0.28 + 0.22 * waveletBand1Spring * quietGate + 0.45 * hero);
 
     // ---- keep a floor: gentle spatial vignette (constant mask, not audio) ----
