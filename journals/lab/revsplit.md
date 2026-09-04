@@ -125,3 +125,30 @@ so `REPEAT` wrap pulls neighbouring copies in and a closed single motif is never
 - `journals/lab/shots/contact-revsplit-boosted.png` — the sheet the verdict was written from
 - `journals/lab/shots/contact-revsplit-arms.png` — same tiles, unboosted
 - `scripts/lab-lum.py`, `scripts/lab-boost.py`, patched `lab-bench.mjs` / `lab-capture.mjs`
+
+## Contradiction with the wave-1 hub note
+
+The hub (`kb/reference/lattice-bead-mon-as-lattice-cell.md`) states the bead cell **loses -37.8%
+lit coverage** vs hex. That does not reproduce here, and the sign is wrong. Controller-off,
+seed-pinned, full resolution, the bead cell **gains**: kiku 5.63% -> 5.90%, ume 5.62% -> 5.98%
+(cutoff L>20/255, spread <=0.01pt, n=3).
+
+It is **not a threshold artifact** — swept the cutoff 5..80 and the bead gains at every one:
+
+| cutoff | all-hex | all-bead | rel |
+|---|---|---|---|
+| >5  | 75.96% | 98.27% | +29.4% |
+| >10 | 32.95% | 66.54% | +101.9% |
+| >20 |  5.63% |  5.90% | +4.8% |
+| >50 |  0.57% |  1.54% | +168.8% |
+| >60 |  0.08% |  0.80% | +858.3% |
+
+Remaining explanations: a different arm (H4 solid-fill genuinely alters coverage by saturating the
+coarsest level and occluding the deeper five), or an uncontrolled capture. Matters because the hub
+advises deciding stage brightness on lit coverage — a wrong sign aims the counter-ratchet at a
+deficit that does not exist.
+
+**Also: lit coverage is not threshold-robust in magnitude** — the same comparison reads +4.8% at
+cutoff 20 and +168.8% at cutoff 50. The histogram is concentrated in a narrow low band, so any
+cutoff inside it sits on a cliff. Lit-coverage figures are only comparable at equal cutoff; always
+quote it.
