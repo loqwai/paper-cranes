@@ -33,6 +33,12 @@
   .status { min-height:24px; margin:12px 0 6px; font-size:15px; color:var(--dim); }
   .status.ok { color:var(--ok); } .status.bad { color:var(--bad); }
   .row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:8px; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+  a.btn { display:block; text-align:center; text-decoration:none; border-radius:14px; padding:14px 16px; font-size:16px; font-weight:600; color:var(--ink); background:#2a1f42; }
+  .pv { margin-top:10px; border-radius:16px; overflow:hidden; background:#000; aspect-ratio:1; position:relative; }
+  .pv iframe { width:100%; height:100%; border:0; display:block; }
+  .pv .cap { position:absolute; left:0; right:0; bottom:0; padding:6px 10px; font-size:12px; color:var(--dim); background:linear-gradient(transparent,#000c); text-align:left; }
+  button.on { background:#3d2a6b; outline:2px solid var(--violet); }
   details { margin-top:12px; text-align:left; color:var(--dim); font-size:13px; }
   code { display:block; word-break:break-all; background:#0d0916; padding:10px; border-radius:10px; margin-top:6px; color:#c9bfe0; font-size:12px; }
   code.inline { display:inline; padding:2px 6px; margin:0; }
@@ -76,6 +82,14 @@
       <button id="prev">&#9664; prev shape</button>
       <button id="undo">undo &minus;1</button>
       <button id="next">next shape &#9654;</button>
+    </div>
+    <div class="row2">
+      <button id="preview">&#9654; preview this visual</button>
+      <a class="btn" id="open" target="_blank" rel="noopener">open live &#8599;</a>
+    </div>
+    <div class="pv" id="pv" hidden>
+      <iframe id="pvf" title="preview" allow="autoplay"></iframe>
+      <div class="cap" id="pvcap"></div>
     </div>
     <details>
       <summary>What goes on the tag</summary>
@@ -152,6 +166,24 @@ const shader = () => SHADERS.find(s => s.id === state.shader) || SHADERS[0]
 const origin = () => ORIGINS.find(o => o.id === state.origin) || ORIGINS[0]
 const bead = () => BEADS[state.idx]
 const urlFor = b => shader().url(origin().url, b)               // the visual (what the short link redirects to)
+// Inline preview: same-origin when possible (works on localhost too), no mic prompt, audio features
+// stubbed at mid values so every variant shows something instead of a silent frame.
+const STUBS = '&noaudio=true&embed=true&quietGate=1&energySpring=0.4&waveletBassSpring=0.45&waveletBand1Spring=0.4&waveletBand2Spring=0.35&waveletBand3Spring=0.35&waveletBand4Spring=0.3&waveletBand5Spring=0.3&waveletCentroidSpring=0.4&melodyFlow=0.3&spectralCrestSmooth=0.3&pitchClassMedian=0.25&spectralCentroidMedian=0.19&spectralEntropyMedian=0.87&spectralSpreadMedian=0.26&bass_env=0.5&mids_env=0.5&treble_env=0.4&energy_env=0.5&entropy_env=0.5&centroid_env=0.4&flux_env=0.3&bass_pump=0.3&drop_glow=0&pitch_pulse=0'
+const previewFor = b => {
+  const local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || ORIGINS.some(o => o.url === location.origin)
+  return shader().url(local ? location.origin : origin().url, b).replace('&fullscreen=true', '') + STUBS
+}
+let previewOpen = false
+const syncPreview = () => {
+  const b = bead()
+  $('preview').classList.toggle('on', previewOpen)
+  $('preview').textContent = previewOpen ? '■ close preview' : '▶ preview this visual'
+  $('pv').hidden = !previewOpen
+  if (!previewOpen) { if ($('pvf').src !== 'about:blank') $('pvf').src = 'about:blank'; return }
+  const src = previewFor(b.id)
+  if ($('pvf').src !== src) $('pvf').src = src
+  $('pvcap').textContent = `${b.id} · ${shader().label} · audio stubbed, no mic`
+}
 const tagFor = b => state.payload === 'short' ? shortFor(b) : urlFor(b)   // what is actually written
 // NDEF URI record: a 1-byte prefix code replaces "https://"; short-record header 3 bytes (6 if payload > 255); TLV wrapper 2 bytes (4 if > 254)
 const ndefBytes = url => { const payload = url.replace(/^https:\/\//, '').length + 1; return payload + (payload > 255 ? 6 : 3) + (payload > 252 ? 4 : 2) }
@@ -166,6 +198,8 @@ const render = () => {
   $('n').textContent = n
   $('warn').textContent = DUP[b.id] ? `same outline as ${DUP[b.id]} in the visual: the wall cannot tell them apart` : ''
   $('url').textContent = url
+  $('open').href = urlFor(b.id)
+  syncPreview()
   $('target').textContent = state.payload === 'short'
     ? `→ should redirect to: ${urlFor(b.id)}  (what it really redirects to is whatever short-links.mjs last pointed it at)`
     : ''
@@ -208,6 +242,7 @@ $('next').onclick = () => { state.idx = (state.idx + 1) % BEADS.length; setStatu
 $('prev').onclick = () => { state.idx = (state.idx + BEADS.length - 1) % BEADS.length; setStatus(`Now ${bead().id}.`); render() }
 $('undo').onclick = () => { const b = bead().id; if (state.counts[b]) state.counts[b]--; setStatus(`${b} count now ${state.counts[b] || 0}.`); render() }
 $('grid').onclick = e => { const t = e.target.closest('.tile'); if (!t) return; state.idx = +t.dataset.i; setStatus(`Now ${bead().id}.`); render(); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+$('preview').onclick = () => { previewOpen = !previewOpen; syncPreview() }
 $('payload').onchange = e => { state.payload = e.target.value; render() }
 $('shader').onchange = e => { state.shader = e.target.value; render() }
 $('origin').onchange = e => { state.origin = e.target.value; render() }
