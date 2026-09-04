@@ -56,6 +56,7 @@
 <body>
 <header>
   <h2>Mon beads · NFC writer</h2>
+  <select id="payload" title="what is written to the tag"></select>
   <select id="shader" title="which visual the tag opens"></select>
   <select id="origin" title="which deployment the tag points at"></select>
 </header>
@@ -77,9 +78,10 @@
       <button id="next">next shape &#9654;</button>
     </div>
     <details>
-      <summary>URL written to the tag</summary>
+      <summary>What goes on the tag</summary>
       <code id="url"></code>
       <div class="bytes" id="bytes"></div>
+      <div class="small" id="target"></div>
     </details>
   </section>
 
@@ -88,6 +90,7 @@
   <section class="notes">
     <p><strong>Bulk flashing:</strong> stay on one shape and tap every bead of that shape. The counter climbs and each write vibrates. Then press <em>next shape</em>. Counts are remembered on this phone.</p>
     <p><strong>Verify</strong> a bead by tapping it from the home screen: the popup must open the visual and the crest must be nameable on screen. Tags stay rewritable; nothing here locks them.</p>
+    <p><strong>Short links:</strong> by default a bead carries <code class="inline">2cb.pw/mon-&lt;shape&gt;</code>, which redirects to the visual. To change what every bead opens later (another visual, or production after the merge) re-point the eleven slugs with <code class="inline">node scripts/nfc/short-links.mjs --shader satellites --origin prod</code> instead of re-flashing. The shortener answers 301, so a phone that already followed a link may keep the old target until its cache expires.</p>
     <p><strong>Offline note:</strong> the tag stores only a URL. With no signal at the site the phone needs the visual already cached (open the same URL once beforehand so the PWA caches it) or a hotspot.</p>
     <p class="small">Old queues (taco / iris / coat) live in git history: <code class="inline">git show 97aeb1d:nfc-writer.html</code> &middot; <a href="#" id="reset">reset counts</a></p>
   </section>
@@ -124,11 +127,18 @@ const SHADERS = [
   { id:'chroma',     label:'ChromaDepth tunnel', url:(o,b)=>`${o}/?shader=redaphid/wip/lattice-bead-vj/chroma&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&${img(b)}&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&wavelet=true&onset_refractory_ms=380&fullscreen=true` },
 ]
 const TAG_BYTES = 504   // NTAG215 user memory
+const PAYLOADS = [
+  { id:'short', label:'short link (2cb.pw)' },
+  { id:'full',  label:'full URL' },
+]
+const SHORT_HOST = 'https://2cb.pw'
+const shortFor = b => `${SHORT_HOST}/mon-${b}`
 
 const KEY = 'cranes-nfc-mon'
 const q = new URLSearchParams(location.search)
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {} } catch { return {} } }
-const state = Object.assign({ idx:0, shader:'satellites', origin:'preview', counts:{} }, load())
+const state = Object.assign({ idx:0, shader:'satellites', origin:'preview', payload:'short', counts:{} }, load())
+if (q.get('payload')) state.payload = q.get('payload')
 if (q.get('shader')) state.shader = q.get('shader')
 if (q.get('origin')) state.origin = q.get('origin')
 if (q.get('bead')) { const i = BEADS.findIndex(b => b.id === q.get('bead')); if (i >= 0) state.idx = i }
@@ -136,25 +146,29 @@ const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)) } ca
 
 const $ = id => document.getElementById(id)
 const fill = (sel, items, cur) => { sel.innerHTML = items.map(i => `<option value="${i.id}" ${i.id===cur?'selected':''}>${i.label}</option>`).join('') }
-fill($('shader'), SHADERS, state.shader); fill($('origin'), ORIGINS, state.origin)
+fill($('payload'), PAYLOADS, state.payload); fill($('shader'), SHADERS, state.shader); fill($('origin'), ORIGINS, state.origin)
 
 const shader = () => SHADERS.find(s => s.id === state.shader) || SHADERS[0]
 const origin = () => ORIGINS.find(o => o.id === state.origin) || ORIGINS[0]
 const bead = () => BEADS[state.idx]
-const urlFor = b => shader().url(origin().url, b)
+const urlFor = b => shader().url(origin().url, b)               // the visual (what the short link redirects to)
+const tagFor = b => state.payload === 'short' ? shortFor(b) : urlFor(b)   // what is actually written
 // NDEF URI record: a 1-byte prefix code replaces "https://"; short-record header 3 bytes (6 if payload > 255); TLV wrapper 2 bytes (4 if > 254)
 const ndefBytes = url => { const payload = url.replace(/^https:\/\//, '').length + 1; return payload + (payload > 255 ? 6 : 3) + (payload > 252 ? 4 : 2) }
 
 const render = () => {
-  const b = bead(), url = urlFor(b.id), bytes = ndefBytes(url), n = state.counts[b.id] || 0
+  const b = bead(), url = tagFor(b.id), bytes = ndefBytes(url), n = state.counts[b.id] || 0
   $('sil').style.setProperty('--m', `url(images/beads/mon-${b.id}.png)`)
   $('sil').classList.toggle('dup', !!DUP[b.id])
   $('name').textContent = b.id
   $('jp').textContent = `${b.jp} · ${b.desc}`
-  $('pos').textContent = `shape ${state.idx + 1} of ${BEADS.length} · ${shader().label}`
+  $('pos').textContent = `shape ${state.idx + 1} of ${BEADS.length} · ${state.payload === 'short' ? 'short link → ' : ''}${shader().label}`
   $('n').textContent = n
   $('warn').textContent = DUP[b.id] ? `same outline as ${DUP[b.id]} in the visual: the wall cannot tell them apart` : ''
   $('url').textContent = url
+  $('target').textContent = state.payload === 'short'
+    ? `→ should redirect to: ${urlFor(b.id)}  (what it really redirects to is whatever short-links.mjs last pointed it at)`
+    : ''
   const bad = bytes > TAG_BYTES
   $('bytes').textContent = `≈ ${bytes} bytes of ${TAG_BYTES} (NTAG215)${bad ? ' — TOO LONG, the write will fail' : ''}`
   $('bytes').classList.toggle('bad', bad)
@@ -171,7 +185,7 @@ let writing = null
 const write = async () => {
   if (!('NDEFReader' in window)) { $('notice').classList.add('show'); setStatus('Web NFC unavailable here. Copy the URL below into NFC Tools.', 'bad'); return }
   if (writing) { writing.abort(); writing = null; $('write').classList.remove('armed'); $('write').textContent = 'Tap a bead to write'; setStatus('Cancelled.'); return }
-  const b = bead(), url = urlFor(b.id)
+  const b = bead(), url = tagFor(b.id)
   writing = new AbortController()
   $('write').classList.add('armed'); $('write').textContent = `Hold the ${b.id} bead to the phone… (tap to cancel)`
   setStatus('Waiting for a tag…')
@@ -194,6 +208,7 @@ $('next').onclick = () => { state.idx = (state.idx + 1) % BEADS.length; setStatu
 $('prev').onclick = () => { state.idx = (state.idx + BEADS.length - 1) % BEADS.length; setStatus(`Now ${bead().id}.`); render() }
 $('undo').onclick = () => { const b = bead().id; if (state.counts[b]) state.counts[b]--; setStatus(`${b} count now ${state.counts[b] || 0}.`); render() }
 $('grid').onclick = e => { const t = e.target.closest('.tile'); if (!t) return; state.idx = +t.dataset.i; setStatus(`Now ${bead().id}.`); render(); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+$('payload').onchange = e => { state.payload = e.target.value; render() }
 $('shader').onchange = e => { state.shader = e.target.value; render() }
 $('origin').onchange = e => { state.origin = e.target.value; render() }
 $('reset').onclick = e => { e.preventDefault(); state.counts = {}; render(); setStatus('Counts reset.') }
