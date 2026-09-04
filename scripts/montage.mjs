@@ -4,7 +4,7 @@
 import { chromium } from 'playwright'
 
 const PORT = process.env.PORT || 6994
-const BASE = `http://localhost:${PORT}/?shader=redaphid/wip/lattice-bead/2&controller=lattice-nav`
+const BASE = `http://localhost:${PORT}/?shader=redaphid/wip/lattice-bead/${process.env.SHADER_N || 3}&controller=lattice-nav`
     + '&noaudio=true&fullscreen=true&knob_161=1&knob_144=0.02&knob_1=0.429&navZoom=0.62'
     + '&seed=0.618&seed2=0.755&seed3=0.892&seed4=0.029&evoPhase=5.5&evoWarp=0.5&evoPlasma=0.5'
     + '&flowPhase=0.4&morphPhase=0.3&warpGrow=2&flybyZoom=0&navX=0&navY=0&quietGate=1'
@@ -47,7 +47,7 @@ const sheet = (title, tiles, cols) => `<style>
   .g{display:grid;grid-template-columns:repeat(${cols},1fr);gap:10px;padding:0 14px 18px}
   figure{margin:0} img{width:100%;display:block;border-radius:5px;background:#000}
   figcaption{margin-top:5px;font-size:11px;color:#b9b9cc;white-space:pre-line;line-height:1.3}
-</style><h1>${title}</h1><div class="sub">lattice-bead/2.frag &middot; frozen frame (time=8) &middot; seed grid K168=0.9 K169=0.28</div>
+</style><h1>${title}</h1><div class="sub">lattice-bead/${process.env.SHADER_N || 3}.frag &middot; frozen frame (time=8) &middot; seed grid K168=0.9 K169=0.28</div>
 <div class="g">${tiles.map(t => `<figure><img src="data:image/jpeg;base64,${t.b64}"><figcaption>${t.label}</figcaption></figure>`).join('')}</div>`
 
 const run = async () => {
