@@ -88,9 +88,10 @@
       <a class="btn" id="open" target="_blank" rel="noopener">open live &#8599;</a>
     </div>
     <div class="pv" id="pv" hidden>
-      <iframe id="pvf" title="preview" allow="autoplay"></iframe>
+      <iframe id="pvf" title="preview" allow="microphone *; autoplay *"></iframe>
       <div class="cap" id="pvcap"></div>
     </div>
+    <label class="small" id="livebox" hidden style="display:block;margin-top:8px;text-align:left"><input type="checkbox" id="livemic" checked> live mic in the preview (untick for a silent room: stubbed audio)</label>
     <details>
       <summary>What goes on the tag</summary>
       <code id="url"></code>
@@ -171,7 +172,9 @@ const urlFor = b => shader().url(origin().url, b)               // the visual (w
 const STUBS = '&noaudio=true&embed=true&quietGate=1&energySpring=0.4&waveletBassSpring=0.45&waveletBand1Spring=0.4&waveletBand2Spring=0.35&waveletBand3Spring=0.35&waveletBand4Spring=0.3&waveletBand5Spring=0.3&waveletCentroidSpring=0.4&melodyFlow=0.3&spectralCrestSmooth=0.3&pitchClassMedian=0.25&spectralCentroidMedian=0.19&spectralEntropyMedian=0.87&spectralSpreadMedian=0.26&bass_env=0.5&mids_env=0.5&treble_env=0.4&energy_env=0.5&entropy_env=0.5&centroid_env=0.4&flux_env=0.3&bass_pump=0.3&drop_glow=0&pitch_pulse=0'
 const previewFor = b => {
   const local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || ORIGINS.some(o => o.url === location.origin)
-  return shader().url(local ? location.origin : origin().url, b).replace('&fullscreen=true', '') + STUBS
+  const live = $('livemic').checked
+  // live: the real page with the real mic (same as the bead opens); stubbed: no mic prompt, mid-value features
+  return shader().url(local ? location.origin : origin().url, b).replace('&fullscreen=true', '') + (live ? '' : STUBS)
 }
 let previewOpen = false
 const syncPreview = () => {
@@ -179,10 +182,11 @@ const syncPreview = () => {
   $('preview').classList.toggle('on', previewOpen)
   $('preview').textContent = previewOpen ? '■ close preview' : '▶ preview this visual'
   $('pv').hidden = !previewOpen
+  $('livebox').hidden = !previewOpen
   if (!previewOpen) { if ($('pvf').src !== 'about:blank') $('pvf').src = 'about:blank'; return }
   const src = previewFor(b.id)
   if ($('pvf').src !== src) $('pvf').src = src
-  $('pvcap').textContent = `${b.id} · ${shader().label} · audio stubbed, no mic`
+  $('pvcap').textContent = `${b.id} · ${shader().label} · ${$('livemic').checked ? 'live mic (allow the microphone once)' : 'audio stubbed, no mic'}`
 }
 const tagFor = b => state.payload === 'short' ? shortFor(b) : urlFor(b)   // what is actually written
 // NDEF URI record: a 1-byte prefix code replaces "https://"; short-record header 3 bytes (6 if payload > 255); TLV wrapper 2 bytes (4 if > 254)
@@ -243,6 +247,7 @@ $('prev').onclick = () => { state.idx = (state.idx + BEADS.length - 1) % BEADS.l
 $('undo').onclick = () => { const b = bead().id; if (state.counts[b]) state.counts[b]--; setStatus(`${b} count now ${state.counts[b] || 0}.`); render() }
 $('grid').onclick = e => { const t = e.target.closest('.tile'); if (!t) return; state.idx = +t.dataset.i; setStatus(`Now ${bead().id}.`); render(); window.scrollTo({ top: 0, behavior: 'smooth' }) }
 $('preview').onclick = () => { previewOpen = !previewOpen; syncPreview() }
+$('livemic').onchange = () => syncPreview()
 $('payload').onchange = e => { state.payload = e.target.value; render() }
 $('shader').onchange = e => { state.shader = e.target.value; render() }
 $('origin').onchange = e => { state.origin = e.target.value; render() }
