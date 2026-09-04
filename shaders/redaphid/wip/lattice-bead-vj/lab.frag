@@ -292,9 +292,11 @@ uniform float spectralSkewMedian;      // SHAPE domain: harmonic tilt
 uniform float spectralEntropyMedian;   // QUALITY domain: chaos vs order
 uniform float spectralKurtosisMedian;  // SHAPE domain: peaked vs diffuse
 uniform float spectralSpreadMedian;    // SHAPE domain: harmonic width
-uniform float spectralCentroidMedian; // vj2 beat2: SLOW timbre brightness -> hue
 uniform float pitchClassMedian;        // TONAL domain: what key we are in     // iter148: controllers/flyby.js arc position — 1 = cruising in close, ~0.24 = wide
-uniform float paletteShift;  // PERMANENT palette rotation — grows on every big drop
+uniform float paletteShift;
+uniform float labRings;   // LAB: outline-echo rings (inset inside, travelling outside)
+uniform float labTint;    // LAB: per-bead hue offset keyed to the seed tile
+uniform float labCross;   // LAB: fold skeleton becomes an inset copy of the bead instead of the hex cross  // PERMANENT palette rotation — grows on every big drop
 uniform float warpGrow;      // PERMANENT structural warp — grows on every big drop
 // waveletBassZScore + wavelet_bassHit auto-declare (raw) — transient pulse punch only.
 
@@ -567,12 +569,12 @@ float seedDist(vec2 p, float pitch){
 
 // One seed octave: coverage + contour, sampled at scale k about centre c.
 // aa scales WITH k, or the antialiasing ramp stops matching the cells it is smoothing.
-vec2 seedLayer(vec2 p, vec2 c, float k, float pitch, float aaBase, float rimW){
+vec3 seedLayer(vec2 p, vec2 c, float k, float pitch, float aaBase, float rimW){
     float d  = seedDist((p - c) * k + c, pitch);
     float aa = clamp(aaBase * k * 1.5, 1e-4, pitch * 0.04);
     // rimW: 4.0 is 3.frag's hairline contour. LEGIBLE widens it into a drawn line, which is
     // what actually survives downscaling to a phone screen or a projector across a room.
-    return vec2(smoothstep(aa, -aa, d), smoothstep(aa * rimW, 0.0, abs(d)));
+    return vec3(smoothstep(aa, -aa, d), smoothstep(aa * rimW, 0.0, abs(d)), d / k);   // LAB: .z = signed distance in uv units
 }
 
 // depth-coherent reactivity: near layers shimmer w/ treble, far layers throb w/ bass
@@ -680,7 +682,8 @@ vec4 fractal(vec2 p){
         float beadTerm = beadDist(uv, hexR_i);
         float cellD    = mix(hexTerm, beadTerm, BEAD_MIX);
         float delt1 = abs(cellD - gRingGap);   // K144 RING GAP: distance from the hex ring to the drawn line — sets how HOLLOW each cell is, independently of its radius.        // MIDS breathe the hexagons
-        float delt2 = min(length(uv) - gCross, min(uv.x, uv.y)) + gCrossBias; // BASS taut cross (+K139 hex↔cross balance)
+        float delt2 = min(length(uv) - gCross, min(uv.x, uv.y)) + gCrossBias;
+        delt2 = mix(delt2, abs(cellD + gRingGap * 2.2), labCross);   // LAB CROSS: skeleton = inset copy of the bead cell, not the hex cross // BASS taut cross (+K139 hex↔cross balance)
         float m = min(delt1, delt2);
         float alias = aliasBase * 0.5 * scale;
         // iter149 LINE PROFILE (user: "it seems blurrier than it used to be"): the intensity split was
@@ -787,7 +790,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     //    Pad 3: X=135 LIGHT ANGLE  Y=136 RELIEF DEPTH.   All centred at 0.5 = neutral; bank4 gates
     //    the whole thing off when the phone isn't there (unset knobs read 0, sum = 0).
     // ── EXPLORE A/B resolved (all centred so 0.5 == 5.frag) ──────────────────────────────────
-    gThetaStep   = PI * (0.125 + evoT * 0.05 /* B3: drop plateau amplitude cut 0.16->0.05, user: no jarring camera jumps */ + EXA(knob_141, 0.20));   // K141 TWIST STEP (PI*0.025 .. PI*0.225)   // vj7-b1 SYMMETRY PLATEAU: + section-hashed offset (±PI*0.08), eased by sectionMix — shared with the zoom-wrap comp via gThetaStep so the octave seam stays closed while the symmetry walks
+    gThetaStep   = PI * (0.125 + evoT * 0.16 + EXA(knob_141, 0.20));   // K141 TWIST STEP (PI*0.025 .. PI*0.225)   // vj7-b1 SYMMETRY PLATEAU: + section-hashed offset (±PI*0.08), eased by sectionMix — shared with the zoom-wrap comp via gThetaStep so the octave seam stays closed while the symmetry walks
     gTwistFall   = 0.05 + EXA(knob_142, 0.16);                    // K142 TWIST FALLOFF (-0.03 .. 0.13)
     gInterleave  = EXA(knob_143, 0.30);                           // K143 INTERLEAVE    (-0.15 .. 0.15)
     gRingGap     = max(0.005, 0.10 + EXA(knob_144, 0.18));        // K144 RING GAP      (0.01 .. 0.19)
@@ -803,7 +806,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     gCrossBias += (spectralEntropyMedian - 0.80) * 0.16 * QGATE;   // iter150 CHAOS -> SHAPE: a noisy, unpredictable spectrum pushes cells toward the taut CROSS; an ordered, tonal one lets the HEXAGON win. Median => a section-scale morph, never a per-beat flick.   // vj2 iter 1: SPECTRAL TILT → cell SHAPE. Bass-heavy balance (+tilt) → the taut CROSS dominates; bright/hissy (−tilt) → HEXAGONS. Median = slow, structural (~seconds), never a per-frame flick.
     gSpin  += (knob_133 - 0.5) * 2.0 * bank4;                 // K133 FOLD TWIST
     gHexR  += (knob_134 - 0.5) * 0.15 * bank4;                // K134 CELL RADIUS
-    gScale  = 2.0 + evoC * 0.05 /* B3: 0.14->0.05 */ + (knob_131 - 0.5) * 0.5 * bank4;   /* iter 142: FOLD RATIO = section plateau. The spectral-width term moved every mirror seam at every level — the 'overlapping kaleidoscope sections breathing' the user called out. */   // vj2 iter 10: SPECTRAL WIDTH → FOLD RATIO. Wide/dense spectrum (spread ~0.85) opens the self-similarity ratio (+0.12), a narrow one tightens it (−0.15). Median → slow structural permutation, never a per-frame flick. // K131 FOLD RATIO
+    gScale  = 2.0 + evoC * 0.14 + (knob_131 - 0.5) * 0.5 * bank4;   /* iter 142: FOLD RATIO = section plateau. The spectral-width term moved every mirror seam at every level — the 'overlapping kaleidoscope sections breathing' the user called out. */   // vj2 iter 10: SPECTRAL WIDTH → FOLD RATIO. Wide/dense spectrum (spread ~0.85) opens the self-similarity ratio (+0.12), a narrow one tightens it (−0.15). Median → slow structural permutation, never a per-frame flick. // K131 FOLD RATIO
     // ── vj7-b7 COMPLEXITY RATCHET (user's original brief: "maybe there's a way to algorithmically
     //    add complexity?"). evoPhase is the energy-weighted MONOTONIC set clock (silence-frozen),
     //    so complexity only ever accrues, never oscillates and never follows a beat — the legal
@@ -813,7 +816,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     gLevelOpen  = gComplex * 0.45;          // more recursion generations drawn at once (see fractal())
     gInterleave += gComplex * 0.05;         // and the two interleaved sub-lattices separate further
     gShapePhase = morphPhase * 0.85 + bTime * 0.30;   // iter 138 RATCHET: strictly increasing -> the radius wave always travels coarse->fine, reads as continuous inward progression, never a rebound
-    gDepthFocus = clamp(0.35 + evoD * 0.12 /* B3: 0.35->0.12, level-window plateau read as a texture swap */ + (knob_132 - 0.5) * bank4
+    gDepthFocus = clamp(0.35 + evoD * 0.35 + (knob_132 - 0.5) * bank4
                       + (trebLive - 0.50) * 0.08 * QGATE          /* iter148: 0.16->0.08 and centred at 0.50 (trebLive actually runs ~0.55, so the old 0.35 centre pushed FINE almost permanently = filigree mush) */
                       - (1.0 - clamp(flybyZoom, 0.0, 1.0)) * 0.08,    /* iter149b: was 0.30 and that was MY BAD GUESS. I assumed the wide leg aliased into mush, but the measurement said the opposite - wide was the SHARPEST state (edge energy 0.09 wide vs 0.02 at close cruise), because the soft 0.12 line ramp goes sub-pixel out there. A 0.30 coarse bias stripped the level window down to only the biggest cells, so the wide shot read as a few soft blobs instead of a landscape. Keep a token bias for anti-alias headroom only. */
                       0.0, 1.0);   /* iter 142: level window = section plateau. The centroid SPRING faded whole detail-levels in/out with brightness = sections appearing/vanishing. */   // vj2 iter 12: 0.35/1.0 → 0.30/0.8 — on bright tracks the finest levels filled every cell with speckle (busy wallpaper); bias coarser, brightness pushes fine less hard   // biased COARSE (0.35): bold cells by default, filigree only when bright   // K132 DEPTH FOCUS   // BRIGHTNESS → fine detail, dark → coarse (level window)                            // fractal self-similarity ratio: slow permutation of the WHOLE structure (user iter 12: fractal permutations, not warps)
@@ -881,7 +884,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     uv += world;                                              // finger PAN — screen-consistent now
     // gentle terrain warp for texture; grows PERMANENTLY on big drops (warpGrow). A fixed function
     // of world position, so it varies by area but never reverses the pan direction.
-    uv += max(0.0, 0.03 + warpGrow * 0.012 /* B3: 0.04->0.012 */ + EXA(knob_150, 0.10)) * vec2(sin(uv.x * 3.0 + seed4 * TAU), cos(uv.y * 3.0 + seed4 * TAU));   // K150 TERRAIN WARP: the fixed positional wobble. 0 = a perfectly rigid lattice; high = the whole plane sags between landmarks.
+    uv += max(0.0, 0.03 + warpGrow * 0.04 + EXA(knob_150, 0.10)) * vec2(sin(uv.x * 3.0 + seed4 * TAU), cos(uv.y * 3.0 + seed4 * TAU));   // K150 TERRAIN WARP: the fixed positional wobble. 0 = a perfectly rigid lattice; high = the whole plane sags between landmarks.
 
     vec4 fr = fractal(uv);
     float lum = fr.x, field = fr.y, wave = fr.z, alpha = fr.w;
@@ -891,18 +894,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     //    image flows in colour with the music. Smoothed contours only — no jitter. QGATE so
     //    a silent room can't flash the hue. Plus per-area / per-device / permanent-drop offsets.
     float s = field
-            + regionHue(world) * max(0.0, 1.0 + EXB(knob_155, 2.0))   // K155 REGION HUE: how strongly WORLD POSITION re-paints the palette. 0 = one colour everywhere;
+            + regionHue(world) * max(0.0, 1.0 + EXB(knob_155, 2.0))   // K155 REGION HUE: how strongly WORLD POSITION re-paints the palette. 0 = one colour everywhere; high = every screen you pan to is a different colourway.
             + bTime * 0.002                                   // vj2 iter 5: was 0.012 = a full hue turn every ~4 min (0.24 turns/min — 8× the user's 'muted, slow' tolerance and the biggest single palette mover). Now ~1 turn / 25 min.
             + (melodyFlow * 0.05 + pitchClassMean * 0.10) * QGATE   // vj2 iter 4: MELODY → palette, but SLOW. melodyFlow slews 0.03/frame (a melodic leap re-tints the whole field 0.075 in ~0.3 s = the palette 'flash' the meter caught: hue 0.46→0.61 inside one track). pitchClassMean is the ~8 s rolling KEY estimate — it carries 2/3 of the weight now. (was melodyFlow*0.15; 0.32 before iter 17)
             + waveletCentroidSpring * 0.07 * QGATE        // BRIGHTNESS → hue tint (0.14 → 0.07)
             + (bassNoteFlow - 0.5) * 0.05 * QGATE         // BASSLINE NOTE → hue tilt (was 0.16: whole-field re-tints on note changes read as colour FLASHING — user iter 9) (centred: a mid bass note is neutral; not a phone fader, so it keeps listening under TAKE OVER)
             + (sectionMode - (1.0 - sectionMix)) * 0.03       // each DROP glides the palette 0.03 further (was 0.07) over its ~4s crossfade (mix eases the step; no snap)
             + DIAL_HUE                                        // dial 1 (knob_2): touch palette rotation
-            + paletteShift * 0.35                             // permanent live mutation (B3: x0.35, a drop step was a 0.05-0.12 turn hue jump)
+            + paletteShift                                    // permanent live mutation
             + seed;                                           // per-device base palette identity
-    // vj2 beat2 (2026-09-04): SLOW hue from the music's KEY and TIMBRE medians. 500-frame medians
-    // move over seconds, never per frame, so the palette follows the slowest music (user: "medians or slopes").
-    s += (pitchClassMedian - 0.5) * 0.30 + (spectralCentroidMedian - 0.35) * 0.25 + (spectralEntropyMedian - 0.6) * 0.12;   // SLOWHUE-B2 high = every screen you pan to is a different colourway.
     vec3 col = lush(s, lum);                                  // (brightness handled by the bloom below)
     col += lush(s + 0.12 + 0.05 * sin(evoPhase * 0.7), 0.9) * wave * max(0.0, 0.6 + EXB(knob_158, 1.1));   // K158 ACCENT: strength of the travelling pulse accent.   // pulse accent (hue-shifted, brighter); the SET CLOCK swings the accent 0.08..0.28 off base over minutes
 
@@ -1018,9 +1018,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         float kB = mix(2.0, exp2(1.0 - zf), unlock);
         float aaBase = length(fwidth(uv));
         float rimW = mix(4.0, 16.0, LEGIBLE);
-        vec2  lA = seedLayer(uv, world, kA, seedPitch, aaBase, rimW);
-        vec2  lB = seedLayer(uv, world, kB, seedPitch, aaBase, rimW);
-        vec2  sl = mix(lA, lB, smoothstep(0.0, 1.0, zf));
+        vec3  lA = seedLayer(uv, world, kA, seedPitch, aaBase, rimW);
+        vec3  lB = seedLayer(uv, world, kB, seedPitch, aaBase, rimW);
+        vec3  sl = mix(lA, lB, smoothstep(0.0, 1.0, zf));
+        // LAB TINT: hue offset per seed tile, so neighbouring beads are individuals (hash11 = the stable hash)
+        vec2  tileId = floor(((uv - world) * kA + world) / seedPitch + 0.5);
+        float labT = (hash11(dot(tileId, vec2(7.0, 113.0)) + seed2 * 31.0) - 0.5) * 0.30 * labTint;
         float sd  = 0.0;
         // AA width from the derivative of uv, which is continuous — taking it from sd
         // would blow up on the fract() seam and draw a grid of dark lines.
@@ -1072,7 +1075,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // bead's OWN ink makes the silhouette the dominant edge in frame. Masked by cov, so
         // it is spatially structured and cannot strobe; driven by a HAND knob, so no geometry
         // moves with the music. At LEGIBLE = 0 this line is a no-op and 3.frag is reproduced.
-        vec3 beadInk = lush(s, mix(0.62, 0.80, pump));
+        vec3 beadInk = lush(s + labT, mix(0.62, 0.80, pump));
         col = mix(col, beadInk, cov * LEGIBLE * 0.72);
 
         // Ground recede, deepened by LEGIBLE. This is the RATCHET.
@@ -1082,8 +1085,23 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // so the figure pays it back. Without this pair, raising LEGIBLE would just dim the
         // picture - which is exactly the mistake the ground-recede made on its first outing
         // (corr(energySpring, brightness) -0.68: a drop made the frame DARKER and FLATTER).
-        col += lush(s, 0.95) * cov * knob_168 * (0.05 + 0.58 * pump) * mix(1.0, 1.9, LEGIBLE);
+        col += lush(s + labT, 0.95) * cov * knob_168 * (0.05 + 0.58 * pump) * mix(1.0, 1.9, LEGIBLE);
         col += lush(s + 0.33, 1.0) * rim * knob_168 * (0.22 + 0.45 * trebLive * QGATE) * mix(1.0, 1.6, LEGIBLE);
+        // ── LAB: OUTLINE-ECHO RINGS ── concentric copies of the crest's OWN outline. Inside the
+        //    silhouette they are inset copies (the fill is made of the bead); outside they are
+        //    ripples that leave the bead and meet the neighbour's at the tile boundary. They travel
+        //    ONE WAY on flowPhase + bTime (monotonic, rate-not-angle) and fade with distance from
+        //    the outline. Audio touches AMPLITUDE only (bassLive is a spring), never the phase.
+        if (labRings > 0.001){
+            float sdn      = sl.z / seedPitch;                          // signed distance, tile-relative
+            float ringP    = 0.045;                                      // ring spacing, tile-relative
+            float ph       = flowPhase * 0.12 + bTime * 0.05;            // monotonic -> rings move OUTWARD
+            float rq       = abs(fract(sdn / ringP - ph) - 0.5) * ringP * seedPitch;   // distance to nearest ring, uv units
+            float ring     = smoothstep(aaBase * 2.5, 0.0, rq);
+            float reach    = exp(-abs(sdn) / mix(0.10, 0.22, cov));      // inside reaches further than outside
+            float ringAmt  = ring * reach * mix(0.30, 0.55, cov) * labRings * knob_168 * (0.55 + 0.45 * bassLive * QGATE);
+            col += lush(s + labT + mix(0.12, 0.33, cov), 0.9) * ringAmt;
+        }
         // ── DROP FLARE (K179) ──────────────────────────────────────────────────
         // energyZScore was measured as the STRONGEST fast signal on this input (live
         // range 1.20 over 8s) and the shader ignored it completely — 0 references. On a

@@ -1,3 +1,111 @@
+// LATTICE-BEAD (detail.frag - FORK of arrival.frag on 2026-09-04) - THE QUIET CHANNELS.
+//
+// arrival.frag gave the frame its loud gesture (the crest resolving on an onset). This adds the
+// quiet ones: five SUBTLE, always-on details keyed to features almost nothing uses.
+//
+// EVERY SIGNAL WAS MEASURED ALIVE BEFORE BEING WIRED. The previous tick keyed the rim hue to
+// `pitchClassMedian`, which measures range 0.000 on this rig - that channel did nothing at all.
+// Measured over 9s of live audio:
+//     spectralEntropySmooth 0.821 · spectralCrestSmooth 0.818 · spectralRoughnessSmooth 0.776
+//     waveletCentroidSpring 0.403 · waveletBand5Spring 0.396 · spectralSpreadRSquared 0.291
+//
+// NEGATIVE RESULT WORTH KEEPING: the whole *Slope* family is ABSENT on this build. Every one of
+// energySlope / bassSlope / spectralCentroidSlope returned no value, despite CLAUDE.md
+// documenting them. Measure before wiring.
+//
+// THE R-SQUARED FAMILY IS THE FIND. It is trend CONFIDENCE - "is this change steady or chaotic"
+// - and nothing in this shader family had used it. It idles near 0.04 and climbs toward 0.29
+// when a feature is genuinely travelling in a straight line, which makes it the right gate for
+// detail that should only appear when the music is GOING somewhere.
+//
+// FIVE CHANNELS, FIVE PROPERTIES, NO OVERLAP (the coat journals' proven routing pattern):
+//   TREND RINGS <- spectralSpreadRSquared   concentric contours inside the bead; crisp only on a
+//                                           confident trend, dissolved when the spectrum churns
+//   GRAIN       <- spectralRoughnessSmooth  fine speckle density across the bead interior
+//   RIM WIDTH   <- spectralCrestSmooth      the contour breathes thicker on peaky material
+//   HAZE        <- waveletBand5Spring       how much interior detail dissolves
+//   HUE TILT    <- waveletCentroidSpring    replaces the DEAD pitchClassMedian
+//
+// All five are smoothed springs or regression statistics - no raw values, no z-scores - so none
+// can shudder. Coefficients are small on purpose: the brief was SUBTLE, and the frame already
+// has its loud gesture. None of these touch geometry, and none is a global multiplier: every one
+// is masked by `cov` or `rim`, so the ground between beads is untouched and cannot strobe.
+//
+// DETAIL defaults to 0.75; ?detail=0 reproduces arrival.frag exactly.
+// LATTICE-BEAD (arrival.frag - FORK of negative.frag on 2026-09-04) - THE CREST ARRIVES.
+//
+// The art critic's verdict on motion, which is the sharpest thing said about this project:
+//   "A car alarm responds to sound. This system is closer to the car alarm."
+// Quiet and loud were the same picture with the gain up - a DIMMER SWITCH. The infinity zoom
+// was perceptually invisible (a self-similar lattice has no landmark to pass, so 28 seconds of
+// dive gave six identical frames). And mirror symmetry is a STILLNESS OPERATOR: when a
+// symmetric field changes, every copy changes at once, so a hit reads as an overall shimmer
+// rather than a hit. The system had no visual word for NOW.
+//
+// Worse, the two halves of the project were fighting: the crest only resolves in a knife-edge
+// window of size and framing, so any audio touching zoom or size destroyed recognition.
+//   "The more musical it gets, the less it's a bead. The more it's a bead, the less it moves."
+//
+// THIS FILE DISSOLVES THAT rather than tuning around it. Legibility stops being a SETTING and
+// becomes an EVENT: the lattice rests dark and fine, and on the onset the crest RESOLVES OUT of
+// it at full clarity, holds, and breathes back. Recognition does not need to be continuous - it
+// needs to happen once, hard. One second at full clarity on the drop is more nameable than four
+// minutes of a permanently legible blob, because the arrival is what makes the eye look up.
+// It also gives the NFC tap its theatre: the wall does not display your crest, it resolves into
+// it in front of everyone, then dissolves back.
+//
+// ── THE TWO CHOICES THAT MATTER ────────────────────────────────────────────────────────
+// ONSET, NOT LEVEL. Measured per-frame jitter: energyZScore 0.3072 / energySpring 0.0320 /
+//   onsetEnvelope 0.0087. Loudness is a curve; hits are where music keeps its time. Requires
+//   ?onset_refractory_ms=380 or the detector free-runs at ~213 BPM chasing hi-hats.
+// THE ARRIVAL TRAVELS. A simultaneous change is precisely what the mirror cancels, so the
+//   resolve is gated by a radial front expanding from the world centre - near cells resolve
+//   first, far cells a beat later. The copies fall out of phase, so the moment survives.
+//
+// ARRIVE defaults to 0.85: this file exists to do this. ?arrive=0 restores static behaviour.
+//
+// NOT CONFIRMED BY A HUMAN EYE YET. Built while the user slept, from a critique rather than
+// from watching it run. The hold/release times especially are guesses that want a real listen.
+// LATTICE-BEAD (negative.frag - FORK of 4.frag on 2026-09-04) - LET THE BLACK IN.
+//
+// 4.frag claimed recognition was solved. An art critic reviewing the render grid disagreed, and
+// they were right: 4 crests clear, 2 arguable, 5 FAILED. kikyo and ume were "the same picture";
+// suhama collapsed into katabami; tomoe read as "an egg with a scratch on it".
+//
+// THE DIAGNOSIS, which measurement supports: "eleven cookie cutters and one dough". Every mon
+// got the same interior - same field, same dot rows, same chevron spine - so the SILHOUETTE was
+// the only thing carrying identity, and a soft halo was blurring even that. Blur eats corners
+// first and curves last, which is why every crest that passed has a STRAIGHT LINE in it (kikko,
+// hakkaku, matsukawa, kiku) and every rounded one collapsed into every other rounded one.
+//
+// A mon is a FIGURE/GROUND composition: the gaps do half the drawing. 4.frag filled them in.
+//
+// WHERE THE GAPS COME FROM. Not from the source art. Measured: all eleven generators in
+// nfc-bead/beads/glow-set/japanese.py produce EXACTLY ONE contour, zero discarded area. (That
+// file's trace() does keep only the largest-area loop, but there is never a second loop to
+// lose - the mon are authored as solid silhouettes because they are printed as solid beads.)
+// So the interior must be DERIVED, and the baked G channel is a true signed distance field,
+// which is precisely the right tool.
+//
+// THE MOVE (knob_181, or ?negative=0..1; default 0 = 4.frag exactly):
+//   erode the silhouette inward by `inset` and carve the band between outline and inset to
+//   BLACK. The gap follows each motif's OWN geometry, so it differs per mon exactly where the
+//   mon differ: under erosion a SHARP lobe pinches off while a ROUND lobe stays open. That is
+//   what separates kikyo (pointed bellflower) from ume (round plum), which the outline alone
+//   does not. It also happens to be how several of these crests are actually drawn - kikyo with
+//   a ring, ume with separated petals.
+//
+// Two more fixes from the same critique:
+//   * HALO TIGHTENED. It bled past every edge and ate the corners that carry identity.
+//   * DEFAULT PALETTE MOVED OFF THE JET COLORMAP. theme 0 + paletteShift 1.35 is yellow-green
+//     body, cyan mids, orange-red hotspots on black - thermal-instrument default output, "the
+//     visual signature of nobody having made a decision", and it was on the hero image. The
+//     presets here lead with Deep Cyan and Ember, which were judged the only two schemes that
+//     read as chosen rather than sampled.
+//
+// WHY BLACK AND NOT A DARK TINT: a true black gap is a VALUE contrast, and value contrast is
+// the one thing every palette in the set lacked - all five rotated hue while keeping the same
+// brights and darks. A jet colormap cannot survive next to real black, which is the point.
 // LATTICE-BEAD (4.frag - FORK of 3.frag on 2026-09-04, overnight, user asleep) - THE LEGIBLE BEAD.
 // 3.frag stays the onset fork. 4 attacks the ONE thing the whole project is for and that every
 // iteration so far has failed: RECOGNITION. A stranger, at a distance, in a dark room, should be
@@ -34,46 +142,6 @@
 // NOT YET CONFIRMED BY A HUMAN. Built while the user was asleep. The recognition claim is the
 // one thing here that a measurement cannot settle - it needs an actual pair of eyes. The default
 // of 0 is off; the recognition presets below set it to 1 explicitly.
-// ==== PRESETS - THE RECOGNITION RECIPE ====
-// Found by sweep, not guessed. knob_169=0.60 (cell pitch ~0.44 in uv), navZoom=0.14 (the only
-// framing that leaves dark ground AROUND the figure), legible=1, knob_168=1.0. Note that the
-// pitch is a WINDOW, not a maximum: past knob_169=0.75 the cell grows so large the camera sits
-// INSIDE one bead and the silhouette disappears. All 11 mon are individually nameable here.
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-suhama.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&name=suhama%20%28three-mound%20sandbar%29
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-ogi.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&name=ogi%20%28folded%20fan%29
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-kikyo.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&name=kikyo%20%28bellflower%29
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-ume.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&name=ume%20%28plum%20blossom%29
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-katabami.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&name=katabami%20%28wood%20sorrel%29
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-tomoe.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&name=tomoe%20%28comma%20and%20tail%29
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-mokko.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&name=mokko%20%28melon%20quatrefoil%29
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-kikko.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&name=kikko%20%28tortoise-shell%20hexagon%29
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-kiku.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&name=kiku%20%28chrysanthemum%29
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-matsukawa.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&name=matsukawa%20%28pine-bark%20lozenge%29
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-hakkaku.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&name=hakkaku%20%28eight-pointed%20star%29
-// -- mon x palette: the same five silhouettes in each curated palette --
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-hakkaku.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=1&paletteShift0=0.45&name=hakkaku%20Deep%20Cyan
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-hakkaku.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=1&paletteShift0=1.05&name=hakkaku%20Ember
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-hakkaku.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=1&paletteShift0=0.75&name=hakkaku%20Violet
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-hakkaku.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=0&paletteShift0=0.15&name=hakkaku%20Acid%20Lime
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-tomoe.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=1&paletteShift0=0.45&name=tomoe%20Deep%20Cyan
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-tomoe.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=1&paletteShift0=1.05&name=tomoe%20Ember
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-tomoe.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=1&paletteShift0=0.75&name=tomoe%20Violet
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-tomoe.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=0&paletteShift0=0.15&name=tomoe%20Acid%20Lime
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-kiku.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=1&paletteShift0=0.45&name=kiku%20Deep%20Cyan
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-kiku.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=1&paletteShift0=1.05&name=kiku%20Ember
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-kiku.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=1&paletteShift0=0.75&name=kiku%20Violet
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-kiku.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=0&paletteShift0=0.15&name=kiku%20Acid%20Lime
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-matsukawa.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=1&paletteShift0=0.45&name=matsukawa%20Deep%20Cyan
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-matsukawa.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=1&paletteShift0=1.05&name=matsukawa%20Ember
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-matsukawa.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=1&paletteShift0=0.75&name=matsukawa%20Violet
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-matsukawa.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=0&paletteShift0=0.15&name=matsukawa%20Acid%20Lime
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-kikko.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=1&paletteShift0=0.45&name=kikko%20Deep%20Cyan
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-kikko.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=1&paletteShift0=1.05&name=kikko%20Ember
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-kikko.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=1&paletteShift0=0.75&name=kikko%20Violet
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-kikko.png&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=0&paletteShift0=0.15&name=kikko%20Acid%20Lime
-// -- the texture end of the dial: legible=0 reproduces 3.frag exactly --
-//https://visuals.beadfamous.com/?shader=redaphid/wip/lattice-bead/4&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-kikyo.png&knob_161=1&knob_168=1.0&knob_169=0.28&legible=0&navZoom0=0.30&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&name=Kikyo%20texture%20%28legible%200%29
-// ==== END PRESETS ====
 // LATTICE-BEAD (3.frag - FORK of 2.frag on 2026-09-04, /vibej iteration 9, Eric Prydz set on the
 // virtual mic) - THE ONSET FORK. 2.frag stays the snapshot of the structure run: the bead lattice,
 // the stable hash, the gamut fix, the four themes, the seed grid. 3 is the first iteration whose
@@ -252,6 +320,19 @@ uniform float spectralRoughnessSmooth;   // smoothed grit → iridescent sparkle
 // Shading channel per the hierarchy — never geometry. max() keeps it one-sided; the pre-existing
 // min(0.85,...) clamp still protects lumMin.
 uniform float autofly;     // ?autofly=0..1 enables the camera wander (default 0 = off)
+uniform float detail;      // ?detail=0..1 the five quiet channels (default 0.75)
+uniform float spec;        // ?spec=0..1 hairline specular on the contour (default 0.7)
+uniform float sweep;       // ?sweep=0..1 travelling light across the bead wall (default 0.6)
+uniform float breathe;     // ?breathe=0..1 per-bead slow scaling (default 0.85)
+// Controller / regression outputs the wrapper does NOT auto-declare, so they must be
+// declared by hand or the shader fails with an undeclared-identifier error. Both were
+// measured alive on this rig; spectralSpreadRSquared is the trend-confidence signal that
+// nothing else in this shader family had ever used.
+uniform float spectralEntropySmooth;
+uniform float spectralSpreadRSquared;
+uniform float arrive;      // ?arrive=0..1 how much of legibility is an EVENT (default 0.85)
+uniform float arriveSpeed; // ?arriveSpeed= how fast the resolve front travels outward
+uniform float negative;    // ?negative=0..1 carve shape-following black gaps; knob_181 wins
 uniform float legible;     // ?legible=0..1 figure/ground separation (see header); knob_180 wins
 uniform float theme;       // ?theme=0..3 selects a palette from the lattice family
 uniform float divePhase;   // dive scrub offset; any numeric query param becomes a float
@@ -292,7 +373,6 @@ uniform float spectralSkewMedian;      // SHAPE domain: harmonic tilt
 uniform float spectralEntropyMedian;   // QUALITY domain: chaos vs order
 uniform float spectralKurtosisMedian;  // SHAPE domain: peaked vs diffuse
 uniform float spectralSpreadMedian;    // SHAPE domain: harmonic width
-uniform float spectralCentroidMedian; // vj2 beat2: SLOW timbre brightness -> hue
 uniform float pitchClassMedian;        // TONAL domain: what key we are in     // iter148: controllers/flyby.js arc position — 1 = cruising in close, ~0.24 = wide
 uniform float paletteShift;  // PERMANENT palette rotation — grows on every big drop
 uniform float warpGrow;      // PERMANENT structural warp — grows on every big drop
@@ -387,6 +467,33 @@ mat2 rot2(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 // (mean luminance 103.37 for both, caught by the sweep). max() has no unset state, so 0 is
 // a real, reachable value and the "legible=0 reproduces 3.frag" claim is actually true.
 #define LEGIBLE (clamp(max(knob_180, legible), 0.0, 1.0))
+// NEGATIVE: how hard the eroded band is carved to black. Uses max() rather than the house LVK
+// convention deliberately - LVK cannot express zero (it reads 0 as "unset, use the baked
+// default"), which silently made ?legible=0 render as 0.55 and cost a sweep to catch.
+#define NEGATIVE (clamp(max(knob_181, negative), 0.0, 1.0))
+// ARRIVE: how much of legibility is handed to the EVENT rather than held as a static setting.
+// Defaults ON (0.85) because that is the point of this fork. max() so 0 is reachable - the
+// house LVK convention cannot express zero and that bug already cost one sweep.
+#define ARRIVE      (clamp(max(knob_182, arrive > 0.0 ? arrive : 0.85), 0.0, 1.0))
+// DETAIL: master for the five quiet channels. max() so 0 is reachable (the LVK convention
+// cannot express zero - that bug already cost one sweep).
+#define DETAIL (clamp(max(knob_183, detail > 0.0 ? detail : 0.75), 0.0, 1.0))
+// BREATHE: per-bead scaling amount. Geometry, so it is deliberately capped and slow-driven only.
+#define BREATHE (clamp(max(knob_184, breathe > 0.0 ? breathe : 0.85), 0.0, 1.0))
+// SWEEP: a light that TRAVELS across the wall of beads. max() so 0 is reachable.
+#define SWEEP (clamp(max(knob_185, sweep > 0.0 ? sweep : 0.6), 0.0, 1.0))
+// SPEC: the hairline highlight. max() so 0 is reachable.
+#define SPEC (clamp(max(knob_186, spec > 0.0 ? spec : 0.7), 0.0, 1.0))
+#define ARR_SPEED   (arriveSpeed > 0.0 ? arriveSpeed : 2.6)
+// THE RELEASE MUST BE SHORT RELATIVE TO THE BEAT. First attempt used 0.62s reasoning that the
+// crest should "hold for a beat" at ~125 BPM. That was backwards and measurement caught it: one
+// beat is 0.48s, so a 0.62s release only decays to exp(-0.48/0.62) = 0.46 before the next onset
+// re-triggers it. The envelope then sat at mean 0.70 - a NEARLY CONSTANT signal - and every
+// correlation against the picture came back under 0.17 at every lag from 0 to 0.5s. An event
+// that never ends is not an event; it is a level, which is the exact thing this fork exists to
+// stop doing. 0.18s decays to 0.07 within a beat, so the crest genuinely arrives and leaves.
+#define ARR_ATTACK  0.020
+#define ARR_RELEASE 0.18
 #define DIAL_HUE   ((knob_2 - 0.5) * 2.0 * DIAL_ON(knob_2))   // dial 1: palette rotation
 #define SEED_ZOOM LVK(knob_163, 0.045, knob_163 * 0.30)   // octaves / second
 #define SEED_FLOW LVK(knob_162, 0.020, knob_162 * 0.15)   // bass pacing on the dive
@@ -560,19 +667,110 @@ float beadDist(vec2 p, float r){
 // mirroring checkerboards the handedness, and a mirrored cell is not reachable by any
 // p -> p*M the fold already applies, so downstream you would need a parity bit nothing
 // here tracks. A seed has to mean "this one motif, repeated".
+// hash11 is defined further down the file (line ~784) but the per-bead breathing needs it up
+// here, so FORWARD-DECLARE it. GLSL ES 3.00 allows a prototype; without one the compiler reports
+// "no matching overloaded function found", which the STATIC validator does not catch - only a
+// real GL compile does. That is why every edit here is render-checked, not just linted.
+float hash11(float p);
+
+// EIGHT SLOW DRIVERS, one per hash bucket, so neighbouring beads breathe on DIFFERENT musical
+// quantities instead of in unison. Every one measured alive on this rig (ranges in the header);
+// every one is a smoothed spring or a regression statistic, never a raw or z-scored value.
+// ELEVEN SLOW DRIVERS, each NORMALISED to the range it actually shows on this rig, so a median
+// with a 0.03 span contributes as much character as a spring with a 0.82 span. Without that the
+// medians would be inert - which is the same class of mistake as wiring pitchClassMedian (range
+// 0.000) and getting nothing.
+//
+// MEDIANS AND MEANS ARE THE RIGHT TOOL FOR SLOW DRIFT and are used deliberately here: a median
+// over the history window barely moves within a bar but wanders across a track, which is exactly
+// the "overall low/slow variation" this wants. MEASURED live ranges are in the comments.
+//
+// NOTE: the *Slope* family is NOT available on this build - every energySlope / bassSlope /
+// spectralCentroidSlope reads absent, despite being documented. Medians and means are alive.
+//
+// ELEVEN buckets rather than eight because a deterministic render showed NO visible bead landing
+// in the 8-bucket entropy slot (moving that driver alone changed 0.0% of pixels): with only ~20
+// beads on screen, coarse buckets leave slots empty. More drivers, finer spread.
+float normDrive(float v, float centre, float span){
+    return clamp(0.5 + (v - centre) / max(span, 1e-4), 0.0, 1.0);
+}
+float slowDriver(float h){
+    float b = floor(h * 11.0);
+    if (b <  0.5) return normDrive(spectralCrestSmooth,       0.5,   0.82);   // measured 0.818
+    if (b <  1.5) return normDrive(spectralRoughnessSmooth,   0.35,  0.78);   // measured 0.776
+    if (b <  2.5) return normDrive(spectralEntropySmooth,     0.5,   0.82);   // measured 0.821
+    if (b <  3.5) return normDrive(waveletCentroidSpring,     0.5,   0.40);   // measured 0.403
+    if (b <  4.5) return normDrive(waveletBand5Spring,        0.5,   0.40);   // measured 0.396
+    if (b <  5.5) return normDrive(waveletBassSpring,         0.35,  0.53);   // measured 0.530
+    if (b <  6.5) return normDrive(energySpring,              0.38,  0.34);   // measured 0.339
+    if (b <  7.5) return normDrive(spectralSpreadRSquared,    0.10,  0.29);   // measured 0.291
+    // the three medians: tiny spans, so they need real amplification to read at all
+    if (b <  8.5) return normDrive(spectralSpreadMedian,      0.26,  0.05);   // measured 0.049
+    if (b <  9.5) return normDrive(spectralKurtosisMedian,    0.50,  0.045);  // measured 0.044
+    return          normDrive(spectralSkewMedian,             0.50,  0.03);   // measured 0.029
+}
+
 float seedDist(vec2 p, float pitch){
-    vec2 f = (fract(p / pitch + 0.5) - 0.5) * pitch;   // one tile, centred, [-pitch/2, pitch/2)
-    return beadDist(f, pitch * 0.5);                   // beadDist rescales: sample at p/r, multiply back by r
+    vec2 q  = p / pitch + 0.5;
+    vec2 id = floor(q);                                // which bead this is, in world space
+    vec2 f  = (fract(q) - 0.5) * pitch;                // one tile, centred, [-pitch/2, pitch/2)
+
+    // ── PER-BEAD BREATHING ────────────────────────────────────────────────────────
+    // Each bead hashes to ONE of eight slow drivers and to its own phase, so the wall reads as
+    // many individuals breathing at their own rate rather than one lattice pulsing. hash11 is
+    // the stable hash: fract(sin(x)*43758.5453) is unstable in float32 and caused a two-state
+    // flicker in this shader's history - never reintroduce it.
+    float h    = hash11(id.x * 37.1 + id.y * 91.7 + 5.0);
+    float ph   = hash11(id.x * 13.3 + id.y * 7.9) * 6.2831853;
+    float slow = clamp(slowDriver(h), 0.0, 1.0);
+    // +/-12% total. The audio term is capped at 8% and an always-on 4% sine keeps a bead moving
+    // even while its own feature sits still, so nothing ever looks frozen.
+    float sc = 1.0 + BREATHE * (0.08 * (slow - 0.5) * 2.0 + 0.04 * sin(iTime * 0.11 + ph));
+    sc = max(sc, 0.55);                                // never invert or collapse the field
+    // beadDist samples at p/r and multiplies back by r, so dividing in and multiplying out keeps
+    // the result a true distance at the new scale.
+    return beadDist(f / sc, pitch * 0.5) * sc;
 }
 
 // One seed octave: coverage + contour, sampled at scale k about centre c.
 // aa scales WITH k, or the antialiasing ramp stops matching the cells it is smoothing.
-vec2 seedLayer(vec2 p, vec2 c, float k, float pitch, float aaBase, float rimW){
+vec3 seedLayer(vec2 p, vec2 c, float k, float pitch, float aaBase, float rimW, float inset){
     float d  = seedDist((p - c) * k + c, pitch);
     float aa = clamp(aaBase * k * 1.5, 1e-4, pitch * 0.04);
     // rimW: 4.0 is 3.frag's hairline contour. LEGIBLE widens it into a drawn line, which is
     // what actually survives downscaling to a phone screen or a projector across a room.
-    return vec2(smoothstep(aa, -aa, d), smoothstep(aa * rimW, 0.0, abs(d)));
+    float cov = smoothstep(aa, -aa, d);
+    float rim = smoothstep(aa * rimW, 0.0, abs(d));
+    // THE INSET SILHOUETTE: the same shape eroded inward by `inset`. The band between the two
+    // (cov - inner) is a gap that follows the motif's OWN geometry, which is the whole point -
+    // a sharp lobe pinches off under erosion while a round one stays open, so this separates
+    // crests that share an outline. z = 0 when inset = 0, so NEGATIVE = 0 is a clean no-op.
+    // MEASURED CORRECTION. The first version returned the whole annulus (cov - inner), which
+    // dimmed most of the interior instead of drawing in it: mean luminance fell 51.0 -> 40.0
+    // (-22%) while the fraction of near-black pixels did not move AT ALL (48.5% -> 48.5%). A
+    // wide soft dimming is not negative space - a mon's internal division is a LINE. So draw a
+    // thin band ON the eroded contour instead, masked to the interior. Two bands at different
+    // depths, because one ring reads as an outline and two read as structure.
+    float w  = aa * 2.5;
+    float b1 = smoothstep(w, 0.0, abs(d + inset));
+    float b2 = smoothstep(w, 0.0, abs(d + inset * 2.35));
+    return vec3(cov, rim, clamp(max(b1, b2 * 0.7), 0.0, 1.0) * cov);
+}
+
+// TREND RINGS. Concentric contours at fixed inward offsets, following the motif's own distance
+// field so they trace ITS shape rather than a circle. `crisp` narrows the band, so a confident
+// trend draws hairlines and a churning spectrum smears them into nothing. Returned separately
+// from seedLayer so the two seed octaves can share it without another vec4.
+float seedRings(vec2 p, vec2 c, float k, float pitch, float aaBase, float pitchStep, float crisp){
+    float d  = seedDist((p - c) * k + c, pitch);
+    float aa = clamp(aaBase * k * 1.5, 1e-4, pitch * 0.04);
+    float w  = aa * mix(6.0, 1.6, crisp);         // wide + soft when the trend is weak
+    float r  = 0.0;
+    for (int i = 1; i <= 3; i++){
+        float off = pitchStep * float(i);
+        r = max(r, smoothstep(w, 0.0, abs(d + off)));
+    }
+    return r * smoothstep(aa, -aa, d);            // interior only
 }
 
 // depth-coherent reactivity: near layers shimmer w/ treble, far layers throb w/ bass
@@ -787,7 +985,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     //    Pad 3: X=135 LIGHT ANGLE  Y=136 RELIEF DEPTH.   All centred at 0.5 = neutral; bank4 gates
     //    the whole thing off when the phone isn't there (unset knobs read 0, sum = 0).
     // ── EXPLORE A/B resolved (all centred so 0.5 == 5.frag) ──────────────────────────────────
-    gThetaStep   = PI * (0.125 + evoT * 0.05 /* B3: drop plateau amplitude cut 0.16->0.05, user: no jarring camera jumps */ + EXA(knob_141, 0.20));   // K141 TWIST STEP (PI*0.025 .. PI*0.225)   // vj7-b1 SYMMETRY PLATEAU: + section-hashed offset (±PI*0.08), eased by sectionMix — shared with the zoom-wrap comp via gThetaStep so the octave seam stays closed while the symmetry walks
+    gThetaStep   = PI * (0.125 + evoT * 0.16 + EXA(knob_141, 0.20));   // K141 TWIST STEP (PI*0.025 .. PI*0.225)   // vj7-b1 SYMMETRY PLATEAU: + section-hashed offset (±PI*0.08), eased by sectionMix — shared with the zoom-wrap comp via gThetaStep so the octave seam stays closed while the symmetry walks
     gTwistFall   = 0.05 + EXA(knob_142, 0.16);                    // K142 TWIST FALLOFF (-0.03 .. 0.13)
     gInterleave  = EXA(knob_143, 0.30);                           // K143 INTERLEAVE    (-0.15 .. 0.15)
     gRingGap     = max(0.005, 0.10 + EXA(knob_144, 0.18));        // K144 RING GAP      (0.01 .. 0.19)
@@ -803,7 +1001,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     gCrossBias += (spectralEntropyMedian - 0.80) * 0.16 * QGATE;   // iter150 CHAOS -> SHAPE: a noisy, unpredictable spectrum pushes cells toward the taut CROSS; an ordered, tonal one lets the HEXAGON win. Median => a section-scale morph, never a per-beat flick.   // vj2 iter 1: SPECTRAL TILT → cell SHAPE. Bass-heavy balance (+tilt) → the taut CROSS dominates; bright/hissy (−tilt) → HEXAGONS. Median = slow, structural (~seconds), never a per-frame flick.
     gSpin  += (knob_133 - 0.5) * 2.0 * bank4;                 // K133 FOLD TWIST
     gHexR  += (knob_134 - 0.5) * 0.15 * bank4;                // K134 CELL RADIUS
-    gScale  = 2.0 + evoC * 0.05 /* B3: 0.14->0.05 */ + (knob_131 - 0.5) * 0.5 * bank4;   /* iter 142: FOLD RATIO = section plateau. The spectral-width term moved every mirror seam at every level — the 'overlapping kaleidoscope sections breathing' the user called out. */   // vj2 iter 10: SPECTRAL WIDTH → FOLD RATIO. Wide/dense spectrum (spread ~0.85) opens the self-similarity ratio (+0.12), a narrow one tightens it (−0.15). Median → slow structural permutation, never a per-frame flick. // K131 FOLD RATIO
+    gScale  = 2.0 + evoC * 0.14 + (knob_131 - 0.5) * 0.5 * bank4;   /* iter 142: FOLD RATIO = section plateau. The spectral-width term moved every mirror seam at every level — the 'overlapping kaleidoscope sections breathing' the user called out. */   // vj2 iter 10: SPECTRAL WIDTH → FOLD RATIO. Wide/dense spectrum (spread ~0.85) opens the self-similarity ratio (+0.12), a narrow one tightens it (−0.15). Median → slow structural permutation, never a per-frame flick. // K131 FOLD RATIO
     // ── vj7-b7 COMPLEXITY RATCHET (user's original brief: "maybe there's a way to algorithmically
     //    add complexity?"). evoPhase is the energy-weighted MONOTONIC set clock (silence-frozen),
     //    so complexity only ever accrues, never oscillates and never follows a beat — the legal
@@ -813,7 +1011,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     gLevelOpen  = gComplex * 0.45;          // more recursion generations drawn at once (see fractal())
     gInterleave += gComplex * 0.05;         // and the two interleaved sub-lattices separate further
     gShapePhase = morphPhase * 0.85 + bTime * 0.30;   // iter 138 RATCHET: strictly increasing -> the radius wave always travels coarse->fine, reads as continuous inward progression, never a rebound
-    gDepthFocus = clamp(0.35 + evoD * 0.12 /* B3: 0.35->0.12, level-window plateau read as a texture swap */ + (knob_132 - 0.5) * bank4
+    gDepthFocus = clamp(0.35 + evoD * 0.35 + (knob_132 - 0.5) * bank4
                       + (trebLive - 0.50) * 0.08 * QGATE          /* iter148: 0.16->0.08 and centred at 0.50 (trebLive actually runs ~0.55, so the old 0.35 centre pushed FINE almost permanently = filigree mush) */
                       - (1.0 - clamp(flybyZoom, 0.0, 1.0)) * 0.08,    /* iter149b: was 0.30 and that was MY BAD GUESS. I assumed the wide leg aliased into mush, but the measurement said the opposite - wide was the SHARPEST state (edge energy 0.09 wide vs 0.02 at close cruise), because the soft 0.12 line ramp goes sub-pixel out there. A 0.30 coarse bias stripped the level window down to only the biggest cells, so the wide shot read as a few soft blobs instead of a landscape. Keep a token bias for anti-alias headroom only. */
                       0.0, 1.0);   /* iter 142: level window = section plateau. The centroid SPRING faded whole detail-levels in/out with brightness = sections appearing/vanishing. */   // vj2 iter 12: 0.35/1.0 → 0.30/0.8 — on bright tracks the finest levels filled every cell with speckle (busy wallpaper); bias coarser, brightness pushes fine less hard   // biased COARSE (0.35): bold cells by default, filigree only when bright   // K132 DEPTH FOCUS   // BRIGHTNESS → fine detail, dark → coarse (level window)                            // fractal self-similarity ratio: slow permutation of the WHOLE structure (user iter 12: fractal permutations, not warps)
@@ -881,7 +1079,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     uv += world;                                              // finger PAN — screen-consistent now
     // gentle terrain warp for texture; grows PERMANENTLY on big drops (warpGrow). A fixed function
     // of world position, so it varies by area but never reverses the pan direction.
-    uv += max(0.0, 0.03 + warpGrow * 0.012 /* B3: 0.04->0.012 */ + EXA(knob_150, 0.10)) * vec2(sin(uv.x * 3.0 + seed4 * TAU), cos(uv.y * 3.0 + seed4 * TAU));   // K150 TERRAIN WARP: the fixed positional wobble. 0 = a perfectly rigid lattice; high = the whole plane sags between landmarks.
+    uv += max(0.0, 0.03 + warpGrow * 0.04 + EXA(knob_150, 0.10)) * vec2(sin(uv.x * 3.0 + seed4 * TAU), cos(uv.y * 3.0 + seed4 * TAU));   // K150 TERRAIN WARP: the fixed positional wobble. 0 = a perfectly rigid lattice; high = the whole plane sags between landmarks.
 
     vec4 fr = fractal(uv);
     float lum = fr.x, field = fr.y, wave = fr.z, alpha = fr.w;
@@ -891,18 +1089,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     //    image flows in colour with the music. Smoothed contours only — no jitter. QGATE so
     //    a silent room can't flash the hue. Plus per-area / per-device / permanent-drop offsets.
     float s = field
-            + regionHue(world) * max(0.0, 1.0 + EXB(knob_155, 2.0))   // K155 REGION HUE: how strongly WORLD POSITION re-paints the palette. 0 = one colour everywhere;
+            + regionHue(world) * max(0.0, 1.0 + EXB(knob_155, 2.0))   // K155 REGION HUE: how strongly WORLD POSITION re-paints the palette. 0 = one colour everywhere; high = every screen you pan to is a different colourway.
             + bTime * 0.002                                   // vj2 iter 5: was 0.012 = a full hue turn every ~4 min (0.24 turns/min — 8× the user's 'muted, slow' tolerance and the biggest single palette mover). Now ~1 turn / 25 min.
             + (melodyFlow * 0.05 + pitchClassMean * 0.10) * QGATE   // vj2 iter 4: MELODY → palette, but SLOW. melodyFlow slews 0.03/frame (a melodic leap re-tints the whole field 0.075 in ~0.3 s = the palette 'flash' the meter caught: hue 0.46→0.61 inside one track). pitchClassMean is the ~8 s rolling KEY estimate — it carries 2/3 of the weight now. (was melodyFlow*0.15; 0.32 before iter 17)
             + waveletCentroidSpring * 0.07 * QGATE        // BRIGHTNESS → hue tint (0.14 → 0.07)
             + (bassNoteFlow - 0.5) * 0.05 * QGATE         // BASSLINE NOTE → hue tilt (was 0.16: whole-field re-tints on note changes read as colour FLASHING — user iter 9) (centred: a mid bass note is neutral; not a phone fader, so it keeps listening under TAKE OVER)
             + (sectionMode - (1.0 - sectionMix)) * 0.03       // each DROP glides the palette 0.03 further (was 0.07) over its ~4s crossfade (mix eases the step; no snap)
             + DIAL_HUE                                        // dial 1 (knob_2): touch palette rotation
-            + paletteShift * 0.35                             // permanent live mutation (B3: x0.35, a drop step was a 0.05-0.12 turn hue jump)
+            + paletteShift                                    // permanent live mutation
             + seed;                                           // per-device base palette identity
-    // vj2 beat2 (2026-09-04): SLOW hue from the music's KEY and TIMBRE medians. 500-frame medians
-    // move over seconds, never per frame, so the palette follows the slowest music (user: "medians or slopes").
-    s += (pitchClassMedian - 0.5) * 0.30 + (spectralCentroidMedian - 0.35) * 0.25 + (spectralEntropyMedian - 0.6) * 0.12;   // SLOWHUE-B2 high = every screen you pan to is a different colourway.
     vec3 col = lush(s, lum);                                  // (brightness handled by the bloom below)
     col += lush(s + 0.12 + 0.05 * sin(evoPhase * 0.7), 0.9) * wave * max(0.0, 0.6 + EXB(knob_158, 1.1));   // K158 ACCENT: strength of the travelling pulse accent.   // pulse accent (hue-shifted, brighter); the SET CLOCK swings the accent 0.08..0.28 off base over minutes
 
@@ -1017,10 +1212,66 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         float kA = mix(1.0, exp2(-zf),      unlock);
         float kB = mix(2.0, exp2(1.0 - zf), unlock);
         float aaBase = length(fwidth(uv));
-        float rimW = mix(4.0, 16.0, LEGIBLE);
-        vec2  lA = seedLayer(uv, world, kA, seedPitch, aaBase, rimW);
-        vec2  lB = seedLayer(uv, world, kB, seedPitch, aaBase, rimW);
-        vec2  sl = mix(lA, lB, smoothstep(0.0, 1.0, zf));
+        // HALO TIGHTENED (critic: the soft bleed past every edge was eating the corners that
+        // carry identity, and blur eats corners before curves). 16.0 -> 11.0 keeps a drawn
+        // contour without the lavender fringe.
+        // ── THE ARRIVAL ──────────────────────────────────────────────────────────
+        // A TRAVELLING resolve front, not a global switch. `rad` is distance from the world
+        // centre; subtracting it from the elapsed time means near cells resolve first and far
+        // cells a beat later, so the mirrored copies are out of phase and can no longer cancel
+        // the moment. This is the whole reason the arrival is legible as an EVENT at all.
+        // rad MUST be normalised. First version used raw length(uv - world), which is in
+        // LATTICE units and runs to several units across a frame, so `tso * 2.6 - rad` never
+        // went positive between onsets 0.48s apart: the front never arrived anywhere and the
+        // whole effect measured as corr(env, luminance) = -0.017, i.e. nothing. Normalising by
+        // the cell pitch makes the front cross ~8 cells in the time available, which is a
+        // visible sweep rather than a switch.
+        float rad     = length(uv - world) / max(seedPitch * 8.0, 1e-4);
+        float front   = clamp(max(timeSinceOnset, 0.0) * ARR_SPEED - rad, 0.0, 1.0);
+        float arrEnv  = onsetEnvelope(ARR_ATTACK, ARR_RELEASE) * clamp(onsetStrength * 1.7, 0.0, 1.0);
+        // QGATE last, so a quiet passage cannot fire the crest out of silence. Applied AFTER
+        // the threshold-free envelope: gating BEFORE a threshold once crushed a drive to a 0%
+        // duty cycle and the jitter metric looked superb precisely because the signal was gone.
+        float arrival = arrEnv * smoothstep(0.0, 0.35, front) * QGATE;
+        // Legibility used from here on: the hand knob is the FLOOR, the event rides on top.
+        // Still a drawing lever (interior flatten / contour width / carved band) - it never
+        // moves a cell boundary, so the geometry-only-evolves rule is not touched.
+        float legNow = clamp(LEGIBLE * (1.0 - ARRIVE * 0.55) + arrival * ARRIVE, 0.0, 1.0);
+        // ── GIVE THE ARRIVAL REAL AUTHORITY ──────────────────────────────────────
+        // FIRST ATTEMPT FAILED, MEASURED: driving only `legNow` from the envelope produced
+        // corr(env, luminance) and corr(env, motion) BELOW 0.12 AT EVERY LAG from 0 to 0.5s -
+        // indistinguishable from zero. The critic had already said why and I had not acted on
+        // it: "legible=0 and legible=1 are nearly the same picture". Building an event on a
+        // lever with no visual authority inherits its lack of authority.
+        //
+        // So the envelope now gates the SEED COMPOSITE itself. At rest the crest is only
+        // faintly present and the frame is the fine dark lattice; on the onset the crest
+        // composites in fully. That is literally "the crest resolves OUT of the lattice"
+        // rather than a legibility setting being nudged.
+        //
+        // Still lighting, not geometry: seedAmt scales how strongly the bead grid is composited
+        // over the fold, never where a cell boundary is. And it is spatially masked by cov/rim,
+        // so it is not a global multiplier and cannot strobe the whole frame.
+        float restAmt = mix(1.0, 0.22, ARRIVE);              // how present the crest is at rest
+        float seedAmt = knob_168 * mix(1.0, mix(restAmt, 1.0, arrival), ARRIVE);
+        // ── THE FIVE QUIET CHANNELS ──────────────────────────────────────────────
+        // Every one measured alive before wiring; every one smoothed, so none can shudder.
+        float trendConf = clamp(spectralSpreadRSquared / 0.29, 0.0, 1.0);   // 0.29 = measured live max
+        float grainAmt  = clamp(spectralRoughnessSmooth, 0.0, 1.0);
+        float crestAmt  = clamp(spectralCrestSmooth, 0.0, 1.0);
+        float hazeAmt   = clamp(waveletBand5Spring, 0.0, 1.0);
+        float hueTilt   = (clamp(waveletCentroidSpring, 0.0, 1.0) - 0.5) * 0.09 * DETAIL;
+
+        // RIM WIDTH breathes with crest. Small span (11.0 +/- 2.2) so the contour thickens
+        // perceptibly on peaky material without ever becoming the lavender halo the critic
+        // objected to.
+        float rimW = mix(4.0, 11.0 + (crestAmt - 0.5) * 4.4 * DETAIL, legNow);
+        // Erosion depth as a fraction of cell pitch. Zero when NEGATIVE is zero, so the whole
+        // feature collapses to 4.frag exactly.
+        float inset = seedPitch * 0.055 * NEGATIVE;
+        vec3  lA = seedLayer(uv, world, kA, seedPitch, aaBase, rimW, inset);
+        vec3  lB = seedLayer(uv, world, kB, seedPitch, aaBase, rimW, inset);
+        vec3  sl = mix(lA, lB, smoothstep(0.0, 1.0, zf));
         float sd  = 0.0;
         // AA width from the derivative of uv, which is continuous — taking it from sd
         // would blow up on the fract() seam and draw a grid of dark lines.
@@ -1030,6 +1281,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // turned the whole seed into a milky veil (measured, first attempt).
         float cov = sl.x;                                          // 1 inside the motif
         float rim = sl.y;                                          // edge band, reads at distance
+        float gap = sl.z;                                          // eroded band = the negative space
         // RELIEF, NOT GAIN — the same lesson iter146 learned for the audio gain. Filling the
         // motif with flat colour washed the frame out worse than it already is. Instead the
         // GROUND BETWEEN beads recedes, so the mon read as bright shapes and the lattice
@@ -1073,17 +1325,135 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // it is spatially structured and cannot strobe; driven by a HAND knob, so no geometry
         // moves with the music. At LEGIBLE = 0 this line is a no-op and 3.frag is reproduced.
         vec3 beadInk = lush(s, mix(0.62, 0.80, pump));
-        col = mix(col, beadInk, cov * LEGIBLE * 0.72);
+        col = mix(col, beadInk, cov * legNow * 0.72);
+
+        // ── LET THE BLACK IN ─────────────────────────────────────────────────────
+        // Carve the eroded band to TRUE black. Applied AFTER the interior flatten so it cuts
+        // through the flattened ink rather than being painted over by it, and BEFORE the rim
+        // so the contour still draws on top and the gap reads as an interior line rather than
+        // a nibbled edge. Spatially structured and mask-bound: no global multiplier, so this
+        // cannot strobe, and it takes no per-frame audio at all - it is pure drawing.
+        col *= 1.0 - gap * NEGATIVE * 0.97;   // hand knob only - drawing, never an event
+
+        // ── DIRECTIONAL SWEEP ────────────────────────────────────────────────────
+        // The art critic's sharpest unaddressed point: "mirror symmetry is a STILLNESS OPERATOR
+        // - when a symmetric field changes, every copy changes at once, so a hit reads as an
+        // overall shimmer... there is not one directional element anywhere". A beat needs one
+        // thing to move, in one place, in ONE DIRECTION.
+        //
+        // The seed grid is the only layer drawn in WORLD space rather than fold space, so it is
+        // the one place a direction survives - anything in the fold gets mirrored into its own
+        // opposite and cancels. A soft band travels along a per-device axis and lights each bead
+        // as it passes, so the wall reads as a light moving across it.
+        //
+        // The phase comes from melodyFlow, which is a MONOTONIC wrapped accumulator in the
+        // controller (confidence-weighted steps clamped to +/-0.03, then mod 1). That is the
+        // rate-not-angle discipline: a tempo change alters how FAST the light travels, never
+        // rewinds it. A slow iTime term guarantees motion even when the melody sits still.
+        // Masked to cov/rim so it lights BEADS and never the ground - it cannot flash the frame.
+        float sweepAng   = 6.2831853 * fract(seed2 * 0.618 + 0.13);      // per-device axis
+        vec2  sweepDir   = vec2(cos(sweepAng), sin(sweepAng));
+        // MEASURED CORRECTION. The first version used * 0.42, giving a period of ~2.4 world
+        // units - SHORTER than the visible frame, so several bands were on screen at once, both
+        // halves were always lit, and there was no net direction at all. Measured: left/right
+        // asymmetry sd 0.0782 -> 0.0548, i.e. the "directional" sweep made the frame MORE
+        // symmetric, the exact opposite of its purpose, while flash sd rose 3.49 -> 4.85.
+        // At 0.10 the period is ~10 world units so AT MOST ONE band is ever in frame, which is
+        // what makes it read as a light travelling across rather than a moving stripe pattern.
+        float sweepProj  = dot(uv - world, sweepDir) * 0.10;
+        float sweepPhase = fract(melodyFlow + iTime * 0.021);
+        float sweepBand  = smoothstep(0.30, 0.0, abs(fract(sweepProj - sweepPhase) - 0.5));
+        // squared to punctuate: a wide duty reads as a glow, not a passing light
+        sweepBand *= sweepBand;
+        // amplitude cut 0.30 -> 0.18: the first version raised flash sd by 39%, and flashing is
+        // the one thing the user has called out twice.
+        col += lush(s + 0.12, 1.0) * (cov * 0.45 + rim * 0.9) * sweepBand * SWEEP * 0.18 * QGATE;
+
+        // TREND RINGS: hairlines inside the bead that sharpen only while the spectrum's width is
+        // on a confident trend. Drawn as a DARKENING, so they read as engraved line rather than
+        // added glow - and so they cannot brighten the frame.
+        float rings = max(seedRings(uv, world, kA, seedPitch, aaBase, seedPitch * 0.085, trendConf),
+                          seedRings(uv, world, kB, seedPitch, aaBase, seedPitch * 0.085, trendConf));
+        col *= 1.0 - rings * DETAIL * (0.10 + 0.30 * trendConf) * cov;
+
+        // GRAIN: fine speckle over the interior, density from roughness. Uses the stable hash -
+        // never fract(sin(x)*43758.5453), which is unstable in float32 and caused a two-state
+        // flicker earlier in this shader's history.
+        float gx = floor(uv.x / max(seedPitch * 0.035, 1e-4));
+        float gy = floor(uv.y / max(seedPitch * 0.035, 1e-4));
+        float grain = hash11(gx * 3.7 + gy * 11.3);
+        col *= 1.0 - cov * DETAIL * grainAmt * 0.09 * step(0.62, grain);
+
+        // HAZE: the interior detail dissolves toward the bead's own ink as the top wavelet octave
+        // fills in. A softening, not a brightening.
+        col = mix(col, beadInk, cov * DETAIL * hazeAmt * 0.14);
 
         // Ground recede, deepened by LEGIBLE. This is the RATCHET.
+        // ── THE GROUND DOES NOT TAKE THE EVENT (2026-09-04, user: "full-screen flashy in a
+        // bad way; the bead is the ENTIRE POINT") ────────────────────────────────────────
+        // (1 - cov) is the ground BETWEEN beads - most of the frame. Driving a multiplier over
+        // that area from an onset means every hit darkens half the screen, which is a full-frame
+        // strobe wearing a mask as a disguise. The coat journals settled this shape long ago:
+        // VJ RADIAL BARS were "strictly masked to silhouette < 0.02 so the jacket is never
+        // touched", and the RIM is the composite target because it is a high-contrast EDGE.
+        //
+        // So the ground now follows ONLY `pump` (energySpring x QGATE - a smoothed controller
+        // spring, slow by construction) and the HAND knob. No event, no per-frame transient over
+        // a large area. All the fast audio moves to the bead and its contour below.
         float seedDepth = mix(mix(0.25, 0.50, pump), mix(0.58, 0.82, pump), LEGIBLE);
         col *= mix(1.0, 1.0 - seedDepth, (1.0 - cov) * knob_168);
         // COUNTER-RATCHET, same edit: a deeper recede takes light out of most of the frame,
         // so the figure pays it back. Without this pair, raising LEGIBLE would just dim the
         // picture - which is exactly the mistake the ground-recede made on its first outing
         // (corr(energySpring, brightness) -0.68: a drop made the frame DARKER and FLATTER).
-        col += lush(s, 0.95) * cov * knob_168 * (0.05 + 0.58 * pump) * mix(1.0, 1.9, LEGIBLE);
-        col += lush(s + 0.33, 1.0) * rim * knob_168 * (0.22 + 0.45 * trebLive * QGATE) * mix(1.0, 1.6, LEGIBLE);
+        // COUNTER-RATCHET FOR THE ARRIVAL, in the same edit as the recede it answers. Measured: with
+        // the recede alone, corr(env, luminance) was -0.213 at 0.05s lag - a hit made the frame
+        // DARKER, which is backwards for something that is supposed to RESOLVE OUT of the lattice.
+        // The crest must gain light as it arrives. cov-masked and spatially structured, so this is
+        // still not a global multiplier and still cannot strobe the frame.
+        col += lush(s, 0.95) * cov * seedAmt * (0.05 + 0.58 * pump) * mix(1.0, 1.9, legNow)
+             * (1.0 + arrival * 1.8);
+        // ── THE RIM CARRIES THE MUSIC ────────────────────────────────────────────
+        // The coat's most reused lesson: route SEVERAL INDEPENDENT signals into ONE composite
+        // element at NON-OVERLAPPING properties. The bead contour is that element here - a
+        // high-contrast edge, spatially tiny, so it can flash hard without washing the frame.
+        //   BRIGHTNESS <- arrival (onset event, temporal domain)
+        //   HUE TILT   <- pitchClassMedian (tonal domain - slow, so colour follows slow music)
+        //   TEXTURE    <- trebLive (frequency domain)
+        // Three different domains, so this is three signals and not one drawn three times.
+        // pitchClassMedian measured range 0.000 on this rig - it was a dead channel. Replaced
+        // with waveletCentroidSpring (measured 0.403), which is also slow, so colour still
+        // follows the slowest music as the hierarchy requires.
+        float rimHue = s + 0.33 + hueTilt;
+        col += lush(rimHue, 1.0) * rim * seedAmt * (0.22 + 0.45 * trebLive * QGATE) * mix(1.0, 1.6, legNow)
+             * (1.0 + arrival * 4.0); 
+        // ── HIGHLIGHT: THE FRAME HAD NO TOP END ──────────────────────────────────
+        // MEASURED tone histogram over 9s of live audio, in eighths of the 0-255 range:
+        //     28.4 / 51.7 / 17.5 / 2.2 / 0.2 / 0 / 0 / 0
+        // 98% of the frame sat in the bottom THREE buckets and 0.01% of pixels were above 160.
+        // Deep blacks were already there (5.3% true black) but there were no HIGHLIGHTS at all,
+        // so the picture lived entirely in the shadows - the critic's "murk", and the reason
+        // contrast stayed low however the midtones were pushed.
+        //
+        // The fix is not more brightness, which is the dimmer switch the critic already rejected.
+        // It is a SMALL AREA AT A HIGH VALUE: pow(rim, 7) keeps only the very centre of the
+        // contour band, a hairline a pixel or two wide, and drives it hard. Deep blacks plus a
+        // thin specular IS value contrast. Because the area is tiny it cannot raise frame
+        // luminance much, so it buys contrast without buying flash - which the numbers have to
+        // confirm, not the intention.
+        // CEILING NOTE, twice corrected, kept because both corrections cost a tick.
+        //   1. softClip is NOT the ceiling. Its knee is at 0.75 and the frame's brightest pixel
+        //      measured 162/255 = 0.635, so nothing ever reaches the roll-off.
+        //   2. Mixing the specular toward neutral to escape LV_LCEIL was TRIED AND REVERTED. It
+        //      bought only max 153.7 -> 160.1 while costing flash sd 3.22 -> 4.11 and contrast
+        //      -0.63. Flashing is the one thing the user has called out twice, so that trade is
+        //      not available.
+        // The ceiling question is still OPEN, and it cannot be settled with a downsampled metric:
+        // the canvas is 1278px, so even a 360x360 read averages a 1px hairline across ~3.5x3.5
+        // and dilutes its peak. Settle it with a 1:1 NATIVE CROP before touching this again.
+        float specCore = pow(rim, 7.0);
+        col += lush(rimHue, 1.0) * specCore * seedAmt * SPEC * (0.55 + 1.10 * arrival) * QGATE;
+  // 2.2 -> 4.0: the frame's fast energy now lives HERE
         // ── DROP FLARE (K179) ──────────────────────────────────────────────────
         // energyZScore was measured as the STRONGEST fast signal on this input (live
         // range 1.20 over 8s) and the shader ignored it completely — 0 references. On a
