@@ -126,7 +126,10 @@ uniform float waveletBand4Spring;
 #define WUB (clamp((wubDepth - 0.18) * 1.25, 0.0, 1.0) * quietGate)
 #define CHURN_RAW (0.70 * spectralFluxNormalized + 0.55 * max(0.0, spectralFluxZScore))
 #define CHURN (clamp((CHURN_RAW - 0.10) * 4.0, 0.0, 1.0) * quietGate)
-#define FLIGHT 0.0   // shader-side auto-flight stays OFF (vj2 iter 2: "I don't like the scrolling").
+// ?autofly=0..1 — the aperiodic camera wander. Kept OFF by default because it was
+// switched off for a reason (vj2 iter 2: "I don't like the scrolling right now"), so this
+// opts back IN rather than turning it on for everyone. 1.0 = the original range.
+#define FLIGHT (autofly)
                      // iter147: TRAVEL now belongs to controllers/flyby.js — a zoom-out / fly / zoom-in
                      // state machine. A shader can only be PERIODIC, so it would fly you back to the
                      // same places forever; the controller remembers where it has been and always
@@ -142,6 +145,7 @@ uniform float spectralRoughnessSmooth;   // smoothed grit → iridescent sparkle
 // So the Z-score now punches the RELIEF depth: grit embosses the lattice harder for a moment.
 // Shading channel per the hierarchy — never geometry. max() keeps it one-sided; the pre-existing
 // min(0.85,...) clamp still protects lumMin.
+uniform float autofly;     // ?autofly=0..1 enables the camera wander (default 0 = off)
 uniform float theme;       // ?theme=0..3 selects a palette from the lattice family
 uniform float divePhase;   // dive scrub offset; any numeric query param becomes a float
                            // uniform, and getQueryParamUniforms skips names already declared
@@ -244,6 +248,17 @@ mat2 rot2(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 //          pixels (9.frag: 0.619 / 0.409 / 0.369, 4.5% clipped) — a blue monochrome that
 //          pinned into fuchsia. Sophistication here is channel BALANCE, not more chroma.
 // LV_LCEIL lightness ceiling. baked 0.78 (was 0.92) — this is what was blowing the rim out.
+// ── TOUCH DIALS (lattice-interactive/3 style) ──────────────────────────────────
+// Chain ?controller=lattice-nav&controller=lattice-controls. lattice-nav gives drag-to-pan
+// and pinch-zoom (navX/navY/navZoom, already consumed below); lattice-controls puts four
+// DIAL NODES at fixed world positions that you circle a finger around, each bound to
+// knob_2..5. Those knobs were UNUSED here, so every dial turned nothing — now each drives
+// one independent, obvious lever. A dial is a HAND control, which is why the pitch dial is
+// allowed to move cell boundaries: the geometry-evolves directive forbids per-frame AUDIO
+// on geometry, not a human turning a knob.
+// step(0.001,k) guards every one, so an untouched dial leaves the frame byte-identical.
+#define DIAL_ON(k) step(0.001, (k))
+#define DIAL_HUE   ((knob_2 - 0.5) * 2.0 * DIAL_ON(knob_2))   // dial 1: palette rotation
 #define SEED_ZOOM LVK(knob_163, 0.045, knob_163 * 0.30)   // octaves / second
 #define SEED_FLOW LVK(knob_162, 0.020, knob_162 * 0.15)   // bass pacing on the dive
 #define LV_RICH  LVK(knob_166, 1.0, knob_166 * 4.0)
@@ -325,7 +340,7 @@ vec3 lush(float s, float lit){
 
     float L = clamp(lb + EXB(knob_156, 0.40) + ls * clamp(lit, 0.0, 1.0), lo, hi);
     float C = max(0.0, (cb + seed2 * cs) + EXB(knob_157, 0.14)) + ca * sin(s * TAU * 0.5 + 1.3);
-    C *= LV_RICH;
+    C *= LV_RICH * mix(1.0, 0.3 + knob_4 * 2.4, DIAL_ON(knob_4));   // dial 3 (knob_4): colour intensity
     return fitGamut(oklch2rgb(vec3(L, C, h)), L);
 }
 
@@ -751,6 +766,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
             + waveletCentroidSpring * 0.07 * quietGate        // BRIGHTNESS → hue tint (0.14 → 0.07)
             + (bassNoteFlow - 0.5) * 0.05 * quietGate         // BASSLINE NOTE → hue tilt (was 0.16: whole-field re-tints on note changes read as colour FLASHING — user iter 9) (centred: a mid bass note is neutral; not a phone fader, so it keeps listening under TAKE OVER)
             + (sectionMode - (1.0 - sectionMix)) * 0.03       // each DROP glides the palette 0.03 further (was 0.07) over its ~4s crossfade (mix eases the step; no snap)
+            + DIAL_HUE                                        // dial 1 (knob_2): touch palette rotation
             + paletteShift                                    // permanent live mutation
             + seed;                                           // per-device base palette identity
     vec3 col = lush(s, lum);                                  // (brightness handled by the bloom below)
@@ -833,7 +849,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // LOG pitch: the visible uv span depends on navZoom AND the perpetual octave zoom,
         // so a linear range missed it entirely in both directions on the first two tries
         // (too wide = one tile covering the screen = no visible effect at all).
-        float seedPitch = exp2(mix(-6.0, 2.0, clamp(knob_169, 0.0, 1.0)));   // 0.016 .. 4.0
+        float seedPitch = exp2(mix(-6.0, 2.0, mix(clamp(knob_169, 0.0, 1.0), knob_3, DIAL_ON(knob_3))));   // dial 2 (knob_3): bead size
         // ── INFINITY ZOOM (the subtronics-eye effect) ──────────────────────────────
         // subtronics-eye dives by scaling about a centre and then fract()-wrapping:
         //     rotatedUV = (rotatedUV - CENTER) * zoomFactor + CENTER;
@@ -861,7 +877,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // same as layer A at zoomP = 0. One octave, one wrap, both seamless, in step.
         // K163 > 0 unlocks and runs the dive at its own rate on top of the lattice's.
         float unlock = step(0.001, knob_163);
-        float zf = fract(mix(zoomP, SEED_ZOOM * iTime + flowPhase * SEED_FLOW, unlock) + divePhase);
+        float unlockD = max(unlock, DIAL_ON(knob_5));   // dial 4 (knob_5): hand dive rate unlocks it
+        float rate = mix(SEED_ZOOM, knob_5 * 0.30, DIAL_ON(knob_5));
+        float zf = fract(mix(zoomP, rate * iTime + flowPhase * SEED_FLOW, unlockD) + divePhase);
         float kA = mix(1.0, exp2(-zf),      unlock);
         float kB = mix(2.0, exp2(1.0 - zf), unlock);
         float aaBase = length(fwidth(uv));
