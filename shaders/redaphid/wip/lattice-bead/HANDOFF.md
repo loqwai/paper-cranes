@@ -158,8 +158,28 @@ createTexture(gl, { src, crossOrigin: 'anonymous',
 2. **`REPEAT` wrap is a gift.** `fractal()` already works in a folded, tiled domain
    (`p = 1.0 - abs(s * fract(p - 0.5) - s * 0.5)`), so a tiling texture lands naturally. Use
    power-of-two dimensions.
-3. **The image is Y-flipped on upload.** Bake accordingly or the mon reads upside down — harmless
-   for the radially symmetric ones, obvious on `tomoe` and `ogi`.
+3. ~~**The image is Y-flipped on upload.** Bake accordingly or the mon reads upside down — harmless
+   for the radially symmetric ones, obvious on `tomoe` and `ogi`.~~
+   **CORRECTED 2026-09-03** (`lab/tomoe`, verified with an unfolded SDF probe against the source PNG).
+   `UNPACK_FLIP_Y_WEBGL=true` **prevents** a flip rather than causing one — it is the conventional
+   correction that makes texture `v` agree with the image's own up. **No bake needs Y compensation**,
+   and a teammate "fixing" this will break a bake that is already correct. Confirmed on `tomoe`:
+   notch upper-left shoulder, tail tip lower-left, crescent opening upper-right — matching
+   `mon-tomoe.png` exactly.
+
+   Two further sampling mechanics found in the same run, both worth knowing before reasoning about
+   what a motif will do:
+   - `fractal()` computes `vec2 uv = abs(p)` **before** the cell distance — a 4-fold mirror on the
+     sampling coordinate. **Every motif is symmetrised before it is drawn**, so chirality is not
+     observable in the lattice and any hypothesis resting on asymmetry is unanswerable as posed.
+   - The mon is sampled as a **tiled** field, not one quadrant: with `gHexR≈0.6` and `|uv|` reaching
+     ~1.4 the texture coordinate exceeds 1.0 and `REPEAT` wrap pulls neighbouring copies in. Masking
+     the other three quadrants changed 83% of pixels.
+
+   **What actually predicts a motif's effect is boundary crossings per radial direction** — how often
+   a ray from the cell centre crosses the silhouette — **not symmetry** (§10 guessed symmetry).
+   Measured departure from the hex baseline at `t=8`: `ume` (5 lobes + notches) **91.4%**,
+   `kikko` 46.6% (confounded — kikko *is* a hexagon), `tomoe` (~1 crossing/ray) **42.3%**.
 
 ## 6. The asset pipeline
 
