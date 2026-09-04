@@ -108,7 +108,7 @@ uniform float waveletBand4Spring;
 // Flux alone is jittery, so CHURN is a COMPOSITE of two views of the same feature: the normalized
 // LEVEL (where are we in the range) plus the positive half of the Z-SCORE (is this a burst right
 // now). Level gives a readable position, the one-sided z-score gives the punch, and clamping keeps
-// it bounded. quietGate so a silent room reads zero.
+// it bounded. QGATE so a silent room reads zero.
 // RANGE-FITTED to the live signal, not to theory: measured over 4 s of the actual room, the raw
 // composite only spanned 0.111..0.319 (mean 0.192). Shipping that against a 0..1 coefficient is how
 // b6's learned mapping ended up invisible ("I don't see the shader reacting"). So the composite is
@@ -123,9 +123,9 @@ uniform float waveletBand4Spring;
 // Measured live: wubDepth spans 0.184..1.0 (mean 0.535) — already a full-range signal, so it needs
 // only a floor trim, not the 4x expansion CHURN needed. Range-fit each feature to ITS OWN measured
 // span; a coefficient copied from another signal is how a mapping ends up invisible or slammed.
-#define WUB (clamp((wubDepth - 0.18) * 1.25, 0.0, 1.0) * quietGate)
+#define WUB (clamp((wubDepth - 0.18) * 1.25, 0.0, 1.0) * QGATE)
 #define CHURN_RAW (0.70 * spectralFluxNormalized + 0.55 * max(0.0, spectralFluxZScore))
-#define CHURN (clamp((CHURN_RAW - 0.10) * 4.0, 0.0, 1.0) * quietGate)
+#define CHURN (clamp((CHURN_RAW - 0.10) * 4.0, 0.0, 1.0) * QGATE)
 // ?autofly=0..1 — the aperiodic camera wander. Kept OFF by default because it was
 // switched off for a reason (vj2 iter 2: "I don't like the scrolling right now"), so this
 // opts back IN rather than turning it on for everyone. 1.0 = the original range.
@@ -153,6 +153,18 @@ uniform float divePhase;   // dive scrub offset; any numeric query param becomes
 uniform float flowPhase;
 uniform float morphPhase;
 uniform float quietGate;
+// ── QUIET GATE FLOOR (2026-09-04, measured on a live Eric Prydz set) ───────────────
+// quietGate multiplies nearly EVERY audio term in this shader. Measured on the live
+// virtual-mic input it averaged 0.012 through a long progressive windup — so the whole
+// shader was gated off exactly when the build is most interesting, and evoPhase (the
+// energy-weighted set clock) sat frozen at 0.0006 for the same reason. That reads as
+// "not music reactive" no matter how good the mappings underneath are.
+//
+// The gate exists for a real reason (a silent ROOM must not flash the hue), so this
+// floors it rather than removing it: quiet passages go SUBDUED, not dead. K178 sets the
+// floor; 0 restores the old hard gate.
+#define QGATE_FLOOR LVK(knob_178, 0.35, knob_178)
+#define QGATE (max(quietGate, QGATE_FLOOR))
 uniform float evoWarp;
 uniform float evoPlasma;
 uniform float wubDepth;            // wobble AMPLITUDE (wavelet-ease) — deepens cell breathing on wubby tracks
@@ -446,9 +458,9 @@ vec2 seedLayer(vec2 p, vec2 c, float k, float pitch, float aaBase){
 
 // depth-coherent reactivity: near layers shimmer w/ treble, far layers throb w/ bass
 float bandForDepth(float ld){
-    if (ld < 0.34) return trebLive * quietGate;
-    if (ld < 0.67) return midsLive * quietGate;
-    return bassLive * quietGate;
+    if (ld < 0.34) return trebLive * QGATE;
+    if (ld < 0.67) return midsLive * QGATE;
+    return bassLive * QGATE;
 }
 
 // shared per-frame state
@@ -537,7 +549,7 @@ vec4 fractal(vec2 p){
         //    (iter 138 proved that), but it IS a legible STATIC axis — the levels all overlap on
         //    screen, so making them differ shows up as richer structure everywhere at once.
         float lvlParity = (mod(float(i), 2.0) < 1.0) ? 1.0 : -1.0;
-        float hexR_i = gHexR + lvlParity * (spectralSkewMedian - 0.5) * 0.16 * quietGate + lvlParity * gInterleave;   // K143 INTERLEAVE: pushes even and odd levels to OPPOSITE radii, so the stack reads as two interleaved lattices instead of one self-similar one. This is the manual version of iter150's spectralSkew term — fly it with the music off to see what that feature is actually doing.   /* iter 142: depth-wave removed entirely — it pulsed */   /* iter 141: demoted 0.13 -> 0.04 — read as pulsing, not travel; the zoom ratchet is the primary motion now */   // iter 138 RATCHET: radius modulation is a WAVE traveling through recursion depth (phase monotonic) - each level swells as the wave passes, motion always flows one way
+        float hexR_i = gHexR + lvlParity * (spectralSkewMedian - 0.5) * 0.16 * QGATE + lvlParity * gInterleave;   // K143 INTERLEAVE: pushes even and odd levels to OPPOSITE radii, so the stack reads as two interleaved lattices instead of one self-similar one. This is the manual version of iter150's spectralSkew term — fly it with the music off to see what that feature is actually doing.   /* iter 142: depth-wave removed entirely — it pulsed */   /* iter 141: demoted 0.13 -> 0.04 — read as pulsing, not travel; the zoom ratchet is the primary motion now */   // iter 138 RATCHET: radius modulation is a WAVE traveling through recursion depth (phase monotonic) - each level swells as the wave passes, motion always flows one way
         // BEAD MORPH (variant 1). Both terms are signed distances to a cell boundary
         // of radius hexR_i in lattice units, so the mix is dimensionally sound and
         // BEAD_MIX=0 is byte-identical in behaviour to 9.frag.
@@ -568,7 +580,7 @@ vec4 fractal(vec2 p){
         f *= mix(mix(1.0 - ld * 0.90, 0.10 + ld * 0.90, gDepthFocus), 1.0, gLevelOpen);   // vj7-b7 COMPLEXITY RATCHET: the level WINDOW dissolves as the set clock advances, so deeper and shallower generations join the picture together instead of one band at a time — the structure literally gains detail over the night. Bounded (<=0.45) so the finest levels can never fully take over into speckle.   // iter 27: stronger window (screenshot: zoomed-out finest levels read as noise)
         // CONTINUOUS palette field: recursion depth + a smooth within-cell swirl so colour flows
         // across the structure (this is the BEAUTY — a smooth field, not a discrete depth band).
-        float swirl = 0.5 + 0.5 * sin(atan(p.y, p.x) * gSwirlArms + length(p) * gSwirlRadial + float(i) + seed4 * TAU + (pitchClassMedian - 0.5) * 1.2 * quietGate);   // iter150 KEY -> INTERIOR COLOUR FLOW: the rolling key estimate rotates the within-cell colour swirl, so a key change re-paints cell interiors without touching the global hue (which stays ~0 drift per directive).
+        float swirl = 0.5 + 0.5 * sin(atan(p.y, p.x) * gSwirlArms + length(p) * gSwirlRadial + float(i) + seed4 * TAU + (pitchClassMedian - 0.5) * 1.2 * QGATE);   // iter150 KEY -> INTERIOR COLOUR FLOW: the rolling key estimate rotates the within-cell colour swirl, so a key change re-paints cell interiors without touching the global hue (which stays ~0 drift per directive).
         float field = ld * (0.55 + evoPlasma * 0.2 + gDepthTint) + swirl * gSwirlMix;   // K153 DEPTH TINT (how much recursion depth colours the field) vs K154 SWIRL MIX (how much the within-cell swirl does). The balance between them is what makes colour read as DEPTH or as FLOW.
 
         float env = sin(gPulse * PI);
@@ -584,9 +596,9 @@ vec4 fractal(vec2 p){
         //    Fix: audio now drives RELIEF — the CONTRAST between lattice line and fill, inside the
         //    smoothstep — which is local and per-depth. The global multiplier keeps only small
         //    CENTRED terms about a constant, so mean frame brightness no longer follows the music.
-        float relief = max(0.0, (band - 0.35)) * 0.75 * quietGate;   // iter148: was signed — when `band` sat below centre it SUBTRACTED contrast and softened every edge (user: 'blurrier than 24h ago'). Relief may only ever sharpen; the quiet baseline is now the floor, not the middle.
+        float relief = max(0.0, (band - 0.35)) * 0.75 * QGATE;   // iter148: was signed — when `band` sat below centre it SUBTRACTED contrast and softened every edge (user: 'blurrier than 24h ago'). Relief may only ever sharpen; the quiet baseline is now the floor, not the middle.
         float lit = (smoothstep(gFill + alias, gFill, m) * (0.5 + relief) + 0.18)
-                  * (1.55 + (glowLive - 0.45) * 0.12 + (bassLive - 0.45) * quietGate * 0.12);   /* iter144: band 0.55->0.95 — treble lights the NEAR levels, mids the middle, bass the FAR ones, so the instruments visibly separate across recursion depth instead of blending into one brightness */   // iter 116: floor 0.95→1.03 — lumMin 0.068 on mellow Of The Trees, just under the 0.08 line   // vj2 iter 9: was 0.7/.4/.7/.6 (range 0.7→2.4): on a quiet intro (energy 0.074) the frame fell to near-BLACK. Floor up, music range compressed (0.95→2.3) — a breakdown dims, it doesn't vanish.
+                  * (1.55 + (glowLive - 0.45) * 0.12 + (bassLive - 0.45) * QGATE * 0.12);   /* iter144: band 0.55->0.95 — treble lights the NEAR levels, mids the middle, bass the FAR ones, so the instruments visibly separate across recursion depth instead of blending into one brightness */   // iter 116: floor 0.95→1.03 — lumMin 0.068 on mellow Of The Trees, just under the 0.08 line   // vj2 iter 9: was 0.7/.4/.7/.6 (range 0.7→2.4): on a quiet intro (energy 0.074) the frame fell to near-BLACK. Floor up, music range compressed (0.95→2.3) — a breakdown dims, it doesn't vanish.
         lit += wave * (0.4 + gPop * 0.7 + gKick * 1.2 + spectralCrestSmooth * 0.35 + WUB * 0.9);   // vj8-b11 LEARNED: the WOBBLE drives the travelling ACCENT. Shading lane, so it may take audio freely, and it ADDS light rather than removing it — deliberate, since the frame was already fighting a dark floor when this was wired.
 
         // front-weighted accumulation (near structure leads the colour) → smooth, no band pops
@@ -611,7 +623,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // STILL: no time-churn on the lattice rotation → the geography holds its orientation (the
     // constant "panning" feel was this term + the orbital drift below). Reactivity is in-place now.
     gSpin  = 0.0;   // (set below from the kick — a transient TWIST, unwinds as the kick decays)
-    gPop   = clamp(glowLive * 0.5 + spectralCrestSmooth * 0.45, 0.0, 1.0) * quietGate;
+    gPop   = clamp(glowLive * 0.5 + spectralCrestSmooth * 0.45, 0.0, 1.0) * QGATE;
     // KICK — dead-zoned so per-frame z-score jitter cannot SHIVER the geometry (user iter 11): only
     // a real onset (z > ~0.6, or a wavelet punch/hit) passes. wavelet_punch = fast wavelet onset × FFT level.
     // iter 26: the raw z-score term is GONE (it was the last per-frame jitter on geometry); only the
@@ -620,7 +632,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
                                  + clamp(wavelet_punch,   0.0, 1.0) * 0.6);   // vj2 iter 7: attack = raw hit, TAIL = smoothed hit (~0.2 s EMA) → each kick is a short envelope, not a 1-frame spike (meter: onset gain was 1.07 = kicks invisible)
     gPulse = fract(flowPhase * 0.6 + bTime * 0.18);
     gSpin  = 0.0;   // iter143 NO-ANGLE-AUDIO: KICK TWIST DELETED. gKick rises and FALLS, so adding it to theta torqued the fold forward on each hit then UNWOUND it — rocking, scaled by (0.4+i*0.05) so deeper levels rocked hardest = 'sections bouncing'. Iris discipline: audio drives RATE/SHAPE/amplitude, never an angle. The kick keeps its shading role (relief + lit) untouched.                                   // KICK TWIST (0.04 → 0.015, vj2 iter 2: user 'twitchy' on dubstep — constant hits made the fold flick) (iter 26): every kick torques the fold a few degrees per level (structural, not colour)
-    float bassPulse = bassLive * quietGate;
+    float bassPulse = bassLive * QGATE;
     // ── SLOW SHAPE EVOLUTION (user iter 11: "a time component so we slowly see different shapes") ──
     //    Aperiodic sums of sub-0.01Hz sines (plasma-journal rule: <1Hz reads as brooding, not jittery)
     //    on morphPhase (a MONOTONIC accumulator from wavelet band 3 — rate-not-angle, so tempo changes
@@ -646,10 +658,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float evoT = mix(SECT(secPrev), SECT(sectionMode), sectionMix);
     float shapeA = 0.5 * sin(morphPhase * 0.85) + 0.5 * sin(bTime * 0.28 + 1.7);   // iter 114: user 'need to SEE the fractal parameters changing' — cycles ~2min → ~70s
     float shapeB = 0.5 * cos(morphPhase * 0.62 + 0.6) + 0.5 * cos(bTime * 0.19);
-    gSpin  += bTime * max(0.0, 0.10 + EXA(knob_146, 0.34)) + flowPhase * 0.05;   // K146 SPIN RATE: the monotonic fold rotation. Clamped at 0 — a fader can stall the spin but NEVER reverse it (standing directive: geometry always goes forward).   // vj7-b2 SPIN FOLLOWS THE LOW END: base rate 0.18 -> 0.10, and flowPhase (bass-paced MONOTONIC accumulator, freezes at silence) carries the rest — the lattice turns faster when the low end works, stalls in breakdowns, never reverses (iter144 zoom precedent). NOT quietGate'd: gating an accumulated ANGLE would snap it when the gate moves.   /* iter 142: shapeA rock removed — spin purely monotonic */   // iter 118: user 'always going FORWARD, no oscillating back' — monotonic rotation now dominates (0.08→0.18), ping-pong shapeA demoted (0.9→0.35)                     // per-level fold angle drift + CONTINUOUS slow fold rotation (~1.3°/s at the deepest level: the structure is always slowly becoming something else) (theta += gSpin*(0.4+i*0.05))
+    gSpin  += bTime * max(0.0, 0.10 + EXA(knob_146, 0.34)) + flowPhase * 0.05;   // K146 SPIN RATE: the monotonic fold rotation. Clamped at 0 — a fader can stall the spin but NEVER reverse it (standing directive: geometry always goes forward).   // vj7-b2 SPIN FOLLOWS THE LOW END: base rate 0.18 -> 0.10, and flowPhase (bass-paced MONOTONIC accumulator, freezes at silence) carries the rest — the lattice turns faster when the low end works, stalls in breakdowns, never reverses (iter144 zoom precedent). NOT QGATE'd: gating an accumulated ANGLE would snap it when the gate moves.   /* iter 142: shapeA rock removed — spin purely monotonic */   // iter 118: user 'always going FORWARD, no oscillating back' — monotonic rotation now dominates (0.08→0.18), ping-pong shapeA demoted (0.9→0.35)                     // per-level fold angle drift + CONTINUOUS slow fold rotation (~1.3°/s at the deepest level: the structure is always slowly becoming something else) (theta += gSpin*(0.4+i*0.05))
     gHexR   = 0.60 + evoA * 0.20;   /* iter 142: radius = section plateau; no rock, no audio breath */   /* iter 138: user 'shaking back and forth without progression' — standing breath 0.17 -> 0.05; the VISIBLE radius change now comes from the depth-traveling wave below (monotonic = always forward) */   // iter 114: 0.06 → 0.17 — cell radius sweep must be VISIBLE (slow driver, safe)   // vj2 iter 2: 0.12·(1+wub·0.8) → 0.05 — the spring (settles ~0.4s) chases a 2–4 Hz wobble, so cells PULSED at wub rate = TWITCHY. Geometry follows slow music; the wub now lives in shading only.
     gHexR  += 0.0;   /* iter 142: QUIET BREATH sine removed (oscillator on geometry) */   // QUIET BREATH: when the gate closes on soft music the cells keep a slow ~27s breath instead of freezing; loud = unchanged
-    gBorder = 0.10 + (trebLive * 0.025 + bassLive * 0.02 + spectralRoughnessSmooth * 0.03) * quietGate   /* vj2 iter 2: treb .06→.025, bass .04→.02 (hi-hats were flicking line thickness) */ + (knob_138 - 0.5) * 0.10 * step(0.001, knob_137 + knob_138);   // K138 LINE THICKNESS (guest bank pad 4 Y, iter 24)   // GRIT fattens the lines too (roughness is not a phone fader → still listens under TAKE OVER)
+    gBorder = 0.10 + (trebLive * 0.025 + bassLive * 0.02 + spectralRoughnessSmooth * 0.03) * QGATE   /* vj2 iter 2: treb .06→.025, bass .04→.02 (hi-hats were flicking line thickness) */ + (knob_138 - 0.5) * 0.10 * step(0.001, knob_137 + knob_138);   // K138 LINE THICKNESS (guest bank pad 4 Y, iter 24)   // GRIT fattens the lines too (roughness is not a phone fader → still listens under TAKE OVER)
     gCross  = 0.20 + evoB * 0.12;   /* iter 142: cross = section plateau; bassPulse off geometry */   /* iter 138: standing sweep 0.11 -> 0.04 (same ratchet fix) */   // iter 114: 0.04 → 0.11      // vj2 iter 2: .05 → .02 (de-twitch)
     // ── GUEST BANK 1 (vjpad knob_131–136, iter 22 auto-wire: the user was riding a dead bank) ──
     //    Pad 1: X=131 FOLD RATIO   Y=132 DEPTH FOCUS      Pad 2: X=133 FOLD TWIST  Y=134 CELL RADIUS
@@ -668,8 +680,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
 
     float bank4 = step(0.001, knob_131 + knob_132 + knob_133 + knob_134 + knob_135 + knob_136);
     gCrossBias = (knob_139 - 0.5) * 0.12 * step(0.001, knob_139 + knob_140);   // K139 HEX↔CROSS (pad 5 X, iter 25): <0.5 more cross, >0.5 more hex
-    gCrossBias -= clamp(waveletTiltMedian, -1.0, 1.0) * 0.05 * quietGate;
-    gCrossBias += (spectralEntropyMedian - 0.80) * 0.16 * quietGate;   // iter150 CHAOS -> SHAPE: a noisy, unpredictable spectrum pushes cells toward the taut CROSS; an ordered, tonal one lets the HEXAGON win. Median => a section-scale morph, never a per-beat flick.   // vj2 iter 1: SPECTRAL TILT → cell SHAPE. Bass-heavy balance (+tilt) → the taut CROSS dominates; bright/hissy (−tilt) → HEXAGONS. Median = slow, structural (~seconds), never a per-frame flick.
+    gCrossBias -= clamp(waveletTiltMedian, -1.0, 1.0) * 0.05 * QGATE;
+    gCrossBias += (spectralEntropyMedian - 0.80) * 0.16 * QGATE;   // iter150 CHAOS -> SHAPE: a noisy, unpredictable spectrum pushes cells toward the taut CROSS; an ordered, tonal one lets the HEXAGON win. Median => a section-scale morph, never a per-beat flick.   // vj2 iter 1: SPECTRAL TILT → cell SHAPE. Bass-heavy balance (+tilt) → the taut CROSS dominates; bright/hissy (−tilt) → HEXAGONS. Median = slow, structural (~seconds), never a per-frame flick.
     gSpin  += (knob_133 - 0.5) * 2.0 * bank4;                 // K133 FOLD TWIST
     gHexR  += (knob_134 - 0.5) * 0.15 * bank4;                // K134 CELL RADIUS
     gScale  = 2.0 + evoC * 0.14 + (knob_131 - 0.5) * 0.5 * bank4;   /* iter 142: FOLD RATIO = section plateau. The spectral-width term moved every mirror seam at every level — the 'overlapping kaleidoscope sections breathing' the user called out. */   // vj2 iter 10: SPECTRAL WIDTH → FOLD RATIO. Wide/dense spectrum (spread ~0.85) opens the self-similarity ratio (+0.12), a narrow one tightens it (−0.15). Median → slow structural permutation, never a per-frame flick. // K131 FOLD RATIO
@@ -683,10 +695,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     gInterleave += gComplex * 0.05;         // and the two interleaved sub-lattices separate further
     gShapePhase = morphPhase * 0.85 + bTime * 0.30;   // iter 138 RATCHET: strictly increasing -> the radius wave always travels coarse->fine, reads as continuous inward progression, never a rebound
     gDepthFocus = clamp(0.35 + evoD * 0.35 + (knob_132 - 0.5) * bank4
-                      + (trebLive - 0.50) * 0.08 * quietGate          /* iter148: 0.16->0.08 and centred at 0.50 (trebLive actually runs ~0.55, so the old 0.35 centre pushed FINE almost permanently = filigree mush) */
+                      + (trebLive - 0.50) * 0.08 * QGATE          /* iter148: 0.16->0.08 and centred at 0.50 (trebLive actually runs ~0.55, so the old 0.35 centre pushed FINE almost permanently = filigree mush) */
                       - (1.0 - clamp(flybyZoom, 0.0, 1.0)) * 0.08,    /* iter149b: was 0.30 and that was MY BAD GUESS. I assumed the wide leg aliased into mush, but the measurement said the opposite - wide was the SHARPEST state (edge energy 0.09 wide vs 0.02 at close cruise), because the soft 0.12 line ramp goes sub-pixel out there. A 0.30 coarse bias stripped the level window down to only the biggest cells, so the wide shot read as a few soft blobs instead of a landscape. Keep a token bias for anti-alias headroom only. */
                       0.0, 1.0);   /* iter 142: level window = section plateau. The centroid SPRING faded whole detail-levels in/out with brightness = sections appearing/vanishing. */   // vj2 iter 12: 0.35/1.0 → 0.30/0.8 — on bright tracks the finest levels filled every cell with speckle (busy wallpaper); bias coarser, brightness pushes fine less hard   // biased COARSE (0.35): bold cells by default, filigree only when bright   // K132 DEPTH FOCUS   // BRIGHTNESS → fine detail, dark → coarse (level window)                            // fractal self-similarity ratio: slow permutation of the WHOLE structure (user iter 12: fractal permutations, not warps)
-    gFill   = max(0.0, max(0.0, 0.06 + EXA(knob_149, 0.14)) + trebLive * 0.02 * quietGate + (spectralSpreadMedian - 0.26) * 0.05 * quietGate
+    gFill   = max(0.0, max(0.0, 0.06 + EXA(knob_149, 0.14)) + trebLive * 0.02 * QGATE + (spectralSpreadMedian - 0.26) * 0.05 * QGATE
             - CHURN * 0.05);   // vj8-b10d OUTER CLAMP — the learned FILL term was applied OUTSIDE the existing max(), so with the user's K149 fader at 0 (base gFill already 0) churn drove gFill NEGATIVE, unlighting cell interiors entirely: lumMin 0.051, two too-dark alerts. A subtractive audio term must never be able to push a threshold past the floor its manual control already sits on.   // vj8-b10 LEARNED, PRIMARY: timbral churn HOLLOWS the cells — the exact sign the hand traced (K149 vs flux, r=-0.45). gFill is a coverage/shading threshold, not a fold param: it changes what a cell LOOKS like without moving where any cell IS, so this is legal audio-on-shading, not audio-on-geometry.   // iter150 HARMONIC WIDTH -> FILL: a wide, dense spectrum fills the cells solid; a narrow one hollows them to outlines.
 
     // ── iter144 BREATHE IN PLACE ── (user: "oscillation _can_ be ok - just not large moving pieces
@@ -695,11 +707,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     //    term stay frozen, because those move the mirror SEAMS at every level and the error compounds
     //    as scale^i — that is what destroyed the sense of space (iters 138-143). Everything that lives
     //    INSIDE a cell is free to breathe, because it changes what a cell LOOKS like without moving
-    //    where any cell IS. All drivers are spring-smoothed and quietGate'd: no raw per-frame value
+    //    where any cell IS. All drivers are spring-smoothed and QGATE'd: no raw per-frame value
     //    ever touches structure (that path is the shiver).
-    gHexR  += (midsLive - 0.35) * 0.18 * quietGate * (0.6 + wubDepth * 0.7);   // CELLS BREATHE with the mids/wobble — ring radius inside each cell; seams fixed
-    gCross += (bassLive - 0.42) * 0.11 * quietGate;                            // BASS pulls the cross taut / lets it slacken
-    gBorder += (spectralCrestSmooth - 0.2) * 0.035 * quietGate;
+    gHexR  += (midsLive - 0.35) * 0.18 * QGATE * (0.6 + wubDepth * 0.7);   // CELLS BREATHE with the mids/wobble — ring radius inside each cell; seams fixed
+    gCross += (bassLive - 0.42) * 0.11 * QGATE;                            // BASS pulls the cross taut / lets it slacken
+    gBorder += (spectralCrestSmooth - 0.2) * 0.035 * QGATE;
     gBorder += CHURN * 0.035;   // vj8-b10d LEARNED, PRIMARY (moved here from FILL): churn FATTENS the lattice lines. FILL turned out to be a dead channel in this preset — the user's own K149 sits at 0, so a subtractive term there has nothing left to remove and only darkens. Line weight always has headroom, is pure shading, and reads from across a room: on a churny passage the whole lattice thickens and glows, on a clean one it goes fine and precise.                // spiky vs smooth timbre → line weight breathes           // vj2 iter 2: .035 → .02 (de-twitch)
 
     // ── UNIQUE-PER-AREA structure: world position drifts the cell SIZE only — NOT rotation.
@@ -743,7 +755,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // iter144: zoom RATE is audio-rated via flowPhase, a MONOTONIC accumulator (rate-not-angle, iris
     // §1) — busy/loud music rushes the lattice inward, a breakdown almost stalls it. Because the
     // phase only ever increases, speeding it up can never make the zoom run backward.
-    float zoomP = fract((bTime - min(evoPhase * 25.0, bTime * 0.6)) * max(0.0, 0.016 + EXA(knob_147, 0.030)) + flowPhase * 0.0045 * quietGate);   /* vj8-b9 ONE-WAY CLAMP (measured 22:14): evoRate had risen 0.0070 -> 0.0093/s as the room got louder; the raw evoPhase*25 term was eating 0.233 of bTime's 0.333/s (zoom down to 30% speed) and REVERSES above evoRate 0.0133 — 70% of the way to running the dive backward, which directive #1 of the geometry channel forbids. min(evoPhase*25, bTime*0.6) caps the subtraction at 60% of elapsed time, so net time always advances at >=0.133/s NO MATTER how loud the room gets. The learned mapping is untouched below the cap; only the failure mode is gone. */   /* vj7-b6 SESSION CALIBRATION: 12 -> 25. Measured evoRate 0.007/s on tonight's quiet mic — at 12 the slowdown was a near-constant 25%, i.e. invisible (user: "I don't see the shader reacting"). 25 gives ~53% swing across loud/quiet transitions HERE; it reverses the zoom if evoRate exceeds 0.0133 (1.9x tonight), so AT REAL VOLUME DROP THIS BACK toward 10 or make the controller emit a normalized sustained-energy rate. */   // K147 ZOOM RATE: how fast the perpetual self-similar zoom eats one octave (~60 s at centre). max() keeps it one-way.   // vj7-b5 LEARNED: SUSTAINED LOUDNESS SLOWS THE ZOOM (confirmed gesture 17:41 — K147 tracked energyLong r=-0.75 t=4.96 n_eff=21, ahead of the accumulator-artifact tie at -0.71). Implemented rate-not-angle: evoPhase is the energy-weighted MONOTONIC set clock (silence-frozen), so subtracting it inside the product slows the zoom ~20% at nominal music, ~40-60% when sustained-hot, continuously, and can never run the zoom backward (12*evoRate stays well under bTime's 1/3).
+    float zoomP = fract((bTime - min(evoPhase * 25.0, bTime * 0.6)) * max(0.0, 0.016 + EXA(knob_147, 0.030)) + flowPhase * 0.0045 * QGATE);   /* vj8-b9 ONE-WAY CLAMP (measured 22:14): evoRate had risen 0.0070 -> 0.0093/s as the room got louder; the raw evoPhase*25 term was eating 0.233 of bTime's 0.333/s (zoom down to 30% speed) and REVERSES above evoRate 0.0133 — 70% of the way to running the dive backward, which directive #1 of the geometry channel forbids. min(evoPhase*25, bTime*0.6) caps the subtraction at 60% of elapsed time, so net time always advances at >=0.133/s NO MATTER how loud the room gets. The learned mapping is untouched below the cap; only the failure mode is gone. */   /* vj7-b6 SESSION CALIBRATION: 12 -> 25. Measured evoRate 0.007/s on tonight's quiet mic — at 12 the slowdown was a near-constant 25%, i.e. invisible (user: "I don't see the shader reacting"). 25 gives ~53% swing across loud/quiet transitions HERE; it reverses the zoom if evoRate exceeds 0.0133 (1.9x tonight), so AT REAL VOLUME DROP THIS BACK toward 10 or make the controller emit a normalized sustained-energy rate. */   // K147 ZOOM RATE: how fast the perpetual self-similar zoom eats one octave (~60 s at centre). max() keeps it one-way.   // vj7-b5 LEARNED: SUSTAINED LOUDNESS SLOWS THE ZOOM (confirmed gesture 17:41 — K147 tracked energyLong r=-0.75 t=4.96 n_eff=21, ahead of the accumulator-artifact tie at -0.71). Implemented rate-not-angle: evoPhase is the energy-weighted MONOTONIC set clock (silence-frozen), so subtracting it inside the product slows the zoom ~20% at nominal music, ~40-60% when sustained-hot, continuously, and can never run the zoom backward (12*evoRate stays well under bTime's 1/3).
     float thetaStep = gThetaStep;   /* K141 shares this: the wrap compensation must use the SAME per-level step as fractal() or the octave seam snaps instead of vanishing. */   /* iter 141b: gSpin*0.05 term was an accumulated (huge) angle -> frame spun fast + symmetry tilted. Compensate only the FIXED per-level step; the residual seam mismatch hides in the ongoing morph. */
     uv *= rot2(zoomP * thetaStep);
     uv /= pow(clamp(2.0 + EXA(knob_148, 2.0), 1.2, 4.0), zoomP);   /* K148 ZOOM OCTAVE: what magnification counts as one wrap. The seam only disappears when this MATCHES the fold ratio gScale (K131) — mismatching them on purpose is a legitimate look, it just visibly re-snaps each cycle. */   /* iter 142: FIXED base — zoom velocity must not follow gScale */
@@ -757,14 +769,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
 
     // ── BEAUTIFUL COLOUR ── one smooth Oklch journey (iris/1 PITCH→COLOUR family): the MELODY
     //    carries the palette through the song and BRIGHTNESS (centroid) tints it, so the whole
-    //    image flows in colour with the music. Smoothed contours only — no jitter. quietGate so
+    //    image flows in colour with the music. Smoothed contours only — no jitter. QGATE so
     //    a silent room can't flash the hue. Plus per-area / per-device / permanent-drop offsets.
     float s = field
             + regionHue(world) * max(0.0, 1.0 + EXB(knob_155, 2.0))   // K155 REGION HUE: how strongly WORLD POSITION re-paints the palette. 0 = one colour everywhere; high = every screen you pan to is a different colourway.
             + bTime * 0.002                                   // vj2 iter 5: was 0.012 = a full hue turn every ~4 min (0.24 turns/min — 8× the user's 'muted, slow' tolerance and the biggest single palette mover). Now ~1 turn / 25 min.
-            + (melodyFlow * 0.05 + pitchClassMean * 0.10) * quietGate   // vj2 iter 4: MELODY → palette, but SLOW. melodyFlow slews 0.03/frame (a melodic leap re-tints the whole field 0.075 in ~0.3 s = the palette 'flash' the meter caught: hue 0.46→0.61 inside one track). pitchClassMean is the ~8 s rolling KEY estimate — it carries 2/3 of the weight now. (was melodyFlow*0.15; 0.32 before iter 17)
-            + waveletCentroidSpring * 0.07 * quietGate        // BRIGHTNESS → hue tint (0.14 → 0.07)
-            + (bassNoteFlow - 0.5) * 0.05 * quietGate         // BASSLINE NOTE → hue tilt (was 0.16: whole-field re-tints on note changes read as colour FLASHING — user iter 9) (centred: a mid bass note is neutral; not a phone fader, so it keeps listening under TAKE OVER)
+            + (melodyFlow * 0.05 + pitchClassMean * 0.10) * QGATE   // vj2 iter 4: MELODY → palette, but SLOW. melodyFlow slews 0.03/frame (a melodic leap re-tints the whole field 0.075 in ~0.3 s = the palette 'flash' the meter caught: hue 0.46→0.61 inside one track). pitchClassMean is the ~8 s rolling KEY estimate — it carries 2/3 of the weight now. (was melodyFlow*0.15; 0.32 before iter 17)
+            + waveletCentroidSpring * 0.07 * QGATE        // BRIGHTNESS → hue tint (0.14 → 0.07)
+            + (bassNoteFlow - 0.5) * 0.05 * QGATE         // BASSLINE NOTE → hue tilt (was 0.16: whole-field re-tints on note changes read as colour FLASHING — user iter 9) (centred: a mid bass note is neutral; not a phone fader, so it keeps listening under TAKE OVER)
             + (sectionMode - (1.0 - sectionMix)) * 0.03       // each DROP glides the palette 0.03 further (was 0.07) over its ~4s crossfade (mix eases the step; no snap)
             + DIAL_HUE                                        // dial 1 (knob_2): touch palette rotation
             + paletteShift                                    // permanent live mutation
@@ -784,7 +796,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // ── MUSICAL BLOOM (iris/1: smooth for global, raw only for the transient) ── a swell/drop
     //    lifts the WHOLE image brightness smoothly (energy + articulation), the kick adds a snappy
     //    thump on top. So it breathes with the build and punches on the hit, never strobes.
-    float dropGlow = clamp(glowLive * 0.6 + spectralCrestSmooth * 0.4, 0.0, 1.0) * quietGate;
+    float dropGlow = clamp(glowLive * 0.6 + spectralCrestSmooth * 0.4, 0.0, 1.0) * QGATE;
     // iter148: THE REMAINING PUMP. iter146 fixed the per-level multiplier but this whole-image one
     //    survived: bass + dropGlow + kick drove it 1.0 -> 1.24, and directive #1 is that bass and kick
     //    NEVER touch the global multiplier. Now a constant with one small CENTRED articulation term,
@@ -812,29 +824,29 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         vec2  L    = vec2(cos(ang), sin(ang));
         float rim  = smoothstep(0.02, 0.25, edge) * pow(0.5 + 0.5 * dot(n, L), 2.0);
         vec3  rimCol = lush(s + 0.33, 1.0);
-        col += rimCol * rim * (0.30 + trebLive * 0.45 + spectralRoughnessSmooth * 0.25 + CHURN * 0.80) * quietGate * 0.8;   // vj8-b10 LEARNED, SECONDARY: the same CHURN flares the EDGES. Two jobs: (a) it makes the learned mapping visible from across the room — cells hollow out while their outlines light up, so a churny passage reads as the lattice turning to wireframe; (b) it is the counter-ratchet for the FILL term above, which removes lit area and would otherwise dim the frame on exactly the loudest passages.
+        col += rimCol * rim * (0.30 + trebLive * 0.45 + spectralRoughnessSmooth * 0.25 + CHURN * 0.80) * QGATE * 0.8;   // vj8-b10 LEARNED, SECONDARY: the same CHURN flares the EDGES. Two jobs: (a) it makes the learned mapping visible from across the room — cells hollow out while their outlines light up, so a churny passage reads as the lattice turning to wireframe; (b) it is the counter-ratchet for the FILL term above, which removes lit area and would otherwise dim the frame on exactly the loudest passages.
         // SHADOW SIDE (iter 16): edges facing AWAY from the light darken → the lattice reads as RELIEF,
         // lit from one side. Depth punches on kicks (gKick, dead-zoned) and leans on the bass spring,
         // so a hit makes the structure emboss harder for a beat. Lighting reactivity, not colour.
         float shade = smoothstep(0.02, 0.25, edge) * pow(0.5 - 0.5 * dot(n, L), 2.0);
-        col *= 1.0 - shade * min(0.85, 0.22 + gKick * 0.95 + bassLive * 0.48 + max(0.0, spectralRoughnessZScore) * 0.10 /* vj2-r1 GRIT RELIEF: 0.22 -> 0.10. The iter-134 comment on this very stack records kick+wub crushing lumMin to .063; my 0.22 took it to .059 (too-dark alert 21:26). Same trap, same stack. */)   /* iter 134: clamp relief stack — kick+wub together crushed lumMin to .063 (floor .08) */ * quietGate * mix(1.0, 0.4 + knob_136 * 1.2, bank4);   // K136 RELIEF DEPTH
+        col *= 1.0 - shade * min(0.85, 0.22 + gKick * 0.95 + bassLive * 0.48 + max(0.0, spectralRoughnessZScore) * 0.10 /* vj2-r1 GRIT RELIEF: 0.22 -> 0.10. The iter-134 comment on this very stack records kick+wub crushing lumMin to .063; my 0.22 took it to .059 (too-dark alert 21:26). Same trap, same stack. */)   /* iter 134: clamp relief stack — kick+wub together crushed lumMin to .063 (floor .08) */ * QGATE * mix(1.0, 0.4 + knob_136 * 1.2, bank4);   // K136 RELIEF DEPTH
         // SPECULAR (iter 19): a TIGHT glint on line edges facing the sun exactly — slides along the
         // structure as the sun orbits; treble spring + crest sharpen/brighten it. Palette-lit, not white.
         float spec = smoothstep(0.02, 0.25, edge) * pow(max(dot(n, L), 0.0), 14.0);
-        col += lush(s + 0.33, 1.0) * spec * (0.25 + trebLive * 0.6 + spectralCrestSmooth * 0.3 + WUB * 0.55) * quietGate;   // vj8-b11 LEARNED: wub also sharpens the SPECULAR glint, so a wobbly bassline makes the lattice edges glint hard and a clean passage lets them settle. Two channels for one feature = you can see it whether you are looking at the cells or the edges.
+        col += lush(s + 0.33, 1.0) * spec * (0.25 + trebLive * 0.6 + spectralCrestSmooth * 0.3 + WUB * 0.55) * QGATE;   // vj8-b11 LEARNED: wub also sharpens the SPECULAR glint, so a wobbly bassline makes the lattice edges glint hard and a clean passage lets them settle. Two channels for one feature = you can see it whether you are looking at the cells or the edges.
         // (sun disc + halo REMOVED iter 21 — user: "that circle needs to go". Lighting stays.)
     }
 
     // ── AURORA (DRAMATIC, /vibej iter 8) ── slow translucent colour CURTAINS sweeping the whole
     //    screen over the lattice, like northern lights behind glass. Sparse bright ribbons that
     //    fold and drift; hue is the palette's complement so they read as a separate layer. Louder
-    //    with spectral BRIGHTNESS + GRIT (both smoothed, neither a phone fader). quietGate-calm.
+    //    with spectral BRIGHTNESS + GRIT (both smoothed, neither a phone fader). QGATE-calm.
     {
         vec2 a = fragCoord / iResolution.xy;
         float band = sin(a.x * 4.0 + sin(a.y * 3.0 + bTime * 0.9) * 1.5 + bTime * 0.5 + evoPhase)
                    * sin(a.x * 7.3 - a.y * 2.0 - bTime * 0.7);
         float curtain = smoothstep(0.35, 1.0, band);                       // sparse bright ribbons
-        float auroraAmt = (0.35 + waveletCentroidSpring * 0.6 + spectralRoughnessSmooth * 0.3) * quietGate;
+        float auroraAmt = (0.35 + waveletCentroidSpring * 0.6 + spectralRoughnessSmooth * 0.3) * QGATE;
         vec3 acol = lush(s + 0.5 + a.y * 0.15, 0.9);                       // complement, drifting up the screen
         col += acol * curtain * 0.10 * auroraAmt * mix(1.0, knob_137 * 2.0, step(0.001, knob_137 + knob_138));   // K137 AURORA AMOUNT (pad 4 X: 0 = off, 0.5 = default, 1 = double)                          // 0.22 → 0.10 (iter 17: palette calm)                          // 0.30 → 0.22 (iter 9: less colour churn)
     }
@@ -919,7 +931,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // ground drops, so a drop buys CONTRAST instead of just dimming the picture.
         // Both terms are cov-masked and spatially structured — no global multiplier, so
         // this still cannot strobe the frame.
-        float pump = clamp(energySpring * quietGate, 0.0, 1.0);
+        float pump = clamp(energySpring * QGATE, 0.0, 1.0);
         // Balance measured live: at depth 0.62 / gain 0.30 the contrast correlation went
         // +0.881 but brightness stayed -0.767 — drops sharpened the frame while DIMMING
         // it, which is backwards for a dark room. Ground recede eased, bead gain nearly
@@ -927,7 +939,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         float seedDepth = mix(0.25, 0.50, pump);
         col *= mix(1.0, 1.0 - seedDepth, (1.0 - cov) * knob_168);
         col += lush(s, 0.95) * cov * knob_168 * (0.05 + 0.58 * pump);   // beads gain with the music
-        col += lush(s + 0.33, 1.0) * rim * knob_168 * (0.22 + 0.45 * trebLive * quietGate);
+        col += lush(s + 0.33, 1.0) * rim * knob_168 * (0.22 + 0.45 * trebLive * QGATE);
     }
 
     // GLOW LIFT — gamma up + gain so mid-tones emit; high chroma keeps it NEON, not washed out.
