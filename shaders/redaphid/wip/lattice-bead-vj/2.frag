@@ -749,7 +749,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         //    only (the iter146 "relief, not gain" rule); the frame mean does not follow it.
         float dome = smoothstep(0.0, -0.55 * heroR, heroD);      // 0 at the edge -> 1 deep inside
         col *= 1.0 + heroIn * dome * (0.05 + 0.24 * ndl)
-                   * (0.7 + gKick * 0.5 + bassLive * 0.4 * quietGate);
+                   * (0.6 + gKick * 0.5 + bassLive * 0.3 * quietGate + waveletBand1Spring * 0.5 * quietGate);   // hero-lab 3: sub-bass band lifts the dome
 
         // 3. SUBJECT / GROUND -- the field is dimmed and desaturated outside the silhouette so
         //    the bead is what the eye lands on from across a dark room. Measured: without this the
@@ -777,14 +777,24 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         //    thing a stranger reads at 20 m in the dark; everything else is why it looks alive.
         float ew   = HERO_EDGE + haa;
         float line = smoothstep(ew, ew * 0.30, abs(heroD)) * heroSettle;
-        col += lush(s + HERO_HUE + 0.33, 1.0) * line
+        // hero-lab 3 (2026-09-04): lush(..., 1.0) is the lightness ceiling = a near-WHITE stroke.
+        // A saturated palette hue just under white keeps "palette-lit" true and off the no-white
+        // rule; wavelet brightness (centroid spring) tints it, the iris CORE_HUE idea, gated.
+        float lineH = fract(s + HERO_HUE + 0.33 + (waveletCentroidSpring - 0.45) * 0.20 * quietGate) * TAU;
+        vec3  lineC = clamp(oklch2rgb(vec3(0.80, 0.15, lineH)), 0.0, 1.0);
+        col += lineC * line
              * (0.85 + trebLive * 0.55 + CHURN * 0.85 + gKick * 0.45 + WUB * 0.35) * HERO_RIM;
 
         // 7. RIM -- the sun-facing arc flares brighter, so the silhouette TURNS in the light
         //    instead of being a uniformly bright sticker.
         float rimA = smoothstep(ew * 3.5, 0.0, abs(heroD)) * pow(ndl, 2.2) * heroSettle;
-        col += lush(s + HERO_HUE + 0.16, 1.0) * rimA
-             * (0.35 + spectralCrestSmooth * 0.5 + WUB * 0.6) * HERO_RIM;
+        // hero-lab 3: rim colour under white too (lush(...,1.0) hit the ceiling at high wavelet
+        // levels), and the wavelet mid/high-mid bands light the sun-facing arc, capped so a loud
+        // passage brightens the rim without ever bleaching it.
+        vec3  rimC = clamp(oklch2rgb(vec3(0.76, 0.14, lineH - 1.05)), 0.0, 1.0);
+        col += rimC * rimA
+             * min(0.30 + spectralCrestSmooth * 0.4 + WUB * 0.5
+                   + waveletBand3Spring * 0.45 + waveletBand4Spring * 0.35, 1.15) * HERO_RIM;
     }
 
     // ── AURORA (DRAMATIC, /vibej iter 8) ── slow translucent colour CURTAINS sweeping the whole
