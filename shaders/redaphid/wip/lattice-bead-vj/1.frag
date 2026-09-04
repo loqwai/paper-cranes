@@ -567,12 +567,12 @@ float seedDist(vec2 p, float pitch){
 
 // One seed octave: coverage + contour, sampled at scale k about centre c.
 // aa scales WITH k, or the antialiasing ramp stops matching the cells it is smoothing.
-vec2 seedLayer(vec2 p, vec2 c, float k, float pitch, float aaBase, float rimW){
+vec3 seedLayer(vec2 p, vec2 c, float k, float pitch, float aaBase, float rimW){
     float d  = seedDist((p - c) * k + c, pitch);
     float aa = clamp(aaBase * k * 1.5, 1e-4, pitch * 0.04);
     // rimW: 4.0 is 3.frag's hairline contour. LEGIBLE widens it into a drawn line, which is
     // what actually survives downscaling to a phone screen or a projector across a room.
-    return vec2(smoothstep(aa, -aa, d), smoothstep(aa * rimW, 0.0, abs(d)));
+    return vec3(smoothstep(aa, -aa, d), smoothstep(aa * rimW, 0.0, abs(d)), d / k);   // .z = signed distance in uv units (outline echoes)
 }
 
 // depth-coherent reactivity: near layers shimmer w/ treble, far layers throb w/ bass
@@ -1018,9 +1018,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         float kB = mix(2.0, exp2(1.0 - zf), unlock);
         float aaBase = length(fwidth(uv));
         float rimW = mix(4.0, 16.0, LEGIBLE);
-        vec2  lA = seedLayer(uv, world, kA, seedPitch, aaBase, rimW);
-        vec2  lB = seedLayer(uv, world, kB, seedPitch, aaBase, rimW);
-        vec2  sl = mix(lA, lB, smoothstep(0.0, 1.0, zf));
+        vec3  lA = seedLayer(uv, world, kA, seedPitch, aaBase, rimW);
+        vec3  lB = seedLayer(uv, world, kB, seedPitch, aaBase, rimW);
+        vec3  sl = mix(lA, lB, smoothstep(0.0, 1.0, zf));
         float sd  = 0.0;
         // AA width from the derivative of uv, which is continuous — taking it from sd
         // would blow up on the fract() seam and draw a grid of dark lines.
@@ -1084,6 +1084,23 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // (corr(energySpring, brightness) -0.68: a drop made the frame DARKER and FLATTER).
         col += lush(s, 0.95) * cov * knob_168 * (0.05 + 0.58 * pump) * mix(1.0, 1.9, LEGIBLE);
         col += lush(s + 0.33, 1.0) * rim * knob_168 * (0.22 + 0.45 * trebLive * QGATE) * mix(1.0, 1.6, LEGIBLE);
+        // ── OUTLINE-ECHO RINGS (lab 2026-09-04) ── concentric copies of the crest's OWN outline.
+        //    Inside the silhouette: inset copies, so the fill is made of the bead. Outside: ripples
+        //    that leave the bead and meet the neighbour's at the tile boundary, so every cell
+        //    interaction on screen IS the crest's outline. They travel ONE WAY on flowPhase + bTime
+        //    (monotonic, rate-not-angle, never rewinds); audio touches AMPLITUDE only (bassLive is a
+        //    spring), never the phase; cov/reach-masked and spatially structured, so it cannot strobe.
+        //    Measured headless (hakkaku, stubbed audio): lum 70.7 -> 75.4, dark 8.3% -> 6.7%, no wash.
+        {
+            float echoAmt = LVK(knob_182, 2.5, knob_182 * 4.0);   // K182 ECHO AMOUNT (0 = baked 2.5, dial 0..4)
+            float sdn     = sl.z / seedPitch;                      // signed distance, tile-relative
+            float ringP   = 0.09;                                  // echo spacing, tile-relative (0.045 = busier)
+            float ph      = flowPhase * 0.12 + bTime * 0.05;       // monotonic -> echoes move OUTWARD
+            float rq      = abs(fract(sdn / ringP - ph) - 0.5) * ringP * seedPitch;   // distance to nearest echo, uv units
+            float ring    = smoothstep(aaBase * 2.5, 0.0, rq);
+            float reach   = exp(-abs(sdn) / mix(0.10, 0.22, cov)); // inside reaches further than outside
+            col += lush(s + mix(0.12, 0.33, cov), 0.9) * ring * reach * mix(0.30, 0.55, cov) * knob_168 * (0.55 + 0.45 * bassLive * QGATE) * echoAmt;
+        }
         // ── DROP FLARE (K179) ──────────────────────────────────────────────────
         // energyZScore was measured as the STRONGEST fast signal on this input (live
         // range 1.20 over 8s) and the shader ignored it completely — 0 references. On a
