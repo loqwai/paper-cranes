@@ -1,0 +1,4 @@
+WALL 1 = kikyo = option D   (options: ['mokko', 'katabami', 'ume', 'kikyo'])
+WALL 2 = kiku = option D   (options: ['kikyo', 'hakkaku', 'ume', 'kiku'])
+WALL 3 = hakkaku = option B   (options: ['kikko', 'hakkaku', 'ogi', 'matsukawa'])
+WALL 4 = suhama = option C   (options: ['tomoe', 'katabami', 'suhama', 'mokko'])
