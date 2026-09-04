@@ -67,6 +67,7 @@ export function make() {
     let tonalSmooth = 0       // smoothed tonal strength
     const spectralSmooth = { crest: 0, rough: 0, entropy: 0 } // smoothed jittery spectral texture
     let quietGate = 0         // 0 in silence → 1 when loud; fades reactivity to stop quiet-noise flashing
+    let ePeak = 0             // slowly-decaying peak of raw energy; the gate is RELATIVE to this
     const phase = { spin: 0, morph: 0, flow: 0, hue: 0 } // monotonic accumulators (rate*dt) — no iTime*rate acceleration
     let bassNoteFlow = null   // flowing bassline-pitch contour
     let wubBaseline = 0       // slow bass average, for wub-depth detection
@@ -155,8 +156,29 @@ export function make() {
         // full-range swings, flashing hue & spinning fast. quietGate smoothly fades 0→1 with
         // loudness so shaders can multiply their audio offsets by it: at low energy the
         // reactivity fades out (visual holds calm) instead of being driven by noise.
-        const eRaw = features.energy ?? 0                       // absolute loudness (gain-independent enough at the low end)
-        const gateTarget = Math.min(1, Math.max(0, (eRaw - 0.015) / 0.05)) // 0 below ~0.015, 1 by ~0.065
+        // ADAPTIVE, NOT ABSOLUTE (bugfix 2026-09-04). This used a HARD ABSOLUTE THRESHOLD:
+        //     gateTarget = clamp((eRaw - 0.015) / 0.05, 0, 1)
+        // which silently assumes the input sits at the level the constants were tuned on. On a
+        // virtual-mic rig it does not. MEASURED live, with music clearly playing and the spectrum
+        // healthy (mids mean 0.603, treble 0.249, 700+ distinct values per feature):
+        //     energy mean 0.01637   ->  gateTarget 0.027   ->  quietGate 5.1e-8
+        // The gate never opened. quietGate multiplies nearly every audio term in the lattice
+        // shaders, so all of them pinned at the QGATE floor and stopped modulating entirely.
+        // That is exactly the "audio reactivity is almost nonexistent" the user reported, and no
+        // amount of shader-side tuning could have fixed it - the signal was gated off upstream.
+        //
+        // The gate's JOB is to tell a quiet passage from a loud one WITHIN THIS INPUT, which is a
+        // relative question, so measure it relatively: track a slowly-decaying peak and compare
+        // against that. Self-calibrating to any input level, mic gain or stream.
+        //   steady input at level L -> ePeak ~ L -> (L - 0.12L)/(0.45L) = 1.96 -> clamps to 1 (open)
+        //   quiet passage at 0.2L   -> (0.2 - 0.12)/0.45 = 0.18            -> low (fades reactivity)
+        //   true silence            -> eRaw -> 0, ratio goes negative      -> 0 (gated, as intended)
+        // Half-life of the peak is ~40s at 60fps, so one quiet bar does not recalibrate it but a
+        // genuinely quieter track does.
+        const eRaw = features.energy ?? 0
+        ePeak = Math.max(eRaw, ePeak * 0.9997)
+        const eRef = Math.max(ePeak, 1e-4)                      // guards divide-by-zero on digital silence
+        const gateTarget = Math.min(1, Math.max(0, (eRaw - 0.12 * eRef) / (0.45 * eRef)))
         quietGate = quietGate * 0.9 + gateTarget * 0.1          // smooth so the gate itself never flashes
         out.quietGate = quietGate
 

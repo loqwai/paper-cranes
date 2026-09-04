@@ -1,0 +1,105 @@
+[
+ {
+  "name": "BASE 1.frag tuning",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.59,
+   "knob_173": 0.33,
+   "knob_174": 0.25
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 41,
+  "mean": 14.16,
+  "litPct": 9.17,
+  "brightPct": 3.37,
+  "darkPct": 14.8
+ },
+ {
+  "name": "BASE + boxfilter 0.25",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.59,
+   "knob_173": 0.33,
+   "knob_174": 0.25,
+   "knob_176": 0.25
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 35,
+  "mean": 14.16,
+  "litPct": 9.18,
+  "brightPct": 3.37,
+  "darkPct": 14.79
+ },
+ {
+  "name": "BASE + boxfilter 0.60",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.59,
+   "knob_173": 0.33,
+   "knob_174": 0.25,
+   "knob_176": 0.6
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 38,
+  "mean": 14.16,
+  "litPct": 9.18,
+  "brightPct": 3.37,
+  "darkPct": 14.75
+ },
+ {
+  "name": "STAGE (no filter)",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 39,
+  "mean": 19.82,
+  "litPct": 12.02,
+  "brightPct": 9.11,
+  "darkPct": 37.17
+ },
+ {
+  "name": "STAGE + boxfilter 0.25",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_176": 0.25
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 36,
+  "mean": 19.77,
+  "litPct": 12.02,
+  "brightPct": 9.17,
+  "darkPct": 37.1
+ },
+ {
+  "name": "STAGE + boxfilter 0.60",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_176": 0.6
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 36,
+  "mean": 19.77,
+  "litPct": 11.99,
+  "brightPct": 9.17,
+  "darkPct": 37.04
+ }
+]

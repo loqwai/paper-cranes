@@ -35,6 +35,10 @@ const events = ['touchstart', 'touchmove', 'touchstop', 'keydown', 'mousedown', 
 let ranMain = false
 let startTime = 0
 const params = new URLSearchParams(window.location.search)
+// ?time=<seconds> pins iTime for deterministic stills. Parsed once; null when absent.
+const pinnedTime = params.has('time') && !isNaN(parseFloat(params.get('time')))
+    ? parseFloat(params.get('time'))
+    : null
 
 // ?vj=1 — load the VJ runtime (validator + aesthetic meter + cursor-hide + /__vj-signal
 // watchdog) at page boot, so reloads can never strip the /vibej loop's tooling and the page
@@ -265,7 +269,13 @@ const animateShader = ({ render, audio, fragmentShader }) => {
         window.cranes.frameCount++
         // Render the shader
         render({
-            time: ((performance.now() - startTime) / 1000) % 1000,
+            // ?time=<seconds> HOLDS iTime, as CLAUDE.md has always documented. It did not:
+            // the param only ever became a separate `time` uniform while iTime kept running off
+            // performance.now(), so every "deterministic" screenshot in the lab was uncontrolled —
+            // which is exactly the 21-30% frame-to-frame pixel jitter teammates measured on
+            // supposedly identical captures. Controller phases still advance in real time; this
+            // pins iTime only.
+            time: pinnedTime ?? ((performance.now() - startTime) / 1000) % 1000,
             features,
             fragmentShader: window.cranes?.shader ?? fragmentShader,
         })

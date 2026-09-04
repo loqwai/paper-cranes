@@ -1,5 +1,6 @@
 import { StatTypes, AudioFeatures } from 'hypnosound'
 import { WorkerRPC } from './WorkerRPC.js'
+import { makeOnsetDetector, defaultOnsetConfig } from './onsetDetector.js'
 
 // Workers compute these but hypnosound's StatTypes doesn't include them
 const AllStatTypes = [...StatTypes, 'slope', 'intercept', 'rSquared']
@@ -49,10 +50,19 @@ export class AudioProcessor {
         this.historySize = historySize
         this.fftAnalyzer = this.createAnalyzer()
         this.fftData = new Uint8Array(this.fftAnalyzer.frequencyBinCount)
+        this.urlSettings = Object.fromEntries(new URLSearchParams(window.location.search))
+        this.onsetAnalyzer = this.createOnsetAnalyzer()
+        this.onsetFftData = new Uint8Array(this.onsetAnalyzer.frequencyBinCount)
+        this.detectOnset = makeOnsetDetector()
         this.workers = new Map()
         this.rawFeatures = {}
         this.currentFeatures = getFlatAudioFeatures()
         this.currentFeatures.beat = false
+        this.currentFeatures.onset = false
+        this.currentFeatures.timeSinceOnset = 1000
+        this.currentFeatures.onsetStrength = 0
+        this.currentFeatures.onsetFlux = 0
+        this.currentFeatures.onsetThreshold = 0
         this.smoothedFeatures = {}
         this.smoothingFactor = 0.10 // Lower = smoother, higher = more responsive
         this.warmupFrame = 0
@@ -65,6 +75,36 @@ export class AudioProcessor {
         analyzer.maxDecibels = -30
         analyzer.fftSize = this.fftSize
         return analyzer
+    }
+
+    // Detection needs fidelity, not smoothness: its own tap with no time smoothing
+    // and a small FFT (~23ms window at 1024 vs ~85ms at 4096) so transients stay sharp.
+    // The feature analyser keeps its smoothing — measurement and animation paths split here.
+    createOnsetAnalyzer = () => {
+        const analyzer = this.audioContext.createAnalyser()
+        analyzer.smoothingTimeConstant = 0
+        analyzer.minDecibels = -100
+        analyzer.maxDecibels = -30
+        analyzer.fftSize = parseInt(this.urlSettings.onset_fft_size ?? '1024')
+        return analyzer
+    }
+
+    getOnsetConfig = () => {
+        const manual = window.cranes?.manualFeatures ?? {}
+        const setting = (key, fallback) => {
+            const value = parseFloat(manual[key] ?? this.urlSettings[key])
+            return isFinite(value) ? value : fallback
+        }
+        const nyquist = this.audioContext.sampleRate / 2
+        const binCount = this.onsetAnalyzer.frequencyBinCount
+        return {
+            sensitivity: setting('onset_sensitivity', defaultOnsetConfig.sensitivity),
+            ratio: setting('onset_ratio', defaultOnsetConfig.ratio),
+            refractoryMs: setting('onset_refractory_ms', defaultOnsetConfig.refractoryMs),
+            fluxFloor: setting('onset_flux_floor', defaultOnsetConfig.fluxFloor),
+            lowBin: (setting('onset_low_hz', 0) / nyquist) * binCount,
+            highBin: (setting('onset_high_hz', nyquist) / nyquist) * binCount,
+        }
     }
 
     initializeWorker = async (name) => {
@@ -131,6 +171,16 @@ export class AudioProcessor {
 
         this.historySize = window.cranes?.manualFeatures?.history_size ?? this.historySize
         this.currentFeatures.beat = this.warmupFrame >= WARMUP_FRAMES && this.isBeat()
+
+        // Onset values bypass the smoothing above on purpose: they are events, not
+        // measurements — the "animation" side shapes them (see onsetEnvelope in GLSL)
+        this.onsetAnalyzer.getByteFrequencyData(this.onsetFftData)
+        const { onset, flux, threshold, strength, timeSinceMs } = this.detectOnset(this.onsetFftData, performance.now(), this.getOnsetConfig())
+        this.currentFeatures.onset = onset
+        this.currentFeatures.timeSinceOnset = isFinite(timeSinceMs) ? timeSinceMs / 1000 : 1000
+        this.currentFeatures.onsetStrength = strength
+        this.currentFeatures.onsetFlux = flux
+        this.currentFeatures.onsetThreshold = threshold
     }
 
     isBeat = () => {
@@ -144,6 +194,7 @@ export class AudioProcessor {
 
         this.sourceNode.connect(windowNode)
         windowNode.connect(this.fftAnalyzer)
+        windowNode.connect(this.onsetAnalyzer)
         await Promise.all(AudioFeatures.map(name => this.initializeWorker(name)))
 
         this.updateCurrentFeatures()
@@ -157,6 +208,7 @@ export class AudioProcessor {
             const newStream = await navigator.mediaDevices.getUserMedia({ audio: true })
             this.sourceNode = this.audioContext.createMediaStreamSource(newStream)
             this.sourceNode.connect(this.fftAnalyzer)
+            this.sourceNode.connect(this.onsetAnalyzer)
 
         }, 5000)
     }

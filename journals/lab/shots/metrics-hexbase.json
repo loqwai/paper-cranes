@@ -1,0 +1,220 @@
+[
+ {
+  "name": "HEX  base",
+  "image": "kikko",
+  "time": 4,
+  "knobs": {
+   "knob_170": 0.59,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.33,
+   "knob_174": 0.25,
+   "knob_175": 0.5,
+   "knob_161": 0
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 40,
+  "mean": 11.27,
+  "litPct": 7.99,
+  "brightPct": 1.83,
+  "darkPct": 36.37
+ },
+ {
+  "name": "HEX  STAGE",
+  "image": "kikko",
+  "time": 4,
+  "knobs": {
+   "knob_161": 0
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 39,
+  "mean": 16.8,
+  "litPct": 12.86,
+  "brightPct": 8.62,
+  "darkPct": 56.63
+ },
+ {
+  "name": "BEAD base",
+  "image": "kikko",
+  "time": 4,
+  "knobs": {
+   "knob_170": 0.59,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.33,
+   "knob_174": 0.25,
+   "knob_175": 0.5,
+   "knob_161": 1
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 41,
+  "mean": 13.96,
+  "litPct": 9.17,
+  "brightPct": 3.04,
+  "darkPct": 15.68
+ },
+ {
+  "name": "BEAD STAGE",
+  "image": "kikko",
+  "time": 4,
+  "knobs": {
+   "knob_161": 1
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 37,
+  "mean": 20.02,
+  "litPct": 13.48,
+  "brightPct": 9.31,
+  "darkPct": 35.97
+ },
+ {
+  "name": "HEX  base",
+  "image": "kikko",
+  "time": 8,
+  "knobs": {
+   "knob_170": 0.59,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.33,
+   "knob_174": 0.25,
+   "knob_175": 0.5,
+   "knob_161": 0
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 39,
+  "mean": 11.28,
+  "litPct": 8,
+  "brightPct": 1.83,
+  "darkPct": 36.26
+ },
+ {
+  "name": "HEX  STAGE",
+  "image": "kikko",
+  "time": 8,
+  "knobs": {
+   "knob_161": 0
+  },
+  "save": "hex-stage.png",
+  "w": 900,
+  "h": 900,
+  "frames": 41,
+  "mean": 16.83,
+  "litPct": 12.9,
+  "brightPct": 8.62,
+  "darkPct": 56.5
+ },
+ {
+  "name": "BEAD base",
+  "image": "kikko",
+  "time": 8,
+  "knobs": {
+   "knob_170": 0.59,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.33,
+   "knob_174": 0.25,
+   "knob_175": 0.5,
+   "knob_161": 1
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 40,
+  "mean": 13.95,
+  "litPct": 9.16,
+  "brightPct": 3.04,
+  "darkPct": 15.74
+ },
+ {
+  "name": "BEAD STAGE",
+  "image": "kikko",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1
+  },
+  "save": "bead-stage.png",
+  "w": 900,
+  "h": 900,
+  "frames": 39,
+  "mean": 20.03,
+  "litPct": 13.51,
+  "brightPct": 9.32,
+  "darkPct": 35.84
+ },
+ {
+  "name": "HEX  base",
+  "image": "kikko",
+  "time": 16,
+  "knobs": {
+   "knob_170": 0.59,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.33,
+   "knob_174": 0.25,
+   "knob_175": 0.5,
+   "knob_161": 0
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 39,
+  "mean": 11.26,
+  "litPct": 7.98,
+  "brightPct": 1.83,
+  "darkPct": 36.44
+ },
+ {
+  "name": "HEX  STAGE",
+  "image": "kikko",
+  "time": 16,
+  "knobs": {
+   "knob_161": 0
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 39,
+  "mean": 16.79,
+  "litPct": 12.85,
+  "brightPct": 8.62,
+  "darkPct": 56.67
+ },
+ {
+  "name": "BEAD base",
+  "image": "kikko",
+  "time": 16,
+  "knobs": {
+   "knob_170": 0.59,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.33,
+   "knob_174": 0.25,
+   "knob_175": 0.5,
+   "knob_161": 1
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 40,
+  "mean": 13.96,
+  "litPct": 9.17,
+  "brightPct": 3.04,
+  "darkPct": 15.72
+ },
+ {
+  "name": "BEAD STAGE",
+  "image": "kikko",
+  "time": 16,
+  "knobs": {
+   "knob_161": 1
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 40,
+  "mean": 20,
+  "litPct": 13.46,
+  "brightPct": 9.3,
+  "darkPct": 36.08
+ }
+]

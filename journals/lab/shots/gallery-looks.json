@@ -1,0 +1,98 @@
+[
+ {
+  "name": "Jade Field",
+  "theme": 0,
+  "ps": 1.35,
+  "z": 0.14,
+  "note": "emerald + orange complementaries, dense cell field",
+  "live": "/?shader=redaphid/wip/lattice-bead/3&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-kikyo.png&knob_161=1&knob_168=0.9&knob_169=0.28&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=0&paletteShift=1.35&navZoom=0.14"
+ },
+ {
+  "name": "Deep Cyan",
+  "theme": 1,
+  "ps": 0.45,
+  "z": 0.3,
+  "note": "darkest theme, richest blue — the vj9 constants",
+  "live": "/?shader=redaphid/wip/lattice-bead/3&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-kikyo.png&knob_161=1&knob_168=0.9&knob_169=0.28&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=1&paletteShift=0.45&navZoom=0.3"
+ },
+ {
+  "name": "Ember",
+  "theme": 1,
+  "ps": 1.05,
+  "z": 0.3,
+  "note": "hot red/orange on a dark ground",
+  "live": "/?shader=redaphid/wip/lattice-bead/3&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-kikyo.png&knob_161=1&knob_168=0.9&knob_169=0.28&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=1&paletteShift=1.05&navZoom=0.3"
+ },
+ {
+  "name": "Violet Ink",
+  "theme": 1,
+  "ps": 0.75,
+  "z": 0.22,
+  "note": "magenta/violet, deep and saturated",
+  "live": "/?shader=redaphid/wip/lattice-bead/3&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-kikyo.png&knob_161=1&knob_168=0.9&knob_169=0.28&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=1&paletteShift=0.75&navZoom=0.22"
+ },
+ {
+  "name": "Acid Lime",
+  "theme": 0,
+  "ps": 0.15,
+  "z": 0.14,
+  "note": "lime/olive, the most unusual hue in the set",
+  "live": "/?shader=redaphid/wip/lattice-bead/3&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-kikyo.png&knob_161=1&knob_168=0.9&knob_169=0.28&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=0&paletteShift=0.15&navZoom=0.14"
+ },
+ {
+  "name": "Cyan Field",
+  "theme": 2,
+  "ps": 0.45,
+  "z": 0.14,
+  "note": "midtone cyan, dense — reads well from far",
+  "live": "/?shader=redaphid/wip/lattice-bead/3&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-kikyo.png&knob_161=1&knob_168=0.9&knob_169=0.28&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=2&paletteShift=0.45&navZoom=0.14"
+ },
+ {
+  "name": "Ember Close",
+  "theme": 1,
+  "ps": 1.05,
+  "z": 0.62,
+  "note": "same ember, big soft lobes",
+  "live": "/?shader=redaphid/wip/lattice-bead/3&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-kikyo.png&knob_161=1&knob_168=0.9&knob_169=0.28&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=1&paletteShift=1.05&navZoom=0.62"
+ },
+ {
+  "name": "Jade Close",
+  "theme": 0,
+  "ps": 1.35,
+  "z": 0.62,
+  "note": "jade at lobe scale",
+  "live": "/?shader=redaphid/wip/lattice-bead/3&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-kikyo.png&knob_161=1&knob_168=0.9&knob_169=0.28&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=0&paletteShift=1.35&navZoom=0.62"
+ },
+ {
+  "name": "Midnight Violet",
+  "theme": 1,
+  "ps": 0.75,
+  "z": 0.14,
+  "note": "violet at field scale — the darkest look",
+  "live": "/?shader=redaphid/wip/lattice-bead/3&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-kikyo.png&knob_161=1&knob_168=0.9&knob_169=0.28&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=1&paletteShift=0.75&navZoom=0.14"
+ },
+ {
+  "name": "Ice",
+  "theme": 2,
+  "ps": 1.35,
+  "z": 0.22,
+  "note": "cool jade/teal, midtone lift",
+  "live": "/?shader=redaphid/wip/lattice-bead/3&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-kikyo.png&knob_161=1&knob_168=0.9&knob_169=0.28&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=2&paletteShift=1.35&navZoom=0.22"
+ },
+ {
+  "name": "Ember Field",
+  "theme": 0,
+  "ps": 1.05,
+  "z": 0.14,
+  "note": "ember at field scale, luminous theme",
+  "live": "/?shader=redaphid/wip/lattice-bead/3&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-kikyo.png&knob_161=1&knob_168=0.9&knob_169=0.28&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=0&paletteShift=1.05&navZoom=0.14"
+ },
+ {
+  "name": "Lime Close",
+  "theme": 2,
+  "ps": 0.15,
+  "z": 0.5,
+  "note": "lime, midtone, close framing",
+  "live": "/?shader=redaphid/wip/lattice-bead/3&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&image=images/beads/mon-kikyo.png&knob_161=1&knob_168=0.9&knob_169=0.28&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true&theme=2&paletteShift=0.15&navZoom=0.5"
+ }
+]
