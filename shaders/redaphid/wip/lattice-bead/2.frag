@@ -250,6 +250,8 @@ float hexDist(vec2 p){
 //
 // The bake normalises distance to the bead's own half-extent (0.5 == boundary,
 // ±1 == bake edge), so ONE constant serves all 11 mon. See bake_sdf_png.py.
+// CELL SITE: 1 = mid-ramp (the recognition fix, shipped ON), 0 = legacy corner cell.
+#define CELL_SITE (1.0 - step(0.5, knob_167))
 #define BEAD_RANGE 1.0
 // ONE-TILE LOOKUP (from lab/whole, now ON by default). The texture wraps REPEAT, and a
 // cell's texcoord used to span ~1.48 periods with 85% of it wrapped, so each cell showed a
@@ -313,6 +315,7 @@ vec4 fractal(vec2 p){
     for (int i = 0; i < LEVELS; i++){
         float s = gScale;                                     // FOLD RATIO drifts (2.0 ± 0.3, iter 12) — a fractal PERMUTATION; continuous across mirror cells for any s
         p = 1.0 - abs(s * fract(p - 0.5) - s * 0.5);          // mirror-repeat fold
+        vec2 pf = p;                                          // fold output, BEFORE the per-level twist (see CELL SITE)
         // COUNTER-ROTATION PARITY (iter 20, fractal permutation on DROPS): alternate levels spin in
         // opposite directions, and every sectionMode step swaps the parity — eased through sectionMix,
         // so on a drop the per-level spin passes through zero and re-winds the other way (visible
@@ -331,7 +334,17 @@ vec4 fractal(vec2 p){
         scale *= s;
         if (i < FIRST) continue;
 
-        vec2 uv = abs(p);
+        // ── CELL SITE (lab/nfold, H13) — the single change that made the mon nameable ──
+        // The cell used to sit at p = 0, which is a CORNER of the triangle-wave fold, so BOTH
+        // mirror lines pass through every cell and each cell showed a 4-fold mirrored fragment.
+        // Wave 1 spent seven experiments failing to fix that from the outside (size, brightness,
+        // mipmaps, motif choice, level splits) because it is not fixable from the outside.
+        // Moving the sample to the MID-RAMP of the triangle wave puts it where the fold is a pure
+        // similarity, so each cell carries the motif WHOLE. Measured: 11/11 mon go from
+        // indistinguishable to individually nameable, and the fold, tiling, continuity, recursion
+        // and the perpetual zoom are all untouched.
+        // knob_167 = 0 restores the legacy corner cell (byte-identical to the old behaviour).
+        vec2 uv = mix(abs(p), (pf - vec2(1.0 - 0.25 * s)) * rot2(theta), CELL_SITE);
         // iter150 INTERLEAVED SCALES: alternate recursion levels take opposite radius offsets, so the
         //    lattice reads as TWO interleaved structures rather than one self-similar stack. The split
         //    is driven by harmonic TILT (spectralSkewMedian): a bass-tilted mix opens the coarse levels
