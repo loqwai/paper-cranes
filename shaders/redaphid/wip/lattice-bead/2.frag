@@ -958,6 +958,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // BRIGHTER, so the pair fires far more reliably than either alone.
         // Still clamped to positives, so it remains one-way and can only ever ADD light.
         float flareZ = clamp((energyZScore + spectralCentroidZScore) * 1.6, 0.0, 1.0);
+        // KNEE. At linear drive the flare measured a 53% duty cycle above 0.2 — active
+        // more than half the time, which is a GLOW, not a flare. A drop response has to
+        // PUNCTUATE. Squaring keeps the peaks at full strength (1^2 = 1) while pushing
+        // the busy middle down (0.4^2 = 0.16), so the contours sit quiet through the
+        // groove and only light up when the track actually lifts.
+        flareZ *= flareZ;
         col += lush(s + 0.33, 1.0) * rim * knob_168 * flareZ * LVK(knob_179, 0.55, knob_179);
     }
 

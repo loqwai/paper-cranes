@@ -53,6 +53,20 @@ every previous number in this shader's history came from a frozen frame with syn
       getting harsh.
 - [ ] `1.frag` and `bright.frag` still carry the unfixed `SECH` hash.
 
+## Gotchas found live (do not re-learn these)
+- **`beat` fires at ~280 BPM** on a 122-128 BPM progressive set — 49 distinct onsets in 10.5s,
+  roughly 2.2x the musical pulse (it catches hats, not kicks). Harmless in THIS shader because all
+  four `beat` references are in COMMENTS and nothing consumes the uniform. Do not wire `beat` to a
+  visible effect expecting a musical pulse without gating it on a bass-band onset first.
+- **Polling rate hides single-frame flags.** Counting `beat` at a 140ms setInterval gave "1 beat in
+  8.4s" — an undersampling artifact. Count per-frame with requestAnimationFrame, and count RISES
+  (false->true) rather than true-frames.
+- **z-scores do not reach +/-1 on real material.** Measured peaks 0.4-0.6 with a NEGATIVE mean.
+  Always measure max AND mean before choosing a scale factor.
+- **A flare with a >50% duty cycle is a glow, not a flare.** Square the drive to keep peaks and
+  suppress the middle: duty above 0.2 went 53% -> 36% while max stayed 1.0 and corr(flare, contrast)
+  IMPROVED 0.208 -> 0.291.
+
 ## History of changes
 - Seed depth was a FIXED 0.40 ground — a static mask over half the frame costing 29% of all
   visible reactivity. Made it breathe on `energySpring`. Do not re-fix it.
