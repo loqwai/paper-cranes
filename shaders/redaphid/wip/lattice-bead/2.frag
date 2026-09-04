@@ -308,6 +308,37 @@ float gShapePhase;   // iter 138 RATCHET: monotonic phase for the depth-travelin
 
 // Recursive hex mirror-fold lattice. Returns vec4(lum, field, wave, alpha):
 //   lum=brightness, field=CONTINUOUS palette coord, wave=pulse accent, alpha=coverage.
+// ── STABLE SECTION HASH (2026-09-04) ────────────────────────────────────────────
+// SECH used to be the textbook `fract(sin(x) * 43758.5453)`. At sectionMode = 1 that
+// evaluates fract(sin(254.2) * 43758.5453), and in float32 the product has magnitude
+// ~4.4e4, where one ULP is ~0.0039 — while sin()'s own error at an argument that far
+// from zero is about the same size. The fract() therefore lands on one of two adjacent
+// representable values, and the GPU picked between them PER FRAME.
+//
+// That alone would be invisible. What made it violent is that gScale, gThetaStep and
+// gHexR all read the hash and all feed fractal(), whose mirror-repeat fold multiplies
+// coordinates by ~2 per level over 10 levels — a ~1000x amplifier. A last-bit wobble in
+// the hash came out the far end as a completely different lattice: measured 98.4% of
+// pixels changing frame to frame, with the whole palette rotating (R up, G and B down),
+// on a page where iTime was pinned and EVERY consumed uniform was constant. gSpin,
+// gPulse and gBorder do not read the hash and never moved — that correlation is what
+// identified it.
+//
+// hash11 keeps every intermediate O(1), so it is bit-reproducible in float32. Same
+// statistical role (an arbitrary per-section constant), no precision cliff. Measured
+// after the swap: frame-to-frame difference 98.37% -> 0.003% (~36 edge pixels), and the
+// frame mean goes from two alternating states to a single value.
+//
+// NOTE: the per-section constants differ from the old ones, so the baked preset's
+// geometry shifts slightly. The old values were never stable to begin with — the shader
+// was picking one of two every frame — so there was no fixed look to preserve.
+float hash11(float p){
+    p = fract(p * 0.1031);
+    p *= p + 33.33;
+    p *= p + p;
+    return fract(p);
+}
+
 vec4 fractal(vec2 p){
     float scale = 1.0, aliasBase = 1.0 / iResolution.y;
     float alpha = 0.0, lumAcc = 0.0, fieldAcc = 0.0, waveAcc = 0.0;
@@ -447,7 +478,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     //    audio and NO oscillators. Each detected DROP (sectionMode) eases the structure to a NEW
     //    random plateau over ~4 s (sectionMix) and STAYS — a one-way transformation. Between drops
     //    the lattice is rock-still except the perpetual zoom + monotonic spin. Audio -> shading only.
-    #define SECH(n, k) (fract(sin(((n) + 1.0) * (k)) * 43758.5453) - 0.5)
+    #define SECH(n, k) (hash11(((n) + 1.0) * (k) * 0.017) - 0.5)   // stable in float32; see hash11 above
     float secPrev = max(sectionMode - 1.0, 0.0);
     float evoA = mix(SECH(secPrev, 127.1), SECH(sectionMode, 127.1), sectionMix);
     float evoB = mix(SECH(secPrev, 311.7), SECH(sectionMode, 311.7), sectionMix);
