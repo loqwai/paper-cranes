@@ -893,8 +893,22 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // controller springs, never per-frame transients, so the ground swells and falls
         // with the music instead of snapping on a kick. Musically this is the right
         // gesture anyway: the beads EMERGE from the ground as the track builds.
-        float seedDepth = mix(0.25, 0.72, clamp(energySpring * quietGate, 0.0, 1.0));
+        // COUNTER-RATCHET (measured on LIVE audio, tab-shared Spotify): the ground-recede
+        // alone correlated NEGATIVELY with the music — corr(energySpring, brightness)
+        // -0.68 and corr(energySpring, contrast) -0.58 over 8.4s. A drop made the frame
+        // DARKER and FLATTER, which is backwards. Receding the ground is a ratchet, and a
+        // ratchet needs a counter-ratchet in the same edit: the beads must GAIN as the
+        // ground drops, so a drop buys CONTRAST instead of just dimming the picture.
+        // Both terms are cov-masked and spatially structured — no global multiplier, so
+        // this still cannot strobe the frame.
+        float pump = clamp(energySpring * quietGate, 0.0, 1.0);
+        // Balance measured live: at depth 0.62 / gain 0.30 the contrast correlation went
+        // +0.881 but brightness stayed -0.767 — drops sharpened the frame while DIMMING
+        // it, which is backwards for a dark room. Ground recede eased, bead gain nearly
+        // doubled, so a drop now buys contrast without costing light.
+        float seedDepth = mix(0.25, 0.50, pump);
         col *= mix(1.0, 1.0 - seedDepth, (1.0 - cov) * knob_168);
+        col += lush(s, 0.95) * cov * knob_168 * (0.05 + 0.58 * pump);   // beads gain with the music
         col += lush(s + 0.33, 1.0) * rim * knob_168 * (0.22 + 0.45 * trebLive * quietGate);
     }
 
