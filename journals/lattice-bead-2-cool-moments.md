@@ -232,3 +232,68 @@ was never smoothness, it was **latency**. Corrected in the published gallery.
 - [ ] tomoe needs a rotational path or should be dropped from the mon set
 - [ ] the `lush()` period-2 chroma bug should land on the base, not just the colour branch
 - [ ] stray vite servers on 6974/6975/6977
+
+## Iter 10 — the reactivity was gated OFF upstream, and the flash was the ground
+
+Two faults, both upstream of anything shader-side. User: *"The audio reactivity is almost
+nonexistent!!"* then *"it's full-screen flashy in a bad way. Read the journals re: the coat"*.
+
+### Fault 1 — the feature stream had FROZEN
+
+`energy` / `bass` / `mids` / `treble` each stuck at ONE value, identical to 5 decimals across
+300 frames (`energy` 0.01205, `bass` 0.10198, `mids` 0.35362, `treble` 0.54218). A live analyser
+never does that. The wild `Normalized` swings that made it *look* alive were the tell, not the
+counter-evidence: Normalized divides by a recent range, and with a frozen input that range
+collapses to zero, so pure noise reads as full-scale motion. A page reload revived it.
+
+**Check absolutes, not Normalized, when judging whether audio is present.**
+
+### Fault 2 — quietGate used an ABSOLUTE threshold and never opened
+
+```js
+gateTarget = clamp((energy - 0.015) / 0.05, 0, 1)   // 0 below 0.015, 1 by 0.065
+```
+Measured live with music clearly playing and the spectrum healthy (mids mean 0.603, treble
+0.249, 700+ distinct values per feature): **energy mean 0.01637 → gateTarget 0.027 → quietGate
+5.1e-8.** The gate never opened. It multiplies nearly every audio term, so everything pinned at
+the QGATE floor and stopped modulating. **That was the "almost nonexistent" reactivity, and no
+shader tuning could ever have fixed it.**
+
+Fixed in `wavelet-ease.js`: the gate is now RELATIVE to a slowly-decaying peak of the input's own
+energy, so it self-calibrates to any mic gain or stream.
+
+| | before | after |
+|---|---|---|
+| quietGate | 5.1e-8 (pinned) | **0.521 – 1.0, mean 0.906** |
+| energySpring | constant | 0.204 – 0.517 |
+| waveletBassSpring | constant | 0.048 – 0.591 |
+
+### Fault 3 — the full-screen flash was the GROUND term
+
+`col *= mix(1.0, 1.0 - seedDepth, (1.0 - cov) * seedAmt)` multiplies the ground BETWEEN beads —
+most of the frame — and I had wired the onset event into it. Every hit darkened half the screen:
+a full-frame strobe wearing a mask as a disguise.
+
+**The coat journals had already settled the correct shape** (this is why they are worth reading):
+VJ RADIAL BARS were *"strictly masked to `silhouette < 0.02` so the jacket is never touched"*, and
+*"the rim is a great composite target because it's a high-contrast EDGE — multiple independent
+signals can route into different rim properties without overlap."*
+
+So: the ground now follows only `pump` (a smoothed spring) and the hand knob — **no event over a
+large area** — and all the fast audio moved onto the bead contour, with three signals from three
+domains at non-overlapping properties (arrival→brightness, pitchClassMedian→hue tilt,
+trebLive→texture).
+
+| | before | after |
+|---|---|---|
+| **corr(onset envelope, contrast)** @0.15s lag | ~0.00 | **+0.468** |
+| contrast mean | 15.95 | **22.82** (+43%) |
+| temporal luminance SD (the flash metric) | 4.6 | **4.34** |
+
+First genuinely onset-locked response of the whole run. Luminance span widened 16.2 → 24.4, but
+as a few sharp arrival peaks rather than continuous swinging; the dial if it still reads flashy
+is the rim gain (2.2 → 4.0 this tick).
+
+### Todo
+- [ ] the viewport is now 1118x1092, not 2560x1249 — cursor park updated
+- [ ] rim gain 4.0 may be too hot; it is the one dial for "still too flashy"

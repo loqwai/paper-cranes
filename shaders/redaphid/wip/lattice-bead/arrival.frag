@@ -1193,11 +1193,22 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // so the contour still draws on top and the gap reads as an interior line rather than
         // a nibbled edge. Spatially structured and mask-bound: no global multiplier, so this
         // cannot strobe, and it takes no per-frame audio at all - it is pure drawing.
-        col *= 1.0 - gap * NEGATIVE * 0.97;   // hard to true black: a VALUE contrast, not a tint
+        col *= 1.0 - gap * NEGATIVE * 0.97;   // hand knob only - drawing, never an event
 
         // Ground recede, deepened by LEGIBLE. This is the RATCHET.
-        float seedDepth = mix(mix(0.25, 0.50, pump), mix(0.58, 0.82, pump), legNow);
-        col *= mix(1.0, 1.0 - seedDepth, (1.0 - cov) * seedAmt);
+        // ── THE GROUND DOES NOT TAKE THE EVENT (2026-09-04, user: "full-screen flashy in a
+        // bad way; the bead is the ENTIRE POINT") ────────────────────────────────────────
+        // (1 - cov) is the ground BETWEEN beads - most of the frame. Driving a multiplier over
+        // that area from an onset means every hit darkens half the screen, which is a full-frame
+        // strobe wearing a mask as a disguise. The coat journals settled this shape long ago:
+        // VJ RADIAL BARS were "strictly masked to silhouette < 0.02 so the jacket is never
+        // touched", and the RIM is the composite target because it is a high-contrast EDGE.
+        //
+        // So the ground now follows ONLY `pump` (energySpring x QGATE - a smoothed controller
+        // spring, slow by construction) and the HAND knob. No event, no per-frame transient over
+        // a large area. All the fast audio moves to the bead and its contour below.
+        float seedDepth = mix(mix(0.25, 0.50, pump), mix(0.58, 0.82, pump), LEGIBLE);
+        col *= mix(1.0, 1.0 - seedDepth, (1.0 - cov) * knob_168);
         // COUNTER-RATCHET, same edit: a deeper recede takes light out of most of the frame,
         // so the figure pays it back. Without this pair, raising LEGIBLE would just dim the
         // picture - which is exactly the mistake the ground-recede made on its first outing
@@ -1209,8 +1220,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // still not a global multiplier and still cannot strobe the frame.
         col += lush(s, 0.95) * cov * seedAmt * (0.05 + 0.58 * pump) * mix(1.0, 1.9, legNow)
              * (1.0 + arrival * 1.8);
-        col += lush(s + 0.33, 1.0) * rim * seedAmt * (0.22 + 0.45 * trebLive * QGATE) * mix(1.0, 1.6, legNow)
-             * (1.0 + arrival * 2.2);   // the CONTOUR flares hardest - it is what reads at distance
+        // ── THE RIM CARRIES THE MUSIC ────────────────────────────────────────────
+        // The coat's most reused lesson: route SEVERAL INDEPENDENT signals into ONE composite
+        // element at NON-OVERLAPPING properties. The bead contour is that element here - a
+        // high-contrast edge, spatially tiny, so it can flash hard without washing the frame.
+        //   BRIGHTNESS <- arrival (onset event, temporal domain)
+        //   HUE TILT   <- pitchClassMedian (tonal domain - slow, so colour follows slow music)
+        //   TEXTURE    <- trebLive (frequency domain)
+        // Three different domains, so this is three signals and not one drawn three times.
+        float rimHue = s + 0.33 + (pitchClassMedian - 0.5) * 0.10;
+        col += lush(rimHue, 1.0) * rim * seedAmt * (0.22 + 0.45 * trebLive * QGATE) * mix(1.0, 1.6, legNow)
+             * (1.0 + arrival * 4.0);   // 2.2 -> 4.0: the frame's fast energy now lives HERE
         // ── DROP FLARE (K179) ──────────────────────────────────────────────────
         // energyZScore was measured as the STRONGEST fast signal on this input (live
         // range 1.20 over 8s) and the shader ignored it completely — 0 references. On a
