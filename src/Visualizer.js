@@ -23,15 +23,29 @@ const positions = [
     1, 1, 0,
 ]
 
-const getTexture = async (gl, url) => {
+// Opt-in trilinear filtering for the image buffer: `?image_filter=mipmap`.
+//
+// WHY IT EXISTS, AND WHY IT IS OPT-IN. NEAREST is what 58 shaders were tuned against, so it stays
+// the default — this must not silently restyle committed art. But a shader that samples the image
+// inside a RECURSIVE FOLD undersamples it catastrophically: lattice's fractal() doubles the
+// sampling rate per level, so one screen pixel spans ~95 texels at level 4 and ~97,000 at level 9.
+// With NEAREST and no mipmaps each pixel takes ONE arbitrary point sample, so a contour band is hit
+// erratically — line cores survive but the mid-tone shoulder never rasterises. Measured on the bead
+// lattice: litPct -37.8% with mean luminance flat, reading as speckle and as lost lit coverage. An
+// ALU distance function like hexDist is immune, which is why only image-sampled cells show it.
+//
+// Trilinear + mipmaps makes each fetch an area average instead of a point probe. WebGL2 allows
+// mipmaps on NPOT textures, and twgl generates them when the min filter asks for them.
+const getTexture = async (gl, url, filter = 'nearest') => {
     const src = url
+    const mip = filter === 'mipmap'
     return new Promise((resolve) => {
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
         const texture = createTexture(gl, {
             src,
             crossOrigin: 'anonymous',
-            min: gl.NEAREST,
-            mag: gl.NEAREST,
+            min: mip ? gl.LINEAR_MIPMAP_LINEAR : gl.NEAREST,
+            mag: mip ? gl.LINEAR : gl.NEAREST,
             wrap: gl.REPEAT
         }, () => {
             gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false)
@@ -108,7 +122,7 @@ void main() {
     gl_Position = position;
 }`
 
-export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) => {
+export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen, imageFilter = 'nearest' }) => {
     // Not awaited: the screen lock must never sit between the user and the visual.
     askForWakeLock()
 
@@ -134,7 +148,7 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
     })
     canvas.addEventListener('webglcontextrestored', async () => {
         // Reinitialize all GL resources in-place instead of reloading
-        initialTexture = await getTexture(gl, initialImageUrl)
+        initialTexture = await getTexture(gl, initialImageUrl, imageFilter)
         frameBuffers = [createFramebufferInfo(gl), createFramebufferInfo(gl)]
         frameBuffers.forEach(setFramebufferTexParams)
         bufferInfo = createBufferInfoFromArrays(gl, { position: positions })
@@ -156,7 +170,7 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         canvas.classList.add('fullscreen')
     }
 
-    let initialTexture = await getTexture(gl, initialImageUrl)
+    let initialTexture = await getTexture(gl, initialImageUrl, imageFilter)
     let frameBuffers = [createFramebufferInfo(gl), createFramebufferInfo(gl)]
 
     const setFramebufferTexParams = (fb) => {

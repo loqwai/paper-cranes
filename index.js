@@ -355,7 +355,11 @@ const main = async () => {
     const visualizerConfig = {
         canvas,
         initialImageUrl: params.get('image') ?? 'images/placeholder-image.png',
-        fullscreen: params.get('fullscreen') === 'true' || shaderFullscreen
+        fullscreen: params.get('fullscreen') === 'true' || shaderFullscreen,
+        // ?image_filter=mipmap → trilinear image buffer. Default stays NEAREST so the 58 shaders
+        // tuned against it are untouched. See getTexture() in src/Visualizer.js for why a shader
+        // that samples the image inside a recursive fold needs this.
+        imageFilter: params.get('image_filter') ?? 'nearest'
     }
 
     // Load and CHAIN controllers — every `?controller=` runs as a left-fold pipeline each frame.
