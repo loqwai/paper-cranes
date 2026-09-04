@@ -296,7 +296,9 @@ uniform float pitchClassMedian;        // TONAL domain: what key we are in     /
 uniform float paletteShift;
 uniform float labRings;   // LAB: outline-echo rings (inset inside, travelling outside)
 uniform float labTint;    // LAB: per-bead hue offset keyed to the seed tile
-uniform float labCross;   // LAB: fold skeleton becomes an inset copy of the bead instead of the hex cross  // PERMANENT palette rotation — grows on every big drop
+uniform float labCross;
+uniform float labRingP;   // LAB: ring spacing override (tile-relative), 0 = default 0.045
+uniform float labCrossLv; // LAB: highest fold level that takes the bead skeleton (0 = all levels)   // LAB: fold skeleton becomes an inset copy of the bead instead of the hex cross  // PERMANENT palette rotation — grows on every big drop
 uniform float warpGrow;      // PERMANENT structural warp — grows on every big drop
 // waveletBassZScore + wavelet_bassHit auto-declare (raw) — transient pulse punch only.
 
@@ -683,7 +685,7 @@ vec4 fractal(vec2 p){
         float cellD    = mix(hexTerm, beadTerm, BEAD_MIX);
         float delt1 = abs(cellD - gRingGap);   // K144 RING GAP: distance from the hex ring to the drawn line — sets how HOLLOW each cell is, independently of its radius.        // MIDS breathe the hexagons
         float delt2 = min(length(uv) - gCross, min(uv.x, uv.y)) + gCrossBias;
-        delt2 = mix(delt2, abs(cellD + gRingGap * 2.2), labCross);   // LAB CROSS: skeleton = inset copy of the bead cell, not the hex cross // BASS taut cross (+K139 hex↔cross balance)
+        delt2 = mix(delt2, abs(cellD + gRingGap * 2.2), labCross * mix(1.0, 1.0 - smoothstep(labCrossLv - 1.0, labCrossLv + 0.5, float(i)), step(0.5, labCrossLv)));   // LAB CROSS: skeleton = inset copy of the bead cell, not the hex cross // BASS taut cross (+K139 hex↔cross balance)
         float m = min(delt1, delt2);
         float alias = aliasBase * 0.5 * scale;
         // iter149 LINE PROFILE (user: "it seems blurrier than it used to be"): the intensity split was
@@ -1094,7 +1096,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         //    the outline. Audio touches AMPLITUDE only (bassLive is a spring), never the phase.
         if (labRings > 0.001){
             float sdn      = sl.z / seedPitch;                          // signed distance, tile-relative
-            float ringP    = 0.045;                                      // ring spacing, tile-relative
+            float ringP    = mix(0.045, labRingP, step(0.001, labRingP));                                      // ring spacing, tile-relative
             float ph       = flowPhase * 0.12 + bTime * 0.05;            // monotonic -> rings move OUTWARD
             float rq       = abs(fract(sdn / ringP - ph) - 0.5) * ringP * seedPitch;   // distance to nearest ring, uv units
             float ring     = smoothstep(aaBase * 2.5, 0.0, rq);

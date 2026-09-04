@@ -17,8 +17,8 @@
 // isotropically, so the outline is never stretched on any viewport.
 //
 // Requires ?controller=dodeca-bloom (or the phases pinned as URL params).
-// Params (0 = default): ?beads=4..48 (28)  ?turns= (2.2)  ?arms=1..4 (1)  ?sizeExp= (0.7)
-//   ?flow= (0.012 - travel rate on flow_phase)  ?heroScale= (0.17)  ?hueSpan= (0.32)
+// Params (0 = default): ?beads=4..48 (28)  ?turns= (2.2)  ?arms=1..4 (1)  ?sizeExp= (0.6)
+//   ?flow= (0.015 - travel rate on flow_phase)  ?heroScale= (0.20)  ?hueSpan= (0.32)
 //   ?align=0..1 (1 - beads point along their radius)  ?tail=0..1 (1 - fade at both ends)
 
 uniform float spin_angle;    // monotonic
@@ -55,9 +55,9 @@ uniform float tail;
 #define N_BEADS  (beads     > 0.0 ? clamp(floor(beads), 4.0, 48.0) : 28.0)
 #define TURNS    (turns     > 0.0 ? turns     : 2.2)
 #define ARMS     (arms      > 0.0 ? clamp(floor(arms), 1.0, 4.0)  : 1.0)
-#define SIZE_EXP (sizeExp   > 0.0 ? sizeExp   : 0.7)
-#define FLOW     (flow      > 0.0 ? flow      : 0.012)
-#define HERO_R   (heroScale > 0.0 ? heroScale : 0.17)
+#define SIZE_EXP (sizeExp   > 0.0 ? sizeExp   : 0.6)
+#define FLOW     (flow      > 0.0 ? flow      : 0.015)
+#define HERO_R   (heroScale > 0.0 ? heroScale : 0.20)
 #define HUE_SPAN (hueSpan   > 0.0 ? hueSpan   : 0.32)
 #define ALIGN    (align     > 0.0 ? align     : 1.0)
 #define TAIL     (tail      > 0.0 ? tail      : 1.0)
@@ -101,7 +101,7 @@ vec3 drawBead(vec2 p, vec2 centre, float r, float orient, float hue, float slowD
     float rim = smoothstep(px * 3.0, 0.0, abs(d));    // narrow: ~3 px, never a halo
     float ins = smoothstep(px * 2.0, 0.0, abs(d + r * 0.16)) * cov;   // inset echo of the outline
 
-    float L = 0.26 + 0.18 * slowDrive + 0.05 * treble_env;
+    float L = 0.36 + 0.16 * slowDrive + 0.05 * treble_env;
     float C = 0.10 + 0.05 * entropy_env;
     vec3 body = lch(hue, C, L);
     vec3 edge = lch(hue + 0.08, C * 1.35, min(L + 0.40, 0.84));
@@ -123,9 +123,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float f2 = sin(rad * 7.9 + morph_phase * 0.19 - ang * 3.0);
     float field = 0.5 + 0.25 * f1 + 0.25 * f2;
     float bgHue = hue_phase * 0.05 + 0.60 + centroid_env * 0.08 + field * 0.05;
-    float bgL   = 0.050 + 0.030 * field + 0.030 * energy_env + 0.015 * mids_env;
-    vec3 col = lch(bgHue, 0.030 + 0.015 * entropy_env, bgL);
-    col *= 1.0 - 0.50 * smoothstep(0.30, 0.85, rad);
+    float bgL   = 0.140 + 0.050 * field + 0.040 * energy_env + 0.020 * mids_env;
+    vec3 col = lch(bgHue, 0.045 + 0.020 * entropy_env, bgL);
+    col *= 1.0 - 0.45 * smoothstep(0.30, 0.85, rad);
 
     // THE SPIRAL - beads born at the hero's rim, travelling outward on flow_phase.
     float n = N_BEADS;
