@@ -391,17 +391,16 @@
   <p class="sec-note">Measured on live audio &mdash; 1289 frames of the running set, not a synthetic bench.</p>
   <div class="tblwrap">
     <table>
-      <caption>Per&#8209;frame jitter of each candidate drive signal, and the resulting frame luminance.</caption>
-      <thead><tr><th>Drive signal</th><th>Jitter / frame</th><th>Range</th></tr></thead>
+      <caption>Per&#8209;frame jitter of each candidate drive signal. <strong>Normalised by range</strong> &mdash; raw jitter flatters whichever signal happens to have the smaller span, which is how an earlier version of this table overstated the result by 4&times;.</caption>
+      <thead><tr><th>Drive signal</th><th>Raw jitter</th><th>Range</th><th>Jitter / range</th></tr></thead>
       <tbody>
-        <tr><td><code>energyZScore</code> &mdash; the shutter</td><td class="num">0.0514</td><td class="num">&minus;0.79 &rarr; 1.18</td></tr>
-        <tr><td><code>energySpring</code> &mdash; smooth, but ~1s late</td><td class="num">0.0320</td><td class="num">&mdash;</td></tr>
-        <tr class="best"><td><code>onsetEnvelope</code> &mdash; <span class="win">in use</span></td><td class="num win">0.0076</td><td class="num">0 &rarr; 0.481</td></tr>
-        <tr><td>Frame luminance (0&ndash;255)</td><td class="num">0.63</td><td class="num">74.1 &rarr; 92.8</td></tr>
+        <tr><td><code>energyZScore</code> &mdash; the shutter</td><td class="num">0.0514</td><td class="num">&minus;0.79 &rarr; 1.18</td><td class="num">0.0262</td></tr>
+        <tr class="best"><td><code>onsetEnvelope</code> &mdash; <span class="win">in use</span></td><td class="num">0.0076</td><td class="num">0 &rarr; 0.481</td><td class="num win">0.0158</td></tr>
+        <tr><td>Frame luminance (0&ndash;255)</td><td class="num">0.63</td><td class="num">74.1 &rarr; 92.8</td><td class="num">&mdash;</td></tr>
       </tbody>
     </table>
   </div>
-  <p class="sec-note" style="margin-top:14px">The flare is <strong>6.8&times; smoother</strong> than the z&#8209;score it replaced, and whole&#8209;frame luminance never strobes. Tempo lock moved from <code>beat</code> at 280&nbsp;BPM to <strong>125.3&nbsp;BPM</strong> &mdash; the set&rsquo;s actual tempo &mdash; with a 3% gap spread.</p>
+  <p class="sec-note" style="margin-top:14px">Corrected: the flare is about <strong>1.7&times;</strong> smoother than the z&#8209;score once range is accounted for &mdash; not the 6.8&times; first claimed here, which compared raw jitter across signals with very different spans. The real win was never smoothness anyway, it was <strong>latency</strong>: smoothing a level enough to stop the shudder costs roughly a second of lag, and an event-driven envelope costs none. Tempo lock moved from <code>beat</code> at 280&nbsp;BPM to <strong>125.3&nbsp;BPM</strong> &mdash; the set&rsquo;s actual tempo &mdash; with a 3% gap spread.</p>
 
   <footer>
     Links point at the <code>lab/substrate2</code> preview deploy; give Cloudflare a minute if a tile 404s. For the local rig, swap the host for <code>localhost:6994</code>.

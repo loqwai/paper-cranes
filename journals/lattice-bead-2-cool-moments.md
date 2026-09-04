@@ -169,3 +169,66 @@ which cannot express zero — `?legible=0` silently became 0.55 and both rendere
 - [ ] The jam drawer registers `paletteShift` with `.min=0 .max=1` while the good values run to
       1.35 — same trap as `onset_refractory_ms`. Touching that slider loses the palette.
 - [ ] `hakkaku` and `kikko` still never got their dedicated keeper run (flagged in the H7 note).
+
+## The art critic, and three agents — 2026-09-04 overnight
+
+### RETRACTION: recognition does not pass
+
+4.md claimed all eleven mon are individually nameable. **That was wrong.** An art critic judging
+the render grid cold: **4 clear, 2 arguable, 5 failed.** kikyo and ume are "the same picture";
+suhama collapses into katabami; tomoe reads as "an egg with a scratch on it".
+
+Two observations worth keeping permanently:
+
+- **Every crest that passes has a straight line in it** (kikko, hakkaku, matsukawa, kiku). Blur
+  eats corners first and curves last, so at distance every rounded silhouette collapses into
+  every other rounded one.
+- **Tomoe is structurally impossible in this engine.** It is defined by *rotational* symmetry —
+  three commas chasing each other — and the lattice mirror-folds. Mirroring is the one operation
+  that cannot produce a tomoe. Not a tuning problem.
+
+### The second verdict: it does not dance
+
+> "A car alarm responds to sound. This system is closer to the car alarm."
+
+- quiet / loud / stage-loud are the same picture with the gain up — a **dimmer switch**
+- the infinity zoom is perceptually **invisible**: a self-similar lattice has no landmark to
+  pass, so 28s of dive gives six identical frames
+- **mirror symmetry is a stillness operator** — every copy changes at once, so a hit reads as
+  shimmer, never as a hit. "Kaleidoscopes are hypnotic and never percussive."
+- legibility and motion were **mutually exclusive**: the crest resolves only in a knife-edge
+  window of size and framing, so any audio touching zoom or size destroys recognition
+
+Answered in `arrival.frag` — legibility becomes an EVENT. Verified deterministically (live
+correlation is blind to a travelling local event): contrast 24.0 → **40.3** at 0.15s → 24.7.
+
+### CORRECTION to a number quoted all session
+
+The "onsetEnvelope is 6.8× smoother than energyZScore" claim compared **raw** per-frame jitter
+across signals with very different spans (flare 0→0.48, z-score −0.79→1.18). Normalised by
+range it is **0.0158 vs 0.0262, about 1.7×**. Still smoother — but the real argument for onsets
+was never smoothness, it was **latency**. Corrected in the published gallery.
+
+### Agent results (branches, not merged)
+
+| branch | worktree | result |
+|---|---|---|
+| `lab/react-rhythm` | pc-lab-r1 | per-cell arrival times: one onset crosses the lattice as a ripple. Simultaneous rise&fall 0.010 → 0.19–0.24 (18–21×). `artic=0` bit-identical to 4.frag. |
+| `lab/react-colour` | pc-lab-r2 | **found a real bug**: `lush()` hue has period 1, its chroma term has period **2**, so one hue renders at C 0.211 *or* 0.115 (1.84×) depending on unrelated state. That is what "fuzzy fuchsia" actually was. Gamut crush 2.14% → 1.21%. |
+| `lab/react-chromadepth` | pc-lab-r3 | Spearman ρ(depth,hue) **0.9941 / 0.9956**, near-white **0.000%**. Two modes (SHELF/DOME). Collapses 4.frag's whole pipeline to one exposure scalar and repaints at the depth hue. |
+
+### Gotchas found by the team
+
+- **The SPA fallback returns 200 with `index.html`** for a missing shader path, so `curl` health
+  checks cannot detect that you are talking to the wrong server. Two agents lost time measuring
+  a sibling worktree's vite after a port collision. Use `--strictPort` and verify the *body*.
+- `node_modules` is a **junction to the main tree**, so `rm -rf node_modules/.vite` in a worktree
+  clears the main tree's vite dep cache. One agent did; it regenerated.
+- Vite's watcher does not reliably pick up `controllers/` edits — the plain URL kept serving a
+  stale transform while a cache-busted URL served the new file. A dev-server restart is the fix.
+
+### Todo
+- [ ] merge/renumber the three agent branches (all three named their fork `5.frag`)
+- [ ] tomoe needs a rotational path or should be dropped from the mon set
+- [ ] the `lush()` period-2 chroma bug should land on the base, not just the colour branch
+- [ ] stray vite servers on 6974/6975/6977
