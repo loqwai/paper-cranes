@@ -394,3 +394,31 @@ Added 2026-09-03 from the first `/lab` wave. Every item below was a confident, p
    Separate windows do not isolate it. Headed Playwright with a per-capture port assertion is the
    reliable path; reusable tools exist on `origin/lab/split` (`scripts/lab-shot.mjs`,
    `scripts/lab-bench.mjs`) and `origin/lab/kiku` (`lab-measure.mjs`, `lab-crossings.mjs`).
+
+### §14 amendments (later the same day, from `lab/ume` under proper controls)
+
+- **Trap 3 was badly understated. The uncontrolled noise floor is 78–93%, not ±8% — larger than
+  every real effect measured in this wave.** Pinning seeds alone does **not** fix it, because
+  `lattice-nav` **accumulates per-frame state** and frame-count jitter moves the camera between
+  captures; `time=` does not stop it. **Take every number with the controller OFF and all four seeds
+  pinned** (controlled spread: 0.11pt, 72× signal-to-noise). Judge aesthetics with it on, measure
+  with it off.
+- **Trap 2, corrected direction.** At full resolution **all 11 motifs BRIGHTEN**, +30.1% to +43.5%
+  (base meanLum 9.35 → 12.16–13.41). The earlier "motif-dependent with varying sign" figures
+  (kiku −1%, tomoe +1%, ume +10%) were downsampling artifacts. **No motif darkens.**
+- **% pixel departure is a SATURATED metric — do not rank motifs with it.** Common effect 76.1%,
+  between-motif spread only 7.9pt: ~96% of the number is "hexDist was replaced by a baked SDF" and
+  ~4% is which motif. `ume` ranks **11th of 11 on departure while looking among the best** — the
+  cleanest available demonstration that this metric and visual quality are unrelated.
+- **Earlier anchors do not reproduce.** `ume 91.4 / kikko 46.6 / tomoe 42.3` re-measures as
+  **71.8 / 72.0 / 78.4**. Anything built on the old figures needs re-measuring.
+- **The crossings predictor is dead** (r=+0.32, permutation p=0.38, n=11). Its premise was also
+  wrong: `tomoe` has the **highest** crossing count of the 11 (2.29/ray), not ~1. It cannot work in
+  principle — crossings are measured on the centred silhouette, and `abs(p)` plus `REPEAT` tiling
+  means the per-cell field is a **tiled mosaic, not one centred motif**.
+- **An occluded tab freezes `requestAnimationFrame` and yields a black canvas that looks exactly
+  like a shader bug.** Suspect occlusion before your edit.
+- **Keeper candidates are unsettled.** `hakkaku` (crisp puffy cross cells) and `kikko` (clean
+  high-contrast hexagons) read at least as well as `ume` and have never been nominated.
+- **The lattice is very dark at these params** (meanLum 9–13 / 255). A brightness counter-ratchet is
+  likely needed before it is stage-ready.
