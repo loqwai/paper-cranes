@@ -291,10 +291,16 @@ vec3 fitGamut(vec3 rgb, float L){
 // repo has the identical function. It is entirely in four (L base, L slope, L clamp,
 // C base, C amp) sets. These are the real constants, lifted verbatim:
 //
-//   0 vj9        L 0.33 +0.40  [0.05,0.92]  C 0.075+s2*0.05 +0.04  lattice-vj/9 — moody, deep
-//   1 luminous   L 0.50 +0.36  [0.12,0.88]  C 0.125+s2*0.05 +0.05  chromadepth-lattice/6 AND
-//                                                                  lattice-interactive/3 — the
-//                                                                  brightest, highest-chroma look
+//   0 luminous   L 0.50 +0.36  [0.12,0.88]  C 0.125+s2*0.05 +0.05  chromadepth-lattice/6 AND
+//                                                                  lattice-interactive/3. DEFAULT:
+//                                                                  measured the MOST music-reactive
+//                                                                  of the four (52.73 vs the
+//                                                                  lattice-vj/9 benchmark 48.93),
+//                                                                  because its higher L base leaves
+//                                                                  the ground room to drop away.
+//   1 vj9        L 0.33 +0.40  [0.05,0.92]  C 0.075+s2*0.05 +0.04  lattice-vj/9 — moody, deep, but
+//                                                                  measures 38.4, well under the
+//                                                                  benchmark: less headroom to move.
 //   2 midtone    L 0.40 +0.44  [0.05,0.92]  C 0.090+s2*0.06 +0.05  chromadepth-lattice/3
 //   3 contrast   L 0.10 +1.20  [0.05,0.92]  C 0.075+s2*0.05 +0.04  lattice-bead H10 — low floor,
 //                                                                  steep slope, most contrast
@@ -302,8 +308,8 @@ vec3 fitGamut(vec3 rgb, float L){
 // ?theme=<0..3>. seed2 still shifts chroma per device and regionHue(world) still repaints
 // by location, so each theme is a family of looks, not one colour.
 void themeConsts(float t, out float lb, out float ls, out float lo, out float hi, out float cb, out float cs, out float ca){
-    if      (t < 0.5) { lb = 0.33; ls = 0.40; lo = 0.05; hi = 0.92; cb = 0.075; cs = 0.05; ca = 0.04; }
-    else if (t < 1.5) { lb = 0.50; ls = 0.36; lo = 0.12; hi = 0.88; cb = 0.125; cs = 0.05; ca = 0.05; }
+    if      (t < 0.5) { lb = 0.50; ls = 0.36; lo = 0.12; hi = 0.88; cb = 0.125; cs = 0.05; ca = 0.05; }
+    else if (t < 1.5) { lb = 0.33; ls = 0.40; lo = 0.05; hi = 0.92; cb = 0.075; cs = 0.05; ca = 0.04; }
     else if (t < 2.5) { lb = 0.40; ls = 0.44; lo = 0.05; hi = 0.92; cb = 0.090; cs = 0.06; ca = 0.05; }
     else              { lb = 0.10; ls = 1.20; lo = 0.05; hi = 0.92; cb = 0.075; cs = 0.05; ca = 0.04; }
 }
@@ -875,8 +881,21 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // motif with flat colour washed the frame out worse than it already is. Instead the
         // GROUND BETWEEN beads recedes, so the mon read as bright shapes and the lattice
         // texture survives INSIDE them. Spatially structured, so it cannot strobe the frame.
-        col *= mix(1.0, 0.40, (1.0 - cov) * knob_168);
-        col += lush(s + 0.33, 1.0) * rim * knob_168 * 0.35;        // contour catches light
+        // ── THE SEED MUST BREATHE ────────────────────────────────────────────────
+        // A FIXED 0.40 ground was a large STATIC mask over ~half the frame, and it cost
+        // 29% of all visible reactivity: measured mean |pixel delta| quiet->drop was
+        // 28.73 with the seed on vs 40.36 with it off. Nothing else came close — the
+        // palette theme moved that number by under 2.
+        //
+        // The seed is LIGHTING, not geometry: it does not move where any cell boundary
+        // is, so the geometry-evolves directive does not apply and it may take audio
+        // freely. Depth rides energySpring and the rim rides treble — both SMOOTHED
+        // controller springs, never per-frame transients, so the ground swells and falls
+        // with the music instead of snapping on a kick. Musically this is the right
+        // gesture anyway: the beads EMERGE from the ground as the track builds.
+        float seedDepth = mix(0.25, 0.72, clamp(energySpring * quietGate, 0.0, 1.0));
+        col *= mix(1.0, 1.0 - seedDepth, (1.0 - cov) * knob_168);
+        col += lush(s + 0.33, 1.0) * rim * knob_168 * (0.22 + 0.45 * trebLive * quietGate);
     }
 
     // GLOW LIFT — gamma up + gain so mid-tones emit; high chroma keeps it NEON, not washed out.
