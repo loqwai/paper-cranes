@@ -211,11 +211,35 @@ mat2 rot2(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 
 // BEAUTIFUL palette — perceptual Oklch, lush and smooth (no muddy mid-mixes). s wraps the hue;
 // lit lifts lightness; chroma breathes for richness. Bounded away from white/black.
+// ── RICH PALETTE (imported 2026-09-04 from this session's eclipse + cozy-neon-night) ──
+// Those two read as saturated neon; this one read as pastel wash. The difference is NOT
+// the hue journey — lush() is byte-identical across every lattice-bead variant the lab
+// produced, so no amount of hue tuning was ever going to fix it. It is the L/C pairing:
+//
+//   eclipse / cozy-neon-night : HSL sat 0.78-0.90, lightness 0.05-0.45  (saturated, dark ground)
+//   lattice-bead (before)     : Oklch C 0.075-0.16, L clamped to 0.92   (unsaturated, light)
+//
+// Oklch at L 0.85 / C 0.11 is pastel BY CONSTRUCTION. cozy-neon-night's ground is
+// hsl2rgb(vec3(0.62, 0.85, 0.05)) — lightness FIVE PERCENT — and it accumulates a few
+// widely separated hues additively on top. So: push C into the neon band and pull the
+// L ceiling down off 0.92. The seed grid (K168) supplies the matching dark ground.
+//
+// LV_RICH  chroma gain.      baked 2.8 -> measured HSL saturation 0.20 -> 0.68.
+// LV_LCEIL lightness ceiling. baked 0.78 (was 0.92) — this is what was blowing the rim out.
+#define LV_RICH  LVK(knob_166, 2.8, knob_166 * 4.0)
+#define LV_LCEIL LVK(knob_164, 0.78, 0.50 + knob_164 * 0.45)
+
 vec3 lush(float s, float lit){
     float h = fract(s) * TAU;
     // BRIGHT baseline so the whole thing emits light (must pop off a phone at night, read from afar)
-    float L = clamp(LV_LBASE + EXB(knob_156, 0.40) + LV_LSLOPE * clamp(lit, 0.0, 1.0), 0.05, 0.92);   // LV_LBASE (H10)   // K156 LIGHT BASE: the palette's baseline lightness (the tuned 0.33 was five iterations of 'less washed out').   // vj2 iter 6: 0.40+0.44 → 0.33+0.40 (max L 0.84 → 0.73). Meter on lit passages: dark 2.4 %, lum 0.30, sat 0.85 — pastel. Lower L keeps chroma, restores the floor. (Oklch: hue untouched.)   // MUTED (iter 17, from chromadepth-lattice/3): lower base lightness
+    float L = clamp(LV_LBASE + EXB(knob_156, 0.40) + LV_LSLOPE * clamp(lit, 0.0, 1.0), 0.05, LV_LCEIL);   // LV_LBASE (H10)   // K156 LIGHT BASE: the palette's baseline lightness (the tuned 0.33 was five iterations of 'less washed out').   // vj2 iter 6: 0.40+0.44 → 0.33+0.40 (max L 0.84 → 0.73). Meter on lit passages: dark 2.4 %, lum 0.30, sat 0.85 — pastel. Lower L keeps chroma, restores the floor. (Oklch: hue untouched.)   // MUTED (iter 17, from chromadepth-lattice/3): lower base lightness
     float C = max(0.0, (0.075 + seed2 * 0.05) + EXB(knob_157, 0.14)) + 0.04 * sin(s * TAU * 0.5 + 1.3);   // K157 CHROMA: saturation. 0 = greyscale structure (a genuinely useful way to READ the geometry).   // vj2 iter 11: chroma 0.09+.06/.05 → 0.075+.05/.04. Meter sat 0.93–0.94 since the L/gamma changes (low L + same C = gamut-edge neon). User wants MUTED; sat target ~0.8.   // lower chroma than 6.frag's neon — user: "more muted"
+    C *= LV_RICH;
+    // GAMUT GUARD: oklab2rgb does not clamp, and sRGB holds far less chroma as L -> 1.
+    // Without this the extra saturation clips per-channel at the bright end and the hue
+    // slides toward whichever primary survives — neon turning to mud exactly where the
+    // lattice is brightest. Fading C at high L keeps the hue journey intact.
+    C *= 1.0 - 0.70 * smoothstep(0.62, 1.0, L);
     return oklch2rgb(vec3(L, C, h));
 }
 
