@@ -2,12 +2,12 @@
 // labelled PNG. Renders sequentially in ONE page — parallel tabs get rAF-throttled in
 // the background and come back stale or black.
 import { chromium } from 'playwright'
-import fs from 'node:fs'
+import crypto from 'node:crypto'
 
 const PORT = process.env.PORT || 6994
 const BASE = `http://localhost:${PORT}/?shader=redaphid/wip/lattice-bead/2&controller=lattice-nav`
     + '&noaudio=true&fullscreen=true&knob_161=1&knob_144=0.02&knob_1=0.429&navZoom=0.62'
-    + '&seed=0.618&seed2=0.755&seed3=0.892&seed4=0.029&time=8&evoPhase=5.5&evoWarp=0.5&evoPlasma=0.5'
+    + '&seed=0.618&seed2=0.755&seed3=0.892&seed4=0.029&evoPhase=5.5&evoWarp=0.5&evoPlasma=0.5'
     + '&flowPhase=0.4&morphPhase=0.3&warpGrow=2&flybyZoom=0&navX=0&navY=0&quietGate=1'
     + '&energySpring=0.55&waveletBassSpring=0.6&waveletBand1Spring=0.5&waveletBand2Spring=0.5'
     + '&waveletBand3Spring=0.45&waveletBand4Spring=0.45&waveletBand5Spring=0.5&waveletCentroidSpring=0.5'
@@ -58,19 +58,34 @@ const run = async () => {
   const beadTiles = []
   for (const m of MON) {
     process.stdout.write(`bead ${m} `)
-    beadTiles.push({ label: m, b64: await shoot(page, `${BASE}&paletteShift=1.7&image=images/beads/mon-${m}.png`) })
+    beadTiles.push({ label: m, b64: await shoot(page, `${BASE}&time=8&paletteShift=1.7&image=images/beads/mon-${m}.png`) })
   }
   const palTiles = []
   for (const s of SCHEMES) {
     process.stdout.write(`pal ${s.label.split('\n')[0]} `)
-    palTiles.push({ label: s.label, b64: await shoot(page, `${BASE}&image=images/beads/mon-kikyo.png${s.q}`) })
+    palTiles.push({ label: s.label, b64: await shoot(page, `${BASE}&time=8&image=images/beads/mon-kikyo.png${s.q}`) })
   }
+
+  // ONE FULL OCTAVE of the dive. SEED_ZOOM = 0.045 octaves/s -> period 22.22s, so the
+  // frame at t=8 and the frame at t=30.22 must be IDENTICAL if the crossfade is seamless.
+  const ZOOM_T = [8, 13.556, 19.111, 24.667, 30.222, 35.778]
+  const zoomTiles = []
+  for (const t of ZOOM_T) {
+    process.stdout.write(`zoom t=${t} `)
+    const b64 = await shoot(page, `${BASE}&time=${t}&paletteShift=1.7&image=images/beads/mon-kikyo.png`)
+    zoomTiles.push({ label: `t=${t}s   zf=${((0.045*t + 0.4*0.020) % 1).toFixed(3)}`, b64 })
+  }
+  const h = b => crypto.createHash('sha256').update(b).digest('hex').slice(0, 16)
+  console.log('  seamless check: t=8 sha ' + h(zoomTiles[0].b64) + '  |  t=30.222 sha ' + h(zoomTiles[4].b64)
+    + '  => ' + (zoomTiles[0].b64 === zoomTiles[4].b64 ? 'IDENTICAL (seamless)' : 'DIFFERENT'))
 
   const out = await browser.newPage({ viewport: { width: 1500, height: 1000 } })
   await out.setContent(sheet('All 11 bead variants', beadTiles, 4))
   await out.screenshot({ path: 'journals/lab/shots/beads-all.png', fullPage: true })
   await out.setContent(sheet('Colour schemes (mon-kikyo)', palTiles, 5))
   await out.screenshot({ path: 'journals/lab/shots/palettes.png', fullPage: true })
+  await out.setContent(sheet('Infinity zoom — one full octave of the dive', zoomTiles, 3))
+  await out.screenshot({ path: 'journals/lab/shots/zoom-dive.png', fullPage: true })
 
   await browser.close()
   console.log('\nwrote journals/lab/shots/beads-all.png + palettes.png')

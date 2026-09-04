@@ -142,6 +142,9 @@ uniform float spectralRoughnessSmooth;   // smoothed grit → iridescent sparkle
 // So the Z-score now punches the RELIEF depth: grit embosses the lattice harder for a moment.
 // Shading channel per the hierarchy — never geometry. max() keeps it one-sided; the pre-existing
 // min(0.85,...) clamp still protects lumMin.
+uniform float divePhase;   // dive scrub offset; any numeric query param becomes a float
+                           // uniform, and getQueryParamUniforms skips names already declared
+                           // here, so ?divePhase= drives this with no knob spent and no clash.
 uniform float flowPhase;
 uniform float morphPhase;
 uniform float quietGate;
@@ -200,11 +203,22 @@ uniform float warpGrow;      // PERMANENT structural warp — grows on every big
 // step(0.001,k) means "knob omitted -> use the baked constant", so the projector URL
 // needs NO lever knobs and a knob can still be twisted live to trim.
 #define LVK(k, baked, map) mix((baked), (map), step(0.001, (k)))
-#define LV_GAMMA  LVK(knob_170, 1.24, knob_170 * 2.0)   // final tone curve.  1.frag: 1.18 | lattice-interactive/3: 0.80 (REJECTED, see below)
+// ── LATTICE-9 TONE CURVE (restored 2026-09-04) ──────────────────────────────────
+// LV_LBASE 0.33 / LV_LSLOPE 0.40 / LV_GAMMA 1.18 are lattice-vj/9.frag's values.
+// H10 had moved them to 0.10 / 1.20 / 1.24 ("base down, slope up") to win brightness
+// contrast. That trade cost the COLOUR, and here is why: sRGB holds the most chroma at
+// MID lightness and almost none near L=0 or L=1.
+//   lattice 9 : L in 0.33 .. 0.73  -- the whole range sits in the high-chroma band
+//   H10       : L in 0.10 .. 0.92  -- most of the range is where chroma cannot exist
+// So H10 was spending its lightness range in exactly the places colour goes grey, which
+// is what made the frame read pastel no matter how the hue journey was tuned. Note the
+// max is now 0.73, under LV_LCEIL, so the rim can no longer blow out by construction.
+// K173/K174/K170 restore the H10 curve for A/B.
+#define LV_GAMMA  LVK(knob_170, 1.18, knob_170 * 2.0)   // final tone curve.  1.frag: 1.18 | lattice-interactive/3: 0.80 (REJECTED, see below)
 #define LV_HALOW  LVK(knob_171, 0.06, knob_171 * 0.24)  // glow halo WIDTH.   1.frag: 0.06 | ref: 0.12 (measured DEAD)
 #define LV_HALOA  LVK(knob_172, 0.35, knob_172)         // halo WEIGHT.       1.frag: 0.35 | ref: 0.60 (measured DEAD)
-#define LV_LBASE  LVK(knob_173, 0.10, knob_173)         // palette lightness BASE.  1.frag: 0.33 | ref: 0.50  -> LOWERED to 0.10
-#define LV_LSLOPE LVK(knob_174, 1.20, knob_174 * 1.6)   // palette lightness SLOPE. 1.frag: 0.40 | ref: 0.36  -> RAISED to 1.20
+#define LV_LBASE  LVK(knob_173, 0.33, knob_173)         // palette lightness BASE.  1.frag: 0.33 | ref: 0.50  -> LOWERED to 0.10
+#define LV_LSLOPE LVK(knob_174, 0.40, knob_174 * 1.6)   // palette lightness SLOPE. 1.frag: 0.40 | ref: 0.36  -> RAISED to 1.20
 #define LV_BGBASE LVK(knob_175, 0.30, knob_175 * 0.6)   // background FIELD base.   1.frag: 0.30 (measured DEAD: alpha~1, bg never visible)
 
 mat2 rot2(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
@@ -226,6 +240,8 @@ mat2 rot2(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 //
 // LV_RICH  chroma gain.      baked 2.8 -> measured HSL saturation 0.20 -> 0.68.
 // LV_LCEIL lightness ceiling. baked 0.78 (was 0.92) — this is what was blowing the rim out.
+#define SEED_ZOOM LVK(knob_163, 0.045, knob_163 * 0.30)   // octaves / second
+#define SEED_FLOW LVK(knob_162, 0.020, knob_162 * 0.15)   // bass pacing on the dive
 #define LV_RICH  LVK(knob_166, 2.8, knob_166 * 4.0)
 #define LV_LCEIL LVK(knob_164, 0.78, 0.50 + knob_164 * 0.45)
 
@@ -348,6 +364,14 @@ float beadDist(vec2 p, float r){
 float seedDist(vec2 p, float pitch){
     vec2 f = (fract(p / pitch + 0.5) - 0.5) * pitch;   // one tile, centred, [-pitch/2, pitch/2)
     return beadDist(f, pitch * 0.5);                   // beadDist rescales: sample at p/r, multiply back by r
+}
+
+// One seed octave: coverage + contour, sampled at scale k about centre c.
+// aa scales WITH k, or the antialiasing ramp stops matching the cells it is smoothing.
+vec2 seedLayer(vec2 p, vec2 c, float k, float pitch, float aaBase){
+    float d  = seedDist((p - c) * k + c, pitch);
+    float aa = clamp(aaBase * k * 1.5, 1e-4, pitch * 0.04);
+    return vec2(smoothstep(aa, -aa, d), smoothstep(aa * 4.0, 0.0, abs(d)));
 }
 
 // depth-coherent reactivity: near layers shimmer w/ treble, far layers throb w/ bass
@@ -755,16 +779,38 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // so a linear range missed it entirely in both directions on the first two tries
         // (too wide = one tile covering the screen = no visible effect at all).
         float seedPitch = exp2(mix(-6.0, 2.0, clamp(knob_169, 0.0, 1.0)));   // 0.016 .. 4.0
-        float sd  = seedDist(uv, seedPitch);
+        // ── INFINITY ZOOM (the subtronics-eye effect) ──────────────────────────────
+        // subtronics-eye dives by scaling about a centre and then fract()-wrapping:
+        //     rotatedUV = (rotatedUV - CENTER) * zoomFactor + CENTER;
+        //     rotatedUV = fract(rotatedUV);
+        // That is seamless there because the content is periodic. The seed grid is too,
+        // but a TRANSLATION lattice is not SELF-SIMILAR: at the wrap the pitch would pop
+        // from 2P back to P. So run TWO octaves and crossfade — at zf = 1 octave B is
+        // exactly what octave A was at zf = 0, and the dive is endless with no snap.
+        //
+        // The phase is MONOTONIC (iTime plus flowPhase, both one-way accumulators), i.e.
+        // rate-not-angle: a tempo change alters how FAST we dive, never rewinds it. That
+        // is the same discipline the zoomP octave clamp above exists to enforce, and the
+        // reason the rate is not taken straight from a per-frame audio value.
+        // K163 DIVE RATE (octaves/sec). K162 how much the BASS paces the dive.
+        // divePhase: a URL-settable offset on the dive, so the octave can be scrubbed with
+        // iTime HELD CONSTANT. Without it the dive is untestable — stepping time to move
+        // the phase also moves `fly`, zoomP, the light angle and the aurora, so "one
+        // octave later" is a different place in the world and nothing can be compared.
+        float zf = fract(SEED_ZOOM * iTime + flowPhase * SEED_FLOW + divePhase);
+        float aaBase = length(fwidth(uv));
+        vec2  lA = seedLayer(uv, world, exp2(-zf),       seedPitch, aaBase);
+        vec2  lB = seedLayer(uv, world, exp2(1.0 - zf),  seedPitch, aaBase);
+        vec2  sl = mix(lA, lB, smoothstep(0.0, 1.0, zf));
+        float sd  = 0.0;
         // AA width from the derivative of uv, which is continuous — taking it from sd
         // would blow up on the fract() seam and draw a grid of dark lines.
         // AA width from the derivative of uv, which is continuous — taking it from sd
         // would blow up on the fract() seam and draw a grid of dark lines. CLAMPED to a
         // fraction of the pitch: unclamped it ran wider than the motif when zoomed out and
         // turned the whole seed into a milky veil (measured, first attempt).
-        float aa  = clamp(length(fwidth(uv)) * 1.5, 1e-4, seedPitch * 0.04);
-        float cov = smoothstep(aa, -aa, sd);                       // 1 inside the motif
-        float rim = smoothstep(aa * 4.0, 0.0, abs(sd));            // edge band, reads at distance
+        float cov = sl.x;                                          // 1 inside the motif
+        float rim = sl.y;                                          // edge band, reads at distance
         // RELIEF, NOT GAIN — the same lesson iter146 learned for the audio gain. Filling the
         // motif with flat colour washed the frame out worse than it already is. Instead the
         // GROUND BETWEEN beads recedes, so the mon read as bright shapes and the lattice
