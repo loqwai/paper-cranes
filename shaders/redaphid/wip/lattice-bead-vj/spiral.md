@@ -24,6 +24,10 @@ only the 3 px contour, punch range 0.55–1.9. Background L range ≈3 %. No glo
 - **Aspect ratio**: hero bounding box 344×340 at 1600×900 and 609×604 at 900×1600
   (`scripts/spiral-look.mjs`) — ratios 1.012 / 1.008, no stretch on any viewport.
 - **Motion** with `controller=dodeca-bloom`: continuous global turn + outward drift, no snap.
+- **Lightness** (2026-09-04, after the lift): ground L 0.19–0.30, body L 0.40–0.61, outline L
+  0.80–0.84 so the outline is always the brightest thing. Measured headless at 960×540, phases
+  pinned: hakkaku single arm lum 16.5/255 (bright>50: 9 %), tomoe single arm 20.2 (12 %),
+  tomoe galaxy `arms=2` 23.5 (15 %). Before the lift these were 7.6 / 9.8 / 11.9.
 - **Motifs**: tomoe reads best (swirl of swirls, chirality preserved because nothing is folded),
   kiku and hakkaku clean at every size, ume fine. Only one `image=` per page, so "a different
   mon per arm" needs a second texture channel — not possible today.

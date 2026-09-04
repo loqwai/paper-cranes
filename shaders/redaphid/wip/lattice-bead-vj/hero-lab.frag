@@ -333,13 +333,15 @@ float beadDist(vec2 p, float r){
 #define HERO_HUE   (knob_185 > 0.001 ? knob_185 : 0.42)   // interior palette rotation vs the field
 #define HERO_RIM   (knob_186 > 0.001 ? knob_186 * 2.0 : 1.0)
 #define HERO_LIFT  (knob_187 > 0.001 ? knob_187 : 0.88)   // how much the interior is re-lit
-#define HERO_INL   (knob_189 > 0.001 ? (knob_189 - 0.5) * 2.0 : 0.0)    // interior luminance offset
+#define HERO_INL   (knob_189 > 0.001 ? (knob_189 - 0.5) * 2.0 : -0.22)    // interior luminance offset
 // SUBJECT vs GROUND. The lattice at these params is BRIGHT and BUSY; measured at 15% scale it
 // out-shouts the motif and the bead stops being nameable. A subject needs a subordinate ground,
 // so the field outside the silhouette is dimmed and desaturated. This is the counter-ratchet
 // partner of the interior lift -- light is moved into the bead, not added to the frame.
-#define HERO_QUIET (knob_191 > 0.001 ? knob_191 : 0.38)   // exterior brightness kept
+#define HERO_QUIET (knob_191 > 0.001 ? knob_191 : 0.26)   // exterior brightness kept
 #define HERO_DESAT (knob_192 > 0.001 ? knob_192 : 0.40)   // exterior saturation kept
+#define HERO_SAT   (knob_194 > 0.001 ? 0.5 + knob_194 * 2.0 : 1.55)   // hero-lab 2: interior chroma boost
+#define HERO_TOE   (knob_193 > 0.001 ? 1.0 + knob_193 * 1.5 : 2.0)   // hero-lab 1: exterior contrast curve (1 = off)
 
 // Signed distance to the WHOLE motif, screen units, for a bead of radius r.
 // Same one-tile clamped lookup + analytic monotone exterior as beadDist (lab/whole),
@@ -737,20 +739,30 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         vec3 inLat = lush(s + HERO_HUE,        clamp(lum * (1.0 + HERO_INL), 0.0, 1.4));
         vec3 inBg  = lush(s + HERO_HUE + 0.52, 0.09 + 0.07 * ndl);
         vec3 inCol = mix(inBg, inLat, clamp(alpha, 0.0, 1.0));
+        // hero-lab 2 (2026-09-04): the interior read as a mint WASH (high L, low C). Pull the lit
+        // level down (HERO_INL) and push chroma up so the aperture is coloured lattice, not haze.
+        float inG = dot(inCol, vec3(0.299, 0.587, 0.114));
+        inCol = clamp(mix(vec3(inG), inCol, HERO_SAT), 0.0, 1.0);
         col = mix(col, inCol, heroIn * HERO_LIFT);
 
         // 2. DOME -- interior relief lit by that sun. LOCAL multiplier inside the silhouette
         //    only (the iter146 "relief, not gain" rule); the frame mean does not follow it.
         float dome = smoothstep(0.0, -0.55 * heroR, heroD);      // 0 at the edge -> 1 deep inside
         col *= 1.0 + heroIn * dome * (0.05 + 0.24 * ndl)
-                   * (0.7 + gKick * 0.5 + bassLive * 0.4 * quietGate);
+                   * (0.6 + gKick * 0.5 + bassLive * 0.3 * quietGate + waveletBand1Spring * 0.5 * quietGate);   // hero-lab 3: sub-bass band lifts the dome
 
         // 3. SUBJECT / GROUND -- the field is dimmed and desaturated outside the silhouette so
         //    the bead is what the eye lands on from across a dark room. Measured: without this the
         //    motif is not nameable at the 15%-scale dark-field proxy; with it, it is.
         float outM = (1.0 - heroIn) * heroSettle;
         float grey = dot(col, vec3(0.299, 0.587, 0.114));
-        col = mix(col, mix(vec3(grey), col, HERO_DESAT) * HERO_QUIET, outM);
+        vec3  ext  = mix(vec3(grey), col, HERO_DESAT) * HERO_QUIET;
+        // hero-lab 1 (2026-09-04): GROUND CURVE. Dimmed + desaturated, the field still sat at
+        // mid-lightness as grey static (moire of the fine fold levels). A contrast curve pivoting
+        // at the ground's own mean sinks that static into black and lifts the strong marks.
+        float eg   = dot(ext, vec3(0.299, 0.587, 0.114));
+        ext *= pow(max(eg, 1e-4) / 0.30, HERO_TOE - 1.0);
+        col = mix(col, ext, outM);
 
         // 4. CONTACT SHADOW -- just outside, so the bead sits IN FRONT of the field.
         float drop = exp(-max(heroD, 0.0) * 26.0) * (1.0 - heroIn) * heroSettle;
@@ -765,14 +777,24 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         //    thing a stranger reads at 20 m in the dark; everything else is why it looks alive.
         float ew   = HERO_EDGE + haa;
         float line = smoothstep(ew, ew * 0.30, abs(heroD)) * heroSettle;
-        col += lush(s + HERO_HUE + 0.33, 1.0) * line
+        // hero-lab 3 (2026-09-04): lush(..., 1.0) is the lightness ceiling = a near-WHITE stroke.
+        // A saturated palette hue just under white keeps "palette-lit" true and off the no-white
+        // rule; wavelet brightness (centroid spring) tints it, the iris CORE_HUE idea, gated.
+        float lineH = fract(s + HERO_HUE + 0.33 + (waveletCentroidSpring - 0.45) * 0.20 * quietGate) * TAU;
+        vec3  lineC = clamp(oklch2rgb(vec3(0.80, 0.15, lineH)), 0.0, 1.0);
+        col += lineC * line
              * (0.85 + trebLive * 0.55 + CHURN * 0.85 + gKick * 0.45 + WUB * 0.35) * HERO_RIM;
 
         // 7. RIM -- the sun-facing arc flares brighter, so the silhouette TURNS in the light
         //    instead of being a uniformly bright sticker.
         float rimA = smoothstep(ew * 3.5, 0.0, abs(heroD)) * pow(ndl, 2.2) * heroSettle;
-        col += lush(s + HERO_HUE + 0.16, 1.0) * rimA
-             * (0.35 + spectralCrestSmooth * 0.5 + WUB * 0.6) * HERO_RIM;
+        // hero-lab 3: rim colour under white too (lush(...,1.0) hit the ceiling at high wavelet
+        // levels), and the wavelet mid/high-mid bands light the sun-facing arc, capped so a loud
+        // passage brightens the rim without ever bleaching it.
+        vec3  rimC = clamp(oklch2rgb(vec3(0.76, 0.14, lineH - 1.05)), 0.0, 1.0);
+        col += rimC * rimA
+             * min(0.30 + spectralCrestSmooth * 0.4 + WUB * 0.5
+                   + waveletBand3Spring * 0.45 + waveletBand4Spring * 0.35, 1.15) * HERO_RIM;
     }
 
     // ── AURORA (DRAMATIC, /vibej iter 8) ── slow translucent colour CURTAINS sweeping the whole

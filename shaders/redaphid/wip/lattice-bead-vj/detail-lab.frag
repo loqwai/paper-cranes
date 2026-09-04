@@ -374,7 +374,10 @@ uniform float spectralEntropyMedian;   // QUALITY domain: chaos vs order
 uniform float spectralKurtosisMedian;  // SHAPE domain: peaked vs diffuse
 uniform float spectralSpreadMedian;    // SHAPE domain: harmonic width
 uniform float pitchClassMedian;        // TONAL domain: what key we are in     // iter148: controllers/flyby.js arc position — 1 = cruising in close, ~0.24 = wide
-uniform float paletteShift;  // PERMANENT palette rotation — grows on every big drop
+uniform float paletteShift;
+uniform float rimboost;     // LAB 2026-09-04 RIM-AS-BRIGHTEST, ?rimboost=0..1 (0 = off = detail.frag exactly)
+uniform float rings;        // LAB 2026-09-04 CELL-TO-CELL RINGS amount, ?rings=0..1 (0 = off = detail.frag exactly)
+float gRingPhase;           // LAB: monotonic phase for the outward rings (set once per frame in main)  // PERMANENT palette rotation — grows on every big drop
 uniform float warpGrow;      // PERMANENT structural warp — grows on every big drop
 // waveletBassZScore + wavelet_bassHit auto-declare (raw) — transient pulse punch only.
 
@@ -734,7 +737,7 @@ float seedDist(vec2 p, float pitch){
 
 // One seed octave: coverage + contour, sampled at scale k about centre c.
 // aa scales WITH k, or the antialiasing ramp stops matching the cells it is smoothing.
-vec3 seedLayer(vec2 p, vec2 c, float k, float pitch, float aaBase, float rimW, float inset){
+vec4 seedLayer(vec2 p, vec2 c, float k, float pitch, float aaBase, float rimW, float inset){
     float d  = seedDist((p - c) * k + c, pitch);
     float aa = clamp(aaBase * k * 1.5, 1e-4, pitch * 0.04);
     // rimW: 4.0 is 3.frag's hairline contour. LEGIBLE widens it into a drawn line, which is
@@ -754,7 +757,19 @@ vec3 seedLayer(vec2 p, vec2 c, float k, float pitch, float aaBase, float rimW, f
     float w  = aa * 2.5;
     float b1 = smoothstep(w, 0.0, abs(d + inset));
     float b2 = smoothstep(w, 0.0, abs(d + inset * 2.35));
-    return vec3(cov, rim, clamp(max(b1, b2 * 0.7), 0.0, 1.0) * cov);
+    // ── LAB 2026-09-04 CELL-TO-CELL RINGS ── the ground BETWEEN crests is drawn by the crests'
+    // OWN distance field: offset copies of each outline travel OUTWARD and meet their neighbours
+    // mid-gap, so the gap reads as "made of the bead" rather than generic lattice. gRingPhase is
+    // MONOTONIC (flowPhase + iTime, rate-not-angle); each ring is windowed by sin(f*PI) so the
+    // fract() wrap is invisible (fract-wrap discipline) and it fades as it travels. Exterior-masked.
+    float ex = 0.0;
+    for (int i = 0; i < 2; i++){
+        float fr  = fract(gRingPhase + 0.5 * float(i));
+        float off = fr * pitch * 0.26;                          // outline -> the concave gap between points (the star reaches the tile edge, so the gap is narrow)
+        ex += smoothstep(aa * 6.0, 0.0, abs(d - off)) * sin(fr * PI) * (1.0 - 0.35 * fr);
+    }
+    ex *= (1.0 - cov);
+    return vec4(cov, rim, clamp(max(b1, b2 * 0.7), 0.0, 1.0) * cov, clamp(ex, 0.0, 1.0));
 }
 
 // TREND RINGS. Concentric contours at fixed inward offsets, following the motif's own distance
@@ -937,6 +952,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // ── per-frame state ── base (idle) animation runs at 1/3 speed via bTime; the audio phases
     //    (morphPhase / flowPhase / springs) keep full speed, so it's calm idle but still reactive.
     float bTime = iTime / 3.0;
+    gRingPhase = flowPhase * 0.12 + iTime * 0.035;   // LAB: monotonic, ~1 ring per 30 s idle, faster when the low end works
     // STILL: no time-churn on the lattice rotation → the geography holds its orientation (the
     // constant "panning" feel was this term + the orbital drift below). Reactivity is in-place now.
     gSpin  = 0.0;   // (set below from the kick — a transient TWIST, unwinds as the kick decays)
@@ -1269,9 +1285,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // Erosion depth as a fraction of cell pitch. Zero when NEGATIVE is zero, so the whole
         // feature collapses to 4.frag exactly.
         float inset = seedPitch * 0.055 * NEGATIVE;
-        vec3  lA = seedLayer(uv, world, kA, seedPitch, aaBase, rimW, inset);
-        vec3  lB = seedLayer(uv, world, kB, seedPitch, aaBase, rimW, inset);
-        vec3  sl = mix(lA, lB, smoothstep(0.0, 1.0, zf));
+        vec4  lA = seedLayer(uv, world, kA, seedPitch, aaBase, rimW, inset);
+        vec4  lB = seedLayer(uv, world, kB, seedPitch, aaBase, rimW, inset);
+        vec4  sl = mix(lA, lB, smoothstep(0.0, 1.0, zf));
         float sd  = 0.0;
         // AA width from the derivative of uv, which is continuous — taking it from sd
         // would blow up on the fract() seam and draw a grid of dark lines.
@@ -1282,6 +1298,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         float cov = sl.x;                                          // 1 inside the motif
         float rim = sl.y;                                          // edge band, reads at distance
         float gap = sl.z;                                          // eroded band = the negative space
+        float halo = sl.w;                                         // LAB: outward cell-to-cell rings (ground only)
         // RELIEF, NOT GAIN — the same lesson iter146 learned for the audio gain. Filling the
         // motif with flat colour washed the frame out worse than it already is. Instead the
         // GROUND BETWEEN beads recedes, so the mon read as bright shapes and the lattice
@@ -1324,8 +1341,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // bead's OWN ink makes the silhouette the dominant edge in frame. Masked by cov, so
         // it is spatially structured and cannot strobe; driven by a HAND knob, so no geometry
         // moves with the music. At LEGIBLE = 0 this line is a no-op and 3.frag is reproduced.
-        vec3 beadInk = lush(s, mix(0.62, 0.80, pump));
-        col = mix(col, beadInk, cov * legNow * 0.72);
+        float RB = clamp(rimboost, 0.0, 1.0);   // LAB RIM-AS-BRIGHTEST: dimmer, flatter interior so the contour is the brightest crispest thing
+        vec3 beadInk = lush(s, mix(mix(0.62, 0.80, pump), mix(0.48, 0.66, pump), RB));
+        col = mix(col, beadInk, cov * legNow * mix(0.72, 0.86, RB));
 
         // ── LET THE BLACK IN ─────────────────────────────────────────────────────
         // Carve the eroded band to TRUE black. Applied AFTER the interior flatten so it cuts
@@ -1425,7 +1443,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // with waveletCentroidSpring (measured 0.403), which is also slow, so colour still
         // follows the slowest music as the hierarchy requires.
         float rimHue = s + 0.33 + hueTilt;
-        col += lush(rimHue, 1.0) * rim * seedAmt * (0.22 + 0.45 * trebLive * QGATE) * mix(1.0, 1.6, legNow)
+        col += lush(rimHue, 1.0) * rim * seedAmt * (mix(0.22, 0.38, RB) + mix(0.45, 0.60, RB) * trebLive * QGATE) * mix(1.0, 1.6, legNow)
              * (1.0 + arrival * 4.0); 
         // ── HIGHLIGHT: THE FRAME HAD NO TOP END ──────────────────────────────────
         // MEASURED tone histogram over 9s of live audio, in eighths of the 0-255 range:
@@ -1451,6 +1469,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // The ceiling question is still OPEN, and it cannot be settled with a downsampled metric:
         // the canvas is 1278px, so even a 360x360 read averages a 1px hairline across ~3.5x3.5
         // and dilutes its peak. Settle it with a 1:1 NATIVE CROP before touching this again.
+        // LAB CELL-TO-CELL RINGS: lit with the rim palette's complement at low amplitude, ground-only,
+        // brightness from the MIDS springs (wavelet band 2/3) - shading, never geometry. RINGS-LAB
+        col += lush(rimHue, 0.80) * halo * seedAmt * (0.30 + 0.45 * midsLive * QGATE) * clamp(rings, 0.0, 1.0);
         float specCore = pow(rim, 7.0);
         col += lush(rimHue, 1.0) * specCore * seedAmt * SPEC * (0.55 + 1.10 * arrival) * QGATE;
   // 2.2 -> 4.0: the frame's fast energy now lives HERE

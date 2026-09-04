@@ -101,7 +101,7 @@ vec3 drawBead(vec2 p, vec2 centre, float r, float orient, float hue, float slowD
     float rim = smoothstep(px * 3.0, 0.0, abs(d));    // narrow: ~3 px, never a halo
     float ins = smoothstep(px * 2.0, 0.0, abs(d + r * 0.16)) * cov;   // inset echo of the outline
 
-    float L = 0.36 + 0.16 * slowDrive + 0.05 * treble_env;
+    float L = 0.40 + 0.16 * slowDrive + 0.05 * treble_env;
     float C = 0.10 + 0.05 * entropy_env;
     vec3 body = lch(hue, C, L);
     vec3 edge = lch(hue + 0.08, C * 1.35, min(L + 0.40, 0.84));
@@ -123,7 +123,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float f2 = sin(rad * 7.9 + morph_phase * 0.19 - ang * 3.0);
     float field = 0.5 + 0.25 * f1 + 0.25 * f2;
     float bgHue = hue_phase * 0.05 + 0.60 + centroid_env * 0.08 + field * 0.05;
-    float bgL   = 0.140 + 0.050 * field + 0.040 * energy_env + 0.020 * mids_env;
+    float bgL   = 0.190 + 0.050 * field + 0.040 * energy_env + 0.020 * mids_env;
     vec3 col = lch(bgHue, 0.045 + 0.020 * entropy_env, bgL);
     col *= 1.0 - 0.45 * smoothstep(0.30, 0.85, rad);
 
