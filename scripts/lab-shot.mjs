@@ -35,13 +35,34 @@ for (const pair of pairs) {
     const file = `${outdir}/${label}.png`
     await page.screenshot({ path: file })
 
-    const fps = await page.evaluate(async () => {
+    // FPS + RESOLUTION TOGETHER. Visualizer.js scales canvas resolution under load
+    // (calculateResolutionRatio), so fps alone is not comparable across arms: the
+    // renderer can hold fps flat and pay for it in pixels. Sample the canvas at BOTH
+    // ends of the window (and the min seen during it) and report pixels/second.
+    const perf = await page.evaluate(async () => {
+        const c = document.querySelector('canvas')
         const t0 = performance.now(), f0 = window.cranes.frameCount
+        const w0 = c.width, h0 = c.height
+        let minPx = w0 * h0, maxPx = w0 * h0, sumPx = 0, n = 0
+        const iv = setInterval(() => {
+            const px = c.width * c.height
+            if (px < minPx) minPx = px
+            if (px > maxPx) maxPx = px
+            sumPx += px; n++
+        }, 100)
         await new Promise(r => setTimeout(r, 5000))
+        clearInterval(iv)
         const t1 = performance.now(), f1 = window.cranes.frameCount
-        return +((f1 - f0) / ((t1 - t0) / 1000)).toFixed(1)
+        const secs = (t1 - t0) / 1000, frames = f1 - f0
+        const meanPx = n ? sumPx / n : w0 * h0
+        return {
+            fps: +(frames / secs).toFixed(1),
+            canvasStart: w0 + 'x' + h0, canvasEnd: c.width + 'x' + c.height,
+            minPx, maxPx, resStable: minPx === maxPx,
+            megapixPerSec: +((frames * meanPx) / secs / 1e6).toFixed(2),
+        }
     })
-    results.push({ label, file, fps, ...guard })
+    results.push({ label, file, ...perf, ...guard })
     console.log(JSON.stringify(results.at(-1)))
 }
 
