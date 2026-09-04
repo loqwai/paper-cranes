@@ -290,6 +290,27 @@ float beadDist(vec2 p, float r){
     return d * r;                        // back to lattice units
 }
 
+// ── SEED GRID (2026-09-04) ──────────────────────────────────────────────────────
+// Lays the bead down as a PLAIN translation-repeat grid, composited over the lattice.
+//
+// Why a per-frame composite and not a frame-0 seed into prevFrame (the obvious design,
+// and what lab/tile recommended): the trail is `0.82*col + 0.162*prev`, so anything
+// written into prevFrame loses 6x per frame — 0.162^3 = 0.4%. A one-shot seed is gone
+// in THREE frames. To be seen it has to be re-asserted every frame, which is this.
+//
+// Sampled in the SAME uv the fold consumes, i.e. AFTER pan, zoom, rotation and the
+// terrain warp — so the grid is locked to the lattice and pans with it, instead of
+// being pinned to screen centre while the lattice moves underneath.
+//
+// TRANSLATION repeat, not the fold's mirror-repeat: lab/tile confirmed on tomoe that
+// mirroring checkerboards the handedness, and a mirrored cell is not reachable by any
+// p -> p*M the fold already applies, so downstream you would need a parity bit nothing
+// here tracks. A seed has to mean "this one motif, repeated".
+float seedDist(vec2 p, float pitch){
+    vec2 f = (fract(p / pitch + 0.5) - 0.5) * pitch;   // one tile, centred, [-pitch/2, pitch/2)
+    return beadDist(f, pitch * 0.5);                   // beadDist rescales: sample at p/r, multiply back by r
+}
+
 // depth-coherent reactivity: near layers shimmer w/ treble, far layers throb w/ bass
 float bandForDepth(float ld){
     if (ld < 0.34) return trebLive * quietGate;
@@ -682,6 +703,35 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         float auroraAmt = (0.35 + waveletCentroidSpring * 0.6 + spectralRoughnessSmooth * 0.3) * quietGate;
         vec3 acol = lush(s + 0.5 + a.y * 0.15, 0.9);                       // complement, drifting up the screen
         col += acol * curtain * 0.10 * auroraAmt * mix(1.0, knob_137 * 2.0, step(0.001, knob_137 + knob_138));   // K137 AURORA AMOUNT (pad 4 X: 0 = off, 0.5 = default, 1 = double)                          // 0.22 → 0.10 (iter 17: palette calm)                          // 0.30 → 0.22 (iter 9: less colour churn)
+    }
+
+    // ── SEED GRID COMPOSITE ── K168 = 0 (unset) is byte-identical to no seed at all;
+    //    the uniform branch keeps the default path exactly as cheap as before.
+    //    K168 SEED AMOUNT: 0 = pure lattice, 1 = the bead grid dominates.
+    //    K169 SEED PITCH: cell pitch in lattice units (0.8 .. 3.2).
+    //    Compositing, NOT a global multiplier and NOT geometry — it cannot strobe the
+    //    frame and it does not move where the lattice's own cell boundaries are.
+    if (knob_168 > 0.001){
+        // LOG pitch: the visible uv span depends on navZoom AND the perpetual octave zoom,
+        // so a linear range missed it entirely in both directions on the first two tries
+        // (too wide = one tile covering the screen = no visible effect at all).
+        float seedPitch = exp2(mix(-6.0, 2.0, clamp(knob_169, 0.0, 1.0)));   // 0.016 .. 4.0
+        float sd  = seedDist(uv, seedPitch);
+        // AA width from the derivative of uv, which is continuous — taking it from sd
+        // would blow up on the fract() seam and draw a grid of dark lines.
+        // AA width from the derivative of uv, which is continuous — taking it from sd
+        // would blow up on the fract() seam and draw a grid of dark lines. CLAMPED to a
+        // fraction of the pitch: unclamped it ran wider than the motif when zoomed out and
+        // turned the whole seed into a milky veil (measured, first attempt).
+        float aa  = clamp(length(fwidth(uv)) * 1.5, 1e-4, seedPitch * 0.04);
+        float cov = smoothstep(aa, -aa, sd);                       // 1 inside the motif
+        float rim = smoothstep(aa * 4.0, 0.0, abs(sd));            // edge band, reads at distance
+        // RELIEF, NOT GAIN — the same lesson iter146 learned for the audio gain. Filling the
+        // motif with flat colour washed the frame out worse than it already is. Instead the
+        // GROUND BETWEEN beads recedes, so the mon read as bright shapes and the lattice
+        // texture survives INSIDE them. Spatially structured, so it cannot strobe the frame.
+        col *= mix(1.0, 0.40, (1.0 - cov) * knob_168);
+        col += lush(s + 0.33, 1.0) * rim * knob_168 * 0.35;        // contour catches light
     }
 
     // GLOW LIFT — gamma up + gain so mid-tones emit; high chroma keeps it NEON, not washed out.
