@@ -2,7 +2,6 @@
 // labelled PNG. Renders sequentially in ONE page — parallel tabs get rAF-throttled in
 // the background and come back stale or black.
 import { chromium } from 'playwright'
-import crypto from 'node:crypto'
 
 const PORT = process.env.PORT || 6994
 const BASE = `http://localhost:${PORT}/?shader=redaphid/wip/lattice-bead/2&controller=lattice-nav`
@@ -75,10 +74,6 @@ const run = async () => {
     const b64 = await shoot(page, `${BASE}&time=${t}&paletteShift=1.7&image=images/beads/mon-kikyo.png`)
     zoomTiles.push({ label: `t=${t}s   zf=${((0.045*t + 0.4*0.020) % 1).toFixed(3)}`, b64 })
   }
-  const h = b => crypto.createHash('sha256').update(b).digest('hex').slice(0, 16)
-  console.log('  seamless check: t=8 sha ' + h(zoomTiles[0].b64) + '  |  t=30.222 sha ' + h(zoomTiles[4].b64)
-    + '  => ' + (zoomTiles[0].b64 === zoomTiles[4].b64 ? 'IDENTICAL (seamless)' : 'DIFFERENT'))
-
   const out = await browser.newPage({ viewport: { width: 1500, height: 1000 } })
   await out.setContent(sheet('All 11 bead variants', beadTiles, 4))
   await out.screenshot({ path: 'journals/lab/shots/beads-all.png', fullPage: true })

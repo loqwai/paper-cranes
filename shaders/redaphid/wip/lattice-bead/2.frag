@@ -238,11 +238,14 @@ mat2 rot2(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 // widely separated hues additively on top. So: push C into the neon band and pull the
 // L ceiling down off 0.92. The seed grid (K168) supplies the matching dark ground.
 //
-// LV_RICH  chroma gain.      baked 2.8 -> measured HSL saturation 0.20 -> 0.68.
+// LV_RICH  chroma gain, baked 1.0 = lattice-9's own chroma. 2.8 was WRONG: measured
+//          against 9.frag it drove B to mean 0.703 vs R/G 0.27 and clipped B on 13% of
+//          pixels (9.frag: 0.619 / 0.409 / 0.369, 4.5% clipped) — a blue monochrome that
+//          pinned into fuchsia. Sophistication here is channel BALANCE, not more chroma.
 // LV_LCEIL lightness ceiling. baked 0.78 (was 0.92) — this is what was blowing the rim out.
 #define SEED_ZOOM LVK(knob_163, 0.045, knob_163 * 0.30)   // octaves / second
 #define SEED_FLOW LVK(knob_162, 0.020, knob_162 * 0.15)   // bass pacing on the dive
-#define LV_RICH  LVK(knob_166, 2.8, knob_166 * 4.0)
+#define LV_RICH  LVK(knob_166, 1.0, knob_166 * 4.0)
 #define LV_LCEIL LVK(knob_164, 0.78, 0.50 + knob_164 * 0.45)
 
 // GAMUT COMPRESSION. oklab2rgb does not clamp, so raising chroma drives a channel
@@ -255,6 +258,23 @@ mat2 rot2(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 // fits in sRGB. The neutral is free: oklab2rgb's matrix rows each sum to 1, so C = 0 maps
 // to vec3(L*L*L) exactly. One lerp, no iteration, and it keeps every bit of chroma sRGB
 // can really hold instead of throwing the hue away.
+// HUE-PRESERVING SOFT CLIP. A per-channel clamp() destroys HUE: it pins whichever
+// channels are hot and leaves the rest, so the RATIO between channels changes. Measured
+// pre-clamp on this frame, B ran 2.6x hotter than R and G and clipped on 13% of pixels
+// while G never once reached 1.0 — B pinned, G did not, and the result was the flat
+// fuchsia. Scaling the whole triple by a rolloff on its MAX keeps the ratios, so an
+// over-bright colour desaturates toward white the way film does instead of shifting hue.
+float softMaxRolloff(float x){
+    const float K = 0.75;                       // identity below the knee
+    return x < K ? x : 1.0 - (1.0 - K) * exp(-(x - K) / (1.0 - K));
+}
+vec3 softClip(vec3 c){
+    c = max(c, vec3(0.0));
+    float mx = max(c.r, max(c.g, c.b));
+    if (mx <= 0.0) return c;
+    return c * (softMaxRolloff(mx) / mx);
+}
+
 vec3 fitGamut(vec3 rgb, float L){
     float g  = L * L * L;                       // the C = 0 neutral for this lightness
     float mn = min(rgb.r, min(rgb.g, rgb.b));
@@ -797,10 +817,21 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // iTime HELD CONSTANT. Without it the dive is untestable — stepping time to move
         // the phase also moves `fly`, zoomP, the light angle and the aurora, so "one
         // octave later" is a different place in the world and nothing can be compared.
-        float zf = fract(SEED_ZOOM * iTime + flowPhase * SEED_FLOW + divePhase);
+        // LOCKED TO THE LATTICE (default). uv has ALREADY been divided by pow(2, zoomP)
+        // above, so the seed inherits the lattice's zoom for free — the exp2(-zf) scaling
+        // this used to add was a SECOND zoom on top, which is exactly why the two drifted
+        // apart. Locked mode therefore holds the layer scales CONSTANT at 1 and 2 and only
+        // animates the crossfade, driven by the lattice's own octave phase zoomP. At
+        // zoomP = 1 uv has halved, so layer B (pitch P/2 in uv) is apparent-pitch P — the
+        // same as layer A at zoomP = 0. One octave, one wrap, both seamless, in step.
+        // K163 > 0 unlocks and runs the dive at its own rate on top of the lattice's.
+        float unlock = step(0.001, knob_163);
+        float zf = fract(mix(zoomP, SEED_ZOOM * iTime + flowPhase * SEED_FLOW, unlock) + divePhase);
+        float kA = mix(1.0, exp2(-zf),      unlock);
+        float kB = mix(2.0, exp2(1.0 - zf), unlock);
         float aaBase = length(fwidth(uv));
-        vec2  lA = seedLayer(uv, world, exp2(-zf),       seedPitch, aaBase);
-        vec2  lB = seedLayer(uv, world, exp2(1.0 - zf),  seedPitch, aaBase);
+        vec2  lA = seedLayer(uv, world, kA, seedPitch, aaBase);
+        vec2  lB = seedLayer(uv, world, kB, seedPitch, aaBase);
         vec2  sl = mix(lA, lB, smoothstep(0.0, 1.0, zf));
         float sd  = 0.0;
         // AA width from the derivative of uv, which is continuous — taking it from sd
@@ -820,7 +851,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     }
 
     // GLOW LIFT — gamma up + gain so mid-tones emit; high chroma keeps it NEON, not washed out.
-    col = pow(clamp(col, 0.0, 1.0), vec3(LV_GAMMA));   // LV_GAMMA (H10)             // vj2 iter 3: 0.92 → 1.18 — meter said dark fraction 1.4% / lum 0.30 / sat 0.81: no floor. Gamma > 1 pulls the mids down and leaves the lit lattice edges bright, so structure gets CONTRAST without touching hue. (iter 27: 0.80/1.15 gain was flattening to pink)
+    col = pow(clamp(softClip(col), 0.0, 1.0), vec3(LV_GAMMA));   // LV_GAMMA (H10)             // vj2 iter 3: 0.92 → 1.18 — meter said dark fraction 1.4% / lum 0.30 / sat 0.81: no floor. Gamma > 1 pulls the mids down and leaves the lit lattice edges bright, so structure gets CONTRAST without touching hue. (iter 27: 0.80/1.15 gain was flattening to pink)
     col *= 1.00;
 
     // gentle trail (low decay so the glow carries between frames)
