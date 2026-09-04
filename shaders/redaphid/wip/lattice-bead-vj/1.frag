@@ -344,7 +344,7 @@ uniform float warpGrow;      // PERMANENT structural warp — grows on every big
 #define LV_HALOA  LVK(knob_172, 0.35, knob_172)         // halo WEIGHT.       1.frag: 0.35 | ref: 0.60 (measured DEAD)
 #define LV_LBASE  LVK(knob_173, 0.33, knob_173)         // palette lightness BASE.  1.frag: 0.33 | ref: 0.50  -> LOWERED to 0.10
 #define LV_LSLOPE LVK(knob_174, 0.40, knob_174 * 1.6)   // palette lightness SLOPE. 1.frag: 0.40 | ref: 0.36  -> RAISED to 1.20
-#define LV_BGBASE LVK(knob_175, 0.30, knob_175 * 0.6)   // background FIELD base.   1.frag: 0.30 (measured DEAD: alpha~1, bg never visible)
+#define LV_BGBASE LVK(knob_175, 0.20, knob_175 * 0.6) /* B9: 0.30->0.20 */   // background FIELD base.   1.frag: 0.30 (measured DEAD: alpha~1, bg never visible)
 
 mat2 rot2(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 
@@ -452,7 +452,7 @@ vec3 fitGamut(vec3 rgb, float L){
 // ?theme=<0..3>. seed2 still shifts chroma per device and regionHue(world) still repaints
 // by location, so each theme is a family of looks, not one colour.
 void themeConsts(float t, out float lb, out float ls, out float lo, out float hi, out float cb, out float cs, out float ca){
-    if      (t < 0.5) { lb = 0.50; ls = 0.36; lo = 0.12; hi = 0.88; cb = 0.125; cs = 0.05; ca = 0.05; }
+    if      (t < 0.5) { lb = 0.10; ls = 0.88; lo = 0.05; hi = 0.66; cb = 0.125; cs = 0.05; ca = 0.05; }   // B9: baked wall lightness (was 0.50/0.36/0.12/0.88) = the beat-1 knob values, lost when the wall reloaded
     else if (t < 1.5) { lb = 0.33; ls = 0.40; lo = 0.05; hi = 0.92; cb = 0.075; cs = 0.05; ca = 0.04; }
     else if (t < 2.5) { lb = 0.40; ls = 0.44; lo = 0.05; hi = 0.92; cb = 0.090; cs = 0.06; ca = 0.05; }
     else              { lb = 0.10; ls = 1.20; lo = 0.05; hi = 0.92; cb = 0.075; cs = 0.05; ca = 0.04; }
@@ -890,7 +890,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     //    carries the palette through the song and BRIGHTNESS (centroid) tints it, so the whole
     //    image flows in colour with the music. Smoothed contours only — no jitter. QGATE so
     //    a silent room can't flash the hue. Plus per-area / per-device / permanent-drop offsets.
-    float s = field * 0.65   /* B6: narrower hue spread across the crest so one colour family is the body (critic r4) */
+    float s = field * 0.30   /* B9: 0.65->0.30 one hue family in the body; B6: narrower hue spread across the crest so one colour family is the body (critic r4) */
             + regionHue(world) * max(0.0, 1.0 + EXB(knob_155, 2.0))   // K155 REGION HUE: how strongly WORLD POSITION re-paints the palette. 0 = one colour everywhere;
             + bTime * 0.002                                   // vj2 iter 5: was 0.012 = a full hue turn every ~4 min (0.24 turns/min — 8× the user's 'muted, slow' tolerance and the biggest single palette mover). Now ~1 turn / 25 min.
             + (melodyFlow * 0.05 + pitchClassMean * 0.10) * QGATE   // vj2 iter 4: MELODY → palette, but SLOW. melodyFlow slews 0.03/frame (a melodic leap re-tints the whole field 0.075 in ~0.3 s = the palette 'flash' the meter caught: hue 0.46→0.61 inside one track). pitchClassMean is the ~8 s rolling KEY estimate — it carries 2/3 of the weight now. (was melodyFlow*0.15; 0.32 before iter 17)
@@ -908,7 +908,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
 
     // BRIGHT, saturated background FIELD — no black voids; the whole screen emits light so it
     // pops off the phone at night and reads from across the room.
-    vec3 bg = lush(s + 0.5, 0.05 + 0.055 * step(0.001, 1.0 - clamp(gFill * 30.0, 0.0, 1.0))) * max(0.0, LV_BGBASE + EXB(knob_159, 0.55) + (gComplex * 0.14 + CHURN * 0.12) * (LV_BGBASE / 0.30));   /* vj8-b10e GAP LIGHT: bg lightness lifts 0.05 -> 0.105 only when gFill is at/near ZERO — i.e. exactly when the cells are hollow and the gaps are the majority of the frame (the user's own K149=0 preset, which drove three too-dark alerts at lumMin 0.049-0.058). When FILL is normal the floor stays at the tuned 0.05, so iter-27's 'there must be real dark somewhere' finding is preserved. */   /* vj8-b10c: hollowing the cells (the learned FILL mapping) removes lit AREA, and at full churn that drove lumMin to 0.059 — under the floor, alert inside a minute. Same counter-ratchet as the complexity term: the field floor rises with the very signal that empties the cells. */   // vj8-b8 RATCHET FLOOR COMPENSATION: b7's complexity ratchet draws finer generations as the set runs, and finer means THINNER LINES WITH MORE UNLIT GAP — measured dark fraction 0.37 -> 0.47 and lumMin down to 0.078 (floor is 0.08) over five minutes. The field floor now rises on the SAME monotonic set clock that causes it, so the gaps stay lit as the detail multiplies. Not the global multiplier and not audio-driven (directive #1 intact): this is the colour channel following the slowest clock there is.   // K159 BG FLOOR: how lit the empty field between cells is. Low = the lattice floats in the dark; high = no voids at all.                    // iter 27: DARK floor — the screenshot had no dark anywhere, so nothing could read                    // DARK muted field (3.frag) — the lattice + the sun are what you look at
+    vec3 bg = lush(s + 0.08 /* B9: ground near the BODY hue (was +0.5 = rust complement, critic: dust) */, 0.05 + 0.055 * step(0.001, 1.0 - clamp(gFill * 30.0, 0.0, 1.0))) * max(0.0, LV_BGBASE + EXB(knob_159, 0.55) + (gComplex * 0.14 + CHURN * 0.12) * (LV_BGBASE / 0.30));   /* vj8-b10e GAP LIGHT: bg lightness lifts 0.05 -> 0.105 only when gFill is at/near ZERO — i.e. exactly when the cells are hollow and the gaps are the majority of the frame (the user's own K149=0 preset, which drove three too-dark alerts at lumMin 0.049-0.058). When FILL is normal the floor stays at the tuned 0.05, so iter-27's 'there must be real dark somewhere' finding is preserved. */   /* vj8-b10c: hollowing the cells (the learned FILL mapping) removes lit AREA, and at full churn that drove lumMin to 0.059 — under the floor, alert inside a minute. Same counter-ratchet as the complexity term: the field floor rises with the very signal that empties the cells. */   // vj8-b8 RATCHET FLOOR COMPENSATION: b7's complexity ratchet draws finer generations as the set runs, and finer means THINNER LINES WITH MORE UNLIT GAP — measured dark fraction 0.37 -> 0.47 and lumMin down to 0.078 (floor is 0.08) over five minutes. The field floor now rises on the SAME monotonic set clock that causes it, so the gaps stay lit as the detail multiplies. Not the global multiplier and not audio-driven (directive #1 intact): this is the colour channel following the slowest clock there is.   // K159 BG FLOOR: how lit the empty field between cells is. Low = the lattice floats in the dark; high = no voids at all.                    // iter 27: DARK floor — the screenshot had no dark anywhere, so nothing could read                    // DARK muted field (3.frag) — the lattice + the sun are what you look at
     col = mix(bg, col, clamp(alpha, 0.0, 1.0));
 
     // (PATH ribbon + DESTINATION landmark towers REMOVED — vj7-b4, user: "remove the 'path' with
