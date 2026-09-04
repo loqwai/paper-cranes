@@ -172,7 +172,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     }
     ribbon *= smoothstep(0.0, 0.15, tt) * smoothstep(1.0, 0.85, tt) * smoothstep(R0 * 0.8, R0, rad);
     float rh = hueBase + (tt - hue_phase * 0.10) * HUE_SPAN;
-    col += lch(rh, 0.08, 0.40) * ribbon * DUST * (0.75 + 0.25 * energy_env);
+    col += lch(rh, 0.08, 0.36) * ribbon * DUST * (0.75 + 0.25 * energy_env) / sqrt(na);   // two arms, two ribbons: keep the sum
 
     // THE SPIRAL - beads born at the hero's rim, travelling outward on flow_phase, surging on
     // hue_phase (both monotonic).

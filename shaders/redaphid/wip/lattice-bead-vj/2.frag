@@ -344,6 +344,7 @@ float beadDist(vec2 p, float r){
 #define HERO_DESAT (knob_192 > 0.001 ? knob_192 : 0.40)   // exterior saturation kept
 #define HERO_SAT   (knob_194 > 0.001 ? 0.5 + knob_194 * 2.0 : 1.55)   // K194 INTERIOR CHROMA saturation of the lattice seen through the bead (default 1.55)
 #define HERO_TOE   (knob_193 > 0.001 ? 1.0 + knob_193 * 1.5 : 2.0)   // K193 GROUND CURVE contrast toe on the field, 1.0..2.5 (1 = off, default 2.0)
+#define HERO_GLINT  (knob_197 > 0.001 ? knob_197 : 0.85)   // K197 GROUND GLINT how much of the directional rim/spec light is removed OUTSIDE the bead (default 0.85)
 #define HERO_KEYHUE (knob_195 > 0.001 ? knob_195 * 0.8 : 0.35)   // K195 KEY HUE how far the outline colour travels with the song's key (turns over the pitch-class range)
 
 // Signed distance to the WHOLE motif, screen units, for a bead of radius r.
@@ -722,17 +723,24 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // shadow / specular stay alive without anything circling the screen.
         vec2  sunP = vec2(0.0);
         vec2  L    = vec2(cos(ang), sin(ang));
-        float rim  = smoothstep(0.02, 0.25, edge) * pow(0.5 + 0.5 * dot(n, L), 2.0);
+        // hero-lab 6 (2026-09-04): THE GROUND SPECKLE. rim/shade/spec come from dFdx/dFdy of `lum`,
+        // and on the ground every sub-pixel lattice line flips lum per pixel, so `edge` spikes and the
+        // glint paints 1-px white dashes everywhere (the "sandpaper"; verified at 4x zoom, and it is
+        // NOT the fine fold levels — fading them changed nothing). Outside the bead the derivative
+        // is incoherent, so the directional light is masked there and kept inside the aperture,
+        // where the field is magnified and its edges are real. Shading lane only; no geometry moves.
+        float rimMask = 1.0 - (1.0 - heroIn) * heroSettle * HERO_GLINT;
+        float rim  = smoothstep(0.02, 0.25, edge) * pow(0.5 + 0.5 * dot(n, L), 2.0) * rimMask;
         vec3  rimCol = lush(s + 0.33, 1.0);
         col += rimCol * rim * (0.30 + trebLive * 0.45 + spectralRoughnessSmooth * 0.25 + CHURN * 0.80) * quietGate * 0.8;   // vj8-b10 LEARNED, SECONDARY: the same CHURN flares the EDGES. Two jobs: (a) it makes the learned mapping visible from across the room — cells hollow out while their outlines light up, so a churny passage reads as the lattice turning to wireframe; (b) it is the counter-ratchet for the FILL term above, which removes lit area and would otherwise dim the frame on exactly the loudest passages.
         // SHADOW SIDE (iter 16): edges facing AWAY from the light darken → the lattice reads as RELIEF,
         // lit from one side. Depth punches on kicks (gKick, dead-zoned) and leans on the bass spring,
         // so a hit makes the structure emboss harder for a beat. Lighting reactivity, not colour.
-        float shade = smoothstep(0.02, 0.25, edge) * pow(0.5 - 0.5 * dot(n, L), 2.0);
+        float shade = smoothstep(0.02, 0.25, edge) * pow(0.5 - 0.5 * dot(n, L), 2.0) * rimMask;
         col *= 1.0 - shade * min(0.85, 0.22 + gKick * 0.95 + bassLive * 0.48 + max(0.0, spectralRoughnessZScore) * 0.10 /* vj2-r1 GRIT RELIEF: 0.22 -> 0.10. The iter-134 comment on this very stack records kick+wub crushing lumMin to .063; my 0.22 took it to .059 (too-dark alert 21:26). Same trap, same stack. */)   /* iter 134: clamp relief stack — kick+wub together crushed lumMin to .063 (floor .08) */ * quietGate * mix(1.0, 0.4 + knob_136 * 1.2, bank4);   // K136 RELIEF DEPTH
         // SPECULAR (iter 19): a TIGHT glint on line edges facing the sun exactly — slides along the
         // structure as the sun orbits; treble spring + crest sharpen/brighten it. Palette-lit, not white.
-        float spec = smoothstep(0.02, 0.25, edge) * pow(max(dot(n, L), 0.0), 14.0);
+        float spec = smoothstep(0.02, 0.25, edge) * pow(max(dot(n, L), 0.0), 14.0) * rimMask;
         col += lush(s + 0.33, 1.0) * spec * (0.25 + trebLive * 0.6 + spectralCrestSmooth * 0.3 + WUB * 0.55) * quietGate;   // vj8-b11 LEARNED: wub also sharpens the SPECULAR glint, so a wobbly bassline makes the lattice edges glint hard and a clean passage lets them settle. Two channels for one feature = you can see it whether you are looking at the cells or the edges.
         // (sun disc + halo REMOVED iter 21 — user: "that circle needs to go". Lighting stays.)
     }

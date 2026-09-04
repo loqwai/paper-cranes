@@ -14,7 +14,7 @@ const url = `http://localhost:${PORT}/?shader=redaphid/wip/lattice-bead-vj/chrom
   + (process.env.PIN ? '&time=8&flowPhase=3.1&morphPhase=1.7&evoPhase=6&spinPhase=2.2&huePhase=0.8&bTime=40' : '')
   + (process.env.EXTRA || '')
 const br = await chromium.launch()
-const p = await br.newPage({ viewport: { width: 1100, height: 900 } })
+const p = await br.newPage({ viewport: { width: +(process.env.W || 1100), height: +(process.env.H || 900) } })
 const errs = []
 p.on('console', m => { if (m.type() === 'error') errs.push(m.text().slice(0, 200)) })
 await p.goto(url, { waitUntil: 'domcontentloaded' })
