@@ -146,11 +146,11 @@ HEAD = """<title>Mon Lattice Presets</title>
   <header>
     <span class="eyebrow">lattice-bead / 3.frag &middot; overnight run</span>
     <h1>Mon Lattice Presets</h1>
-    <p class="lede">The overnight run ended somewhere better than it started: <strong>the bead is legible</strong>. All eleven crests now read as themselves. Below them, twelve palette looks from a 32-tile sweep. Tap anything to play it &mdash; tiles are frozen frames (<code>time=8</code>) so the comparison is honest, links are live and audio-reactive.</p>
+    <p class="lede">Japanese <em>mon</em> as the repeating cell of a music-reactive lattice. The test is <strong>recognition</strong>: a stranger, at a distance, in a dark room, should be able to name their own bead. Tap anything to play it &mdash; tiles are frozen frames (<code>time=8</code>) so the comparison is honest, links are live and audio-reactive.</p>
   </header>
 
   <h2>The eleven beads</h2>
-  <p class="sec-note">This is the acceptance test: a stranger, at a distance, in a dark room, should be able to <strong>name their own bead</strong>. It had failed at every framing and every seed pitch until tonight. On <code>4.frag</code> each of these is individually nameable &mdash; and it holds live, with audio running and the camera moving, not just on a frozen frame.</p>
+  <p class="sec-note"><strong>An earlier version of this page claimed all eleven were nameable. That was wrong</strong> &mdash; an art critic judging the grid cold scored it 4&nbsp;clear, 2&nbsp;arguable, 5&nbsp;failed. Since then the interior structure (eroded gaps and trend rings) has made <strong>tomoe, ogi and katabami</strong> read, and separated <strong>suhama from katabami</strong>. One pair still fails: <strong>kikyo and ume</strong>, and that is a source&#8209;art problem rather than a shader one &mdash; see below. These tiles are re&#8209;rendered on <code>detail.frag</code> at the corrected palette.</p>
   <div class="beads">
 MON_HERE
   </div>
@@ -180,8 +180,8 @@ MON_HERE
     </table>
   </div>
 
-  <h2>Palette looks</h2>
-  <p class="sec-note">Ordered roughly by hue. Every one of these avoids <code>paletteShift=1.7</code> and <code>theme=3</code>, for the reasons below.</p>
+  <h2>Palette exploration</h2>
+  <p class="sec-note">Kept as a record of the search, <strong>not as recommendations</strong>. These were rendered on <code>3.frag</code> before the gamut measurements, and at least two of them crush a channel badly. Their names are also unreliable: the palette coordinate carries the seed and a per&#8209;region hue, so &ldquo;Deep Cyan&rdquo; renders olive at a different seed. Treat each name as valid only for the frame it sits on.</p>
   <div class="grid">
 """
 
@@ -204,10 +204,24 @@ TAIL = """
       <p>Theme&nbsp;3 washes out across every hue &mdash; its lightness scale of <code>1.20</code> blows the pastel.</p>
     </div>
     <div class="finding">
-      <span class="tag">Solved</span>
-      <h3>The mon axis was saturated &mdash; until the interior flattened</h3>
-      <p>On <code>3.frag</code> all eleven motifs were near&#8209;indistinguishable, and the honest read was that recognition is a design problem rather than a knob. That was right: no amount of pitch or framing fixed it.</p>
-      <p>The design change was figure/ground, and it worked. Worth keeping the shape of the mistake though &mdash; three sessions were spent tuning size and framing when the blocker was <em>contrast inside the silhouette</em>.</p>
+      <span class="tag">Partly solved</span>
+      <h3>Figure/ground fixed most of it &mdash; kikyo and ume are source art</h3>
+      <p>Flattening the interior and carving eroded gaps made <strong>tomoe, ogi and katabami</strong> read, and lifted <strong>suhama vs katabami</strong> to the separation of a pair that passes.</p>
+      <p><strong>kikyo vs ume cannot be fixed in the shader.</strong> Erosion rings follow the outline, so they cannot separate shapes whose outlines already match &mdash; and measured on the baked artwork itself, the two are <strong>4&ndash;7&times; more alike than any other pair</strong> (radial profile distance 0.019, against 0.079 and 0.141). kikyo&rsquo;s petals measure no sharper than ume&rsquo;s. The generator documents widening its shoulders and opening the tip to ~67&deg;, and says outright that the difference from ume is now only the tip. That softening erased it.</p>
+    </div>
+
+    <div class="finding">
+      <span class="tag">Correction</span>
+      <h3>The palette these were first shown in crushed 13% of pixels</h3>
+      <p>Every earlier tile on this page was rendered with <code>theme=0 &amp; paletteShift=1.35</code> &mdash; the jet&#8209;colormap look the critic called &ldquo;the visual signature of nobody having made a decision&rdquo;. Measured later, it also <strong>crushes 13% of pixels</strong> to a dead channel, the worst gamut behaviour of any variant.</p>
+      <p>The <em>bare default</em> measures 0% crush at comparable contrast, and on live audio has <strong>less than half the flash</strong>. Everything here is re&#8209;rendered on it, and every preset in the shader moved off the old one.</p>
+    </div>
+
+    <div class="finding">
+      <span class="tag">Method</span>
+      <h3>Five times, a null result was the instrument</h3>
+      <p>A whole&#8209;frame metric could not see an effect touching 1/11 of the beads. Luminance and contrast are blind to <em>direction</em>. Downsampling a 1278px canvas to 90px diluted a 1px hairline 200&times;. And a <em>still frame</em> cannot measure flash at all &mdash; which is how a palette got recommended here that turned out to be the flashiest of the set.</p>
+      <p>The rule that came out of it: <strong>name the property being judged, then check the instrument has that axis.</strong> Contrast is spatial, flash is temporal, asymmetry is directional, a hairline is high&#8209;frequency. An instrument missing the axis still returns a confident number &mdash; about something else.</p>
     </div>
     <div class="finding">
       <span class="tag">Negative result</span>

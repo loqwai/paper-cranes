@@ -709,3 +709,31 @@ this window are not.
 - [x] live rig moved to the bare default (lowest flash of the three)
 - [ ] theme 2 has genuinely better contrast and top end — if the flash can be tamed at its palette
       it would be the strongest look; the flash source there has not been identified
+
+## Iter 20 — corrected the published gallery (non-invasive tick)
+
+The planned move — isolating theme 2's flash source via K173/K174 — was **rejected by the user**,
+correctly: it would have cycled the live projection through five palette configurations for ~40
+seconds. That investigation needs a moment when the rig is not projecting. Not retried.
+
+Did a tick that touches nothing on screen instead. **The published gallery had gone stale and was
+carrying claims since retracted:**
+
+- its lede said *"the bead is legible — all eleven crests now read as themselves"*, which the art
+  critic's verdict (4 clear / 2 arguable / 5 failed) disproved;
+- every tile was rendered with `theme=0 & paletteShift=1.35` — the jet colormap, later measured to
+  crush **13%** of pixels;
+- the palette section presented names ("Deep Cyan", "Jade") as if they transferred, which they
+  do not.
+
+Re-rendered the eleven mon on `detail.frag` at the bare default (0% crush) and rewrote the page:
+the recognition claim is now stated with its retraction and its current state, kikyo/ume is
+explained as source art with the profile numbers, the palette section is relabelled as a record
+of the search rather than recommendations, and a Method card records the five occasions a null
+result turned out to be the instrument.
+
+**Point of practice:** a published artifact is a claim that keeps making itself. When the evidence
+under it changes, correcting it is part of the work, not an optional tidy-up.
+
+### Todo
+- [ ] theme 2 flash source (K173 lb / K174 ls isolation) — needs a non-projecting moment
