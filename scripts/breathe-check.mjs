@@ -3,6 +3,8 @@
 // lattice-nav is DELIBERATELY ABSENT: it accumulates per-frame state between captures and put
 // the noise floor at 15.5%, swamping the per-driver signal. navZoom is passed as a plain param
 // instead, which pins it (fine here - no gestures in a headless determinism test).
+// detail=0 ISOLATES breathing: the five quiet channels consume the same signals, so with them
+// on, "all drivers moved" measures mostly THEM and the comparison is meaningless.
 // change ONE driver at a time. spectralEntropySmooth is the ONLY driver used nowhere else in
 // the shader, so it isolates breathing cleanly - spectralCrestSmooth also drives rim width and
 // moved 23.4% of pixels with breathing OFF, which made it useless as a probe. If cells are individually keyed, moving one driver must shift
@@ -15,7 +17,7 @@ const B = `http://localhost:${PORT}/?shader=redaphid/wip/lattice-bead/detail`
   + '&seed=0.618&seed2=0.755&seed3=0.892&seed4=0.029&evoPhase=5.5&flowPhase=0.4&morphPhase=0.3'
   + '&warpGrow=2&navX=0&navY=0&sectionMode=1&sectionMix=1&spectralEntropy=0.8&spectralSpread=0.26'
   + '&knob_168=1.0&knob_169=0.60&navZoom=0.14&legible=1&negative=0.6&theme=1&paletteShift=0.45'
-  + '&image=images/beads/mon-hakkaku.png&detail=0.75&onsetStrength=0&timeSinceOnset=9'
+  + '&image=images/beads/mon-hakkaku.png&detail=0.0001&onsetStrength=0&timeSinceOnset=9'
 
 // all eight drivers pinned mid
 const MID = '&spectralCrestSmooth=0.5&spectralRoughnessSmooth=0.5&spectralEntropySmooth=0.5'

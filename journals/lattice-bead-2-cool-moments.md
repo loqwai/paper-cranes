@@ -357,3 +357,36 @@ scales the two zoom octaves produce.
 - [ ] per-bead audio keying unproven — instrument `slowDriver` bucket occupancy directly rather
       than inferring it from pixel diffs
 - [ ] the deterministic harness MUST drop `lattice-nav` (noise 15.5% → 0.000). Bake that in.
+
+## Iter 12 — CORRECTION: the per-bead breathing does work
+
+Iter 11 recorded the per-bead audio keying as "not demonstrably working". **That was wrong**, and
+the error was in the measurement, not the shader. Three checks close it:
+
+1. **Plumbing verified.** Loading the deterministic harness and reading `flattenFeatures()` back:
+   every driver arrives with exactly its URL value — `spectralEntropySmooth` 0.875,
+   `spectralSpreadRSquared` 0.222, `spectralSkewMedian` 0.515, `spectralCrestSmooth` 0.333,
+   `waveletCentroidSpring` 0.444. Hand-declaring a uniform does **not** stop it being set;
+   `getQueryParamUniforms` only emits declarations.
+2. **Bucket occupancy verified.** Replaying `hash11` over the on-screen id range in JS: all 11
+   buckets populated even at 49 beads (counts 5,4,3,5,7,4,4,4,3,5,5). Not a distribution problem.
+3. **The arithmetic closes.** One driver owns ~1/11 of beads and moves them 8%, measuring
+   **0.055 mad**. Times 11 buckets ≈ 0.6 total audio contribution. The always-on sine covers
+   *all* beads at half amplitude ≈ 5.5× that ≈ **3.3** — and measured breathe-on/off is **3.24**.
+
+So a single driver *must* have a tiny whole-frame footprint; that is what "different for each
+one" means. The metric was wrong, not the feature.
+
+**Also corrected:** `ALL_drivers_moved` = 60.2% even with `detail=0` is NOT breathing — it is
+`energySpring`, which drives `pump` (ground depth and both gains) regardless of DETAIL. Moving
+all drivers at once moves that too, so that number was never a breathing measurement.
+
+### Method lesson
+A whole-frame pixel metric cannot see an effect that touches 1/11 of the beads by 8%. Either
+isolate a driver with no other consumer (`spectralEntropySmooth` is the only one here), or
+predict the magnitude first and check the measurement can resolve it. "Zero change" is a claim
+about the instrument until the instrument's resolution is known.
+
+### Todo
+- [x] per-bead audio keying — verified by plumbing readback + bucket census + magnitude arithmetic
+- [ ] `energySpring` has global reach via `pump`; exclude it from any future isolation test
