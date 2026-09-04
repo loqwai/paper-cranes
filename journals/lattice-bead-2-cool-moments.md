@@ -587,3 +587,47 @@ never have fixed this; the radial-profile comparison settled it in one measureme
 - [x] suhama/katabami — fixed by the interior structure
 - [ ] kikyo tip angle is an ARTIST decision in japanese.py (affects printed beads)
 - [ ] tomoe remains structurally impossible (rotational symmetry vs a mirror fold)
+
+## Iter 17 — tomoe is NOT structurally impossible
+
+The critic's hardest structural claim:
+
+> "The *tomoe* is defined by **rotational** symmetry — three commas chasing each other — while
+> your engine mirrors everything, which is the one operation that cannot produce a tomoe. This
+> isn't a tuning problem; the symmetry model and the emblem are incompatible."
+
+**That is true of the FOLD path and false of the SEED GRID.** `fractal()` applies `abs(p)`, which
+symmetrises and makes chirality unobservable — but `seedDist()` is plain `fract()` tiling in world
+space with no fold at all. A chiral motif survives there, and the render shows it: on
+`detail.frag` with the interior rings on (`negative=0.9`, `detail=0.85`), tomoe reads as a clear
+comma — head, body, curling tail — with a second comma entering frame. See
+`journals/lab/shots/tomoe-look.png`.
+
+**Two more of the critic's failures are fixed in the same image:** `ogi` now reads as a folded fan
+and `katabami` as a three-lobed sorrel. Both were judged on `4.frag`, before the interior
+structure existed; the eroded-band gaps and trend rings are what make them read.
+
+Running tally against the critic's 4 clear / 2 arguable / 5 failed:
+`suhama`/`katabami` separated (iter 16), `tomoe` reads, `ogi` reads. Only **kikyo/ume** remains,
+and that one is a source-art bug (iter 16), not a shader bug.
+
+### A failed measurement, recorded so it is not repeated
+I first tried to prove chirality numerically by comparing each render against its own horizontal
+mirror. **The test was meaningless**: the symmetric controls scored as "chiral" as tomoe
+(hakkaku 35.54, kikko 33.77, tomoe 34.87), because self-mirroring an off-centre crop of a TILED
+field measures the tiling's phase, not the motif's symmetry. A motif's symmetry does not imply
+symmetry of an arbitrary window onto its tiling. Looked at the render instead, which settled it
+immediately.
+
+### MISTAKE: I wrote into the user's main worktree
+`scripts/pair-separation.mjs` and `scripts/tomoe-look.mjs` write to a RELATIVE path, and I ran
+them as `node /d/Projects/pc-lab-sub2/scripts/...` with no `cd`, so the session cwd
+(`D:/Projects/paper-cranes`) received the output. That created `journals/lab/shots/` in the
+user's tree — which the standing rule forbids. Both files moved to `pc-lab-sub2` and the
+directory removed; `git status journals/` in the main tree is back to its session-start state.
+**Any script writing relative paths must be run with an explicit `cd` into the worktree.**
+
+### Todo
+- [x] tomoe — reads on detail.frag; the "impossible" verdict was about the fold path only
+- [ ] the palette in this render is dusty pink/olive despite theme=1 paletteShift=0.45 (which the
+      sweep called Deep Cyan) — worth checking whether paletteShift is being consumed as expected
