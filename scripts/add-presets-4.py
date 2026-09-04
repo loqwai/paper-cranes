@@ -29,7 +29,8 @@ MON = [
     ("hakkaku", "eight-pointed star"),
 ]
 # theme / paletteShift pairs that survived the overnight curation (1.7 and theme 3 excluded).
-PALETTES = [("Jade", 0, 1.35), ("Deep Cyan", 1, 0.45), ("Ember", 1, 1.05), ("Violet", 1, 0.75)]
+PALETTES = [("Jade", 0, 1.35), ("Deep Cyan", 1, 0.45), ("Ember", 1, 1.05),
+            ("Violet", 1, 0.75), ("Acid Lime", 0, 0.15)]
 
 
 def url(mon, theme, ps, name, legible=1, k169="0.60", z="0.14"):
@@ -55,17 +56,22 @@ lines = [
 for mon, desc in MON:
     lines.append(f"//{url(mon, 0, 1.35, mon + ' (' + desc + ')')}")
 
-lines.append("// -- palette variants on kikyo, from the curated set --")
-for pname, th, ps in PALETTES:
-    lines.append(f"//{url('kikyo', th, ps, 'Kikyo ' + pname)}")
+# mon x palette. Verified at legible=1 in journals/lab/shots/legible-palette.png: all five
+# palettes hold once the interior is flattened, and because each mon is now a DISTINCT
+# recognisable shape this is real variety, not one wash re-tinted. Five shapes with the most
+# different silhouettes get the full palette set; the rest ship in Jade above.
+lines.append("// -- mon x palette: the same five silhouettes in each curated palette --")
+for mon in ["hakkaku", "tomoe", "kiku", "matsukawa", "kikko"]:
+    for pname, th, ps in PALETTES[1:]:
+        lines.append(f"//{url(mon, th, ps, mon + ' ' + pname)}")
 
 lines.append("// -- the texture end of the dial: legible=0 reproduces 3.frag exactly --")
 lines.append(f"//{url('kikyo', 0, 1.35, 'Kikyo texture (legible 0)', legible=0, k169='0.28', z='0.30')}")
 lines.append("// ==== END PRESETS ====")
 
 block = "\n".join(lines) + "\n"
-marker = "// of 0.55 is a deliberate midpoint, not a tuned value.\n"
+marker = "// of 0 is off; the recognition presets below set it to 1 explicitly.\n"
 assert marker in src, "header marker not found"
 src = src.replace(marker, marker + block, 1)
 io.open(FRAG, "w", encoding="utf-8").write(src)
-print(f"wrote {len(MON) + len(PALETTES) + 1} presets into {FRAG}")
+print(f"wrote {len(lines) - 7} presets into {FRAG}")

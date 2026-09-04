@@ -9,10 +9,12 @@ import io
 import html
 
 TILES = "journals/lab/shots/gallery-tiles.json"
+MONS = "journals/lab/shots/gallery-mon.json"
 OUT = "journals/lab/shots/gallery.html"
 PREVIEW = "https://lab-substrate2.paper-cranes-visuals.pages.dev"
 
 tiles = json.load(io.open(TILES, encoding="utf-8"))
+mons = json.load(io.open(MONS, encoding="utf-8"))
 
 
 def card(t):
@@ -27,6 +29,18 @@ def card(t):
           <div><dt>pShift</dt><dd>{t['ps']}</dd></div>
           <div><dt>navZoom</dt><dd>{t['z']}</dd></div>
         </dl>
+      </div>
+    </a>"""
+
+
+def moncard(t):
+    """A bead. The name is the point of the page, so it gets the emphasis."""
+    u = html.escape(PREVIEW + t["live"])
+    return f"""    <a class="bead" href="{u}" target="_blank" rel="noopener">
+      <img src="data:image/jpeg;base64,{t['b64']}" alt="{html.escape(t['name'])}" loading="lazy">
+      <div class="meta">
+        <h3>{html.escape(t['name'])}</h3>
+        <p>{html.escape(t['note'])}</p>
       </div>
     </a>"""
 
@@ -67,6 +81,24 @@ HEAD = """<title>Mon Lattice Presets</title>
   .look:hover,.look:focus-visible{border-color:var(--accent-dim);transform:translateY(-2px)}
   .look:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .look img{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:#000}
+
+  /* The bead grid carries the page's one moment of emphasis: it is the result the whole
+     project exists for, so it gets a warmer surface and a name set in the display face. */
+  .beads{display:grid;grid-template-columns:repeat(auto-fill,minmax(214px,1fr));gap:14px;margin-top:22px}
+  .bead{display:flex;flex-direction:column;text-decoration:none;color:inherit;
+        background:var(--surface);border:1px solid var(--line);border-radius:3px;overflow:hidden;
+        transition:border-color .18s ease,transform .18s ease}
+  .bead:hover,.bead:focus-visible{border-color:var(--accent);transform:translateY(-2px)}
+  .bead:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .bead img{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:#000}
+  .bead .meta{padding:11px 13px 13px;gap:3px}
+  .bead h3{font-family:var(--display);font-weight:700;font-size:17px;margin:0;letter-spacing:-.01em}
+  .bead p{margin:0;font-size:12.5px;color:var(--muted)}
+
+  .recipe{display:flex;flex-wrap:wrap;gap:9px;margin-top:18px}
+  .recipe span{font-family:var(--mono);font-size:12.5px;background:var(--raised);
+               border:1px solid var(--line);border-radius:2px;padding:6px 11px;color:var(--muted)}
+  .recipe span b{color:var(--accent);font-weight:600}
   .meta{padding:13px 14px 14px;display:flex;flex-direction:column;gap:7px;flex:1}
   .meta h3{font-family:var(--display);font-weight:500;font-size:16.5px;margin:0;letter-spacing:-.008em}
   .meta p{margin:0;font-size:13px;line-height:1.45;color:var(--muted);flex:1}
@@ -114,10 +146,41 @@ HEAD = """<title>Mon Lattice Presets</title>
   <header>
     <span class="eyebrow">lattice-bead / 3.frag &middot; overnight run</span>
     <h1>Mon Lattice Presets</h1>
-    <p class="lede">Twelve looks pulled from a 32-tile sweep of <strong>theme &times; paletteShift &times; navZoom</strong>. Tap any one to play it. Tiles are rendered from a frozen frame (<code>time=8</code>) so the comparison is honest &mdash; each links to the live, audio-reactive version.</p>
+    <p class="lede">The overnight run ended somewhere better than it started: <strong>the bead is legible</strong>. All eleven crests now read as themselves. Below them, twelve palette looks from a 32-tile sweep. Tap anything to play it &mdash; tiles are frozen frames (<code>time=8</code>) so the comparison is honest, links are live and audio-reactive.</p>
   </header>
 
-  <h2>The looks</h2>
+  <h2>The eleven beads</h2>
+  <p class="sec-note">This is the acceptance test: a stranger, at a distance, in a dark room, should be able to <strong>name their own bead</strong>. It had failed at every framing and every seed pitch until tonight. On <code>4.frag</code> each of these is individually nameable &mdash; and it holds live, with audio running and the camera moving, not just on a frozen frame.</p>
+  <div class="beads">
+MON_HERE
+  </div>
+
+  <div class="callout">
+    <h3>Why it was failing, and the fix</h3>
+    <p>The cause was <strong>figure/ground</strong>. <code>3.frag</code> deliberately let the lattice texture survive <em>inside</em> the motif &mdash; its own comment calls that a feature. But interior and exterior then carry the same contrast, so the eye has no silhouette to lock onto and the shape never resolves. The measurements agreed: 76.1% common effect with only 7.9pt of between&#8209;motif spread.</p>
+    <p><code>4.frag</code> adds one hand lever, <code>legible</code>, which collapses the interior toward the bead&rsquo;s own ink, deepens the ground recede, and widens the contour into a drawn line. Every term is mask&#8209;bound and spatially structured &mdash; no global multiplier, so none of it can strobe &mdash; and it is a hand knob, so no geometry moves with the music.</p>
+    <div class="recipe">
+      <span>knob_169 <b>0.60</b></span>
+      <span>navZoom <b>0.14</b></span>
+      <span>legible <b>1</b></span>
+      <span>knob_168 <b>1.0</b></span>
+    </div>
+  </div>
+
+  <div class="tblwrap">
+    <table>
+      <caption>Cell size is a prerequisite &mdash; and it is a <strong>window</strong>, not a maximum. Past 0.75 the camera sits inside a single bead and the silhouette is gone entirely.</caption>
+      <thead><tr><th>knob_169</th><th>Cell pitch (uv)</th><th>Reads as</th></tr></thead>
+      <tbody>
+        <tr><td class="num">0.28 <span style="color:var(--dim)">shipped</span></td><td class="num">0.074</td><td>a fine texture &mdash; no shape at all</td></tr>
+        <tr class="best"><td class="num win">0.55 &ndash; 0.65</td><td class="num">0.33 &ndash; 0.57</td><td><span class="win">the bead, with dark ground around it</span></td></tr>
+        <tr><td class="num">0.75</td><td class="num">1.00</td><td>edge of usable</td></tr>
+        <tr><td class="num">0.85 &ndash; 0.95</td><td class="num">1.74 &ndash; 3.03</td><td>inside one bead &mdash; no silhouette</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Palette looks</h2>
   <p class="sec-note">Ordered roughly by hue. Every one of these avoids <code>paletteShift=1.7</code> and <code>theme=3</code>, for the reasons below.</p>
   <div class="grid">
 """
@@ -141,10 +204,10 @@ TAIL = """
       <p>Theme&nbsp;3 washes out across every hue &mdash; its lightness scale of <code>1.20</code> blows the pastel.</p>
     </div>
     <div class="finding">
-      <span class="tag">Negative result</span>
-      <h3>The mon axis is saturated</h3>
-      <p>All eleven motifs are near&#8209;indistinguishable at playing framing. The dominant shapes in frame come from the <strong>lattice fold</strong>, not from the crest; the mon only ever reaches fine panel detail.</p>
-      <p>This matches the measurement: 76.1% common effect with only <strong>7.9pt</strong> of between&#8209;motif spread. A viewer cannot name the bead, which is the whole acceptance test. Recognition is a design problem, not a knob.</p>
+      <span class="tag">Solved</span>
+      <h3>The mon axis was saturated &mdash; until the interior flattened</h3>
+      <p>On <code>3.frag</code> all eleven motifs were near&#8209;indistinguishable, and the honest read was that recognition is a design problem rather than a knob. That was right: no amount of pitch or framing fixed it.</p>
+      <p>The design change was figure/ground, and it worked. Worth keeping the shape of the mistake though &mdash; three sessions were spent tuning size and framing when the blocker was <em>contrast inside the silhouette</em>.</p>
     </div>
     <div class="finding">
       <span class="tag">Negative result</span>
@@ -176,6 +239,7 @@ TAIL = """
 </div>
 """
 
-page = HEAD + "\n".join(card(t) for t in tiles) + TAIL
+head = HEAD.replace("MON_HERE", "\n".join(moncard(m) for m in mons))
+page = head + "\n".join(card(t) for t in tiles) + TAIL
 io.open(OUT, "w", encoding="utf-8").write(page)
 print("wrote", OUT, len(page) // 1024, "KB")

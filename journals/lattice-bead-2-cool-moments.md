@@ -135,3 +135,37 @@ vary `navZoom` and keep `lattice-nav` in the URL.
 `scripts/variety-sweep.mjs` (new) renders framing and theme×paletteShift grids;
 `scripts/recog-sweep.mjs` (new) renders the pitch×amount and 11-mon recognition grids;
 `scripts/montage.mjs` now takes `SHADER_N` so sheets follow the fork.
+
+## RECOGNITION SOLVED — 4.frag, 2026-09-04 overnight
+
+The acceptance test passes. All 11 mon individually nameable, confirmed live with audio and
+autofly, not just on a frozen frame. See `shaders/redaphid/wip/lattice-bead/4.md` for the full
+write-up. Short version:
+
+**Cause was figure/ground, not size or framing.** 3.frag let the lattice texture survive inside
+the motif, so interior and exterior carried the same contrast and the eye had no silhouette to
+lock onto. Three sessions went into tuning size and framing when the blocker was *contrast
+inside the silhouette*.
+
+**Fix:** `legible` (knob_180 / `?legible=`, default 0 = 3.frag exactly) — interior flattens
+toward bead ink, ground recede deepens 0.25–0.50 → 0.58–0.82, contour widens 4× → 16×.
+All mask-bound and spatially structured (no global multiplier), hand knob (no geometry on audio),
+and the flatten + contour are the recede's counter-ratchet in the same edit.
+
+**Recipe:** `knob_169=0.60 navZoom=0.14 legible=1 knob_168=1.0`.
+Cell pitch is a **window**, not a maximum — past 0.75 the camera sits *inside* one bead and the
+silhouette is gone.
+
+**Variety:** 11 mon × 5 palettes = 55 distinct good visuals, verified in
+`journals/lab/shots/legible-palette.png`. 32 ship as presets in 4.frag.
+
+**Bug caught by measurement:** LEGIBLE first used the house `LVK` "0 means unset" convention,
+which cannot express zero — `?legible=0` silently became 0.55 and both rendered bit-identically
+(lum 103.37 each). Now `clamp(max(knob_180, legible), 0, 1)`.
+
+### Todo
+- [ ] `autofly` drifts through zoom levels, so the bead alternates figure/ground. Both legible,
+      but consider range-limiting autofly when `legible > 0`.
+- [ ] The jam drawer registers `paletteShift` with `.min=0 .max=1` while the good values run to
+      1.35 — same trap as `onset_refractory_ms`. Touching that slider loses the palette.
+- [ ] `hakkaku` and `kikko` still never got their dedicated keeper run (flagged in the H7 note).
