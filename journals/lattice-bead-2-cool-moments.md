@@ -81,3 +81,57 @@ every previous number in this shader's history came from a frozen frame with syn
   while contrast climbs.
 - Anti-clipping work costs dynamic range. `softClip` compresses exactly the loud passages that
   used to punch — budget headroom (higher L base) to buy it back.
+
+---
+
+# FORKED TO 3.frag — 2026-09-04 ~05:00 (session continues in this file)
+
+`2.frag` is frozen as the structure-run snapshot. `/vibej` now targets `3.frag`.
+User went to sleep with the instruction: *"I need to sleep and want to come back to a large
+variety of good visuals"* and *"Focus on not making those jitter/shudder mistakes we documented."*
+Audio keeps playing (virtual mic) — live reactivity work stays valid, but no human judgement is
+available, so the working rule is **fork distinct looks rather than mutate one file toward a
+local optimum**.
+
+## Verified: the onset fix holds on live audio
+
+1289 frames sampled on the live jam tab (Prydz set, real music, `quietGate` mean 0.718):
+
+| signal | jitter/frame | range |
+|---|---|---|
+| flare = `onsetEnvelope(0.012,0.16) * clamp(onsetStrength*1.8,0,1) * QGATE` | **0.0076** | 0 → 0.481 |
+| `energyZScore` (the driver it replaced) | 0.0514 | −0.789 → 1.175 |
+| frame luminance (0–255) | 0.63 | 74.1 → 92.8 |
+
+The flare is **6.8× smoother** than the z-score, and whole-frame luminance never strobes.
+`waveletBassSpring` alive at 0.128–0.674, so `?wavelet=true` is doing its job.
+
+## NEGATIVE RESULT 1 — the mon axis is saturated, and it fails the recognition test
+
+`beads-all.png` at the shipped framing: all 11 mon are **nearly indistinguishable**. The dominant
+forms in frame (the pink clover lobes, the green blobs) are produced by the **lattice fold**, not
+by the motif; the mon only ever reaches the fine panel detail. This is the visual confirmation of
+the measured result in `kb/reference/lattice-bead-h7-motif-ranking.md`: departure % is **saturated
+at 76.1% common effect with only 7.9pt between-motif spread**, so it cannot rank motifs — and,
+more importantly, a viewer cannot *name the bead*, which is the project's whole acceptance test.
+
+Corollary from the same note, worth not re-deriving: prior anchors **reversed** on re-measurement
+(ume 91.4→71.8, kikko 46.6→72.0, tomoe 42.3→78.4); `tomoe` has the **highest** crossing count
+(2.29/ray), not the lowest; all 11 motifs **brighten** (+30.1% to +43.5%), none darken; and
+`hakkaku`/`kikko` read at least as well as `ume` but were never given a keeper run.
+
+## NEGATIVE RESULT 2 — seed pitch is a dead lever at fixed framing
+
+`recog-pitch.png`: `knob_169` swept 0.10 → 0.55 against `knob_168` 0.55/0.9/1.0 — **15 tiles, all
+nearly identical**. Do not spend another session tuning seed pitch expecting recognition from it.
+
+**Root cause of the flat sweep, found afterwards:** that sweep omitted `navZoom` *and* dropped
+`controller=lattice-nav`, so framing was pinned at the default for every tile. `navZoom` is the
+framing lever; `knob_169` only sets bead pitch *within* a framing. Any future recognition run must
+vary `navZoom` and keep `lattice-nav` in the URL.
+
+## Method note
+
+`scripts/variety-sweep.mjs` (new) renders framing and theme×paletteShift grids;
+`scripts/recog-sweep.mjs` (new) renders the pitch×amount and 11-mon recognition grids;
+`scripts/montage.mjs` now takes `SHADER_N` so sheets follow the fork.
