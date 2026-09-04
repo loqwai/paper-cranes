@@ -9,6 +9,7 @@ const url = `http://localhost:${PORT}/?shader=${shader}&controller=wavelet-ease&
   + '&quietGate=1&energySpring=0.4&waveletBassSpring=0.45&waveletBand1Spring=0.4&waveletBand2Spring=0.35&waveletBand3Spring=0.35'
   + '&waveletBand4Spring=0.3&waveletBand5Spring=0.3&waveletCentroidSpring=0.4&melodyFlow=0.3&spectralCrestSmooth=0.3&spectralRoughnessSmooth=0.3&spectralEntropySmooth=0.5'
   + '&seed=0.5&seed2=0.5&seed3=0.5'
+  + '&pitchClassMedian=0.25&spectralCentroidMedian=0.19&spectralEntropyMedian=0.87&spectralSpreadMedian=0.26&pitchClassMean=0.3'
   + (process.env.EXTRA || '')
 const br = await chromium.launch()
 const p = await br.newPage({ viewport: { width: 1100, height: 900 } })

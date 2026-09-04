@@ -899,7 +899,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
             + (sectionMode - (1.0 - sectionMix)) * 0.03       // each DROP glides the palette 0.03 further (was 0.07) over its ~4s crossfade (mix eases the step; no snap)
             + DIAL_HUE                                        // dial 1 (knob_2): touch palette rotation
             + paletteShift * 0.35                             // permanent live mutation (B3: x0.35, a drop step was a 0.05-0.12 turn hue jump)
-            + mix(seed, 0.74, 0.85);                          // B12: mostly FIXED base (violet body, pink rim at rest; critic r7 look), 15% per-device
+            + mix(seed, 0.92, 0.85);   /* B13: 0.74->0.92; with the wall medians (key 0.25, centroid 0.19, entropy 0.87) the body lands ~0.80 = violet, rim +0.33 = pink */                          // B12: mostly FIXED base (violet body, pink rim at rest; critic r7 look), 15% per-device
     // vj2 beat2 (2026-09-04): SLOW hue from the music's KEY and TIMBRE medians. 500-frame medians
     // move over seconds, never per frame, so the palette follows the slowest music (user: "medians or slopes").
     s += (pitchClassMedian - 0.5) * 0.30 + (spectralCentroidMedian - 0.35) * 0.25 + (spectralEntropyMedian - 0.6) * 0.12;   // SLOWHUE-B2 high = every screen you pan to is a different colourway.
