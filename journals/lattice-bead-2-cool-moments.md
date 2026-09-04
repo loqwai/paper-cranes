@@ -23,7 +23,28 @@ every previous number in this shader's history came from a frozen frame with syn
 - corr(energy, brightness) −0.682 → **−0.109** (neutral).
 - Canvas ranges widened: mean 93.9–110 → **65.3–91**, contrast 25–29 → **25.7–33.6**.
 
+
+### Live Prydz set exposed THREE dead subsystems the bench could not see (iters 4-5)
+- **Audio fingerprint** — Eric Prydz set, long progressive windup. `energySpring` 0.18-0.35 rising,
+  `quietGate` 0.03-0.21 rising, `energyZScore` range 1.20, `sectionMode` = 3.
+- **What worked** — sampling the live RANGE of every consumed uniform, then attacking whatever read 0.000.
+- **What was missed (the findings)** —
+  1. **All 7 wavelet springs read exactly 0.000** without `?wavelet=true`. `bassLive`/`midsLive`/`trebLive`
+     are *defined* from them, so bass/mids/treble reactivity was entirely dead. The synthetic bench
+     PINS these, so it can never catch it. After the param: bass 0.410, bands 0.350-0.463, centroid 0.329.
+  2. **`quietGate` averaged 0.012** through the windup and multiplies 37 audio terms — the whole shader
+     was gated off exactly when a progressive build is most interesting. Floored at 0.35 (`QGATE`, K178).
+  3. **`energyZScore` had range 1.20 and ZERO references** — the strongest fast signal on the input,
+     completely unused. Now drives a one-way contour flare (K179).
+- **Design hypothesis** — before tuning any mapping, measure the live RANGE of every input it consumes.
+  A mapping on a flatlined feature is invisible no matter how well tuned, and a bench that pins its
+  inputs is structurally blind to it.
+
 ## Todo
+- [ ] Judge the DROP: `energyZScore` only reached 0.63 during the build; the K179 contour flare is
+      armed but unproven until a real drop lands.
+- [ ] `evoWarp`/`evoPlasma`/`warpGrow` are section-hashed plateaus — constant within a section by
+      design. Confirm they actually step on the next section change.
 - [ ] Correlations are measured over a single ~8 s window of one track — passage-dependent and
       noisy. Re-measure across several tracks before trusting any single number.
 - [ ] Seed pitch (`K169`) is absolute and does not track the octave zoom; needs the non-audio

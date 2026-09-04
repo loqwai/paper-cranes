@@ -940,6 +940,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         col *= mix(1.0, 1.0 - seedDepth, (1.0 - cov) * knob_168);
         col += lush(s, 0.95) * cov * knob_168 * (0.05 + 0.58 * pump);   // beads gain with the music
         col += lush(s + 0.33, 1.0) * rim * knob_168 * (0.22 + 0.45 * trebLive * QGATE);
+        // ── DROP FLARE (K179) ──────────────────────────────────────────────────
+        // energyZScore was measured as the STRONGEST fast signal on this input (live
+        // range 1.20 over 8s) and the shader ignored it completely — 0 references. On a
+        // progressive drop the kick lands as a sharp positive z-score, so flaring the
+        // bead CONTOURS on it gives the drop a visible edge that reads across a room.
+        // clamp to positives: a quiet passage must never DARKEN the rim, only fail to
+        // brighten it (one-way, so it cannot pump inversely like the ground did).
+        // Rim-masked, so this is lighting on an edge band — it cannot strobe the frame
+        // the way a global col *= would.
+        col += lush(s + 0.33, 1.0) * rim * knob_168
+             * clamp(energyZScore, 0.0, 1.0) * LVK(knob_179, 0.55, knob_179);
     }
 
     // GLOW LIFT — gamma up + gain so mid-tones emit; high chroma keeps it NEON, not washed out.
