@@ -459,9 +459,9 @@ uniform float cddebug;  // ?cddebug=1 render the DEPTH FIELD as greyscale, for m
 // chroma.frag: ?cdmode=2 TUNNEL is the DEFAULT here (0 = unset -> 2). ?cdmode=0.001 for SHELF, 1 for DOME.
 #define CD_MODE_RAW ((cdmode > 0.001 || knob_184 > 0.001) ? max(cdmode, knob_184 * 2.0) : 2.0)   // K184 CD MODE (0 shelf, 0.5 dome, 1 tunnel)
 #define CD_MODE (clamp(CD_MODE_RAW, 0.0, 1.0))
-#define CD_RINGP   LVK(knob_188, 0.07, 0.03 + knob_188 * 0.12)   // K188 TERRACE SPACING (sd units; cell radius = 1)
+#define CD_RINGP   LVK(knob_188, 0.05, 0.02 + knob_188 * 0.12)   // K188 TERRACE SPACING (sd units; cell radius = 1)
 #define CD_ECHO    LVK(knob_189, 0.60, knob_189)                  // K189 ECHO LINES  (exposure of the terrace edges)
-#define CD_BEADVAR LVK(knob_190, 0.08, knob_190 * 0.2)            // K190 BEAD DEPTH SPREAD (per-crest depth offset, +/- half of this)
+#define CD_BEADVAR LVK(knob_190, 0.16, knob_190 * 0.3)            // K190 BEAD DEPTH SPREAD (per-crest push BACK, 0..this; rims stay nearest)
 #define CD_POP  LVK(max(knob_182, cdpop), 0.6, clamp(max(knob_182, cdpop), 0.0, 1.0))   // chroma.frag: baked ON at 0.6 (bead-masked onset pop); ?cdpop=0.001 to disable
 #define CD_DOME LVK(knob_185, 4.0, knob_185 * 8.0)
 // The four constants below are KNOB-ONLY (no matching ?param), and they use the house LVK
@@ -1380,7 +1380,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         float sqIn    = fract(qIn), sqOut = fract(qOut);
         float uT      = floor(qIn) + smoothstep(0.0, 0.5, sqIn) + ph;   // terraced index, un-phased
         float terrIn  = ringP * ((uT + 1.0) * (uT + 1.0) - 1.0) * 0.5;  // inverse warp -> terraced inside
-        float eBead   = mix(1.0, 0.30, clamp(uT / 5.0, 0.0, 1.0));      // exposure ladder: each step darker
+        float eBead   = mix(0.72, 0.26, clamp(uT / 4.0, 0.0, 1.0));     // exposure ladder: first band already below the rim, each step darker
         float terrOut = max(sd, 0.0) + ringP * (smoothstep(0.0, 0.5, sqOut) - sqOut);
         float tunIn   = mix(0.03, 0.46, clamp(terrIn / 0.36, 0.0, 1.0));            // rim red -> centre green
         float tunOut  = mix(CD_LAT_N, CD_GND_F, clamp(terrOut / CD_GAP, 0.0, 1.0));  // cyan just outside -> violet far
@@ -1393,7 +1393,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         float echoLine = smoothstep(0.10, 0.0, abs(sqL - 0.5)) * exp(-abs(sd) / mix(0.22, 0.45, covM)) * tunnel;
         // PER-BEAD DEPTH: neighbouring crests sit at slightly different depths. Bounded to a fraction of
         // a band, bead-only, so the ground stays one surface and no crest can invert its order.
-        depth = clamp(depth + gBeadOff * CD_BEADVAR * covM, 0.0, 1.0);
+        depth = clamp(depth + (gBeadOff + 0.5) * CD_BEADVAR * covM * (1.0 - rimT * tunnel), 0.0, 1.0);
 
         // LATTICE TEXTURE, bounded. mFront is the fold's own distance field at the front-most
         // level - geometry, no audio - and it is added at +/- CD_TEX only, which is a fraction of
@@ -1437,7 +1437,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
             // TUNNEL exposure shaping: the funnel darkens toward its far end and the ground sits low, so the
             // frame keeps a dark floor and the red outline is the brightest thing. Fixed function of geometry
             // (inside / covM), no audio - a spatial tilt, not a global multiplier.
-            e *= mix(1.0, eBead * covM + (1.0 - covM) * 0.62, tunnel);
+            e *= mix(1.0, eBead * covM + (1.0 - covM) * 0.50, tunnel);
             e  = mix(e, max(e, 0.94), rimT * tunnel);   // the outline is a thin BRILLIANT red line - the one bright thing
             // NEAR reads brighter. A fixed function of depth - no audio in it - so it is a
             // spatial tilt, not the global multiplier that directive #1 forbids.

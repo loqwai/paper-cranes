@@ -186,7 +186,7 @@ vec3 drawBead(vec2 p, vec2 centre, float r, float idx, float slowDrive, inout fl
 
     // MADE OF THE BEAD: inset copies of the crest's own outline inside the silhouette, so the
     // fill is thematically the bead rather than a flat disc. Static in d, lit by the slow driver.
-    float ringP  = rr * 2.6;                                   // spacing in d units (~2 echoes per bead)
+    float ringP  = rr * 1.15;                                  // spacing in d units: first echo at -1.15 rr is still star-shaped, ~3 per bead
     float inset  = smoothstep(aa * 2.0, 0.0, abs(fract(-d / ringP + 0.5) - 0.5) * ringP) * cov
                  * smoothstep(0.0, aa * 6.0, -d);              // fade at the true edge so it never doubles the rim
     col += edge * inset * (0.18 + 0.22 * slowDrive);
@@ -197,8 +197,8 @@ vec3 drawBead(vec2 p, vec2 centre, float r, float idx, float slowDrive, inout fl
     if (idx < 0.5){
         float ph   = flow_phase * 0.16;
         float gq   = abs(fract(d / (ringP * 1.6) - ph) - 0.5) * ringP * 1.6;
-        float echo = smoothstep(aa * 3.0, 0.0, gq) * (1.0 - cov) * exp(-max(d, 0.0) / (rr * 4.5));
-        col += lch(hueBase + 0.5, 0.05, 0.30) * echo * (0.35 + 0.35 * energy_env) * BG_AMT;
+        float echo = smoothstep(aa * 3.0, 0.0, gq) * (1.0 - cov) * exp(-max(d, 0.0) / (rr * 6.5));
+        col += lch(hueBase + 0.5, 0.05, 0.32) * echo * (0.55 + 0.40 * energy_env) * BG_AMT;
     }
 
     vec3 col2 = body * cov * lift + edge * rim * punch;
@@ -223,7 +223,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float bgHue = hue_phase * 0.05 + 0.55 + centroid_env * 0.10 + field * 0.06;
     // Lightness rides ONLY slow envelopes, and gently: this is the surface the user asked to
     // stop shuddering, so its whole dynamic range is a few percent.
-    float bgL   = 0.10 + 0.05 * field + 0.045 * energy_env + 0.03 * mids_env;
+    float bgL   = 0.12 + 0.06 * field + 0.045 * energy_env + 0.03 * mids_env;
     float bgC   = 0.035 + 0.020 * entropy_env;
     vec3  col   = lch(bgHue, bgC, bgL) * BG_AMT;
 
@@ -243,7 +243,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         float hh = hash11(i * 5.17 + 2.3);
         // ORBIT: angle is a monotonic phase plus a fixed per-bead offset. Never a feature.
         float ang = spin_angle * (0.12 + hh * 0.10) + t * TAU;
-        float orb = 0.335 + 0.030 * sin(morph_phase * 0.33 + t * TAU);
+        // orbit fits the narrower screen axis (portrait phones), so no satellite is ever cropped
+        float halfW = 0.5 * iResolution.x / iResolution.y;
+        float orb = min(0.335, halfW - 0.13) + 0.030 * sin(morph_phase * 0.33 + t * TAU);
         vec2  c   = vec2(cos(ang), sin(ang)) * orb;
 
         // one slow driver per bead, six ways

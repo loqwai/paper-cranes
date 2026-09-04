@@ -1073,10 +1073,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // it is spatially structured and cannot strobe; driven by a HAND knob, so no geometry
         // moves with the music. At LEGIBLE = 0 this line is a no-op and 3.frag is reproduced.
         vec3 beadInk = lush(s, mix(0.62, 0.80, pump));
-        col = mix(col, beadInk, cov * LEGIBLE * 0.72);
+        col = mix(col, beadInk, cov * LEGIBLE * 0.86);   /* B10: 0.72->0.86 flatter body, critic: mauve midtone smudge */
 
         // Ground recede, deepened by LEGIBLE. This is the RATCHET.
-        float seedDepth = mix(mix(0.25, 0.50, pump), mix(0.58, 0.82, pump), LEGIBLE);
+        float seedDepth = mix(mix(0.25, 0.50, pump), mix(0.48, 0.72, pump), LEGIBLE);   /* B10: recede 0.58/0.82 -> 0.48/0.72 so the ground arc lines show the carousel turn */
         col *= mix(1.0, 1.0 - seedDepth, (1.0 - cov) * knob_168);
         // COUNTER-RATCHET, same edit: a deeper recede takes light out of most of the frame,
         // so the figure pays it back. Without this pair, raising LEGIBLE would just dim the
