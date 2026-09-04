@@ -1094,7 +1094,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         {
             float echoAmt = LVK(knob_182, 2.5, knob_182 * 4.0);   // K182 ECHO AMOUNT (0 = baked 2.5, dial 0..4)
             float sdn     = sl.z / seedPitch;                      // signed distance, tile-relative
-            float ringP   = 0.09;                                  // echo spacing, tile-relative (0.045 = busier)
+            float ringP   = mix(0.07, 0.11, clamp((spectralSpreadMedian - 0.20) * 2.5, 0.0, 1.0));   // B5 SLOW SHAPE: echo spacing follows the harmonic-width MEDIAN (moves over seconds, user: medians/slopes on slow shapes); was 0.09
             float ph      = flowPhase * 0.12 + bTime * 0.05;       // monotonic -> echoes move OUTWARD
             float rq      = abs(fract(sdn / ringP - ph) - 0.5) * ringP * seedPitch;   // distance to nearest echo, uv units
             float ring    = smoothstep(aaBase * 2.5, 0.0, rq);

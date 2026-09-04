@@ -333,13 +333,15 @@ float beadDist(vec2 p, float r){
 #define HERO_HUE   (knob_185 > 0.001 ? knob_185 : 0.42)   // interior palette rotation vs the field
 #define HERO_RIM   (knob_186 > 0.001 ? knob_186 * 2.0 : 1.0)
 #define HERO_LIFT  (knob_187 > 0.001 ? knob_187 : 0.88)   // how much the interior is re-lit
-#define HERO_INL   (knob_189 > 0.001 ? (knob_189 - 0.5) * 2.0 : 0.0)    // interior luminance offset
+#define HERO_INL   (knob_189 > 0.001 ? (knob_189 - 0.5) * 2.0 : -0.22)    // interior luminance offset
 // SUBJECT vs GROUND. The lattice at these params is BRIGHT and BUSY; measured at 15% scale it
 // out-shouts the motif and the bead stops being nameable. A subject needs a subordinate ground,
 // so the field outside the silhouette is dimmed and desaturated. This is the counter-ratchet
 // partner of the interior lift -- light is moved into the bead, not added to the frame.
-#define HERO_QUIET (knob_191 > 0.001 ? knob_191 : 0.38)   // exterior brightness kept
+#define HERO_QUIET (knob_191 > 0.001 ? knob_191 : 0.26)   // exterior brightness kept
 #define HERO_DESAT (knob_192 > 0.001 ? knob_192 : 0.40)   // exterior saturation kept
+#define HERO_SAT   (knob_194 > 0.001 ? 0.5 + knob_194 * 2.0 : 1.55)   // hero-lab 2: interior chroma boost
+#define HERO_TOE   (knob_193 > 0.001 ? 1.0 + knob_193 * 1.5 : 2.0)   // hero-lab 1: exterior contrast curve (1 = off)
 
 // Signed distance to the WHOLE motif, screen units, for a bead of radius r.
 // Same one-tile clamped lookup + analytic monotone exterior as beadDist (lab/whole),
@@ -737,6 +739,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         vec3 inLat = lush(s + HERO_HUE,        clamp(lum * (1.0 + HERO_INL), 0.0, 1.4));
         vec3 inBg  = lush(s + HERO_HUE + 0.52, 0.09 + 0.07 * ndl);
         vec3 inCol = mix(inBg, inLat, clamp(alpha, 0.0, 1.0));
+        // hero-lab 2 (2026-09-04): the interior read as a mint WASH (high L, low C). Pull the lit
+        // level down (HERO_INL) and push chroma up so the aperture is coloured lattice, not haze.
+        float inG = dot(inCol, vec3(0.299, 0.587, 0.114));
+        inCol = clamp(mix(vec3(inG), inCol, HERO_SAT), 0.0, 1.0);
         col = mix(col, inCol, heroIn * HERO_LIFT);
 
         // 2. DOME -- interior relief lit by that sun. LOCAL multiplier inside the silhouette
@@ -750,7 +756,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         //    motif is not nameable at the 15%-scale dark-field proxy; with it, it is.
         float outM = (1.0 - heroIn) * heroSettle;
         float grey = dot(col, vec3(0.299, 0.587, 0.114));
-        col = mix(col, mix(vec3(grey), col, HERO_DESAT) * HERO_QUIET, outM);
+        vec3  ext  = mix(vec3(grey), col, HERO_DESAT) * HERO_QUIET;
+        // hero-lab 1 (2026-09-04): GROUND CURVE. Dimmed + desaturated, the field still sat at
+        // mid-lightness as grey static (moire of the fine fold levels). A contrast curve pivoting
+        // at the ground's own mean sinks that static into black and lifts the strong marks.
+        float eg   = dot(ext, vec3(0.299, 0.587, 0.114));
+        ext *= pow(max(eg, 1e-4) / 0.30, HERO_TOE - 1.0);
+        col = mix(col, ext, outM);
 
         // 4. CONTACT SHADOW -- just outside, so the bead sits IN FRONT of the field.
         float drop = exp(-max(heroD, 0.0) * 26.0) * (1.0 - heroIn) * heroSettle;
