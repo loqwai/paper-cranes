@@ -810,7 +810,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     //    geometry channel. Saturating exponential: ~30% in a few minutes, ~85% deep into a set,
     //    never past 1. Two structural payoffs, both bounded:
     float gComplex = 1.0 - exp(-max(0.0, evoPhase) * 0.33);
-    gLevelOpen  = min(gComplex * 0.45, 0.25);   /* B8: cap — every fine level open was the ground speckle (cells-lab) */          // more recursion generations drawn at once (see fractal())
+    gLevelOpen  = min(gComplex * 0.45, 0.15);   /* B11: 0.25->0.15 vs specks */   /* B8: cap — every fine level open was the ground speckle (cells-lab) */          // more recursion generations drawn at once (see fractal())
     gInterleave += gComplex * 0.05;         // and the two interleaved sub-lattices separate further
     gShapePhase = morphPhase * 0.85 + bTime * 0.30;   // iter 138 RATCHET: strictly increasing -> the radius wave always travels coarse->fine, reads as continuous inward progression, never a rebound
     gDepthFocus = clamp(0.35 + evoD * 0.12 /* B3: 0.35->0.12, level-window plateau read as a texture swap */ + (knob_132 - 0.5) * bank4
@@ -1073,16 +1073,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // it is spatially structured and cannot strobe; driven by a HAND knob, so no geometry
         // moves with the music. At LEGIBLE = 0 this line is a no-op and 3.frag is reproduced.
         vec3 beadInk = lush(s, mix(0.62, 0.80, pump));
-        col = mix(col, beadInk, cov * LEGIBLE * 0.86);   /* B10: 0.72->0.86 flatter body, critic: mauve midtone smudge */
+        { vec3 gIn = vec3(dot(col, vec3(0.299, 0.587, 0.114))); col = mix(col, mix(gIn, beadInk, 0.5) * (0.6 + 0.8 * gIn.x), cov * 0.85); }   /* B11: inside the crest the lattice is TEXTURE (luminance relief in the body colour), not colour blotches (critic r8: rash) */
+        col = mix(col, beadInk, cov * LEGIBLE * 0.86);
 
         // Ground recede, deepened by LEGIBLE. This is the RATCHET.
-        float seedDepth = mix(mix(0.25, 0.50, pump), mix(0.48, 0.72, pump), LEGIBLE);   /* B10: recede 0.58/0.82 -> 0.48/0.72 so the ground arc lines show the carousel turn */
+        float seedDepth = mix(mix(0.25, 0.50, pump), mix(0.58, 0.82, pump), LEGIBLE);   /* B11: back to 0.58/0.82 - B10 lift only dirtied the floor (critic r8) */
         col *= mix(1.0, 1.0 - seedDepth, (1.0 - cov) * knob_168);
         // COUNTER-RATCHET, same edit: a deeper recede takes light out of most of the frame,
         // so the figure pays it back. Without this pair, raising LEGIBLE would just dim the
         // picture - which is exactly the mistake the ground-recede made on its first outing
         // (corr(energySpring, brightness) -0.68: a drop made the frame DARKER and FLATTER).
-        col += lush(s, 0.95) * cov * knob_168 * (0.05 + 0.58 * pump) * mix(1.0, 1.9, LEGIBLE);
+        col += lush(s, 0.95) * cov * knob_168 * (0.05 + 0.25 * pump) * mix(1.0, 1.9, LEGIBLE);   /* B11: 0.58->0.25, the pump-lit patches were the pink blotches */
         col += lush(s + 0.33, 1.0) * rim * knob_168 * (0.38 + 0.60 * trebLive * QGATE) * mix(1.0, 1.6, LEGIBLE);   /* B7: rim gain 0.22/0.45 -> 0.38/0.60 (cells-lab rimboost) so the contour is the brightest thing */
         // ── OUTLINE-ECHO RINGS (lab 2026-09-04) ── concentric copies of the crest's OWN outline.
         //    Inside the silhouette: inset copies, so the fill is made of the bead. Outside: ripples
