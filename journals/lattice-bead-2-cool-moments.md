@@ -631,3 +631,41 @@ directory removed; `git status journals/` in the main tree is back to its sessio
 - [x] tomoe — reads on detail.frag; the "impossible" verdict was about the fold path only
 - [ ] the palette in this render is dusty pink/olive despite theme=1 paletteShift=0.45 (which the
       sweep called Deep Cyan) — worth checking whether paletteShift is being consumed as expected
+
+## Iter 18 — the default was fine; MY presets were the ugly ones
+
+Rendered the bare shader with **no parameters** against each curated palette, seeds pinned so only
+the palette differs:
+
+| variant | contrast | p999 | **gamut crush** |
+|---|---|---|---|
+| **true default** (no theme/pShift) | 41.1 | 155 | **0.0%** |
+| theme 0 · pShift 1.35 "Jade" | 44.0 | 172 | **13.0%** |
+| theme 1 · 0.45 "Deep Cyan" | 29.2 | 116 | 0.4% |
+| theme 1 · 1.05 "Ember" | 29.3 | 115 | 0.0% |
+| theme 1 · 0.75 "Violet" | 28.1 | 113 | **10.4%** |
+| theme 2 · 0.45 | 46.4 | 180 | 0.0% |
+
+**The bare default is good** — blue/violet on near-black, zero crush, contrast 41.1. It is *not*
+the jet colormap the critic objected to.
+
+**The jet colormap is `theme=0 & paletteShift=1.35`, and it crushes 13% of pixels** — the worst
+gamut behaviour of any variant measured. That is the palette I baked into all eleven recognition
+presets, and the one every contact sheet in this journal was rendered with. Fixed: the eleven mon
+presets and the texture preset now ride the bare default; zero presets remain on it.
+
+### My palette NAMES do not transfer
+"Deep Cyan" renders olive here; "Jade" renders red/green. `s` carries `seed + regionHue(world) +
+field`, so the same theme/paletteShift lands on a different hue at a different seed or framing.
+This is the second time this exact error has been made in this project — the first was recorded as
+"render, don't predict" during the overnight sweep, and I named palettes from one seed anyway.
+**Treat every palette name as valid only for the seed and framing it was observed at.**
+
+### Also closed
+The "dusty pink tomoe" note from iter 17 was **not** a palette bug — that harness omitted the seed
+params, so the hue came from a random per-context seed. Not a defect.
+
+### Todo
+- [x] presets moved off the 13%-crush palette
+- [ ] theme 2 · 0.45 measures best of all (contrast 46.4, p999 180, 0% crush) but reads orange/green
+      — worth a human eye on whether it is too close to the thermal look the critic rejected
