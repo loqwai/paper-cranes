@@ -1,0 +1,65 @@
+[
+ {
+  "name": "BAKED no lever knobs",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 41,
+  "mean": 19.82,
+  "litPct": 12.02,
+  "brightPct": 9.11,
+  "darkPct": 37.14
+ },
+ {
+  "name": "BAKED kikko",
+  "image": "kikko",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 40,
+  "mean": 20.04,
+  "litPct": 13.52,
+  "brightPct": 9.32,
+  "darkPct": 35.76
+ },
+ {
+  "name": "BAKED ume",
+  "image": "ume",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 41,
+  "mean": 20.06,
+  "litPct": 12.87,
+  "brightPct": 9.42,
+  "darkPct": 36.28
+ },
+ {
+  "name": "OVERRIDE back to 1.frag",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.59,
+   "knob_173": 0.33,
+   "knob_174": 0.25
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 41,
+  "mean": 14.16,
+  "litPct": 9.17,
+  "brightPct": 3.37,
+  "darkPct": 14.81
+ }
+]

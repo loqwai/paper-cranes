@@ -1,0 +1,23 @@
+[
+ {
+  "name": "PARITY2 bead dflt",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.59,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.33,
+   "knob_174": 0.3333,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 41,
+  "mean": 14.16,
+  "litPct": 9.17,
+  "brightPct": 3.36,
+  "darkPct": 14.8
+ }
+]

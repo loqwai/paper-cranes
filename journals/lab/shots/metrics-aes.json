@@ -1,0 +1,56 @@
+[
+ {
+  "name": "CTRL base kikko",
+  "image": "kikko",
+  "time": 8,
+  "ctrl": true,
+  "save": "ctrl-base-kikko.png",
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.59,
+   "knob_173": 0.33,
+   "knob_174": 0.25
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 41,
+  "mean": 14,
+  "litPct": 11.1,
+  "brightPct": 3.4,
+  "darkPct": 17.7
+ },
+ {
+  "name": "CTRL stage kikko",
+  "image": "kikko",
+  "time": 8,
+  "ctrl": true,
+  "save": "ctrl-stage-kikko.png",
+  "knobs": {
+   "knob_161": 1
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 39,
+  "mean": 21.48,
+  "litPct": 15.43,
+  "brightPct": 11.38,
+  "darkPct": 40.03
+ },
+ {
+  "name": "CTRL stage hakkaku",
+  "image": "hakkaku",
+  "time": 8,
+  "ctrl": true,
+  "save": "ctrl-stage-hakkaku.png",
+  "knobs": {
+   "knob_161": 1
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 40,
+  "mean": 20.44,
+  "litPct": 14.01,
+  "brightPct": 10.62,
+  "darkPct": 42.55
+ }
+]

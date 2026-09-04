@@ -1,0 +1,254 @@
+[
+ {
+  "name": "A1 bead baseline",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.59,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.33,
+   "knob_174": 0.3333,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 41,
+  "mean": 14.16,
+  "litPct": 9.17,
+  "brightPct": 3.37,
+  "darkPct": 14.8
+ },
+ {
+  "name": "J1 slope 0.70",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.59,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.33,
+   "knob_174": 0.5833,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 41,
+  "mean": 28.34,
+  "litPct": 52.69,
+  "brightPct": 8.78,
+  "darkPct": 1.01
+ },
+ {
+  "name": "J2 slope 0.90",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.59,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.33,
+   "knob_174": 0.75,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 40,
+  "mean": 37.59,
+  "litPct": 86.25,
+  "brightPct": 11.19,
+  "darkPct": 0.02
+ },
+ {
+  "name": "J3 slope 1.10",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.59,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.33,
+   "knob_174": 0.9167,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 41,
+  "mean": 47.96,
+  "litPct": 96.45,
+  "brightPct": 21.14,
+  "darkPct": 0
+ },
+ {
+  "name": "K1 bgbase 0.15",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.59,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.33,
+   "knob_174": 0.3333,
+   "knob_175": 0.25
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 42,
+  "mean": 14.15,
+  "litPct": 9.16,
+  "brightPct": 3.37,
+  "darkPct": 14.83
+ },
+ {
+  "name": "K2 bgbase 0.06",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.59,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.33,
+   "knob_174": 0.3333,
+   "knob_175": 0.1
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 40,
+  "mean": 14.15,
+  "litPct": 9.15,
+  "brightPct": 3.37,
+  "darkPct": 14.84
+ },
+ {
+  "name": "K3 bgbase 0.00",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.59,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.33,
+   "knob_174": 0.3333,
+   "knob_175": 0
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 41,
+  "mean": 14.14,
+  "litPct": 9.14,
+  "brightPct": 3.36,
+  "darkPct": 14.87
+ },
+ {
+  "name": "L1 sl0.90 bg0.06",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.59,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.33,
+   "knob_174": 0.75,
+   "knob_175": 0.1
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 42,
+  "mean": 37.58,
+  "litPct": 86.23,
+  "brightPct": 11.18,
+  "darkPct": 0.02
+ },
+ {
+  "name": "L2 sl0.90 bg0.06 g0.90",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.45,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.33,
+   "knob_174": 0.75,
+   "knob_175": 0.1
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 41,
+  "mean": 50.95,
+  "litPct": 97.89,
+  "brightPct": 32.25,
+  "darkPct": 0
+ },
+ {
+  "name": "L3 sl0.90 bg0.06 g0.80",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.4,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.33,
+   "knob_174": 0.75,
+   "knob_175": 0.1
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 41,
+  "mean": 57.25,
+  "litPct": 99.13,
+  "brightPct": 51.49,
+  "darkPct": 0
+ },
+ {
+  "name": "L4 sl1.10 bg0.00 g0.90",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.45,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.33,
+   "knob_174": 0.9167,
+   "knob_175": 0
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 40,
+  "mean": 62.23,
+  "litPct": 99.57,
+  "brightPct": 61.85,
+  "darkPct": 0
+ },
+ {
+  "name": "L5 sl1.10 bg0.06 g0.80",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.4,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.33,
+   "knob_174": 0.9167,
+   "knob_175": 0.1
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 41,
+  "mean": 68.71,
+  "litPct": 99.88,
+  "brightPct": 75.55,
+  "darkPct": 0
+ }
+]

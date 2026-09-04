@@ -1,0 +1,254 @@
+[
+ {
+  "name": "A1 bead baseline",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.59,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.33,
+   "knob_174": 0.33333333333333337,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 42,
+  "mean": 14.16,
+  "litPct": 9.17,
+  "brightPct": 3.37,
+  "darkPct": 14.8
+ },
+ {
+  "name": "M1 L0.20 sl0.90 g1.18",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.59,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.2,
+   "knob_174": 0.75,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 39,
+  "mean": 21.16,
+  "litPct": 12.19,
+  "brightPct": 8.33,
+  "darkPct": 11.92
+ },
+ {
+  "name": "M2 L0.12 sl0.90 g1.18",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.59,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.12,
+   "knob_174": 0.75,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 42,
+  "mean": 14.58,
+  "litPct": 10.14,
+  "brightPct": 6.89,
+  "darkPct": 74.38
+ },
+ {
+  "name": "M3 L0.12 sl1.10 g1.18",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.59,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.12,
+   "knob_174": 0.9166666666666667,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 42,
+  "mean": 20.01,
+  "litPct": 11.96,
+  "brightPct": 8.79,
+  "darkPct": 29.5
+ },
+ {
+  "name": "M4 L0.12 sl1.10 g1.00",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.5,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.12,
+   "knob_174": 0.9166666666666667,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 41,
+  "mean": 25.05,
+  "litPct": 19.63,
+  "brightPct": 9.44,
+  "darkPct": 4.79
+ },
+ {
+  "name": "M5 L0.12 sl1.10 g0.90",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.45,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.12,
+   "knob_174": 0.9166666666666667,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 41,
+  "mean": 28.84,
+  "litPct": 44.45,
+  "brightPct": 10.03,
+  "darkPct": 1.52
+ },
+ {
+  "name": "M6 L0.18 sl1.10 g0.90",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.45,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.18,
+   "knob_174": 0.9166666666666667,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 41,
+  "mean": 36.47,
+  "litPct": 80.63,
+  "brightPct": 11.19,
+  "darkPct": 0.04
+ },
+ {
+  "name": "M7 L0.08 sl1.20 g0.85",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.425,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.08,
+   "knob_174": 1,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 42,
+  "mean": 30.05,
+  "litPct": 49.08,
+  "brightPct": 10.46,
+  "darkPct": 1.19
+ },
+ {
+  "name": "M8 L0.20 sl1.00 g1.00",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.5,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.2,
+   "knob_174": 0.8333333333333334,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 41,
+  "mean": 30.59,
+  "litPct": 56.04,
+  "brightPct": 10.21,
+  "darkPct": 0.78
+ },
+ {
+  "name": "M9 L0.25 sl0.80 g1.00",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.5,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.25,
+   "knob_174": 0.6666666666666667,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 41,
+  "mean": 28.8,
+  "litPct": 53.08,
+  "brightPct": 9.06,
+  "darkPct": 0.92
+ },
+ {
+  "name": "M10 L0.15 sl1.20 g1.00",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.5,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.15,
+   "knob_174": 1,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 41,
+  "mean": 31.97,
+  "litPct": 58.79,
+  "brightPct": 10.92,
+  "darkPct": 0.67
+ },
+ {
+  "name": "M11 L0.10 sl1.20 g0.95",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.475,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.1,
+   "knob_174": 1,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 40,
+  "mean": 28.13,
+  "litPct": 35.33,
+  "brightPct": 10.25,
+  "darkPct": 2.29
+ }
+]

@@ -1,0 +1,254 @@
+[
+ {
+  "name": "A1 bead baseline",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.59,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.33,
+   "knob_174": 0.33333333333333337,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 42,
+  "mean": 14.16,
+  "litPct": 9.17,
+  "brightPct": 3.37,
+  "darkPct": 14.8
+ },
+ {
+  "name": "M3 ref  L0.12 sl1.10",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.59,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.12,
+   "knob_174": 0.9166666666666667,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 41,
+  "mean": 20.01,
+  "litPct": 11.97,
+  "brightPct": 8.79,
+  "darkPct": 29.49
+ },
+ {
+  "name": "N1 L0.14 sl1.20 g1.18",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.59,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.14,
+   "knob_174": 1,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 40,
+  "mean": 24.79,
+  "litPct": 16.08,
+  "brightPct": 9.98,
+  "darkPct": 5.9
+ },
+ {
+  "name": "N2 L0.16 sl1.20 g1.18",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.59,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.16,
+   "knob_174": 1,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 41,
+  "mean": 26.89,
+  "litPct": 26.63,
+  "brightPct": 10.4,
+  "darkPct": 3.28
+ },
+ {
+  "name": "N3 L0.18 sl1.20 g1.18",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.59,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.18,
+   "knob_174": 1,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 39,
+  "mean": 29.19,
+  "litPct": 43.23,
+  "brightPct": 10.77,
+  "darkPct": 1.74
+ },
+ {
+  "name": "N4 L0.20 sl1.20 g1.18",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.59,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.2,
+   "knob_174": 1,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 42,
+  "mean": 31.69,
+  "litPct": 56.8,
+  "brightPct": 11.09,
+  "darkPct": 0.83
+ },
+ {
+  "name": "N5 L0.16 sl1.20 g1.10",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.55,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.16,
+   "knob_174": 1,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 42,
+  "mean": 29.46,
+  "litPct": 44.86,
+  "brightPct": 10.7,
+  "darkPct": 1.6
+ },
+ {
+  "name": "N6 L0.16 sl1.20 g1.30",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.65,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.16,
+   "knob_174": 1,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 40,
+  "mean": 23.68,
+  "litPct": 13.47,
+  "brightPct": 9.95,
+  "darkPct": 8.4
+ },
+ {
+  "name": "N7 L0.14 sl1.20 g1.25",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.625,
+   "knob_171": 0.25,
+   "knob_172": 0.35,
+   "knob_173": 0.14,
+   "knob_174": 1,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 39,
+  "mean": 22.98,
+  "litPct": 13.13,
+  "brightPct": 9.7,
+  "darkPct": 11.07
+ },
+ {
+  "name": "N8 L0.16 sl1.20 refhalo",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.59,
+   "knob_171": 0.5,
+   "knob_172": 0.6,
+   "knob_173": 0.16,
+   "knob_174": 1,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 38,
+  "mean": 26.09,
+  "litPct": 25.43,
+  "brightPct": 9.48,
+  "darkPct": 3.31
+ },
+ {
+  "name": "N9 L0.16 sl1.20 halo.60w",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.59,
+   "knob_171": 0.5,
+   "knob_172": 0.35,
+   "knob_173": 0.16,
+   "knob_174": 1,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 40,
+  "mean": 26.68,
+  "litPct": 26.41,
+  "brightPct": 10.23,
+  "darkPct": 3.29
+ },
+ {
+  "name": "N10 L0.16 sl1.20 halo.60a",
+  "image": "hakkaku",
+  "time": 8,
+  "knobs": {
+   "knob_161": 1,
+   "knob_170": 0.59,
+   "knob_171": 0.25,
+   "knob_172": 0.6,
+   "knob_173": 0.16,
+   "knob_174": 1,
+   "knob_175": 0.5
+  },
+  "w": 900,
+  "h": 900,
+  "frames": 41,
+  "mean": 26.35,
+  "litPct": 25.84,
+  "brightPct": 9.83,
+  "darkPct": 3.29
+ }
+]
