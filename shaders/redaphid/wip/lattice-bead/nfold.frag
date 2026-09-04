@@ -279,17 +279,37 @@ float hexDist(vec2 p){
 //       Set N = the motif's own measured rotational order and the fold REINFORCES
 //       the motif; set it wrong and the fold shreds it.
 //
-// knob_166  N          N = round(knob_166 * 32).  N < 2 -> kaleidoscope OFF.
-//                      kiku 12 -> 0.375 | hakkaku 8 -> 0.25 | kikko 6 -> 0.1875
-//                      ume/kikyo 5 -> 0.15625 | katabami 3 -> 0.09375
-//                      mokko/matsukawa 2 -> 0.0625 | ogi/suhama/tomoe 1 -> 0.03125
+// VERDICT (lab/nfold, 2026-09-04): (b) IS A NO-OP WHEN N MATCHES. If a motif already has
+// D_N symmetry, folding the sample coordinate into a TAU/N wedge is the IDENTITY on it. A
+// matched kaleidoscope cannot reinforce; it can only do nothing. Matched still BEATS
+// mismatched -- because mismatch is destructive (tomoe at N=4 is a blob) -- but the entire
+// recognition win comes from (a) alone. SHIP knob_167=1; LEAVE knob_166 AT 0.
+//
+// MEASURED fold order of the BAKED PNGs, about the AREA CENTROID (scripts/mon-fold.py).
+// Five of these disagree with the numbers the brief carried, and each disagreement is real:
+//   kiku 12 | hakkaku 8 | kikko 6 | ume 5 | kikyo 5 | katabami 3
+//   mokko 2      <- NOT 4: mokko() is a 4-rosette scaled x1.295 in x, which kills the 4-fold
+//   matsukawa 2  <- NOT 3: three stacked rhombi share one 2-fold axis, not a 3-fold one
+//   tomoe 1      <- NOT 3: japanese.py draws ONE comma on purpose ("obviously asymmetric")
+//   suhama 1     <- NOT 3: the three mounds sit at unequal radii and the shape is stretched
+//   ogi 1        <- NOT 3: a single circular sector
+// knob_166  N          N = round(knob_166 * 32).  N < 2 -> kaleidoscope OFF (the default,
+//                      and the recommended setting). 12->0.375  8->0.25  6->0.1875
+//                      5->0.15625  3->0.09375  2->0.0625  1->0.03125
 // knob_167  CELL SITE  0 = legacy corner cell (byte-identical to 2.frag), 1 = mid-ramp.
 // knob_168  CENTRE X   motif rotational centre offset, q units. 0 = unset -> 0.
 // knob_169  CENTRE Y   ditto. THE BAKE CENTRES EACH MON ON ITS BOUNDING BOX, NOT ON
 //                      ITS ROTATIONAL CENTRE, so every odd-fold mon needs this or the
 //                      kaleidoscope spins about the wrong point and smears the motif.
-//                      Measured (scripts/mon-fold.py): ume 0.6385, kikyo 0.668,
-//                      katabami 0.626, suhama 0.743, ogi 0.2855, tomoe 0.5205 (+x 0.6135).
+//                      Measured (scripts/mon-fold.py), q units -> knob value:
+//                        ume  +0.055 -> knob_169=0.6385     kikyo +0.067 -> 0.668
+//                        katabami +0.050 -> 0.626           suhama +0.097 -> 0.743
+//                        ogi  -0.086 -> 0.2855              tomoe +0.008 -> 0.5205, knob_168=0.6135
+//                        hakkaku / kikko / kiku / mokko / matsukawa: centred already, omit both.
+//                      Worth 27% of the frame on ume -- not a rounding detail.
+//
+// ALSO: knob_144 (RING GAP) must be ~0.02 in bead mode. At its shipped 0.3 the drawn line is
+// an OFFSET CURVE of the motif, which rounds kiku's twelve petals into a featureless cloud.
 #define KAL_N     floor(knob_166 * 32.0 + 0.5)
 #define CELL_SITE (knob_167)
 #define BEAD_CX   (step(0.0005, knob_168) * (knob_168 - 0.5) * 0.4)
