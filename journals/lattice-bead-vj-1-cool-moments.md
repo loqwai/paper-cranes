@@ -1,6 +1,9 @@
 # lattice-bead-vj/1 — Session Journal
 
 ## Status
+2026-09-04 ~14:00: monthly spend limit hit - critic, gallery documenter and all variant owners terminated mid-task;
+parent continues alone at low priority. Beats 1-13 live and pushed (9815551). satellites.frag reverted to 7f07414
+(agent left it mid-edit, 3 compile errors); 2/chroma/grid/spiral committed as-is (validate clean, partial last tasks).
 2026-09-04 vibej2 live run (MOGEE prep). Live target `shaders/redaphid/wip/lattice-bead-vj/1.frag`
 = copy of `lattice-bead/4.frag` + beats below. Wall: user's fullscreen jam tab (out of MCP reach after
 fullscreen); edits hot-swap from disk via editor-sync. Monitor: `node scripts/lab/live-shot.mjs <prefix>`
@@ -22,6 +25,11 @@ palette"), motion 5/10 (glide-lurch-glide on drops) → beat 3.
   `?shader=redaphid/wip/lattice-bead-vj/2&image=images/beads/mon-hakkaku.png&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&navZoom0=0.218&knob_1=0.429&knob_134=0.507&wavelet=true`
 
 ## History of changes
+- Beat 8: fold-ground carousel (rotate fractal input about the screen centre, monotonic; crests + pan untouched), fine-level cap, quieter exterior echoes.
+- Beat 9: baked wall lightness (theme0 lb 0.10 ls 0.88 hi 0.66), field*0.30 one-family body, ground hue near body (bg s+0.08).
+- Beat 10 -> 11: recede lift reverted (dirtied floor); lattice inside the crest = luminance texture in body colour; pump patches 0.58->0.25; gLevelOpen cap 0.15.
+- Beat 12: deterministic rest palette: regionHue zeroed at world 0, base mix(seed,0.92,0.85); accent s+0.04, gain 0.30. Beat 13: base retuned for real medians.
+- Critic scores on the wall: r3 8/5, r4 8/7, r5 8/8, r6 7/7, r7 8/8, r8 7/7, r9 5/7 (random-seed palette rounds; seeds pinned from r10).
 - Beat 1 (knobs, not code): K173 light base 0.10, K174 slope 0.55 (1.2 washed out), K175 bg 0.25, K164 ceiling 0.35.
 - Beat 2: SLOWHUE-B2 — hue += key/centroid/entropy medians (slow). `uniform spectralCentroidMedian` added.
 - Beat 3: drop plateau amplitudes cut — twist step 0.16→0.05, fold ratio 0.14→0.05, level window 0.35→0.12,
@@ -30,6 +38,7 @@ palette"), motion 5/10 (glide-lurch-glide on drops) → beat 3.
 - Dropped: bead-shaped fold skeleton (speckle at show framing, lab verdict).
 
 ## Traps this run
+- Monitor palettes differed from the wall: per-load random seeds + regionHue(seed3) + medians read 0 under noaudio. Pin seeds and stub medians at wall values.
 - Fullscreen (canvas click) ejects the jam tab from the MCP group; a second tab in the same window steals
   the foreground and freezes the wall. Monitor headlessly instead.
 - The Playwright MCP is the user's PERSONAL browser — never use it.

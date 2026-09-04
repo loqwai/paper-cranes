@@ -35,6 +35,11 @@ twisting lines, `t = fract(i/N - time)`, one hue offset per line, max-composited
   so it reads as the crest and not a filled badge. Ribbon now carries the hero's blue outward and
   fades to nothing by the red beads (one continuous stroke per arm).
 
+Critic on M4: "the right shape of idea, but a faint cyan smoke ring" → M5 made it bold: ring L 0.80,
+width 0.09 in t, amplitude `smoothstep(0, 0.33, drop_glow)` (full for two thirds of the journey,
+fading in the last third), and each crossed bead blinks ice-blue on its contour (L 0.84, C 0.09,
+never white). Drop transient: lum 26.8 → 27.9 → 24.1 across the walk, peak pixel 188.
+
 Critic verdicts (art-critic agent, 2026-09-04): m1dust still 8 / motion 8, m2surge 8 / 6 ("the
 drop does not read as an event"), m3chiral 8 / 7 ("a connoisseur's secret; project m3chiral; the
 drop ripple is the real upgrade"). Ripple + outline hero added in response.

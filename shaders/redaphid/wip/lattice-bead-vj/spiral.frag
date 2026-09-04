@@ -137,6 +137,8 @@ vec3 drawBead(vec2 p, vec2 centre, float r, float orient, float mirror, float hu
 
     col = mix(col, body * 0.9, cov * w);
     col += edge * (0.35 * ins + rim * punch) * w;
+    // the ripple crossing this bead: a blink of ice-blue on the contour (still never white)
+    col += lch(hue - 0.06, 0.09, 0.84) * rim * ringBoost * w;
     return col;
 }
 
@@ -182,8 +184,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // hero, bright) and its decay carries the ring outward while it fades - one-way, once, and a
     // new drop simply starts a new ring. On the ground it rides the ribbon only (local, thin).
     float tRing = clamp(1.0 - drop_glow, 0.0, 1.0);
-    float ringG = exp(-pow((tt - tRing) / 0.05, 2.0));
-    col += lch(rh, 0.10, 0.62) * ribbon * ringG * drop_glow * 1.0 / sqrt(na);
+    // bold for the first two thirds of the journey, fading only in the last third (critic)
+    float ringAmp = smoothstep(0.0, 0.33, drop_glow);
+    float ringG = exp(-pow((tt - tRing) / 0.09, 2.0));
+    col += lch(rh, 0.10, 0.80) * ribbon * ringG * ringAmp * 2.2 / sqrt(na);
 
     // THE SPIRAL - beads born at the hero's rim, travelling outward on flow_phase, surging on
     // hue_phase (both monotonic).
@@ -214,7 +218,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
                         : k < 3.5 ? entropy_env : k < 4.5 ? centroid_env : flux_env;
 
             float born = smoothstep(0.30, 0.0, t);
-            float ringB = 3.0 * drop_glow * exp(-pow((t - tRing) / 0.09, 2.0));
+            float ringB = 2.5 * ringAmp * exp(-pow((t - tRing) / 0.12, 2.0));
             drawBead(uv, c, br, orient, mirror, hue, clamp(drive, 0.0, 1.0), w, born, 1.0, ringB, col);
         }
     }

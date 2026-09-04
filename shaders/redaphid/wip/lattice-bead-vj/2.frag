@@ -345,6 +345,7 @@ float beadDist(vec2 p, float r){
 #define HERO_SAT   (knob_194 > 0.001 ? 0.5 + knob_194 * 2.0 : 1.55)   // K194 INTERIOR CHROMA saturation of the lattice seen through the bead (default 1.55)
 #define HERO_TOE   (knob_193 > 0.001 ? 1.0 + knob_193 * 1.5 : 2.0)   // K193 GROUND CURVE contrast toe on the field, 1.0..2.5 (1 = off, default 2.0)
 #define HERO_GLINT  (knob_197 > 0.001 ? knob_197 : 0.85)   // K197 GROUND GLINT how much of the directional rim/spec light is removed OUTSIDE the bead (default 0.85)
+#define WAVE_GROUND (knob_198 > 0.001 ? knob_198 : 0.10)   // K198 GROUND WAVE how much of the travelling accent reaches the ground (default 0.10)
 #define HERO_KEYHUE (knob_195 > 0.001 ? knob_195 * 0.8 : 0.35)   // K195 KEY HUE how far the outline colour travels with the song's key (turns over the pitch-class range)
 
 // Signed distance to the WHOLE motif, screen units, for a bead of radius r.
@@ -377,6 +378,13 @@ float gShapePhase;   // iter 138 RATCHET: monotonic phase for the depth-travelin
 
 // Recursive hex mirror-fold lattice. Returns vec4(lum, field, wave, alpha):
 //   lum=brightness, field=CONTINUOUS palette coord, wave=pulse accent, alpha=coverage.
+// hero-lab 7 (2026-09-04): THE BREATH. With every controller phase pinned and only iTime moving,
+// whole-frame luminance went 37 -> 54 -> 61 -> 32 over 4.5 s. The source is the depth-travelling
+// accent `wave` (gPulse = fract(flowPhase*0.6 + bTime*0.18), a 17 s lap through the recursion
+// levels): when the band sits on a COARSE level it lights most of the screen at once - a global
+// swell, the user's hardest veto. It is now masked to the hero (interior + outline) per pixel, so
+// it stays local relief inside the bead and the ground floor holds still.
+float gWaveMask = 1.0;
 vec4 fractal(vec2 p){
     float scale = 1.0, aliasBase = 1.0 / iResolution.y;
     float alpha = 0.0, lumAcc = 0.0, fieldAcc = 0.0, waveAcc = 0.0;
@@ -457,7 +465,7 @@ vec4 fractal(vec2 p){
         float field = ld * (0.55 + evoPlasma * 0.2 + gDepthTint) + swirl * gSwirlMix;   // K153 DEPTH TINT (how much recursion depth colours the field) vs K154 SWIRL MIX (how much the within-cell swirl does). The balance between them is what makes colour read as DEPTH or as FLOW.
 
         float env = sin(gPulse * PI);
-        float wave = smoothstep(0.30 - (spectralKurtosisMedian - 0.48) * 0.28, 0.0, abs(ld - (1.0 - gPulse))) * env;   // iter150 PEAKEDNESS -> ACCENT WIDTH: a focused, peaky spectrum narrows the travelling accent to a tight band; a diffuse one spreads it into a broad glow.
+        float wave = smoothstep(0.30 - (spectralKurtosisMedian - 0.48) * 0.28, 0.0, abs(ld - (1.0 - gPulse))) * env * gWaveMask;   // hero-lab 7: masked to the hero   // iter150 PEAKEDNESS -> ACCENT WIDTH: a focused, peaky spectrum narrows the travelling accent to a tight band; a diffuse one spreads it into a broad glow.
         float band = bandForDepth(ld);
         // ── iter146 RELIEF, NOT GAIN ── (user: "the color still seems flickery on a global scale
         //    with the music - like it brightens and washes out")
@@ -666,6 +674,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // of world position, so it varies by area but never reverses the pan direction.
     uv += max(0.0, 0.03 + warpGrow * 0.04 + EXA(knob_150, 0.10)) * vec2(sin(uv.x * 3.0 + seed4 * TAU), cos(uv.y * 3.0 + seed4 * TAU));   // K150 TERRAIN WARP: the fixed positional wobble. 0 = a perfectly rigid lattice; high = the whole plane sags between landmarks.
 
+    gWaveMask = mix(WAVE_GROUND, 1.0, heroIn);   // hero-lab 7: travelling accent lives in the bead, not on the floor
     vec4 fr = fractal(uv);
     float lum = fr.x, field = fr.y, wave = fr.z, alpha = fr.w;
 
@@ -683,7 +692,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
             + paletteShift                                    // permanent live mutation
             + seed;                                           // per-device base palette identity
     vec3 col = lush(s, lum);                                  // (brightness handled by the bloom below)
-    col += lush(s + 0.12 + 0.05 * sin(evoPhase * 0.7), 0.9) * wave * max(0.0, 0.6 + EXB(knob_158, 1.1));   // K158 ACCENT: strength of the travelling pulse accent.   // pulse accent (hue-shifted, brighter); the SET CLOCK swings the accent 0.08..0.28 off base over minutes
+    col += lush(s + 0.12 + 0.05 * sin(evoPhase * 0.7), 0.9) * wave * max(0.0, 0.15 + EXB(knob_158, 1.1));   // hero-lab 7: 0.6 -> 0.15 (was a frame-wide swell)   // K158 ACCENT: strength of the travelling pulse accent.   // pulse accent (hue-shifted, brighter); the SET CLOCK swings the accent 0.08..0.28 off base over minutes
 
     // BRIGHT, saturated background FIELD — no black voids; the whole screen emits light so it
     // pops off the phone at night and reads from across the room.

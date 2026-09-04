@@ -459,7 +459,8 @@ uniform float cddebug;  // ?cddebug=1 render the DEPTH FIELD as greyscale, for m
 // chroma.frag: ?cdmode=2 TUNNEL is the DEFAULT here (0 = unset -> 2). ?cdmode=0.001 for SHELF, 1 for DOME.
 #define CD_MODE_RAW ((cdmode > 0.001 || knob_184 > 0.001) ? max(cdmode, knob_184 * 2.0) : 2.0)   // K184 CD MODE (0 shelf, 0.5 dome, 1 tunnel)
 #define CD_MODE (clamp(CD_MODE_RAW, 0.0, 1.0))
-#define CD_RINGP   LVK(knob_188, 0.05, 0.02 + knob_188 * 0.12)   // K188 TERRACE SPACING (sd units; cell radius = 1)
+#define CD_RINGP   LVK(knob_188, 0.05, 0.02 + knob_188 * 0.12)
+#define CD_WELL    0.26   // the dark well: inside-distance (cell radius = 1) where the funnel bottoms out; FIXED size   // K188 TERRACE SPACING (sd units; cell radius = 1)
 #define CD_ECHO    LVK(knob_189, 0.60, knob_189)                  // K189 ECHO LINES  (exposure of the terrace edges)
 #define CD_BEADVAR LVK(knob_190, 0.16, knob_190 * 0.3)            // K190 BEAD DEPTH SPREAD (per-crest push BACK, 0..this; rims stay nearest)
 #define CD_POP  LVK(max(knob_182, cdpop), 0.6, clamp(max(knob_182, cdpop), 0.0, 1.0))   // chroma.frag: baked ON at 0.6 (bead-masked onset pop); ?cdpop=0.001 to disable
@@ -979,7 +980,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     //    geometry channel. Saturating exponential: ~30% in a few minutes, ~85% deep into a set,
     //    never past 1. Two structural payoffs, both bounded:
     float gComplex = 1.0 - exp(-max(0.0, evoPhase) * 0.33);
-    gLevelOpen  = gComplex * 0.45;          // more recursion generations drawn at once (see fractal())
+    gLevelOpen  = min(gComplex * 0.45, 0.15);   // chroma: cap the open fine levels (as 1.frag) - they were bead-glyph specks in the ground          // more recursion generations drawn at once (see fractal())
     gInterleave += gComplex * 0.05;         // and the two interleaved sub-lattices separate further
     gShapePhase = morphPhase * 0.85 + bTime * 0.30;   // iter 138 RATCHET: strictly increasing -> the radius wave always travels coarse->fine, reads as continuous inward progression, never a rebound
     gDepthFocus = clamp(0.35 + evoD * 0.35 + (knob_132 - 0.5) * bank4
@@ -1378,11 +1379,19 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         float qIn     = uIn - ph;                            // edges move toward the centre
         float qOut    = max(sd, 0.0) / ringP - ph;           // edges move away from the crest
         float sqIn    = fract(qIn), sqOut = fract(qOut);
-        float uT      = floor(qIn) + smoothstep(0.0, 0.5, sqIn) + ph;   // terraced index, un-phased
-        float terrIn  = ringP * ((uT + 1.0) * (uT + 1.0) - 1.0) * 0.5;  // inverse warp -> terraced inside
-        float eBead   = mix(0.72, 0.26, clamp(uT / 4.0, 0.0, 1.0));     // exposure ladder: first band already below the rim, each step darker
+        // FIXED WELL, ENDLESS DRAIN (coordinator, after critic r3). The base profile of the funnel is a
+        // fixed function of the true distance; the terraces are a ZERO-MEAN travelling sawtooth on top
+        // (flat treads, steep risers) that fades to nothing before a fixed inner radius. So the dark well
+        // never changes size, and every terrace drains into it and dissolves - forever, no breathing.
+        float wellIdx = sqrt(1.0 + 2.0 * CD_WELL / ringP) - 1.0;                       // the well edge, in ring-index units
+        float fade    = 1.0 - smoothstep(0.70, 1.00, uIn / max(wellIdx, 1e-3));        // terraces die out approaching the well
+        float waveIdx = (smoothstep(0.0, 0.5, sqIn) - sqIn - 0.25) * fade;             // +/-0.25 index, mean 0, travels inward
+        float effIdx  = uIn + waveIdx;                                                  // terraced index; its MEAN is the true index
+        float ladder  = clamp(effIdx / max(wellIdx, 1e-3), 0.0, 1.0);                  // 0 at the rim, 1 in the well, then constant
+        float terrIn  = ladder * CD_WELL;                                               // terraced "inside", saturating at the well
+        float eBead   = mix(0.72, 0.26, ladder);                                        // exposure ladder: first band below the rim, well darkest
         float terrOut = max(sd, 0.0) + ringP * (smoothstep(0.0, 0.5, sqOut) - sqOut);
-        float tunIn   = mix(0.03, 0.46, clamp(terrIn / 0.36, 0.0, 1.0));            // rim red -> centre green
+        float tunIn   = mix(0.03, 0.46, clamp(terrIn / CD_WELL, 0.0, 1.0));         // rim red -> well green (fixed size)
         float tunOut  = mix(CD_LAT_N, CD_GND_F, clamp(terrOut / CD_GAP, 0.0, 1.0));  // cyan just outside -> violet far
         float depthT  = mix(tunOut, tunIn, covM);
         float rimT    = smoothstep(0.66, 0.74, gRim);   // thin AND hard-edged: a soft rim mask blended depth 0.01 with 0.56 and painted a yellow-green fringe outside the rim (critic r2) - one AA pixel only

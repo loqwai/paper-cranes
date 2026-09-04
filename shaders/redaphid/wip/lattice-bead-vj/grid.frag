@@ -79,7 +79,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     //      Cell-to-cell hand-off is a continuous crossfade of a distance weight, never a jump.
     //      Lighting only: no geometry moves, no audio on the path.
     float aspect  = iResolution.x / iResolution.y;
-    float u       = fract(flowPhase * 0.06 + seed);
+    float u       = fract(flowPhase * 0.24 + seed);                        // ~20 s per pass
     float heroEnv = sin(u * 3.14159265);
     vec2  heroNdc = mix(vec2(-0.85 * aspect, -0.80), vec2(0.85 * aspect, 0.80), u);
     vec2  heroP   = heroNdc * (N * 0.5) + tide + vec2(navX, navY) * (N * nz / 0.07);
@@ -127,17 +127,18 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
          * (0.80 + 0.45 * waveletBand2Spring * quietGate + 0.9 * hero);
 
     // ---- body: blue family, warm heart at the core, inset echoes made of the outline ----
-    vec3 body = lush(s, mix(0.40, 0.50, inner) + 0.22 * hero);
+    vec3 body = lush(s, mix(mix(0.36, 0.46, inner), mix(0.40, 0.50, inner) + 0.22, hero));   // crowd interior dimmer than the hero
     body = mix(body, lush(s + 0.42, 0.68 + 0.14 * hero), smoothstep(0.45, 1.0, inner) * 0.90);
     body += lush(s + 0.42, 0.80) * smoothstep(0.55, 1.0, inner) * energySpring * quietGate * 0.30;   // the heart breathes with level
-    body += lush(s + 0.12, 0.88) * ring * reachIn * echoAmt * (0.55 + 0.35 * waveletBand3Spring * quietGate);
+    body += lush(s + 0.12, 0.88) * ring * reachIn * echoAmt * (0.55 + 0.35 * waveletBand3Spring * quietGate) * mix(0.73, 1.0, hero);
     col = mix(col, body, cov);
 
     // ---- rim: the only bright line; bass lights it, centroid tilts its hue a touch ----
     float rimHue = s + 0.30 + 0.05 * (waveletCentroidSpring - 0.5) * quietGate;
     col *= 1.0 - heroDim;                                                                          // local, slow: not a global multiplier
-    col += lush(rimHue, 0.90) * rim * (1.0 + 0.40 * waveletBassSpring * quietGate + 0.45 * hero * (1.0 + 0.5 * waveletBassSpring * quietGate));   // palette-lit, never white; audio on the hero rim only
-    col += lush(rimHue, 0.75) * rimSoft * (0.28 + 0.22 * waveletBand1Spring * quietGate + 0.45 * hero);
+    // crowd rim at HALF the hero's luminance: x0.73 in gamma-encoded space; hero outline L 0.81, never white
+    col += lush(rimHue, mix(0.90, 0.94, hero)) * rim * mix(0.73, 1.0, hero) * (1.0 + 0.25 * waveletBassSpring * quietGate * hero);   // audio on the hero rim only
+    col += lush(rimHue, 0.75) * rimSoft * ((0.28 + 0.22 * waveletBand1Spring * quietGate) * mix(0.73, 1.0, hero) + 0.20 * hero);
 
     // ---- keep a floor: gentle spatial vignette (constant mask, not audio) ----
     col *= 1.0 - 0.35 * smoothstep(0.7, 1.7, length(ndc));
