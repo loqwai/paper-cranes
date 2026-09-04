@@ -53,7 +53,7 @@ uniform float spectralSpreadMedian;   // SLOW: harmonic width -> echo spacing
 vec3 lush(float s, float lit){
     float L = mix(0.10, 0.86, clamp(lit, 0.0, 1.0));
     float C = 0.11 + 0.05 * sin(s * TAU * 0.5 + 1.3);
-    C *= smoothstep(0.0, 0.25, L) * (1.0 - 0.45 * smoothstep(0.62, 0.95, L));   // no grey crush, no white wash
+    C *= smoothstep(0.0, 0.25, L) * (1.0 - 0.30 * smoothstep(0.66, 0.95, L));   // no grey crush, no white wash
     return oklch2rgb(vec3(L, C, fract(s) * TAU));
 }
 
@@ -109,7 +109,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float groundLit = LVK(knob_4, 1.0, knob_4 * 2.0);                        // K4 GROUND
     vec3 col = lush(s + 0.5, 0.10 * groundLit);
     col += lush(s + 0.33, 0.55) * ring * reachOut * (1.0 - cov) * echoAmt
-         * (0.60 + 0.40 * waveletBand2Spring * quietGate);
+         * (0.80 + 0.45 * waveletBand2Spring * quietGate);
 
     // ---- body: blue family, warm heart at the core, inset echoes made of the outline ----
     vec3 body = lush(s, mix(0.40, 0.50, inner));
@@ -120,7 +120,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
 
     // ---- rim: the only bright line; bass lights it, centroid tilts its hue a touch ----
     float rimHue = s + 0.30 + 0.05 * (waveletCentroidSpring - 0.5) * quietGate;
-    col += lush(rimHue, 1.0) * rim * (1.0 + 0.40 * waveletBassSpring * quietGate);
+    col += lush(rimHue, 0.90) * rim * (1.0 + 0.40 * waveletBassSpring * quietGate);   // palette-lit, never white
     col += lush(rimHue, 0.75) * rimSoft * (0.28 + 0.22 * waveletBand1Spring * quietGate);
 
     // ---- keep a floor: gentle spatial vignette (constant mask, not audio) ----

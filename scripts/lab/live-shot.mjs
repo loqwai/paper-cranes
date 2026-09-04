@@ -20,7 +20,13 @@ const out = []
 for (let i = 1; i <= frames; i++) {
   const path = `${outPrefix}-${i}.jpg`
   await p.screenshot({ path, type: 'jpeg', quality: 85 })
-  out.push(path)
+  const lum = await p.evaluate(() => {
+    const c = document.querySelector('canvas'); const g = document.createElement('canvas'); g.width = 160; g.height = 160
+    const x = g.getContext('2d'); x.drawImage(c, 0, 0, 160, 160); const d = x.getImageData(0, 0, 160, 160).data
+    let s = 0, n = 0; for (let k = 0; k < d.length; k += 4) { s += 0.299 * d[k] + 0.587 * d[k + 1] + 0.114 * d[k + 2]; n++ }
+    return +(s / n).toFixed(1)
+  })
+  out.push({ path, lum })
   if (i < frames) await p.waitForTimeout(gap)
 }
 await br.close()

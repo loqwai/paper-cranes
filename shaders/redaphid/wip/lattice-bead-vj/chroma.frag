@@ -1372,15 +1372,21 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         float tunnel  = step(1.5, CD_MODE_RAW);
         float ringP   = CD_RINGP;
         float ph      = flowPhase * 0.12 + bTime * 0.05;
-        float qIn     = inside / ringP - ph;                 // edges move toward the centre
+        // inside: ring INDEX with spacing that GROWS toward the centre (sqrt warp) - wider, darker steps
+        // inward, a staircase down into shadow (critic). Terraced in index space, mapped back exactly.
+        float uIn     = sqrt(1.0 + 2.0 * inside / ringP) - 1.0;
+        float qIn     = uIn - ph;                            // edges move toward the centre
         float qOut    = max(sd, 0.0) / ringP - ph;           // edges move away from the crest
         float sqIn    = fract(qIn), sqOut = fract(qOut);
-        float terrIn  = inside + ringP * (smoothstep(0.0, 0.5, sqIn)  - sqIn);
+        float uT      = floor(qIn) + smoothstep(0.0, 0.5, sqIn) + ph;   // terraced index, un-phased
+        float terrIn  = ringP * ((uT + 1.0) * (uT + 1.0) - 1.0) * 0.5;  // inverse warp -> terraced inside
+        float eBead   = mix(1.0, 0.30, clamp(uT / 5.0, 0.0, 1.0));      // exposure ladder: each step darker
         float terrOut = max(sd, 0.0) + ringP * (smoothstep(0.0, 0.5, sqOut) - sqOut);
         float tunIn   = mix(0.03, 0.46, clamp(terrIn / 0.36, 0.0, 1.0));            // rim red -> centre green
         float tunOut  = mix(CD_LAT_N, CD_GND_F, clamp(terrOut / CD_GAP, 0.0, 1.0));  // cyan just outside -> violet far
         float depthT  = mix(tunOut, tunIn, covM);
-        depthT        = mix(depthT, CD_FRES, rimM);                                  // the outline: nearest of all
+        float rimT    = smoothstep(0.55, 0.95, gRim);                                // thinner than the legible band
+        depthT        = mix(depthT, CD_FRES, rimT);                                  // the outline: nearest of all
         depth         = mix(depth, depthT, tunnel);
         // echo LINES (exposure only): a thin bright line on every terrace edge, fading with distance
         float sqL      = mix(sqOut, sqIn, covM);
@@ -1431,7 +1437,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
             // TUNNEL exposure shaping: the funnel darkens toward its far end and the ground sits low, so the
             // frame keeps a dark floor and the red outline is the brightest thing. Fixed function of geometry
             // (inside / covM), no audio - a spatial tilt, not a global multiplier.
-            e *= mix(1.0, mix(1.0, 0.42, clamp(inside / 0.36, 0.0, 1.0)) * covM + (1.0 - covM) * 0.62, tunnel);
+            e *= mix(1.0, eBead * covM + (1.0 - covM) * 0.62, tunnel);
+            e  = mix(e, max(e, 0.94), rimT * tunnel);   // the outline is a thin BRILLIANT red line - the one bright thing
             // NEAR reads brighter. A fixed function of depth - no audio in it - so it is a
             // spatial tilt, not the global multiplier that directive #1 forbids.
             e *= mix(1.16, 0.84, clamp(depth, 0.0, 1.0));

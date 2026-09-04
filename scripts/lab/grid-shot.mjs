@@ -8,7 +8,7 @@ const PIN = process.env.PIN === '0' ? '' : '&time=8'
 const IMG = process.env.IMG || 'mon-hakkaku'
 const url = `http://localhost:${PORT}/?shader=redaphid/wip/lattice-bead-vj/grid&noaudio=true&wavelet=true`
   + `&image=images/beads/${IMG}.png&seed=0.618&seed2=0.755&seed3=0.31&seed4=0.47` + PIN
-  + '&flowPhase=3.0&spinPhase=2.0&huePhase=1.0&morphPhase=1.5&evoPhase=6&quietGate=1'
+  + (PIN ? '&flowPhase=3.0&spinPhase=2.0&huePhase=1.0&morphPhase=1.5&evoPhase=6' : '&controller=wavelet-ease') + '&quietGate=1'
   + '&energySpring=0.4&waveletBassSpring=0.45&waveletBand1Spring=0.4&waveletBand2Spring=0.35&waveletBand3Spring=0.35'
   + '&waveletBand4Spring=0.3&waveletBand5Spring=0.3&waveletCentroidSpring=0.4&melodyFlow=0.3'
   + '&pitchClassMedian=0.25&spectralCentroidMedian=0.19&spectralSpreadMedian=0.26&spectralEntropyMedian=0.87'

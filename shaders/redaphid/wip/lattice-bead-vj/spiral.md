@@ -14,6 +14,22 @@ twisting lines, `t = fract(i/N - time)`, one hue offset per line, max-composited
   family (`hueSpan` 0.32 of the wheel) and the band **travels outward one-way on `hue_phase`**.
 - Beads point along their radius (`align`) and counter-spin the arm's global turn on `spin_angle`.
 
+## The three additions (2026-09-04, second pass)
+- **Dust ribbon** (`dust`, default 1.0): the radial gap from each pixel to the nearest turn of every
+  arm's log spiral, from the beads' own equation, drawn as a soft coloured band (L 0.40, ~0.05 uv
+  wide) on slow channels only, hue matching the beads passing there. +2/255 mean luminance.
+- **Drop surge** (`surge`, default 0.03): the birth position adds `hue_phase * surge`. `hue_phase`
+  is dodeca-bloom's monotonic accumulator whose rate jumps on flux spikes and settles back, so on a
+  drop the arms surge outward and beads are born faster, and nothing ever runs backward. The
+  counter-ratchet is structural: the surge lives in a `fract()`-wrapped position, not a rate.
+  Newborn beads (t < 0.3) flare on `drop_glow`, contour only (peak pixel 160 at drop_glow 0.7).
+- **Chirality** (`chiral`, default 1): with 2+ arms, odd arms are mirrored and spin the other way.
+  Tomoe curls both ways across the galaxy.
+
+Measured with dodeca-bloom running, envelopes pinned mid-energy, `knob_5=1`, 1280×720, 4 frames
+1.5 s apart (`scripts/spiral-motion.mjs`): lum 23.2 (dust) / 25.5 (drop) / 23.2 (all on), max
+pixel 136–160 = the outline, phases strictly increasing frame to frame.
+
 ## Discipline
 Every angle and position reads a monotonic phase (`spin_angle`, `flow_phase`, `hue_phase`).
 Slow `*_env` drive lightness/chroma. Fast channels (`bass_pump`, `drop_glow`, `pitch_pulse`) touch
