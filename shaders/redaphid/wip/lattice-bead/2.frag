@@ -949,8 +949,16 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // brighten it (one-way, so it cannot pump inversely like the ground did).
         // Rim-masked, so this is lighting on an edge band — it cannot strobe the frame
         // the way a global col *= would.
-        col += lush(s + 0.33, 1.0) * rim * knob_168
-             * clamp(energyZScore, 0.0, 1.0) * LVK(knob_179, 0.55, knob_179);
+        // SCALED, AND DRIVEN BY TWO SIGNALS. Measured on the live set, the z-scores peak
+        // around 0.4-0.6 rather than 1.0, and energyZScore AVERAGED -0.11 — so the raw
+        // clamp left the flare off most of the time and capped at 42% strength even at
+        // its best. Scaling by 1.6 lets a typical positive excursion reach full flare.
+        // spectralCentroidZScore is added because it measured the LARGEST live range of
+        // anything sampled (1.372) and was also unused: a drop is both LOUDER and
+        // BRIGHTER, so the pair fires far more reliably than either alone.
+        // Still clamped to positives, so it remains one-way and can only ever ADD light.
+        float flareZ = clamp((energyZScore + spectralCentroidZScore) * 1.6, 0.0, 1.0);
+        col += lush(s + 0.33, 1.0) * rim * knob_168 * flareZ * LVK(knob_179, 0.55, knob_179);
     }
 
     // GLOW LIFT — gamma up + gain so mid-tones emit; high chroma keeps it NEON, not washed out.
