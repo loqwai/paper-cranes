@@ -936,6 +936,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // +0.881 but brightness stayed -0.767 — drops sharpened the frame while DIMMING
         // it, which is backwards for a dark room. Ground recede eased, bead gain nearly
         // doubled, so a drop now buys contrast without costing light.
+        // BALANCE IS NOT TUNED PER-WINDOW ANY MORE. Measured across four ~10s windows of
+        // the same set, corr(energySpring, brightness) read -0.109, -0.704 and -0.582 and
+        // corr(contrast) read +0.694 then -0.666 — the SAME build, opposite signs. Those
+        // swings are passage noise, not a signal to tune against, so this is held at the
+        // 0.50/0.58 pair that has the most measurement behind it. Re-tune only from data
+        // averaged over a whole track or longer.
         float seedDepth = mix(0.25, 0.50, pump);
         col *= mix(1.0, 1.0 - seedDepth, (1.0 - cov) * knob_168);
         col += lush(s, 0.95) * cov * knob_168 * (0.05 + 0.58 * pump);   // beads gain with the music
@@ -957,13 +963,27 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // anything sampled (1.372) and was also unused: a drop is both LOUDER and
         // BRIGHTER, so the pair fires far more reliably than either alone.
         // Still clamped to positives, so it remains one-way and can only ever ADD light.
-        float flareZ = clamp((energyZScore + spectralCentroidZScore) * 1.6, 0.0, 1.0);
-        // KNEE. At linear drive the flare measured a 53% duty cycle above 0.2 — active
-        // more than half the time, which is a GLOW, not a flare. A drop response has to
-        // PUNCTUATE. Squaring keeps the peaks at full strength (1^2 = 1) while pushing
-        // the busy middle down (0.4^2 = 0.16), so the contours sit quiet through the
-        // groove and only light up when the track actually lifts.
-        flareZ *= flareZ;
+        // ── SHUTTER FIX (docs/debugging-twitchy-shaders.md, Fix 1) ────────────────
+        // This drove the flare from (energyZScore + spectralCentroidZScore) as a
+        // CONTINUOUS SCALE. That is the documented cause of twitchy output, in the doc's
+        // own words: "Use Normalized for smooth modulation. Use ZScore ONLY for event
+        // detection" — `float scale = energyZScore * 0.5;` is listed as the bad example.
+        // z-scores are near-zero during normal audio and spike on anomalies, so scaling a
+        // brightness by one makes the contours stutter frame to frame. User called it
+        // "shuttery"; the doc had already called it, and I wrote it anyway two ticks ago.
+        //
+        // energySpring is the controller's spring-SMOOTHED energy — purpose-built for
+        // exactly this, and already driving the ground pump above, so flare and ground now
+        // move together coherently instead of fighting. The knee is kept: it is what makes
+        // the flare punctuate rather than glow (duty above 0.2 went 53% -> 36%).
+        // Gate placement matters: applying QGATE BEFORE the threshold shrank the drive
+        // below it (energySpring 0.31 * gate 0.35 = 0.108, never clearing 0.18) and the
+        // flare measured dead — max 0.01, 0% duty. The jitter number looked wonderful
+        // precisely because the signal was gone. Threshold on the RAW spring, then gate
+        // the result, so a silent room still cannot flash but real music still fires.
+        float flareZ = clamp((energySpring - 0.20) * 3.0, 0.0, 1.0);
+        flareZ *= flareZ;          // knee: punctuate, don't glow
+        flareZ *= QGATE;           // silence guard, applied AFTER the shaping
         col += lush(s + 0.33, 1.0) * rim * knob_168 * flareZ * LVK(knob_179, 0.55, knob_179);
     }
 
