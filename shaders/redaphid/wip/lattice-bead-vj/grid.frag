@@ -66,16 +66,23 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float nz    = navZoom > 0.001 ? navZoom : 1.0;
     float N     = LVK(knob_1, 3.2, mix(1.5, 8.0, knob_1)) / nz;              // K1 TILES
     float drift = LVK(knob_5, 1.0, knob_5 * 2.0);                            // K5 DRIFT
-    vec2  tide  = vec2(0.030, 0.012) * flowPhase * drift;                   // one-way tide, never back
+    vec2  tide  = vec2(0.045, 0.018) * flowPhase * drift;                   // one-way tide, never back
     vec2  p     = ndc * (N * 0.5) + tide + vec2(navX, navY) * (N * nz / 0.07);   // lattice-nav pan in the lattice's own units
 
     vec2  tileIndex = floor(p + 0.5);
     vec2  f         = fract(p + 0.5) - 0.5;                                  // in-tile, [-0.5, 0.5)
 
+    // ---- HERO CELL: one lit crest circles the screen centre on a monotonic angle (never reverses),
+    //      handing over to the next cell by a continuous crossfade, so the wall has a subject and a
+    //      direction. Screen-relative, so it stays near the centre under pan (user: centre the bead).
+    float th      = flowPhase * 0.12 + seed * TAU;
+    vec2  heroP   = vec2(cos(th), sin(th)) * 0.55 * (N * 0.5) + tide + vec2(navX, navY) * (N * nz / 0.07);
+    float hero    = smoothstep(1.35, 0.15, length(tileIndex - heroP));
+
     // ---- per-cell identity: golden-ratio spread, neighbours always differ, nothing flickers ----
     float gid  = fract(dot(tileIndex, vec2(0.618034, 0.381966)) + seed);
     float gid2 = fract(dot(tileIndex, vec2(0.246979, 0.554958)) + seed2);
-    float ang  = spinPhase * (0.06 + 0.05 * gid2) * (gid2 < 0.5 ? -1.0 : 1.0);   // slow, monotonic, constant direction per cell
+    float ang  = spinPhase * (0.10 + 0.08 * gid2) * (gid2 < 0.5 ? -1.0 : 1.0);   // slow, monotonic, constant direction per cell
     float ca = cos(ang), sa = sin(ang);
     vec2  fr = mat2(ca, -sa, sa, ca) * f;
 
@@ -109,19 +116,19 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float groundLit = LVK(knob_4, 1.0, knob_4 * 2.0);                        // K4 GROUND
     vec3 col = lush(s + 0.5, 0.10 * groundLit);
     col += lush(s + 0.33, 0.55) * ring * reachOut * (1.0 - cov) * echoAmt
-         * (0.80 + 0.45 * waveletBand2Spring * quietGate);
+         * (0.80 + 0.45 * waveletBand2Spring * quietGate + 0.9 * hero);
 
     // ---- body: blue family, warm heart at the core, inset echoes made of the outline ----
-    vec3 body = lush(s, mix(0.40, 0.50, inner));
-    body = mix(body, lush(s + 0.42, 0.68), smoothstep(0.45, 1.0, inner) * 0.90);
+    vec3 body = lush(s, mix(0.40, 0.50, inner) + 0.22 * hero);
+    body = mix(body, lush(s + 0.42, 0.68 + 0.14 * hero), smoothstep(0.45, 1.0, inner) * 0.90);
     body += lush(s + 0.42, 0.80) * smoothstep(0.55, 1.0, inner) * energySpring * quietGate * 0.30;   // the heart breathes with level
     body += lush(s + 0.12, 0.88) * ring * reachIn * echoAmt * (0.55 + 0.35 * waveletBand3Spring * quietGate);
     col = mix(col, body, cov);
 
     // ---- rim: the only bright line; bass lights it, centroid tilts its hue a touch ----
     float rimHue = s + 0.30 + 0.05 * (waveletCentroidSpring - 0.5) * quietGate;
-    col += lush(rimHue, 0.90) * rim * (1.0 + 0.40 * waveletBassSpring * quietGate);   // palette-lit, never white
-    col += lush(rimHue, 0.75) * rimSoft * (0.28 + 0.22 * waveletBand1Spring * quietGate);
+    col += lush(rimHue, 0.90) * rim * (1.0 + 0.40 * waveletBassSpring * quietGate + 0.6 * hero);   // palette-lit, never white
+    col += lush(rimHue, 0.75) * rimSoft * (0.28 + 0.22 * waveletBand1Spring * quietGate + 0.45 * hero);
 
     // ---- keep a floor: gentle spatial vignette (constant mask, not audio) ----
     col *= 1.0 - 0.35 * smoothstep(0.7, 1.7, length(ndc));

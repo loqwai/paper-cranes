@@ -29,7 +29,7 @@
 //
 // Requires ?controller=dodeca-bloom (or the phases pinned as URL params). wavelet not needed.
 // Params (0 = default): ?beads=4..48 (28)  ?turns= (2.2)  ?arms=1..4 (1)  ?sizeExp= (0.6)
-//   ?flow= (0.015 - travel rate on flow_phase)  ?heroScale= (0.20)  ?hueSpan= (0.32)
+//   ?flow= (0.015 - travel rate on flow_phase)  ?heroScale= (0.22)  ?hueSpan= (0.32)
 //   ?align=0..1 (1)  ?tail=0..1 (1)  ?dust= (1.0; 0.001 = off)  ?surge= (0.03; 0.001 = off)
 //   ?chiral=0..1 (1 - mirror odd arms; 0.001 = off)
 //
@@ -76,7 +76,7 @@ uniform float chiral;
 #define ARMS     (arms      > 0.0 ? clamp(floor(arms), 1.0, 4.0)  : 1.0)
 #define SIZE_EXP (sizeExp   > 0.0 ? sizeExp   : 0.6)
 #define FLOW     (flow      > 0.0 ? flow      : 0.015)
-#define HERO_R   (heroScale > 0.0 ? heroScale : 0.20)
+#define HERO_R   (heroScale > 0.0 ? heroScale : 0.22)
 #define HUE_SPAN (hueSpan   > 0.0 ? hueSpan   : 0.32)
 #define ALIGN    (align     > 0.0 ? align     : 1.0)
 #define TAIL     (tail      > 0.0 ? tail      : 1.0)
@@ -112,7 +112,7 @@ float beadDist(vec2 p, float r){
 // ONE BEAD. The only place the fast channels appear; every fast term is on the contour band.
 //   mirror  +1 / -1 flips the sampled shape (chirality)     born  1 for a newborn, 0 otherwise
 vec3 drawBead(vec2 p, vec2 centre, float r, float orient, float mirror, float hue, float slowDrive,
-              float w, float born, inout vec3 col){
+              float w, float born, float fill, float ringBoost, inout vec3 col){
     vec2 q = p - centre;
     if (length(q) > r * 1.55) return col;             // bounding circle: skip the fetch
     q = rot(orient) * q;
@@ -127,11 +127,13 @@ vec3 drawBead(vec2 p, vec2 centre, float r, float orient, float mirror, float hu
 
     float L = 0.40 + 0.16 * slowDrive + 0.05 * treble_env;
     float C = 0.10 + 0.05 * entropy_env;
-    vec3 body = lch(hue, C, L);
+    vec3 body = lch(hue, C, mix(0.17, L, fill));      // fill 0 = near-black interior (the hero)
     vec3 edge = lch(hue + 0.08, C * 1.35, min(L + 0.40, 0.84));
 
     // fast channels: contour only. Newborns flare on drop_glow (latched + decay, never a strobe).
-    float punch = 0.55 + 0.45 * bass_pump + 0.65 * drop_glow + 0.25 * pitch_pulse + 1.1 * drop_glow * born;
+    // The RIPPLE: once per drop a ring leaves the hero and runs outward along the arms as
+    // drop_glow decays, lighting the outlines it passes (ringBoost) - see mainImage.
+    float punch = 0.55 + 0.45 * bass_pump + 0.35 * drop_glow + 0.25 * pitch_pulse + 0.6 * drop_glow * born + ringBoost;
 
     col = mix(col, body * 0.9, cov * w);
     col += edge * (0.35 * ins + rim * punch) * w;
@@ -171,8 +173,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         ribbon = max(ribbon, exp(-gap * gap / 0.0006));
     }
     ribbon *= smoothstep(0.0, 0.15, tt) * smoothstep(1.0, 0.85, tt) * smoothstep(R0 * 0.8, R0, rad);
-    float rh = hueBase + (tt - hue_phase * 0.10) * HUE_SPAN;
-    col += lch(rh, 0.08, 0.36) * ribbon * DUST * (0.75 + 0.25 * energy_env) / sqrt(na);   // two arms, two ribbons: keep the sum
+    // The ribbon carries the hero's blue out of the centre and fades to nothing by the red beads,
+    // so each arm reads as one continuous stroke (critic, 2026-09-04).
+    float rh = hueBase + 0.02;
+    float fadeOut = pow(1.0 - tt, 1.3);
+    col += lch(rh, 0.08, 0.36) * ribbon * DUST * fadeOut * (0.75 + 0.25 * energy_env) / sqrt(na);
+    // RIPPLE position: tRing = 1 - drop_glow. A drop latches drop_glow high (ring born near the
+    // hero, bright) and its decay carries the ring outward while it fades - one-way, once, and a
+    // new drop simply starts a new ring. On the ground it rides the ribbon only (local, thin).
+    float tRing = clamp(1.0 - drop_glow, 0.0, 1.0);
+    float ringG = exp(-pow((tt - tRing) / 0.05, 2.0));
+    col += lch(rh, 0.10, 0.62) * ribbon * ringG * drop_glow * 1.6 / sqrt(na);
 
     // THE SPIRAL - beads born at the hero's rim, travelling outward on flow_phase, surging on
     // hue_phase (both monotonic).
@@ -203,12 +214,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
                         : k < 3.5 ? entropy_env : k < 4.5 ? centroid_env : flux_env;
 
             float born = smoothstep(0.30, 0.0, t);
-            drawBead(uv, c, br, orient, mirror, hue, clamp(drive, 0.0, 1.0), w, born, col);
+            float ringB = 3.0 * drop_glow * exp(-pow((t - tRing) / 0.09, 2.0));
+            drawBead(uv, c, br, orient, mirror, hue, clamp(drive, 0.0, 1.0), w, born, 1.0, ringB, col);
         }
     }
 
-    // THE HERO - centred, slowest spin, the still point everything is born from.
-    drawBead(uv, vec2(0.0), HERO_R, spin_angle * 0.05, 1.0, hueBase + 0.02, clamp(energy_env, 0.0, 1.0), 1.0, 0.0, col);
+    // THE HERO - centred, slowest spin, the still point everything is born from. An OUTLINE like
+    // its children, larger and brighter, with a near-black fill (critic: not a filled badge).
+    drawBead(uv, vec2(0.0), HERO_R, spin_angle * 0.05, 1.0, hueBase + 0.02, clamp(energy_env, 0.0, 1.0), 1.0, 0.0, 0.15, 0.35 + 2.0 * drop_glow, col);
 
     fragColor = vec4(pow(clamp(softClip(col), 0.0, 1.0), vec3(0.85)), 1.0);
 }

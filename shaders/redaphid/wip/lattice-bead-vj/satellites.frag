@@ -231,6 +231,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     col *= 1.0 - 0.55 * smoothstep(0.30, 0.80, r);
 
     float cover = 0.0;
+    // FIT: on a portrait screen the whole group (hero + orbit + satellites, reach ~0.47 in
+    // height units) scales down together, so nothing is cropped and nothing overlaps. Pure
+    // placement, uniform in x and y - the bead outline keeps its aspect ratio.
+    float fit = min(1.0, (0.5 * iResolution.x / iResolution.y) / 0.47);
 
     // ── SATELLITES ───────────────────────────────────────────────────────────────────────
     // Drawn first so the hero composites over them. Each takes a DIFFERENT slow envelope as
@@ -243,9 +247,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         float hh = hash11(i * 5.17 + 2.3);
         // ORBIT: angle is a monotonic phase plus a fixed per-bead offset. Never a feature.
         float ang = spin_angle * (0.12 + hh * 0.10) + t * TAU;
-        // orbit fits the narrower screen axis (portrait phones), so no satellite is ever cropped
-        float halfW = 0.5 * iResolution.x / iResolution.y;
-        float orb = min(0.335, halfW - 0.13) + 0.030 * sin(morph_phase * 0.33 + t * TAU);
+        float orb = (0.335 + 0.030 * sin(morph_phase * 0.33 + t * TAU)) * fit;
         vec2  c   = vec2(cos(ang), sin(ang)) * orb;
 
         // one slow driver per bead, six ways
@@ -257,13 +259,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
                     : k < 4.5 ? centroid_env
                     :           flux_env;
 
-        col += drawBead(uv, c, 0.062 + hh * 0.030, i + 1.0, clamp(drive, 0.0, 1.0), cover);
+        col += drawBead(uv, c, (0.062 + hh * 0.030) * fit, i + 1.0, clamp(drive, 0.0, 1.0), cover);
     }
 
     // ── THE HERO ─────────────────────────────────────────────────────────────────────────
     // Centred, large, spinning slowest of anything on screen so it reads as the still point.
     float heroCover = 0.0;
-    col += drawBead(uv, vec2(0.0), HERO_R, 0.0, clamp(energy_env, 0.0, 1.0), heroCover);
+    col += drawBead(uv, vec2(0.0), HERO_R * fit, 0.0, clamp(energy_env, 0.0, 1.0), heroCover);
 
     // Counter-ratchet: the vignette and the satellites both take light out of the frame, so
     // the hero's own ground lifts a little as the music does - a drop buys contrast rather
