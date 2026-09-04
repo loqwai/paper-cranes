@@ -1441,6 +1441,16 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // thin specular IS value contrast. Because the area is tiny it cannot raise frame
         // luminance much, so it buys contrast without buying flash - which the numbers have to
         // confirm, not the intention.
+        // CEILING NOTE, twice corrected, kept because both corrections cost a tick.
+        //   1. softClip is NOT the ceiling. Its knee is at 0.75 and the frame's brightest pixel
+        //      measured 162/255 = 0.635, so nothing ever reaches the roll-off.
+        //   2. Mixing the specular toward neutral to escape LV_LCEIL was TRIED AND REVERTED. It
+        //      bought only max 153.7 -> 160.1 while costing flash sd 3.22 -> 4.11 and contrast
+        //      -0.63. Flashing is the one thing the user has called out twice, so that trade is
+        //      not available.
+        // The ceiling question is still OPEN, and it cannot be settled with a downsampled metric:
+        // the canvas is 1278px, so even a 360x360 read averages a 1px hairline across ~3.5x3.5
+        // and dilutes its peak. Settle it with a 1:1 NATIVE CROP before touching this again.
         float specCore = pow(rim, 7.0);
         col += lush(rimHue, 1.0) * specCore * seedAmt * SPEC * (0.55 + 1.10 * arrival) * QGATE;
   // 2.2 -> 4.0: the frame's fast energy now lives HERE

@@ -489,3 +489,50 @@ colour in the frame, so it wants its own fork rather than a tick.
 ### Todo
 - [ ] frame ceiling ~162/255; raising `LV_LCEIL` for the specular path only would give true
       highlights without repainting the whole palette
+
+## Iter 15 — the ceiling, settled with a proper instrument (and a revert)
+
+Chased the "no top end" finding from iter 14. Two of my own claims were wrong and both cost a
+measurement to disprove.
+
+**Wrong claim 1: "softClip's roll-off is the binding constraint."** Its knee is at 0.75 (191/255)
+and the frame's brightest pixel was 162. Nothing ever reaches the roll-off. softClip is not
+involved at all.
+
+**Wrong claim 2: "LV_LCEIL is the cap, so mix the specular toward neutral to escape it."** Tried
+it — a specular is the *light's* colour, not the surface's, so in principle it should not be bound
+by the surface palette. Measured:
+
+| | before | after neutral mix |
+|---|---|---|
+| max | 153.7 | 160.1 (+6.4) |
+| flash sd | 3.22 | **4.11 (+0.89)** |
+| contrast | 24.58 | **23.95 (−0.63)** |
+
+Bought +6 luminance for +0.89 flash and −0.63 contrast. **Reverted** — flashing is the one thing
+the user has called out twice, so that trade is not available.
+
+### Settled with a 1:1 native crop
+
+Every previous read downsampled (90×90, then 360×360) on a **1278px** canvas, so a 1px hairline
+was averaged across a block and its peak diluted — 200× at 90px, ~12× at 360px. A 420×420 crop
+drawn **1:1** preserves it:
+
+| | spec off | spec on |
+|---|---|---|
+| p99.99 | 144.1 | 149.3 |
+| brightest pixel ever | 172 | **179** |
+
+So the ceiling is **real, not an artifact**: this shader genuinely never emits a pixel above
+~179/255. No single clamp causes it — it is the sum of the additive terms, and scaling those up
+buys flash, as the revert showed. **True highlights need a separate mechanism, not a bigger gain.**
+
+### Method
+Three ticks in a row a null or weak result turned out to be the instrument. The rule that now
+applies to every visual measurement here: **read 1:1 when the effect is thin.** Downsampling is
+a low-pass filter, and every interesting thing in this shader — contour, hairline, ring, gap — is
+high-frequency.
+
+### Todo
+- [x] ceiling question — settled: real peak is 179/255, not a metric artifact
+- [ ] true highlights need their own mechanism (a separate pass), not larger coefficients
