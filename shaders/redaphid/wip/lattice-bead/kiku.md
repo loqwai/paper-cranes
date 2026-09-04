@@ -9,22 +9,34 @@ Scratch fork of `1.frag` (the shared bead substrate) for one hypothesis, on `lab
 
 Evidence: `journals/lab/shots/kiku-sheet.png`.
 
-## The instrument (the only edit to the substrate's logic)
+## ⚠ Retraction: my "bake defect" was wrong
 
-Two uniforms, both pure diagnostics — **do not merge into `1.frag`**:
+An earlier version of this document claimed the mon bake was broken — "max green 127, the field
+never crosses zero, only the interior half was baked, no legibility test is clean until re-baked."
+**All of that was false and is withdrawn in full. The bake is correct. Nothing is blocked.**
 
-- `onlyLevel` — draw exactly one fold level, so "which level does it break at" can be answered
-  without the other five overlaying it. `-1` = all levels (normal). Added *after* the fold, so
-  geometry is untouched.
-- `flatLevels` — bypass the depth window (`gLevelOpen`), so a single level isn't dimmed by its
-  own depth.
+The cause was my own tooling. I read the PNG through canvas2D `drawImage` + `getImageData`, which
+stores **premultiplied alpha** and therefore returns `RGB = 0` wherever `alpha = 0`. The mon
+exterior is `alpha = 0`, so the green channel read as 0 there and the field looked like it never
+went positive. Re-read with PIL/numpy:
 
-⚠ Both default to `0.0` when absent from the URL, and `onlyLevel = 0` draws nothing (level 0 is
-below `FIRST`). **Always pass `onlyLevel=-1` for a full render.**
+| | value |
+|---|---|
+| G overall | 45–200 (156 unique) |
+| G **exterior** (alpha = 0) | **128–200** |
+| G interior (alpha > 0) | 45–127 ← *this* is where my bogus "127 ceiling" came from |
+| zero crossings, centre row | **2** |
+| effective crossings per cell-space ray | **2.84** (min 1, max 9) |
+
+**Rule: never read a baked SDF through canvas2D or anything that composites alpha.** Use
+numpy/PIL or a GPU readback. My `scripts/lab-crossings.mjs` carried this bug and has been deleted
+and replaced by `scripts/lab_sdf.py`. Screenshot tools (`lab-measure`, `lab-pitch`, `lab-repeat`)
+may keep using canvas — rendered frames are opaque, so premultiplication cannot destroy anything.
+
+**The H1 verdict does not depend on any of this** — it rests on `texCoordMax = 1.678` (pure
+arithmetic, no image read), the `abs(p)` mirror (code), and the 804 px zoom test (screenshots).
 
 ## Why it fails: the cell never contains ONE flower
-
-Measured, not assumed (`scripts/lab-crossings.mjs`):
 
 - `fractal()` does `vec2 uv = abs(p)` **before** the cell distance — a 4-fold mirror on the
   sampling coordinate. The motif is symmetrised before it is ever drawn.
@@ -36,19 +48,15 @@ So what is drawn is a **mirrored, tiled composite of kiku fragments**, never one
 rosette. The `1cell-L4-zoom` tile catches one fragment: a 3-lobe scalloped arc.
 
 **This is a property of the substrate's fold, not of kiku.** Any motif whose identity lives in its
-*global closed outline* loses that identity here.
-
-> Corrected from an earlier reading of mine that claimed only the upper-right quadrant is sampled.
-> The *unwrapped* coordinate is indeed always ≥ 0.5, but it exceeds 1.0 and wraps, so the whole
-> texture is reached. Credit to the tomoe teammate; `texCoordMax = 1.678` confirms it.
+*global closed outline* loses that identity here. Independently confirmed by `lab/ume`.
 
 ## On-screen cell size — nameability is NOT what breaks first here
 
 `uv = (fragCoord − 0.5·iResolution.xy) / iResolution.y`, then `uv *= 0.07 / navZoom`. So one world
 unit = `res.y · navZoom / 0.07` px, and the pitch at level `i` is that over `gScale^(i+1)`
-(`gScale ≈ 2.0`). At 900×900, `navZoom = 0.218` (the tuned performance zoom):
+(`gScale ≈ 2.0`). At 900×900, `navZoom = 0.218`:
 
-| level | analytic pitch | measured (`lab-pitch.mjs`) | reads as | nameable? |
+| level | analytic pitch | measured | reads as | nameable? |
 |---|---|---|---|---|
 | **4 (coarsest)** | **87.6 px** | 44.8 † | scalloped / antler-like lobed cells | no |
 | 5 | 43.8 px | **43.8** ✓ | ornate carpet, scalloping clear | no |
@@ -57,81 +65,87 @@ unit = `res.y · navZoom / 0.07` px, and the pitch at level `i` is that over `gS
 | 8 | 5.5 px | 9.4 ‡ | uniform fine lace | no |
 | 9 (finest) | 2.7 px | 8.6 ‡ | speckle | no |
 
-† L4 draws the cross term (`delt2`) as well as the ring, giving ~2 crossings per cell.
-‡ saturates: `alias = aliasBase · 0.5 · scale` widens lines with depth, so adjacent crossings merge
-below ~9 px. The exact agreement at L5 and L6 is what validates the ladder.
+† L4 also draws the cross term (`delt2`), giving ~2 crossings per cell.
+‡ saturates below ~9 px: `alias = aliasBase · 0.5 · scale` widens lines with depth so adjacent
+crossings merge. The exact agreement at L5 and L6 validates the ladder.
 
-**High `i` = FINE** (`scale *= gScale` each iteration), so L4 is the largest cell the lattice ever
-draws at performance zoom, at ~88 px.
+**High `i` = FINE**, so L4 is the largest cell the lattice draws at performance zoom, at ~88 px.
 
-**The decisive test:** at `navZoom = 2.0` a level-4 cell is **804 px** — it fills the frame, 9× the
-performance-zoom size — and kiku is *still* not nameable (`1cell-L4-zoom` tile). So for kiku the
-binding constraint is the mirror+tile composite above, **not** on-screen size. lab/split's
-size→nameability finding is real and shows up here as the *scalloping* fading (visible to ~22 px at
-L6, speckle by ~5 px at L8), but kiku hits the size-independent failure first.
+**The decisive test:** at `navZoom = 2.0` a level-4 cell is **804 px**, filling the frame — and
+there texel sampling is ~1:1, so there is **no aliasing** either. kiku is *still* not nameable.
+That single test isolates the sampling geometry from cell size and from minification alike.
+lab/split's size→nameability result is real, and shows up here as the *scalloping* fading (visible
+to ~22 px at L6, speckle by ~5 px at L8) — but kiku hits the size-independent failure first.
 
-## The bake never wrote the EXTERIOR of the signed field (defect, affects everyone)
+## The −37.8 % lit coverage: sampling, not the bake
 
-| point | RGBA | decoded `d` |
+With the bake exonerated, the coverage loss needed a new explanation. It is **not** fewer contours:
+
+- **The field is fine.** Measured over a 4-texel finite-difference step, `|grad|` is **1.00 for the
+  bead vs 1.15 for the hexagon** — comparable.
+- **The bead has MORE contour area than the hexagon**, not less — line-area ratio **1.22–2.51×**
+  depending on `gRingGap`. So "fewer lines" is ruled out.
+- **The cause is undersampling of the tiled, mirrored field.** The fold doubles the sampling rate
+  every level, so at 900 px / `navZoom = 0.218` one screen pixel spans:
+
+| level | texels per pixel (linear) | per pixel **area** |
 |---|---|---|
-| centre | `255, 45, 0, 255` | −0.65 (interior) |
-| near boundary | `78, 121, 0, 255` | −0.05 |
-| **just outside** | **`0, 0, 0, 0`** | **−1.00** |
+| 4 | 9.7 | 95 |
+| 6 | 39.0 | 1 519 |
+| 9 | 311.8 | 97 193 |
 
-**Max green anywhere in the image is 127/255**, decoding to `d = −0.004`: the field is **negative
-everywhere and never crosses zero** (0 boundary crossings along every cell-space ray). Outside the
-silhouette the PNG is fully transparent, so green reads `0` and `beadDist` returns −1.0 — the
-*deepest interior* value — for every exterior pixel. Only the interior half was baked.
+With `min: NEAREST` and **no mipmaps**, each pixel takes *one arbitrary point sample* out of those.
+The contour band `|cellD − gRingGap| < gBorder` is therefore hit erratically pixel-to-pixel instead
+of forming a coherent band. Line **cores** still reach full brightness where a sample lands in the
+band — which is why `brightPct > 50` is preserved at ~4 % — but the connected mid-tone shoulder
+painted by `smoothstep(gBorder + 0.06, gBorder + 0.01, m) * 0.35` never forms. Hence `litPct > 20`
+down 37.8 % with mean luminance flat. **The hexagon is immune because `hexDist` is pure ALU with no
+texture fetch**, so its shoulders are exact at every level.
 
-Consequence: `abs(cellD − gRingGap)` bottoms out at ≈ `gRingGap` instead of reaching 0, so every
-bead-drawn line is systematically weaker than its hex equivalent, and the field is discontinuous at
-the boundary.
+**Fix:** mipmap + `LINEAR_MIPMAP_LINEAR` for the bead texture (a `Visualizer.js` change, and a
+shared serialisation point), or restrict the bead to coarse levels (§8 variant 2), or evaluate the
+motif analytically instead of sampling a texture.
 
 ## Brightness — n=4 with spread. Mean luminance does NOT discriminate; coverage does
 
-Protocol adopted from `lab/split` for cross-teammate comparability (headed Chromium/real GPU,
-1000×800, settle = `frameCount > 30` + 3000 ms), plus seed pinning and full-resolution metrics
-(`scripts/lab-repeat.mjs`), n = 4, `time=8`:
+Protocol adopted from `lab/split` (headed Chromium/real GPU, 1000×800, settle = `frameCount > 30`
++ 3000 ms), plus seed pinning and full-resolution metrics (`scripts/lab-repeat.mjs`), n = 4:
 
 | arm | mean lum (mean ± sd, range) | lit >20 % (mean ± sd, range) |
 |---|---|---|
 | hex (`knob_161=0`) | 14.34 ± 0.42 (13.62–14.62) | **17.38 ± 0.84 (15.92–17.91)** |
 | kiku (`knob_161=1`) | 14.82 ± 0.30 (14.54–15.31) | **10.81 ± 0.73 (9.93–11.86)** |
 
-- **Mean luminance: no usable difference.** kiku is nominally +3.3 %, and the ranges overlap. Any
-  single-shot mean-luminance claim here — in either direction — is inside the noise.
-- **Lit coverage: −37.8 %, and the ranges do not overlap at all** (hex min 15.92 > kiku max 11.86).
-  That is the real, robust effect, and it is caused by the bake defect above.
+- **Mean luminance: no usable difference in my run** (kiku nominally +3.3 %, ranges overlap).
+- **Lit coverage: −37.8 %, ranges non-overlapping.**
 
-**This reconciles kiku with tomoe rather than contradicting it.** kiku's mean luminance also comes
-out slightly *up*, exactly like tomoe's. The disagreement was never real — `meanLum` simply does not
-discriminate these arms. **Decide the counter-ratchet question on lit coverage, not on mean**, and
-**fix the bake first**: compensating now would bake the defect in.
+A later fleet measurement found **all 11 motifs brighten (+30–43 %)** at full resolution under
+proper controls. My kiku meanLum moves the same *direction* but far less; the two were taken at
+different viewport/zoom, so treat the fleet number as the headline and mine as same-sign
+corroboration. Either way this confirms my withdrawal of the claim that tomoe's brightening was a
+downsampling artifact — it was not.
 
-> An earlier note of mine guessed tomoe's brightening was a downsampling artifact. That guess was
-> wrong and is withdrawn. The downsampling trap is real (a 160×160 downsample of these same frames
-> reports kiku *brighter*, 12.62 → 15.02, flipping the sign of the coverage result) and
-> `lab/fill`'s `lab-metrics.mjs` does resample to 384 px wide — but it is not what explains tomoe.
+> A downsampling trap is real, separately: a 160×160 downsample of these same frames reports kiku
+> *brighter* (12.62 → 15.02), flipping the sign of the coverage result, and `lab/fill`'s
+> `lab-metrics.mjs` resamples to 384 px wide before measuring.
 
 ## Reproducibility — pinning the seeds cuts the spread ~3×
 
-The ±8 % irreproducibility is **substantially seed-driven, not only `lattice-nav` real-time state.**
 `index.js` seeds `seed..seed4` with `Math.random()` into `localStorage` (`paperCranes.seeds`), and
 `seed3`/`seed4` drive lattice twist and swirl, so a fresh browser context re-rolls the picture on
-every load. Same arm, n = 4, pinned vs not:
+every load. Same arm, n = 4:
 
 | | mean lum spread | lit % spread | distinct seed sets |
 |---|---|---|---|
-| kiku, seeds **pinned** | **5.2 %** | **17.8 %** | 1 |
-| kiku, seeds **unpinned** | 9.3 % | **32.6 %** | 4 |
+| seeds **pinned** | **5.2 %** | **17.8 %** | 1 |
+| seeds **unpinned** | 9.3 % | **32.6 %** | 4 |
 
-Unpinned mean-luminance spread (9.3 %) is essentially the ±8 % being reported fleet-wide. Pinning
-via `addInitScript` before any page script runs (see `scripts/lab-shot.mjs` / `lab-repeat.mjs`)
-roughly halves it, and cuts coverage spread by ~2.7×. **Recommended for every teammate.**
+Unpinned mean-luminance spread (9.3 %) is essentially the ±8 % reported fleet-wide. Pinning via
+`addInitScript` before any page script runs roughly halves it. **Recommended for every teammate.**
 
 ## Boundary crossings per radial direction (the candidate predictor)
 
-720 rays from the motif centre:
+720 rays from the motif centre (alpha-based, so never affected by the canvas bug):
 
 | metric | kiku |
 |---|---|
@@ -139,7 +153,18 @@ roughly halves it, and cuts coverage spread by ~2.7×. **Recommended for every t
 | rays crossing 3× (the deep notches) | 26 / 720 (4 %) |
 | radius modulation (`1 − rmin/rmax`) | **0.277** (rmin 331 px, rmax 458 px) |
 
-**kiku scores LOW on this predictor, not high.** It is star-convex: a ray from the centre exits
-exactly once, 12-fold or not. Its 12-fold-ness is *angular* frequency plus a 28 % radius wobble, not
-radial crossings. The predictor survives — a low count correctly anticipates the mild scalloped
-restyling the sheet shows — but the prediction that kiku would score high does not.
+**kiku scores LOW on this predictor, not high.** It is star-convex: a ray exits exactly once,
+12-fold or not. Its 12-fold-ness is *angular* frequency plus a 28 % radius wobble. The predictor
+survives — a low count correctly anticipates the mild scalloped restyling — but the prediction that
+kiku would score high does not.
+
+## The instrument (the only edit to the substrate's logic)
+
+Two uniforms, both pure diagnostics — **do not merge into `1.frag`**:
+
+- `onlyLevel` — draw exactly one fold level. `-1` = all levels (normal). Added *after* the fold, so
+  geometry is untouched.
+- `flatLevels` — bypass the depth window (`gLevelOpen`), so a single level isn't dimmed by depth.
+
+⚠ Both default to `0.0` when absent from the URL, and `onlyLevel = 0` draws nothing (level 0 is
+below `FIRST`). **Always pass `onlyLevel=-1` for a full render.**
