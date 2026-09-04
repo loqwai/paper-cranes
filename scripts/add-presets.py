@@ -31,7 +31,7 @@ for L in looks:
         "&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls"
         "&image=images/beads/mon-kikyo.png&knob_161=1&knob_168=0.9&knob_169=0.28"
         "&autofly=1&wavelet=true&onset_refractory_ms=380&fullscreen=true"
-        f"&theme={L['theme']}&paletteShift={L['ps']}&navZoom={L['z']}"
+        f"&theme={L['theme']}&paletteShift0={L['ps']}&navZoom0={L['z']}"
         f"&name={quote(L['name'])}"
     )
     lines.append(f"//{url}")

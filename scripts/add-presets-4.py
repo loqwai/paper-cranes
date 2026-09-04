@@ -38,8 +38,8 @@ def url(mon, theme, ps, name, legible=1, k169="0.60", z="0.14"):
         f"{HOST}/?shader=redaphid/wip/lattice-bead/4"
         "&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls"
         f"&image=images/beads/mon-{mon}.png&knob_161=1&knob_168=1.0&knob_169={k169}"
-        f"&legible={legible}&navZoom={z}&autofly=1&wavelet=true&onset_refractory_ms=380"
-        f"&fullscreen=true&theme={theme}&paletteShift={ps}&name={quote(name)}"
+        f"&legible={legible}&navZoom0={z}&autofly=1&wavelet=true&onset_refractory_ms=380"
+        f"&fullscreen=true&theme={theme}&paletteShift0={ps}&name={quote(name)}"
     )
 
 

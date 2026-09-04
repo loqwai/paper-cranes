@@ -31,9 +31,30 @@ export function make(cranes) {
     // navZoom=0.432 never applied and it was sitting 2.3x more zoomed in than the tuned state.)
     const _q = new URLSearchParams(location.search)
     const _num = (k, d) => { const v = parseFloat(_q.get(k)); return Number.isFinite(v) ? v : d }
-    let navX = _num('navX', 0), navY = _num('navY', 0)   // accumulated world position — never resets (no snap-back)
+    // SEED-ONLY ALIASES (bugfix 2026-09-04). The plain `?navZoom=` seed above still works, but
+    // feature precedence has FLIPPED since it was written. It is now
+    //     measuredAudio < wavelet < CONTROLLER < urlParams < manualFeatures
+    // so a `?navZoom=` in the URL is re-applied EVERY FRAME on top of whatever the finger just
+    // did: the seed lands, and then every subsequent gesture is silently discarded.
+    //
+    // Measured on the live rig with ?navZoom=0.14 present:
+    //     drag  → navX 0 → -0.288, navY 0 → 0.1475   (pan fine — navX/navY were NOT in the URL)
+    //     wheel → navZoom 0.14 → 0.14                (DEAD)
+    //     pinch → navZoom 0.14 → 0.14                (DEAD)
+    // So any preset carrying a camera position disables the matching gesture — and carrying one
+    // is the entire point of a preset. paletteShift/warpGrow are worse: they are PERMANENT
+    // accumulations a drop is meant to grow, so a preset freezes the one thing that makes the
+    // look transform over a show.
+    //
+    // Stripping the key from the URL after seeding does NOT work: the jam page's ParamsManager
+    // re-syncs its own state back into the URL, so it reappears (verified live). The fix that
+    // does work is a seed-only NAME the shader never reads and nothing re-syncs. Presets should
+    // use `?navZoom0=`; `?navZoom=` is kept for the many existing presets that use it, and still
+    // pins, which is the documented old behaviour rather than a silent change under them.
+    const _seed = (k, d) => _num(k + '0', _num(k, d))
+    let navX = _seed('navX', 0), navY = _seed('navY', 0)   // accumulated world position — never resets (no snap-back)
     let velX = 0, velY = 0          // momentum, for a glide after release
-    let zoom = _num('navZoom', 1.0) || 1.0   // multiplicative zoom (1 = default; >1 zoomed in)
+    let zoom = _seed('navZoom', 1.0) || 1.0   // multiplicative zoom (1 = default; >1 zoomed in)
     let lastX = 0, lastY = 0        // previous finger position (0..1)
     let pinchDist0 = 0, pinchZoom0 = 1
     let mode = 0                    // 0 idle · 1 pan · 2 pinch
@@ -46,7 +67,7 @@ export function make(cranes) {
     // ── PERMANENT live mutation ── an extreme sound (a big drop) permanently rotates the palette
     // and grows the structural warp, so the look transforms over the show and never returns to the
     // start — rewarding people for going hard. These accumulate and never reset (within a session).
-    let paletteShift = _num('paletteShift', 0), warpGrow = _num('warpGrow', 0), mutation = 0, mutCooldown = 0
+    let paletteShift = _seed('paletteShift', 0), warpGrow = _seed('warpGrow', 0), mutation = 0, mutCooldown = 0
     let lastMutSection = null   // sectionMode at the last mutation — one mutation per real drop   // seeded from URL too: these are PERMANENT accumulations, so a preset that captured them mid-show must restore them
 
     const xy = e => { const t = e.touches ? e.touches[0] : e; return [t.clientX / innerWidth, t.clientY / innerHeight] }
