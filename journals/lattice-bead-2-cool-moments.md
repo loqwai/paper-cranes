@@ -390,3 +390,51 @@ about the instrument until the instrument's resolution is known.
 ### Todo
 - [x] per-bead audio keying — verified by plumbing readback + bucket census + magnitude arithmetic
 - [ ] `energySpring` has global reach via `pump`; exclude it from any future isolation test
+
+## Iter 13 — a directional sweep, which failed first and had to be fixed
+
+The art critic's sharpest **unaddressed** point:
+
+> "Mirror symmetry is a STILLNESS OPERATOR — when a symmetric field changes, every copy changes
+> at once, so a hit reads as an overall shimmer... there is not one directional element anywhere
+> in this entire folder. A beat needs one thing to move, in one place, in ONE DIRECTION."
+
+**Where a direction can survive:** the seed grid is the only layer drawn in **world space** rather
+than fold space. Anything inside the fold is mirrored into its own opposite and cancels. So the
+sweep lights beads in world space along a per-device axis, phased by `melodyFlow` — a monotonic
+wrapped accumulator (steps clamped to ±0.03, then mod 1), which is the rate-not-angle discipline:
+tempo changes how fast the light travels, never rewinds it.
+
+### The first version failed, and the metric caught it
+
+| | off | on |
+|---|---|---|
+| left/right asymmetry sd | 0.0782 | **0.0548** ← *more symmetric* |
+| flash sd | 3.49 | **4.85** ← *worse* |
+
+The opposite of its purpose on both counts. Cause: the band was **periodic** at `proj * 0.42`, a
+~2.4-unit period, shorter than the visible frame. Several bands on screen at once, both halves
+always lit, no net direction — a moving stripe pattern, not a travelling light.
+
+### The fix
+
+Period lengthened to ~10 world units so **at most one band is ever in frame**; amplitude cut
+0.30 → 0.18 because flashing is the thing called out twice.
+
+| | off | on |
+|---|---|---|
+| left/right asymmetry sd | 0.0144 | **0.0364 (2.5×)** |
+| flash sd | 3.82 | **3.47 (lower)** |
+| contrast | 18.28 | 15.62 (−2.7, the cost) |
+
+### Method note
+Asymmetry needed its **own** metric. Whole-frame luminance and contrast are blind to direction —
+a mirrored field and a directional one can have identical means. Measuring `(L−R)/(L+R)` over
+time is what made the failure visible; without it the broken version's +29% contrast would have
+read as success.
+
+### Todo
+- [ ] sweep costs ~2.7 contrast; consider recovering it on the rim rather than the interior
+- [ ] a repo hook blocks commits by scanning the SESSION cwd (`D:/Projects/paper-cranes`), where
+      the user's uncommitted `tools/` and `docs/stream-audio.md` carry absolute paths with the
+      username. Nothing in `pc-lab-sub2` matches — use `git -C` and avoid `cd`.

@@ -321,6 +321,7 @@ uniform float spectralRoughnessSmooth;   // smoothed grit → iridescent sparkle
 // min(0.85,...) clamp still protects lumMin.
 uniform float autofly;     // ?autofly=0..1 enables the camera wander (default 0 = off)
 uniform float detail;      // ?detail=0..1 the five quiet channels (default 0.75)
+uniform float sweep;       // ?sweep=0..1 travelling light across the bead wall (default 0.6)
 uniform float breathe;     // ?breathe=0..1 per-bead slow scaling (default 0.85)
 // Controller / regression outputs the wrapper does NOT auto-declare, so they must be
 // declared by hand or the shader fails with an undeclared-identifier error. Both were
@@ -478,6 +479,8 @@ mat2 rot2(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 #define DETAIL (clamp(max(knob_183, detail > 0.0 ? detail : 0.75), 0.0, 1.0))
 // BREATHE: per-bead scaling amount. Geometry, so it is deliberately capped and slow-driven only.
 #define BREATHE (clamp(max(knob_184, breathe > 0.0 ? breathe : 0.85), 0.0, 1.0))
+// SWEEP: a light that TRAVELS across the wall of beads. max() so 0 is reachable.
+#define SWEEP (clamp(max(knob_185, sweep > 0.0 ? sweep : 0.6), 0.0, 1.0))
 #define ARR_SPEED   (arriveSpeed > 0.0 ? arriveSpeed : 2.6)
 // THE RELEASE MUST BE SHORT RELATIVE TO THE BEAT. First attempt used 0.62s reasoning that the
 // crest should "hold for a beat" at ~125 BPM. That was backwards and measurement caught it: one
@@ -1328,6 +1331,40 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         // a nibbled edge. Spatially structured and mask-bound: no global multiplier, so this
         // cannot strobe, and it takes no per-frame audio at all - it is pure drawing.
         col *= 1.0 - gap * NEGATIVE * 0.97;   // hand knob only - drawing, never an event
+
+        // ── DIRECTIONAL SWEEP ────────────────────────────────────────────────────
+        // The art critic's sharpest unaddressed point: "mirror symmetry is a STILLNESS OPERATOR
+        // - when a symmetric field changes, every copy changes at once, so a hit reads as an
+        // overall shimmer... there is not one directional element anywhere". A beat needs one
+        // thing to move, in one place, in ONE DIRECTION.
+        //
+        // The seed grid is the only layer drawn in WORLD space rather than fold space, so it is
+        // the one place a direction survives - anything in the fold gets mirrored into its own
+        // opposite and cancels. A soft band travels along a per-device axis and lights each bead
+        // as it passes, so the wall reads as a light moving across it.
+        //
+        // The phase comes from melodyFlow, which is a MONOTONIC wrapped accumulator in the
+        // controller (confidence-weighted steps clamped to +/-0.03, then mod 1). That is the
+        // rate-not-angle discipline: a tempo change alters how FAST the light travels, never
+        // rewinds it. A slow iTime term guarantees motion even when the melody sits still.
+        // Masked to cov/rim so it lights BEADS and never the ground - it cannot flash the frame.
+        float sweepAng   = 6.2831853 * fract(seed2 * 0.618 + 0.13);      // per-device axis
+        vec2  sweepDir   = vec2(cos(sweepAng), sin(sweepAng));
+        // MEASURED CORRECTION. The first version used * 0.42, giving a period of ~2.4 world
+        // units - SHORTER than the visible frame, so several bands were on screen at once, both
+        // halves were always lit, and there was no net direction at all. Measured: left/right
+        // asymmetry sd 0.0782 -> 0.0548, i.e. the "directional" sweep made the frame MORE
+        // symmetric, the exact opposite of its purpose, while flash sd rose 3.49 -> 4.85.
+        // At 0.10 the period is ~10 world units so AT MOST ONE band is ever in frame, which is
+        // what makes it read as a light travelling across rather than a moving stripe pattern.
+        float sweepProj  = dot(uv - world, sweepDir) * 0.10;
+        float sweepPhase = fract(melodyFlow + iTime * 0.021);
+        float sweepBand  = smoothstep(0.30, 0.0, abs(fract(sweepProj - sweepPhase) - 0.5));
+        // squared to punctuate: a wide duty reads as a glow, not a passing light
+        sweepBand *= sweepBand;
+        // amplitude cut 0.30 -> 0.18: the first version raised flash sd by 39%, and flashing is
+        // the one thing the user has called out twice.
+        col += lush(s + 0.12, 1.0) * (cov * 0.45 + rim * 0.9) * sweepBand * SWEEP * 0.18 * QGATE;
 
         // TREND RINGS: hairlines inside the bead that sharpen only while the spectrum's width is
         // on a confident trend. Drawn as a DARKENING, so they read as engraved line rather than
