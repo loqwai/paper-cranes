@@ -536,3 +536,54 @@ high-frequency.
 ### Todo
 - [x] ceiling question — settled: real peak is 179/255, not a metric artifact
 - [ ] true highlights need their own mechanism (a separate pass), not larger coefficients
+
+## Iter 16 — kikyo vs ume is a SOURCE ART bug, not a shader bug
+
+Re-ran the critic's failing pairs on `detail.frag`, which has since gained the eroded-band gaps
+and trend rings. Separation measured 1:1 on a 420px native crop:
+
+| pair | mad | % pixels differing |
+|---|---|---|
+| **kikyo vs ume** (failed) | **6.15** | **15.9%** |
+| suhama vs katabami (failed) | 11.95 | 30.6% |
+| kikko vs hakkaku (both PASSED — control) | 14.89 | 36.5% |
+
+**suhama/katabami is fixed** — the interior structure lifted it to control levels.
+**kikyo/ume is not**, at under half the separation of a pair that reads as distinct.
+
+### Why no shader change can fix it
+
+Erosion rings follow the outline, so they cannot separate two shapes whose outlines already
+match. Measuring the **baked source art** directly — rotation-aligned radial profile distance,
+before any shader runs:
+
+| pair | profile distance |
+|---|---|
+| **kikyo vs ume** | **0.0193** |
+| suhama vs katabami | 0.0786 (4× more different) |
+| kikko vs hakkaku | 0.1409 (7× more different) |
+| kikyo vs kikko | 0.0924 |
+
+**kikyo and ume are 4–7× more alike than any other pair in the artwork itself.** kikyo's max
+radial sharpness is **0.0175** against ume's **0.0150** — the "pointed" petals are no sharper
+than the round ones.
+
+### The generator says so itself
+
+`nfc-bead/beads/glow-set/japanese.py::kikyo` documents widening the shoulders to 0.30R and
+opening the tip angle to ~67° so it reads as a crest rather than a generic five-pointed star,
+and states outright that *"the difference from ume is now only the tip"*. The softening was
+deliberate; measurement says it went far enough to erase **the only feature** distinguishing the
+two crests.
+
+**This affects the printed beads as well as the visuals**, so it is a decision for the artist,
+not a shader fix. Sharpening the tip (67° → ~45°) or narrowing the shoulders would restore it.
+
+### Method
+Measure the SOURCE when two rendered things won't separate. Three ticks of shader work could
+never have fixed this; the radial-profile comparison settled it in one measurement.
+
+### Todo
+- [x] suhama/katabami — fixed by the interior structure
+- [ ] kikyo tip angle is an ARTIST decision in japanese.py (affects printed beads)
+- [ ] tomoe remains structurally impossible (rotational symmetry vs a mirror fold)
