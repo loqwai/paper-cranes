@@ -422,3 +422,34 @@ Added 2026-09-03 from the first `/lab` wave. Every item below was a confident, p
   high-contrast hexagons) read at least as well as `ume` and have never been nominated.
 - **The lattice is very dark at these params** (meanLum 9–13 / 255). A brightness counter-ratchet is
   likely needed before it is stage-ready.
+
+---
+
+## 15. THE `fractal()` CONSTRAINT IS LIFTED (user, 2026-09-03)
+
+Sections 3 and 7 say **"Do not rewrite `fractal()`."** That was a previous session's call, not the
+user's. **The user has lifted it: "We can absolutely rewrite fractal(). We can do whatever we want."**
+
+This matters because wave 1's terminal finding — *the goal is unreachable without rewriting
+`fractal()`* — was only terminal because of that self-imposed rule. **The goal is reachable.** The
+blocker is one line:
+
+```glsl
+p = 1.0 - abs(s * fract(p - 0.5) - s * 0.5);   // 2.frag:303 — mirror-repeat fold
+```
+
+A triangle wave. It mirrors, and it lands the drawn cell at `p = 0`, a **corner** of the folded
+domain — so all four screen quadrants map to one fold quadrant and the lattice can only ever show
+the fold's 4-fold symmetry, never the motif's. (Note this is why removing the separate `abs(p)` at
+the sampling site is a 0.36% no-op: the fold has already done the mirroring.)
+
+### THE ACTUAL GOAL, restated by the user
+
+> *"Let's give people something to gasp about, as they understand the bead on their kandi
+> represents the visual on the nfc chip."*
+
+Someone wearing the physical bead taps its NFC chip and the wall becomes **their bead**. The
+acceptance test is therefore not a metric — it is **recognition**: a stranger, at a distance, in the
+dark, without being told, sees their own bead. Nameability is the whole product, not a nice-to-have.
+
+Wave 1 measured that the current fold cannot deliver that. Wave 2 is allowed to change the fold.
