@@ -891,7 +891,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     //    image flows in colour with the music. Smoothed contours only — no jitter. QGATE so
     //    a silent room can't flash the hue. Plus per-area / per-device / permanent-drop offsets.
     float s = field * 0.30   /* B9: 0.65->0.30 one hue family in the body; B6: narrower hue spread across the crest so one colour family is the body (critic r4) */
-            + regionHue(world) * max(0.0, 1.0 + EXB(knob_155, 2.0))   // K155 REGION HUE: how strongly WORLD POSITION re-paints the palette. 0 = one colour everywhere;
+            + (regionHue(world) - regionHue(vec2(0.0))) * max(0.0, 1.0 + EXB(knob_155, 2.0))   /* B12: zero at the rest position so the palette at rest no longer depends on seed3 */   // K155 REGION HUE: how strongly WORLD POSITION re-paints the palette. 0 = one colour everywhere;
             + bTime * 0.002                                   // vj2 iter 5: was 0.012 = a full hue turn every ~4 min (0.24 turns/min — 8× the user's 'muted, slow' tolerance and the biggest single palette mover). Now ~1 turn / 25 min.
             + (melodyFlow * 0.05 + pitchClassMean * 0.10) * QGATE   // vj2 iter 4: MELODY → palette, but SLOW. melodyFlow slews 0.03/frame (a melodic leap re-tints the whole field 0.075 in ~0.3 s = the palette 'flash' the meter caught: hue 0.46→0.61 inside one track). pitchClassMean is the ~8 s rolling KEY estimate — it carries 2/3 of the weight now. (was melodyFlow*0.15; 0.32 before iter 17)
             + waveletCentroidSpring * 0.07 * QGATE        // BRIGHTNESS → hue tint (0.14 → 0.07)
@@ -899,12 +899,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
             + (sectionMode - (1.0 - sectionMix)) * 0.03       // each DROP glides the palette 0.03 further (was 0.07) over its ~4s crossfade (mix eases the step; no snap)
             + DIAL_HUE                                        // dial 1 (knob_2): touch palette rotation
             + paletteShift * 0.35                             // permanent live mutation (B3: x0.35, a drop step was a 0.05-0.12 turn hue jump)
-            + seed;                                           // per-device base palette identity
+            + mix(seed, 0.74, 0.85);                          // B12: mostly FIXED base (violet body, pink rim at rest; critic r7 look), 15% per-device
     // vj2 beat2 (2026-09-04): SLOW hue from the music's KEY and TIMBRE medians. 500-frame medians
     // move over seconds, never per frame, so the palette follows the slowest music (user: "medians or slopes").
     s += (pitchClassMedian - 0.5) * 0.30 + (spectralCentroidMedian - 0.35) * 0.25 + (spectralEntropyMedian - 0.6) * 0.12;   // SLOWHUE-B2 high = every screen you pan to is a different colourway.
     vec3 col = lush(s, lum);                                  // (brightness handled by the bloom below)
-    col += lush(s + 0.12 + 0.05 * sin(evoPhase * 0.7), 0.9) * wave * max(0.0, 0.6 + EXB(knob_158, 1.1));   // K158 ACCENT: strength of the travelling pulse accent.   // pulse accent (hue-shifted, brighter); the SET CLOCK swings the accent 0.08..0.28 off base over minutes
+    col += lush(s + 0.04 + 0.02 * sin(evoPhase * 0.7), 0.9) * wave * max(0.0, 0.30 + EXB(knob_158, 1.1));   /* B12: accent in the body hue family and half gain - it was the moss-green mottling and the swell (critic r9) */   // K158 ACCENT: strength of the travelling pulse accent.   // pulse accent (hue-shifted, brighter); the SET CLOCK swings the accent 0.08..0.28 off base over minutes
 
     // BRIGHT, saturated background FIELD — no black voids; the whole screen emits light so it
     // pops off the phone at night and reads from across the room.
