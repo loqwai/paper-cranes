@@ -1,567 +1,203 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#0a0a14">
-<title>taco NFC writer</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0812">
+<title>Bead NFC writer</title>
 <style>
-  :root {
-    color-scheme: dark;
-    --bg: #0a0a14;
-    --fg: #e5e7f0;
-    --dim: #6b7080;
-    --navy: #1a3470;
-    --skyblue: #6cb0e8;
-    --shadow: #1a1a1a;
-    --taco-demo: #f39c12;
-    --taco-direct-kick: #e74c3c;
-    --taco-cubic-ease: #2ecc71;
-    --taco-outline-tunnel: #34495e;
-    --taco-rainbow-plume: #9b59b6;
-    --taco-confident-kick: #c0392b;
-    --taco-live-iter: #16a085;
-    --taco-tortilla-cosmic: #e67e22;
-    --taco-region-mask: #6cb0e8;
-    --taco-plasma: #ff7eb6;
-    --taco-seamless: #5fd0c8;
-    --iris: #9b7ad0;
-    --ok: #2ecc71;
-    --err: #e74c3c;
-    --warn: #f39c12;
-  }
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--fg);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-    min-height: 100vh;
-    min-height: 100dvh;
-    display: flex;
-    flex-direction: column;
-    padding: 16px;
-    gap: 16px;
-  }
-  header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-  }
-  h1 {
-    font-size: 18px;
-    margin: 0;
-    font-weight: 500;
-    letter-spacing: 0.02em;
-  }
-  .progress {
-    font-size: 14px;
-    color: var(--dim);
-    font-variant-numeric: tabular-nums;
-  }
-  .current {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  .current.color-navy { border-left: 4px solid var(--navy); }
-  .current.color-skyblue { border-left: 4px solid var(--skyblue); }
-  .current.color-shadow { border-left: 4px solid var(--shadow); }
-  .current.color-taco-demo { border-left: 4px solid var(--taco-demo); }
-  .current.color-taco-direct-kick { border-left: 4px solid var(--taco-direct-kick); }
-  .current.color-taco-cubic-ease { border-left: 4px solid var(--taco-cubic-ease); }
-  .current.color-taco-outline-tunnel { border-left: 4px solid var(--taco-outline-tunnel); }
-  .current.color-taco-rainbow-plume { border-left: 4px solid var(--taco-rainbow-plume); }
-  .current.color-taco-confident-kick { border-left: 4px solid var(--taco-confident-kick); }
-  .current.color-taco-live-iter { border-left: 4px solid var(--taco-live-iter); }
-  .current.color-taco-tortilla-cosmic { border-left: 4px solid var(--taco-tortilla-cosmic); }
-  .current.color-taco-region-mask { border-left: 4px solid var(--taco-region-mask); }
-  .current.color-taco-plasma { border-left: 4px solid var(--taco-plasma); }
-  .current.color-taco-seamless { border-left: 4px solid var(--taco-seamless); }
-  .current.color-iris { border-left: 4px solid var(--iris); }
-  .label {
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--dim);
-  }
-  .next-name {
-    font-size: 24px;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    word-break: break-all;
-  }
-  .next-url {
-    font-size: 13px;
-    color: var(--dim);
-    word-break: break-all;
-    line-height: 1.4;
-  }
-  .write-btn {
-    flex: 1;
-    min-height: 200px;
-    background: var(--ok);
-    color: #fff;
-    border: none;
-    border-radius: 16px;
-    font-size: 28px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 120ms;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-  }
-  .write-btn:active { background: #25a058; }
-  .write-btn:disabled {
-    background: var(--dim);
-    opacity: 0.6;
-  }
-  .write-btn.writing { background: var(--warn); }
-  .write-btn.error { background: var(--err); }
-  .controls {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 8px;
-  }
-  .controls button {
-    padding: 12px;
-    background: rgba(255, 255, 255, 0.06);
-    color: var(--fg);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    font-size: 14px;
-    cursor: pointer;
-  }
-  .controls button:active { background: rgba(255, 255, 255, 0.12); }
-  .status {
-    font-size: 14px;
-    min-height: 20px;
-    padding: 8px 12px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.04);
-    text-align: center;
-  }
-  .status.ok { color: var(--ok); }
-  .status.err { color: var(--err); }
-  .status.warn { color: var(--warn); }
-  .queue {
-    background: rgba(255, 255, 255, 0.02);
-    border-radius: 8px;
-    padding: 8px;
-    max-height: 240px;
-    overflow-y: auto;
-    font-size: 12px;
-    line-height: 1.5;
-  }
-  .preview {
-    aspect-ratio: 1 / 1;
-    width: 100%;
-    max-width: 360px;
-    margin: 0 auto;
-    border-radius: 12px;
-    overflow: hidden;
-    background: #000;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    position: relative;
-  }
-  .preview iframe {
-    width: 100%;
-    height: 100%;
-    border: 0;
-    display: block;
-    pointer-events: none;
-  }
-  .preview-label {
-    position: absolute;
-    top: 6px;
-    left: 8px;
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: rgba(255, 255, 255, 0.6);
-    background: rgba(0, 0, 0, 0.4);
-    padding: 2px 6px;
-    border-radius: 4px;
-    pointer-events: none;
-  }
-  .queue summary {
-    cursor: pointer;
-    color: var(--dim);
-    padding: 4px 8px;
-  }
-  .queue ol {
-    margin: 8px 0 0;
-    padding-left: 24px;
-  }
-  .queue li {
-    padding: 2px 0;
-    cursor: pointer;
-    color: var(--dim);
-  }
-  .queue li.done { text-decoration: line-through; opacity: 0.5; }
-  .queue li.current { color: var(--fg); font-weight: 600; }
-  .unsupported {
-    background: var(--err);
-    color: #fff;
-    padding: 16px;
-    border-radius: 8px;
-    text-align: center;
-    line-height: 1.5;
-  }
+  :root { color-scheme: dark; --bg:#0b0812; --card:#161022; --ink:#f3ecff; --dim:#9a8fb3; --pink:#ff4fa3; --violet:#7b5cff; --ok:#3ddc84; --bad:#ff5d5d; --warn:#ffb545; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-tap-highlight-color:transparent; }
+  header { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:12px 14px; border-bottom:1px solid #241a36; }
+  header h2 { margin:0 auto 0 0; font-size:15px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); }
+  select { background:#1f1630; color:var(--ink); border:1px solid #3a2b55; border-radius:10px; padding:8px 10px; font-size:14px; max-width:46vw; }
+  main { max-width:720px; margin:0 auto; padding:14px 14px 60px; }
+  .card { background:var(--card); border-radius:22px; padding:18px 16px 16px; text-align:center; box-shadow:0 10px 40px #0007; }
+  .sil { width:min(62vw,300px); aspect-ratio:1; margin:6px auto 10px; background:var(--ink);
+         -webkit-mask:var(--m) center/contain no-repeat; mask:var(--m) center/contain no-repeat;
+         filter:drop-shadow(0 0 22px #ff4fa366); }
+  .sil.dup { background:linear-gradient(135deg,var(--ink) 55%,var(--warn)); }
+  h1 { margin:0; font-size:44px; letter-spacing:.02em; line-height:1.05; }
+  .jp { color:var(--dim); font-size:17px; margin-top:4px; }
+  .pos { color:var(--dim); font-size:13px; margin-top:8px; letter-spacing:.1em; text-transform:uppercase; }
+  .count { font-size:20px; margin:10px 0 4px; }
+  .count b { color:var(--ok); font-size:30px; }
+  .warn { color:var(--warn); font-size:14px; min-height:20px; margin:4px 0 8px; }
+  button { border:0; border-radius:14px; padding:14px 16px; font-size:16px; font-weight:600; color:var(--ink); background:#2a1f42; cursor:pointer; }
+  button:active { transform:scale(.98); }
+  button.big { width:100%; padding:22px 16px; font-size:22px; background:linear-gradient(135deg,var(--violet),var(--pink)); box-shadow:0 8px 30px #ff4fa355; }
+  button.big[disabled] { filter:grayscale(.6) brightness(.6); }
+  button.big.armed { animation:pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 50% { box-shadow:0 8px 44px #ff4fa3aa; } }
+  .status { min-height:24px; margin:12px 0 6px; font-size:15px; color:var(--dim); }
+  .status.ok { color:var(--ok); } .status.bad { color:var(--bad); }
+  .row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:8px; }
+  details { margin-top:12px; text-align:left; color:var(--dim); font-size:13px; }
+  code { display:block; word-break:break-all; background:#0d0916; padding:10px; border-radius:10px; margin-top:6px; color:#c9bfe0; font-size:12px; }
+  code.inline { display:inline; padding:2px 6px; margin:0; }
+  .bytes { margin-top:6px; }
+  .bytes.bad { color:var(--bad); font-weight:700; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(104px,1fr)); gap:10px; margin-top:18px; }
+  .tile { background:var(--card); border-radius:16px; padding:10px 6px 8px; text-align:center; cursor:pointer; border:2px solid transparent; }
+  .tile.cur { border-color:var(--pink); }
+  .tile .s { width:64px; aspect-ratio:1; margin:0 auto 6px; background:var(--ink); -webkit-mask:var(--m) center/contain no-repeat; mask:var(--m) center/contain no-repeat; }
+  .tile .n { font-size:13px; }
+  .tile .c { font-size:12px; color:var(--dim); }
+  .tile .c.done { color:var(--ok); }
+  .notes { margin-top:22px; color:var(--dim); font-size:14px; }
+  .notes p { margin:8px 0; }
+  .notice { display:none; background:#3a1d1d; color:#ffd6d6; border-radius:14px; padding:12px 14px; margin-bottom:12px; font-size:14px; }
+  .notice.show { display:block; }
+  .small { font-size:12px; color:var(--dim); }
+  a { color:var(--dim); }
 </style>
 </head>
 <body>
-
 <header>
-  <h1 id="title">taco NFC writer</h1>
-  <span class="progress" id="progress">0 / 50</span>
+  <h2>Mon beads · NFC writer</h2>
+  <select id="shader" title="which visual the tag opens"></select>
+  <select id="origin" title="which deployment the tag points at"></select>
 </header>
+<main>
+  <div class="notice" id="notice"><strong>Web NFC is not available here.</strong> Use Chrome or Edge on Android over HTTPS. On iPhone, copy the URL below into NFC Tools and write it as a URL record.</div>
 
-<div id="unsupported" class="unsupported" style="display:none">
-  <strong>Web NFC not supported on this browser.</strong><br>
-  Use Chrome/Edge on Android (HTTPS required). On iOS, Web NFC is not available — use NFC Tools instead.
-</div>
+  <section class="card">
+    <div class="sil" id="sil"></div>
+    <h1 id="name">&mdash;</h1>
+    <div class="jp" id="jp"></div>
+    <div class="pos" id="pos"></div>
+    <div class="count">written <b id="n">0</b> &times;</div>
+    <div class="warn" id="warn"></div>
+    <button class="big" id="write">Tap a bead to write</button>
+    <div class="status" id="status">Hold the bead's bottom half (the tag pocket) flat against the back of the phone.</div>
+    <div class="row">
+      <button id="prev">&#9664; prev shape</button>
+      <button id="undo">undo &minus;1</button>
+      <button id="next">next shape &#9654;</button>
+    </div>
+    <details>
+      <summary>URL written to the tag</summary>
+      <code id="url"></code>
+      <div class="bytes" id="bytes"></div>
+    </details>
+  </section>
 
-<div class="current" id="current">
-  <span class="label">Next tag</span>
-  <span class="next-name" id="next-name">—</span>
-  <span class="next-url" id="next-url">—</span>
-</div>
+  <section class="grid" id="grid"></section>
 
-<div class="preview" id="preview-wrap">
-  <span class="preview-label" id="preview-label">preview</span>
-  <iframe id="preview" title="shader preview" sandbox="allow-scripts allow-same-origin"></iframe>
-</div>
-
-<button class="write-btn" id="write" disabled>Tap a tag to write</button>
-
-<div class="status" id="status">Ready.</div>
-
-<div class="controls">
-  <button id="prev">&larr; Prev</button>
-  <button id="skip">Skip &rarr;</button>
-  <button id="reset">Reset</button>
-</div>
-
-<details class="queue" id="queue-details">
-  <summary>Queue (tap a row to jump)</summary>
-  <ol id="queue"></ol>
-</details>
+  <section class="notes">
+    <p><strong>Bulk flashing:</strong> stay on one shape and tap every bead of that shape. The counter climbs and each write vibrates. Then press <em>next shape</em>. Counts are remembered on this phone.</p>
+    <p><strong>Verify</strong> a bead by tapping it from the home screen: the popup must open the visual and the crest must be nameable on screen. Tags stay rewritable; nothing here locks them.</p>
+    <p><strong>Offline note:</strong> the tag stores only a URL. With no signal at the site the phone needs the visual already cached (open the same URL once beforehand so the PWA caches it) or a hotspot.</p>
+    <p class="small">Old queues (taco / iris / coat) live in git history: <code class="inline">git show 97aeb1d:nfc-writer.html</code> &middot; <a href="#" id="reset">reset counts</a></p>
+  </section>
+</main>
 
 <script>
-const QUEUES = {
-  taco: [
-    // plasma
-    { name: "taco-1", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
-    { name: "taco-2", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_2=0.62&knob_5=0.07&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
-    { name: "taco-3", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_2=0.24&knob_5=0.14&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
-    { name: "taco-4", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.472&seed2=0.79&seed3=0.108&seed4=0.426&knob_2=0.85&knob_5=0.21&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
-    { name: "taco-5", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.09&seed2=0.408&seed3=0.726&seed4=0.044&knob_2=0.47&knob_5=0.29&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
-    { name: "taco-6", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.708&seed2=0.026&seed3=0.344&seed4=0.662&knob_2=0.09&knob_5=0.36&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
-    { name: "taco-7", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.326&seed2=0.644&seed3=0.962&seed4=0.28&knob_2=0.71&knob_5=0.43&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
-    { name: "taco-8", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.944&seed2=0.262&seed3=0.58&seed4=0.898&knob_2=0.33&knob_5=0.5&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
-    { name: "taco-9", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.562&seed2=0.88&seed3=0.198&seed4=0.516&knob_2=0.94&knob_5=0.57&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
-    { name: "taco-10", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.18&seed2=0.498&seed3=0.816&seed4=0.134&knob_2=0.56&knob_5=0.64&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
-    { name: "taco-11", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.798&seed2=0.116&seed3=0.434&seed4=0.752&knob_2=0.18&knob_5=0.71&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
-    { name: "taco-12", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.416&seed2=0.734&seed3=0.052&seed4=0.37&knob_2=0.8&knob_5=0.79&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
-    { name: "taco-13", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.034&seed2=0.352&seed3=0.67&seed4=0.988&knob_2=0.42&knob_5=0.86&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
-    { name: "taco-14", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.652&seed2=0.97&seed3=0.288&seed4=0.606&knob_2=0.03&knob_5=0.93&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
-    { name: "taco-15", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.271&seed2=0.589&seed3=0.907&seed4=0.225&knob_2=0.65&knob_5=1.0&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
-    // seamless
-    { name: "taco-16", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_1=0.52&knob_4=0.74&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307&fft_size=2048&smoothing=0.3", color: "taco-seamless" },
-    { name: "taco-17", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=0.52&knob_2=0.62&knob_4=0.74&knob_5=0.11&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307&fft_size=2048&smoothing=0.3", color: "taco-seamless" },
-    { name: "taco-18", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=0.52&knob_2=0.24&knob_4=0.74&knob_5=0.22&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307&fft_size=2048&smoothing=0.3", color: "taco-seamless" },
-    { name: "taco-19", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.472&seed2=0.79&seed3=0.108&seed4=0.426&knob_1=0.52&knob_2=0.85&knob_4=0.74&knob_5=0.33&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307&fft_size=2048&smoothing=0.3", color: "taco-seamless" },
-    { name: "taco-20", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.09&seed2=0.408&seed3=0.726&seed4=0.044&knob_1=0.52&knob_2=0.47&knob_4=0.74&knob_5=0.44&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307&fft_size=2048&smoothing=0.3", color: "taco-seamless" },
-    { name: "taco-21", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.708&seed2=0.026&seed3=0.344&seed4=0.662&knob_1=0.52&knob_2=0.09&knob_4=0.74&knob_5=0.56&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307&fft_size=2048&smoothing=0.3", color: "taco-seamless" },
-    { name: "taco-22", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.326&seed2=0.644&seed3=0.962&seed4=0.28&knob_1=0.52&knob_2=0.71&knob_4=0.74&knob_5=0.67&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307&fft_size=2048&smoothing=0.3", color: "taco-seamless" },
-    { name: "taco-23", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.944&seed2=0.262&seed3=0.58&seed4=0.898&knob_1=0.52&knob_2=0.33&knob_4=0.74&knob_5=0.78&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307&fft_size=2048&smoothing=0.3", color: "taco-seamless" },
-    { name: "taco-24", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.562&seed2=0.88&seed3=0.198&seed4=0.516&knob_1=0.52&knob_2=0.94&knob_4=0.74&knob_5=0.89&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307&fft_size=2048&smoothing=0.3", color: "taco-seamless" },
-    { name: "taco-25", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/seamless&image=images/taco-stencil.png&controller=taco-kandi&seed=0.18&seed2=0.498&seed3=0.816&seed4=0.134&knob_1=0.52&knob_2=0.56&knob_4=0.74&knob_5=1.0&knob_6=0.15&knob_7=0.0&knob_8=0.394&knob_10=0.449&knob_11=0.583&knob_12=0.504&knob_13=0.685&knob_14=0.63&knob_15=0.307&fft_size=2048&smoothing=0.3", color: "taco-seamless" },
-    // rainbow-plume
-    { name: "taco-26", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/rainbow-plume&image=images/taco.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_1=1.0&knob_2=0.3&knob_3=1.0&knob_4=1.0&knob_6=0.276&knob_7=0.0&knob_8=0.843&knob_9=0.575&knob_10=0.622&knob_12=0.472&knob_13=0.386&knob_14=1.0&knob_15=0.85&knob_16=0.457&fft_size=2048&smoothing=0.3", color: "taco-rainbow-plume" },
-    { name: "taco-27", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/rainbow-plume&image=images/taco.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=1.0&knob_2=0.92&knob_3=1.0&knob_4=1.0&knob_5=0.62&knob_6=0.276&knob_7=0.0&knob_8=0.843&knob_9=0.575&knob_10=0.622&knob_12=0.472&knob_13=0.386&knob_14=1.0&knob_15=0.85&knob_16=0.457&fft_size=2048&smoothing=0.3", color: "taco-rainbow-plume" },
-    { name: "taco-28", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/rainbow-plume&image=images/taco.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=1.0&knob_2=0.54&knob_3=1.0&knob_4=1.0&knob_5=0.24&knob_6=0.276&knob_7=0.0&knob_8=0.843&knob_9=0.575&knob_10=0.622&knob_12=0.472&knob_13=0.386&knob_14=1.0&knob_15=0.85&knob_16=0.457&fft_size=2048&smoothing=0.3", color: "taco-rainbow-plume" },
-    { name: "taco-29", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/rainbow-plume&image=images/taco.png&controller=taco-kandi&seed=0.472&seed2=0.79&seed3=0.108&seed4=0.426&knob_1=1.0&knob_2=0.15&knob_3=1.0&knob_4=1.0&knob_5=0.85&knob_6=0.276&knob_7=0.0&knob_8=0.843&knob_9=0.575&knob_10=0.622&knob_12=0.472&knob_13=0.386&knob_14=1.0&knob_15=0.85&knob_16=0.457&fft_size=2048&smoothing=0.3", color: "taco-rainbow-plume" },
-    { name: "taco-30", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/rainbow-plume&image=images/taco.png&controller=taco-kandi&seed=0.09&seed2=0.408&seed3=0.726&seed4=0.044&knob_1=1.0&knob_2=0.77&knob_3=1.0&knob_4=1.0&knob_5=0.47&knob_6=0.276&knob_7=0.0&knob_8=0.843&knob_9=0.575&knob_10=0.622&knob_12=0.472&knob_13=0.386&knob_14=1.0&knob_15=0.85&knob_16=0.457&fft_size=2048&smoothing=0.3", color: "taco-rainbow-plume" },
-    { name: "taco-31", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/rainbow-plume&image=images/taco.png&controller=taco-kandi&seed=0.708&seed2=0.026&seed3=0.344&seed4=0.662&knob_1=1.0&knob_2=0.39&knob_3=1.0&knob_4=1.0&knob_5=0.09&knob_6=0.276&knob_7=0.0&knob_8=0.843&knob_9=0.575&knob_10=0.622&knob_12=0.472&knob_13=0.386&knob_14=1.0&knob_15=0.85&knob_16=0.457&fft_size=2048&smoothing=0.3", color: "taco-rainbow-plume" },
-    // confident-kick
-    { name: "taco-32", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/confident-kick&image=images/taco.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_1=0.5&knob_2=0.3&knob_3=0.6&knob_4=0.7&knob_7=0.0&knob_12=0.5&knob_14=0.6&fft_size=2048&smoothing=0.3", color: "taco-confident-kick" },
-    { name: "taco-33", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/confident-kick&image=images/taco.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=0.5&knob_2=0.92&knob_3=0.6&knob_4=0.7&knob_5=0.62&knob_7=0.0&knob_12=0.5&knob_14=0.6&fft_size=2048&smoothing=0.3", color: "taco-confident-kick" },
-    { name: "taco-34", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/confident-kick&image=images/taco.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=0.5&knob_2=0.54&knob_3=0.6&knob_4=0.7&knob_5=0.24&knob_7=0.0&knob_12=0.5&knob_14=0.6&fft_size=2048&smoothing=0.3", color: "taco-confident-kick" },
-    { name: "taco-35", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/confident-kick&image=images/taco.png&controller=taco-kandi&seed=0.472&seed2=0.79&seed3=0.108&seed4=0.426&knob_1=0.5&knob_2=0.15&knob_3=0.6&knob_4=0.7&knob_5=0.85&knob_7=0.0&knob_12=0.5&knob_14=0.6&fft_size=2048&smoothing=0.3", color: "taco-confident-kick" },
-    // live-iter
-    { name: "taco-36", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/live-iter&image=images/taco.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_1=0.5&knob_2=0.3&knob_3=0.6&knob_4=0.6&knob_7=0.0&knob_12=0.5&knob_14=0.6&fft_size=2048&smoothing=0.3", color: "taco-live-iter" },
-    { name: "taco-37", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/live-iter&image=images/taco.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=0.5&knob_2=0.92&knob_3=0.6&knob_4=0.6&knob_5=0.62&knob_7=0.0&knob_12=0.5&knob_14=0.6&fft_size=2048&smoothing=0.3", color: "taco-live-iter" },
-    { name: "taco-38", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/live-iter&image=images/taco.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=0.5&knob_2=0.54&knob_3=0.6&knob_4=0.6&knob_5=0.24&knob_7=0.0&knob_12=0.5&knob_14=0.6&fft_size=2048&smoothing=0.3", color: "taco-live-iter" },
-    { name: "taco-39", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/live-iter&image=images/taco.png&controller=taco-kandi&seed=0.472&seed2=0.79&seed3=0.108&seed4=0.426&knob_1=0.5&knob_2=0.15&knob_3=0.6&knob_4=0.6&knob_5=0.85&knob_7=0.0&knob_12=0.5&knob_14=0.6&fft_size=2048&smoothing=0.3", color: "taco-live-iter" },
-    // cubic-ease
-    { name: "taco-40", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/cubic-ease&image=images/taco.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_1=0.5&knob_2=0.3&knob_3=0.6&knob_4=0.6&knob_7=0.0&knob_12=0.5&knob_14=0.5&fft_size=2048&smoothing=0.3", color: "taco-cubic-ease" },
-    { name: "taco-41", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/cubic-ease&image=images/taco.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=0.5&knob_2=0.92&knob_3=0.6&knob_4=0.6&knob_5=0.62&knob_7=0.0&knob_12=0.5&knob_14=0.5&fft_size=2048&smoothing=0.3", color: "taco-cubic-ease" },
-    { name: "taco-42", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/cubic-ease&image=images/taco.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=0.5&knob_2=0.54&knob_3=0.6&knob_4=0.6&knob_5=0.24&knob_7=0.0&knob_12=0.5&knob_14=0.5&fft_size=2048&smoothing=0.3", color: "taco-cubic-ease" },
-    { name: "taco-43", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/cubic-ease&image=images/taco.png&controller=taco-kandi&seed=0.472&seed2=0.79&seed3=0.108&seed4=0.426&knob_1=0.5&knob_2=0.15&knob_3=0.6&knob_4=0.6&knob_5=0.85&knob_7=0.0&knob_12=0.5&knob_14=0.5&fft_size=2048&smoothing=0.3", color: "taco-cubic-ease" },
-    // outline-tunnel
-    { name: "taco-44", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/outline-tunnel&image=images/taco.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_1=0.197&knob_2=0.3&knob_3=0.016&knob_4=0.803&knob_6=0.465&knob_7=0.0&knob_8=1.0&knob_9=0.071&knob_10=0.394&knob_11=1.0&knob_12=1.0&knob_13=0.543&knob_14=0.402&knob_15=0.62&knob_16=0.205&fft_size=2048&smoothing=0.3", color: "taco-outline-tunnel" },
-    { name: "taco-45", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/outline-tunnel&image=images/taco.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=0.197&knob_2=0.92&knob_3=0.016&knob_4=0.803&knob_5=0.62&knob_6=0.465&knob_7=0.0&knob_8=1.0&knob_9=0.071&knob_10=0.394&knob_11=1.0&knob_12=1.0&knob_13=0.543&knob_14=0.402&knob_15=0.62&knob_16=0.205&fft_size=2048&smoothing=0.3", color: "taco-outline-tunnel" },
-    { name: "taco-46", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/outline-tunnel&image=images/taco.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=0.197&knob_2=0.54&knob_3=0.016&knob_4=0.803&knob_5=0.24&knob_6=0.465&knob_7=0.0&knob_8=1.0&knob_9=0.071&knob_10=0.394&knob_11=1.0&knob_12=1.0&knob_13=0.543&knob_14=0.402&knob_15=0.62&knob_16=0.205&fft_size=2048&smoothing=0.3", color: "taco-outline-tunnel" },
-    { name: "taco-47", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/outline-tunnel&image=images/taco.png&controller=taco-kandi&seed=0.472&seed2=0.79&seed3=0.108&seed4=0.426&knob_1=0.197&knob_2=0.15&knob_3=0.016&knob_4=0.803&knob_5=0.85&knob_6=0.465&knob_7=0.0&knob_8=1.0&knob_9=0.071&knob_10=0.394&knob_11=1.0&knob_12=1.0&knob_13=0.543&knob_14=0.402&knob_15=0.62&knob_16=0.205&fft_size=2048&smoothing=0.3", color: "taco-outline-tunnel" },
-    // region-mask
-    { name: "taco-48", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/region-mask&image=images/taco.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_1=0.039&knob_2=0.3&knob_3=0.724&knob_4=0.756&knob_6=0.409&knob_7=0.0&knob_8=0.488&knob_9=0.071&knob_10=1.0&knob_11=1.0&knob_12=1.0&knob_13=0.071&knob_14=0.504&knob_15=0.63&knob_16=0.205&fft_size=2048&smoothing=0.3", color: "taco-region-mask" },
-    { name: "taco-49", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/region-mask&image=images/taco.png&controller=taco-kandi&seed=0.236&seed2=0.554&seed3=0.872&seed4=0.19&knob_1=0.039&knob_2=0.92&knob_3=0.724&knob_4=0.756&knob_5=0.62&knob_6=0.409&knob_7=0.0&knob_8=0.488&knob_9=0.071&knob_10=1.0&knob_11=1.0&knob_12=1.0&knob_13=0.071&knob_14=0.504&knob_15=0.63&knob_16=0.205&fft_size=2048&smoothing=0.3", color: "taco-region-mask" },
-    { name: "taco-50", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/region-mask&image=images/taco.png&controller=taco-kandi&seed=0.854&seed2=0.172&seed3=0.49&seed4=0.808&knob_1=0.039&knob_2=0.54&knob_3=0.724&knob_4=0.756&knob_5=0.24&knob_6=0.409&knob_7=0.0&knob_8=0.488&knob_9=0.071&knob_10=1.0&knob_11=1.0&knob_12=1.0&knob_13=0.071&knob_14=0.504&knob_15=0.63&knob_16=0.205&fft_size=2048&smoothing=0.3", color: "taco-region-mask" },
-  ],
-  iris: [
-    // iris/1 — 15 shape/color permutations, written as 2cb.pw short links (KV: iris-1-N)
-    { name: "iris-1-1", url: "https://2cb.pw/iris-1-1", color: "iris" },  // Deep Tunnel Plunge
-    { name: "iris-1-2", url: "https://2cb.pw/iris-1-2", color: "iris" },  // Flat Star Mandala
-    { name: "iris-1-3", url: "https://2cb.pw/iris-1-3", color: "iris" },  // Wide Open Flower
-    { name: "iris-1-4", url: "https://2cb.pw/iris-1-4", color: "iris" },  // Tight Focused Eye
-    { name: "iris-1-5", url: "https://2cb.pw/iris-1-5", color: "iris" },  // Peach Plasma
-    { name: "iris-1-6", url: "https://2cb.pw/iris-1-6", color: "iris" },  // Violet Teal Journey
-    { name: "iris-1-7", url: "https://2cb.pw/iris-1-7", color: "iris" },  // Slow Hypnotic Spin
-    { name: "iris-1-8", url: "https://2cb.pw/iris-1-8", color: "iris" },  // Fast Kaleidoscope
-    { name: "iris-1-9", url: "https://2cb.pw/iris-1-9", color: "iris" },  // Photon Ring
-    { name: "iris-1-10", url: "https://2cb.pw/iris-1-10", color: "iris" },  // Dense Ripple Web
-    { name: "iris-1-11", url: "https://2cb.pw/iris-1-11", color: "iris" },  // Gazing Eye
-    { name: "iris-1-12", url: "https://2cb.pw/iris-1-12", color: "iris" },  // Ember Corona
-    { name: "iris-1-13", url: "https://2cb.pw/iris-1-13", color: "iris" },  // Moire Lattice (DMT)
-    { name: "iris-1-14", url: "https://2cb.pw/iris-1-14", color: "iris" },  // Calm Breath
-    { name: "iris-1-15", url: "https://2cb.pw/iris-1-15", color: "iris" },  // Chaos Bloom
-  ],
-  coat: [
-    // navy
-    { name: "coat-navy-1",  url: "https://2cb.pw/coat-navy-1",  color: "navy" },
-    { name: "coat-navy-2",  url: "https://2cb.pw/coat-navy-2",  color: "navy" },
-    { name: "coat-navy-3",  url: "https://2cb.pw/coat-navy-3",  color: "navy" },
-    { name: "coat-navy-4",  url: "https://2cb.pw/coat-navy-4",  color: "navy" },
-    { name: "coat-navy-5",  url: "https://2cb.pw/coat-navy-5",  color: "navy" },
-    { name: "coat-navy-6",  url: "https://2cb.pw/coat-navy-6",  color: "navy" },
-    { name: "coat-navy-7",  url: "https://2cb.pw/coat-navy-7",  color: "navy" },
-    { name: "coat-navy-8",  url: "https://2cb.pw/coat-navy-8",  color: "navy" },
-    { name: "coat-navy-9",  url: "https://2cb.pw/coat-navy-9",  color: "navy" },
-    { name: "coat-navy-10", url: "https://2cb.pw/coat-navy-10", color: "navy" },
-    // skyblue
-    { name: "coat-skyblue-1",  url: "https://2cb.pw/coat-skyblue-1",  color: "skyblue" },
-    { name: "coat-skyblue-2",  url: "https://2cb.pw/coat-skyblue-2",  color: "skyblue" },
-    { name: "coat-skyblue-3",  url: "https://2cb.pw/coat-skyblue-3",  color: "skyblue" },
-    { name: "coat-skyblue-4",  url: "https://2cb.pw/coat-skyblue-4",  color: "skyblue" },
-    { name: "coat-skyblue-5",  url: "https://2cb.pw/coat-skyblue-5",  color: "skyblue" },
-    { name: "coat-skyblue-6",  url: "https://2cb.pw/coat-skyblue-6",  color: "skyblue" },
-    { name: "coat-skyblue-7",  url: "https://2cb.pw/coat-skyblue-7",  color: "skyblue" },
-    { name: "coat-skyblue-8",  url: "https://2cb.pw/coat-skyblue-8",  color: "skyblue" },
-    { name: "coat-skyblue-9",  url: "https://2cb.pw/coat-skyblue-9",  color: "skyblue" },
-    { name: "coat-skyblue-10", url: "https://2cb.pw/coat-skyblue-10", color: "skyblue" },
-    // shadow
-    { name: "coat-shadow-1",  url: "https://2cb.pw/coat-shadow-1",  color: "shadow" },
-    { name: "coat-shadow-2",  url: "https://2cb.pw/coat-shadow-2",  color: "shadow" },
-    { name: "coat-shadow-3",  url: "https://2cb.pw/coat-shadow-3",  color: "shadow" },
-    { name: "coat-shadow-4",  url: "https://2cb.pw/coat-shadow-4",  color: "shadow" },
-    { name: "coat-shadow-5",  url: "https://2cb.pw/coat-shadow-5",  color: "shadow" },
-    { name: "coat-shadow-6",  url: "https://2cb.pw/coat-shadow-6",  color: "shadow" },
-    { name: "coat-shadow-7",  url: "https://2cb.pw/coat-shadow-7",  color: "shadow" },
-    { name: "coat-shadow-8",  url: "https://2cb.pw/coat-shadow-8",  color: "shadow" },
-    { name: "coat-shadow-9",  url: "https://2cb.pw/coat-shadow-9",  color: "shadow" },
-    { name: "coat-shadow-10", url: "https://2cb.pw/coat-shadow-10", color: "shadow" },
-  ],
+const BEADS = [
+  { id:'hakkaku',   jp:'八角',  desc:'eight-point star' },
+  { id:'tomoe',     jp:'巴',    desc:'comma swirl' },
+  { id:'kiku',      jp:'菊',    desc:'chrysanthemum' },
+  { id:'ume',       jp:'梅',    desc:'plum blossom, five round petals' },
+  { id:'kikyo',     jp:'桔梗',  desc:'bellflower, five pointed petals' },
+  { id:'kikko',     jp:'亀甲',  desc:'tortoise-shell hexagon' },
+  { id:'matsukawa', jp:'松皮',  desc:'pine-bark stepped diamond' },
+  { id:'mokko',     jp:'木瓜',  desc:'quince, four lobes' },
+  { id:'ogi',       jp:'扇',    desc:'folding fan' },
+  { id:'suhama',    jp:'州浜',  desc:'sandbar, three lobes' },
+  { id:'katabami',  jp:'片喰',  desc:'wood sorrel, three leaves' },
+]
+// ume and kikyo share the same outline in the visual: the wall cannot tell them apart
+const DUP = { ume:'kikyo', kikyo:'ume' }
+
+const ORIGINS = [
+  { id:'preview', label:'mogee preview (works now)', url:'https://mogee.paper-cranes-visuals.pages.dev' },
+  { id:'prod',    label:'visuals.beadfamous.com (after merge)', url:'https://visuals.beadfamous.com' },
+]
+const img = b => `image=images/beads/mon-${b}.png`
+const SHADERS = [
+  { id:'satellites', label:'Hero + satellites', url:(o,b)=>`${o}/?shader=redaphid/wip/lattice-bead-vj/satellites&controller=dodeca-bloom&${img(b)}&satellites=6&wavelet=true&onset_refractory_ms=380&fullscreen=true` },
+  { id:'hero',       label:'Centred hero on lattice', url:(o,b)=>`${o}/?shader=redaphid/wip/lattice-bead-vj/2&${img(b)}&controller=wavelet-ease&controller=lattice-nav&navZoom0=0.218&knob_1=0.429&knob_134=0.507&wavelet=true&fullscreen=true` },
+  { id:'wall',       label:'Wall lattice (bead cells)', url:(o,b)=>`${o}/?shader=redaphid/wip/lattice-bead-vj/1&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&${img(b)}&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&wavelet=true&onset_refractory_ms=380&fullscreen=true` },
+  { id:'spiral',     label:'Spiral galaxy', url:(o,b)=>`${o}/?shader=redaphid/wip/lattice-bead-vj/spiral&${img(b)}&controller=dodeca-bloom&arms=2&beads=20&turns=1.6&wavelet=true&fullscreen=true` },
+  { id:'grid',       label:'Grid of crests', url:(o,b)=>`${o}/?shader=redaphid/wip/lattice-bead-vj/grid&controller=wavelet-ease&controller=lattice-nav&${img(b)}&wavelet=true&fullscreen=true` },
+  { id:'chroma',     label:'ChromaDepth tunnel', url:(o,b)=>`${o}/?shader=redaphid/wip/lattice-bead-vj/chroma&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&${img(b)}&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&wavelet=true&onset_refractory_ms=380&fullscreen=true` },
+]
+const TAG_BYTES = 504   // NTAG215 user memory
+
+const KEY = 'cranes-nfc-mon'
+const q = new URLSearchParams(location.search)
+const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {} } catch { return {} } }
+const state = Object.assign({ idx:0, shader:'satellites', origin:'preview', counts:{} }, load())
+if (q.get('shader')) state.shader = q.get('shader')
+if (q.get('origin')) state.origin = q.get('origin')
+if (q.get('bead')) { const i = BEADS.findIndex(b => b.id === q.get('bead')); if (i >= 0) state.idx = i }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)) } catch {} }
+
+const $ = id => document.getElementById(id)
+const fill = (sel, items, cur) => { sel.innerHTML = items.map(i => `<option value="${i.id}" ${i.id===cur?'selected':''}>${i.label}</option>`).join('') }
+fill($('shader'), SHADERS, state.shader); fill($('origin'), ORIGINS, state.origin)
+
+const shader = () => SHADERS.find(s => s.id === state.shader) || SHADERS[0]
+const origin = () => ORIGINS.find(o => o.id === state.origin) || ORIGINS[0]
+const bead = () => BEADS[state.idx]
+const urlFor = b => shader().url(origin().url, b)
+// NDEF URI record: a 1-byte prefix code replaces "https://"; short-record header 3 bytes (6 if payload > 255); TLV wrapper 2 bytes (4 if > 254)
+const ndefBytes = url => { const payload = url.replace(/^https:\/\//, '').length + 1; return payload + (payload > 255 ? 6 : 3) + (payload > 252 ? 4 : 2) }
+
+const render = () => {
+  const b = bead(), url = urlFor(b.id), bytes = ndefBytes(url), n = state.counts[b.id] || 0
+  $('sil').style.setProperty('--m', `url(images/beads/mon-${b.id}.png)`)
+  $('sil').classList.toggle('dup', !!DUP[b.id])
+  $('name').textContent = b.id
+  $('jp').textContent = `${b.jp} · ${b.desc}`
+  $('pos').textContent = `shape ${state.idx + 1} of ${BEADS.length} · ${shader().label}`
+  $('n').textContent = n
+  $('warn').textContent = DUP[b.id] ? `same outline as ${DUP[b.id]} in the visual: the wall cannot tell them apart` : ''
+  $('url').textContent = url
+  const bad = bytes > TAG_BYTES
+  $('bytes').textContent = `≈ ${bytes} bytes of ${TAG_BYTES} (NTAG215)${bad ? ' — TOO LONG, the write will fail' : ''}`
+  $('bytes').classList.toggle('bad', bad)
+  $('write').disabled = bad
+  $('grid').innerHTML = BEADS.map((x, i) => {
+    const c = state.counts[x.id] || 0
+    return `<div class="tile ${i===state.idx?'cur':''}" data-i="${i}"><div class="s" style="--m:url(images/beads/mon-${x.id}.png)"></div><div class="n">${x.id}</div><div class="c ${c?'done':''}">${c ? c + ' written' : 'none yet'}</div></div>`
+  }).join('')
+  save()
 }
 
-// URL hash selects queue: #coat for the coat queue, default = taco
-const QUEUE_NAME = (location.hash.replace("#", "") || "taco")
-const QUEUE = QUEUES[QUEUE_NAME] || QUEUES.taco
-document.getElementById("title").textContent = QUEUE_NAME + " NFC writer"
-document.title = QUEUE_NAME + " NFC writer"
-
-const STORAGE_KEY = QUEUE_NAME + "-nfc-writer-state"
-
-const els = {
-  unsupported: document.getElementById("unsupported"),
-  current: document.getElementById("current"),
-  nextName: document.getElementById("next-name"),
-  nextUrl: document.getElementById("next-url"),
-  progress: document.getElementById("progress"),
-  write: document.getElementById("write"),
-  status: document.getElementById("status"),
-  prev: document.getElementById("prev"),
-  skip: document.getElementById("skip"),
-  reset: document.getElementById("reset"),
-  queue: document.getElementById("queue"),
-  preview: document.getElementById("preview"),
-  previewLabel: document.getElementById("preview-label"),
-  previewWrap: document.getElementById("preview-wrap"),
-}
-
-// Map nfc-variants.json full URLs (production) onto whichever origin we're on so
-// the iframe renders locally during dev. Falls back to short URL if mapping missing.
-let VARIANTS_BY_NAME = {}
-const VARIANTS_URLS = {
-  taco: "/shaders/redaphid/taco/nfc-variants.json",
-  iris: "/shaders/redaphid/iris/nfc-variants.json",
-}
-const variantsUrl = VARIANTS_URLS[QUEUE_NAME] || null
-if (variantsUrl) {
-  fetch(variantsUrl)
-    .then(r => r.ok ? r.json() : Promise.reject(r.status))
-    .then(list => {
-      VARIANTS_BY_NAME = Object.fromEntries(list.map(v => [v.name, v]))
-      render()
-    })
-    .catch(err => setStatus(`Could not load variants (${err}); preview disabled.`, "warn"))
-}
-
-function previewUrlFor(name) {
-  const v = VARIANTS_BY_NAME[name]
-  if (!v) return null
-  // Replace the production origin with the local one so the iframe runs against dev/this host.
-  // Add noaudio so the preview doesn't fight for the mic, and time=0 for a deterministic still.
-  const fullUrl = new URL(v.full)
-  const localUrl = new URL(fullUrl.pathname + fullUrl.search, location.origin)
-  localUrl.searchParams.set("noaudio", "true")
-  localUrl.searchParams.set("embed", "true")
-  return localUrl.toString()
-}
-
-let state = loadState()
-
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) {
-      const parsed = JSON.parse(raw)
-      if (typeof parsed.index === "number" && Array.isArray(parsed.done)) return parsed
-    }
-  } catch (_) {}
-  return { index: 0, done: [] }
-}
-
-function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-}
-
-function setStatus(msg, kind = "") {
-  els.status.textContent = msg
-  els.status.className = "status" + (kind ? " " + kind : "")
-}
-
-let lastPreviewKey = null
-function render() {
-  const cur = QUEUE[state.index]
-  if (!cur) {
-    els.nextName.textContent = "All done."
-    els.nextUrl.textContent = "Tap Reset to start over."
-    els.write.disabled = true
-    els.write.textContent = "Done"
-    els.current.className = "current"
-    setPreview(null, null)
-  } else {
-    els.nextName.textContent = cur.name
-    els.nextUrl.textContent = cur.url
-    els.current.className = "current color-" + cur.color
-    els.write.disabled = false
-    els.write.textContent = "Tap a tag to write"
-    setPreview(cur.name, previewUrlFor(cur.name))
-  }
-  els.progress.textContent = `${state.done.length} / ${QUEUE.length}`
-  renderQueue()
-  saveState()
-}
-
-function setPreview(name, url) {
-  if (!els.preview) return
-  // Key on (name, url) so a name that was previously "unavailable" gets re-set
-  // once VARIANTS_BY_NAME finishes loading.
-  const key = name + "|" + (url || "")
-  if (key === lastPreviewKey) return
-  lastPreviewKey = key
-  if (!url) {
-    els.preview.removeAttribute("src")
-    els.previewLabel.textContent = name ? "preview loading…" : "preview"
-    return
-  }
-  els.preview.src = url
-  els.previewLabel.textContent = name
-}
-
-function renderQueue() {
-  els.queue.innerHTML = ""
-  QUEUE.forEach((item, i) => {
-    const li = document.createElement("li")
-    li.textContent = item.name
-    if (state.done.includes(i)) li.classList.add("done")
-    if (i === state.index) li.classList.add("current")
-    li.addEventListener("click", () => {
-      state.index = i
-      render()
-      setStatus(`Jumped to ${item.name}.`)
-    })
-    els.queue.appendChild(li)
-  })
-}
-
-async function writeCurrent() {
-  const cur = QUEUE[state.index]
-  if (!cur) return
-  if (!("NDEFReader" in window)) {
-    setStatus("Web NFC not available.", "err")
-    return
-  }
-  els.write.classList.remove("error")
-  els.write.classList.add("writing")
-  els.write.textContent = "Hold tag to phone..."
-  setStatus(`Writing ${cur.name}...`, "warn")
-
+const setStatus = (msg, cls = '') => { $('status').textContent = msg; $('status').className = 'status ' + cls }
+let writing = null
+const write = async () => {
+  if (!('NDEFReader' in window)) { $('notice').classList.add('show'); setStatus('Web NFC unavailable here. Copy the URL below into NFC Tools.', 'bad'); return }
+  if (writing) { writing.abort(); writing = null; $('write').classList.remove('armed'); $('write').textContent = 'Tap a bead to write'; setStatus('Cancelled.'); return }
+  const b = bead(), url = urlFor(b.id)
+  writing = new AbortController()
+  $('write').classList.add('armed'); $('write').textContent = `Hold the ${b.id} bead to the phone… (tap to cancel)`
+  setStatus('Waiting for a tag…')
   try {
     const ndef = new NDEFReader()
-    await ndef.write({
-      records: [{ recordType: "url", data: cur.url }],
-    })
-    // Success
-    if (!state.done.includes(state.index)) state.done.push(state.index)
-    state.index++
-    while (state.index < QUEUE.length && state.done.includes(state.index)) state.index++
-    els.write.classList.remove("writing")
-    setStatus(`✓ Wrote ${cur.name}. Next: ${QUEUE[state.index]?.name ?? "(done)"}`, "ok")
-    if (navigator.vibrate) navigator.vibrate(80)
+    await ndef.write({ records: [{ recordType: 'url', data: url }] }, { signal: writing.signal })
+    state.counts[b.id] = (state.counts[b.id] || 0) + 1
+    if (navigator.vibrate) navigator.vibrate([60, 40, 60])
+    setStatus(`✓ ${b.id} #${state.counts[b.id]} written. Tap the next ${b.id} bead, or press next shape.`, 'ok')
     render()
   } catch (e) {
-    els.write.classList.remove("writing")
-    els.write.classList.add("error")
-    els.write.textContent = "Try again"
-    setStatus(`Error: ${e.message || e}`, "err")
+    if (e.name !== 'AbortError') { if (navigator.vibrate) navigator.vibrate(300); setStatus(`✗ ${e.name}: ${e.message}`, 'bad') }
+  } finally {
+    writing = null; $('write').classList.remove('armed'); $('write').textContent = 'Tap a bead to write'
   }
 }
 
-els.write.addEventListener("click", writeCurrent)
-
-els.prev.addEventListener("click", () => {
-  if (state.index > 0) {
-    state.index--
-    render()
-    setStatus(`Back to ${QUEUE[state.index].name}.`)
-  }
-})
-els.skip.addEventListener("click", () => {
-  if (state.index < QUEUE.length) {
-    state.index++
-    render()
-    setStatus(`Skipped. Next: ${QUEUE[state.index]?.name ?? "(done)"}`)
-  }
-})
-els.reset.addEventListener("click", () => {
-  if (!confirm("Reset progress? This clears the 'done' list.")) return
-  state = { index: 0, done: [] }
-  render()
-  setStatus("Reset.")
-})
-
-if (!("NDEFReader" in window)) {
-  els.unsupported.style.display = "block"
-  els.write.disabled = true
-}
-
+$('write').onclick = write
+$('next').onclick = () => { state.idx = (state.idx + 1) % BEADS.length; setStatus(`Now ${bead().id}.`); render() }
+$('prev').onclick = () => { state.idx = (state.idx + BEADS.length - 1) % BEADS.length; setStatus(`Now ${bead().id}.`); render() }
+$('undo').onclick = () => { const b = bead().id; if (state.counts[b]) state.counts[b]--; setStatus(`${b} count now ${state.counts[b] || 0}.`); render() }
+$('grid').onclick = e => { const t = e.target.closest('.tile'); if (!t) return; state.idx = +t.dataset.i; setStatus(`Now ${bead().id}.`); render(); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+$('shader').onchange = e => { state.shader = e.target.value; render() }
+$('origin').onchange = e => { state.origin = e.target.value; render() }
+$('reset').onclick = e => { e.preventDefault(); state.counts = {}; render(); setStatus('Counts reset.') }
+if (!('NDEFReader' in window)) $('notice').classList.add('show')
 render()
 </script>
 </body>
