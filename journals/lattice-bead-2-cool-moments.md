@@ -297,3 +297,63 @@ is the rim gain (2.2 → 4.0 this tick).
 ### Todo
 - [ ] the viewport is now 1118x1092, not 2560x1249 — cursor park updated
 - [ ] rim gain 4.0 may be too hot; it is the one dial for "still too flashy"
+
+## Iter 11 — detail.frag: the quiet channels, and an unverified feature
+
+User asked for (a) subtle detail keyed to lesser-known audio features, and (b) per-bead slow
+scaling driven by slow uniforms, different for each bead.
+
+### Measure before wiring — this is now a hard rule
+
+Last tick I keyed the rim hue to `pitchClassMedian`. It measures **range 0.000** on this rig, so
+that channel did nothing. Before writing a line this time, 9s of live sampling:
+
+| alive | range | | dead |
+|---|---|---|---|
+| `spectralEntropySmooth` | 0.821 | | **the entire `*Slope` family is ABSENT** — |
+| `spectralCrestSmooth` | 0.818 | | every `energySlope` / `bassSlope` / |
+| `spectralRoughnessSmooth` | 0.776 | | `spectralCentroidSlope` returns no value, |
+| `waveletBassSpring` | 0.530 | | despite CLAUDE.md documenting them |
+| `waveletCentroidSpring` | 0.403 | | |
+| `spectralSpreadRSquared` | **0.291** | | `pitchClassMedian` — range 0.000 |
+| `spectralSpreadMedian` | 0.049 | | `sectionMix` — constant |
+
+**The R-SQUARED family is the find.** It is trend *confidence* — "is this change steady or
+chaotic" — idling near 0.04 and climbing to 0.29 when a feature travels in a straight line.
+Nothing in this shader family had ever used it. It is the right gate for detail that should
+appear only when the music is *going somewhere*.
+
+### Five quiet channels (verified subtle)
+
+TREND RINGS ← `spectralSpreadRSquared` · GRAIN ← `spectralRoughnessSmooth` · RIM WIDTH ←
+`spectralCrestSmooth` · HAZE ← `waveletBand5Spring` · HUE TILT ← `waveletCentroidSpring`
+(replacing the dead `pitchClassMedian`). All smoothed or regression statistics — no raw values,
+no z-scores — so none can shudder. Measured on/off: contrast 24.85 → 23.94, **a 4% change**,
+which is the brief. Flash unchanged (3.49 → 3.44). Compiles clean, no console errors.
+
+### NOT VERIFIED: per-bead audio keying
+
+Deterministic harness (lattice-nav REMOVED — it accumulates per-frame state and put the noise
+floor at 15.5%; without it the floor is **exactly 0.000**):
+
+| | changed |
+|---|---|
+| breathe on vs off | 16.3% |
+| move ALL drivers | 61.2% |
+| move ONE driver (`spectralEntropySmooth`) | **0.0%** |
+| move one MEDIAN (`spectralSkewMedian`) | **0.1%** |
+
+The breathing is real, but the 61.2% is dominated by the *other five* channels, which consume
+the same signals. **The per-bead audio keying is not demonstrably working** — what is visibly
+breathing is the always-on phase sine. Going from 8 to 11 buckets did not change it, so
+"too few beads per bucket" is probably not the whole story.
+
+Candidates not yet eliminated: the `(slow - 0.5)` term is exactly 0 when a driver sits at its
+centre, so a mid-pinned harness cannot see it; the ±8% scale may move too few pixels to cross
+the diff threshold; or `id` inside `seedDist` may be poorly distributed through `hash11` at the
+scales the two zoom octaves produce.
+
+### Todo
+- [ ] per-bead audio keying unproven — instrument `slowDriver` bucket occupancy directly rather
+      than inferring it from pixel diffs
+- [ ] the deterministic harness MUST drop `lattice-nav` (noise 15.5% → 0.000). Bake that in.
