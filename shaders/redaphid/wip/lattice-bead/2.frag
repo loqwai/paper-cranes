@@ -229,18 +229,33 @@ mat2 rot2(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 #define LV_RICH  LVK(knob_166, 2.8, knob_166 * 4.0)
 #define LV_LCEIL LVK(knob_164, 0.78, 0.50 + knob_164 * 0.45)
 
+// GAMUT COMPRESSION. oklab2rgb does not clamp, so raising chroma drives a channel
+// NEGATIVE and the final clamp() pins it to 0 — the hue snaps to a pure primary and the
+// frame reads posterized/garish. Measured at the first rich setting: 11.93% of pixels had
+// a channel crushed to zero (legacy pastel: 0.00%). Fading C by lightness was NOT enough,
+// because the problem is worst in the MIDS, not the highlights.
+//
+// Instead, compress toward the neutral of the same lightness until the colour actually
+// fits in sRGB. The neutral is free: oklab2rgb's matrix rows each sum to 1, so C = 0 maps
+// to vec3(L*L*L) exactly. One lerp, no iteration, and it keeps every bit of chroma sRGB
+// can really hold instead of throwing the hue away.
+vec3 fitGamut(vec3 rgb, float L){
+    float g  = L * L * L;                       // the C = 0 neutral for this lightness
+    float mn = min(rgb.r, min(rgb.g, rgb.b));
+    float mx = max(rgb.r, max(rgb.g, rgb.b));
+    float t  = 1.0;
+    if (mn < 0.0) t = min(t, g / max(g - mn, 1e-5));           // pull the low channel up to 0
+    if (mx > 1.0) t = min(t, (1.0 - g) / max(mx - g, 1e-5));   // pull the high channel down to 1
+    return mix(vec3(g), rgb, clamp(t, 0.0, 1.0));
+}
+
 vec3 lush(float s, float lit){
     float h = fract(s) * TAU;
     // BRIGHT baseline so the whole thing emits light (must pop off a phone at night, read from afar)
     float L = clamp(LV_LBASE + EXB(knob_156, 0.40) + LV_LSLOPE * clamp(lit, 0.0, 1.0), 0.05, LV_LCEIL);   // LV_LBASE (H10)   // K156 LIGHT BASE: the palette's baseline lightness (the tuned 0.33 was five iterations of 'less washed out').   // vj2 iter 6: 0.40+0.44 → 0.33+0.40 (max L 0.84 → 0.73). Meter on lit passages: dark 2.4 %, lum 0.30, sat 0.85 — pastel. Lower L keeps chroma, restores the floor. (Oklch: hue untouched.)   // MUTED (iter 17, from chromadepth-lattice/3): lower base lightness
     float C = max(0.0, (0.075 + seed2 * 0.05) + EXB(knob_157, 0.14)) + 0.04 * sin(s * TAU * 0.5 + 1.3);   // K157 CHROMA: saturation. 0 = greyscale structure (a genuinely useful way to READ the geometry).   // vj2 iter 11: chroma 0.09+.06/.05 → 0.075+.05/.04. Meter sat 0.93–0.94 since the L/gamma changes (low L + same C = gamut-edge neon). User wants MUTED; sat target ~0.8.   // lower chroma than 6.frag's neon — user: "more muted"
     C *= LV_RICH;
-    // GAMUT GUARD: oklab2rgb does not clamp, and sRGB holds far less chroma as L -> 1.
-    // Without this the extra saturation clips per-channel at the bright end and the hue
-    // slides toward whichever primary survives — neon turning to mud exactly where the
-    // lattice is brightest. Fading C at high L keeps the hue journey intact.
-    C *= 1.0 - 0.70 * smoothstep(0.62, 1.0, L);
-    return oklch2rgb(vec3(L, C, h));
+    return fitGamut(oklch2rgb(vec3(L, C, h)), L);
 }
 
 // UNIQUE-PER-AREA hue offset: incommensurate low frequencies → smooth + quasi-non-repeating, so
