@@ -357,3 +357,40 @@ without a contact sheet — a verdict with no evidence path is an opinion, and s
   output; they should not each write their own baker.
 - Any change to `Visualizer.js` (needed only for §8 variant 3, multi-texture) — that is a shared
   file and a serialisation point.
+
+---
+
+## 14. Measurement traps (each one produced a wrong verdict before it was caught)
+
+Added 2026-09-03 from the first `/lab` wave. Every item below was a confident, plausible,
+**wrong** measurement — not a hypothesis that failed.
+
+1. **Never read a baked SDF through canvas2D.** `drawImage` + `getImageData` stores premultiplied
+   alpha and cannot recover RGB where `alpha == 0`, so every exterior pixel reads 0 and the apparent
+   max green caps at 127. This was reported as a "bake defect that blocks the fan-out". It is not:
+   uploading through the real `Visualizer.js` path and reading back from the GPU gives exterior
+   **199**, interior **46**, edge **140** — the correct signed field, matching a direct numpy read
+   (45→199, 156 levels). **Read baked PNGs with numpy/PIL, or read back from the GPU. Never canvas2D.**
+2. **Never measure luminance on a downsampled frame.** A 160×160 downsample of the same frames
+   reports the bead variant *brighter* when full resolution says the opposite — thin bright lines
+   average into dark ground. Measure at full resolution, and prefer **lit coverage** over mean
+   luminance when the change is line-weight rather than exposure.
+3. **`time=` does NOT fully determinise the frame.** `lattice-nav` carries state that advances in
+   real time, so frames are only ±8% reproducible. Any numeric claim needs **n≥3 and a stated
+   spread**; do not rank two motifs as different unless they separate beyond that noise.
+4. **Seeds are random per browser profile.** `index.js` seeds `seed..seed4` from `Math.random()` into
+   `localStorage`, and `seed3`/`seed4` drive lattice twist/swirl — so a fresh profile changes the
+   picture between baseline and variant. **Pin seeds in the URL for every comparison.**
+5. **In-app FPS cannot measure a lattice shader on desktop.** Vsync caps it and the app has a dynamic
+   resolution scaler, so the canvas silently shrinks under load and FPS stays flat. Record
+   `canvas.width/height` with every sample and report **pixels/second**, or benchmark offscreen at a
+   fixed size.
+6. **`mix()` evaluates both operands.** `mix(hexTerm, beadTerm, BEAD_MIX)` runs `beadDist()` and all
+   its dependent texture fetches in **every** arm, including `BEAD_MIX=0`. §9's per-level saving is
+   **not** realised by a per-level mix — it needs a real uniform branch. Measured: the entire bead
+   cost is ~20% of frame time, so halving it buys ~10% on desktop. Mobile remains unmeasured and
+   `@mobile: true` has not been copied anywhere.
+7. **The Claude-in-Chrome tab group is shared between teammates and they evict each other's tabs.**
+   Separate windows do not isolate it. Headed Playwright with a per-capture port assertion is the
+   reliable path; reusable tools exist on `origin/lab/split` (`scripts/lab-shot.mjs`,
+   `scripts/lab-bench.mjs`) and `origin/lab/kiku` (`lab-measure.mjs`, `lab-crossings.mjs`).
