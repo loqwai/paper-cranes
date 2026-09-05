@@ -1,22 +1,26 @@
 // Record a short webm clip of a visual, headless, with the synthetic beat driving the features.
 //   node scripts/lab/clip.mjs "<query>" <out.webm> [secs=10] [mode=dodeca|wavelet] [size=720]
-// Same synthetic track as react-stat.mjs: 128 BPM kicks + hats, a 2 s breakdown at 8 s, a DROP at 10 s.
-// Use secs >= 13 to include the drop. Output goes to journals/clips/ unless an absolute path is given.
+// Same synthetic track as react-stat.mjs: 128 BPM kicks + hats, a 2 s breakdown before the DROP, a louder groove after.
+// env DROP_AT=<s>  seconds into the clip the drop lands (default 10; the breakdown is the 2 s before it)
+// env KBPS=<n>     record IN-PAGE with canvas.captureStream + MediaRecorder at this video bitrate (VP9, VP8 fallback)
+//                  instead of Playwright's recordVideo, whose bitrate is fixed (~130 KB/s regardless of frame size).
+//                  Use it when clips must be small enough to inline: KBPS=600 makes a 9 s clip ~0.7 MB.
+// Output goes to journals/clips/ unless an absolute path is given.
 import { chromium } from 'playwright'
-import { mkdirSync, renameSync, existsSync, statSync } from 'node:fs'
+import { mkdirSync, renameSync, existsSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 const [,, query, outArg = 'journals/clips/clip.webm', secsArg = '10', mode = 'dodeca', sizeArg = '720'] = process.argv
 if (!query) { console.error('usage: node scripts/lab/clip.mjs "<query>" <out.webm> [secs] [mode] [size]'); process.exit(2) }
-const secs = +secsArg, size = +sizeArg, out = resolve(outArg), DROP = +(process.env.DROP_AT || 10)   // DROP_AT: seconds into the clip the drop lands (breakdown = the 2 s before)
+const secs = +secsArg, size = +sizeArg, out = resolve(outArg), DROP = +(process.env.DROP_AT || 10), KBPS = +(process.env.KBPS || 0)
 mkdirSync(dirname(out), { recursive: true })
 const tmpDir = resolve('journals/clips/.tmp')
 const br = await chromium.launch()
-const ctx = await br.newContext({ viewport: { width: size, height: size }, recordVideo: { dir: tmpDir, size: { width: size, height: size } } })
+const ctx = await br.newContext({ viewport: { width: size, height: size }, ...(KBPS ? {} : { recordVideo: { dir: tmpDir, size: { width: size, height: size } } }) })
 const p = await ctx.newPage()
-await p.goto(`http://localhost:6969/?${query}&noaudio=true`, { waitUntil: 'domcontentloaded' })
+await p.goto(`http://localhost:${process.env.PORT || 6969}/?${query}&noaudio=true`, { waitUntil: 'domcontentloaded' })
 await p.waitForSelector('canvas', { timeout: 15000 })
 await p.waitForTimeout(1500)
-await p.evaluate(async ({ secs, mode, DROP }) => {
+const b64 = await p.evaluate(async ({ secs, mode, DROP, KBPS }) => {
   const BEAT = 60 / 128
   const music = t => {
     const b = Math.floor(t / BEAT), tb = t - b * BEAT
@@ -45,6 +49,14 @@ await p.evaluate(async ({ secs, mode, DROP }) => {
       pitchClassMedian: 0.25, spectralCentroidMedian: 0.19, spectralEntropyMedian: 0.87, spectralSpreadMedian: 0.26,
     }
   }
+  let rec = null, chunks = []
+  if (KBPS) {
+    const stream = document.querySelector('canvas').captureStream(30)
+    const mime = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find(m => MediaRecorder.isTypeSupported(m))
+    rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: KBPS * 1000 })
+    rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data) }
+    rec.start(250)
+  }
   const t0 = performance.now()
   await new Promise(done => {
     const iv = setInterval(() => {
@@ -53,11 +65,20 @@ await p.evaluate(async ({ secs, mode, DROP }) => {
       Object.assign(window.cranes.manualFeatures, feats(t))
     }, 33)
   })
-}, { secs, mode, DROP })
-const video = p.video()
-await ctx.close()
-const path = await video.path()
-await br.close()
+  if (!rec) return null
+  await new Promise(r => { rec.onstop = r; rec.stop() })
+  const blob = new Blob(chunks, { type: 'video/webm' })
+  return await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result.split(',')[1]); fr.readAsDataURL(blob) })
+}, { secs, mode, DROP, KBPS })
 if (existsSync(out)) renameSync(out, out.replace(/\.webm$/, `.prev-${Date.now()}.webm`))
-renameSync(path, out)
-console.log(JSON.stringify({ out, kb: Math.round(statSync(out).size / 1024), secs, mode }))
+if (KBPS) {
+  await ctx.close(); await br.close()
+  writeFileSync(out, Buffer.from(b64, 'base64'))
+} else {
+  const video = p.video()
+  await ctx.close()
+  const path = await video.path()
+  await br.close()
+  renameSync(path, out)
+}
+console.log(JSON.stringify({ out, kb: Math.round(statSync(out).size / 1024), secs, mode, kbps: KBPS || 'playwright' }))
