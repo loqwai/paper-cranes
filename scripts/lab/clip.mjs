@@ -34,7 +34,7 @@ await p.evaluate(async ({ secs, mode, DROP }) => {
       quietGate: 1, energySpring: m.energy, waveletBassSpring: m.bass, waveletBand1Spring: m.bass * 0.9, waveletBand2Spring: m.mids,
       waveletBand3Spring: m.mids * 0.8, waveletBand4Spring: m.treble * 0.7, waveletBand5Spring: m.treble, waveletCentroidSpring: 0.4 + 0.2 * m.treble,
       melodyFlow: 0.3, spectralCrestSmooth: 0.3 + 0.3 * m.treble, spectralRoughnessSmooth: 0.3, spectralEntropySmooth: 0.5,
-      bassLive: m.bass, trebLive: m.treble, midsLive: m.mids, wavelet_bassHit: m.kick > 0.9 ? 1 : 0, wavelet_punch: m.kick,
+      bassLive: m.bass, trebLive: m.treble, midsLive: m.mids, wavelet_bassHit: m.kick > 0.9 ? 1 : 0, wavelet_punch: m.kick, wavelet_bassHitSmooth: m.kick,
       sectionMode: t >= DROP ? 1 : 0, sectionMix: t >= DROP ? Math.min(1, (t - DROP) / 4) : 0,
       pitchClassMedian: 0.25, spectralCentroidMedian: 0.19, spectralEntropyMedian: 0.87, spectralSpreadMedian: 0.26,
     }

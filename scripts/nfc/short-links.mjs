@@ -25,6 +25,9 @@ const SHADERS = {
   spiral:     (o, b) => `${o}/?shader=redaphid/wip/lattice-bead-vj/spiral&${img(b)}&controller=dodeca-bloom&arms=2&beads=20&turns=1.6&wavelet=true&fullscreen=true`,
   grid:       (o, b) => `${o}/?shader=redaphid/wip/lattice-bead-vj/grid&controller=wavelet-ease&controller=lattice-nav&${img(b)}&wavelet=true&fullscreen=true`,
   chroma:     (o, b) => `${o}/?shader=redaphid/wip/lattice-bead-vj/chroma&controller=wavelet-ease&controller=lattice-nav&controller=lattice-controls&${img(b)}&knob_161=1&knob_168=1.0&knob_169=0.60&legible=1&navZoom0=0.14&wavelet=true&onset_refractory_ms=380&fullscreen=true`,
+  'satellites-chroma': (o, b) => `${o}/?shader=redaphid/wip/lattice-bead-vj/satellites-chroma&controller=dodeca-bloom&${img(b)}&satellites=6&knob_1=0.75&knob_2=0.7&knob_3=0.6&wavelet=true&onset_refractory_ms=380&fullscreen=true`,
+  'spiral-chroma': (o, b) => `${o}/?shader=redaphid/wip/lattice-bead-vj/spiral-chroma&${img(b)}&controller=dodeca-bloom&arms=2&beads=20&turns=1.6&wavelet=true&fullscreen=true`,
+  'grid-chroma': (o, b) => `${o}/?shader=redaphid/wip/lattice-bead-vj/grid-chroma&controller=wavelet-ease&controller=lattice-nav&${img(b)}&wavelet=true&fullscreen=true`,
 }
 
 const args = process.argv.slice(2)
