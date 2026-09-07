@@ -50,8 +50,9 @@ mat2 rot2(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 
 vec3 lush(float s, float lit){
     float h = fract(s) * TAU;
-    float L = clamp(0.06 + 0.70 * pow(clamp(lit, 0.0, 1.0), 1.35), 0.0, 0.95);   // NEON (journal-proven ramp)
+    float L = clamp(pow(clamp(lit, 0.0, 1.0), 1.55), 0.0, 1.0);   // NEON: zero floor -> true black, rims reach full
     float C = (0.235 + seed2 * 0.05) + 0.06 * sin(s * TAU * 0.5 + 1.3);   // NEON: high chroma
+    C *= smoothstep(0.0, 0.22, L);   // chroma -> 0 with L, else OKLCH clamps to a colored floor, never black
     return oklch2rgb(vec3(L, C, h));
 }
 
@@ -79,7 +80,7 @@ float leadTendril(vec2 wpos, vec2 A, vec2 B, float bTime, float ph){
     float sdf = v - center;
     float aa = fwidth(sdf) + 1e-4;
     float al = u * 80.0;
-    float glow = 1.0;
+    float glow = 0.0;   // was 1.0: an unmasked whole-frame floor (see HANDOFF.md) — filaments only
     for (int k = 0; k < 3; k++){
         float fk = float(k) - 1.0;
         float off = (fk * 2.4 + 1.6 * sin(al * 0.4 + bTime * 1.4 + fk * 2.1)) * aa;
@@ -175,9 +176,9 @@ vec4 fractal(vec2 p){
         float alias = aliasBase * 0.5 * scale;
         // RIM-DOMINANT: narrow band hugging the edge carries the light; interior stays near-black.
         float rim  = smoothstep(gBorder + alias, gBorder, m);                 // hard edge
-        float halo = smoothstep(gBorder + 0.045, gBorder + 0.004, m);         // tight glow off the edge
+        float halo = smoothstep(gBorder + 0.020, gBorder + 0.003, m);         // hairline glow off the edge
         float body = smoothstep(gBorder + 0.12, gBorder + 0.02, m);           // faint interior
-        float f = rim * 0.46 + halo * 0.16 + body * 0.04;
+        float f = rim * 0.90 + halo * 0.18;   // near-opaque rim; thin, so interiors stay black
 
         float ld = float(i - FIRST) / float(LEVELS - 1 - FIRST);
         float swirl = 0.5 + 0.5 * sin(atan(p.y, p.x) * 2.0 + length(p) * 3.0 + float(i) + seed4 * TAU);
@@ -186,8 +187,8 @@ vec4 fractal(vec2 p){
         float env = sin(gPulse * PI);
         float wave = smoothstep(0.30, 0.0, abs(ld - (1.0 - gPulse))) * env;
         float band = bandForDepth(ld);
-        float lit = (rim * 0.72 + halo * 0.18 + smoothstep(gFill + alias, gFill, m) * 0.04)
-                  * (0.30 + (energySpring * 0.30 + band * 0.5 + waveletBassSpring * quietGate * 0.45) * gReact);
+        float lit = (rim * 0.95 + halo * 0.22)
+                  * (0.64 + (energySpring * 0.22 + band * 0.35 + waveletBassSpring * quietGate * 0.30) * gReact);
         lit += wave * (0.16 + gPop * 0.20 + gKick * 0.30 + spectralCrestSmooth * 0.12);
 
         float w = (1.0 - alpha) * f;
@@ -219,7 +220,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     gPulse = fract(flowPhase * 0.6 + bTime * 0.18);
     float bassPulse = waveletBassSpring * quietGate;
     gHexR   = 0.60 + waveletBand2Spring * 0.12 * quietGate + knob_3 * 0.30;   // STRUCTURE dial (knob_3) → cell size
-    gBorder = 0.10 + waveletBand5Spring * 0.06 * quietGate;
+    gBorder = 0.034 + waveletBand5Spring * 0.020 * quietGate;   // thin neon tube, not a fat band
     gCross  = 0.20 - bassPulse * 0.05;
     gFill   = 0.06 + waveletBand5Spring * 0.035 * quietGate;
     gReact  = 1.5 + knob_5 * 2.5;   // floor raised: knob_5 rode at 0 all night, pinning this to 1.0          // MUSIC-REACTIVITY dial (knob_5) → how hard it responds
@@ -260,7 +261,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     vec3 col = lush(s, lum);
     col += lush(s + 0.18, 1.0) * wave * (0.55 + gKick * 0.35 + gPop * 0.20);   // audio rides the FILAMENTS, not exposure
 
-    vec3 bg = lush(s + 0.4, 0.06) * 0.10;   // BLACK ground — neon sits on darkness
+    vec3 bg = lush(s + 0.4, 0.04) * 0.03;   // BLACK ground — neon sits on darkness
     col = mix(bg, col, clamp(alpha, 0.0, 1.0));
 
     // ── LEAD TENDRILS + DIALS ── four long wisps stand out in the world (tail → node, NOT from home);
