@@ -247,6 +247,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // NO orbital drift → the world holds still under pan, so the controller's hit-testing is exact.
     float navz = navZoom < 0.01 ? 1.0 : navZoom;
     navz *= 1.0 + 0.45 * bassPulse;          // ZOOM WITH IT: bass lunge (spring-smoothed, never raw)
+    float plunge = fract((bTime * 0.05 + flowPhase * 0.03));   // monotonic, bass-paced; wraps seamlessly (fold ratio 2)
+    navz *= exp2(-plunge);                    // MANDELBROT PLUNGE: continuous descent, new detail unfolds forever
     gPix = (0.07 / navz) / iResolution.y;   // one screen pixel, in world/fold units
     uv *= 0.07 / navz;
     uv += world;

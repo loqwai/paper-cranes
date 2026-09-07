@@ -393,6 +393,8 @@ The table above is the state after §0.1/§0.2 only. **§0.3 then moved the floo
 weight is the rim's opacity"), not pushing the ground down. Re-measure lum / clip / sat after the rim
 weight lands before trusting any number in this section.
 
+**Whole-frame saturation is meaningless on a mostly-black frame.** `sat` fell 0.75 → 0.54 over three ticks (iter24–26) while the lines stayed fully saturated — it was `dark` rising 0.70 → 0.79 averaging black pixels in. Measure `satOfLitPixels` (saturation over lit, coloured pixels only); it read **0.987**. **The §6 target of 0.87–0.94 should be read as satOfLitPixels**, not whole-frame sat.
+
 **Luma meters under-read red/purple palettes ~2×.** `lum`/`lumMax` are Rec.601-weighted (0.299/0.587/0.114): a saturated purple line AT the OKLCH L cap (~0.75) reads lumMax ~0.28. Once the palette is red/purple, judge brightness by the L-cap value and `whiteish`, never by lumMax — chasing lumMax with drive leads straight back to white lines (iter20b).
 
 **A ratchet needs a counter-ratchet.** Anything that monotonically adds structure also monotonically
@@ -466,7 +468,8 @@ must both be present, and `lattice-controls` chains **after** `lattice-nav`.
 - **A set-length brief is ONE monotonic arc scalar** (iter18–26, 21:06→22:15: *"outlines for now... hypercolor
   in the course of an hour"*). `gArc = clamp((iTime-T0)/3600)` hung every intensity term via `mix(now,
   later, gArc)`; two live corrections were T0 nudges, none were coefficient hunts; whiteish 0 and clip 0 at
-  every check. After the arc saturates the intensity knob is gone — plan the next mechanism before it's asked.
+  every check. The arc never loses its knob: re-anchor `T0 = pageAge − 3600·target` to set it to any level
+  instantly (down or up); it resumes climbing from there. Both live corrections tonight were exactly this.
 - **The flow needs TIME, not just the URL.** Accumulators start at 0 on every page load. A fresh boot
   is the *tuned* look, not the *flow* look. To start deep, raise `paletteShift`/`warpGrow` in the URL.
 - **One move at a time**, and take no metric-driven move while the knobs are sweeping. The hands are
