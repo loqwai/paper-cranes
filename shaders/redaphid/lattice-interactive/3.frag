@@ -175,8 +175,10 @@ vec4 fractal(vec2 p){
         float m = min(delt1, delt2);
         float alias = aliasBase * 0.5 * scale;
         // RIM-DOMINANT: narrow band hugging the edge carries the light; interior stays near-black.
-        float rim  = smoothstep(gBorder + alias, gBorder, m);                 // hard edge
-        float halo = smoothstep(gBorder + 0.020, gBorder + 0.003, m);         // hairline glow off the edge
+        float ldw = float(i - FIRST) / float(LEVELS - 1 - FIRST);
+        float bw   = gBorder * (0.30 + 0.70 * ldw);                          // coarse levels get THIN rims (they're 32x wider on screen)
+        float rim  = smoothstep(bw + alias, bw, m);                           // hard edge
+        float halo = smoothstep(bw * 1.6 + 0.004, bw * 1.1, m);               // hairline glow off the edge
         float body = smoothstep(gBorder + 0.12, gBorder + 0.02, m);           // faint interior
         float f = rim * 0.90 + halo * 0.18;   // near-opaque rim; thin, so interiors stay black
 
@@ -189,7 +191,7 @@ vec4 fractal(vec2 p){
         float band = bandForDepth(ld);
         float lit = (rim * 0.95 + halo * 0.22)
                   * (0.64 + (energySpring * 0.22 + band * 0.35 + waveletBassSpring * quietGate * 0.30) * gReact);
-        lit += wave * (0.16 + gPop * 0.20 + gKick * 0.30 + spectralCrestSmooth * 0.12);
+        lit += wave * (0.04 + gKick * 0.08);   // pulse barely touches lightness — it moves HUE instead (below)
 
         float w = (1.0 - alpha) * f;
         lumAcc   += w * lit;
@@ -251,6 +253,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float lum = fr.x, field = fr.y, wave = fr.z, alpha = fr.w;
 
     float s = field
+            + wave * 0.10                                   // depth pulse recolours the lines: zero brightness cost
             + regionHue(world)
             + bTime * 0.012
             + melodyFlow * 0.32 * quietGate
@@ -259,7 +262,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
             + knob_2 * 2.5                                  // COLOUR-SCHEME dial (knob_2) → global hue rotation
             + seed;
     vec3 col = lush(s, lum);
-    col += lush(s + 0.18, 1.0) * wave * (0.55 + gKick * 0.35 + gPop * 0.20);   // audio rides the FILAMENTS, not exposure
+    col += lush(s + 0.18, 1.0) * wave * (0.14 + gKick * 0.16 + gPop * 0.08);   // audio rides the FILAMENTS, not exposure
 
     vec3 bg = lush(s + 0.4, 0.04) * 0.03;   // BLACK ground — neon sits on darkness
     col = mix(bg, col, clamp(alpha, 0.0, 1.0));
