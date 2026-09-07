@@ -5,6 +5,8 @@ Target: `shaders/redaphid/lattice-interactive/3.frag`. Recipe: `shaders/redaphid
 arithmetic rather than taste).
 
 ## Status
+**Iter 10 (20:21).** Dial-node rings glow on the kick: `hueC * (...) * (1 + grab + gKick*0.7)` in dialDistort. INCIDENT: first save failed to compile — `gKick` undeclared at line 933 (globals were declared AFTER dialDistort; the static linter cannot see forward references, the skill warns about exactly this). Page spammed ~1100 compile errors holding the last good frame for ~20 s. Fix: hoisted the globals line above every function. Recovered: 60 fps, lum 0.077, dark 0.755, black 0.686, clip 0, lumSpread 0.025. PROCESS FIX from iter 11 on: write to `.claude/vj-pending.frag`, GL-compile it in-page via __vjValidate, only then copy into 3.frag.
+
 **Iter 9 (20:16).** Detail budget follows sustained energy: `build = clamp(energySpring*1.4)` widens the sub-pixel gate `res` upper edge 1.6→(1.6+1.2*build); counter-ratchet `lit *= 1 - 0.30*build*ldw` dims the admitted fine levels. energySpring 0.36–0.58 → build ~0.7. lum 0.066→0.083 while dark 0.817→0.75, black 0.70, clip 0, lumSpread 0.076: line count up, light nearly flat.
 
 **Iter 8 (20:12).** Treble tightens FINE line width: `bw *= 1 - 0.35*ldw*clamp(waveletBand5Spring*quietGate)` (coarse outlines unchanged, floor 65%). Treble spring 0.38→0.04 over the window (energy 0.54, treb 0.76). lum 0.066, dark 0.817, black 0.718, clip 0, lumSpread 0.07. Width-not-light lane confirmed stable.
@@ -71,6 +73,7 @@ it, not the eye.
   that moved the needle by < 0.02. Full write-ups are HANDOFF §0.1–§0.3.
 
 ## Todo
+- [x] Pre-save GL validation via the pending-file handoff — deviated from the skill for 10 ticks and it bit on iter 10. Mandatory from iter 11.
 - [ ] **dark 0.06–0.18 is under the 0.20–0.29 target.** One more thinning of the coarse rims — `bw`
       coarse factor 0.30 → ~0.22 — if the user wants more black. Not before they ask; the current
       frame is on-directive.
@@ -85,6 +88,7 @@ it, not the eye.
       weight; any `col +=` after `mix(bg, col, alpha)` whose mask never reaches zero on screen.
 
 ## History of changes
+- iter10: dial rings + gKick*0.7 (local). Globals hoisted to the top of the file after a forward-reference compile failure.
 - iter9: energy-driven detail window + counter-ratchet on fine-level gain. dark 0.82→0.75 at build≈0.7.
 - iter8: treble→fine-line width (taut on hits). Spread 0.07.
 - iter7: flowPhase*0.18 into gSpin (rate-not-angle), melodyFlow 0.5→0.25. 0.35 was too much with the ring swell active — spread 0.13; fix-in-tick to 0.18.

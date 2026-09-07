@@ -20,6 +20,9 @@
 #define LEVELS 10
 #define FIRST 4
 
+// per-frame globals, declared before ANY function so dialDistort/fractal can all see them
+float gSpin, gPulse, gPop, gKick, gHexR, gBorder, gCross, gFill, gReact, gTwist, gPix;
+
 // ── wavelet-ease controller outputs (declared by hand; 0 without the controller / a mic) ──
 uniform float waveletBassSpring;
 uniform float waveletBand2Spring;
@@ -134,7 +137,7 @@ vec3 dialDistort(vec3 col, vec2 scrUV, vec2 NS, float rad, float val, float grab
     float markAng = val * TAU - PI;
     float adm = abs(atan(sin(ang - markAng), cos(ang - markAng)));
     float marker = smoothstep(0.45, 0.0, adm) * smoothstep(rad * 0.28, 0.0, abs(r - edge));
-    col += hueC * (rim * 0.40 + marker * 1.1) * (1.0 + grab);
+    col += hueC * (rim * 0.40 + marker * 1.1) * (1.0 + grab + gKick * 0.7);   // controls glow on the kick
     return col;
 }
 
@@ -152,7 +155,6 @@ float bandForDepth(float ld){
     return waveletBand5Spring * quietGate;
 }
 
-float gSpin, gPulse, gPop, gKick, gHexR, gBorder, gCross, gFill, gReact, gTwist, gPix;
 
 vec4 fractal(vec2 p){
     float scale = 1.0, aliasBase = gPix;   // TRUE pixel footprint in fold units (includes the zoom)
