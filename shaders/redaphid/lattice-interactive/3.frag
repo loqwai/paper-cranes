@@ -217,7 +217,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float liveGate = clamp(max(energyNormalized * 1.6, bassNormalized * 1.3) - 0.10, 0.0, 1.0);
     liveGate = clamp(0.45 + liveGate * 0.85, 0.0, 1.3);
     #define quietGate liveGate
-    gSpin  = bTime * 0.04 + morphPhase * 0.4 + melodyFlow * 0.5 * quietGate;   // MOVING (kept)
+    gSpin  = bTime * 0.04 + morphPhase * 0.4 + flowPhase * 0.18 + melodyFlow * 0.25 * quietGate;   // rate-not-angle: bass paces the spin (0.35 pushed lumSpread to 0.13)
     gPop   = clamp(energySpring * 0.5 + spectralCrestSmooth * 0.45, 0.0, 1.0) * quietGate;
     gKick  = clamp(max(waveletBassZScore, 0.0), 0.0, 1.0) * 0.45 + clamp(wavelet_bassHit, 0.0, 1.0) * 0.40
            + clamp(spectralFluxZScore, 0.0, 1.0) * 0.30;   // flux = fires on ANY transient (tamed)
