@@ -178,6 +178,7 @@ vec4 fractal(vec2 p){
         // RIM-DOMINANT: narrow band hugging the edge carries the light; interior stays near-black.
         float ldw = float(i - FIRST) / float(LEVELS - 1 - FIRST);
         float bw   = gBorder * (0.20 + 0.80 * ldw);                          // coarse levels get THIN rims (they're 32x wider on screen)
+        bw *= 1.0 - 0.35 * ldw * clamp(waveletBand5Spring * quietGate, 0.0, 1.0);   // treble snaps fine lines taut (width, not light)
         float res  = smoothstep(bw * 1.6, bw * 0.5, alias);                   // sub-pixel level -> 0, not haze
         float rim  = smoothstep(bw + alias, bw, m) * res;                     // hard edge
         float halo = smoothstep(bw * 1.6 + 0.004, bw * 1.1, m) * res;         // hairline glow off the edge
