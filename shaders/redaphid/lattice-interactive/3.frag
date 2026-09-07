@@ -269,7 +269,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
 
     float s = field
             + wave * 0.10                                   // depth pulse recolours the lines: zero brightness cost
-            + gArc * 0.10 * clamp(spectralFluxZScore, 0.0, 1.0)   // IRIS flux twinkle (hue only), fades in with the arc
             + regionHue(world)
             + bTime * 0.012
             + melodyFlow * 0.32 * gGate
