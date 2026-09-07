@@ -171,7 +171,7 @@ vec4 fractal(vec2 p){
 
         vec2 uv = abs(p);
         float delt1 = abs((hexDist(uv) - gHexR) - 0.1);
-        float delt2 = min(length(uv) - gCross, min(uv.x, uv.y));
+        float delt2 = min(abs(length(uv) - gCross), min(uv.x, uv.y));   // ring, not filled disc
         float m = min(delt1, delt2);
         float alias = aliasBase * 0.5 * scale;
         // RIM-DOMINANT: narrow band hugging the edge carries the light; interior stays near-black.

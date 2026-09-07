@@ -5,6 +5,8 @@ Target: `shaders/redaphid/lattice-interactive/3.frag`. Recipe: `shaders/redaphid
 arithmetic rather than taste).
 
 ## Status
+**Iter 3 (19:52).** Cell-centre circles were FILLED pie-discs (`length(uv)-gCross` negative inside → whole interior 'on the line'); `abs()` makes them rings. Frame: lum 0.024, dark 0.904, black 0.809, clip 0, lumSpread 0.019, lumMax 0.262 (160x90 downsample under-reads thin lines). Quiet passage (energy 0.07, bass 0.89, centroid 0.19). Look = black wireframe; next: neon brightness ON THE LINES, then music-driven moves (hue/phase/spin-rate/per-depth bands).
+
 **Iter 2 (19:47).** User: "black background, inside the lattice mostly black too"; venue = TENT WALL AT NIGHT, nothing overwhelming. Move: sub-pixel LEVEL FADE `res = smoothstep(bw*1.6, bw*0.5, alias)` on rim+halo, so a level that can't resolve as a line vanishes instead of smearing into haze. INCIDENT: first version sent the projector 100% BLACK (dark 1.0) because the shader's `alias` was `1/resY*scale` — it never included the `0.07/navz` zoom, so it was 3-14x the true pixel footprint (this is also why every zoom level had haze). Fixed with `gPix = (0.07/navz)/iResolution.y` as aliasBase. Result at navZoom 0.239: lum 0.043, dark 0.836, black 0.785, clip 0, bright 0, lumSpread 0.04.
 
 **/vibej2-pw run started 19:38, iter 1/180, cron 6bcdfe4e, mic, Playwright fullscreen verified (outer 1440x900, chrome 0).** Brief: neon cyberpunk outline, rim only, mostly black. Iter 1: coarse rim factor 0.30→0.20, halo weight 0.18→0.07 → lum 0.206, dark 0.223, sat 0.968, clip 0, lumSpread 0.059 (all in target).
@@ -70,6 +72,7 @@ it, not the eye.
       weight; any `col +=` after `mix(bg, col, alpha)` whose mask never reaches zero on screen.
 
 ## History of changes
+- iter3: cell-centre discs → rings via `abs(length(uv) - gCross)`. Filled discs were the last 'wall of colour' element and are on the vetoed orbs list.
 - iter2: sub-pixel level fade (`res`) + TRUE pixel footprint `gPix` (the old `alias` ignored zoom). One-frame black-out on the projector while the gate was miscalibrated — always sanity-check `dark < 0.99` in the post-edit measure.
 Each bullet carries the number that proved it.
 - **`lumAcc` normalised** — `lumAcc * ia`, matching `fieldAcc`/`waveAcc`. `lit` had been arriving at
