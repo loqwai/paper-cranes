@@ -155,3 +155,14 @@ test software" infobar that would otherwise eat the top of the show.
 - **(d) Does the launcher pass `--config`?** `grep -- --config ~/mcp/run_playwright.sh` must hit,
   and the path must be absolute and correct. If Claude Code's MCP entry points at a bare
   `npx @playwright/mcp` instead of `~/mcp/run_playwright.sh`, the config is never read.
+
+## Verified 2026-09-06 21:24 — fullscreen survives page reloads
+
+With the `--start-fullscreen` + `contextOptions.viewport: null` launch config, the Chromium window
+stayed fullscreen through a full page reload (`innerHeight 900 == screen.height`, `chromeHeight 0`,
+checked 55 s after the reload). Only page state is lost on a reload: `iTime` (so any time-anchored
+arc restarts), `navX/navY/navZoom` (re-seed with `&navZoom=<value>` in the URL — lattice-nav honours
+the preset), and the in-page validator. The reload itself was most likely triggered by a new `.frag`
+file being created under the project root (the Vite shader plugin watches them) — never create
+`.frag` files under the project root during a set; write scratch shaders as `.frag.txt` or outside
+the repo.
