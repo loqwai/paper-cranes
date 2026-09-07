@@ -5,6 +5,7 @@ Target: `shaders/redaphid/lattice-interactive/3.frag`. Recipe: `shaders/redaphid
 arithmetic rather than taste).
 
 ## Status
+**Iter 17 (21:00).** USER: "pay close attention to the music and adjust as necessary" + "use Claude subagent teams. we're live. impress everyone". Music read first (16 samples / 6 s): treble 0.85, centroid 0.79, entropy 0.81, roughness 0.71, crest 0.07 (no clean tonal peaks), bass mean 0.13 spiking 0.82, bass spring 0.31, 2 clear kicks (bassZ>0.6) + 6 hits / 6 s, melodyFlow 0.12 (static), energySpring 0.63, raw quietGate 1.0. Read: treble/noise-dominant grit, sparse kicks. Pre-move frame: lum 0.139, dark 0.60, clip 0.0003, lumSpread 0.143, 61 fps. Move: IRIS edge-fuzz for this corner — `haze = spectralRoughnessSmooth * gGate`; halo width `bw*(1.6 + 2.4*haze)`, halo weight `0.07 + 0.10*haze` — neon tubes fog on gritty passages, snap crisp on clean ones (light lane, alpha-masked, smoothed feature). Post-move (21:02, compiled in-page → saved, 61 fps, 8-frame avg): lum 0.126, dark 0.704, black 0.656, clip 0, bright 0.078, lumMax 0.859, lumSpread 0.057 (from 0.143). Roughness 0.30–0.48 over the window — track turned bassier/cleaner right after the read (bass 0.45, treb 0.21, centroid 0.33, entropy 0.28) so haze sat ~half; opens on the gritty sections. Team: R&D candidate-moves agent → `.claude/vj-candidates/QUEUE.md`; post-show fixes agent in an isolated worktree (lattice-nav auto-pan + index.js resize noise); scribe.
 **Iter 15 (20:52).** IRIS kick path: `bassPulse += 0.35*smoothstep(0.6,1.2,waveletBassZScore)` (thresholded z — the allowed form) so zoom lunge / rings / trails / tunnel all snap on a clear kick. dark 0.662, clip 0, lumSpread 0.052, 61 fps.
 **Iter 16 (20:55).** IRIS research landed. BUG FOUND: `#define quietGate liveGate` lived inside mainImage, so `bandForDepth()` and `fractal()` (defined ABOVE it) read the raw gain-dependent `quietGate` all night — per-depth band lighting (iter 4) and treble-taut (iter 8) were dead on quiet passages. Fixed with a real global `gGate` set before fractal() runs; every use now goes through it. Also: IRIS `kickExcess = clamp((wavelet_bassHit-1)*0.5)` tier into gKick (bassHit measures 90–214 on hits here, so the tier is effectively binary — fine); removed `melodyFlow` from the spin ANGLE (Iris: audio in amplitude, never in phase — it rocked back). dark 0.672, black 0.575, clip 0, lumSpread 0.061, 62 fps. NOTE: raw quietGate read 1.0 during this loud window — it is gain-dependent, not always dead.
 
@@ -63,6 +64,7 @@ filaments, hue). #5 is the reminder that a regression is one edit away and the m
 it, not the eye.
 
 ## Cool moments
+- **iter17 music-read-first (21:00):** user asked for close listening; the tick opened with a 16-sample feature window BEFORE choosing a move, and the read (roughness 0.71, crest 0.07, sparse kicks) picked the lane — texture, not kick. Design hypothesis: the move should be chosen from the music's dominant domain that window, not from the todo list; a treble-grit passage wants a halo/width move, a kick-heavy one wants camera/bass.
 - **iter13 zoom lunge (20:43):** first geometry-of-camera move; on a spring it reads as a surge toward the viewer on every kick, no shiver. Design hypothesis: camera moves are the most legible reactivity of all and are safe on springs — reserve them for the bass.
 - **iter4 per-depth bands (19:56):** the first move where the meters show music in the LINES and not the frame — lumMax doubled on a bass hit with lum/dark unchanged. Design hypothesis: this is the lane; keep adding audio to depth-indexed line properties (width, hue, ring radius), never to exposure.
 - **The flash diagnosis (the night's real finding).** Three consecutive rounds of the screenshot and
@@ -86,6 +88,8 @@ it, not the eye.
   that moved the needle by < 0.02. Full write-ups are HANDOFF §0.1–§0.3.
 
 ## Todo
+- [x] iter17: halo-fuzz post-move numbers confirmed — lumSpread 0.143→0.057, dark 0.60→0.704, clip 0. Still unverified: haze at full (roughness ≥0.7) — the window only reached 0.48. Re-measure on the next gritty passage; if spread > ~0.16 pull the weight term 0.10→0.06 before the width term.
+- [ ] iter17: R&D queue at `.claude/vj-candidates/QUEUE.md` — pull from it, don't invent, while it has entries. Post-show worktree agent owns lattice-nav auto-pan + index.js resize noise (supersedes the older POST-SHOW bullet below; both wait for a break).
 - [ ] POST-SHOW: move the forward drift into lattice-nav.js (auto-pan velocity) so dial touch hit-testing stays exact. Controllers are in Vite's watch-ignore, so this needs a reload — never mid-set.
 - [x] Pre-save GL validation via the pending-file handoff — deviated from the skill for 10 ticks and it bit on iter 10. Mandatory from iter 11.
 - [ ] **dark 0.06–0.18 is under the 0.20–0.29 target.** One more thinning of the coarse rims — `bw`
@@ -102,6 +106,7 @@ it, not the eye.
       weight; any `col +=` after `mix(bg, col, alpha)` whose mask never reaches zero on screen.
 
 ## History of changes
+- iter17: music-read-first tick; roughness→halo width/weight fuzz (`haze = spectralRoughnessSmooth*gGate`, width ×(1.6+2.4h), weight 0.07+0.10h). lumSpread 0.143→0.057, dark 0.704, clip 0. First subagent-team tick.
 - iter15: Iris kick path into bassPulse (thresholded bassZ).
 - iter16: gGate global (the #define scope bug — a #define inside mainImage does not reach functions above it); kickExcess tier; melodyFlow out of the spin angle.
 - iter14: Iris tunnel push on the feedback sample (0.006 + 0.022*bassPulse).
@@ -154,6 +159,7 @@ None tonight. `3.frag` was edited **in place** — the user chose that over a sc
 graduated design arc (1 → 2 → 3) lives in `shaders/redaphid/wip/lattice-interactive/lattice-interactive.md`.
 
 ## Design hypotheses for v(next)
+- **Read 6 s of features before choosing; the track profile, not the shader's wiring gaps, should pick the lane** (iter17 — first move chosen FROM a music read rather than from the wiring list). A 16-sample window (treble/centroid/entropy/roughness/crest + kick count + springs) names the dominant domain; one move from that lane, and write the passage profile next to the numbers so they have a context. Caveat measured the same tick: the track changed character within 2 min of the read (roughness 0.71→0.30–0.48), so a smoothed feature with a floor beats a hard-coded profile.
 - A `#define` placed inside a function only renames text AFTER it. Never use #define to retarget a uniform for helper functions — use a global set at the top of mainImage. (Cost tonight: two 'proven' reactive moves were silently dead for 12 ticks; the meters attributed their motion to other terms.)
 - Iris rule adopted: gate GEOMETRY hard, gate COLOUR softly with a floor. Iris rule adopted: audio in AMPLITUDE, never in PHASE/ANGLE.
 - **Never trust one frame; measure a spread.** A screenshot and a single meter sample are both

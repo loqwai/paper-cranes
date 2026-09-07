@@ -449,6 +449,7 @@ must both be present, and `lattice-controls` chains **after** `lattice-nav`.
   is the *tuned* look, not the *flow* look. To start deep, raise `paletteShift`/`warpGrow` in the URL.
 - **One move at a time**, and take no metric-driven move while the knobs are sweeping. The hands are
   never fought.
+- **Read the music before you pick the move** (user, 21:00: *"pay close attention to the music and adjust as necessary"*). Take a ~16-sample feature window first, name the dominant domain (treble grit / kick / tonal / static), and choose the lane from that — `spectralRoughnessSmooth * gGate` on halo width/weight is the proven texture lane for noise-dominant passages; camera/bass moves are for kick-heavy ones.
 - **Hot-swapping a `time * k` constant JUMPS the value once** — `bTime * 0.012` on the hue sum is
   such a term. Change those before the show, not during; a live edit is a visible hue snap.
 - **If `paletteShift` suddenly collapses mid-set** (e.g. 3.66 → 0.41), the pad's COLOUR bank has
