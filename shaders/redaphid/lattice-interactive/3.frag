@@ -179,7 +179,8 @@ vec4 fractal(vec2 p){
         float ldw = float(i - FIRST) / float(LEVELS - 1 - FIRST);
         float bw   = gBorder * (0.20 + 0.80 * ldw);                          // coarse levels get THIN rims (they're 32x wider on screen)
         bw *= 1.0 - 0.35 * ldw * clamp(waveletBand5Spring * quietGate, 0.0, 1.0);   // treble snaps fine lines taut (width, not light)
-        float res  = smoothstep(bw * 1.6, bw * 0.5, alias);                   // sub-pixel level -> 0, not haze
+        float build = clamp(energySpring * 1.4, 0.0, 1.0);                    // sustained energy, smoothed
+        float res  = smoothstep(bw * (1.6 + 1.2 * build), bw * 0.5, alias);   // sub-pixel level -> 0, not haze; energy widens the window
         float rim  = smoothstep(bw + alias, bw, m) * res;                     // hard edge
         float halo = smoothstep(bw * 1.6 + 0.004, bw * 1.1, m) * res;         // hairline glow off the edge
         float body = smoothstep(gBorder + 0.12, gBorder + 0.02, m);           // faint interior
@@ -195,6 +196,7 @@ vec4 fractal(vec2 p){
         float lit = (rim * 0.95 + halo * 0.22)
                   * (0.56 + (energySpring * 0.16 + band * 0.75 + waveletBassSpring * quietGate * 0.12) * gReact);
         lit += wave * (0.04 + gKick * 0.08);   // pulse barely touches lightness — it moves HUE instead (below)
+        lit *= 1.0 - 0.30 * build * ldw;       // counter-ratchet: more fine lines, not more light
 
         float w = (1.0 - alpha) * f;
         lumAcc   += w * lit;

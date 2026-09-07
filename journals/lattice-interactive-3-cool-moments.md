@@ -5,6 +5,8 @@ Target: `shaders/redaphid/lattice-interactive/3.frag`. Recipe: `shaders/redaphid
 arithmetic rather than taste).
 
 ## Status
+**Iter 9 (20:16).** Detail budget follows sustained energy: `build = clamp(energySpring*1.4)` widens the sub-pixel gate `res` upper edge 1.6→(1.6+1.2*build); counter-ratchet `lit *= 1 - 0.30*build*ldw` dims the admitted fine levels. energySpring 0.36–0.58 → build ~0.7. lum 0.066→0.083 while dark 0.817→0.75, black 0.70, clip 0, lumSpread 0.076: line count up, light nearly flat.
+
 **Iter 8 (20:12).** Treble tightens FINE line width: `bw *= 1 - 0.35*ldw*clamp(waveletBand5Spring*quietGate)` (coarse outlines unchanged, floor 65%). Treble spring 0.38→0.04 over the window (energy 0.54, treb 0.76). lum 0.066, dark 0.817, black 0.718, clip 0, lumSpread 0.07. Width-not-light lane confirmed stable.
 
 **Iter 7 (20:08).** Spin RATE from `flowPhase` (bass-paced monotonic accumulator; advanced 95.99→96.36 with no reversal); direct `melodyFlow` angle term halved 0.5→0.25. First try at 0.35 pushed lumSpread to 0.132 (second geometry mover stacked on iter-5's ring swell — exactly what the iter-5 note warned about); backed off to 0.18 → spread 0.045. Quiet passage: lum 0.028, dark 0.91, black 0.83, clip 0; lum followed the bass spring 0.15→0.02, i.e. lines dim in the quiet by design.
@@ -83,6 +85,7 @@ it, not the eye.
       weight; any `col +=` after `mix(bg, col, alpha)` whose mask never reaches zero on screen.
 
 ## History of changes
+- iter9: energy-driven detail window + counter-ratchet on fine-level gain. dark 0.82→0.75 at build≈0.7.
 - iter8: treble→fine-line width (taut on hits). Spread 0.07.
 - iter7: flowPhase*0.18 into gSpin (rate-not-angle), melodyFlow 0.5→0.25. 0.35 was too much with the ring swell active — spread 0.13; fix-in-tick to 0.18.
 - iter6: centroid-spring hue lean 0.14→0.30. Colour-only; spread stayed 0.048.
