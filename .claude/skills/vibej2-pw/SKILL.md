@@ -101,6 +101,15 @@ browser nobody is looking at.
 
 ## Setup differences from /vibej-pw
 
+### Step 0 — Fullscreen (do this FIRST)
+
+Same as `/vibej-pw` step 0: follow **`docs/FULLSCREEN.md`** before opening any tab. Check
+`~/mcp/playwright-mcp.config.json` (`--start-fullscreen`, `viewport: null`) and that
+`~/mcp/run_playwright.sh` passes `--config`; reconnect the MCP if the config changed; once the
+jam tab exists, run the Verify snippet with `browser_evaluate` and proceed only on
+`fillsScreen: true`. This matters more here than in v1: in `spotify`/`tab` mode a late reconnect
+also costs the user the share click, so get fullscreen right before the audio source is set up.
+
 ### Step 3 — tabs
 
 - **Jam page** — as `/vibej-pw`, but build the URL per `audioSource` above.

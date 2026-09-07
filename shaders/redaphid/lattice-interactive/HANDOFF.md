@@ -472,38 +472,16 @@ for (const event of events) window.addEventListener(event, handler, true);   // 
 permanently disarm fullscreen). `keydown` moved here too — it had been bound to the canvas, which is
 **not focusable**, so it was dead code that had never once fired.
 
-### Playwright MCP — the fullscreen recipe that actually works
+### Playwright MCP — fullscreen
 
-`@playwright/mcp` is **headed by default**; `--headless` is the opt-out. **There is no `--headed`
-flag** — passing it fails the server at startup with `unknown option '--headed'`. Fullscreen and
-headedness are configured through a **config file**, not flags. `~/mcp/playwright-mcp.config.json`:
+Full procedure, dead ends and the verify snippet live in **`docs/FULLSCREEN.md`**. Read that, not
+this. The short version:
 
-```json
-{
-  "browser": {
-    "launchOptions": {
-      "headless": false,
-      "args": ["--start-fullscreen"],
-      "ignoreDefaultArgs": ["--enable-automation"]
-    },
-    "contextOptions": { "viewport": null }
-  }
-}
-```
-
-and the launcher (`~/mcp/run_playwright.sh`) passes `--config` pointing at it.
-
-Three of those settings are load-bearing:
-
-- **`--start-fullscreen`, not `--kiosk`** — deliberately, so the operator can **Escape out mid-show**.
-  Kiosk traps you.
-- **`"viewport": null`** — without it, Playwright **emulates a fixed viewport** (we measured
-  `innerHeight` **812** on a **900 px** screen), so the page is **letterboxed even when
-  `document.fullscreenElement` is set**. The fullscreen API reports success; the pixels lie. If a
-  running session shows this and a restart is off the table, **`browser_resize` to the screen size**
-  is the live workaround.
-- **`ignoreDefaultArgs: ["--enable-automation"]`** — drops the automation infobar that would
-  otherwise sit at the top of the show.
+1. `~/mcp/playwright-mcp.config.json`: `args: ["--start-fullscreen"]`, `contextOptions.viewport: null`, `ignoreDefaultArgs: ["--enable-automation"]`; `~/mcp/run_playwright.sh` passes `--config` to it.
+2. `/mcp` → playwright → **reconnect** (not a session restart); the browser is fresh, so `browser_navigate` to the URL above again.
+3. Verify with `browser_evaluate`: `innerWidth === screen.width && innerHeight === screen.height && outerHeight - innerHeight === 0`. **Never** trust `document.fullscreenElement` — it was `HTML` while the page was letterboxed at 812/900.
+4. Mid-set, no reconnect: `browser_resize` to `screen.width × screen.height`, then the operator presses ⌃⌘F on the Chromium window.
+5. Never pass `--headed` — there is no such flag; the server dies (`CONNECTION_CLOSED`). Headed is the default.
 
 ---
 

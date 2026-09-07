@@ -64,6 +64,17 @@ If a shader arg is passed mid-run (skill re-invoked while state exists), treat i
 
 ## Setup (once, at start)
 
+### 0. Fullscreen (do this FIRST)
+
+The user is projecting the Playwright window. Follow **`docs/FULLSCREEN.md`** exactly, before
+opening any tab — the fix is a config file plus an MCP **reconnect**, and a reconnect drops every
+tab, so do it before step 3, never after:
+
+1. `~/mcp/playwright-mcp.config.json` must have `launchOptions.args: ["--start-fullscreen"]` and `contextOptions.viewport: null`; `~/mcp/run_playwright.sh` must pass `--config` to it.
+2. If it was just edited: `/mcp` → playwright → reconnect.
+3. After the jam tab exists (step 3), run the **Verify** snippet from `docs/FULLSCREEN.md` via `browser_evaluate`. Proceed only on `fillsScreen: true`. `document.fullscreenElement` proves nothing under Playwright.
+4. Mid-set fallback (no reconnect): `browser_resize` to `screen.width × screen.height` and have the user press ⌃⌘F.
+
 ### 1. Read the port
 
 ```fish
