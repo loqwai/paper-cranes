@@ -233,7 +233,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
            + clamp(spectralFluxZScore, 0.0, 1.0) * 0.30 + kickExcess * 0.45;   // flux = any transient; kickExcess = real kick tier
     gPulse = fract(flowPhase * 0.6 + bTime * 0.18);
     float bassPulse = waveletBassSpring * gGate
-                    + 0.35 * smoothstep(0.6, 1.2, waveletBassZScore);   // IRIS kick path: clear kicks snap everything downstream
+                    + 0.35 * pow(smoothstep(0.45, 1.2, waveletBassZScore), 0.6);   // IRIS kick ENVELOPE: earlier onset + pow(.,0.6) fast attack; spring = body/decay
     gHexR   = 0.60 + waveletBand2Spring * 0.12 * gGate + knob_3 * 0.30;   // STRUCTURE dial (knob_3) → cell size
     gBorder = 0.028 + energySpring * 0.014 + waveletBand5Spring * 0.014 * gGate;   // IRIS LINE_THICK: loudness = line weight (same width as before at energySpring 0.63; quiet -> thinner)
     gCross  = 0.17 + bassPulse * 0.11;      // rings swell on the kick (spring-smoothed, no shiver)
