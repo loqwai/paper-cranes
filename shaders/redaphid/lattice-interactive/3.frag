@@ -52,9 +52,11 @@ uniform float ctrlGrab;      // index of the node being turned (-1 = none) → b
 mat2 rot2(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 
 vec3 lush(float s, float lit){
-    float h = fract(s) * TAU;
-    float L = clamp(pow(clamp(lit, 0.0, 1.0), 1.55), 0.0, mix(0.50, 0.96, gArc));   // L CAP: pure outlines now, whites only at hypercolor
-    float C = (0.30 + seed2 * 0.05) + 0.06 * sin(s * TAU * 0.5 + 1.3);   // NEON: high chroma (deep colour, not white)
+    float k = smoothstep(0.44, 0.56, fract(s));                 // two-tone selector (near-binary): orange OR purple, not the red between
+    float h = mix(radians(82.0), radians(-50.0), k);            // ORANGE <-> DEEP PURPLE (orange anchor toward yellow: it clipped to red at 68°)
+    float L = clamp(clamp(lit, 0.0, 1.0), 0.0, mix(0.55, 0.88, gArc));   // L CAP: colour, never white; linear drive reaches the cap
+    L *= mix(1.0, 0.80, k);                                     // the purple runs DEEP
+    float C = ((0.36 + seed2 * 0.05) + 0.06 * sin(s * TAU * 0.5 + 1.3)) * mix(0.60, 1.0, k);   // chroma: orange side in-gamut (else it clips to red), purple full
     C *= smoothstep(0.0, 0.22, L);   // chroma -> 0 with L, else OKLCH clamps to a colored floor, never black
     return oklch2rgb(vec3(L, C, h));
 }
@@ -191,13 +193,13 @@ vec4 fractal(vec2 p){
 
         float ld = float(i - FIRST) / float(LEVELS - 1 - FIRST);
         float swirl = 0.5 + 0.5 * sin(atan(p.y, p.x) * 2.0 + length(p) * 3.0 + float(i) + seed4 * TAU);
-        float field = ld * (0.55 + evoPlasma * 0.2 + build * 0.35 + gArc * 0.60) + swirl * 0.45;   // hue span widens over the hour -> hypercolor
+        float field = ld * (0.55 + evoPlasma * 0.2 + build * 0.35 + gArc * 0.60 + clamp(waveletBand5Spring * gGate, 0.0, 1.0) * 0.30) + swirl * 0.45;   // hue span widens over the hour -> hypercolor; TREBLE splits coarse/fine further (hue only)
 
         float env = sin(gPulse * PI);
         float wave = smoothstep(0.30, 0.0, abs(ld - (1.0 - gPulse))) * env;
         float band = bandForDepth(ld);
         float lit = (rim * 0.95 + halo * 0.22)
-                  * (mix(0.40, 0.62, gArc) + (energySpring * 0.16 + band * 0.75 + waveletBassSpring * gGate * 0.12) * gReact);
+                  * (mix(0.90, 1.20, gArc) + (energySpring * 0.16 + band * 0.75 + waveletBassSpring * gGate * 0.12) * gReact);
         lit += wave * (0.04 + gKick * 0.08);   // pulse barely touches lightness — it moves HUE instead (below)
         lit *= 1.0 - 0.30 * build * ldw;       // counter-ratchet: more fine lines, not more light
 
@@ -217,7 +219,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float aspect = iResolution.x / iResolution.y;
 
     float bTime = iTime / 3.0;
-    gArc = clamp((iTime - 3038.0) / 3600.0, 0.0, 1.0);   // SET ARC: outlines now -> hypercolor in 60 min
+    gArc = clamp((iTime - -2107.0) / 3600.0, 0.0, 1.0);   // SET ARC: outlines now -> hypercolor in 60 min
     // LIVE GATE (VJ fix): the shipped gGate reads ~0.002 avg on a room mic, which multiplied
     // nearly every reactive term to nothing. Rebuild it from measured energy with a hard floor so
     // motion always survives, and OR in the bass level so bass-driven moves never gate out.
@@ -289,7 +291,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
         float ah = hash11(cN[i] + fi) * TAU;                            // per-node tendril heading
         vec2 tail = cN[i] + 1.3 * vec2(cos(ah), sin(ah));               // LONG tendril, out in the world
         float tnd = leadTendril(wpos, tail, cN[i], bTime, fi * 1.7 + seed * TAU);
-        col += mix(lush(hue, 0.85), vec3(1.0), 0.25) * tnd * 0.22;      // ethereal wisp leading to it
+        col += lush(hue, 0.85) * tnd * 0.22;                            // wisp in palette colour — the ONLY white in the file is gone (user 21:06: too white)
     }
 
     // ── MUSICAL BLOOM + SPARKLE (as before) ──
