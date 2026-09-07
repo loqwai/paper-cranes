@@ -181,7 +181,7 @@ vec4 fractal(vec2 p){
         float ldw = float(i - FIRST) / float(LEVELS - 1 - FIRST);
         float bw   = gBorder * (0.20 + 0.80 * ldw);                          // coarse levels get THIN rims (they're 32x wider on screen)
         bw *= 1.0 - 0.35 * ldw * clamp(waveletBand5Spring * quietGate, 0.0, 1.0);   // treble snaps fine lines taut (width, not light)
-        float build = clamp((energySpring - 0.35) * 1.6, 0.0, 1.0);           // sustained energy: opens above mid, full only at peaks
+        float build = clamp((energySpring - 0.22) * 1.05, 0.0, 1.0);          // sustained energy: gentle slope (a knee at track energy oscillates)
         float res  = smoothstep(bw * (1.6 + 1.2 * build), bw * 0.5, alias);   // sub-pixel level -> 0, not haze; energy widens the window
         float rim  = smoothstep(bw + alias, bw, m) * res;                     // hard edge
         float halo = smoothstep(bw * 1.6 + 0.004, bw * 1.1, m) * res;         // hairline glow off the edge
@@ -232,7 +232,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     gBorder = 0.034 + waveletBand5Spring * 0.020 * quietGate;   // thin neon tube, not a fat band
     gCross  = 0.17 + bassPulse * 0.11;      // rings swell on the kick (spring-smoothed, no shiver)
     gFill   = 0.06 + waveletBand5Spring * 0.035 * quietGate;
-    gReact  = 1.5 + knob_5 * 2.5;   // floor raised: knob_5 rode at 0 all night, pinning this to 1.0          // MUSIC-REACTIVITY dial (knob_5) → how hard it responds
+    gReact  = 2.0 + knob_5 * 2.5;   // floor raised: knob_5 rode at 0 all night, pinning this to 1.0          // MUSIC-REACTIVITY dial (knob_5) → how hard it responds
     gTwist  = knob_4 * 1.5;                 // STRUCTURE dial (knob_4) → kaleido twist
 
     vec2 world = vec2(navX, navY) + vec2(0.80, 0.55) * (bTime * 0.03 + flowPhase * 0.02);   // constant forward motion, bass-paced
@@ -240,6 +240,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
 
     // NO orbital drift → the world holds still under pan, so the controller's hit-testing is exact.
     float navz = navZoom < 0.01 ? 1.0 : navZoom;
+    navz *= 1.0 + 0.45 * bassPulse;          // ZOOM WITH IT: bass lunge (spring-smoothed, never raw)
     gPix = (0.07 / navz) / iResolution.y;   // one screen pixel, in world/fold units
     uv *= 0.07 / navz;
     uv += world;

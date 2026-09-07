@@ -5,6 +5,8 @@ Target: `shaders/redaphid/lattice-interactive/3.frag`. Recipe: `shaders/redaphid
 arithmetic rather than taste).
 
 ## Status
+**Iter 13 (20:43).** Read-first tick: lumSpread 0.147 from the detail-budget KNEE at energySpring 0.35 sitting right at track energy → fine levels flipping in/out. Softened to slope `(energySpring-0.22)*1.05`. Then USER: "more reactivity. zoom with it. definitely at first" → ZOOM LUNGE `navz *= 1 + 0.45*bassPulse` (bass SPRING only, gPix follows) + gReact floor 1.5→2.0. Directive change: reactivity now outranks the lumSpread<0.1 target; lum following the music is intended. Bass spring 0.26–0.84 → ~38% lunge. lum 0.163, dark 0.581, black 0.536, clip 0.001, lumSpread 0.126, 61 fps.
+
 **Iter 12 (20:36).** Motion trails now that the lattice travels: feedback decay `0.62 + 0.18*bassPulse` (max 0.80) — lines streak on kicks, snap crisp between; rim standing gain 0.56→0.52 as the counter. Bass spring 0.67→0.10→0.49 over the window. lum 0.105, dark 0.673, black 0.598, clip 0, lumSpread 0.073, 62 fps.
 
 **Iter 11 (20:27).** USER: "we need it to be moving forward, navigation wise, constantly" + shiver reminder. (1) FORWARD: lattice-nav has NO auto-pan (drag + friction glide only; knob_1 is drag sensitivity) — navX/navY measured exactly 0 all set. Added a seamless bass-paced drift in the shader: `world += vec2(0.80,0.55)*(bTime*0.03 + flowPhase*0.02)`. Touch hit-test on dial nodes is offset while on (MIDI unaffected). (2) SHIVER: `liveGate` was built from RAW per-frame energy/bass and multiplied ring radius, line width, spin, hue → swapped to `energySpring*1.7 / waveletBassSpring*1.4`. (3) hue span across depth widens with `build` (two-tone at peaks). First tick using the pending-file → in-page GL compile → /__save-shader protocol. Peak passage (energy 0.88): lum 0.135, dark 0.625, black 0.506, clip 0, lumSpread 0.079, 61 fps. Watch dark on the next normal passage; pull gate scale if < 0.65.
@@ -56,6 +58,7 @@ filaments, hue). #5 is the reminder that a regression is one edit away and the m
 it, not the eye.
 
 ## Cool moments
+- **iter13 zoom lunge (20:43):** first geometry-of-camera move; on a spring it reads as a surge toward the viewer on every kick, no shiver. Design hypothesis: camera moves are the most legible reactivity of all and are safe on springs — reserve them for the bass.
 - **iter4 per-depth bands (19:56):** the first move where the meters show music in the LINES and not the frame — lumMax doubled on a bass hit with lum/dark unchanged. Design hypothesis: this is the lane; keep adding audio to depth-indexed line properties (width, hue, ring radius), never to exposure.
 - **The flash diagnosis (the night's real finding).** Three consecutive rounds of the screenshot and
   the meter *disagreeing* — a screenshot reading bright while the meter said the mean was fine, then
@@ -94,6 +97,7 @@ it, not the eye.
       weight; any `col +=` after `mix(bg, col, alpha)` whose mask never reaches zero on screen.
 
 ## History of changes
+- iter13: build knee→slope (0.22, 1.05); ZOOM LUNGE on bass spring 0.45; gReact 1.5→2.0. Spread target relaxed by user in favour of reactivity.
 - iter12: bass-stretched motion trails (decay 0.62→0.80 on the kick), rim gain 0.56→0.52.
 - iter11b: build recalibrated (energySpring-0.35)*1.6 — density only at true peaks.
 - iter11: constant forward drift (bass-paced), liveGate → springs (shiver fix), depth hue-span × build. Protocol: pending → GL compile → save.
