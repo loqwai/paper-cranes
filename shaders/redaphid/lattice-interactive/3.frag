@@ -191,7 +191,7 @@ vec4 fractal(vec2 p){
 
         float ld = float(i - FIRST) / float(LEVELS - 1 - FIRST);
         float swirl = 0.5 + 0.5 * sin(atan(p.y, p.x) * 2.0 + length(p) * 3.0 + float(i) + seed4 * TAU);
-        float field = ld * (0.55 + evoPlasma * 0.2 + build * 0.35) + swirl * 0.45;   // energy splits coarse/fine into two-tone
+        float field = ld * (0.55 + evoPlasma * 0.2 + build * 0.35 + gArc * 0.60) + swirl * 0.45;   // hue span widens over the hour -> hypercolor
 
         float env = sin(gPulse * PI);
         float wave = smoothstep(0.30, 0.0, abs(ld - (1.0 - gPulse))) * env;
@@ -267,6 +267,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
 
     float s = field
             + wave * 0.10                                   // depth pulse recolours the lines: zero brightness cost
+            + gArc * 0.10 * clamp(spectralFluxZScore, 0.0, 1.0)   // IRIS flux twinkle (hue only), fades in with the arc
             + regionHue(world)
             + bTime * 0.012
             + melodyFlow * 0.32 * gGate
