@@ -184,9 +184,10 @@ vec4 fractal(vec2 p){
         float build = clamp((energySpring - 0.22) * 1.05, 0.0, 1.0);          // sustained energy: gentle slope (a knee at track energy oscillates)
         float res  = smoothstep(bw * (1.6 + 1.2 * build), bw * 0.5, alias);   // sub-pixel level -> 0, not haze; energy widens the window
         float rim  = smoothstep(bw + alias, bw, m) * res;                     // hard edge
-        float halo = smoothstep(bw * 1.6 + 0.004, bw * 1.1, m) * res;         // hairline glow off the edge
+        float haze = spectralRoughnessSmooth * gGate;                          // IRIS: dissonance = hazier line
+        float halo = smoothstep(bw * (1.6 + 2.4 * haze) + 0.004, bw * 1.1, m) * res;   // halo fogs out on gritty passages
         float body = smoothstep(gBorder + 0.12, gBorder + 0.02, m);           // faint interior
-        float f = rim * 0.90 + halo * 0.07;   // near-opaque rim, hairline halo: crisp tube on black
+        float f = rim * 0.90 + halo * (0.07 + 0.10 * haze);   // near-opaque rim; halo carries more on noise
 
         float ld = float(i - FIRST) / float(LEVELS - 1 - FIRST);
         float swirl = 0.5 + 0.5 * sin(atan(p.y, p.x) * 2.0 + length(p) * 3.0 + float(i) + seed4 * TAU);
