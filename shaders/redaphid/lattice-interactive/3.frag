@@ -151,10 +151,10 @@ float bandForDepth(float ld){
     return waveletBassSpring * quietGate;
 }
 
-float gSpin, gPulse, gPop, gKick, gHexR, gBorder, gCross, gFill, gReact, gTwist;
+float gSpin, gPulse, gPop, gKick, gHexR, gBorder, gCross, gFill, gReact, gTwist, gPix;
 
 vec4 fractal(vec2 p){
-    float scale = 1.0, aliasBase = 1.0 / iResolution.y;
+    float scale = 1.0, aliasBase = gPix;   // TRUE pixel footprint in fold units (includes the zoom)
     float alpha = 0.0, lumAcc = 0.0, fieldAcc = 0.0, waveAcc = 0.0;
 
     for (int i = 0; i < LEVELS; i++){
@@ -177,8 +177,9 @@ vec4 fractal(vec2 p){
         // RIM-DOMINANT: narrow band hugging the edge carries the light; interior stays near-black.
         float ldw = float(i - FIRST) / float(LEVELS - 1 - FIRST);
         float bw   = gBorder * (0.20 + 0.80 * ldw);                          // coarse levels get THIN rims (they're 32x wider on screen)
-        float rim  = smoothstep(bw + alias, bw, m);                           // hard edge
-        float halo = smoothstep(bw * 1.6 + 0.004, bw * 1.1, m);               // hairline glow off the edge
+        float res  = smoothstep(bw * 1.6, bw * 0.5, alias);                   // sub-pixel level -> 0, not haze
+        float rim  = smoothstep(bw + alias, bw, m) * res;                     // hard edge
+        float halo = smoothstep(bw * 1.6 + 0.004, bw * 1.1, m) * res;         // hairline glow off the edge
         float body = smoothstep(gBorder + 0.12, gBorder + 0.02, m);           // faint interior
         float f = rim * 0.90 + halo * 0.07;   // near-opaque rim, hairline halo: crisp tube on black
 
@@ -233,6 +234,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
 
     // NO orbital drift → the world holds still under pan, so the controller's hit-testing is exact.
     float navz = navZoom < 0.01 ? 1.0 : navZoom;
+    gPix = (0.07 / navz) / iResolution.y;   // one screen pixel, in world/fold units
     uv *= 0.07 / navz;
     uv += world;
     vec2 wpos = uv;                                         // clean world position — controls live here
