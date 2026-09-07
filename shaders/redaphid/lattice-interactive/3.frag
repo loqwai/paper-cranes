@@ -235,7 +235,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float bassPulse = waveletBassSpring * gGate
                     + 0.35 * smoothstep(0.6, 1.2, waveletBassZScore);   // IRIS kick path: clear kicks snap everything downstream
     gHexR   = 0.60 + waveletBand2Spring * 0.12 * gGate + knob_3 * 0.30;   // STRUCTURE dial (knob_3) → cell size
-    gBorder = 0.034 + waveletBand5Spring * 0.020 * gGate;   // thin neon tube, not a fat band
+    gBorder = 0.028 + energySpring * 0.014 + waveletBand5Spring * 0.014 * gGate;   // IRIS LINE_THICK: loudness = line weight (same width as before at energySpring 0.63; quiet -> thinner)
     gCross  = 0.17 + bassPulse * 0.11;      // rings swell on the kick (spring-smoothed, no shiver)
     gFill   = 0.06 + waveletBand5Spring * 0.035 * gGate;
     gReact  = 2.0 + knob_5 * 2.5;   // floor raised: knob_5 rode at 0 all night, pinning this to 1.0          // MUSIC-REACTIVITY dial (knob_5) → how hard it responds
