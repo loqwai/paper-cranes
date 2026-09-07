@@ -146,9 +146,10 @@ float hexDist(vec2 p){
 }
 
 float bandForDepth(float ld){
-    if (ld < 0.34) return waveletBand5Spring * quietGate;
+    // bass -> coarse outlines, mids -> middle, treble -> fine detail (instruments separate by depth)
+    if (ld < 0.34) return waveletBassSpring  * quietGate;
     if (ld < 0.67) return waveletBand2Spring * quietGate;
-    return waveletBassSpring * quietGate;
+    return waveletBand5Spring * quietGate;
 }
 
 float gSpin, gPulse, gPop, gKick, gHexR, gBorder, gCross, gFill, gReact, gTwist, gPix;
@@ -191,7 +192,7 @@ vec4 fractal(vec2 p){
         float wave = smoothstep(0.30, 0.0, abs(ld - (1.0 - gPulse))) * env;
         float band = bandForDepth(ld);
         float lit = (rim * 0.95 + halo * 0.22)
-                  * (0.64 + (energySpring * 0.22 + band * 0.35 + waveletBassSpring * quietGate * 0.30) * gReact);
+                  * (0.56 + (energySpring * 0.16 + band * 0.75 + waveletBassSpring * quietGate * 0.12) * gReact);
         lit += wave * (0.04 + gKick * 0.08);   // pulse barely touches lightness — it moves HUE instead (below)
 
         float w = (1.0 - alpha) * f;

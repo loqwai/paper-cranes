@@ -5,6 +5,8 @@ Target: `shaders/redaphid/lattice-interactive/3.frag`. Recipe: `shaders/redaphid
 arithmetic rather than taste).
 
 ## Status
+**Iter 4 (19:56).** Per-depth band lighting flipped the right way round: bass→coarse outlines, mids→middle, treble→fine detail; band coefficient 0.35→0.75, standing gain 0.64→0.56. Music playing (energy 0.48, treb 0.75, centroid 0.74, bassHit spike 15.7); bass spring 0.12→0.58 across the 8-sample window. lumMax 0.26→0.60 while dark 0.873 / black 0.782 / clip 0 / lumSpread 0.03 — lines brighten with the music, frame does not pump.
+
 **Iter 3 (19:52).** Cell-centre circles were FILLED pie-discs (`length(uv)-gCross` negative inside → whole interior 'on the line'); `abs()` makes them rings. Frame: lum 0.024, dark 0.904, black 0.809, clip 0, lumSpread 0.019, lumMax 0.262 (160x90 downsample under-reads thin lines). Quiet passage (energy 0.07, bass 0.89, centroid 0.19). Look = black wireframe; next: neon brightness ON THE LINES, then music-driven moves (hue/phase/spin-rate/per-depth bands).
 
 **Iter 2 (19:47).** User: "black background, inside the lattice mostly black too"; venue = TENT WALL AT NIGHT, nothing overwhelming. Move: sub-pixel LEVEL FADE `res = smoothstep(bw*1.6, bw*0.5, alias)` on rim+halo, so a level that can't resolve as a line vanishes instead of smearing into haze. INCIDENT: first version sent the projector 100% BLACK (dark 1.0) because the shader's `alias` was `1/resY*scale` — it never included the `0.07/navz` zoom, so it was 3-14x the true pixel footprint (this is also why every zoom level had haze). Fixed with `gPix = (0.07/navz)/iResolution.y` as aliasBase. Result at navZoom 0.239: lum 0.043, dark 0.836, black 0.785, clip 0, bright 0, lumSpread 0.04.
@@ -37,6 +39,7 @@ filaments, hue). #5 is the reminder that a regression is one edit away and the m
 it, not the eye.
 
 ## Cool moments
+- **iter4 per-depth bands (19:56):** the first move where the meters show music in the LINES and not the frame — lumMax doubled on a bass hit with lum/dark unchanged. Design hypothesis: this is the lane; keep adding audio to depth-indexed line properties (width, hue, ring radius), never to exposure.
 - **The flash diagnosis (the night's real finding).** Three consecutive rounds of the screenshot and
   the meter *disagreeing* — a screenshot reading bright while the meter said the mean was fine, then
   the reverse — were not bad sampling and not a meter bug. **The frame was oscillating.** A single
