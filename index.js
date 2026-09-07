@@ -313,16 +313,29 @@ document.addEventListener('fullscreenchange', () => {
 })
 
 const addListenersForFullscreen = (visualizer) => {
-    for (const event of events) {
-        visualizer.addEventListener(event, async () => {
-            try {
-                await document.documentElement.requestFullscreen();
-            } catch (e) {
-                console.error(`requesting fullscreen from event ${event} failed`, e);
-            }
-            askForWakeLock().catch(e => console.warn('Wake lock failed after user gesture:', e))
-        }, { once: true });
+    // Listeners live on window in CAPTURE phase (not on the canvas): controllers such as
+    // lattice-controls register window-capture handlers that call stopPropagation() when a
+    // gesture lands on a dial node, which used to swallow the gesture before it ever reached
+    // the canvas — so fullscreen never fired on shaders with controls. Capture on window runs
+    // ahead of those handlers, so ANY gesture anywhere triggers fullscreen exactly once.
+    // keydown is bound here too: it was previously on the canvas, which is not focusable.
+    let done = false
+    const go = async (event) => {
+        if (done || document.fullscreenElement) return
+        done = true
+        for (const e of events) window.removeEventListener(e, handler, true)
+        try {
+            await document.documentElement.requestFullscreen();
+        } catch (e) {
+            done = false   // gesture wasn't eligible (e.g. resize) — stay armed for the next one
+            for (const ev of events) window.addEventListener(ev, handler, true)
+            console.error(`requesting fullscreen from event ${event} failed`, e);
+            return
+        }
+        askForWakeLock().catch(e => console.warn('Wake lock failed after user gesture:', e))
     }
+    const handler = (ev) => { go(ev.type) }
+    for (const event of events) window.addEventListener(event, handler, true);
 }
 
 const main = async () => {

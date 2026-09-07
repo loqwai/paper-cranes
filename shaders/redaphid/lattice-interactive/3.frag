@@ -50,8 +50,8 @@ mat2 rot2(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 
 vec3 lush(float s, float lit){
     float h = fract(s) * TAU;
-    float L = clamp(0.50 + 0.36 * clamp(lit, 0.0, 1.0), 0.12, 0.88);
-    float C = (0.125 + seed2 * 0.05) + 0.05 * sin(s * TAU * 0.5 + 1.3);
+    float L = clamp(0.06 + 0.70 * pow(clamp(lit, 0.0, 1.0), 1.35), 0.0, 0.95);   // NEON (journal-proven ramp)
+    float C = (0.235 + seed2 * 0.05) + 0.06 * sin(s * TAU * 0.5 + 1.3);   // NEON: high chroma
     return oklch2rgb(vec3(L, C, h));
 }
 
@@ -173,8 +173,11 @@ vec4 fractal(vec2 p){
         float delt2 = min(length(uv) - gCross, min(uv.x, uv.y));
         float m = min(delt1, delt2);
         float alias = aliasBase * 0.5 * scale;
-        float f = smoothstep(gBorder + alias, gBorder, m) * 0.4
-                + smoothstep(gBorder + 0.12, gBorder + 0.01, m) * 0.6;
+        // RIM-DOMINANT: narrow band hugging the edge carries the light; interior stays near-black.
+        float rim  = smoothstep(gBorder + alias, gBorder, m);                 // hard edge
+        float halo = smoothstep(gBorder + 0.045, gBorder + 0.004, m);         // tight glow off the edge
+        float body = smoothstep(gBorder + 0.12, gBorder + 0.02, m);           // faint interior
+        float f = rim * 0.46 + halo * 0.16 + body * 0.04;
 
         float ld = float(i - FIRST) / float(LEVELS - 1 - FIRST);
         float swirl = 0.5 + 0.5 * sin(atan(p.y, p.x) * 2.0 + length(p) * 3.0 + float(i) + seed4 * TAU);
@@ -183,9 +186,9 @@ vec4 fractal(vec2 p){
         float env = sin(gPulse * PI);
         float wave = smoothstep(0.30, 0.0, abs(ld - (1.0 - gPulse))) * env;
         float band = bandForDepth(ld);
-        float lit = (smoothstep(gFill + alias, gFill, m) * 0.5 + 0.18)
-                  * (0.7 + (energySpring * 0.4 + band * 0.7 + waveletBassSpring * quietGate * 0.6) * gReact);
-        lit += wave * (0.4 + gPop * 0.7 + gKick * 1.2 + spectralCrestSmooth * 0.35);
+        float lit = (rim * 0.72 + halo * 0.18 + smoothstep(gFill + alias, gFill, m) * 0.04)
+                  * (0.30 + (energySpring * 0.30 + band * 0.5 + waveletBassSpring * quietGate * 0.45) * gReact);
+        lit += wave * (0.16 + gPop * 0.20 + gKick * 0.30 + spectralCrestSmooth * 0.12);
 
         float w = (1.0 - alpha) * f;
         lumAcc   += w * lit;
@@ -194,7 +197,7 @@ vec4 fractal(vec2 p){
         alpha    += w;
     }
     float ia = 1.0 / max(alpha, 1e-3);
-    return vec4(lumAcc, fieldAcc * ia, waveAcc * ia, alpha);
+    return vec4(lumAcc * ia, fieldAcc * ia, waveAcc * ia, alpha);   // FIX: lum was un-normalized (pastel wash)
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord){
@@ -203,16 +206,23 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float aspect = iResolution.x / iResolution.y;
 
     float bTime = iTime / 3.0;
+    // LIVE GATE (VJ fix): the shipped quietGate reads ~0.002 avg on a room mic, which multiplied
+    // nearly every reactive term to nothing. Rebuild it from measured energy with a hard floor so
+    // motion always survives, and OR in the bass level so bass-driven moves never gate out.
+    float liveGate = clamp(max(energyNormalized * 1.6, bassNormalized * 1.3) - 0.10, 0.0, 1.0);
+    liveGate = clamp(0.45 + liveGate * 0.85, 0.0, 1.3);
+    #define quietGate liveGate
     gSpin  = bTime * 0.04 + morphPhase * 0.4 + melodyFlow * 0.5 * quietGate;   // MOVING (kept)
     gPop   = clamp(energySpring * 0.5 + spectralCrestSmooth * 0.45, 0.0, 1.0) * quietGate;
-    gKick  = clamp(max(waveletBassZScore, 0.0), 0.0, 1.0) * 0.5 + clamp(wavelet_bassHit, 0.0, 1.0) * 0.3;
+    gKick  = clamp(max(waveletBassZScore, 0.0), 0.0, 1.0) * 0.45 + clamp(wavelet_bassHit, 0.0, 1.0) * 0.40
+           + clamp(spectralFluxZScore, 0.0, 1.0) * 0.30;   // flux = fires on ANY transient (tamed)
     gPulse = fract(flowPhase * 0.6 + bTime * 0.18);
     float bassPulse = waveletBassSpring * quietGate;
     gHexR   = 0.60 + waveletBand2Spring * 0.12 * quietGate + knob_3 * 0.30;   // STRUCTURE dial (knob_3) → cell size
     gBorder = 0.10 + waveletBand5Spring * 0.06 * quietGate;
     gCross  = 0.20 - bassPulse * 0.05;
     gFill   = 0.06 + waveletBand5Spring * 0.035 * quietGate;
-    gReact  = 1.0 + knob_5 * 2.5;          // MUSIC-REACTIVITY dial (knob_5) → how hard it responds
+    gReact  = 1.5 + knob_5 * 2.5;   // floor raised: knob_5 rode at 0 all night, pinning this to 1.0          // MUSIC-REACTIVITY dial (knob_5) → how hard it responds
     gTwist  = knob_4 * 1.5;                 // STRUCTURE dial (knob_4) → kaleido twist
 
     vec2 world = vec2(navX, navY);
@@ -248,9 +258,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
             + knob_2 * 2.5                                  // COLOUR-SCHEME dial (knob_2) → global hue rotation
             + seed;
     vec3 col = lush(s, lum);
-    col += lush(s + 0.18, 1.0) * wave * 0.7;
+    col += lush(s + 0.18, 1.0) * wave * (0.55 + gKick * 0.35 + gPop * 0.20);   // audio rides the FILAMENTS, not exposure
 
-    vec3 bg = lush(s + 0.4, 0.45) * 0.92;
+    vec3 bg = lush(s + 0.4, 0.06) * 0.10;   // BLACK ground — neon sits on darkness
     col = mix(bg, col, clamp(alpha, 0.0, 1.0));
 
     // ── LEAD TENDRILS + DIALS ── four long wisps stand out in the world (tail → node, NOT from home);
@@ -266,17 +276,18 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
 
     // ── MUSICAL BLOOM + SPARKLE (as before) ──
     float dropGlow = clamp(energySpring * 0.6 + spectralCrestSmooth * 0.4, 0.0, 1.0) * quietGate;
-    col *= 1.0 + (bassPulse * 0.12 + dropGlow * 0.13 + gKick * 0.10) * gReact;   // MUSIC-REACTIVITY dial
+    // (removed: global `col *= 1+audio` exposure pump — user: "no global brightness change")
+    // Audio now rides STRUCTURE + HUE + filament glow only; see gHue/gGeo below.   // MUSIC-REACTIVITY dial
     vec2 scr = fragCoord / iResolution.xy;
     float g1 = 0.5 + 0.5 * sin(scr.x * 190.0 + bTime * 5.0);
     float g2 = 0.5 + 0.5 * sin(scr.y * 163.0 - bTime * 4.0);
     float sparkPatch = 0.5 + 0.5 * sin(scr.x * 6.0 + scr.y * 4.3 - bTime * 2.0);
-    float spark = pow(g1 * g2, 16.0) * sparkPatch;
+    float spark = 0.0;   // VETOED (lattice-interactive-vj-1 beat 3: "get that white dot grid gone")
     col += vec3(1.0, 0.97, 0.92) * spark * clamp(alpha, 0.0, 1.0)
          * (waveletBand5Spring * 0.25 + spectralCrestSmooth * 0.22 + spectralRoughnessSmooth * 0.12) * quietGate;
 
-    col = pow(clamp(col, 0.0, 1.0), vec3(0.80));
-    col *= 1.15;
+    col = pow(clamp(col, 0.0, 1.0), vec3(1.02));   // keep the floor black
+    col *= 1.0;   // neutral: no global exposure lift (user: "no global brightness change")
 
     // ── DISTORTION DIALS ── each control is a small backbuffer-distortion lens (ripple / plasma /
     //    wave / throb), world-anchored so it's small from afar and grows as you approach. Sampled here,
@@ -292,9 +303,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
 
     // gentle trail (feeds the ripples between frames)
     vec4 prev = getLastFrameColor(fragCoord / iResolution.xy);
-    col = mix(prev.rgb * 0.90, col, 0.82);
+    col = mix(prev.rgb * 0.62, col, 0.93);   // fast decay so black stays black
 
-    col = mix(col, vec3(0.0), dot(sp, sp) * 0.12);          // minimal vignette
+    col = mix(col, vec3(0.0), clamp(dot(sp, sp) * 0.30, 0.0, 0.85));   // deeper vignette -> black edges
 
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
