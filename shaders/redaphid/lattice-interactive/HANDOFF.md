@@ -215,6 +215,9 @@ The rest of the palette contract, all journal-proven, all currently in the file:
 - **After a palette lock, audit every audio term on the hue coordinate for RATE** (iter21): a hard
   selector (`smoothstep(0.44,0.56)`) turns a fast hue shimmer (flux z-score ×0.10) into an
   orange↔purple strobe on every transient. Only slow drivers (springs, arc, depth) may feed a thresholded hue.
+- **...and for AMPLITUDE** (iter25): a hue driver smaller than the selector's half-width (`wave*0.10` vs
+  a 0.12-wide band) is invisible under the lock; `wave*0.18` made the slow depth pulse roll orange↔purple.
+  Slow + big enough to cross = a rolling front; fast + big enough = a strobe; too small = dead.
 - **When the user names a palette, lock it in `lush()`** (user, 21:21: *"ORANGE AND DEEP PURPLE"*): anchor hues selected by the existing hue coordinate — `k = smoothstep(0.30,0.70,fract(s)); h = mix(radians(62), radians(-52), k)` — so every hue driver keeps its wiring and just chooses between the named colours. Never rewire the drivers for a palette request. Meter with `hueMix` (orange / purple / other share of lit saturated pixels).
 - **A cap is not a drive** (iter20): lines stalled at L~0.28 under a 0.73 cap because the standing gain + 1.55 exponent crushed `lit` first. Live: gain `mix(0.62,0.90,gArc)`, exponent 1.20, ceiling 0.90. Check lumMax against the cap whenever the arc moves.
 - **High-chroma orange/yellow clips to RED in sRGB** (iter20b): OKLCH 68° @ C 0.36 rendered red (hueMix red 0.41 / orange 0.00). Keep orange-side chroma ≤ ~0.22 at L 0.6–0.75 (live: anchor 82°, chroma × `mix(0.60,1.0,k)`); purple survives the clamp, orange does not. Ship a hue-bucket meter with every palette lock.

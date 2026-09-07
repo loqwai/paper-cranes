@@ -268,7 +268,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float lum = fr.x, field = fr.y, wave = fr.z, alpha = fr.w;
 
     float s = field
-            + wave * 0.10                                   // depth pulse recolours the lines: zero brightness cost
+            + wave * 0.18                                   // depth COLOUR WAVE: a purple front rolls through the orange lattice with the bass
             + regionHue(world)
             + bTime * 0.012
             + melodyFlow * 0.32 * gGate
