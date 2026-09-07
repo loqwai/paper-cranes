@@ -190,7 +190,7 @@ vec4 fractal(vec2 p){
 
         float ld = float(i - FIRST) / float(LEVELS - 1 - FIRST);
         float swirl = 0.5 + 0.5 * sin(atan(p.y, p.x) * 2.0 + length(p) * 3.0 + float(i) + seed4 * TAU);
-        float field = ld * (0.55 + evoPlasma * 0.2) + swirl * 0.45;
+        float field = ld * (0.55 + evoPlasma * 0.2 + build * 0.35) + swirl * 0.45;   // energy splits coarse/fine into two-tone
 
         float env = sin(gPulse * PI);
         float wave = smoothstep(0.30, 0.0, abs(ld - (1.0 - gPulse))) * env;
@@ -219,7 +219,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     // LIVE GATE (VJ fix): the shipped quietGate reads ~0.002 avg on a room mic, which multiplied
     // nearly every reactive term to nothing. Rebuild it from measured energy with a hard floor so
     // motion always survives, and OR in the bass level so bass-driven moves never gate out.
-    float liveGate = clamp(max(energyNormalized * 1.6, bassNormalized * 1.3) - 0.10, 0.0, 1.0);
+    float liveGate = clamp(max(energySpring * 1.7, waveletBassSpring * 1.4) - 0.08, 0.0, 1.0);   // SPRINGS, not raw: no shiver on geometry
     liveGate = clamp(0.45 + liveGate * 0.85, 0.0, 1.3);
     #define quietGate liveGate
     gSpin  = bTime * 0.04 + morphPhase * 0.4 + flowPhase * 0.18 + melodyFlow * 0.25 * quietGate;   // rate-not-angle: bass paces the spin (0.35 pushed lumSpread to 0.13)
@@ -235,7 +235,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     gReact  = 1.5 + knob_5 * 2.5;   // floor raised: knob_5 rode at 0 all night, pinning this to 1.0          // MUSIC-REACTIVITY dial (knob_5) → how hard it responds
     gTwist  = knob_4 * 1.5;                 // STRUCTURE dial (knob_4) → kaleido twist
 
-    vec2 world = vec2(navX, navY);
+    vec2 world = vec2(navX, navY) + vec2(0.80, 0.55) * (bTime * 0.03 + flowPhase * 0.02);   // constant forward motion, bass-paced
     gHexR += 0.07 * sin(world.x * 0.8 + world.y * 0.45);
 
     // NO orbital drift → the world holds still under pan, so the controller's hit-testing is exact.
