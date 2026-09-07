@@ -225,7 +225,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float bassPulse = waveletBassSpring * quietGate;
     gHexR   = 0.60 + waveletBand2Spring * 0.12 * quietGate + knob_3 * 0.30;   // STRUCTURE dial (knob_3) → cell size
     gBorder = 0.034 + waveletBand5Spring * 0.020 * quietGate;   // thin neon tube, not a fat band
-    gCross  = 0.20 - bassPulse * 0.05;
+    gCross  = 0.17 + bassPulse * 0.11;      // rings swell on the kick (spring-smoothed, no shiver)
     gFill   = 0.06 + waveletBand5Spring * 0.035 * quietGate;
     gReact  = 1.5 + knob_5 * 2.5;   // floor raised: knob_5 rode at 0 all night, pinning this to 1.0          // MUSIC-REACTIVITY dial (knob_5) → how hard it responds
     gTwist  = knob_4 * 1.5;                 // STRUCTURE dial (knob_4) → kaleido twist
