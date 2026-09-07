@@ -154,3 +154,4 @@ screenshots/
 public/test-audio/
 public/images/*.webp
 .claude/vj-state.json
+.claude/vj-pending.frag
