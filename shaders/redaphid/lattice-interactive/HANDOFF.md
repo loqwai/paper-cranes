@@ -211,6 +211,7 @@ The rest of the palette contract, all journal-proven, all currently in the file:
 - **If "too neon" ever comes up, chroma is the knob, not L.** Low L at the same C sits on the sRGB
   gamut edge and reads as neon; the journals' muted look came from `C ≈ 0.075` (sat 0.86–0.87),
   tonight's neon from `C ≈ 0.235`. Don't fix a saturation complaint by lifting L — that is §0.1 again.
+- **On a projector / fabric, cap line LIGHTNESS and push chroma** (user, 21:06: *"still too white to project on to the tent"*). A line at OKLCH L ≥ ~0.8 reads WHITE on a tent regardless of hue; "white" complaints are an L-cap problem, not a hue problem. Live: `L` capped at `mix(0.50, 0.96, gArc)`, chroma base 0.30 — neon is deep colour, not bright lines. Meter it with `whiteish` (lum>0.35 AND sat<0.25).
 - **`lush()` is OKLCH, not HSL, on purpose.** At fixed HSL lightness 0.35, measured luma at high
   saturation went yellow **0.634** vs blue **0.066** — a hue spin in HSL *is* a brightness pump.
   OKLCH's perceptual L is what makes the hue channel safe to move independently of brightness.
