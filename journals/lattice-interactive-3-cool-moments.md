@@ -6,6 +6,7 @@ arithmetic rather than taste).
 
 ## Status
 **Iter 11 (20:27).** USER: "we need it to be moving forward, navigation wise, constantly" + shiver reminder. (1) FORWARD: lattice-nav has NO auto-pan (drag + friction glide only; knob_1 is drag sensitivity) — navX/navY measured exactly 0 all set. Added a seamless bass-paced drift in the shader: `world += vec2(0.80,0.55)*(bTime*0.03 + flowPhase*0.02)`. Touch hit-test on dial nodes is offset while on (MIDI unaffected). (2) SHIVER: `liveGate` was built from RAW per-frame energy/bass and multiplied ring radius, line width, spin, hue → swapped to `energySpring*1.7 / waveletBassSpring*1.4`. (3) hue span across depth widens with `build` (two-tone at peaks). First tick using the pending-file → in-page GL compile → /__save-shader protocol. Peak passage (energy 0.88): lum 0.135, dark 0.625, black 0.506, clip 0, lumSpread 0.079, 61 fps. Watch dark on the next normal passage; pull gate scale if < 0.65.
+**Iter 11b (20:31).** Frame was too dense for the tent: `build = energySpring*1.4` pinned at 1.0 for any energy > 0.7 (most of a loud track). Recalibrated `build = clamp((energySpring-0.35)*1.6)`: opens above mid energy, full only at peaks. Normal passage (energySpring 0.33–0.54): lum 0.110, dark 0.721, black 0.669, clip 0, lumSpread 0.044, 61 fps.
 
 **Iter 10 (20:21).** Dial-node rings glow on the kick: `hueC * (...) * (1 + grab + gKick*0.7)` in dialDistort. INCIDENT: first save failed to compile — `gKick` undeclared at line 933 (globals were declared AFTER dialDistort; the static linter cannot see forward references, the skill warns about exactly this). Page spammed ~1100 compile errors holding the last good frame for ~20 s. Fix: hoisted the globals line above every function. Recovered: 60 fps, lum 0.077, dark 0.755, black 0.686, clip 0, lumSpread 0.025. PROCESS FIX from iter 11 on: write to `.claude/vj-pending.frag`, GL-compile it in-page via __vjValidate, only then copy into 3.frag.
 
@@ -91,6 +92,7 @@ it, not the eye.
       weight; any `col +=` after `mix(bg, col, alpha)` whose mask never reaches zero on screen.
 
 ## History of changes
+- iter11b: build recalibrated (energySpring-0.35)*1.6 — density only at true peaks.
 - iter11: constant forward drift (bass-paced), liveGate → springs (shiver fix), depth hue-span × build. Protocol: pending → GL compile → save.
 - iter10: dial rings + gKick*0.7 (local). Globals hoisted to the top of the file after a forward-reference compile failure.
 - iter9: energy-driven detail window + counter-ratchet on fine-level gain. dark 0.82→0.75 at build≈0.7.
