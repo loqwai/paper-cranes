@@ -463,6 +463,10 @@ must both be present, and `lattice-controls` chains **after** `lattice-nav`.
   NEW `.frag` anywhere under the project root during a set (write candidates as `.frag.txt` outside the
   root); modifying `.claude/vj-pending.frag` in place has never reloaded. Recovery: re-navigate with
   `&navZoom=<value>` (lattice-nav honours it) and re-anchor any set-arc `T0`. Post-show: read the Vite log.
+- **A set-length brief is ONE monotonic arc scalar** (iter18–26, 21:06→22:15: *"outlines for now... hypercolor
+  in the course of an hour"*). `gArc = clamp((iTime-T0)/3600)` hung every intensity term via `mix(now,
+  later, gArc)`; two live corrections were T0 nudges, none were coefficient hunts; whiteish 0 and clip 0 at
+  every check. After the arc saturates the intensity knob is gone — plan the next mechanism before it's asked.
 - **The flow needs TIME, not just the URL.** Accumulators start at 0 on every page load. A fresh boot
   is the *tuned* look, not the *flow* look. To start deep, raise `paletteShift`/`warpGrow` in the URL.
 - **One move at a time**, and take no metric-driven move while the knobs are sweeping. The hands are
