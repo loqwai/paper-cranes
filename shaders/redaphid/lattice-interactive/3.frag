@@ -260,7 +260,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
             + regionHue(world)
             + bTime * 0.012
             + melodyFlow * 0.32 * quietGate
-            + waveletCentroidSpring * 0.14 * quietGate
+            + waveletCentroidSpring * 0.30 * quietGate     // palette leans cyan when bright, magenta when dark
             + paletteShift
             + knob_2 * 2.5                                  // COLOUR-SCHEME dial (knob_2) → global hue rotation
             + seed;

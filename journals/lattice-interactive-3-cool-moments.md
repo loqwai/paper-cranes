@@ -5,6 +5,8 @@ Target: `shaders/redaphid/lattice-interactive/3.frag`. Recipe: `shaders/redaphid
 arithmetic rather than taste).
 
 ## Status
+**Iter 6 (20:04).** Hue follows `waveletCentroidSpring` 0.14→0.30 (slow, smoothed colour lane). Spring 0.30–0.40 over the window (energy 0.72, centroid 0.79); lines blue-violet (line RGB 0.30/0.19/0.52). lum 0.050, dark 0.859, black 0.756, clip 0, lumSpread 0.048.
+
 **Iter 5 (20:00).** Cell-centre rings SWELL on kicks: `gCross = 0.17 + bassPulse*0.11` (was a 0.05 shrink). Bass spring 0.37–0.57 over the window (energy 0.58, treb 0.89, centroid 0.87). lum 0.074, dark 0.80, black 0.72, clip 0, lumSpread 0.094 — at the edge of the <0.1 target because the swell moves line area; hold here, don't add another geometry mover this track.
 
 **Iter 4 (19:56).** Per-depth band lighting flipped the right way round: bass→coarse outlines, mids→middle, treble→fine detail; band coefficient 0.35→0.75, standing gain 0.64→0.56. Music playing (energy 0.48, treb 0.75, centroid 0.74, bassHit spike 15.7); bass spring 0.12→0.58 across the 8-sample window. lumMax 0.26→0.60 while dark 0.873 / black 0.782 / clip 0 / lumSpread 0.03 — lines brighten with the music, frame does not pump.
@@ -77,6 +79,7 @@ it, not the eye.
       weight; any `col +=` after `mix(bg, col, alpha)` whose mask never reaches zero on screen.
 
 ## History of changes
+- iter6: centroid-spring hue lean 0.14→0.30. Colour-only; spread stayed 0.048.
 - iter5: ring swell on bass (gCross 0.17 + bassPulse*0.11). lumSpread crept to 0.094 — geometry movers cost stability; one per track.
 - iter3: cell-centre discs → rings via `abs(length(uv) - gCross)`. Filled discs were the last 'wall of colour' element and are on the vetoed orbs list.
 - iter2: sub-pixel level fade (`res`) + TRUE pixel footprint `gPix` (the old `alias` ignored zoom). One-frame black-out on the projector while the gate was miscalibrated — always sanity-check `dark < 0.99` in the post-edit measure.
