@@ -5,6 +5,8 @@ Target: `shaders/redaphid/lattice-interactive/3.frag`. Recipe: `shaders/redaphid
 arithmetic rather than taste).
 
 ## Status
+**Iter 12 (20:36).** Motion trails now that the lattice travels: feedback decay `0.62 + 0.18*bassPulse` (max 0.80) — lines streak on kicks, snap crisp between; rim standing gain 0.56→0.52 as the counter. Bass spring 0.67→0.10→0.49 over the window. lum 0.105, dark 0.673, black 0.598, clip 0, lumSpread 0.073, 62 fps.
+
 **Iter 11 (20:27).** USER: "we need it to be moving forward, navigation wise, constantly" + shiver reminder. (1) FORWARD: lattice-nav has NO auto-pan (drag + friction glide only; knob_1 is drag sensitivity) — navX/navY measured exactly 0 all set. Added a seamless bass-paced drift in the shader: `world += vec2(0.80,0.55)*(bTime*0.03 + flowPhase*0.02)`. Touch hit-test on dial nodes is offset while on (MIDI unaffected). (2) SHIVER: `liveGate` was built from RAW per-frame energy/bass and multiplied ring radius, line width, spin, hue → swapped to `energySpring*1.7 / waveletBassSpring*1.4`. (3) hue span across depth widens with `build` (two-tone at peaks). First tick using the pending-file → in-page GL compile → /__save-shader protocol. Peak passage (energy 0.88): lum 0.135, dark 0.625, black 0.506, clip 0, lumSpread 0.079, 61 fps. Watch dark on the next normal passage; pull gate scale if < 0.65.
 **Iter 11b (20:31).** Frame was too dense for the tent: `build = energySpring*1.4` pinned at 1.0 for any energy > 0.7 (most of a loud track). Recalibrated `build = clamp((energySpring-0.35)*1.6)`: opens above mid energy, full only at peaks. Normal passage (energySpring 0.33–0.54): lum 0.110, dark 0.721, black 0.669, clip 0, lumSpread 0.044, 61 fps.
 
@@ -92,6 +94,7 @@ it, not the eye.
       weight; any `col +=` after `mix(bg, col, alpha)` whose mask never reaches zero on screen.
 
 ## History of changes
+- iter12: bass-stretched motion trails (decay 0.62→0.80 on the kick), rim gain 0.56→0.52.
 - iter11b: build recalibrated (energySpring-0.35)*1.6 — density only at true peaks.
 - iter11: constant forward drift (bass-paced), liveGate → springs (shiver fix), depth hue-span × build. Protocol: pending → GL compile → save.
 - iter10: dial rings + gKick*0.7 (local). Globals hoisted to the top of the file after a forward-reference compile failure.

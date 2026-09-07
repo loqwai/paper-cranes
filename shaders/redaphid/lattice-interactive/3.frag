@@ -196,7 +196,7 @@ vec4 fractal(vec2 p){
         float wave = smoothstep(0.30, 0.0, abs(ld - (1.0 - gPulse))) * env;
         float band = bandForDepth(ld);
         float lit = (rim * 0.95 + halo * 0.22)
-                  * (0.56 + (energySpring * 0.16 + band * 0.75 + waveletBassSpring * quietGate * 0.12) * gReact);
+                  * (0.52 + (energySpring * 0.16 + band * 0.75 + waveletBassSpring * quietGate * 0.12) * gReact);
         lit += wave * (0.04 + gKick * 0.08);   // pulse barely touches lightness — it moves HUE instead (below)
         lit *= 1.0 - 0.30 * build * ldw;       // counter-ratchet: more fine lines, not more light
 
@@ -315,7 +315,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
 
     // gentle trail (feeds the ripples between frames)
     vec4 prev = getLastFrameColor(fragCoord / iResolution.xy);
-    col = mix(prev.rgb * 0.62, col, 0.93);   // fast decay so black stays black
+    col = mix(prev.rgb * (0.62 + 0.18 * bassPulse), col, 0.93);   // trails stretch on the kick; black stays black
 
     col = mix(col, vec3(0.0), clamp(dot(sp, sp) * 0.30, 0.0, 0.85));   // deeper vignette -> black edges
 
