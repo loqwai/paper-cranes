@@ -3,6 +3,7 @@ import { resolve } from 'path'
 import { shaderPlugin } from './vite-plugins/shader-plugin.js'
 import { remoteWsPlugin } from './vite-plugins/remote-ws-plugin.js'
 import { editorSyncPlugin } from './vite-plugins/editor-sync-plugin.js'
+import { vjSignalPlugin } from './vite-plugins/vj-signal-plugin.js'
 import { getPort } from './scripts/dev-port.js'
 
 const port = getPort()
@@ -32,6 +33,8 @@ export default defineConfig({
         playlist: resolve(import.meta.dirname, 'playlist.html'),
         'nfc-writer': resolve(import.meta.dirname, 'nfc-writer.html'),
         midi: resolve(import.meta.dirname, 'midi.html'),
+        vj: resolve(import.meta.dirname, 'vj.html'),
+        vjpad: resolve(import.meta.dirname, 'vjpad.html'),
       },
       output: {
         entryFileNames: 'assets/[name].js',
@@ -52,5 +55,5 @@ export default defineConfig({
       external: (id) => id.startsWith('https://'),
     },
   },
-  plugins: [shaderPlugin(), remoteWsPlugin(), editorSyncPlugin()],
+  plugins: [shaderPlugin(), remoteWsPlugin(), editorSyncPlugin(), vjSignalPlugin()],
 })

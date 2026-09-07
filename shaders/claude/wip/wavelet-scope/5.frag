@@ -1,4 +1,5 @@
 // @fullscreen: true
+//https://visuals.beadfamous.com/?shader=claude/wip/wavelet-scope/5&wavelet=true&fullscreen=true
 // @tags: diagnostic, wavelet, oscilloscope, graph, drop-detector, debug
 //
 // SPLIT SCOPE — vertical split comparison, both halves scrolling independently.

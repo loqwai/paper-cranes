@@ -1,4 +1,5 @@
 // @fullscreen: true
+//https://visuals.beadfamous.com/?shader=claude/wip/wavelet-scope/bass-activity&wavelet=true&fullscreen=true
 // @tags: diagnostic, wavelet, oscilloscope, graph, debug
 //
 // INDEPENDENT ACTIVITY — animation lines that move INDEPENDENTLY (not in sync). The old

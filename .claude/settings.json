@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./scripts/dev-port)",
+      "Bash(PORT=$(./scripts/dev-port); curl -s -o /dev/null -w \"%{http_code}\" http://localhost:$PORT/ 2>/dev/null || echo \"not running\")",
+      "Bash(cat .claude/vj-state.json)",
+      "Bash(cat .claude/vj-signals.jsonl)",
+      "Bash(tail:*)",
+      "Bash(node scripts/validate-shader.js:*)",
+      "Bash(git checkout -- shaders/*)",
+      "Bash(git status)",
+      "Bash(git diff:*)"
+    ]
+  }
+}

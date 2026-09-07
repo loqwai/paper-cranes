@@ -1,4 +1,5 @@
 // @fullscreen: true
+//https://visuals.beadfamous.com/?shader=claude/wip/wavelet-scope/6&wavelet=true&fullscreen=true
 // @tags: diagnostic, wavelet, meters, graph, drop-detector, debug
 //
 // SPLIT METERS (live-debug) — vertical split, filled bar meters instead of thin

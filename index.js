@@ -12,7 +12,8 @@ const maybeStartWavelet = async (params, audioContext, sourceNode) => {
     window.cranes.waveletProcessor = wavelet
 }
 import { makeVisualizer, askForWakeLock } from './src/Visualizer.js'
-import { getInitialShader } from './src/shaderLoader.js'
+import { getInitialShader, loadShader } from './src/shaderLoader.js'
+import { loadControllers, composeControllers } from './src/controllerChain.js'
 
 
 const SEED_KEY = 'paperCranes.seeds'
@@ -34,6 +35,11 @@ const events = ['touchstart', 'touchmove', 'touchstop', 'keydown', 'mousedown', 
 let ranMain = false
 let startTime = 0
 const params = new URLSearchParams(window.location.search)
+
+// ?vj=1 — load the VJ runtime (validator + aesthetic meter + cursor-hide + /__vj-signal
+// watchdog) at page boot, so reloads can never strip the /vibej loop's tooling and the page
+// itself can wake the loop. Dev-only in practice (/__vj-signal exists only on the dev server).
+if (params.get('vj') === '1') import('./src/vj/runtime.js').then(m => m.startVjRuntime()).catch(e => console.warn('[vj] runtime failed', e))
 
 const getVisualizerDOMElement = () => {
     if (!window.visualizer) {
@@ -116,39 +122,10 @@ const setupCanvasEvents = (canvas) => {
 
 const noAudio = { getFeatures: () => ({}) }
 
-const setupAudio = async () => {
-    // audio=none disables audio input (consistent with audio=tab pattern)
-    // noaudio=true and embed=true are kept for backwards compatibility
-    if (params.get('audio') === 'none' || params.get('noaudio') === 'true' || params.get('embed') === 'true') {
-        return noAudio
-    }
-
-    if (params.get('audio') === 'tab') {
-        const { setupTabAudio } = await import('./src/audio/tabAudioSource.js')
-        return setupTabAudio({ params, AudioProcessor })
-    }
-
-    const fileConfig = createAudioFileSource({ params })
-    if (fileConfig) {
-        try {
-            const audioContext = new AudioContext()
-            const { sourceNode, audioBuffer, startSource } = await initAudioFromFile({ config: fileConfig, audioContext })
-            window.cranes.audioBuffer = audioBuffer
-            window.cranes.startSource = startSource
-
-            const audioProcessor = new AudioProcessor(audioContext, sourceNode, fileConfig.historySize, fileConfig.fftSize)
-            audioProcessor.smoothingFactor = fileConfig.smoothing
-            await audioProcessor.start()
-            // Route through speakers (unlike mic input, file playback has no feedback risk)
-            audioProcessor.fftAnalyzer.connect(audioContext.destination)
-            await maybeStartWavelet(params, audioContext, sourceNode)
-            return audioProcessor
-        } catch (err) {
-            console.error('Audio file initialization failed:', err)
-            return noAudio
-        }
-    }
-
+// Mic capture path. Acquires getUserMedia, builds an AudioProcessor, and wires
+// up the optional wavelet pass. This is the default audio source and also the
+// fallback when ?audio=tab is requested in a browser that can't capture tab audio.
+const setupMicAudio = async () => {
     try {
         // get the default audio input
         const devices = await navigator.mediaDevices.enumerateDevices();
@@ -180,6 +157,49 @@ const setupAudio = async () => {
         console.error('Audio initialization failed:', err);
         return noAudio
     }
+}
+
+const setupAudio = async () => {
+    // audio=none disables audio input (consistent with audio=tab pattern)
+    // noaudio=true and embed=true are kept for backwards compatibility
+    if (params.get('audio') === 'none' || params.get('noaudio') === 'true' || params.get('embed') === 'true') {
+        return noAudio
+    }
+
+    if (params.get('audio') === 'tab') {
+        const { setupTabAudio, isTabAudioSupported } = await import('./src/audio/tabAudioSource.js')
+        // Tab audio relies on getDisplayMedia exposing audio tracks — only
+        // Chromium desktop does. Everywhere else (Firefox, Safari, mobile)
+        // fall back to the mic so the visualizer still reacts to sound.
+        if (!isTabAudioSupported()) {
+            console.warn('Tab audio capture unsupported in this browser — falling back to microphone input.')
+            return setupMicAudio()
+        }
+        return setupTabAudio({ params, AudioProcessor })
+    }
+
+    const fileConfig = createAudioFileSource({ params })
+    if (fileConfig) {
+        try {
+            const audioContext = new AudioContext()
+            const { sourceNode, audioBuffer, startSource } = await initAudioFromFile({ config: fileConfig, audioContext })
+            window.cranes.audioBuffer = audioBuffer
+            window.cranes.startSource = startSource
+
+            const audioProcessor = new AudioProcessor(audioContext, sourceNode, fileConfig.historySize, fileConfig.fftSize)
+            audioProcessor.smoothingFactor = fileConfig.smoothing
+            await audioProcessor.start()
+            // Route through speakers (unlike mic input, file playback has no feedback risk)
+            audioProcessor.fftAnalyzer.connect(audioContext.destination)
+            await maybeStartWavelet(params, audioContext, sourceNode)
+            return audioProcessor
+        } catch (err) {
+            console.error('Audio file initialization failed:', err)
+            return noAudio
+        }
+    }
+
+    return setupMicAudio()
 };
 
 // Parse URL params as numbers when possible
@@ -279,42 +299,7 @@ const animateController = (controller) => {
     requestAnimationFrame(controllerFrame)
 }
 
-// Load a controller module from a URL (local or remote)
-const loadController = async () => {
-    const controllerPath = params.get('controller')
-    if (!controllerPath) return null
-
-    try {
-        // Handle paths with or without .js extension
-        let controllerUrl = controllerPath
-        if (!controllerPath.includes('http') && !controllerPath.endsWith('.js')) {
-            controllerUrl = `/controllers/${controllerPath}.js`
-        } else if (!controllerPath.includes('http')) {
-            controllerUrl = `/controllers/${controllerPath}`
-        }
-
-        const controllerModule = await import(/* @vite-ignore */ controllerUrl)
-
-        // Handle different module formats:
-        // 1. Module exports a function directly (default export) - use it as the controller
-        // 2. Module exports a make() function - CALL it (with cranes) to get the controller
-        // 3. Module exports something else - error
-        //
-        // The make() pattern (per docs/controllers.md) returns the per-frame controller —
-        // so we must invoke make(), not return it. Returning make itself was a bug: the
-        // animation loop would call make(features) every frame, re-initializing state and
-        // returning a fresh function instead of the controller's computed values.
-
-        if (typeof controllerModule.default === 'function') return controllerModule.default
-        if (typeof controllerModule.make === 'function') return controllerModule.make(window.cranes)
-        if (typeof controllerModule === 'function') return controllerModule
-        console.error('Controller must export a function directly or provide a make() function')
-        return null
-    } catch (error) {
-        console.error(`Failed to load controller: ${error}`)
-        return null
-    }
-}
+// Controller loading/chaining lives in src/controllerChain.js (repeated ?controller= → pipeline).
 
 
 if(navigator.connection) {
@@ -373,33 +358,10 @@ const main = async () => {
         fullscreen: params.get('fullscreen') === 'true' || shaderFullscreen
     }
 
-    // Load and initialize controller if specified
-    const controllerExport = await loadController()
-
-    if (controllerExport) {
-        try {
-            let controller
-
-            // Check if the export is a make function or direct controller
-            if (typeof controllerExport === 'function') {
-                // If it takes 0-1 arguments, it's likely a direct controller function
-                if (controllerExport.length <= 1) {
-                    controller = controllerExport
-                } else {
-                    // Otherwise it's probably a make function
-                    controller = controllerExport(window.cranes)
-                }
-            }
-
-            if (typeof controller !== 'function') {
-                throw new Error('Controller must be a function or return a function')
-            }
-
-            // Setup separate animation loop for the controller
-            animateController(controller)
-        } catch (e) {
-            console.error('Failed to initialize controller:', e)
-        }
+    // Load and CHAIN controllers — every `?controller=` runs as a left-fold pipeline each frame.
+    const controllerFns = await loadControllers(window.cranes, params.getAll('controller'))
+    if (controllerFns.length) {
+        animateController(composeControllers(controllerFns))
     }
 
     // Initialize visualizer and start shader animation loop
@@ -413,9 +375,33 @@ main()
 // Reload the page when shader files change on disk (replaces full-reload from shader-plugin).
 // Skip on the editor page — it handles shader updates via the editor-sync HMR event.
 if (import.meta.hot) {
-    import.meta.hot.on('shaders-changed', () => {
+    import.meta.hot.on('shaders-changed', async ({ path }) => {
         if (window.location.pathname.includes('edit')) return
         if (window.location.pathname.includes('jam')) return
-        location.reload()
+
+        // A full reload here costs a black frame, an audio-context restart and the
+        // entire 500-frame feature history. That is invisible while developing and
+        // ruinous during a set, because /vibej rewrites its target .frag every
+        // minute — so the display would blink and lose its statistics every minute.
+        //
+        // The event fires for ANY .frag in the tree, so first ask whether the file
+        // that changed is even the one on screen; usually it is not.
+        const changed = String(path ?? '')
+            .replace(/^.*?shaders\//, '')
+            .replace(/\.frag$/, '')
+        const showing = new URLSearchParams(window.location.search).get('shader')
+        if (!changed || !showing || changed !== showing) return
+
+        // Same shader: swap the source in place. window.cranes.shader is what
+        // animateShader reads every frame, so assigning it recompiles without
+        // touching the audio pipeline — the same trick RemoteDisplay uses.
+        try {
+            await loadShader(showing)
+        } catch (e) {
+            // Never leave the screen stuck on stale code mid-show; the reload is
+            // ugly but it is the honest fallback.
+            console.error('[hmr] hot-swap failed, falling back to reload:', e)
+            location.reload()
+        }
     })
 }

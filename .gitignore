@@ -148,6 +148,7 @@ yarn-error.log*
 !**/.yarn/sdks/
 .playwright-mcp
 shaders.json
+images.json
 manifests/
 test-screenshots/
 screenshots/
@@ -155,3 +156,6 @@ public/test-audio/
 public/images/*.webp
 .claude/vj-state.json
 .claude/vj-pending.frag
+.wrangler/
+.claude/vj-signals.jsonl
+.claude/vj-signals.jsonl.prev

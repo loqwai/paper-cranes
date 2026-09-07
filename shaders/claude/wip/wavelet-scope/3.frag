@@ -1,4 +1,5 @@
 // @fullscreen: true
+//https://visuals.beadfamous.com/?shader=claude/wip/wavelet-scope/3&wavelet=true&fullscreen=true
 // @tags: diagnostic, wavelet, oscilloscope, graph, drop-detector, debug
 //
 // WAVELET BASS vs DROP-DETECTOR — scrolling oscilloscope that overlays our new wavelet

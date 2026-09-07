@@ -11,6 +11,7 @@ import {
 } from 'twgl-base.js'
 
 import { shaderWrapper } from './shader-transformers/shader-wrapper.js'
+import { keepScreenAwake } from './wakeLock.js'
 
 // Simple full-screen quad
 const positions = [
@@ -84,9 +85,20 @@ const calculateResolutionRatio = (frameTime, renderTimes, lastResolutionRatio) =
     return lastResolutionRatio
 }
 
+// Held for the lifetime of the page: this app is never *not* showing a shader, so
+// "while a shader is running" and "while the page is open" are the same interval.
+let screenAwake = null
+
+/**
+ * Start holding the screen awake, idempotently. Safe to call from a user gesture
+ * to nudge a re-acquire on browsers that refused the request before any input.
+ */
 export const askForWakeLock = async () => {
-    if(!navigator.wakeLock) return
-    return navigator.wakeLock.request('screen')
+    if (!screenAwake) screenAwake = keepScreenAwake()
+    // Exposed so the lock can be checked for real on a device — a request that was
+    // denied is otherwise indistinguishable from one that succeeded.
+    if (window.cranes) window.cranes.wakeLock = screenAwake
+    return screenAwake
 }
 
 // Default vertex shader for full-screen quad
@@ -97,7 +109,8 @@ void main() {
 }`
 
 export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) => {
-    await askForWakeLock().catch(e => {});
+    // Not awaited: the screen lock must never sit between the user and the visual.
+    askForWakeLock()
 
     const gl = canvas.getContext('webgl2', {
         antialias: false,

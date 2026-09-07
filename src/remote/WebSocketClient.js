@@ -1,4 +1,9 @@
-const DEFAULT_RELAY_HOST = 'paper-cranes-remote.redaphid.workers.dev'
+// The worker is deployed from workers/remote-relay. It ALSO answers on
+// paper-cranes-remote.loqwai.workers.dev, but do not point clients there: a
+// wildcard Cloudflare Access app guards that subdomain (and *.hypnodroid.com)
+// and 302s the websocket upgrade to a login page. beadfamous.com carries no
+// such app, which is the only reason this host is the default.
+const DEFAULT_RELAY_HOST = 'relay.beadfamous.com'
 
 /**
  * Get the WebSocket URL for remote control.

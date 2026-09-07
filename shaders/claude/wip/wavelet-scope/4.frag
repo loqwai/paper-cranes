@@ -1,4 +1,5 @@
 // @fullscreen: true
+//https://visuals.beadfamous.com/?shader=claude/wip/wavelet-scope/4&wavelet=true&fullscreen=true
 // @tags: diagnostic, wavelet, oscilloscope, graph, debug
 //
 // WAVELET FULL-BAND OSCILLOSCOPE — scrolls all six octave-band z-scores as separate

@@ -1,4 +1,5 @@
 // @fullscreen: true
+//https://visuals.beadfamous.com/?shader=claude/wip/wavelet-scope/centroid-solo&wavelet=true&fullscreen=true
 // @tags: diagnostic, wavelet, oscilloscope, debug
 //
 // CENTROID SOLO — one feature, full screen, BRIGHT and SMOOTHED so a frequency

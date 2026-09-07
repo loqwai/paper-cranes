@@ -2,6 +2,53 @@
 
 All notable non-shader feature changes to this project will be documented in this file.
 
+## 2026-08-20
+
+### Performance
+
+- **Remote display no longer stutters while a fader moves** — The knob→uniform path had three
+  per-message costs on the display, running at up to 60/second (vjpad coalesces its sends to one
+  per animation frame). The URL mirror parsed and re-serialised a ~700-char URL carrying 30+ knobs
+  and called `history.replaceState` on **every** message; it is now debounced to 750ms and flushed
+  on `pagehide`, since it exists only so a refresh preserves state. The per-message "Remote" flash
+  was removed outright — it did `getElementById`, four style writes and a fresh `setTimeout` per
+  message (stacking ~60 timers/second), to draw an overlay that `?vj=1` hides with CSS anyway.
+  Params are still applied **synchronously on arrival**: batching them into a
+  `requestAnimationFrame` was tried and reverted, because it added up to a full frame (~16ms) of
+  lag to a surface people play in time with music. `updateStatusIndicator` is untouched — it fires
+  on connection state changes only.
+
+### Features
+
+- **[VJ telemetry](vj-telemetry.md) (`?vj=1`, `?vjtrack=1`)** — The display page volunteers its own
+  numbers so the auto-VJ loop can judge a page it cannot screenshot (a tab opened by an earlier
+  session is outside the current browser tab group and cannot be scripted at all). `?vj=1` installs
+  the GL validator, aesthetic meter, a frame-time jank probe, and cursor hygiene, and POSTs a boot
+  beacon, a 20s `pulse`, and watchdog health alerts (`clip`, `flicker`, `too-dark`, `shiver`,
+  `gate-drop`/`gate-clean`) to `/__vj-signal`. Boot beacons now carry a parsed `flags` object —
+  with 30 knobs in a URL, the parameters that matter fall past any truncation limit.
+  `?vjtrack=1` additionally logs every knob move at 10Hz with the full ~184-channel feature vector;
+  it is **off by default** as it is a ~17KB serialise plus a fetch every 2s on the render thread.
+
+### Developer Experience
+
+- **Fader-imitation analysis (`scripts/vj/`)** — Tooling to answer "which audio feature was that
+  gesture imitating?". `watch-release.js` fires the moment a fader is released; `knob-correlate.js`
+  segments the log into gestures and correlates each knob against every feature; `remote-send.js`
+  pushes `update-params` to a display from a shell (the lever on a tab that cannot be scripted).
+  The correlator carries three guards, each added because its absence produced a confident wrong
+  answer: correlate **inside one gesture** (across idle time everything reads r≈0.3), a Bartlett
+  **effective-N** test (a 7s sweep reads r=0.9 on ~3 independent points), and **detrending** (a
+  steady sweep matches every monotonic accumulator in the engine — the tell is many unrelated
+  channels tying at one r, and `n_eff` does not catch it).
+- **Signal log rotation** — `.claude/vj-signals.jsonl` rotates on dev-server start, keeping one
+  `.prev`. It was an unbounded `appendFileSync` that reached 7.3MB while the GET endpoint only ever
+  serves the last 50 lines.
+- **~54MB of dead artifacts dropped** — `.playwright-mcp/` (48MB, already matched by `.gitignore`
+  but committed before the ignore existed), ~20MB of screenshot PNGs under `scripts/*-screenshots/`
+  (the capture harnesses in those directories are kept), a root `images/` directory superseded by
+  `public/images/`, and four one-off scripts with no references.
+
 ## 2026-06-07
 
 ### Features

@@ -2,6 +2,7 @@
 
 ## What's New
 
+- **Smoother remote control** — the display no longer stutters while a knob is moving. Per-message URL rewriting and DOM work have been taken off the hot path; params still apply synchronously so nothing is added to knob→visual latency
 - **[Wavelet audio analysis](docs/wavelet-analysis.md)** — Opt-in `?wavelet=true` multiresolution DWT alongside the FFT: octave bands, brightness/complexity axes, and a sharp low-latency deep-bass drop trigger
 - **[MIDI mapping page](docs/midi-mapping.md#mapping-page-midihtml)** — Visual `/midi.html` UI: see every device + mapping at once, click-to-learn knobs, edit indices inline
 - **[Jam page](docs/jam-page.md)** — Lean live session page: fullscreen shader + knob drawer + spacebar snapshot queue. No editor overhead.
@@ -68,6 +69,7 @@ Pick a shader from `shaders/` and load it via the `?shader` param — e.g. [loca
 | `knob_1`..`knob_200` | `?knob_1=0.5` | Set knob values directly (0-1 range) |
 | `seed`, `seed2`, etc. | `?seed=0.5` | Override deterministic seed values |
 | `time` | `?time=10.0` | Hold time constant (useful for screenshots/testing) |
+| `vj` | `?vj=1` | Install the [VJ telemetry runtime](docs/vj-telemetry.md): GL validator, aesthetic meter, frame-time probe, health signals |
 | *any name* | `?myParam=0.5` | Any numeric param becomes a `uniform float` in GLSL |
 
 ## Making your own visualizations
@@ -95,6 +97,7 @@ If you want to deploy a visualization you made, PR me and I'll add it to the dep
 | [MIDI Mapping](docs/midi-mapping.md) | Controller profiles, auto-assignment, and learn mode |
 | [Audio File Playback](docs/audio-file-playback.md) | Deterministic audio for testing and screenshots |
 | [Unique Feature Guide](docs/unique-feature-guide.md) | Choosing independent audio features for multi-element shaders |
+| [VJ Telemetry](docs/vj-telemetry.md) | `?vj=1` page-as-sensor signals, and reading a knob/feature correlation honestly |
 | [Changelog](docs/CHANGELOG.md) | Recent feature changes |
 
 ## Deploying your visualization to visuals.beadfamous.com

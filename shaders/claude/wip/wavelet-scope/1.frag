@@ -1,4 +1,5 @@
 // @fullscreen: true
+//https://visuals.beadfamous.com/?shader=claude/wip/wavelet-scope/1&wavelet=true&fullscreen=true
 // @tags: diagnostic, wavelet, debug
 //
 // WAVELET SCOPE — diagnostic for the DWT prototype (?wavelet=true).

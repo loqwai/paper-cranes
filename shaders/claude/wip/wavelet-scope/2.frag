@@ -1,4 +1,5 @@
 // @fullscreen: true
+//https://visuals.beadfamous.com/?shader=claude/wip/wavelet-scope/2&wavelet=true&fullscreen=true
 // @tags: diagnostic, wavelet, oscilloscope, graph, debug
 //
 // WAVELET BASS OSCILLOSCOPE — scrolling line comparison of the wavelet bass-hit
