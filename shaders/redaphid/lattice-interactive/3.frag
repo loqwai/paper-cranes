@@ -322,7 +322,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
 
     // gentle trail (feeds the ripples between frames)
     vec2 tuv  = fragCoord / iResolution.xy - 0.5;
-    tuv      *= 1.0 - (0.006 + 0.022 * bassPulse);      // IRIS tunnel push: trails streak radially, harder on the kick
+    tuv      *= 1.0 - (0.006 + 0.022 * bassPulse + 0.012 * kickExcess + 0.008 * clamp(spectralFluxZScore, 0.0, 1.0) + 0.006 * spectralRoughnessSmooth);   // IRIS tunnel rush: real kicks + transients + grit shove the trails forward (feedback lane, brightness-neutral)
     vec4 prev = getLastFrameColor(tuv + 0.5);
     col = mix(prev.rgb * (0.56 + (0.06 + 0.18 * bassPulse) * gArc), col, 0.93);   // trails grow over the hour; black stays black
 
