@@ -21,7 +21,7 @@
 #define FIRST 4
 
 // per-frame globals, declared before ANY function so dialDistort/fractal can all see them
-float gSpin, gPulse, gPop, gKick, gHexR, gBorder, gCross, gFill, gReact, gTwist, gPix;
+float gSpin, gPulse, gPop, gKick, gHexR, gBorder, gCross, gFill, gReact, gTwist, gPix, gGate;
 
 // ── wavelet-ease controller outputs (declared by hand; 0 without the controller / a mic) ──
 uniform float waveletBassSpring;
@@ -150,9 +150,9 @@ float hexDist(vec2 p){
 
 float bandForDepth(float ld){
     // bass -> coarse outlines, mids -> middle, treble -> fine detail (instruments separate by depth)
-    if (ld < 0.34) return waveletBassSpring  * quietGate;
-    if (ld < 0.67) return waveletBand2Spring * quietGate;
-    return waveletBand5Spring * quietGate;
+    if (ld < 0.34) return waveletBassSpring  * gGate;
+    if (ld < 0.67) return waveletBand2Spring * gGate;
+    return waveletBand5Spring * gGate;
 }
 
 
@@ -180,7 +180,7 @@ vec4 fractal(vec2 p){
         // RIM-DOMINANT: narrow band hugging the edge carries the light; interior stays near-black.
         float ldw = float(i - FIRST) / float(LEVELS - 1 - FIRST);
         float bw   = gBorder * (0.20 + 0.80 * ldw);                          // coarse levels get THIN rims (they're 32x wider on screen)
-        bw *= 1.0 - 0.35 * ldw * clamp(waveletBand5Spring * quietGate, 0.0, 1.0);   // treble snaps fine lines taut (width, not light)
+        bw *= 1.0 - 0.35 * ldw * clamp(waveletBand5Spring * gGate, 0.0, 1.0);   // treble snaps fine lines taut (width, not light)
         float build = clamp((energySpring - 0.22) * 1.05, 0.0, 1.0);          // sustained energy: gentle slope (a knee at track energy oscillates)
         float res  = smoothstep(bw * (1.6 + 1.2 * build), bw * 0.5, alias);   // sub-pixel level -> 0, not haze; energy widens the window
         float rim  = smoothstep(bw + alias, bw, m) * res;                     // hard edge
@@ -196,7 +196,7 @@ vec4 fractal(vec2 p){
         float wave = smoothstep(0.30, 0.0, abs(ld - (1.0 - gPulse))) * env;
         float band = bandForDepth(ld);
         float lit = (rim * 0.95 + halo * 0.22)
-                  * (0.52 + (energySpring * 0.16 + band * 0.75 + waveletBassSpring * quietGate * 0.12) * gReact);
+                  * (0.52 + (energySpring * 0.16 + band * 0.75 + waveletBassSpring * gGate * 0.12) * gReact);
         lit += wave * (0.04 + gKick * 0.08);   // pulse barely touches lightness — it moves HUE instead (below)
         lit *= 1.0 - 0.30 * build * ldw;       // counter-ratchet: more fine lines, not more light
 
@@ -216,22 +216,24 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float aspect = iResolution.x / iResolution.y;
 
     float bTime = iTime / 3.0;
-    // LIVE GATE (VJ fix): the shipped quietGate reads ~0.002 avg on a room mic, which multiplied
+    // LIVE GATE (VJ fix): the shipped gGate reads ~0.002 avg on a room mic, which multiplied
     // nearly every reactive term to nothing. Rebuild it from measured energy with a hard floor so
     // motion always survives, and OR in the bass level so bass-driven moves never gate out.
     float liveGate = clamp(max(energySpring * 1.7, waveletBassSpring * 1.4) - 0.08, 0.0, 1.0);   // SPRINGS, not raw: no shiver on geometry
     liveGate = clamp(0.45 + liveGate * 0.85, 0.0, 1.3);
-    #define quietGate liveGate
-    gSpin  = bTime * 0.04 + morphPhase * 0.4 + flowPhase * 0.18 + melodyFlow * 0.25 * quietGate;   // rate-not-angle: bass paces the spin (0.35 pushed lumSpread to 0.13)
-    gPop   = clamp(energySpring * 0.5 + spectralCrestSmooth * 0.45, 0.0, 1.0) * quietGate;
+    gGate = liveGate;   // GLOBAL gate: bandForDepth()/fractal() are defined above mainImage and must see it too
+    gSpin  = bTime * 0.04 + morphPhase * 0.4 + flowPhase * 0.18;   // rate-not-angle: bass paces the spin; no audio in the ANGLE (melodyFlow rocked back)
+    gPop   = clamp(energySpring * 0.5 + spectralCrestSmooth * 0.45, 0.0, 1.0) * gGate;
+    float kickExcess = clamp((wavelet_bassHit - 1.0) * 0.5, 0.0, 1.0);   // IRIS: hit 1->0, 3->1 — the REAL kicks
     gKick  = clamp(max(waveletBassZScore, 0.0), 0.0, 1.0) * 0.45 + clamp(wavelet_bassHit, 0.0, 1.0) * 0.40
-           + clamp(spectralFluxZScore, 0.0, 1.0) * 0.30;   // flux = fires on ANY transient (tamed)
+           + clamp(spectralFluxZScore, 0.0, 1.0) * 0.30 + kickExcess * 0.45;   // flux = any transient; kickExcess = real kick tier
     gPulse = fract(flowPhase * 0.6 + bTime * 0.18);
-    float bassPulse = waveletBassSpring * quietGate;
-    gHexR   = 0.60 + waveletBand2Spring * 0.12 * quietGate + knob_3 * 0.30;   // STRUCTURE dial (knob_3) → cell size
-    gBorder = 0.034 + waveletBand5Spring * 0.020 * quietGate;   // thin neon tube, not a fat band
+    float bassPulse = waveletBassSpring * gGate
+                    + 0.35 * smoothstep(0.6, 1.2, waveletBassZScore);   // IRIS kick path: clear kicks snap everything downstream
+    gHexR   = 0.60 + waveletBand2Spring * 0.12 * gGate + knob_3 * 0.30;   // STRUCTURE dial (knob_3) → cell size
+    gBorder = 0.034 + waveletBand5Spring * 0.020 * gGate;   // thin neon tube, not a fat band
     gCross  = 0.17 + bassPulse * 0.11;      // rings swell on the kick (spring-smoothed, no shiver)
-    gFill   = 0.06 + waveletBand5Spring * 0.035 * quietGate;
+    gFill   = 0.06 + waveletBand5Spring * 0.035 * gGate;
     gReact  = 2.0 + knob_5 * 2.5;   // floor raised: knob_5 rode at 0 all night, pinning this to 1.0          // MUSIC-REACTIVITY dial (knob_5) → how hard it responds
     gTwist  = knob_4 * 1.5;                 // STRUCTURE dial (knob_4) → kaleido twist
 
@@ -265,8 +267,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
             + wave * 0.10                                   // depth pulse recolours the lines: zero brightness cost
             + regionHue(world)
             + bTime * 0.012
-            + melodyFlow * 0.32 * quietGate
-            + waveletCentroidSpring * 0.30 * quietGate     // palette leans cyan when bright, magenta when dark
+            + melodyFlow * 0.32 * gGate
+            + waveletCentroidSpring * 0.30 * gGate     // palette leans cyan when bright, magenta when dark
             + paletteShift
             + knob_2 * 2.5                                  // COLOUR-SCHEME dial (knob_2) → global hue rotation
             + seed;
@@ -288,7 +290,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     }
 
     // ── MUSICAL BLOOM + SPARKLE (as before) ──
-    float dropGlow = clamp(energySpring * 0.6 + spectralCrestSmooth * 0.4, 0.0, 1.0) * quietGate;
+    float dropGlow = clamp(energySpring * 0.6 + spectralCrestSmooth * 0.4, 0.0, 1.0) * gGate;
     // (removed: global `col *= 1+audio` exposure pump — user: "no global brightness change")
     // Audio now rides STRUCTURE + HUE + filament glow only; see gHue/gGeo below.   // MUSIC-REACTIVITY dial
     vec2 scr = fragCoord / iResolution.xy;
@@ -297,7 +299,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float sparkPatch = 0.5 + 0.5 * sin(scr.x * 6.0 + scr.y * 4.3 - bTime * 2.0);
     float spark = 0.0;   // VETOED (lattice-interactive-vj-1 beat 3: "get that white dot grid gone")
     col += vec3(1.0, 0.97, 0.92) * spark * clamp(alpha, 0.0, 1.0)
-         * (waveletBand5Spring * 0.25 + spectralCrestSmooth * 0.22 + spectralRoughnessSmooth * 0.12) * quietGate;
+         * (waveletBand5Spring * 0.25 + spectralCrestSmooth * 0.22 + spectralRoughnessSmooth * 0.12) * gGate;
 
     col = pow(clamp(col, 0.0, 1.0), vec3(1.02));   // keep the floor black
     col *= 1.0;   // neutral: no global exposure lift (user: "no global brightness change")

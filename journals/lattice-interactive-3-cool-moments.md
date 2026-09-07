@@ -5,6 +5,9 @@ Target: `shaders/redaphid/lattice-interactive/3.frag`. Recipe: `shaders/redaphid
 arithmetic rather than taste).
 
 ## Status
+**Iter 15 (20:52).** IRIS kick path: `bassPulse += 0.35*smoothstep(0.6,1.2,waveletBassZScore)` (thresholded z — the allowed form) so zoom lunge / rings / trails / tunnel all snap on a clear kick. dark 0.662, clip 0, lumSpread 0.052, 61 fps.
+**Iter 16 (20:55).** IRIS research landed. BUG FOUND: `#define quietGate liveGate` lived inside mainImage, so `bandForDepth()` and `fractal()` (defined ABOVE it) read the raw gain-dependent `quietGate` all night — per-depth band lighting (iter 4) and treble-taut (iter 8) were dead on quiet passages. Fixed with a real global `gGate` set before fractal() runs; every use now goes through it. Also: IRIS `kickExcess = clamp((wavelet_bassHit-1)*0.5)` tier into gKick (bassHit measures 90–214 on hits here, so the tier is effectively binary — fine); removed `melodyFlow` from the spin ANGLE (Iris: audio in amplitude, never in phase — it rocked back). dark 0.672, black 0.575, clip 0, lumSpread 0.061, 62 fps. NOTE: raw quietGate read 1.0 during this loud window — it is gain-dependent, not always dead.
+
 **Iter 14 (20:48).** USER: "use Iris series for inspiration re: reactivity". Applied the iris/wavelet TUNNEL PUSH (its knob_28, 'a big part of apparent SPEED'): previous frame sampled zoomed toward centre `tuv *= 1 - (0.006 + 0.022*bassPulse)` so trails streak radially = flying forward, harder on the kick. Bass spring 0.32–0.73. lum 0.134, dark 0.686, black 0.628, clip 0, lumSpread 0.148 (reactivity-driven, accepted), 62 fps. Iris research agent still running for the full mapping list.
 
 **Iter 13 (20:43).** Read-first tick: lumSpread 0.147 from the detail-budget KNEE at energySpring 0.35 sitting right at track energy → fine levels flipping in/out. Softened to slope `(energySpring-0.22)*1.05`. Then USER: "more reactivity. zoom with it. definitely at first" → ZOOM LUNGE `navz *= 1 + 0.45*bassPulse` (bass SPRING only, gPix follows) + gReact floor 1.5→2.0. Directive change: reactivity now outranks the lumSpread<0.1 target; lum following the music is intended. Bass spring 0.26–0.84 → ~38% lunge. lum 0.163, dark 0.581, black 0.536, clip 0.001, lumSpread 0.126, 61 fps.
@@ -99,6 +102,8 @@ it, not the eye.
       weight; any `col +=` after `mix(bg, col, alpha)` whose mask never reaches zero on screen.
 
 ## History of changes
+- iter15: Iris kick path into bassPulse (thresholded bassZ).
+- iter16: gGate global (the #define scope bug — a #define inside mainImage does not reach functions above it); kickExcess tier; melodyFlow out of the spin angle.
 - iter14: Iris tunnel push on the feedback sample (0.006 + 0.022*bassPulse).
 - iter13: build knee→slope (0.22, 1.05); ZOOM LUNGE on bass spring 0.45; gReact 1.5→2.0. Spread target relaxed by user in favour of reactivity.
 - iter12: bass-stretched motion trails (decay 0.62→0.80 on the kick), rim gain 0.56→0.52.
@@ -149,6 +154,8 @@ None tonight. `3.frag` was edited **in place** — the user chose that over a sc
 graduated design arc (1 → 2 → 3) lives in `shaders/redaphid/wip/lattice-interactive/lattice-interactive.md`.
 
 ## Design hypotheses for v(next)
+- A `#define` placed inside a function only renames text AFTER it. Never use #define to retarget a uniform for helper functions — use a global set at the top of mainImage. (Cost tonight: two 'proven' reactive moves were silently dead for 12 ticks; the meters attributed their motion to other terms.)
+- Iris rule adopted: gate GEOMETRY hard, gate COLOUR softly with a floor. Iris rule adopted: audio in AMPLITUDE, never in PHASE/ANGLE.
 - **Never trust one frame; measure a spread.** A screenshot and a single meter sample are both
   point samples of a moving signal, and their disagreement is *information about motion*, not about
   either instrument. Any "flashy" complaint should be answered with an N-frame spread before a single
