@@ -315,7 +315,7 @@ moving pieces that disrupt the sense of space. The fractal structures can breath
 **FROZEN** is the spatial frame — fold ratio and every angle term. **FREE TO BREATHE** is anything
 inside a cell: `gHexR`, `gCross`, `gBorder`, `gFill`. That is why `3.frag`'s audio on those four is
 legal and audio on `theta` is not.
-- **Auto-scroll / flight.** The user navigates; the shader does not fly itself.
+- **Auto-scroll / flight.** The user navigates; the shader does not fly itself. — **superseded 22:22 by user request (iter27), for the plunge only** (*"give me something like a mandelbrot zoom"*): `navz *= exp2(-fract(bTime*0.05 + flowPhase*0.03))`, seamless because the fold ratio is 2. The veto still stands for every other self-driven camera move.
 
 ---
 
