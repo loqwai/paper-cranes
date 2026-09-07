@@ -5,6 +5,8 @@ Target: `shaders/redaphid/lattice-interactive/3.frag`. Recipe: `shaders/redaphid
 arithmetic rather than taste).
 
 ## Status
+**Iter 14 (20:48).** USER: "use Iris series for inspiration re: reactivity". Applied the iris/wavelet TUNNEL PUSH (its knob_28, 'a big part of apparent SPEED'): previous frame sampled zoomed toward centre `tuv *= 1 - (0.006 + 0.022*bassPulse)` so trails streak radially = flying forward, harder on the kick. Bass spring 0.32–0.73. lum 0.134, dark 0.686, black 0.628, clip 0, lumSpread 0.148 (reactivity-driven, accepted), 62 fps. Iris research agent still running for the full mapping list.
+
 **Iter 13 (20:43).** Read-first tick: lumSpread 0.147 from the detail-budget KNEE at energySpring 0.35 sitting right at track energy → fine levels flipping in/out. Softened to slope `(energySpring-0.22)*1.05`. Then USER: "more reactivity. zoom with it. definitely at first" → ZOOM LUNGE `navz *= 1 + 0.45*bassPulse` (bass SPRING only, gPix follows) + gReact floor 1.5→2.0. Directive change: reactivity now outranks the lumSpread<0.1 target; lum following the music is intended. Bass spring 0.26–0.84 → ~38% lunge. lum 0.163, dark 0.581, black 0.536, clip 0.001, lumSpread 0.126, 61 fps.
 
 **Iter 12 (20:36).** Motion trails now that the lattice travels: feedback decay `0.62 + 0.18*bassPulse` (max 0.80) — lines streak on kicks, snap crisp between; rim standing gain 0.56→0.52 as the counter. Bass spring 0.67→0.10→0.49 over the window. lum 0.105, dark 0.673, black 0.598, clip 0, lumSpread 0.073, 62 fps.
@@ -97,6 +99,7 @@ it, not the eye.
       weight; any `col +=` after `mix(bg, col, alpha)` whose mask never reaches zero on screen.
 
 ## History of changes
+- iter14: Iris tunnel push on the feedback sample (0.006 + 0.022*bassPulse).
 - iter13: build knee→slope (0.22, 1.05); ZOOM LUNGE on bass spring 0.45; gReact 1.5→2.0. Spread target relaxed by user in favour of reactivity.
 - iter12: bass-stretched motion trails (decay 0.62→0.80 on the kick), rim gain 0.56→0.52.
 - iter11b: build recalibrated (energySpring-0.35)*1.6 — density only at true peaks.

@@ -315,7 +315,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     }
 
     // gentle trail (feeds the ripples between frames)
-    vec4 prev = getLastFrameColor(fragCoord / iResolution.xy);
+    vec2 tuv  = fragCoord / iResolution.xy - 0.5;
+    tuv      *= 1.0 - (0.006 + 0.022 * bassPulse);      // IRIS tunnel push: trails streak radially, harder on the kick
+    vec4 prev = getLastFrameColor(tuv + 0.5);
     col = mix(prev.rgb * (0.62 + 0.18 * bassPulse), col, 0.93);   // trails stretch on the kick; black stays black
 
     col = mix(col, vec3(0.0), clamp(dot(sp, sp) * 0.30, 0.0, 0.85));   // deeper vignette -> black edges
