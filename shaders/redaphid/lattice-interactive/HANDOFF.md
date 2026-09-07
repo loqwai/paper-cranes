@@ -212,6 +212,9 @@ The rest of the palette contract, all journal-proven, all currently in the file:
   gamut edge and reads as neon; the journals' muted look came from `C ≈ 0.075` (sat 0.86–0.87),
   tonight's neon from `C ≈ 0.235`. Don't fix a saturation complaint by lifting L — that is §0.1 again.
 - **On a projector / fabric, cap line LIGHTNESS and push chroma** (user, 21:06: *"still too white to project on to the tent"*). A line at OKLCH L ≥ ~0.8 reads WHITE on a tent regardless of hue; "white" complaints are an L-cap problem, not a hue problem. Live: `L` capped at `mix(0.50, 0.96, gArc)`, chroma base 0.30 — neon is deep colour, not bright lines. Meter it with `whiteish` (lum>0.35 AND sat<0.25).
+- **After a palette lock, audit every audio term on the hue coordinate for RATE** (iter21): a hard
+  selector (`smoothstep(0.44,0.56)`) turns a fast hue shimmer (flux z-score ×0.10) into an
+  orange↔purple strobe on every transient. Only slow drivers (springs, arc, depth) may feed a thresholded hue.
 - **When the user names a palette, lock it in `lush()`** (user, 21:21: *"ORANGE AND DEEP PURPLE"*): anchor hues selected by the existing hue coordinate — `k = smoothstep(0.30,0.70,fract(s)); h = mix(radians(62), radians(-52), k)` — so every hue driver keeps its wiring and just chooses between the named colours. Never rewire the drivers for a palette request. Meter with `hueMix` (orange / purple / other share of lit saturated pixels).
 - **A cap is not a drive** (iter20): lines stalled at L~0.28 under a 0.73 cap because the standing gain + 1.55 exponent crushed `lit` first. Live: gain `mix(0.62,0.90,gArc)`, exponent 1.20, ceiling 0.90. Check lumMax against the cap whenever the arc moves.
 - **High-chroma orange/yellow clips to RED in sRGB** (iter20b): OKLCH 68° @ C 0.36 rendered red (hueMix red 0.41 / orange 0.00). Keep orange-side chroma ≤ ~0.22 at L 0.6–0.75 (live: anchor 82°, chroma × `mix(0.60,1.0,k)`); purple survives the clamp, orange does not. Ship a hue-bucket meter with every palette lock.
@@ -451,11 +454,12 @@ must both be present, and `lattice-controls` chains **after** `lattice-nav`.
   and resets all state** — nav position, dial values, `paletteShift`, `warpGrow`, every accumulator.
   Shader `.frag` edits hot-reload; `index.js` edits do not. If an `index.js` fix is needed, it waits
   for a break.
-- **NEVER create a new `.frag` file anywhere under the project root mid-set** — the Vite shader plugin
-  watches `.frag` and a NEW file triggers a full page reload (iter20c, 21:24: an R&D agent's `verify.py`
-  wrote candidates to `.claude/vj-candidates/out/*.frag` → reload, arc → 0, navZoom → 1.0). Modifying an
-  existing file (`.claude/vj-pending.frag`) is safe; write candidates as `.frag.txt` OUTSIDE the root.
-  Recovery: re-navigate with `&navZoom=<value>` (lattice-nav honours it) and re-anchor any set-arc `T0`.
+- **The page CAN full-reload mid-set for reasons not yet identified** (iter20c, 21:24: arc → 0, navZoom
+  → 1.0, fullscreen held). Cause UNKNOWN — the first theory (a team agent creating new `.frag` files under
+  the root → Vite watcher) was retracted; no such file was written. Precautions anyway: never create a
+  NEW `.frag` anywhere under the project root during a set (write candidates as `.frag.txt` outside the
+  root); modifying `.claude/vj-pending.frag` in place has never reloaded. Recovery: re-navigate with
+  `&navZoom=<value>` (lattice-nav honours it) and re-anchor any set-arc `T0`. Post-show: read the Vite log.
 - **The flow needs TIME, not just the URL.** Accumulators start at 0 on every page load. A fresh boot
   is the *tuned* look, not the *flow* look. To start deep, raise `paletteShift`/`warpGrow` in the URL.
 - **One move at a time**, and take no metric-driven move while the knobs are sweeping. The hands are
