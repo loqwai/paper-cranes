@@ -176,11 +176,11 @@ vec4 fractal(vec2 p){
         float alias = aliasBase * 0.5 * scale;
         // RIM-DOMINANT: narrow band hugging the edge carries the light; interior stays near-black.
         float ldw = float(i - FIRST) / float(LEVELS - 1 - FIRST);
-        float bw   = gBorder * (0.30 + 0.70 * ldw);                          // coarse levels get THIN rims (they're 32x wider on screen)
+        float bw   = gBorder * (0.20 + 0.80 * ldw);                          // coarse levels get THIN rims (they're 32x wider on screen)
         float rim  = smoothstep(bw + alias, bw, m);                           // hard edge
         float halo = smoothstep(bw * 1.6 + 0.004, bw * 1.1, m);               // hairline glow off the edge
         float body = smoothstep(gBorder + 0.12, gBorder + 0.02, m);           // faint interior
-        float f = rim * 0.90 + halo * 0.18;   // near-opaque rim; thin, so interiors stay black
+        float f = rim * 0.90 + halo * 0.07;   // near-opaque rim, hairline halo: crisp tube on black
 
         float ld = float(i - FIRST) / float(LEVELS - 1 - FIRST);
         float swirl = 0.5 + 0.5 * sin(atan(p.y, p.x) * 2.0 + length(p) * 3.0 + float(i) + seed4 * TAU);

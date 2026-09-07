@@ -5,6 +5,8 @@ Target: `shaders/redaphid/lattice-interactive/3.frag`. Recipe: `shaders/redaphid
 arithmetic rather than taste).
 
 ## Status
+**/vibej2-pw run started 19:38, iter 1/180, cron 6bcdfe4e, mic, Playwright fullscreen verified (outer 1440x900, chrome 0).** Brief: neon cyberpunk outline, rim only, mostly black. Iter 1: coarse rim factor 0.30→0.20, halo weight 0.18→0.07 → lum 0.206, dark 0.223, sat 0.968, clip 0, lumSpread 0.059 (all in target).
+
 **2026-09-06, live set in progress.** Playwright MCP browser · mic audio · `remote=display` ·
 `wavelet=true` · controllers `lattice-nav` + `lattice-controls` · `knob_1=0.21`. Branch
 `vibej2-audio-source`.
