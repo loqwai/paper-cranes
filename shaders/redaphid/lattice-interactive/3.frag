@@ -21,7 +21,7 @@
 #define FIRST 4
 
 // per-frame globals, declared before ANY function so dialDistort/fractal can all see them
-float gSpin, gPulse, gPop, gKick, gHexR, gBorder, gCross, gFill, gReact, gTwist, gPix, gGate;
+float gSpin, gPulse, gPop, gKick, gHexR, gBorder, gCross, gFill, gReact, gTwist, gPix, gGate, gArc;
 
 // ── wavelet-ease controller outputs (declared by hand; 0 without the controller / a mic) ──
 uniform float waveletBassSpring;
@@ -53,8 +53,8 @@ mat2 rot2(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 
 vec3 lush(float s, float lit){
     float h = fract(s) * TAU;
-    float L = clamp(pow(clamp(lit, 0.0, 1.0), 1.55), 0.0, 1.0);   // NEON: zero floor -> true black, rims reach full
-    float C = (0.235 + seed2 * 0.05) + 0.06 * sin(s * TAU * 0.5 + 1.3);   // NEON: high chroma
+    float L = clamp(pow(clamp(lit, 0.0, 1.0), 1.55), 0.0, mix(0.50, 0.96, gArc));   // L CAP: pure outlines now, whites only at hypercolor
+    float C = (0.30 + seed2 * 0.05) + 0.06 * sin(s * TAU * 0.5 + 1.3);   // NEON: high chroma (deep colour, not white)
     C *= smoothstep(0.0, 0.22, L);   // chroma -> 0 with L, else OKLCH clamps to a colored floor, never black
     return oklch2rgb(vec3(L, C, h));
 }
@@ -181,13 +181,13 @@ vec4 fractal(vec2 p){
         float ldw = float(i - FIRST) / float(LEVELS - 1 - FIRST);
         float bw   = gBorder * (0.20 + 0.80 * ldw);                          // coarse levels get THIN rims (they're 32x wider on screen)
         bw *= 1.0 - 0.35 * ldw * clamp(waveletBand5Spring * gGate, 0.0, 1.0);   // treble snaps fine lines taut (width, not light)
-        float build = clamp((energySpring - 0.22) * 1.05, 0.0, 1.0);          // sustained energy: gentle slope (a knee at track energy oscillates)
+        float build = clamp((energySpring - 0.22) * 1.05, 0.0, 1.0) * mix(0.6, 1.0, gArc);   // detail budget grows over the hour
         float res  = smoothstep(bw * (1.6 + 1.2 * build), bw * 0.5, alias);   // sub-pixel level -> 0, not haze; energy widens the window
         float rim  = smoothstep(bw + alias, bw, m) * res;                     // hard edge
         float haze = spectralRoughnessSmooth * gGate;                          // IRIS: dissonance = hazier line
         float halo = smoothstep(bw * (1.6 + 2.4 * haze) + 0.004, bw * 1.1, m) * res;   // halo fogs out on gritty passages
         float body = smoothstep(gBorder + 0.12, gBorder + 0.02, m);           // faint interior
-        float f = rim * 0.90 + halo * (0.07 + 0.10 * haze);   // near-opaque rim; halo carries more on noise
+        float f = rim * 0.90 + halo * (0.07 + 0.10 * haze) * mix(0.35, 1.0, gArc);   // halo fog grows over the hour
 
         float ld = float(i - FIRST) / float(LEVELS - 1 - FIRST);
         float swirl = 0.5 + 0.5 * sin(atan(p.y, p.x) * 2.0 + length(p) * 3.0 + float(i) + seed4 * TAU);
@@ -197,7 +197,7 @@ vec4 fractal(vec2 p){
         float wave = smoothstep(0.30, 0.0, abs(ld - (1.0 - gPulse))) * env;
         float band = bandForDepth(ld);
         float lit = (rim * 0.95 + halo * 0.22)
-                  * (0.52 + (energySpring * 0.16 + band * 0.75 + waveletBassSpring * gGate * 0.12) * gReact);
+                  * (mix(0.40, 0.62, gArc) + (energySpring * 0.16 + band * 0.75 + waveletBassSpring * gGate * 0.12) * gReact);
         lit += wave * (0.04 + gKick * 0.08);   // pulse barely touches lightness — it moves HUE instead (below)
         lit *= 1.0 - 0.30 * build * ldw;       // counter-ratchet: more fine lines, not more light
 
@@ -217,6 +217,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float aspect = iResolution.x / iResolution.y;
 
     float bTime = iTime / 3.0;
+    gArc = clamp((iTime - 3038.0) / 3600.0, 0.0, 1.0);   // SET ARC: outlines now -> hypercolor in 60 min
     // LIVE GATE (VJ fix): the shipped gGate reads ~0.002 avg on a room mic, which multiplied
     // nearly every reactive term to nothing. Rebuild it from measured energy with a hard floor so
     // motion always survives, and OR in the bass level so bass-driven moves never gate out.
@@ -321,7 +322,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     vec2 tuv  = fragCoord / iResolution.xy - 0.5;
     tuv      *= 1.0 - (0.006 + 0.022 * bassPulse);      // IRIS tunnel push: trails streak radially, harder on the kick
     vec4 prev = getLastFrameColor(tuv + 0.5);
-    col = mix(prev.rgb * (0.62 + 0.18 * bassPulse), col, 0.93);   // trails stretch on the kick; black stays black
+    col = mix(prev.rgb * (0.56 + (0.06 + 0.18 * bassPulse) * gArc), col, 0.93);   // trails grow over the hour; black stays black
 
     col = mix(col, vec3(0.0), clamp(dot(sp, sp) * 0.30, 0.0, 0.85));   // deeper vignette -> black edges
 
