@@ -4,12 +4,56 @@ import { html } from 'htm/preact'
 import { createParamsManager } from './src/params/ParamsManager.js'
 
 const searchParams = new URLSearchParams(window.location.search)
+const isRemoteControlMode = searchParams.get('remote') === 'control'
 
 const paramsManager = createParamsManager({
     syncToUrl: true,
-    remoteMode: false,
+    remoteMode: isRemoteControlMode,
+    onRemoteStatusChange: (status, info) => {
+        updateRemoteStatusIndicator(status, info)
+    },
 })
 window.paramsManager = paramsManager
+
+// Remote status indicator
+const updateRemoteStatusIndicator = (status, info) => {
+    let indicator = document.getElementById('remote-control-indicator')
+
+    if (!indicator) {
+        indicator = document.createElement('div')
+        indicator.id = 'remote-control-indicator'
+        indicator.style.cssText = `
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-family: system-ui, sans-serif;
+            font-size: 12px;
+            z-index: 10000;
+            pointer-events: none;
+            transition: opacity 0.3s, background-color 0.3s;
+        `
+        document.body.appendChild(indicator)
+    }
+
+    const statusConfig = {
+        connected: { bg: '#22c55e', text: `Remote: ${info?.connectedClients || 0} displays`, opacity: 0.9 },
+        disconnected: { bg: '#ef4444', text: 'Remote: Disconnected', opacity: 1 },
+        reconnecting: { bg: '#eab308', text: 'Remote: Reconnecting...', opacity: 1 },
+        error: { bg: '#ef4444', text: 'Remote: Error', opacity: 1 },
+    }
+
+    const config = statusConfig[status] || statusConfig.disconnected
+    indicator.style.backgroundColor = config.bg
+    indicator.style.color = 'white'
+    indicator.style.opacity = config.opacity
+    indicator.textContent = config.text
+}
+
+if (isRemoteControlMode) {
+    updateRemoteStatusIndicator('reconnecting', {})
+}
 
 // Toast feedback
 const flashToast = (message, duration = 1800) => {
