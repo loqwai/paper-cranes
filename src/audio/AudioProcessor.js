@@ -1,5 +1,6 @@
 import { StatTypes, AudioFeatures } from 'hypnosound'
 import { WorkerRPC } from './WorkerRPC.js'
+import { OnsetProcessor } from './OnsetProcessor.js'
 
 // Workers compute these but hypnosound's StatTypes doesn't include them
 const AllStatTypes = [...StatTypes, 'slope', 'intercept', 'rSquared']
@@ -56,6 +57,11 @@ export class AudioProcessor {
         this.smoothedFeatures = {}
         this.smoothingFactor = 0.10 // Lower = smoother, higher = more responsive
         this.warmupFrame = 0
+        // Event-driven layer. Runs on the raw spectrum in updateFftData, ahead of
+        // both the worker hop and the EMA below, so its triggers are as early as
+        // this pipeline can produce. See OnsetProcessor.js for why that matters.
+        this.onsetProcessor = new OnsetProcessor(audioContext.sampleRate, this.fftAnalyzer.frequencyBinCount)
+        this.onsetFeatures = {}
     }
 
     createAnalyzer = () => {
@@ -164,6 +170,10 @@ export class AudioProcessor {
     updateFftData = () => {
         requestAnimationFrame(this.updateFftData)
         this.fftAnalyzer.getByteFrequencyData(this.fftData)
+        // Onsets first, on the freshest possible spectrum. Deliberately NOT
+        // smoothed and NOT sent through a worker: a trigger is an event, and
+        // delaying an event is the one thing that cannot be undone downstream.
+        this.onsetProcessor.process(this.fftData, performance.now(), this.onsetFeatures)
         // Broadcast FFT data to all workers (fire-and-forget)
         this.workers.forEach(worker => {
             worker.setHistorySize(this.historySize)
@@ -171,7 +181,10 @@ export class AudioProcessor {
         })
     }
 
-    getFeatures = () => this.currentFeatures
+    // Onset features are merged at read time rather than written into
+    // currentFeatures, so the EMA loop above can never touch them. Smoothing an
+    // envelope would re-introduce exactly the lag this layer exists to remove.
+    getFeatures = () => Object.assign(this.currentFeatures, this.onsetFeatures)
 
     cleanup = () => {
         this.workers.forEach(worker => worker.terminate())
