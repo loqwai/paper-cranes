@@ -168,3 +168,49 @@ Continuous drivers are wavelet-ease springs; z-scores remain only in the SNARE a
 and glint events. Onsets are off by user request.
 
 See `journals/bear-cool-moments.md` for the per-beat history.
+
+### bear-zoom ratchet (4.frag)
+
+A moderate camera push-in from the lowest wavelet band, built as a ratcheting gate with a cooldown.
+`controllers/bear-zoom.js` runs chained after `wavelet-ease` and outputs `bearZoom` (0..1). Without
+it `bearZoom` reads 0 and the shader is unchanged.
+
+**Preset:**
+```
+https://visuals.beadfamous.com/?shader=claude/wip/bear/4&image=images/bear-model.png&wavelet=true&controller=wavelet-ease&controller=bear-zoom
+```
+
+- **Signal: `waveletBand0ZScore`.** `src/audio/dwt.js` reverses the octave list, so band0 is the lowest
+  detail band (43-86 Hz). The z-score only fires events; it never scales anything (moveGate rule 1).
+- **Ratchet.** A rising crossing of 0.8 steps one notch, up to 3. On 150 s of live mic music, 0.8 sits at
+  about p98: band0 z was p50 -0.07, p90 0.43, p95 0.61, p99 0.90, with jitter 0.045/frame. The gate re-arms
+  under 0.2, with a 0.35 s refractory.
+- **Cooldown (the counter-ratchet, same controller).** The slope is a least-squares fit over the last 1 s
+  of the EMA-smoothed z, because the built-in `*Slope` features read 0 on this input.
+  - A slope below -0.3 z/s starts a 0.8 s cooldown.
+  - A new surge, or the slope rising past +0.15, cancels it. A cooldown cannot start within 0.5 s of a surge:
+    the 1 s fit has not seen the surge yet, and live it restarted on the same frame the surge cancelled it.
+  - When it completes the ratchet drops to notch 0 (normal zoom), and new steps are locked out for 1.5 s so
+    it cannot flap.
+  - 10 s with no surge also starts cooling, so a plateau never pins the zoom in.
+  - Replaying this logic over the calibration trace gave ~12 steps/min, ~6 releases/min, a median hold of
+    2.2 s (p90 4.8 s), zoomed ~40% of the time, and no release->step inside 1 s. An arm threshold of 0.55
+    held the zoom in ~80% of the time, i.e. on every kick.
+  - Live, with the controller running (175 s of mic music): 7.9 steps/min, 3.8 releases/min, a median hold
+    of 5.4 s (1.6-11.6 s), zoomed 39% of the time and at full ratchet 6%, with no release->step inside 1 s
+    (fastest re-entry 1.9 s). Steps land on energy lift 0.044 against a 0.017 average. In the 1.5 s after a
+    release, violet fill was 4.0% vs 3.8% otherwise, and violet touching the silhouette 1.3 vs 1.4 cells (of
+    96x96), so the release draws no outline and no flood.
+- **Motion.** A critically-damped spring in the controller: in over ~0.35 s, back out over ~1.3 s.
+- **Shader.**
+  - `ZOOM_DEPTH 0.14`: base scale 1.18 -> 1.04 at full ratchet, a bear ~13% bigger.
+  - It zooms about `ZOOM_FOCUS` (0.5, 0.70), the upper chest, so the head and raised arms grow and the
+    plinth takes any crop.
+  - The kick/energy punch rides the same low end, so it is halved at full zoom (deepest scale 0.96;
+    moveGate rule 2).
+  - Mouth rings and god rays are taken at the zoomed base.
+  - The ring-field gate `getMaxReach` follows the zoom with 0.08 headroom instead of a fixed max extent.
+    A fixed gate at full zoom would be a halo ~23% wider than the resting bear and would choke the mouth
+    rings in the arm gaps.
+- **Pinned framing checks.** Add `&noaudio=true&bearZoom=1` (or `0`) to the usual feature pins; URL params
+  outrank controller output.

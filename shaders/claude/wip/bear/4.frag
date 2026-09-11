@@ -35,7 +35,7 @@
 //
 // PRESETS:
 // Default
-// https://visuals.beadfamous.com/?shader=claude/wip/bear/4&image=images/bear-model.png&wavelet=true&controller=wavelet-ease
+// https://visuals.beadfamous.com/?shader=claude/wip/bear/4&image=images/bear-model.png&wavelet=true&controller=wavelet-ease&controller=bear-zoom
 
 #define PI 3.14159265
 #define TAU 6.28318531
@@ -65,6 +65,7 @@ uniform float spectralCrestSmooth;
 uniform float spinPhase;            // monotonic, ~0.06 rad/s quiet, faster loud (rate-not-angle)
 uniform float spectralRoughnessSmooth;
 uniform float spectralEntropySmooth;
+uniform float bearZoom;            // controllers/bear-zoom.js (chain after wavelet-ease): 0..1 zoom ratchet, spring-damped
 
 // ============================================================================
 // AUDIO PARAMETERS
@@ -94,9 +95,22 @@ uniform float spectralEntropySmooth;
 // energyMedian is a RAW level (~0.02 on real music), useless as a 0-1 weight; "how loud now"
 #define LOUD smoothstep(0.3, 0.8, energySpring)
 #define ROAR max(KICK, DROP)
+// BEAR-ZOOM RATCHET (controllers/bear-zoom.js, chained after wavelet-ease). Each low-end surge on the
+// LOWEST wavelet band (waveletBand0ZScore, 43-86 Hz) steps the camera in one notch, up to 3; the band's
+// slope turning down runs a cooldown that walks it back to normal zoom. The z-score only fires the
+// event - the controller eases the notch position with a critically-damped spring (in ~0.35 s, out
+// ~1.3 s), so geometry never takes a raw feature. Moderate: full ratchet = bear ~13% bigger. It zooms
+// about ZOOM_FOCUS (upper chest, image uv) so the raised arms and roaring head grow and the plinth
+// takes any crop. Without the controller bearZoom reads 0 and nothing changes.
+#define ZOOM_DEPTH 0.14
+#define ZOOM_FOCUS vec2(0.5, 0.70)
+#define ZOOM_BASE (BASE_SCALE - bearZoom * ZOOM_DEPTH)
 // GEOMETRY from springs only (no z-score on scale - that is the shutter): the bass spring
 // still punches on every kick, critically damped
-#define BEAR_SCALE (BASE_SCALE - waveletBassSpring * 0.10 * MOTION - smoothstep(0.5, 0.9, energySpring) * 0.06)
+// bear-zoom: the punch rides the same low end as the ratchet, so it is halved at full zoom (rule 2,
+// bounded excursion: full zoom plus the deepest punch bottoms out at scale 0.96)
+#define PUNCH_SHARE (1.0 - bearZoom * 0.5)
+#define BEAR_SCALE (ZOOM_BASE - (waveletBassSpring * 0.10 * MOTION + smoothstep(0.5, 0.9, energySpring) * 0.06) * PUNCH_SHARE)
 
 // The UV beam: sweep POSITION is a constant-rate clock (never audio-driven, no rocking),
 // audio drives its POWER and WIDTH. TEXTURE family (flux) + mids feed the power.
@@ -188,12 +202,16 @@ uniform float spectralEntropySmooth;
 // MASK
 // ============================================================================
 
-vec2 screenToImg(vec2 uv, float scale) {
+// `zoom` is the ratchet position the lookup is taken at. Zooming also shifts the image so ZOOM_FOCUS
+// holds its screen position (an exact fixed point at scale = ZOOM_BASE; the punch scales about it).
+vec2 screenToImgAt(vec2 uv, float scale, float zoom) {
     float sa = iResolution.x / iResolution.y;
     vec2 c = (uv - 0.5) * scale;
     if (sa > IMG_ASPECT) c.x *= sa / IMG_ASPECT; else c.y *= IMG_ASPECT / sa;
-    return c + 0.5;
+    return c + 0.5 + (ZOOM_FOCUS - 0.5) * zoom * ZOOM_DEPTH / BASE_SCALE;
 }
+
+vec2 screenToImg(vec2 uv, float scale) { return screenToImgAt(uv, scale, bearZoom); }
 
 float sampleMask(vec2 img) {
     if (img.x < 0.0 || img.x > 1.0 || img.y < 0.0 || img.y > 1.0) return 0.0;
@@ -208,6 +226,19 @@ vec3 sampleTex(vec2 img) {
 }
 
 float getMask(vec2 uv, float scale) { return sampleMask(screenToImg(uv, scale)); }
+
+// The bear's LARGEST reach. Charge (inside) and the ring field (outside) share alpha, so no pixel the
+// bear may cover can feed or colour the rings (beat 19c gated on the deepest punch, BASE_SCALE - 0.16).
+// bear-zoom: a fixed gate at the deepest punch AND full zoom is a halo ~23% wider than the resting bear
+// that chokes the mouth rings in the arm gaps, so the gate follows the ratchet: the deepest punch at the
+// current zoom plus 0.08 of zoom headroom. The zoom-out spring moves < 0.07 per frame even at 20 fps,
+// so every pixel the shrinking bear uncovers is still gated on the frame it leaves and its charge is
+// dropped, instead of stranded outside as a violet outline.
+float deepestScale(float z) { return BASE_SCALE - z * ZOOM_DEPTH - 0.16 * (1.0 - z * 0.5); }
+float getMaxReach(vec2 uv) {
+    float z = min(1.0, bearZoom + 0.08);
+    return sampleMask(screenToImgAt(uv, deepestScale(z), z));
+}
 
 // Glow just outside the silhouette: a tight bright line plus a faint wide halo (16 taps)
 float getEdgeGlow(vec2 uv, float scale, float mask, float width) {
@@ -331,7 +362,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // exterior: advect outward from the mouth (distances in mask-image units, y = 1, so a
     // ring stays a circle on screen); a roar seeds a ring just outside the head, a slow
     // breath seeds a faint one in silence. Two side taps soften the radial streaking.
-    vec2 dImg = (screenToImg(uv, BASE_SCALE) - MOUTH) * vec2(IMG_ASPECT, 1.0);
+    // bear-zoom: taken at the zoomed base so rings still leave the mouth and the god rays stay on it
+    vec2 dImg = (screenToImg(uv, ZOOM_BASE) - MOUTH) * vec2(IMG_ASPECT, 1.0);
     float dM = length(dImg);
     vec2 outward = dImg / max(dM, 1e-4);              // unit direction, same in screen px
     vec2 perp = vec2(-outward.y, outward.x) / res;
@@ -342,7 +374,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // charged edge pixels land outside the current outline and leaked into the ring field anyway.
     // Block against the LARGEST extent the bear can reach (BEAR_SCALE bottoms out at BASE - 0.16),
     // so no pixel the bear can ever cover feeds the rings. Same single texture tap.
-    float srcMask = getMask(srcUv, BASE_SCALE - 0.16);
+    float srcMask = getMaxReach(srcUv);
     // beat 19b LEAK FIX: the soft edge (srcMask 0.15-0.6) let the bear's stored CHARGE (same alpha
     // channel) leak into the exterior ring field; under the flat plinth "outward" is straight down, so
     // it advected as violet row-stripes (seen 1:1). Any trace of bear coverage now blocks the source.
@@ -445,7 +477,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // line, packing the exterior; a smoothstep knee keeps only strong ring edges.
     vec2 outUv = uv + outward * 10.0 / res;
     float wOut = clamp(getLastFrameColor(outUv).a, 0.0, 1.0);
-    wOut = mix(wOut, w, smoothstep(0.0, 0.12, getMask(outUv, BASE_SCALE - 0.16)));
+    wOut = mix(wOut, w, smoothstep(0.0, 0.12, getMaxReach(outUv)));
     // beat 31: near the screen edge the outward tap left the frame and read a clamped edge texel, so a
     // ring reaching the bottom drew a thin violet line along the screen edge. Off-screen = no difference.
     if (outUv.x < 0.0 || outUv.x > 1.0 || outUv.y < 0.0 || outUv.y > 1.0) wOut = w;
