@@ -393,6 +393,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     lch.x = clamp(lch.x, 0.0, 0.88);
     lch.y = min(lch.y, 0.30);
     col = oklch2rgb(lch);
+    // GAMUT GUARD (vibej2 beat 13): hot phosphor at L 0.88 with chroma 0.30 is outside sRGB, so the
+    // green channel clamped at 1.0 - the monitor measured 0.26% of pixels with a channel > 0.98.
+    // Pull CHROMA down (hue and lightness kept) until every channel fits. No-op for in-gamut pixels.
+    for (int gi = 0; gi < 4; gi++) {
+        if (max(col.r, max(col.g, col.b)) <= 0.97) break;
+        lch.y *= 0.75;
+        col = oklch2rgb(lch);
+    }
 
     fragColor = vec4(clamp(col, 0.0, 1.0), clamp(field, 0.0, 1.0));
 }

@@ -71,7 +71,10 @@ uniform float spectralEntropySmooth;
 // ============================================================================
 
 // Quiet gate: in silence everything audio settles to its resting value
-#define MOTION smoothstep(0.12, 0.5, energySpring)
+// beat 23: at energySpring 0.19 (a quieter passage, below its 0.29 long average) MOTION read ~0.08, so
+// rim, sparkle, beam power, KICK and DROP all ran at ~8% and the frame looked static (rResid -0.07).
+// A 35% floor once music is actually playing keeps quiet passages visibly alive; silence still rests.
+#define MOTION (smoothstep(0.02, 0.08, energySpring) * mix(0.35, 1.0, smoothstep(0.12, 0.5, energySpring)))
 
 // EVENTS -> size / charge / rings. Onset envelopes are immediate AND smooth (one designed
 // curve per hit: kick 220 ms, snare 150 ms, hat 90 ms). The max() with a z-score is the
@@ -100,11 +103,45 @@ uniform float spectralEntropySmooth;
 #define BEAM_RATE (0.045 + seed4 * 0.025)                      // sweeps per second (ping-pong)
 #define BEAM_WIDTH (0.06 + spectralSpreadNormalized * 0.05 * MOTION)
 #define BEAM_POWER (0.07 + (0.25 + spectralFluxNormalized * 0.35 + waveletBand2Spring * 0.2) * MOTION)  // per 1/60 s
-#define ROAR_POWER 0.3                                          // per 1/60 s (body; the mouth gets 3x)
+// beat 27: 0.3 -> 0.06. Since beat 25 this only feeds the DROP whole-body charge. At 0.3 it saturated
+// the bear in ~3 frames: a per-frame catcher caught mean frame luminance jumping 0.074 -> 0.184 in
+// ~100 ms on a drop (all 5 biggest dL frames within 350 ms of the drop rise, KICK = 0). At 0.06 the
+// drop SWELLS over ~0.4 s to the same peak instead of snapping - the flicker metric saw a strobe step.
+#define ROAR_POWER 0.06                                         // per 1/60 s, DROP whole-body charge only
 
 // Phosphor afterglow: fraction of charge left after ONE SECOND. Sustained loud music fades
 // faster (stays responsive), a quiet room lingers.
-#define CHARGE_KEEP_S (0.55 - LOUD * 0.25 - KICK * 0.1)
+// beat 14: 0.55 -> 0.72 at rest. At 0.55 a beam-swept arm was black again within ~2 s, so the
+// wall was a black bear shape most of the time; real glow filament lingers.
+// beat 22: loud passages cut the keep to ~0.45/s, so a zone starved of share for one kick went black;
+// the head strobed at the kick rate (sustained flicker 1.04 over a clean 20 s). Keep now barely drops.
+#define CHARGE_KEEP_S (0.78 - LOUD * 0.08)
+// ANATOMY EQ (beat 14): the bear is an equaliser. Bass charges the legs + plinth, mids the torso,
+// highs the head + raised arms - each from its own wavelet SPRING (smooth, decorrelated bands), so a
+// groove lights the sculpt in time with the mix. Per-1/60 s charge rate at full band.
+// beat 14b: absolute thresholds were dead on a quiet passage (bands 0.12-0.20, all under their
+// 0.26-0.40 knees). Use each band's SHARE of the three instead - scale-invariant, so the dominant
+// band owns its part of the bear in a whisper or a drop, and a kick visibly pulls the glow down.
+#define EQ_POWER 0.02
+#define EQ_SUM (waveletBassSpring + waveletBand2Spring + waveletBand5Spring + 1e-3)
+#define EQ_LEGS smoothstep(0.30, 0.52, waveletBassSpring / EQ_SUM)
+#define EQ_BODY smoothstep(0.22, 0.40, waveletBand2Spring / EQ_SUM)   // beat 14c: mids share peaks ~0.41, torso was half-lit at best
+#define EQ_HEAD smoothstep(0.26, 0.48, waveletBand5Spring / EQ_SUM)
+#define EQ_QUIET smoothstep(0.04, 0.18, energySpring)
+// beat 28 EDGE-TRIGGERED RINGS: ring gates were emitted EVERY FRAME they were open. A drop or a snare holds
+// its gate for seconds, so rings became a continuous source and (with beat 16/17/20's longer, faster,
+// brighter rings) flooded the whole exterior solid violet. The clock pixel stores these gates in b/a, and
+// rings now fire only on the gate's RISE - one ring per hit.
+#define RING_PULSE (smoothstep(0.52, 0.60, waveletBassSpring / EQ_SUM) * EQ_QUIET)
+#define MOUTH_GATE max(ROAR, RING_PULSE * 0.45)
+// beat 29: SNARE removed from the wide ring. It is a raw spectralFluxZScore fallback (jitter 0.021/frame,
+// ~10x DROP) and under rise detection every upward jitter is a fresh edge, so on busy passages the wide
+// ring re-fired continuously (a 6 s sample: emitWide jitter 0.092/frame, snare-driven 15% of the time)
+// and a look caught the flood again. The wide shockwave is now DROP-only; kicks keep the mouth ring.
+// beat 30 REVERTS beat 29: a 3-min catcher after it still found a 57% violet flood (5 frames over 30%)
+// with DROP = 0, so SNARE was not the flood source - and removing it cut ring presence to p50 0%. The
+// flood is now made impossible to render by the ring band detector below instead.
+#define WIDE_GATE max(SNARE, DROP)
 
 // PITCH family -> colour. Strontium aluminate green (#5df0a3 ~ oklch hue 158 deg = 2.76 rad),
 // seeded per device toward yellow-green or aqua; centroid trend drifts it slowly.
@@ -140,8 +177,12 @@ uniform float spectralEntropySmooth;
 #define SHAKE_AMP (SHAKE_GATE * 0.007 + KICK * SHAKE_GATE * 0.004)   // uv units; subtronics max was 0.01
 
 // Exterior roar rings: px per SECOND outward from the mouth, fraction left after one second
-#define WAVE_SPEED (150.0 + ROAR * 90.0)
-#define WAVE_KEEP_S (0.20 - LOUD * 0.08)
+// beat 17: 150 -> 260 px/s. At ~2 kicks/s the rings were ~75 px apart and merged into one thick
+// crown; at 260 they sit ~130 px apart and read as separate shockwaves.
+#define WAVE_SPEED (260.0 + ROAR * 90.0)
+// beat 16: 0.20 -> 0.42. At 0.20 a kick ring was gone within ~60 px of the head and read as a static
+// crown; now each kick's ring rolls out across the dark toward the frame edge.
+#define WAVE_KEEP_S (0.42 - LOUD * 0.12)
 
 // ============================================================================
 // MASK
@@ -227,7 +268,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     if (fragCoord.x < 1.0 && fragCoord.y < 1.0) {
         float hi = floor(x * 255.0);
         float lo = floor(fract(x * 255.0) * 255.0);
-        fragColor = vec4(hi / 255.0, lo / 255.0, 0.0, 0.0);
+        // b/a carry this frame's ring gates so the next frame can fire rings on their RISE (beat 28)
+        fragColor = vec4(hi / 255.0, lo / 255.0, clamp(MOUTH_GATE, 0.0, 1.0), clamp(WIDE_GATE, 0.0, 1.0));
         return;
     }
     vec4 clk = getLastFrameColor(vec2(0.5) / res);
@@ -269,7 +311,21 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float mouth = exp(-sq(length(dMouthImg) / 0.055));
 
     // interior: charge accumulates under the beam, on kicks and at the mouth, decays like afterglow
-    float chargeIn = min((beam * BEAM_POWER + ROAR * ROAR_POWER + mouth * KICK * 0.9) * k, 1.0);
+    // anatomy bands in mask-image height (bear spans ~0.03 plinth .. 0.97 ears), soft overlaps
+    float wLegs = 1.0 - smoothstep(0.20, 0.40, img.y);
+    float wBody = smoothstep(0.24, 0.44, img.y) * (1.0 - smoothstep(0.62, 0.78, img.y));
+    float wHead = smoothstep(0.64, 0.80, img.y);
+    // beat 22 SHARE FLOOR: shares sum to 1, so every kick moved ALL input from head to legs and back.
+    // Each zone keeps 35% input while music plays; dominance brightens its zone on top of that.
+    // beat 24: floor 0.35 -> 0.20. With keep 0.78 a floored zone still settled at charge ~0.63 vs ~0.83
+    // dominant, so the equaliser barely read. At 0.20: ~0.45 vs ~0.80. The slow keep makes zones swing
+    // over ~1 s instead of blacking out per kick (beat 22), so the strobe should not return.
+    float eq = (wLegs * mix(0.20, 1.0, EQ_LEGS) + wBody * mix(0.20, 1.0, EQ_BODY) + wHead * mix(0.20, 1.0, EQ_HEAD)) * EQ_QUIET;
+    // beat 25: the WHOLE-BODY flash-charge used ROAR = max(KICK, DROP). Once beat 23's MOTION floor let
+    // partial kicks through and beat 24 deepened zone contrast, every kick blazed the entire bear lime and
+    // it sank back within ~4 s - sustained flicker 0.96 over 30 s. Whole-body flash is now DROP only;
+    // kicks still light the mouth, rings, rim and (via the EQ) the legs.
+    float chargeIn = min((beam * BEAM_POWER + DROP * ROAR_POWER + mouth * KICK * 0.9 + eq * EQ_POWER) * k, 1.0);
     float charge = prev.a * pow(max(CHARGE_KEEP_S, 0.01), dt) + chargeIn * (1.0 - prev.a);
 
     // exterior: advect outward from the mouth (distances in mask-image units, y = 1, so a
@@ -282,14 +338,36 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float stepPx = max(WAVE_SPEED * dt, 1.0);         // NEAREST sampling: never under 1 px
     vec2 srcUv = uv - outward * stepPx / res;
     float up = (getLastFrameColor(srcUv).a * 2.0 + getLastFrameColor(srcUv + perp).a + getLastFrameColor(srcUv - perp).a) * 0.25;
-    float srcMask = getMask(srcUv, scale);
-    float wave = up * (1.0 - smoothstep(0.15, 0.6, srcMask)) * pow(max(WAVE_KEEP_S, 0.01), dt);
+    // beat 19c: the bear's SIZE punches with the bass every frame, so when it shrinks, last frame's
+    // charged edge pixels land outside the current outline and leaked into the ring field anyway.
+    // Block against the LARGEST extent the bear can reach (BEAR_SCALE bottoms out at BASE - 0.16),
+    // so no pixel the bear can ever cover feeds the rings. Same single texture tap.
+    float srcMask = getMask(srcUv, BASE_SCALE - 0.16);
+    // beat 19b LEAK FIX: the soft edge (srcMask 0.15-0.6) let the bear's stored CHARGE (same alpha
+    // channel) leak into the exterior ring field; under the flat plinth "outward" is straight down, so
+    // it advected as violet row-stripes (seen 1:1). Any trace of bear coverage now blocks the source.
+    float wave = up * (1.0 - smoothstep(0.0, 0.12, srcMask)) * pow(max(WAVE_KEEP_S, 0.01), dt);
     float breath = pow(0.5 + 0.5 * sin(iTime * 0.7 + seed4 * TAU), 8.0) * 0.25;
     // two rings: the kick pours out of the mouth (0.15) through the gaps between head and
     // arms; the snare (or a drop) fires the wide shockwave (0.32) that clears the raised arms
-    float ringMouth = exp(-sq((dM - 0.15) / 0.025));
+    // beat 19: width 0.025 -> 0.012. The kick ring was a thick violet HEADBAND behind the head, cut hard
+    // by the inner arms; a thin source makes each kick a crisp arc that reads as a shockwave.
+    float ringMouth = exp(-sq((dM - 0.15) / 0.012));
     float ringWide = exp(-sq((dM - 0.32) / 0.03));
-    float roarSrc = (ROAR * 0.95 + breath) * ringMouth + max(SNARE, DROP) * 0.85 * ringWide;
+    // RING PULSE (beat 15): the mouth ring used to fire only on ROAR (KICK/DROP), which never opens in
+    // a quiet groove, so the dark around the bear was dead. The bass band's SHARE punches on every
+    // kick at any volume (smooth spring), so it pours rings out of the mouth in time. It feeds ONLY
+    // the ring source - whole-body flash stays on the stricter KICK, so nothing strobes.
+    // beat 17: knee 0.44-0.58 -> 0.52-0.60. The wide knee held emission open 46% of the time, so rings
+    // smeared into a band; firing only on the crest of each bass push leaves dark gaps between rings.
+    // beat 28: emission follows the gate's rise rate (per second, so 60 and 144 fps match); rises slower
+    // than 1.5/s are ignored so slow drift and 8-bit storage steps never emit ghost rings.
+    float emitMouth = clamp(((MOUTH_GATE - clk.b) / dt - 1.5) * 0.12, 0.0, 1.0);
+    float emitWide = clamp(((WIDE_GATE - clk.a) / dt - 1.5) * 0.12, 0.0, 1.0);
+    // beat 21b: after the beat-20 brightness lift, every ~1.6 Hz share-pulse ring flashed a vivid circle
+    // and the watchdog fired flicker 1.33 then 1.54 in clean windows. Share-pulse rings drop to 0.45 so
+    // they read as a soft heartbeat; KICK/DROP (ROAR) rings keep full strength as the big shockwaves.
+    float roarSrc = (emitMouth * 0.95 + breath) * ringMouth + emitWide * 0.85 * ringWide;
     wave = max(wave, roarSrc);
 
     float field = mix(wave, charge, inside);
@@ -314,7 +392,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     pL *= mix(0.55, 1.2, relief);
     pL *= 1.0 - features * 0.6;
     float pC = 0.07 + 0.18 * sin(c * PI) + 0.08 * c;          // hot phosphor goes whiter
-    vec3 phos = oklch2rgb(vec3(pL, pC, PHOS_HUE));
+    // ANATOMY HUE (beat 18): each EQ zone is its own glow-filament colour - legs lean yellow-green,
+    // torso stays phosphor green, head + raised arms lean aqua - so the equaliser reads as COLOUR from
+    // across the room, not only brightness. Static in space (no audio), so colour still follows only
+    // the slow melody drift inside PHOS_HUE.
+    // beat 18b: legs -0.30 read as murky OLIVE whenever dim (yellow-green at low L goes brown); -0.18
+    // plus a chroma lift in the leg zone keeps the feet a clean lime at any charge.
+    float regionHue = PHOS_HUE + wHead * 0.45 - wLegs * 0.18;
+    vec3 phos = oklch2rgb(vec3(pL, pC + wLegs * 0.04, regionHue));
     // the UV light itself, glancing off the surface as it passes
     // the UV beam RAKES the relief: surfaces facing away from the beam's travel catch it, so the
     // face and fur form sweep across the bear as the light passes (one extra texture tap)
@@ -348,7 +433,24 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // ---- EXTERIOR COLOUR: blacklight dark, roar rings in violet, dust motes ----
     vec3 dark = oklch2rgb(vec3(0.08 + 0.03 * fbm(uv * 3.0 + seed * 5.0), 0.02, PHOS_HUE));
     float w = clamp(wave, 0.0, 1.0);
-    vec3 waveCol = oklch2rgb(vec3(w * 0.75, 0.06 + 0.18 * sin(w * PI), UV_HUE)) * smoothstep(0.0, 0.08, w);
+    // beat 20: rings now travel around the whole bear (19c) but the wide arcs read too faint across a
+    // room. Steeper L curve capped below white plus more chroma; the gamut guard catches the rest.
+    // beat 30 RING BAND DETECTOR: floods kept coming back from sources three fixes failed to pin down. A
+    // ring is a thin travelling band, so its field differs sharply from the field ~10 px further out; a
+    // flood is flat. Colour is now drawn from that difference, so a saturated field renders nothing
+    // whatever filled it, while real rings keep their look. One extra previous-frame tap.
+    // beat 30b: (1) the outward tap landed INSIDE the bear at silhouette edges, where alpha holds CHARGE,
+    // so violet lines hugged the arms and plinth - taps inside the bear's largest extent now compare the
+    // pixel with itself. (2) clamp(|dw| * 2.5) drew every decay ramp and advection ripple as a contour
+    // line, packing the exterior; a smoothstep knee keeps only strong ring edges.
+    vec2 outUv = uv + outward * 10.0 / res;
+    float wOut = clamp(getLastFrameColor(outUv).a, 0.0, 1.0);
+    wOut = mix(wOut, w, smoothstep(0.0, 0.12, getMask(outUv, BASE_SCALE - 0.16)));
+    // beat 31: near the screen edge the outward tap left the frame and read a clamped edge texel, so a
+    // ring reaching the bottom drew a thin violet line along the screen edge. Off-screen = no difference.
+    if (outUv.x < 0.0 || outUv.x > 1.0 || outUv.y < 0.0 || outUv.y > 1.0) wOut = w;
+    float ringVis = smoothstep(0.08, 0.35, abs(w - wOut));
+    vec3 waveCol = oklch2rgb(vec3(min(ringVis * 1.15, 0.80), 0.09 + 0.20 * sin(ringVis * PI), UV_HUE)) * smoothstep(0.0, 0.06, ringVis);
     float beamAir = beam * 0.16 * (0.6 + 0.4 * hash12(floor(uv * res / 2.0)));
     vec3 uvAir = oklch2rgb(vec3(0.30, 0.10, UV_HUE)) * beamAir;
     // motes twinkle: a fixed set of cells, each fading in and out on its own slow phase. The
@@ -358,7 +460,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float twinkle = 0.5 - 0.5 * cos((iTime * (0.35 + moteSeed * 0.5) + moteSeed * 9.0) * TAU);
     float mote = step(1.0 - 0.0025 * (0.3 + SPARKLE), hash12(cell * 1.7 + 3.1)) * twinkle * twinkle;
     vec3 motes = oklch2rgb(vec3(0.75, 0.10, UV_HUE + 0.3)) * mote;
-    vec3 ext = dark + waveCol + uvAir + motes;
+    // beat 26: rings bunch around the raised arms, and at thin claw tips the soft silhouette edge left
+    // `inside` fractional, so mix(ext, phos, inside) let violet ring colour show THROUGH the paws as
+    // chevron flecks (seen 1:1). Rings now vanish wherever the bear has any coverage at all.
+    // beat 26b: 0.25 was too high - a claw tip antialiases to well under 25% coverage, and the pixel read
+    // still found saturated ring violet (98,8,206), mirror-identical at both claws. Kill at any trace.
+    vec3 ext = dark + waveCol * (1.0 - smoothstep(0.0, 0.05, mask)) + uvAir + motes;
 
     // ---- WARM HEARTH (from the-coat-23 :661-684, vibej2 beat 5): an amber light behind the
     // charm that only comes up in the WARM corner. Elliptical falloff from the body in mask
@@ -367,6 +474,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float hearth = exp(-max(length(eH) - 1.0, 0.0) * 3.5) * WARM_GATE * (0.85 + 0.15 * sin(iTime * 0.4 * TAU + seed2 * TAU));
     // hearth retune: L 0.42 read as brown at room distance; amber needs L ~0.6 and more chroma
     ext += oklch2rgb(vec3(0.60 * hearth, 0.16 * hearth, 1.25)) * smoothstep(0.0, 0.05, hearth);
+
+    // ---- BLACKLIGHT STAGE (beat 21): the bear floated in a black void. A soft violet pool on the
+    // floor under the plinth, as if the UV lamp sits below it - anchored in mask space so it follows
+    // the bear's size, swelling with the bass spring (light takes the audio), exterior only.
+    // beat 21c: the first pool (radii 0.62 x 0.075, L 0.30) sat almost entirely behind the plinth and
+    // was invisible; wider + taller so it spills up around the plinth sides and lower legs, brighter.
+    vec2 pS = (img - vec2(0.5, 0.0)) / vec2(0.95, 0.20);
+    float stage = exp(-dot(pS, pS)) * (0.55 + 0.45 * waveletBassSpring * EQ_QUIET);
+    ext += oklch2rgb(vec3(0.42 * stage, 0.15 * stage, UV_HUE)) * smoothstep(0.0, 0.04, stage);
 
     // ---- GOD RAYS (the-coat-23 :564-577, vibej2 beat 6): a lobed fan out of the MOUTH in the
     // BRIGHT corner, biased upward into the dark above the head, spinning on the controller's
@@ -400,6 +516,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     lch.x = clamp(lch.x, 0.0, 0.88);
     lch.y = min(lch.y, 0.30);
     col = oklch2rgb(lch);
+    // GAMUT GUARD (vibej2 beat 13): hot phosphor at L 0.88 with chroma 0.30 is outside sRGB, so the
+    // green channel clamped at 1.0 - the monitor measured 0.26% of pixels with a channel > 0.98.
+    // Pull CHROMA down (hue and lightness kept) until every channel fits. No-op for in-gamut pixels.
+    for (int gi = 0; gi < 4; gi++) {
+        if (max(col.r, max(col.g, col.b)) <= 0.97) break;
+        lch.y *= 0.75;
+        col = oklch2rgb(lch);
+    }
 
     fragColor = vec4(clamp(col, 0.0, 1.0), clamp(field, 0.0, 1.0));
 }
