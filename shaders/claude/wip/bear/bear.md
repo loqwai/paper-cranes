@@ -1,6 +1,6 @@
 # Phosphor Bear
 
-Music visuals for the **bear charm** — the 34 mm NFC keychain in `D:\Projects\3d-bear`
+Music visuals for the **bear charm** — the 34 mm NFC keychain in the sibling `3d-bear` project
 (`print-ready/keychain-bear-r4b-TRELLIS-corded-nfc-embedded.stl`, a sealed NTAG215 cavity
 in the plinth). It is the round-4 candidate `b` bear: a grizzly roaring with both arms up
 on a rock, the same one printed as the Goldrush totem in strontium-aluminate glow filament
@@ -8,8 +8,9 @@ and lit from inside by blacklight ("Phosphor Bear", `3d-bear/docs/index.html`).
 
 **Preset (what the NFC tag should point at):**
 ```
-https://visuals.beadfamous.com/?shader=claude/wip/bear/1&image=images/bear.png
+https://visuals.beadfamous.com/?shader=claude/wip/bear/2&image=images/bear.png
 ```
+(`bear/1` is the same without onset envelopes.)
 
 ## The mask
 
@@ -24,7 +25,7 @@ Regenerate with:
 ```bash
 python - <<'PY'
 from PIL import Image
-a = Image.open('D:/Projects/3d-bear/outputs/stage2_mesh/round4z/b_cutout.png').split()[-1]
+a = Image.open('../3d-bear/outputs/stage2_mesh/round4z/b_cutout.png').split()[-1]
 x0,y0,x1,y1 = a.point(lambda v: 255 if v > 8 else 0).getbbox(); pad = 35
 Image.eval(a.crop((x0-pad,y0-pad,x1+pad,y1+pad)), lambda v: 255-v).convert('RGB').save('public/images/bear.png')
 PY
@@ -63,6 +64,23 @@ The charm *is* phosphor under a blacklight, so the shader does what the plastic 
 Everything audio is multiplied by `MOTION = smoothstep(0.12, 0.5, energyNormalized)` so a
 quiet room only gets the base beam sweep and the breath rings.
 
+## Onset mapping (2.frag)
+
+The events layer comes from the onset envelopes (`docs/onset-detection.md`): one designed
+curve per detected hit, immediate and smooth. Each is `max()`ed with a z-score fallback so
+the shader still moves on builds where the onset uniforms read 0 (hypnosound < 2.1 — the
+installed 1.14.0 is one of them; the fallbacks are what you see today).
+
+| Uniform | Envelope | Drives | Fallback |
+|---|---|---|---|
+| `onsetKick` | 220 ms | bear punch (`BEAR_SCALE`), flash-charge, **mouth flare + mouth afterglow**, mouth ring | `bassZScore × 0.6` |
+| `onsetKick × onsetKickStrength` | — | how white the mouth flare goes (hard hits whiter) | none |
+| `onsetSnare` | 150 ms | the wide shockwave ring | `spectralFluxZScore × 0.4` |
+| `onsetHat` | 90 ms | white rim ticks, mote density | `trebleZScore × 0.4` |
+
+Test the onset state without a mic: add `&onsetKick=0.9&onsetKickStrength=0.9&onsetSnare=0.7&onsetHat=0.8`
+to the roar URL below (the uniforms are plain built-ins; query params outrank measured audio).
+
 Seeds: `seed` beam direction · `seed2` phosphor hue (yellow-green ↔ aqua) · `seed3` violet
 hue + mottle offset · `seed4` sweep rate/phase + breath phase.
 
@@ -96,6 +114,19 @@ Give the page ~5 s after load before judging a still (async shader compile).
   the 140 fps desk, ring seeded inside the head (only leaked through the armpits — added the
   wide second ring), rim too thick (tight line + faint halo), rest state too dark (ambient floor
   0.20, beam visible in the air).
+- **2.frag** — events moved to the onset envelopes: kick → punch/flash/mouth, snare → wide
+  shockwave, hat → rim ticks and motes, each with a z-score fallback underneath. One
+  elaboration: the **open mouth** is a soft spot in mask-image space that takes the kick
+  hardest — it flares white-green on the hit (whiter for hard hits) and, because the flare is
+  also fed into the stored charge, its afterglow lingers longest, so the roar visibly comes
+  from the mouth. No extra texture taps. Verified rest and onset states via query-param URLs;
+  the mouth flare only reads on transient kicks, not in a sustained still. Then tuned against
+  real music through the mic loopback (144 fps desk): `bassZScore` peaks ~0.7–1.1,
+  `spectralFluxZScore` ~0.2–0.45, `trebleZScore` ~0.45, `energyZScore` rarely above 0.6,
+  `energyNormalized` 0.1–0.8. `energyMedian` is a raw level (~0.02), so the afterglow/ring
+  "loudness" terms now use `LOUD = smoothstep(0.3, 0.8, energyNormalized)`. Body flash
+  power halved so a steady beat no longer pins the whole bear at full charge — the beam
+  sweep stays visible and the mouth stays the hottest point.
 
 ## Ideas to pick up later
 
@@ -104,3 +135,36 @@ Give the page ~5 s after load before judging a still (async shader compile).
 - Mouth-locked roar: brighten the mouth region itself on `DROP` (needs the mouth mask, not
   just the point).
 - Promote to `shaders/bear/1.frag` once it has been jammed with real music.
+
+## 3.frag and 4.frag — /vibej2 live session (2026-09-11)
+
+Two versions of the same shader, differing only in which face image they read:
+
+| Shader | Image | Face source | Preset |
+|---|---|---|---|
+| `3.frag` | `bear-face.png` (556×945) | the reference photo | [preset](https://visuals.beadfamous.com/?shader=claude/wip/bear/3&image=images/bear-face.png&wavelet=true&controller=wavelet-ease) |
+| `4.frag` | `bear-model.png` (563×945) | a front orthographic render of the printed mesh | [preset](https://visuals.beadfamous.com/?shader=claude/wip/bear/4&image=images/bear-model.png&wavelet=true&controller=wavelet-ease) |
+
+Both images keep the mask contract (R = 255 − inside, byte-identical to `bear.png` for the
+photo version) and add G = relief and B = features. Phosphor glows brighter where the relief is
+thicker, features stay engraved dark at full charge, the UV beam rakes across the relief, and the
+eyes carry a small lamp. The printed mesh has no modelled eyes, so on `4.frag` the lamp is the
+only eye cue.
+
+The controller is REQUIRED — without it every spring reads 0 and the bear rests.
+
+**Feature-space corners**
+
+| Corner | Condition | Effect |
+|---|---|---|
+| WARM | mids spring high, centroid spring low, energy spring low | amber hearth halo |
+| BRIGHT | energy spring high, centroid spring high | god rays from the mouth, cyan as centroid rises |
+| LIFT | energySpring − energyLong | layer lines sharpen with build tension, charge washes them |
+| DROP | large lift | roar rings and flash-charge |
+| KICK | bass spring top 10% | punch, flash, mouth flare |
+| SHAKE | bass+energy, roughness, and lift all at their p99s | subtronics-eye camera shake, peak-only per the user |
+
+Continuous drivers are wavelet-ease springs; z-scores remain only in the SNARE and HAT ring
+and glint events. Onsets are off by user request.
+
+See `journals/bear-cool-moments.md` for the per-beat history.
