@@ -180,6 +180,13 @@ it `bearZoom` reads 0 and the shader is unchanged.
 https://visuals.beadfamous.com/?shader=claude/wip/bear/4&image=images/bear-model.png&wavelet=true&controller=wavelet-ease&controller=bear-zoom
 ```
 
+3.frag (photo face) runs the same zoom:
+```
+https://visuals.beadfamous.com/?shader=claude/wip/bear/3&image=images/bear-face.png&wavelet=true&controller=wavelet-ease&controller=bear-zoom
+```
+3.frag does not have 4.frag's later ring fixes (beats 19-31), so its ring source is gated against the
+ABSOLUTE max extent (deepest punch at full zoom) rather than a gate that follows the zoom.
+
 - **Signal: `waveletBand0ZScore`.** `src/audio/dwt.js` reverses the octave list, so band0 is the lowest
   detail band (43-86 Hz). The z-score only fires events; it never scales anything (moveGate rule 1).
 - **Ratchet.** A rising crossing of 0.8 steps one notch, up to 3. On 150 s of live mic music, 0.8 sits at
