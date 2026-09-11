@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Paper Cranes — VJ</title>
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <link rel="stylesheet" href="vj.css" />
+</head>
+
+<body>
+    <header id="bar">
+        <div id="dot" class="dot"></div>
+        <div id="status">connecting…</div>
+        <button id="wake" class="chip" type="button">STAY AWAKE</button>
+    </header>
+
+    <main id="app">
+        <section class="group">
+            <div class="grouphead">SHADER</div>
+            <div id="shaders" class="shaders"></div>
+        </section>
+
+        <section class="group">
+            <div class="grouphead">LOOK <span class="hint">drag across a row</span></div>
+            <div id="faders-look"></div>
+        </section>
+
+        <section class="group">
+            <div class="grouphead">
+                MUSIC CHANNELS
+                <button id="manual-toggle" class="chip" type="button">TAKE OVER</button>
+            </div>
+            <div id="audio-note" class="note">The music is driving these. Hit TAKE OVER to grab them by hand.</div>
+            <div id="faders-audio" class="dim"></div>
+        </section>
+
+        <section class="group">
+            <div class="grouphead">HORIZONS DIALS <span class="hint">lattice-interactive/3 only</span></div>
+            <div id="faders-extra"></div>
+        </section>
+    </main>
+
+    <footer id="foot">
+        <button id="release" class="bigbtn" type="button">RELEASE<small>back to music</small></button>
+        <button id="reset" class="bigbtn" type="button">RESET<small>neutral look</small></button>
+    </footer>
+
+    <script type="module" src="./vj.js"></script>
+</body>
+
+</html>

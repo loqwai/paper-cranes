@@ -337,6 +337,7 @@ uniform float another;   // = 1.2
 - `fullscreen` - Start in fullscreen
 - `remote` - Remote mode: `display` (receive commands) or `control` (send commands)
 - `audio=tab` - Capture audio from a browser tab instead of mic. Chrome/Edge only. See [docs/tab-audio.md](docs/tab-audio.md)
+- `audio=<http(s) url>` - Play AND visualize a live audio stream (e.g. an Icecast feed of your desktop audio). For mic-less browsers like a parked Tesla. Stream must be HTTPS + CORS-enabled. See [docs/stream-audio.md](docs/stream-audio.md)
 - `audio_file=<url>` - Play a deterministic audio file through the analyzer. See [docs/audio-file-playback.md](docs/audio-file-playback.md)
 - `wavelet=true` - Enable opt-in wavelet (DWT) analysis alongside FFT. Adds `wavelet*` uniforms (octave bands, centroid/spread, bassHit trigger, FFT×wavelet combos). See [docs/wavelet-analysis.md](docs/wavelet-analysis.md)
 - `audio_time=<seconds>` - Start audio file playback at this offset (default: 0)

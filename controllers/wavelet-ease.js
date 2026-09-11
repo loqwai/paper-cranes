@@ -155,8 +155,30 @@ export function make() {
         // full-range swings, flashing hue & spinning fast. quietGate smoothly fades 0→1 with
         // loudness so shaders can multiply their audio offsets by it: at low energy the
         // reactivity fades out (visual holds calm) instead of being driven by noise.
-        const eRaw = features.energy ?? 0                       // absolute loudness (gain-independent enough at the low end)
-        const gateTarget = Math.min(1, Math.max(0, (eRaw - 0.015) / 0.05)) // 0 below ~0.015, 1 by ~0.065
+        //
+        // SELF-CALIBRATING from gain-INDEPENDENT signals: a fixed absolute band (old: open
+        // 0.015→0.065 on raw energy) mis-tuned per device/mic-gain/input-level — on a quiet input
+        // it never opened and THROTTLED real music. The thing we actually want to reject is mic
+        // NOISE/HISS (advanced-shader-techniques.md §1), and noise has a level-independent
+        // signature: a FLAT spectrum. So gate on two complementary gain-independent measures of
+        // "there is real musical signal", opening if EITHER fires:
+        //   (a) RHYTHMIC DYNAMICS — loudness swing across the window. energyMin≪energyMax for
+        //       music with transients/gaps; energyMin≈energyMax for stationary hiss (energy is an
+        //       average over ~2048 FFT bins, so it barely moves). A ratio → gain-independent.
+        //   (b) SPECTRAL TONALITY — spectralCrest (max bin / sum) is high when a tonal peak exists,
+        //       ~flat for hiss. Also a pure ratio → gain-independent. Catches SUSTAINED tonal music
+        //       (drones/pads) that has little loudness swing, which (a) alone would miss.
+        // Holds calm only when it's flat AND steady = a quiet room's noise floor. (energyMax≈0
+        // until the stats window fills → closed at startup; reuses tonalSmooth's existing
+        // 0.15/2.5 calibration so the "is it tonal" mapping matches the rest of the controller.)
+        const eMin = features.energyMin ?? 0
+        const eMax = features.energyMax ?? 0
+        const dynamics = eMax > 1e-6 ? 1 - eMin / eMax : 0      // 0 = flat (silence/hiss), ~1 = musical swing
+        const tonality = Math.min(1, Math.max(0, (tonalSmooth - 0.15) * 2.5)) // 0 = flat noise, 1 = clearly tonal
+        const gateTarget = Math.max(
+            Math.min(1, Math.max(0, (dynamics - 0.35) / (0.75 - 0.35))), // rhythmic content opens it
+            tonality,                                                    // OR sustained tonal content opens it
+        )
         quietGate = quietGate * 0.9 + gateTarget * 0.1          // smooth so the gate itself never flashes
         out.quietGate = quietGate
 

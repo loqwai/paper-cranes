@@ -173,6 +173,14 @@ const setupAudio = async () => {
         return setupTabAudio({ params, AudioProcessor })
     }
 
+    // audio=<http(s) url> plays and visualizes a live audio stream (e.g. an
+    // Icecast feed of your desktop audio), for browsers with no usable mic.
+    const audioParam = params.get('audio')
+    if (audioParam && /^https?:\/\//i.test(audioParam)) {
+        const { setupStreamAudio } = await import('./src/audio/streamAudioSource.js')
+        return setupStreamAudio({ params, AudioProcessor, url: audioParam })
+    }
+
     const fileConfig = createAudioFileSource({ params })
     if (fileConfig) {
         try {

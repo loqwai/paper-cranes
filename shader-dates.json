@@ -289,6 +289,7 @@
   "shaders/redaphid/taco/julia-warp.frag": "2026-05-09T16:17:20-07:00",
   "shaders/redaphid/taco/live-iter.frag": "2026-05-09T17:13:15-07:00",
   "shaders/redaphid/taco/outline-tunnel.frag": "2026-05-09T17:13:15-07:00",
+  "shaders/redaphid/taco/plasma-taco-live.frag": "2026-08-14T14:39:04-07:00",
   "shaders/redaphid/taco/plasma.frag": "2026-05-09T16:17:20-07:00",
   "shaders/redaphid/taco/radiation.frag": "2026-05-09T17:13:15-07:00",
   "shaders/redaphid/taco/rainbow-plume.frag": "2026-05-09T17:13:15-07:00",

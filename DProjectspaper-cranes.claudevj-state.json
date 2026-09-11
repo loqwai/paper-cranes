@@ -1,0 +1,14 @@
+{
+  "jobId": "vibej-cozy-neon",
+  "iteration": 2,
+  "target": 10,
+  "shaderPath": "claude/wip/cozy-neon-night/1",
+  "jamPageId": 1753244152,
+  "spotifyPageId": 1753244155,
+  "port": 6969,
+  "moveStyle": "subtle",
+  "knobSnapshot": {},
+  "unwiredKnobs": [],
+  "failCount": 0,
+  "startedAt": "2026-08-24T00:00:00Z"
+}
