@@ -152,12 +152,26 @@ export function make(cranes) {
         // Shaped after the house ratchet in controllers/bear-zoom.js: an ARMED rising crossing
         // with hysteresis, a refractory, and a LOCKOUT after release so a release cannot be
         // immediately undone by the next transient.
-        const ARM = 0.74, REARM = 0.46, MAX = 3
-        const REFRACTORY_S = 0.5, LOCKOUT_S = 1.5, HOLD_S = 1.2, COOL_S = 0.9, IDLE_S = 12
+        // Measured at ARM 0.74 / REARM 0.46 / HOLD 1.2: over 60 s the ratchet never passed one
+        // notch and the eyes were shut 92% of the time - too strict, because the counter-ratchet
+        // reset the whole stack every time the 6 s signal dipped under re-arm. Loosened, with a
+        // longer hold so a section survives its own quiet bars. Target is bear-zoom's measured
+        // shape: engaged roughly a third of the time, full ratchet rare.
+        // ARM/REARM now describe the SECTION gate (cooling), not the step trigger.
+        const ARM = 0.50, REARM = 0.34, MAX = 3
+        const REFRACTORY_S = 0.45, LOCKOUT_S = 1.2, HOLD_S = 2.5, COOL_S = 0.9, IDLE_S = 12
+        // DECOUPLED, and this is the whole trick (it is what bear-zoom.js does with its z-score
+        // and its separately-fitted slope). Stepping is driven by a FAST event - energyZScore,
+        // measured elsewhere in the repo as the best available trigger at ~11 hits/5 s - while
+        // cooling is driven by the SLOW section signal. Driving both from the section signal
+        // (measured: never passed 1 notch, eyes shut 94%) is self-defeating, because the very
+        // dip that re-arms the ratchet is also the dip that starts releasing it.
+        const ez = features.energyZScore ?? 0
+        const sectionHot = iNorm > 0.45          // only ratchet up while the section IS intense
         s.since += dt
         s.sinceRelease += dt
-        if (!s.armed && iNorm < REARM) s.armed = true
-        if (s.armed && iNorm > ARM && s.since > REFRACTORY_S && s.sinceRelease > LOCKOUT_S) {
+        if (!s.armed && ez < 0.2) s.armed = true
+        if (s.armed && ez > 0.8 && sectionHot && s.since > REFRACTORY_S && s.sinceRelease > LOCKOUT_S) {
             s.armed = false
             s.since = 0
             s.cooling = false
@@ -170,7 +184,7 @@ export function make(cranes) {
         // pinning them open forever.
         const idle = s.since > IDLE_S
         if (s.notches > 0 && !s.cooling && (iNorm < REARM || idle)) { s.cooling = true; s.cool = 0 }
-        if (s.cooling && !idle && iNorm > ARM * 0.85) s.cooling = false   // it got hot again
+        if (s.cooling && !idle && iNorm > ARM) s.cooling = false   // the section got hot again
         if (s.cooling) {
             s.cool += dt
             if (s.cool > HOLD_S + COOL_S) {

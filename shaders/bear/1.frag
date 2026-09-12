@@ -307,7 +307,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // itself, so the silhouette keeps its contrast. Deliberately still a dark room.
     vec2 stageD = (uv - vec2(0.5, 0.42)) * vec2(iResolution.x / iResolution.y, 1.0);
     float stage = exp(-dot(stageD, stageD) * 2.6);
-    float floorL = 0.17 + 0.13 * stage + 0.035 * fbm(uv * 3.0 + seed * 5.0);
+    float floorL = 0.24 + 0.15 * stage + 0.035 * fbm(uv * 3.0 + seed * 5.0);
     vec3 dark = oklch2rgb(vec3(floorL, 0.055 + 0.035 * stage, UV_HUE));
     float w = clamp(wave, 0.0, 1.0);
     vec3 waveCol = oklch2rgb(vec3(w * 0.75, 0.06 + 0.18 * sin(w * PI), UV_HUE)) * smoothstep(0.0, 0.08, w);
