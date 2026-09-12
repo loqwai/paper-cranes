@@ -30,6 +30,14 @@ export function make(cranes) {
         env: 0,
         lo: 0,
         hi: 0.5,
+        intn: 0,
+        intSec: 0,
+        iLo: 0,
+        iHi: 0.4,
+        notches: 0,
+        refr: 0,
+        cool: 0,
+        eyeOpen: 0,
         spin: 0,
         eye: 0,
         tilt: 0,
@@ -109,6 +117,49 @@ export function make(cranes) {
         // now" swell underneath the per-beat punch.
         s.breath = EMA(s.breath, energy * gate, 1 - Math.exp(-dt * 1.3))
 
+        // ---- INTENSITY RATCHET -> the rezz spiral eyes ----
+        // "Intense" is deliberately NOT bass: bass already owns the zoom, and driving the eyes
+        // from it would be one signal drawn twice. This blend is loudness + spectral chaos +
+        // brightness, i.e. "the track is going hard", which is a different musical question.
+        // Measured raw: p50 0.34, p85 0.56, p95 0.71, but jitter 0.159 per 70 ms - far too
+        // spiky to threshold directly, so it is smoothed BEFORE the ratchet sees it.
+        const intRaw =
+            (features.energyNormalized ?? 0) * 0.45 +
+            (features.spectralEntropyNormalized ?? 0) * 0.30 +
+            (features.trebleNormalized ?? 0) * 0.25
+        s.intn = EMA(s.intn, intRaw * gate, 1 - Math.exp(-dt * 1.6))
+        // SECTION scale (~6 s time constant). The de-jittered signal still swings on a ~1 s
+        // beat scale, and a ratchet fed from that refilled faster than it could drain, so the
+        // eyes never closed. A section is not a beat: smooth to the timescale of the QUESTION.
+        s.intSec = EMA(s.intSec, s.intn, 1 - Math.exp(-dt * 0.17))
+
+        // Adaptive again, but on a MUCH slower window (~50 s) than the kick's: "intense" has to
+        // mean intense relative to this track's recent range, or the thresholds only suit one
+        // song. Measured with fixed thresholds: intensity p10 0.45 never fell under REARM 0.34,
+        // so the ratchet sat pinned at max and the eyes were permanently on.
+        s.iLo = Math.min(s.intSec, s.iLo + dt * 0.02)
+        s.iHi = Math.max(s.intSec, s.iHi - dt * 0.02)
+        const iNorm = Math.min(Math.max((s.intSec - s.iLo) / Math.max(s.iHi - s.iLo, 0.06), 0), 1)
+
+        // Ratchet: each crossing of ARM adds a notch (up to MAX) and starts a refractory.
+        // Notches HOLD while the section stays hot, and only bleed off after the intensity has
+        // sat below REARM for the hold time - so the eyes come out during an intense section
+        // and stay out, instead of flickering on individual transients.
+        const ARM = 0.74, REARM = 0.46, MAX = 3
+        s.refr = Math.max(0, s.refr - dt)
+        if (iNorm > ARM && s.refr === 0 && s.notches < MAX) {
+            s.notches += 1
+            s.refr = 0.5
+        }
+        if (iNorm < REARM) {
+            s.cool += dt
+            if (s.cool > 1.2) s.notches = Math.max(0, s.notches - dt * 0.55)
+        } else {
+            s.cool = 0
+        }
+        // eased follower so the spiral fades in/out rather than stepping
+        s.eyeOpen = EMA(s.eyeOpen, Math.min(s.notches / MAX, 1), 1 - Math.exp(-dt * 2.4))
+
         s.lastLift = lift
 
         return {
@@ -121,6 +172,10 @@ export function make(cranes) {
             eyeSpin: s.eye % (Math.PI * 2),
             bearTilt: tilt,
             bearGate: gate,
+            eyeOpen: s.eyeOpen,
+            bearIntensity: iNorm,
+            bearIntensityRaw: s.intn,
+            eyeNotches: s.notches,
         }
     }
 }

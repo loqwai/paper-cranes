@@ -53,6 +53,7 @@ uniform float bearSpin;    // radians, monotonic, never reverses
 uniform float eyeSpin;     // radians, monotonic, faster - the rezz spiral eyes
 uniform float bearTilt;    // radians, slow body sway
 uniform float bearGate;    // 0..1 quiet gate
+uniform float eyeOpen;     // 0..1 intensity RATCHET - spirals only in intense sections
 
 // ============================================================================
 // AUDIO PARAMETERS
@@ -187,6 +188,41 @@ float fbm(vec2 p) {
 }
 
 // ============================================================================
+// REZZ SPIRAL EYES
+// ============================================================================
+// A logarithmic spiral: the phase is ARMS*angle + TIGHT*log(radius), so the arms stay
+// self-similar all the way in and the centre never turns into a moire rosette.
+// It spins by SUBTRACTING a monotonic accumulator (eyeSpin) from the phase - rate, not angle,
+// so the spin can never jump backwards when a feature dips.
+#define EYE_ARMS 5.0
+#define EYE_TIGHT 7.0
+// Measured off bear-face.png on a labelled uv grid (y up): the eyes sit at (0.438, 0.919)
+// and (0.550, 0.919) and are only ~0.018 uv across. EYE_RAD is a goggle, deliberately a bit
+// larger than the eye itself - but 0.052 was ~2x too big and sprawled across the whole brow.
+#define EYE_RAD 0.030
+#define EYE_L vec2(0.438, 0.919)
+#define EYE_R vec2(0.550, 0.919)
+
+// One eye. Returns 0..1 spiral coverage, already anti-aliased and masked to a disc.
+float spiralEye(vec2 img, vec2 centre, float spin, float open) {
+    vec2 p = (img - centre) * vec2(IMG_ASPECT, 1.0);   // square space, so the eye is round
+    // the goggle GROWS as the ratchet fills, so an intense section is legible from across the
+    // room rather than being a detail you have to walk up to
+    float r = length(p) / (EYE_RAD * (0.70 + 0.55 * open));
+    if (r > 1.25) return 0.0;
+    float a = atan(p.y, p.x);
+    float phase = EYE_ARMS * a + EYE_TIGHT * log(max(r, 0.04)) - spin;
+    float s = sin(phase);
+    // fwidth anti-aliasing: the spiral's arms get thin near the rim, and without this they
+    // alias into crawling dots at a distance - the opposite of legible.
+    float aa = max(fwidth(phase), 0.6);
+    float line = smoothstep(-aa, aa, s);
+    float disc = 1.0 - smoothstep(0.82, 1.05, r);       // soft rim
+    float core = smoothstep(0.30, 0.0, r);              // solid pupil so the centre reads
+    return clamp(max(line * disc, core * 0.9), 0.0, 1.0);
+}
+
+// ============================================================================
 // MAIN
 // ============================================================================
 
@@ -279,6 +315,19 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // ---- COMPOSITE ----
     vec3 col = mix(ext, phos, inside) + rim * (1.0 - inside);
+
+    // ---- REZZ EYES: hypnotic green spirals, gated by the intensity ratchet ----
+    // They ride ON the bear (multiplied by `inside`), so they read as part of the sculpt
+    // rather than as an overlay floating in front of it.
+    if (eyeOpen > 0.01) {
+        float eyes = max(spiralEye(img, EYE_L, eyeSpin, eyeOpen), spiralEye(img, EYE_R, eyeSpin, eyeOpen));
+        float e = eyes * eyeOpen * inside;
+        // brighter and slightly whiter-green than the body so they separate from it, but
+        // still inside the phosphor family - never white, never a global multiplier.
+        vec3 eyeCol = oklch2rgb(vec3(0.62 + 0.22 * eyeOpen, 0.20, PHOS_HUE + 0.10));
+        col = mix(col, eyeCol, e * 0.92);
+    }
+
     if (beat) col *= 1.06;
     // ?knob_199=1 paints the stored field (alpha) so persistence can be verified in a still
     if (knob_199 > 0.5) col = vec3(prev.a, field, 0.25 + inside * 0.5);   // K199 DEBUG FIELD
