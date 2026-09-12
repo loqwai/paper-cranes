@@ -35,9 +35,13 @@ export function make(cranes) {
         iLo: 0,
         iHi: 0.4,
         notches: 0,
-        refr: 0,
+        armed: true,
+        cooling: false,
+        since: 99,
+        sinceRelease: 99,
         cool: 0,
         eyeOpen: 0,
+        eyeVel: 0,
         spin: 0,
         eye: 0,
         tilt: 0,
@@ -145,20 +149,43 @@ export function make(cranes) {
         // Notches HOLD while the section stays hot, and only bleed off after the intensity has
         // sat below REARM for the hold time - so the eyes come out during an intense section
         // and stay out, instead of flickering on individual transients.
+        // Shaped after the house ratchet in controllers/bear-zoom.js: an ARMED rising crossing
+        // with hysteresis, a refractory, and a LOCKOUT after release so a release cannot be
+        // immediately undone by the next transient.
         const ARM = 0.74, REARM = 0.46, MAX = 3
-        s.refr = Math.max(0, s.refr - dt)
-        if (iNorm > ARM && s.refr === 0 && s.notches < MAX) {
-            s.notches += 1
-            s.refr = 0.5
+        const REFRACTORY_S = 0.5, LOCKOUT_S = 1.5, HOLD_S = 1.2, COOL_S = 0.9, IDLE_S = 12
+        s.since += dt
+        s.sinceRelease += dt
+        if (!s.armed && iNorm < REARM) s.armed = true
+        if (s.armed && iNorm > ARM && s.since > REFRACTORY_S && s.sinceRelease > LOCKOUT_S) {
+            s.armed = false
+            s.since = 0
+            s.cooling = false
+            if (s.notches < MAX) s.notches += 1
         }
-        if (iNorm < REARM) {
+
+        // The "decay" is a COUNTER-RATCHET, not a bleed: it HOLDS the notches while the section
+        // is still hot, then drops them to zero in one go. A continuous bleed made the eyes fade
+        // in and out constantly instead of belonging to a section. IDLE_S stops a plateau
+        // pinning them open forever.
+        const idle = s.since > IDLE_S
+        if (s.notches > 0 && !s.cooling && (iNorm < REARM || idle)) { s.cooling = true; s.cool = 0 }
+        if (s.cooling && !idle && iNorm > ARM * 0.85) s.cooling = false   // it got hot again
+        if (s.cooling) {
             s.cool += dt
-            if (s.cool > 1.2) s.notches = Math.max(0, s.notches - dt * 0.55)
-        } else {
-            s.cool = 0
+            if (s.cool > HOLD_S + COOL_S) {
+                s.notches = 0
+                s.cooling = false
+                s.sinceRelease = 0
+            }
         }
-        // eased follower so the spiral fades in/out rather than stepping
-        s.eyeOpen = EMA(s.eyeOpen, Math.min(s.notches / MAX, 1), 1 - Math.exp(-dt * 2.4))
+
+        // Asymmetric critically damped spring: snap open (~0.35 s), ease shut (~1.3 s), so the
+        // eyes ARRIVE on a section and linger out of it rather than blinking symmetrically.
+        const eyeTarget = Math.min(s.notches / MAX, 1)
+        const om = eyeTarget > s.eyeOpen ? 13.5 : 3.6
+        s.eyeVel += (om * om * (eyeTarget - s.eyeOpen) - 2 * om * s.eyeVel) * dt
+        s.eyeOpen = Math.min(Math.max(s.eyeOpen + s.eyeVel * dt, 0), 1)
 
         s.lastLift = lift
 

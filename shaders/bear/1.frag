@@ -300,7 +300,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     phos += oklch2rgb(vec3(0.35, 0.12, UV_HUE)) * beam * 0.18 * (0.5 + 0.5 * mottle);
 
     // ---- EXTERIOR COLOUR: blacklight dark, roar rings in violet, dust motes ----
-    vec3 dark = oklch2rgb(vec3(0.08 + 0.03 * fbm(uv * 3.0 + seed * 5.0), 0.02, PHOS_HUE));
+    // BLACKLIGHT STAGE, not a black void. Measured on the bear-face preset: mean frame
+    // luminance p50 0.017 / min 0.004, against the house projector-legibility floor of 0.10
+    // (journals/lattice-vj-2: judge lumMin, never the mean; a lit field is what carries across
+    // a room). A broad violet pool behind the bear lifts the floor without touching the bear
+    // itself, so the silhouette keeps its contrast. Deliberately still a dark room.
+    vec2 stageD = (uv - vec2(0.5, 0.42)) * vec2(iResolution.x / iResolution.y, 1.0);
+    float stage = exp(-dot(stageD, stageD) * 2.6);
+    float floorL = 0.17 + 0.13 * stage + 0.035 * fbm(uv * 3.0 + seed * 5.0);
+    vec3 dark = oklch2rgb(vec3(floorL, 0.055 + 0.035 * stage, UV_HUE));
     float w = clamp(wave, 0.0, 1.0);
     vec3 waveCol = oklch2rgb(vec3(w * 0.75, 0.06 + 0.18 * sin(w * PI), UV_HUE)) * smoothstep(0.0, 0.08, w);
     float beamAir = beam * 0.16 * (0.6 + 0.4 * hash21(floor(uv * res / 2.0)));
