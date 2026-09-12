@@ -19,12 +19,23 @@
 // A 60 Hz phone and a 144 Hz monitor fade at the same speed.
 //
 // PRESETS:
-// Default
-// https://visuals.beadfamous.com/?shader=claude/wip/bear/1&image=images/bear.png
+// Outline
+// https://visuals.beadfamous.com/?shader=bear/1&image=images/bear.png&wavelet=true&controller=bear-move
+// Photo
+// https://visuals.beadfamous.com/?shader=bear/1&image=images/bear-face.png&relief_amt=1&img_aspect=0.5884&wavelet=true&controller=bear-move
+// 3D Model
+// https://visuals.beadfamous.com/?shader=bear/1&image=images/bear-model.png&relief_amt=1&img_aspect=0.5958&wavelet=true&controller=bear-move
 
 #define PI 3.14159265
 #define TAU 6.28318531
-#define IMG_ASPECT (556.0 / 945.0)
+// Three source images are supported, all sharing mask = 1 - r (verified by sampling them):
+//   images/bear.png       556x945  black bear on white, NO relief   (outline)
+//   images/bear-face.png  556x945  photo cutout, relief in GREEN    (the real charm)
+//   images/bear-model.png 563x945  printed-mesh render, relief in GREEN (the 3d model)
+// bear-model is a different width, so the aspect is overridable per preset via ?img_aspect=.
+uniform float img_aspect;   // 0 = use the default below
+uniform float relief_amt;   // 0 = flat silhouette, 1 = use the image's green-channel relief
+#define IMG_ASPECT (img_aspect > 0.01 ? img_aspect : (556.0 / 945.0))
 #define LAYERS 170.0
 #define MOUTH vec2(0.505, 0.867)   // open mouth in mask-image uv (y up)
 // >1 = smaller bear. Measured 2026-09-11: at 1.18 the silhouette already filled the frame
@@ -126,6 +137,16 @@ float sampleMask(vec2 img) {
 }
 
 float getMask(vec2 uv, float scale) { return sampleMask(screenToImg(uv, scale)); }
+
+// Surface relief from the image's GREEN channel. bear-face/bear-model carry lambert shading
+// there; the plain outline has g == 0 inside, which is why this is opt-in per preset rather
+// than auto-detected - a flat silhouette would otherwise render uniformly dark.
+float sampleRelief(vec2 img) {
+    if (relief_amt < 0.01) return 1.0;
+    if (img.x < 0.0 || img.x > 1.0 || img.y < 0.0 || img.y > 1.0) return 1.0;
+    float g = getInitialFrameColor(img).g;
+    return mix(1.0, 0.42 + 1.15 * g, clamp(relief_amt, 0.0, 1.0));
+}
 
 // Glow just outside the silhouette: a tight bright line plus a faint wide halo (16 taps)
 float getEdgeGlow(vec2 uv, float scale, float mask, float width) {
@@ -234,7 +255,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float mottle = fbm(img * vec2(7.0, 11.0) + vec2(seed3 * 9.0, iTime * 0.015));
     float layers = 0.94 + 0.06 * cos(img.y * LAYERS * TAU);
     float c = clamp(charge, 0.0, 1.0);
-    float pL = (0.20 + c * 0.70) * (0.78 + 0.32 * mottle) * layers;
+    // relief multiplies the phosphor LIGHTNESS only - it is shading, so by the channel
+    // hierarchy it belongs to light, never to geometry or to the global multiplier.
+    float pL = (0.20 + c * 0.70) * (0.78 + 0.32 * mottle) * layers * sampleRelief(img);
     float pC = 0.07 + 0.18 * sin(c * PI) + 0.08 * c;          // hot phosphor goes whiter
     vec3 phos = oklch2rgb(vec3(pL, pC, PHOS_HUE));
     // the UV light itself, glancing off the surface as it passes
