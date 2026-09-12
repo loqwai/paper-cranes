@@ -27,7 +27,21 @@
 #define IMG_ASPECT (556.0 / 945.0)
 #define LAYERS 170.0
 #define MOUTH vec2(0.505, 0.867)   // open mouth in mask-image uv (y up)
-#define BASE_SCALE 1.18            // >1 = smaller bear; bear fills 1/1.18 of the short axis
+// >1 = smaller bear. Measured 2026-09-11: at 1.18 the silhouette already filled the frame
+// height (top row clipped in 50% of frames), so the punch had nowhere to grow and simply
+// pushed the head off-screen. Resting smaller gives the zoom somewhere to GO.
+#define BASE_SCALE 1.72
+#define PIVOT vec2(0.5, 0.22)      // the bear rocks about its base, not its middle
+
+// ---- controller uniforms (controllers/bear-move.js, chain it with ?controller=bear-move) ----
+// The controller holds what GLSL cannot: a damped spring and monotonic rotation accumulators.
+uniform float bearPunch;   // 0..1.4 damped beat punch -> in/out scale
+uniform float bearBreath;  // 0..1 continuous bass level -> always-on in/out
+uniform float bearLift;    // 0..1 raw bass transient
+uniform float bearSpin;    // radians, monotonic, never reverses
+uniform float eyeSpin;     // radians, monotonic, faster - the rezz spiral eyes
+uniform float bearTilt;    // radians, slow body sway
+uniform float bearGate;    // 0..1 quiet gate
 
 // ============================================================================
 // AUDIO PARAMETERS
@@ -40,7 +54,29 @@
 #define KICK (clamp(bassZScore, 0.0, 1.0) * MOTION)
 #define DROP (smoothstep(0.45, 0.9, energyZScore) * MOTION)
 #define ROAR max(KICK, DROP)
-#define BEAR_SCALE (BASE_SCALE - bassNormalized * 0.06 * MOTION - KICK * 0.10 - DROP * 0.08)
+
+// IN/OUT: the punch is the headline move - the bear surges toward the room on every beat.
+// It is the CONTROLLER's damped spring, never a raw feature, so it swells (~90 ms) instead
+// of snapping. Smaller scale = bigger bear.
+#define PUNCH_DEPTH (0.55 + knob_101 * 0.35)   // K101 ZOOM PUNCH (0.55 .. 0.90)
+#define BREATH_DEPTH 0.22
+// punch = the EVENT (bass transient, surges on every kick). breath = the SLOW swell of overall
+// energy. Two different features on two different timescales, so they never stack into one blob.
+// Smaller scale = bigger bear. The floor is a hard stop so no knob can degenerate the geometry.
+// Hard zoom ceiling. Measured: at scale ~1.18 the silhouette already fills the frame height,
+// so anything below ~1.22 clips the ears. Strong beats now SATURATE against this instead of
+// pushing the head off-screen, which reads as a punch landing rather than a framing error.
+#define BEAR_SCALE_MIN 1.22
+#define BEAR_SCALE max(BASE_SCALE - bearBreath * BREATH_DEPTH - bearPunch * PUNCH_DEPTH - DROP * 0.10, BEAR_SCALE_MIN)
+// BEAR_SCALE_MIN above is also the bear's LARGEST possible extent. Every tap that hands state
+// across the silhouette must be gated against it, never against the current scale: the alpha
+// channel means CHARGE inside the bear and RING FIELD outside, and a shrinking bear drags
+// charged pixels into the exterior, where they advect outward as stripes.
+// (journal beat 19c - now critical, the punch is far deeper than the 0.10 it was written for.)
+
+// BODY ROTATION: a slow sway about the base. The phase is a pure clock from the controller
+// (geometry only ever EVOLVES); audio sets only its amplitude.
+#define BODY_ROT (bearTilt)
 
 // The UV beam: sweep POSITION is a constant-rate clock (never audio-driven, no rocking),
 // audio drives its POWER and WIDTH. TEXTURE family (flux) + mids feed the power.
@@ -70,11 +106,18 @@
 // MASK
 // ============================================================================
 
+vec2 rot2(vec2 p, float a) { float s = sin(a), c = cos(a); return mat2(c, -s, s, c) * p; }
+
 vec2 screenToImg(vec2 uv, float scale) {
     float sa = iResolution.x / iResolution.y;
     vec2 c = (uv - 0.5) * scale;
     if (sa > IMG_ASPECT) c.x *= sa / IMG_ASPECT; else c.y *= IMG_ASPECT / sa;
-    return c + 0.5;
+    c += 0.5;
+    // rock about the base. Rotate in SQUARE space (x scaled by IMG_ASPECT) or the bear
+    // shears instead of turning.
+    vec2 p = (c - PIVOT) * vec2(IMG_ASPECT, 1.0);
+    p = rot2(p, BODY_ROT);
+    return p / vec2(IMG_ASPECT, 1.0) + PIVOT;
 }
 
 float sampleMask(vec2 img) {
@@ -173,8 +216,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float stepPx = max(WAVE_SPEED * dt, 1.0);         // NEAREST sampling: never under 1 px
     vec2 srcUv = uv - outward * stepPx / res;
     float up = (getLastFrameColor(srcUv).a * 2.0 + getLastFrameColor(srcUv + perp).a + getLastFrameColor(srcUv - perp).a) * 0.25;
-    float srcMask = getMask(srcUv, scale);
-    float wave = up * (1.0 - smoothstep(0.15, 0.6, srcMask)) * pow(max(WAVE_KEEP_S, 0.01), dt);
+    float srcMask = getMask(srcUv, BEAR_SCALE_MIN);   // MOVE1 largest extent, not current scale
+    float wave = up * (1.0 - smoothstep(0.0, 0.12, srcMask)) * pow(max(WAVE_KEEP_S, 0.01), dt);
     float breath = pow(0.5 + 0.5 * sin(iTime * 0.7 + seed4 * TAU), 8.0) * 0.25;
     // two rings: 0.15 pours out of the mouth through the gaps between head and arms,
     // 0.32 clears the raised arms and reads as a shockwave off the whole bear
