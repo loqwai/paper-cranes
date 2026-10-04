@@ -78,11 +78,15 @@
 #define CARDIOID_AUDIO_TH 0.35   // spread nudges where along the cardioid c sits (rad)
 #define JULIA_AUDIO_ZOOM 0.35    // kurtosis zooms the arm texture
 #define TEX_ACROSS_SLIDE 0.6     // entropy slides the texture across the ribbon
+#define EVIL_CAP 0.25           // iter26 darkwave cap (was FINAL_L_CAP 0.275)
+#define EVIL_RING 0.65          // iter30 narrower ring inside each cell
+#define EVIL_GAMMA 1.45         // iter26 contrast: >1 darkens mid-tones, keeps the hottest edges
 #define FINAL_L_CAP 0.275        // hard lightness cap after every driver — never white
 // ITER11 REZZ EYE: the arms converge into a thin hot-red iris ring around a pure-black pupil.
 // Built in log-radius space so it belongs to the spiral (not a screen-space disc).
 #define EYE_R 0.065          // iris radius (uv units, screen height = 2)
 #define EYE_W 0.18           // ring half-width in log-radius (~4.5px at 812px tall) — iter12: was 0.11, coil swallowed it
+#define EYE_IRIS_L 0.11     // iter28 iris fill lightness around the slit
 #define EYE_L 0.25           // ring lightness at full breath (HSL, before FINAL_L_CAP)
 #define EYE_MOAT_IN 1.25     // iter12: black moat from this x EYE_R ...
 #define EYE_MOAT_OUT 2.4     // ... to this x EYE_R, so the ring reads as a ring, not the end of the coil
@@ -105,8 +109,25 @@ uniform float rezzBuild;  // ITER19 section build 0..1 (3s energy envelope vs it
 // never a coordinate offset, so nothing can run backwards.
 uniform float rezzScene;
 // ITER22 BASS ZOOM RATCHET: forward-only plunge in log r (drift + kick surge), wrapped seamlessly in the controller
-uniform float rezzZoom;     // spiral log-r shift
-uniform float rezzZoomTex;  // arm-texture log-r shift (wrap-aligned to whole fold periods)
+uniform float rezzZoom;     // spiral log-r shift (iter25: steady drift, no bass)
+// ITER27: the arms spin on bear-move's eyeSpin (controllers/bear-move.js, bear/1's user-approved rezz-eye
+// rotation): rad, monotonic, rate 1.15 + 1.6*energy + 5.5*kick-lift rad/s, wrapped at 2pi = one seamless turn
+uniform float eyeSpin;
+uniform float rezzArmSpin;  // ITER25 ARM SPIN RATCHET: spiral angle in turns, forward-only (flux + centroid trend lean the rate)
+uniform float rezzZoomTex;
+// ITER23 FINE-DETAIL CRAWL: deep fold levels run on their own forward-only clocks
+uniform float rezzDetail;      // crawl clock (flux hits surge the rate)
+uniform float rezzDetailRate;  // its current rate, for speed-based LOD
+uniform float rezzDetailSpin;  // twist clock (centroid trend leans the rate)
+#define DETAIL_FROM 3          // first level that crawls (coarser levels stay calm)
+#define DETAIL_GROW 1.35       // each deeper level crawls 1.35x faster (in its own cell units)
+#define DETAIL_TWIST 0.6       // per-level twist on the detail clock
+// ITER24 ADVANCED AUDIO -> FINE LATTICE (controller envelopes, amplitude only, one feature per role)
+uniform float rezzGrit;   // spectralRoughness -> fine-level line brightness (grit)
+uniform float rezzDepth;  // spectralEntropy   -> how deep the fold is revealed
+uniform float rezzSharp;  // spectralCrest     -> rim contrast (halo cut, never width)
+uniform float rezzAir;    // treble            -> violet sparkle on the finest levels
+  // arm-texture log-r shift (wrap-aligned to whole fold periods)
 vec4 rzPreset(float i) {
     return vec4(fract(sin(i * 12.9898) * 43758.5453), fract(sin(i * 78.233 + 1.7) * 43758.5453),
                 fract(sin(i * 37.719 + 4.1) * 43758.5453), fract(sin(i * 93.989 + 2.3) * 43758.5453));
@@ -205,21 +226,37 @@ float hxHex(vec2 p){ p = abs(p); return max(p.x + p.y * 0.57735027, max(p.x, p.y
 vec3 hxFold(vec2 p, float pix, float spin, float zoom, float hexR, float ringR, float border){
     float scale = zoom, alpha = 0.0, lumAcc = 0.0, fieldAcc = 0.0;
     for (int i = 0; i < HX_LEVELS; i++){
+        // ITER23: shift BEFORE the fold by fract(clock): the fold repeats every 1 unit, so the fract wrap is
+        // invisible and the crawl is forward-only forever (x only, so a wrap is a whole-period jump)
+        float dk = (i >= DETAIL_FROM) ? pow(DETAIL_GROW, float(i - DETAIL_FROM)) : 0.0;
+        p.x += fract(rezzDetail * dk);
         p = 1.0 - abs(2.0 * fract(p - 0.5) - 1.0);
         if (i == 0) p = 0.5 + (p - 0.5) * zoom;
-        p *= hxRot(float(i) * 0.39269908 + spin * (0.4 + float(i) * 0.05) + (seed3 - 0.5) * float(i) * 0.8);
+        p *= hxRot(float(i) * 0.39269908 + spin * (0.4 + float(i) * 0.05) + (seed3 - 0.5) * float(i) * 0.8
+                    + rezzDetailSpin * DETAIL_TWIST * max(float(i - DETAIL_FROM + 1), 0.0));   // iter23 deeper = faster twist
         scale *= 2.0;
         if (i < HX_FIRST) continue;
         vec2 a = abs(p);
-        float m = min(abs(hxHex(a) - hexR - 0.1), min(abs(length(a) - ringR), min(a.x, a.y)));
+        // ITER30 EVIL GEOMETRY: star rim (hex U hex rotated 30deg -> 12 spikes), thorn axes that taper away
+        // from the cell centre, and a tighter ring. Shape only: widths and clocks untouched.
+        vec2 a30 = vec2(a.x * 0.8660254 - a.y * 0.5, a.x * 0.5 + a.y * 0.8660254);
+        float star = min(hxHex(a), hxHex(abs(a30)) * 1.08);
+        float thorn = min(a.x * (1.0 + 4.0 * a.y), a.y * (1.0 + 4.0 * a.x));
+        float m = min(abs(star - hexR - 0.1), min(abs(length(a) - ringR * EVIL_RING), thorn));
         float ld = float(i - HX_FIRST) / float(HX_LEVELS - 1 - HX_FIRST);
         float alias = pix * 0.5 * scale;                          // true pixel footprint at this level
         float bw = border * (0.20 + 0.80 * ld);                   // coarse levels get thin rims
         float res = smoothstep(bw * 1.6, bw * 0.5, alias);        // sub-pixel level -> 0, not haze
+        res *= smoothstep(0.25, 0.12, rezzDetailRate * dk / 60.0);  // iter23 speed LOD: > 1/4 period per frame would wagon-wheel -> fade
         float rim = smoothstep(bw + alias, bw, m) * res;
         float halo = smoothstep(bw * 1.6 + 0.004, bw * 1.1, m) * res;
+        // ITER24: entropy reveals deeper levels (calm music = coarse lattice, chaotic = full depth)
+        float reveal = 0.35 + 0.65 * rezzDepth;
+        float vis = smoothstep(reveal + 0.15, reveal - 0.15, ld);
+        rim *= vis; halo *= vis * (1.0 - 0.7 * rezzSharp);   // crest: crisper rims, less glow
+        float lvGain = 1.0 + 0.7 * rezzGrit * ld + 0.9 * rezzAir * smoothstep(0.6, 1.0, ld);  // grit + air sparkle on the fine end
         float w = (1.0 - alpha) * (rim * 0.90 + halo * 0.07);     // weight IS alpha (front-to-back)
-        lumAcc += w * (rim * 0.95 + halo * 0.22);
+        lumAcc += w * (rim * 0.95 + halo * 0.22) * lvGain;
         fieldAcc += w * ld;
         alpha += w;
     }
@@ -356,7 +393,7 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
     float spLog = log(max(spR, 1e-4));
     float flexW = 1.0 - smoothstep(log(FLEX_R0), log(FLEX_R1), spLog);
     spR = exp(spLog - FLEX_AMT * FLEX_ENV * flexW);   // ITER16 radial-only, no angle term
-    float spinPhase = SPIN_SPEED * (time - SPIN_SURGE * SPIN_SURGE_PERIOD / 6.28318 * cos(6.28318 * time / SPIN_SURGE_PERIOD));   // ITER14
+    float spinPhase = rezzArmSpin;   // ITER29 back to rezz-ratchet (eyeSpin was "too fast"): ~0.07-0.18 turns/s, % 1 seamless   // ITER25 (was the iter14 time-only surge at 0.015 turns/s; now ~0.055+ turns/s on a ratchet)
     float spA = atan(sp.y, sp.x) / 6.28318 + spinPhase;
     float spTight = SPIRAL_TIGHT * (1.0 + COIL_BREATH * DRIVE_COIL);   // ITER8_COIL
     float spiral = fract((log(spR) - rezzZoom - COIL_ANCHOR) * spTight + spA * SPIRAL_ARMS - rezzDrive);   // iter18 ratchet (was time * DRIVE_SPEED)
@@ -427,9 +464,28 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
     float eyeL = eyeRing * EYE_L * (EYE_REST + (1.0 - EYE_REST) * BASS_KICK) * (0.85 + 0.15 * EYE_BREATH);   // ITER15 kick + slow breath
     rezzHue = mix(rezzHue, 1.0, max(eyeRing, step(rezzL, emergeL) * eyeEmerge));
     rezzL = max(rezzL, max(emergeL, eyeL));
-    rezzL *= smoothstep(EYE_R * 0.80, EYE_R * 0.86, spR);        // pupil: crisp true-black disc
-    rezzL = min(rezzL, FINAL_L_CAP);
-    color = hsl2rgb(vec3(rezzHue, 0.92, rezzL));
+    // ITER28 SINISTER EYE: the pupil disc becomes a dim blood-red iris with a vertical cat SLIT of pure black.
+    // Eye-local coords follow the flexed radius so the slit breathes with the iter16 flex.
+    vec2 eq = sp * (spR / max(length(sp), 1e-4)) / EYE_R;
+    float eqR = length(eq);
+    float iris = smoothstep(0.86, 0.80, eqR);                          // inside the ring
+    float slitW = 0.20 * sqrt(max(1.0 - eq.y * eq.y, 0.0));            // lens-shaped slit, widest mid-eye
+    float slit = smoothstep(slitW + 0.04, slitW, abs(eq.x));
+    float irisL = EYE_IRIS_L * (0.55 + 0.45 * BASS_KICK) * (1.0 - 0.6 * eqR);   // glows from the slit outward
+    rezzL = mix(rezzL, irisL, iris);
+    rezzHue = mix(rezzHue, 0.995, iris);
+    rezzL *= 1.0 - slit * iris;                                        // pure black void
+    float eyeKeep = max(eyeRing, iris);                                // the eye is spared the darkwave gamma
+    // ITER26 DARKWAVE GRADE ("make those lattices more evil"): no pink/magenta middle. Hue is pushed hard to
+    // either oxblood red or bruise violet (spatial field, so the steep step can't flash in time), the violet
+    // end sinks darker, and a contrast curve leaves thin hot-red veins on near-black.
+    float evH = rezzHue < 0.5 ? rezzHue + 1.0 : rezzHue;            // red sits at 1.0
+    float evT = smoothstep(0.38, 0.72, clamp((1.0 - evH) / 0.24, 0.0, 1.0));   // 0 = red side, 1 = violet side
+    rezzHue = fract(mix(0.988, 0.745, evT));                        // oxblood -> bruise violet
+    rezzL *= mix(1.0, 0.55, evT);                                   // violet runs deep, red carries the light
+    rezzL = mix(pow(clamp(rezzL / EVIL_CAP, 0.0, 1.0), EVIL_GAMMA) * EVIL_CAP, rezzL, eyeKeep);   // contrast: veins bright, body black (eye spared, iter28)
+    rezzL = min(rezzL, EVIL_CAP);
+    color = hsl2rgb(vec3(rezzHue, 0.97, rezzL));
 
     fragColor = vec4(color, 1.);
 }

@@ -368,3 +368,28 @@ rolloff 27%, flux hit ~5% (correct for a transient). First pass had the gate ope
   every phase once. Watch: kick surges move about 0.013 log-r per frame, which is 0.43 of a level-9 fold
   period, near wagon-wheel. Those levels are mostly res-gated at that radius. Add the speed-based LOD if
   fine detail strobes on kicks.
+- **iter23: FINE-DETAIL CRAWL.** From level 3 down, each fold level is shifted along x by `fract(rezzDetail * 1.35^(i-3))` BEFORE it folds. The fold repeats every 1 unit, so the wrap is invisible, and the crawl only goes forward. Deeper levels crawl faster in their own cell units. There is also a per-level twist `rezzDetailSpin*0.6*(i-2)`, plus a speed LOD that fades any level moving more than 1/4 of its period per frame (wagon-wheel guard). rezzDetail rate is 0.25 base, + 0.9 on flux hits. The detailSpin rate leans with the centroid slope*rSquared trend. Live: detail 27.3, rate 0.26, spin 3.9.
+- **iter24: ADVANCED AUDIO -> FINE LATTICE** (controller envelopes, amplitude only, one feature per domain):
+  | Feature | Role | How |
+  |---|---|---|
+  | spectralEntropy (eased 2 s) | fold depth reveal | levels with ld > 0.35+0.65*depth fade out: calm music = coarse lattice, chaotic = full depth |
+  | spectralRoughness (eased 0.8 s) | fine-line grit | per-level gain 1 + 0.7*grit*ld |
+  | spectralCrest (eased 1 s) | rim contrast | halo *(1 - 0.7*sharp), crisper rims, never width |
+  | treble (env 50/400 ms) | violet sparkle | +0.9*air on the finest levels (ld > 0.6) |
+  | spectralFlux z (env 20/300 ms) | crawl surge | rezzDetail rate 0.25 + 0.9*hit (iter23) |
+  | centroid slope x rSquared | twist lean | rezzDetailSpin rate 0.05 + 0.035*trend, floor 0.01 (iter23) |
+  Live: grit 0.33, depth 0.43, sharp 0.04, air 0.26, trend 0.30. Frame peak 0.08, black 0.70 (dimmer
+  because depth 0.43 hides the deep levels).
+- **iter25: ZOOM STEADY + ARM SPIN RATCHET.** User: *"Don't speed up the actual zooming by the bass. I need the spirals moving."* rezzZoom is now a constant 0.06 log-r/s (bass removed; the seamless wrap is kept). New `rezzArmSpin` (turns, % 1; one turn equals one atan-seam jump, so the wrap is seamless) replaces the iter14 time-only surge (0.015 turns/s). Rate is max(0.03, 0.055 + 0.06*flux-hit + 0.035*centroid trend), no bass. Live: 0.075 turns/s (27 deg/s), zoom 0.06/s.
+- **iter26: DARKWAVE GRADE.** User: *"go more darkwave stuff. Make those lattices more evil."* At the end of the pipeline, the hue is pushed hard (smoothstep 0.38-0.72 on the red/violet position, a spatial field so it can't flash in time) to oxblood 0.988 or bruise violet 0.745, with no magenta middle. The violet side runs at 0.55x lightness, then a contrast curve (gamma 1.45) and cap 0.25 (EVIL_CAP; was 0.275). Saturation is 0.97. Live: peak 0.115, black 0.82 (was ~0.65), magenta share of lit pixels 0.11. Read: thin hot-red wire lattice on black. The eye went too dim under the gamma; that's next.
+- **iter27: ARMS SPIN ON bear-move eyeSpin.** User: *"I thought we had a controller for the rezz shader that actually gave us continuous rotation."* That is `controllers/bear-move.js` (bear/1 rezz eyes, 33c4fd3). Its eyeSpin rate is 1.15 + 1.6*energyN + 5.5*kick-lift rad/s, a monotonic accumulator wrapped at 2pi. Chained: jam URL is now `&controller=rezz-ratchet&controller=bear-move` (no uniform-name clash). The shader uses `spinPhase = eyeSpin/2pi`. One wrap is one full turn, which is seamless for both the spiral (4 arms) and the fold (1 period per turn). **Do not scale it by k<1:** a fractional turn at the wrap pops the texture. Live: 2.69 rad/s (~0.43 turns/s) at energy 0.057. Faster than the darkwave "slower" ask, but this is the rotation the user remembered. rezzArmSpin (iter25) is still exported, unused.
+- **iter28: SINISTER EYE.** The pupil disc is now a dim blood-red iris (EYE_IRIS_L 0.11, brighter on
+  kicks, glowing from the slit outward) with a vertical lens-shaped cat **slit** of pure black. Eye-local
+  coords follow the flexed radius, so the slit breathes with the iter16 flex. The eye ring and iris are
+  spared from the iter26 darkwave gamma (`mix(gammaL, L, eyeKeep)`), so the eye stays the focal point.
+- **iter29: ARM SPIN SLOWED.** User: *"Too fast."* (bear-move eyeSpin ran ~0.43 turns/s.) Back to
+  `rezzArmSpin`, now with eyeSpin's shape at low coefficients: 0.07 + 0.09*energyEnv + 0.02*kick +
+  0.015*flux, floor 0.04 turns/s, about 0.07 at rest and ~0.18 at peak. % 1 is still seamless.
+  Live: 0.070 turns/s (energy 0 at the read). bear-move is still chained in the URL but nothing uses it,
+  so drop it on the next natural reload.
+- **iter30: EVIL GEOMETRY.** Fold rim is now a star (hex ∪ hex rotated 30°, 12 spikes), the cross axes are thorns `min(a.x*(1+4a.y), a.y*(1+4a.x))` that taper away from the cell centre, and the ring is narrower (EVIL_RING 0.65). Shape only; widths and clocks are untouched. Reads as red cracks and veins on black. Live, with audio silent (energy 0, so the entropy reveal is at its minimum): peak 0.114, **black 0.88**. Sparse in silence; should fill in when music returns.

@@ -99,7 +99,17 @@ export const make = () => {
         // wrap at 101 spiral periods (63.125) and drive the texture shift 0.064% faster, so one wrap is
         // exactly 4 fold periods (and 4*2^i at every finer level). Seamless, bounded, no float decay.
         // CHANGE THESE if the shader's SPIRAL_TIGHT / SPIRAL_ARMS / HX_SEAM_N change.
-        phase.zoom = ((phase.zoom ?? 0) + (0.045 + 0.95 * env.kick) * dt) % ZOOM_WRAP
+        // iter25: STEADY drift only. User: "Don't speed up the actual zooming by the bass." Bass stays on
+        // the centre flex / rims / eye.
+        phase.zoom = ((phase.zoom ?? 0) + 0.06 * dt) % ZOOM_WRAP
+
+        // ── ARM SPIN RATCHET (iter25): the spiral arms always visibly rotate. Turns/sec, forward-only,
+        // rate leaned by ADVANCED features (flux hits + confident centroid brightening), never bass.
+        // One full turn = exactly one atan-seam jump (4 spiral periods, 1 fold period), so % 1 is seamless.
+        // iter29: bear-move eyeSpin's SHAPE (base + energy + small kick) at much lower coefficients —
+        // the user called eyeSpin (~0.43 turns/s) "too fast". ~0.07 turns/s at rest, ~0.18 at peak.
+        const armRate = Math.max(0.04, 0.07 + 0.09 * env.energy + 0.02 * env.kick + 0.015 * env.hit)
+        phase.armSpin = ((phase.armSpin ?? 0) + armRate * dt) % 1
 
         // detail clocks: fine fold levels crawl forward; flux hits SURGE the rate, never the position
         phase.detail += (0.25 + 0.9 * env.hit) * dt
@@ -116,6 +126,7 @@ export const make = () => {
             rezzGate: g,
             rezzBuild: env.build,
             rezzScene: phase.scene,
+            rezzArmSpin: phase.armSpin,         // spiral angle, turns (wrapped at 1)
             rezzZoom: phase.zoom,               // spiral log-r shift
             rezzZoomTex: phase.zoom * ZOOM_TEX, // arm-texture log-r shift (wrap-aligned)
             rezzDetail: phase.detail,
