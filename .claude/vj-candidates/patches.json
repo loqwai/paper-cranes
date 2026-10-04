@@ -1,0 +1,75 @@
+{
+  "_target": "shaders/redaphid/lattice-interactive/3.frag",
+  "_verified_against_md5": "1046c970594749eda8b633bed9c02a37",
+  "_note": "Each candidate = ordered list of {old,new} exact str.replace pairs. Run verify.py to confirm every `old` hits exactly once in the CURRENT 3.frag.",
+  "C4_tunnel_rush_grit": [
+    {
+      "old": "    tuv      *= 1.0 - (0.006 + 0.022 * bassPulse);      // IRIS tunnel push: trails streak radially, harder on the kick",
+      "new": "    tuv      *= 1.0 - (0.006 + 0.022 * bassPulse + 0.012 * kickExcess + 0.008 * clamp(spectralFluxZScore, 0.0, 1.0) + 0.006 * spectralRoughnessSmooth);   // IRIS tunnel rush: real kicks + transients + grit shove the trails forward (feedback lane, brightness-neutral)"
+    }
+  ],
+  "C6_kick_envelope": [
+    {
+      "old": "                    + 0.35 * smoothstep(0.6, 1.2, waveletBassZScore);   // IRIS kick path: clear kicks snap everything downstream",
+      "new": "                    + 0.35 * pow(smoothstep(0.45, 1.2, waveletBassZScore), 0.6);   // IRIS kick ENVELOPE: earlier onset + pow(.,0.6) fast attack; spring = body/decay"
+    }
+  ],
+  "C7_line_weight_energy": [
+    {
+      "old": "    gBorder = 0.034 + waveletBand5Spring * 0.020 * gGate;   // thin neon tube, not a fat band",
+      "new": "    gBorder = 0.028 + energySpring * 0.014 + waveletBand5Spring * 0.014 * gGate;   // IRIS LINE_THICK: loudness = line weight (same width as before at energySpring 0.63; quiet -> thinner)"
+    }
+  ],
+  "C2_wash_veil": [
+    {
+      "old": "uniform float spectralRoughnessSmooth;\n",
+      "new": "uniform float spectralRoughnessSmooth;\nuniform float spectralEntropySmooth;\n"
+    },
+    {
+      "old": "    vec4 fr = fractal(uv);\n",
+      "new": "    float washGate = smoothstep(0.55, 0.85, spectralEntropySmooth) * smoothstep(0.35, 0.08, spectralCrestSmooth) * clamp(gGate, 0.0, 1.0);   // IRIS third corner: loud broadband with NO peaks (inverted crest) = noise/cymbal wash\n    vec4 fr = fractal(uv);\n"
+    },
+    {
+      "old": "            + waveletCentroidSpring * 0.30 * gGate     // palette leans cyan when bright, magenta when dark\n",
+      "new": "            + waveletCentroidSpring * 0.30 * gGate     // palette leans cyan when bright, magenta when dark\n            + washGate * 0.14                              // IRIS wash veil: broadband grit drifts the palette to a zone kicks never reach\n"
+    }
+  ],
+  "C5_shimmer_halo": [
+    {
+      "old": "uniform float spectralRoughnessSmooth;\n",
+      "new": "uniform float spectralRoughnessSmooth;\nuniform float spectralEntropySmooth;\n"
+    },
+    {
+      "old": "float gSpin, gPulse, gPop, gKick, gHexR, gBorder, gCross, gFill, gReact, gTwist, gPix, gGate, gArc;",
+      "new": "float gSpin, gPulse, gPop, gKick, gHexR, gBorder, gCross, gFill, gReact, gTwist, gPix, gGate, gArc, gShimmer;"
+    },
+    {
+      "old": "    gGate = liveGate;   // GLOBAL gate: bandForDepth()/fractal() are defined above mainImage and must see it too\n",
+      "new": "    gGate = liveGate;   // GLOBAL gate: bandForDepth()/fractal() are defined above mainImage and must see it too\n    gShimmer = clamp(waveletBand5Spring * 1.3, 0.0, 1.0) * smoothstep(0.5, 0.05, waveletBassSpring) * smoothstep(0.3, 0.7, spectralEntropySmooth) * gGate;   // IRIS trebleShimmer corner: bright + chaotic + bass-light (closes on the kick)\n"
+    },
+    {
+      "old": "        float f = rim * 0.90 + halo * (0.07 + 0.10 * haze) * mix(0.35, 1.0, gArc);   // halo fog grows over the hour",
+      "new": "        float f = rim * 0.90 + halo * (0.07 + 0.10 * haze + 0.12 * gShimmer * gArc) * mix(0.35, 1.0, gArc);   // halo fog grows over the hour; IRIS trebleShimmer blooms it (arc-gated, SDF-masked)"
+    }
+  ],
+  "C9_color_gate_floor": [
+    {
+      "old": "            + melodyFlow * 0.32 * gGate\n",
+      "new": "            + melodyFlow * 0.32 * (0.35 + 0.65 * gGate)   // IRIS COLOR_GATE: colour gated softly with a floor\n"
+    },
+    {
+      "old": "            + waveletCentroidSpring * 0.30 * gGate     // palette leans cyan when bright, magenta when dark\n",
+      "new": "            + waveletCentroidSpring * 0.30 * (0.35 + 0.65 * gGate)     // palette leans cyan when bright, magenta when dark (COLOR_GATE floor)\n"
+    }
+  ],
+  "C8_flux_twinkle_LOCAL_fallback": [
+    {
+      "old": "            + gArc * 0.10 * clamp(spectralFluxZScore, 0.0, 1.0)   // IRIS flux twinkle (hue only), fades in with the arc\n",
+      "new": ""
+    },
+    {
+      "old": "    col += lush(s + 0.18, 1.0) * wave * (0.14 + gKick * 0.16 + gPop * 0.08);   // audio rides the FILAMENTS, not exposure",
+      "new": "    col += lush(s + 0.18 + 0.12 * clamp(spectralFluxZScore, 0.0, 1.0), 1.0) * wave * (0.14 + gKick * 0.16 + gPop * 0.08);   // IRIS fluxPulse twinkle: transients re-tint the FILAMENTS (hue only, wave-masked)"
+    }
+  ]
+}

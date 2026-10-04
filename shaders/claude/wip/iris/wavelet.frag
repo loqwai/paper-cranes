@@ -111,6 +111,31 @@ uniform float spectralCrestSmooth;      // smoothed spectral crest (was jittery 
 uniform float spectralRoughnessSmooth;  // smoothed spectral roughness (was jittery raw)
 uniform float spectralEntropySmooth;    // smoothed spectral entropy (was jittery raw)
 uniform float quietGate;                // 0 in quiet → 1 loud; gates audio offsets (no quiet-noise flashing)
+
+// iter4 (vibej2/mic) LIVE_GATE — global bass-aware replacement for bare quietGate.
+// quietGate keys on RAW absolute energy over a hardcoded 0.015..0.065 window
+// (wavelet-ease.js:159) so it is GAIN-DEPENDENT. On a quiet laptop mic it measured
+// avg 0.011 / max 0.247 while waveletBassSpring sat at 0.625 — i.e. pinned at zero
+// during real music. Every "many-feature modulation" term below was multiplied by it,
+// so RIPPLE spread, RING_REACH, petalFocus and skewStretch were ALL dead on mic input.
+// LIVE_GATE ORs in a self-calibrating bass term (rides the Normalized variant, so it
+// holds at any input gain). quietGate still wins when it is genuinely loud.
+// iter10 (vibej2/mic) BEAT-CONFIRMED term added. Measured a QUIET-AND-PUNCHY passage:
+// waveletBassZScore 1.251 + wavelet_bassHit 2.101 (clear kicks) while waveletBassSpring
+// sat at 0.051 — under the 0.10 level floor. LIVE_GATE read 0 and the iter8 beat zoom
+// (× LIVE_GATE) was SUPPRESSED on a hard kick: pulse 0.069 × 0 = 0. A structured beat
+// proves signal as surely as level does, so OR it in. Threshold 0.6σ→1.2σ needs a REAL
+// spike; bassZ decays fast so it cannot hold the gate open on noise.
+#define LIVE_GATE (max(max(quietGate, smoothstep(0.10, 0.35, waveletBassSpring)), smoothstep(0.6, 1.2, waveletBassZScore)))
+
+// iter5 (vibej2/mic) COLOR_GATE — the four PALETTE terms (MASTER_HUE, SUB_LEAN, CORE_HUE,
+// CORONA_HUE) were still on bare quietGate, so on a quiet mic the whole palette collapsed
+// to fixed hues exactly when the music dropped — the iris went monochrome in the gaps.
+// Colour wants a FLOOR rather than geometry's full swing: never fully dead, never wild on
+// noise. 0.35 floor + 0.65 of the live gate keeps hue breathing through quiet passages
+// while still opening up fully when the room is loud.
+#define COLOR_GATE (0.35 + 0.65 * LIVE_GATE)
+
 uniform float spinPhase;                // monotonic spin accumulator (rate*dt — no iTime*rate acceleration)
 uniform float morphPhase;               // monotonic morph accumulator
 uniform float flowPhase;                // monotonic flow accumulator
@@ -150,7 +175,7 @@ uniform float spectralRolloffNormalized;    // high-freq cutoff → outer reach
 // Like iris/7, MASTER_HUE is primarily the knob_2 palette rotation. Audio only GENTLY tints it
 // (small coefficients) so the color stays inside iris/7's tuned Oklab journey instead of swinging
 // into harsh RGB primaries (the "cheap" look). melodyFlow gives a subtle melodic drift, no more.
-#define MASTER_HUE  (knob_2 * 6.28318 + (melodyFlow - 0.5) * 0.5 * MOD_HUE * quietGate + SUB_LEAN)
+#define MASTER_HUE  (knob_2 * 6.28318 + (melodyFlow - 0.5) * 0.5 * MOD_HUE * COLOR_GATE + SUB_LEAN)
 
 // LEVEL FAMILY → SIZE / DEPTH / THICKNESS. Band energies set how BIG/BOLD/DEEP, by region.
 #define LINE_THICK  (width * (5.0 + energy_env * 5.0) * (0.4 + knob_18 * 1.6))            // loudness = line weight
@@ -160,9 +185,9 @@ uniform float spectralRolloffNormalized;    // high-freq cutoff → outer reach
 
 // TEXTURE FAMILY → DETAIL / SPARKLE / EDGE. Transients/grit set fine structure (below + IRIDESCENCE/EDGE_GLOW).
 // SHAPE FAMILY (NEW): spectral SPREAD/ROLLOFF → ring spacing & outer reach (how wide the spectrum = how far the structure spreads).
-#define RIPPLE_FREQ (10.0 + knob_13 * 16.0 + ZOOM_DEEP * 32.0 + waveletBand4Spring * 8.0 + spectralRoughnessSmooth * 6.0 + (spectralSpreadNormalized - 0.5) * 8.0 * MOD_SPREAD * quietGate) // spread = ring spacing
-#define RING_REACH  (1.0 + (spectralRolloffNormalized - 0.5) * 0.18 * MOD_REACH * quietGate)  // rolloff = how far the iris reaches outward
-#define SUB_LEAN    ((waveletTiltNormalized - 0.5) * 0.25 * MOD_TILT * quietGate)            // bass↔treble lean tints the hue
+#define RIPPLE_FREQ (10.0 + knob_13 * 16.0 + ZOOM_DEEP * 32.0 + waveletBand4Spring * 8.0 + spectralRoughnessSmooth * 6.0 + (spectralSpreadNormalized - 0.5) * 8.0 * MOD_SPREAD * LIVE_GATE) // spread = ring spacing
+#define RING_REACH  (1.0 + (spectralRolloffNormalized - 0.5) * 0.18 * MOD_REACH * LIVE_GATE)  // rolloff = how far the iris reaches outward
+#define SUB_LEAN    ((waveletTiltNormalized - 0.5) * 0.25 * MOD_TILT * COLOR_GATE)            // bass↔treble lean tints the hue
 #define TWIST (knob_10 * 3.14159 + ZOOM_DEEP * 1.6)  // STATIC twist (knob only) — NO audio, so the petals never rock back. Audio drives SHAPE, not this rotation.
 #define BASS_REACT (0.8 + knob_11 * 1.4)
 
@@ -171,8 +196,8 @@ uniform float spectralRolloffNormalized;    // high-freq cutoff → outer reach
 #define EDGE_GLOW   (0.9 + 0.4 * energy_env + spectralCrestSmooth * 0.4)       // articulation glints the edges
 
 // PITCH FAMILY → COLOR (continued). Brightness/crest set the core & corona hues.
-#define CORE_HUE   (0.6 + waveletCentroidSpring * 0.8 * quietGate)
-#define CORONA_HUE (4.2 - spectralCrestSmooth * 0.6 * quietGate)
+#define CORE_HUE   (0.6 + waveletCentroidSpring * 0.8 * COLOR_GATE)
+#define CORONA_HUE (4.2 - spectralCrestSmooth * 0.6 * COLOR_GATE)
 
 const vec3 plnormal = normalize(vec3(1, 1, -1));
 const vec3 n1 = normalize(vec3(-PHI,PHI-1.0,1.0));
@@ -219,8 +244,8 @@ float df(vec2 p) {
   // IMPORTANT: skew does NOT rotate the petals (that made them rock BACK when skew slid down).
   // Instead SKEW stretches the petal SHAPE asymmetrically — a lean you can see, but no spin-back.
   // KURTOSIS → FOCUS vs DIFFUSE: pulls petals inward (focused star) or pushes out (open flower).
-  float petalFocus = 1.0 + (spectralKurtosisNormalized - 0.5) * 0.22 * MOD_KURT * quietGate;
-  float skewStretch = (spectralSkewNormalized - 0.5) * 0.18 * MOD_SKEW * quietGate;   // asymmetric SHAPE, not rotation
+  float petalFocus = 1.0 + (spectralKurtosisNormalized - 0.5) * 0.22 * MOD_KURT * LIVE_GATE;
+  float skewStretch = (spectralSkewNormalized - 0.5) * 0.18 * MOD_SKEW * LIVE_GATE;   // asymmetric SHAPE, not rotation
   for (int i = 0; i < rep; ++i) {
     vec2 ip = p;
     float petalI = float(i);
@@ -281,9 +306,28 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   // it fires on the beat at ANY input gain (mic OR direct-in), so the pulse is consistent
   // across environments. Kept slight (max ~8% push-in) + a little raw hit/pump when present.
   float waveletBeat = clamp(max(waveletBassZScore, 0.0), 0.0, 1.0);   // the beat, self-calibrating
-  float kickZoom = clamp(waveletBeat * 0.07
-                       + bass_pump * BASS_REACT * 0.05
-                       + clamp(wavelet_bassHit, 0.0, 1.0) * 0.04, 0.0, 0.12);
+  // iter8 (vibej2/mic) PULSING BEAT ZOOM (user request: "pulsing zoom with the beat",
+  // explicitly NOT the `beat` uniform).
+  // PROBLEM FOUND: `bass_pump` = clamp(wubDepth + waveletBassSpring*0.5) and wubDepth was
+  // measured PINNED AT 1.0, so bass_pump saturates at 1.0 permanently. Its 0.05 term was a
+  // CONSTANT 5% push — a fixed zoom offset, not a pulse. Only the bassZ spike moved, which
+  // is why the old zoom read as a flicker instead of a breath.
+  // FIX: build the pulse from signals that actually SWING, and shape it like a kick
+  // envelope — fast attack, visible decay.
+  //   (1) waveletBassZScore — self-calibrating spike, the beat itself (works at any gain).
+  //       pow(x, 0.6) puts a fast ATTACK on it so a small spike already reads.
+  //   (2) wavelet_bassHit excess above 1.0 — the sharp transient (measured peaks 3.4).
+  //   (3) waveletBassSpring — the spring-eased bass LEVEL supplies the body/decay tail,
+  //       replacing the saturated bass_pump so the pulse rings out instead of snapping back.
+  // Prior art: the-coat-15 iter9 settled ~8.5% total as "slight but visible"; clit-2 used
+  // bassZ*0.08; dodeca-bloom iter34 used bass_pump*BASS_REACT*0.12. We land at ~9.5% max.
+  float kickAttack = pow(waveletBeat, 0.6);                            // fast attack
+  float kickSnap   = clamp((wavelet_bassHit - 1.0) * 0.5, 0.0, 1.0);   // sharp transient
+  float kickBody   = smoothstep(0.05, 0.55, waveletBassSpring);        // swings (unlike bass_pump)
+  float kickPulse  = clamp(kickAttack * 0.055
+                         + kickSnap   * 0.025
+                         + kickBody   * 0.035, 0.0, 0.095) * BASS_REACT * LIVE_GATE;
+  float kickZoom = clamp(kickPulse, 0.0, 0.12);
   p *= ZOOM * (1.0 - kickZoom);                        // beat pushes the camera slightly in
   float d = df(p);
   // ZOOM-DEEP SUB-LAYER — compound nested fractal: a second pass at half scale, rotated,
@@ -342,7 +386,24 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   // SHADE — anatomical darkness amount (additive 0..1, applied as L scale at the end).
   // No L cascade: gather all dark-region weights into one number, multiply L once.
   float aa = atan(p.y, p.x);
-  float limbal     = smoothstep(0.40, 0.56, irisR);
+  // iter1 (vibej2/mic) LIMBAL BASS BLOOM — the outer ring was the one big static shape on
+  // screen; on bass-dominant mic material it never moved. The limbal band now BREATHES
+  // outward on the self-calibrating wavelet beat (works at any mic gain) and thickens with
+  // the smooth sub-bass level, so the biggest form in the frame answers the kick.
+  // Gated by quietGate so room tone in the gaps doesn't wobble the ring.
+  // iter3 (vibej2/mic) BASS-AWARE GATE — quietGate keys on RAW absolute energy with a
+  // hardcoded 0.015..0.065 window (wavelet-ease.js:159), which is gain-dependent. On a quiet
+  // laptop mic real music sits UNDER that window: measured qg 0.45 → 0.00 → 0.19 across
+  // three reads while every wavelet band was healthy (b1..b5 ≈ 0.18-0.40). That left the
+  // iter1 limbal bloom multiplied by ~0 — dormant most of the show.
+  // Fix per journals/1-cool-moments.md: OR a bass-aware term into the gate so bass-driven
+  // motion survives, instead of trusting absolute loudness alone. waveletBassSpring is
+  // self-calibrating (rides the Normalized variant) so this works at any input gain.
+  float liveGate   = LIVE_GATE;                                   // promoted to a global (iter4)
+  float limbalBloom = clamp(waveletBeat * 0.55 + waveletBassSpring * 0.45, 0.0, 1.0) * liveGate;
+  float limbalPush  = limbalBloom * 0.035;                  // ring expands up to 3.5% outward
+  float limbalWide  = limbalBloom * 0.025;                  // and softens/thickens as it blooms
+  float limbal     = smoothstep(0.40 - limbalWide + limbalPush, 0.56 + limbalWide + limbalPush, irisR);
   float collR      = 0.20 + 0.02*sin(aa*float(rep));
   float collarette = smoothstep(0.045, 0.0, abs(irisR - collR));
   float pitAng     = pow(0.5 + 0.5*cos(aa*12.0), 8.0);
@@ -352,7 +413,22 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   float furrows    = 0.5 + 0.5*sin(irisR * 150.0);
   float ruffR      = 0.075 + 0.012*sin(aa*float(rep)*2.0);
   float ruff       = smoothstep(0.028, 0.0, abs(parallaxR - ruffR));
-  float pupilRad   = knob_14 * 0.16 * (1.0 - bass_pump * BASS_REACT * 0.18);
+  // iter11 (vibej2/mic) DRONE gate → PUPIL DILATION. `knob_14` is not in the header
+  // preset, so pupilRad was 0 and `step(0.001, pupilRad)` masked the pupil to NOTHING —
+  // the eye had no pupil all session; the dark centre was the ribbed core geometry.
+  // Measured a sustained SUB-BASS DRONE: centroid 0.13 (darkest of the session), tonal
+  // 1.889, wbass 0.216, every higher band ≤0.09, no kicks. A drone is the one passage
+  // type where a pupil OPENING is the honest visual — the eye dilates into the dark.
+  // Keyed on the two signals that scream (low centroid, high tonal) with a soft bass
+  // floor; NOT on monsterBass, whose bass_env term is too weak here (0.216).
+  // knob_14 remains a manual base the user can add on top. Declared BEFORE pupilRad
+  // (declaration order — see iter6).
+  float droneGate  = smoothstep(0.35, 0.10, centroid_env)          // dark
+                   * smoothstep(0.80, 1.50, tonalStrength)          // tonal, not noise
+                   * smoothstep(0.08, 0.30, bass_env)               // some sub present
+                   * LIVE_GATE;
+  float pupilBase  = knob_14 + droneGate * 0.62;                     // 0.62*0.16 ≈ 0.10 radius at full drone
+  float pupilRad   = pupilBase * 0.16 * (1.0 - bass_pump * BASS_REACT * 0.18);
   float pupil      = (1.0 - smoothstep(pupilRad*0.6, pupilRad, parallaxR)) * step(0.001, pupilRad);
 
   // BRIGHT — anatomical bright amount (additive 0..1). Single L lift, no compounding.
@@ -390,6 +466,19 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   float trebleShimmer = treble_env
                       * smoothstep(0.5, 0.05, bass_env)
                       * smoothstep(0.3, 0.7, entropy_env);
+  // iter6 (vibej2/mic) BROADBAND WASH gate — THIRD corner of the texture space.
+  // monsterBass covers sub-heavy, trebleShimmer covers bright+chaotic+bass-light. Neither
+  // fires on a dense NOISY WASH: measured roughness 0.87 + entropy 0.954 + spread 0.903 +
+  // rolloff 0.983 all near max while crest collapsed to 0.045 and skew to 0.071 — loud,
+  // broadband, no transient peaks (noise sweep / cymbal wash / breakdown). trebleShimmer
+  // misses it because its bass-light term is only partly satisfied; monsterBass misses it
+  // outright. Note entropy_env (= 1 - tonalStrength) read only 0.62 here while the true
+  // smoothed entropy was 0.954, so we key on spectralEntropySmooth directly.
+  // LOW CREST is the discriminator: a wash has energy everywhere and peaks nowhere.
+  float washGate = smoothstep(0.55, 0.85, spectralSpreadNormalized)
+                 * smoothstep(0.55, 0.85, spectralEntropySmooth)
+                 * smoothstep(0.35, 0.08, spectralCrestSmooth)   // INVERTED: peaky kills it
+                 * LIVE_GATE;
   // MOVIE_FLUX gate (iter33) — defining feature of film audio is constant timbral motion
   // (dialogue → music → silence → score → foley). spectralFluxZScore spikes on every cut/
   // line/sound effect. This gate fires brief bursts on every flux event and is independent
@@ -399,8 +488,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   // t — palette traversal parameter (where in the colour journey we are).
   // Built from: SDF (fractal coordinate) + radius (anatomy) + hue_phase (slow time) + audio.
   // Audio adds to t (palette region shift) instead of multiplying L (which washes out).
+  // iter6 WASH VEIL — on a broadband wash the iris drifts its palette outward toward the
+  // corona end (cool/diffuse) and spreads the radial term, so the eye reads as SOFTENING
+  // and opening rather than pulsing. Small numbers: this is a drift, not a strobe.
+  float washVeil = washGate;
   float t = 0.05 * fiber
-          + 0.55 * irisR
+          + 0.55 * irisR * (1.0 + washVeil * 0.10)
+          + washVeil * 0.14
           + 0.20 * hue_phase / TAU                   // monotonic palette drift
           // (removed `+ (knob_2 - 0.5)` — that shoved the palette zone off iris/7's tuned
           //  warm-gold↔green↔teal↔violet journey into harsh zones. knob_2 rotates the FINAL
@@ -670,10 +764,19 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   // (dialogue / foley / cuts) so movie audio drives a visible eye reaction even when bass
   // isn't kicking. The two terms cover music + movie audio independently.
   // iter79 add spectralCrestSmooth (peakiness) — spiky audio = sharper glint.
+  // iter7 (vibej2/mic) HARD KICK GLINT — `wavelet_bassHit` is the SHARPEST trigger in the
+  // whole feature set and was used in exactly ONE place (the L305 zoom nudge), clamped to
+  // 1.0 and scaled to 4%. Measured peaks of 3.4 on mic, so every bit of headroom above 1.0
+  // was being thrown away. Scale the excess into the catchlight: normal hits ride the
+  // existing terms, but a REAL kick (hit > 1) snaps a bright specular glint on the eye.
+  // Deliberately on the catchlight (a tiny bright dot) rather than a global flash — reads
+  // as the eye catching a strobe, not as the whole frame strobing.
+  float kickExcess = clamp((wavelet_bassHit - 1.0) * 0.5, 0.0, 1.0);   // 1.0->0, 3.0->1.0
   float catchPulse = 1.0
                    + bass_pump * BASS_REACT * 0.6
                    + clamp(spectralFluxZScore, 0.0, 1.0) * 0.8
-                   + spectralCrestSmooth * 0.45;
+                   + spectralCrestSmooth * 0.45
+                   + kickExcess * 1.1;                                 // the hard kick
   // iter53: knob_36 catchlight intensity master — user pinned at ~0.6, give them control.
   float catchlight = (1.0 - smoothstep(0.008, 0.022, catchD)) * knob_19 * onEye * catchPulse * mix(0.4, 1.8, knob_36);
   col += vec3(0.85, 0.88, 0.95) * catchlight;                   // bright cool-white specular

@@ -1,0 +1,98 @@
+{
+  "timestamp": "2026-09-07T03:47:22.339Z",
+  "shader": "redaphid/lattice-interactive/3",
+  "name": null,
+  "knobs": {
+    "knob_1": 0.21,
+    "knob_1.min": 0,
+    "knob_1.max": 1
+  },
+  "audio": {
+    "bass": {
+      "normalized": 0.355,
+      "zScore": -0.103,
+      "slope": 0,
+      "rSquared": 0.016
+    },
+    "energy": {
+      "normalized": 0.386,
+      "zScore": 0.045,
+      "slope": 0,
+      "rSquared": 0.021
+    },
+    "mids": {
+      "normalized": 0.541,
+      "zScore": -0.085,
+      "slope": 0.0001,
+      "rSquared": 0.041
+    },
+    "treble": {
+      "normalized": 0.534,
+      "zScore": -0.006,
+      "slope": -0.0001,
+      "rSquared": 0.133
+    },
+    "spectralCentroid": {
+      "normalized": 0.367,
+      "zScore": 0.026,
+      "slope": 0,
+      "rSquared": 0.005
+    },
+    "spectralFlux": {
+      "normalized": 0.116,
+      "zScore": -0.159,
+      "slope": 0,
+      "rSquared": 0.003
+    },
+    "spectralEntropy": {
+      "normalized": 0.337,
+      "zScore": -0.219,
+      "slope": 0,
+      "rSquared": 0.024
+    },
+    "spectralRoughness": {
+      "normalized": 0.336,
+      "zScore": -0.303,
+      "slope": 0,
+      "rSquared": 0.015
+    },
+    "spectralKurtosis": {
+      "normalized": 0.495,
+      "zScore": 0.078,
+      "slope": 0,
+      "rSquared": 0.057
+    },
+    "spectralSpread": {
+      "normalized": 0.35,
+      "zScore": -0.024,
+      "slope": 0.0001,
+      "rSquared": 0.057
+    },
+    "spectralCrest": {
+      "normalized": 0.392,
+      "zScore": -0.1,
+      "slope": 0,
+      "rSquared": 0.004
+    },
+    "spectralRolloff": {
+      "normalized": 0.337,
+      "zScore": 0.009,
+      "slope": 0.0001,
+      "rSquared": 0.028
+    },
+    "spectralSkew": {
+      "normalized": 0.413,
+      "zScore": -0.261,
+      "slope": 0,
+      "rSquared": 0.092
+    },
+    "pitchClass": {
+      "normalized": 0,
+      "zScore": -0.301,
+      "slope": -0.0002,
+      "rSquared": 0.011
+    }
+  },
+  "musicTab": null,
+  "userNote": null
+}

@@ -225,6 +225,24 @@ The rest of the palette contract, all journal-proven, all currently in the file:
   saturation went yellow **0.634** vs blue **0.066** — a hue spin in HSL *is* a brightness pump.
   OKLCH's perceptual L is what makes the hue channel safe to move independently of brightness.
 
+### `bw` is a STACK — multiplicative reducers compound into a blackout (iter28, live)
+
+`bw` (line width) carries several audio reducers at once — currently iter8 treble on fine levels, iter17
+haze on the halo, iter23 C7 energy on line weight. Each was safe alone with its own floor. Adding a
+fourth (crest → all levels, 0.72 floor) on a passage where crest ran **0.65–0.98** took the PRODUCT
+below the sub-pixel gate; `bw` feeds `res`, so `res` zeroed and **every line died: dark 1.000,
+litFrac 0.000, lum 0.0003 for ~3 s on a live projector.** Reverted in the same tick.
+
+> **RULES.** (1) Multiplicative reducers on the same quantity COMPOUND — before adding one, evaluate
+> the product of ALL existing terms at their simultaneous maxima, using each feature's range **as
+> measured this set** (crest read 0.20–0.35 for two hours, then 0.98, then 0.06). (2) **A per-term
+> floor does not bound a product.** Give the stack ONE shared floor — `bw = max(bw, bwMin)` after all
+> reducers — which would have made this move safe. (3) **Width terms are higher-risk than light terms
+> here**: `bw` → `res` means a width collapse is a total blackout, not a dimming. Both blackouts
+> tonight (iter2's `alias` miscalibration, iter28's width stack) came through `res`.
+> (4) **`dark > 0.95` or `litFrac < 0.02` on a post-save measure is an AUTOMATIC revert**, not a note
+> to consider — iter2 wrote the sanity check as prose and iter28 repeated the failure.
+
 ### The rim weight is the rim's opacity — thin the line, never lower the weight
 
 Second finding from the §0.3 edit, and it rewrites what "neon rims" meant all evening. The bright
