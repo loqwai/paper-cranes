@@ -1,6 +1,6 @@
 // @fullscreen: true
 // @tags: rezz, dark
-// rezz-1 — moody-octopus2 forked for a dark Rezz palette: dark reds, blacks, purples.
+// rezz-3 (forked from rezz-1 mid audio-wiring, VJ iter 5) — moody-octopus2 forked for a dark Rezz palette: dark reds, blacks, purples.
 
 // ============================================================================
 // REZZ GRADE PARAMETERS
@@ -12,8 +12,6 @@
 // HYPNOTIC SPIRAL (Rezz goggles) + PROWL DRIVE — the spiral is the image, the fractal lives in its arms
 #define SPIRAL_ARMS 4.0     // spiral arms around the vanishing point
 #define SPIRAL_TIGHT 1.6    // bands per e-fold of radius (higher = tighter coil)
-#define COIL_BREATH 0.16    // section-level coil: builds coil tighter, breakdowns relax (fraction of SPIRAL_TIGHT)
-#define COIL_ANCHOR -0.7    // log-radius where the coil breathes in place (bands pinned mid-screen, no slide)
 #define DRIVE_SPEED 0.22    // bands stream OUT from the centre like road lines (cycles/sec, time only)
 #define SPIN_SPEED 0.015    // slow hypnotic rotation (turns/sec, time only)
 #define TROUGH_DARK 0.94    // how black the gaps between arms are
@@ -22,14 +20,13 @@
 #define ARM_TEX_MIX 0.85      // 1.0 = arms carry only the arm-space Julia, 0.0 = old screen-space fractal
 #define ARM_TEX_TILES 8.0     // Julia tiles per seam-wrap along the arm (integer keeps the atan seam clean)
 #define ARM_TEX_FLOW 0.12     // texture streams along the arm (time only) — iter5: 0.04 read as static
-#define ARM_JULIA_MORPH 0.07  // Julia c walks the inner-cardioid path (rad/sec, time only) — iter5: 0.02 read as static
+#define ARM_JULIA_MORPH 0.07  // Julia c walks the 0.7885 circle (rad/sec, time only) — iter5: 0.02 read as static
 #define ARM_TEX_GAIN 16.0    // escape count that maps to full glow (6 saturated everything into flat blobs)
+#define ARM_JULIA_RADIUS 0.7885  // |c| of the slow Julia orbit (near the boundary = filament-rich)
 #define ARM_TEX_ACROSS 1.6    // Julia span across the ribbon (mirrored at the centre)
 #define ARM_FILAMENT_WIDTH 2.5   // distance-estimate line width in screen pixels
 #define ARM_GLOW_FLOOR 0.45   // dim escape-glow under the filaments so the ribbon body isn't empty
 #define ARM_TRAIL_RIM 0.6     // trailing-edge rim strength relative to the leading rim
-#define ARM_BODY 0.34         // iter6: filled Julia interior gets a dim surface (was black -> read as isolated clumps)
-#define ARM_RIBBON_BASE 0.16  // iter6: faint continuous base across the whole ribbon under the filaments
 
 // ============================================================================
 // AUDIO MAPPING (iter5) — one feature per visible role, all AMPLITUDE/OFFSET (never inside a
@@ -38,46 +35,25 @@
 // Live synthwave on the USB mic measured: energy 0.011-0.030, Normalized features swing ~0.05-0.9,
 // spectralFluxZScore idles ~0 and spikes to ~0.9 on hits.
 // ============================================================================
-#define QUIET_GATE smoothstep(0.003, 0.008, energy)                                     // energy: master gate
+#define QUIET_GATE smoothstep(0.005, 0.012, energy)                                     // energy: master gate
 #define D_(x) (QUIET_GATE * (x))
-#define DRIVE_BASS  D_(smoothstep(0.20, 0.65, bassNormalized))        // kick/sub  -> red rim glow + thickness
+#define DRIVE_BASS  D_(smoothstep(0.30, 0.80, bassNormalized))        // kick/sub  -> red rim glow + thickness
 #define DRIVE_MIDS  D_(smoothstep(0.45, 0.95, midsNormalized))        // synth body -> arm texture brightness
-#define DRIVE_AIR   D_(smoothstep(0.15, 0.60, trebleNormalized))      // hats/air  -> violet trailing rim
+#define DRIVE_AIR   D_(smoothstep(0.25, 0.80, trebleNormalized))      // hats/air  -> violet trailing rim
 #define DRIVE_HIT   D_(smoothstep(0.30, 1.00, spectralFluxZScore))    // snare/hits (dead-zoned Z) -> texture flash
-// Drivers that MOVE the texture (c morph, zoom, slide) read a median-filtered z-score instead of
-// Normalized: per-frame Normalized spikes made the texture twitch (iter7 measured +40% frame-to-frame
-// luma change, spikes 2x). Median rejects the spikes; the drift still reads over seconds.
-#define MEDZ(med, mean, sd) clamp(((med) - (mean)) / max(2.0 * (sd), 1e-4) * MEDZ_GAIN, -1.0, 1.0)
-#define MEDZ_GAIN 2.0
-#define DRIVE_KURT  D_(0.5 + 0.5 * MEDZ(spectralKurtosisMedian, spectralKurtosisMean, spectralKurtosisStandardDeviation))            // peakiness -> Julia zoom (texture scale)
+#define DRIVE_CENT  D_(spectralCentroidNormalized - 0.5)              // brightness -> Julia c (real) morph offset
+#define DRIVE_SPRD  D_(spectralSpreadNormalized - 0.5)                // width      -> Julia c (imag) morph offset
+#define DRIVE_KURT  D_(smoothstep(0.20, 0.90, spectralKurtosisNormalized)) // peakiness -> Julia zoom (texture scale)
 #define DRIVE_CREST D_(smoothstep(0.20, 0.90, spectralCrestNormalized))    // spikiness -> filament line width
-#define DRIVE_GRIT  D_(smoothstep(0.12, 0.60, spectralRoughnessNormalized))// dissonance -> glow under the filaments
-#define DRIVE_CHAOS D_(0.5 * MEDZ(spectralEntropyMedian, spectralEntropyMean, spectralEntropyStandardDeviation))                   // entropy    -> texture slides ACROSS the arm
-// slow gate (median energy) so the coil never jumps when raw energy flickers across the gate
-#define SECTION_GATE smoothstep(0.003, 0.008, energyMedian)
-#define DRIVE_COIL  (SECTION_GATE * MEDZ(energyMedian, energyMean, energyStandardDeviation)) // section energy -> coil tightness
-// ITER9 SECTION MOOD — colour follows SLOW music only: intense sections (energy/bass medians up) lean
-// hot red, calm/airy sections (centroid/rolloff medians up) lean deep violet. Fast features never touch hue.
-#define SECTION_MOOD (SECTION_GATE * clamp(0.5 * MEDZ(energyMedian, energyMean, energyStandardDeviation) + 0.5 * MEDZ(bassMedian, bassMean, bassStandardDeviation) - 0.5 * MEDZ(spectralCentroidMedian, spectralCentroidMean, spectralCentroidStandardDeviation) - 0.5 * MEDZ(spectralRolloffMedian, spectralRolloffMean, spectralRolloffStandardDeviation), -1.0, 1.0))
-#define MOOD_RED 0.5       // how far an intense section pulls the arm hue toward pure red
-#define MOOD_VIOLET 0.08   // how far a calm section tilts the arm hue toward violet
+#define DRIVE_GRIT  D_(smoothstep(0.20, 0.85, spectralRoughnessNormalized))// dissonance -> glow under the filaments
+#define DRIVE_CHAOS D_(spectralEntropyNormalized - 0.5)               // entropy    -> texture slides ACROSS the arm
+#define DRIVE_ROLL  D_(smoothstep(0.25, 0.85, spectralRolloffNormalized))  // high cutoff -> hue tilts red->violet
 #define ENGINE_GROWL (0.70 + 0.30 * DRIVE_BASS)      // rest 0.70 = the calm look
 #define ENGINE_GROWL_TEX (0.80 + 0.25 * DRIVE_MIDS + 0.30 * DRIVE_HIT)
-#define CARDIOID_K 0.96          // inset of the c path inside the main cardioid (1.0 = boundary, filament-rich; lower = fatter, smoother)
-#define CARDIOID_AUDIO_K 0.025   // centroid nudges the inset toward the boundary (more filigree when brighter)
-#define CARDIOID_AUDIO_TH 0.35   // spread nudges where along the cardioid c sits (rad)
+#define JULIA_AUDIO_C 0.045      // how far centroid/spread push Julia c off its orbit (shape morph)
 #define JULIA_AUDIO_ZOOM 0.35    // kurtosis zooms the arm texture
 #define TEX_ACROSS_SLIDE 0.6     // entropy slides the texture across the ribbon
-#define FINAL_L_CAP 0.275        // hard lightness cap after every driver — never white
-// ITER11 REZZ EYE: the arms converge into a thin hot-red iris ring around a pure-black pupil.
-// Built in log-radius space so it belongs to the spiral (not a screen-space disc).
-#define EYE_R 0.065          // iris radius (uv units, screen height = 2)
-#define EYE_W 0.18           // ring half-width in log-radius (~4.5px at 812px tall) — iter12: was 0.11, coil swallowed it
-#define EYE_L 0.25           // ring lightness at full breath (HSL, before FINAL_L_CAP)
-#define EYE_MOAT_IN 1.25     // iter12: black moat from this x EYE_R ...
-#define EYE_MOAT_OUT 2.4     // ... to this x EYE_R, so the ring reads as a ring, not the end of the coil
-#define EYE_EMERGE 0.13      // lead rims visibly streaming out of the eye
-#define EYE_BREATH D_(0.5 + 0.5 * SECTION_GATE * MEDZ(bassMedian, bassMean, bassStandardDeviation))   // slow bass -> ring breath
+#define FINAL_L_CAP 0.31         // hard lightness cap after every driver — never white
 
 // Function to check if pixel and surrounding area is solid white
 float getWhiteAmount(vec2 uv, vec2 pixelSize) {
@@ -267,8 +243,7 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
     vec2 sp = (fragCoord * 2.0 - iResolution.xy) / iResolution.y;
     float spR = max(length(sp), 0.015);
     float spA = atan(sp.y, sp.x) / 6.28318 + time * SPIN_SPEED;
-    float spTight = SPIRAL_TIGHT * (1.0 + COIL_BREATH * DRIVE_COIL);   // ITER8_COIL
-    float spiral = fract((log(spR) - COIL_ANCHOR) * spTight + spA * SPIRAL_ARMS - time * DRIVE_SPEED);
+    float spiral = fract(log(spR) * SPIRAL_TIGHT + spA * SPIRAL_ARMS - time * DRIVE_SPEED);
     float spiralArm = smoothstep(0.0, 0.08, spiral) * smoothstep(0.62, 0.42, spiral);
     // leading rim + dimmer trailing rim frame each ribbon so all 4 arms read as one coherent band
     float leadRim = smoothstep(0.0, 0.035, spiral) * smoothstep(0.13 + 0.07 * DRIVE_BASS, 0.04, spiral);
@@ -280,7 +255,7 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
     // rides the arm undistorted and shrinks toward the vanishing point like perspective.
     // u jumps by SPIRAL_TIGHT*2PI across the atan seam; tiling u by that / ARM_TEX_TILES keeps it seamless.
     float spTheta = spA * 6.28318;
-    float armU = log(spR) * (SPIRAL_ARMS / 6.28318) - SPIRAL_TIGHT * spTheta - time * ARM_TEX_FLOW;   // texture stays on the REST coil: rescaling tiles with the breathing coil tripled jitter (iter8 A/B)
+    float armU = log(spR) * (SPIRAL_ARMS / 6.28318) - SPIRAL_TIGHT * spTheta - time * ARM_TEX_FLOW;
     float armTile = SPIRAL_TIGHT * 6.28318 / ARM_TEX_TILES;
     float armAlong = abs(fract(armU / armTile) * 2.0 - 1.0);      // mirrored -> no seam between tiles
     float armAcross = clamp(spiral / 0.62, 0.0, 1.0);
@@ -291,14 +266,9 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
     jz /= 1.0 + JULIA_AUDIO_ZOOM * DRIVE_KURT;                    // kurtosis zooms into the texture
     // Julia-space size of one screen pixel, for crisp distance-estimate filaments
     float jpx = clamp(max(fwidth(armAlong) * 3.0, fwidth(armMirror) * ARM_TEX_ACROSS), 1e-4, 0.05);
-    // iter10: c rides a curve just INSIDE the Mandelbrot main cardioid, so every Julia set on the path
-    // is connected and fills the ribbon (the old 0.7885 circle wandered into dust). Time walks theta
-    // monotonically; centroid/spread nudge theta and the inset k by small smoothed amounts.
-    float jTh = time * ARM_JULIA_MORPH + CARDIOID_AUDIO_TH * D_(MEDZ(spectralSpreadMedian, spectralSpreadMean, spectralSpreadStandardDeviation));
-    float jK = clamp(CARDIOID_K + CARDIOID_AUDIO_K * D_(MEDZ(spectralCentroidMedian, spectralCentroidMean, spectralCentroidStandardDeviation)), 0.85, 0.995);
-    vec2 jE = vec2(cos(jTh), sin(jTh));
-    vec2 jE2 = vec2(jE.x * jE.x - jE.y * jE.y, 2.0 * jE.x * jE.y);
-    vec2 jc = jK * (0.5 * jE - 0.25 * jE2);                        // c = k * (e^{iθ}/2 - e^{2iθ}/4)
+    float jAng = time * ARM_JULIA_MORPH;
+    vec2 jc = vec2(sin(jAng), cos(jAng)) * ARM_JULIA_RADIUS
+            + JULIA_AUDIO_C * vec2(DRIVE_CENT, DRIVE_SPRD);       // centroid/spread morph the Julia shape
     vec2 jdz = vec2(1.0, 0.0);
     float jn = 0.0;
     for (int i = 0; i < 48; i++) {
@@ -313,16 +283,7 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
     float filament = jn >= 47.0 ? 0.0 : 1.0 - smoothstep(0.0, (ARM_FILAMENT_WIDTH + 1.6 * DRIVE_CREST) * jpx, jde);
     float escGlow = jn >= 47.0 ? 0.0 : clamp((jn + 1.0 - log2(log2(max(dot(jz, jz), 1.0001)))) / ARM_TEX_GAIN, 0.0, 1.0);
     float armTex = max(filament, escGlow * (ARM_GLOW_FLOOR + 0.22 * DRIVE_GRIT));
-    // iter6 RIBBON FILL: the filled interior is a dim surface, and the ribbon carries a faint base,
-    // so the Julia reads as a pattern printed across the whole ribbon instead of dust clumps on black
-    float ribbonCore = smoothstep(0.0, 0.35, 1.0 - armMirror);   // strongest mid-ribbon, fades to the rims
-    if (jn >= 47.0) armTex = max(armTex, ARM_BODY * (0.75 + 0.5 * DRIVE_MIDS));
-    armTex = max(armTex, ARM_RIBBON_BASE * (0.6 + 0.4 * ribbonCore));
-    // hue walk keyed to the texture's STRUCTURE only (no mids/grit amplitude), so fast audio brightens
-    // the texture without flickering its colour (iter9)
-    float armTexShape = max(max(filament, escGlow * ARM_GLOW_FLOOR), ARM_RIBBON_BASE * (0.6 + 0.4 * ribbonCore));
-    if (jn >= 47.0) armTexShape = max(armTexShape, ARM_BODY);
-    float texWalk = abs(fract(armTexShape * 1.3 + t * 0.02) * 2.0 - 1.0);
+    float texWalk = abs(fract(armTex * 1.3 + t * 0.02) * 2.0 - 1.0);
     float texL = smoothstep(0.04, 0.8, armTex) * REZZ_CEIL * (1.0 - 0.65 * texWalk) * ENGINE_GROWL_TEX;
     rezzL = mix(rezzL * (1.0 - ARM_TEX_MIX), texL, ARM_TEX_MIX);
     rezzHue = mix(rezzHue, fract(1.0 - REZZ_SPAN * texWalk), ARM_TEX_MIX);
@@ -330,26 +291,9 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
     rezzL *= mix(1.0 - TROUGH_DARK, 1.0, spiralArm) * depth;
     rezzL = max(rezzL, spiralRim * depth * ARM_RIM * ENGINE_GROWL);  // hot red leading edge
     rezzHue = mix(rezzHue, 1.0, leadRim);                         // leading rim is pure red
-    rezzHue = mix(rezzHue, 0.80, trailRim * 0.7);                  // trailing rim is violet (treble only brightens it)
+    rezzHue = mix(rezzHue, 0.80, trailRim * DRIVE_AIR);            // treble pushes the trailing rim violet
     rezzHue = fract(rezzHue - (1.0 - spiralArm) * 0.05);          // gaps lean violet
-    // section mood: unwrap to [0.5,1.5) so red (1.0) sits mid-range, lean, then fold back — no wrap seam
-    float moodH = rezzHue < 0.5 ? rezzHue + 1.0 : rezzHue;
-    moodH = mix(moodH, 1.0, MOOD_RED * max(SECTION_MOOD, 0.0) * spiralArm);
-    moodH -= MOOD_VIOLET * max(-SECTION_MOOD, 0.0) * spiralArm;
-    rezzHue = fract(moodH);
-    // ITER11 REZZ EYE: rims emerge from the iris, the iris is a thin red ring, the pupil is black
-    float eyeD = abs(log(spR) - log(EYE_R));
-    float eyeRing = smoothstep(EYE_W, 0.0, eyeD);
-    // iter12 moat: the arms stop short of the iris and re-emerge beyond the moat, streaming outward
-    float eyeMoat = smoothstep(EYE_R * (EYE_MOAT_IN - 0.1), EYE_R * EYE_MOAT_IN, spR)
-                  * (1.0 - smoothstep(EYE_R * EYE_MOAT_OUT, EYE_R * (EYE_MOAT_OUT + 0.6), spR));
-    rezzL *= 1.0 - eyeMoat;
-    float eyeEmerge = smoothstep(EYE_R * EYE_MOAT_OUT, EYE_R * (EYE_MOAT_OUT + 0.8), spR) * (1.0 - smoothstep(0.24, 0.5, spR));
-    float emergeL = leadRim * eyeEmerge * EYE_EMERGE;
-    float eyeL = eyeRing * EYE_L * (0.75 + 0.25 * EYE_BREATH);
-    rezzHue = mix(rezzHue, 1.0, max(eyeRing, step(rezzL, emergeL) * eyeEmerge));
-    rezzL = max(rezzL, max(emergeL, eyeL));
-    rezzL *= smoothstep(EYE_R * 0.80, EYE_R * 0.86, spR);        // pupil: crisp true-black disc
+    rezzHue = fract(rezzHue - 0.07 * DRIVE_ROLL * spiralArm);      // rolloff tilts the arms red -> violet
     rezzL = min(rezzL, FINAL_L_CAP);
     color = hsl2rgb(vec3(rezzHue, 0.92, rezzL));
 
