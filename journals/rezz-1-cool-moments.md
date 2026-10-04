@@ -210,3 +210,122 @@ rolloff 27%, flux hit ~5% (correct for a transient). First pass had the gate ope
   streaming out beyond the moat. Measured at rest (audio silent): black 0.60, peak 0.104, jitter
   0.0047. Bass breathing still unverified. (Process slip: edited on disk before validating;
   it compiled.)
+
+- **iter13 (2026-10-03 session 2, claude-in-chrome, user projecting the jam tab): PROWL WAVE.** Audio
+  SILENT for tuning purposes: the app's input `audioInputs[0]` is now listed as "PCM2902 Audio Codec"
+  (same Burr-Brown USB codec) and raw `energy` sits at 4e-8 to 1.5e-6, about 10^4 below last session's live
+  music (0.011-0.030), so QUIET_GATE stays shut. `bassNormalized` and `spectralFluxZScore` still wander on
+  that noise floor, so **don't read them as music**. The laptop's "Built-in Audio Analog Stereo" input is
+  loud and clipping, but it isn't the input the app uses. Time-only move: a soft band of light rolls
+  OUTWARD along the arms every 9 s (`PROWL_PERIOD 9`, `PROWL_DENS 0.42` waves per e-fold, `PROWL_DIM 0.5`
+  outside the band). It multiplies lightness before the eye, so the eye stays steady. Radial luma
+  probe, 2 s apart: peak bin 4 -> 5 -> 6 -> 7 (~2x contrast against the dimmed rest), mean 0.011-0.016,
+  peak 0.12, black 0.63-0.74. The road now reads as moving toward you. Process: edited on disk, then
+  GL-validated the served file in the same tick (ok).
+- **iter14: SPIN SURGE.** Still SILENT. One 0.018 energy spike showed up in a 2 s read, but 40 more
+  samples over 6 s were all 0 with the gate shut, so it was a pop, not music. Time-only move: the rotation
+  RATE now breathes, SPIN_SPEED*(1 + 0.8*sin(2pi t/48)), so it eases off to 0.2x and leans into the
+  throttle at 1.8x over a 48 s cycle (the prowl). The phase is the closed-form integral of that rate, so it
+  stays monotonic (no reversal, no audio in the phase). It feeds `spA`, so the arm texture turns with the
+  arms. **Rejected a 2-min red<->violet hue drift:** any swing big enough to see breaks the
+  ≤0.03/min hue rule. The colour stays on SECTION_MOOD (slow music) only. Live frame: dark, peak in
+  budget, prowl wave intact. The rate change wasn't isolated with a probe (a ring cross-correlation can't
+  separate spin from the outward drive). Judge it by eye over a minute.
+- **iter15: BASS KICK on the eye + lead rims. AUDIO LIVE on the USB codec.** 3 s ranges: energy
+  0.033-0.134 (about **4x louder than last session's 0.011-0.030**), bassN 0.05-0.77 (median ~0.43),
+  midsN 0.19-0.99, trebleN 0.09-0.85, fluxZ -0.14 to 0.77. QUIET_GATE (0.003-0.008) is **fully open
+  100%** at this level. Diagnosis: the eye's only audio term was the slow bass-median breath (0.40-0.64)
+  scaling 0.75-1.0, so about 6% brightness change, invisible. The lead rims rode DRIVE_BASS, which
+  sat around 0.5 (no contrast) and also widened the rim per frame (fast signal on geometry). Fix:
+  `BASS_KICK = D_(smoothstep(0.40, 0.75, bassNormalized))`, dead-zoned above the median. Eye ring L =
+  EYE_L*(0.40 + 0.60*kick)*(0.85 + 0.15*breath). Lead rim brightness = ARM_RIM*(0.50 + 0.50*kick).
+  **Removed** the bass-driven rim width (fixed 0.13). Process fixed: built the edit in the page, compiled
+  it with __vjValidate, THEN POSTed /__save-shader. Probe (30 frames): iris-ring red 0.088-0.132
+  (1.5x swing), **corr with bassN 0.53**, mean 0.012-0.022, peak 0.08-0.12, black 0.55-0.64.
+  Watch next tick: in this window bassN maxed ~0.54, so the dead-zone held the kick mostly low and the
+  eye sat dim (~0.10 L). If the eye stops being the focal point, raise EYE_REST or drop the dead-zone to
+  0.35.
+- **iter16: CENTRE FLEX.** User: *"the center spiral itself should flex in and out with the beat."* Lens
+  warp on radius only: `spR = exp(log(spR) - FLEX_AMT * pow(BASS_KICK, 1.5) * flexW)`. flexW is 1 inside
+  FLEX_R0 0.06 and fades to 0 at FLEX_R1 0.55 in log-radius, so the centre bulges outward on a kick and
+  springs back while the outer arms stay put. It's applied right after `spR`, so spiral, armU/armAcross,
+  depth, prowl, eye and rims all ride it. spA and the armTile/SPIRAL_TIGHT texture frame are untouched.
+  FLEX_AMT 0.12. AUDIO LIVE. Built in the page, validated, then /__save-shader.
+  **Measured:** eye-ring radius (full-res centre crop, red radial argmax) 0.0645 -> 0.0735 uv = **14% flex**
+  on kicks (model max 12.7% plus pixel quantisation). It sits at rest (env < 0.01) in 9/36 frames, so it
+  returns to zero between kicks. **Jitter A/B** (alternating window.cranes.shader swaps, 3 rounds x 20
+  consecutive rAF frames): no-flex 0.0044/0.0057/0.0067 vs flex 0.0033/0.0061/0.0047, so the flex adds
+  **no jitter** (all ≤ 0.010). A single run spaced 60 ms apart read 0.016. Frame spacing inflates that
+  metric, so **only compare jitter at the same sampling cadence**. Kept FLEX_AMT 0.12.
+- Design hypothesis: "flex with the beat" is a radius-only lens warp in log-space, masked to the
+  centre. It reads as the spiral breathing, and the outer frame stays steady, so it doesn't shiver.
+- **iter17: LATTICE TRANSPLANT. The fractal is the star.** User: *"focus more on the fractals"* using
+  lattice-interactive/3. Replaced the whole arm-space Julia (jz setup, cardioid c path, 48-iter loop,
+  DE filaments, escGlow, armTexShape) with lattice-interactive/3's hex mirror-fold `fractal()`, ported as
+  a controller-free `hxFold()`. It is evaluated in arm space `(armU, spiral) * hxK` with
+  `hxK = HX_SEAM_N / (SPIRAL_TIGHT*2pi)`, so the atan seam jump is an integer number of fold periods
+  (no seam ray). armU keeps the REST coil (iter8 rule). Uses an analytic pixel footprint (not fwidth) for
+  the `res` sub-pixel gate, so fine levels vanish toward the eye instead of hazing. Hue walk comes from the
+  fold's depth field: coarse outlines hot red, fine levels violet and into shadow. Slow audio only: kurtosis
+  MEDZ -> hex size, bass-median breath -> ring radius, crest -> rim width (widening only, never a reducer).
+  ARM_TEX_MIX 0.85 -> 1.0 (dropped the screen-space Julia underlay). Eye, iter15 kick rims, iter16 centre
+  flex and iter13 prowl band are all untouched. Dead defines (ARM_JULIA_MORPH, ARM_TEX_GAIN,
+  ARM_FILAMENT_WIDTH, ARM_GLOW_FLOOR, ARM_BODY, CARDIOID_*, JULIA_AUDIO_ZOOM, TEX_ACROSS_SLIDE, DRIVE_CHAOS,
+  DRIVE_GRIT) are left in place, unused. Plan: scratchpad `lattice3-transplant.md`.
+  **Measured** (320x180, 20 consecutive rAF frames, live audio, energy ~0.04):
+  before peak 0.097 / black 0.637 / lit(>0.04) 0.080 / mean 0.0126 / jitter 0.0040;
+  after peak 0.112 / black 0.648 / **lit 0.162 (2x)** / mean 0.0155 / jitter 0.012-0.016.
+  **Jitter A/B** (fold audio terms zeroed vs live, 2 rounds): 0.0132/0.0163 vs 0.0165/0.0160. The fold's
+  audio drivers add nothing. The rise comes from crisp 1-2 px lines streaming (DRIVE_SPEED + ARM_TEX_FLOW
+  + spin): moving thin lines change every pixel they cross. The Julia's soft clouds didn't. **Rule:** a
+  line-art texture has a higher jitter floor on this metric, so re-baseline instead of comparing to Julia-era
+  numbers. If it reads as shimmer on the projector, slow ARM_TEX_FLOW (0.12) first, not the audio.
+  Screenshot: red hex/ring/cross outlines with violet fine detail printed along all 4 ribbons, black gaps,
+  eye intact, no seam ray, no white.
+
+- **iter18: RATCHET CONTROLLER. Texture coords and fractal params now only move forward.** USER: *"The
+  fractals on the arms are flickering, in this way we absolutely have documented in the past. We need a
+  controller that ratchets so it always moves forwards."* It's the documented failure from
+  lattice-interactive/3 (iter11: raw per-frame `liveGate` on ring radius / line width / spin -> shiver;
+  iter16: melodyFlow in the spin ANGLE -> "it rocked back") and advanced-shader-techniques §1-2. New
+  chainable controller **`controllers/rezz-ratchet.js`** (jam URL now `...&controller=rezz-ratchet`).
+  Phases `rezzFlow / rezzDrive / rezzSpin / rezzMorph` with `phase += (floor + k*smoothedAudio)*dt`, floor
+  > 0 so they strictly increase. Envelopes `rezzKick` (attack 30 ms / release 220 ms), `rezzMids`
+  (tau 350 ms), `rezzHit` (20 / 300 ms), `rezzGate` (tau 400 ms).
+  **Audit -> replaced:**
+  | Term | Was (back and forth) | Now |
+  |---|---|---|
+  | hxFold rim width | raw per-frame `DRIVE_CREST` (lines pulsed) | fixed `HX_BORDER` |
+  | hxFold hex size | kurtosis MEDZ | `0.05*sin(rezzMorph*2pi)`, a smooth cycle on a ratchet clock |
+  | hxFold ring radius | bass-median breath | `0.03*sin(rezzMorph*3.88+1)` |
+  | hxFold spin | `time*HX_SPIN` | `rezzSpin` (bass speeds it, never reverses it) |
+  | armU flow | `time*ARM_TEX_FLOW` | `rezzFlow` (energy speeds it) |
+  | spiral drive (= fold y coord) | `time*DRIVE_SPEED` | `rezzDrive` |
+  | coil breath | energy MEDZ rescaled `spiral`, the fold y coord | **OFF** (`COIL_BREATH 0`) |
+  | texture brightness | raw per-frame mids + flux z | `rezzMids` / `rezzHit` envelopes |
+  | flex / kick rims / eye kick | raw per-frame `bassNormalized` | `rezzKick` envelope |
+
+  Left alone: the iter14 spin surge (closed-form integral, already monotonic), the prowl band (time only),
+  SECTION_MOOD hue (slow medians, colour lane), EYE_BREATH (eye brightness only).
+  **A/B** (3 alternating rounds x 16 consecutive rAF frames, 240x135, live audio, energy ~0.04):
+  old jit 0.0235 / back-and-forth 0.0066 / brightness pump 0.30e-3 / peak 0.144 / black 0.65;
+  new jit 0.0237 / back-and-forth 0.0072 / **pump 0.24e-3 (-20%)** / **peak 0.132** / black 0.67.
+  The per-pixel metrics didn't move, because they're dominated by thin lines streaming across pixels,
+  so they **cannot see** a slow audio rock under that motion. The fix is structural (no audio term can
+  pull a coordinate backwards any more). The user's eye on the projector is the verification for this one.
+  Process: built and GL-validated in-page, then /__save-shader. A long single-call A/B detached the
+  debugger mid-script; it still saved. **Run A/B in short calls** (one round per evaluate).
+  Screenshot: dense red line-lattice on all 4 ribbons, violet rims, black gaps, eye intact, no white.
+- **Next suspect if the user still sees flicker: temporal aliasing (wagon-wheel).** Fine fold levels move
+  `rate * hxK * 2^(level+1)` periods/s. With flow ~0.15/s at level 9 that's ~0.2-0.4 periods per frame,
+  close to the 0.5 Nyquist limit, so those lines can look like they step backwards even with a perfectly
+  monotonic clock. Fix: a motion term in the `res` gate (fade a level when its per-frame displacement
+  exceeds ~0.25 of its period), or lower HX_LEVELS / raise HX_FIRST. Don't slow the ratchet floors first.
+- Design hypothesis: **texture coords and fractal params move only via monotonic accumulators.** Audio
+  changes a phase's RATE (≥ a positive floor) or an envelope's AMPLITUDE, never a coordinate's value.
+  Anything that has to go back and forth (shape cycles) is `sin(ratchetPhase)`, smooth and slow, not a
+  feature.
+
+## Forks
+- `rezz-1 ⇐ lattice-interactive/3` (iter17): fractal transplant, not a fork. rezz-1's arm texture is now
+  lattice-interactive/3's hex mirror-fold (`fractal()` lines 161-214), controller/wavelet uniforms dropped.

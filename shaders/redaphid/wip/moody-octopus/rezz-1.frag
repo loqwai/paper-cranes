@@ -12,14 +12,18 @@
 // HYPNOTIC SPIRAL (Rezz goggles) + PROWL DRIVE — the spiral is the image, the fractal lives in its arms
 #define SPIRAL_ARMS 4.0     // spiral arms around the vanishing point
 #define SPIRAL_TIGHT 1.6    // bands per e-fold of radius (higher = tighter coil)
-#define COIL_BREATH 0.16    // section-level coil: builds coil tighter, breakdowns relax (fraction of SPIRAL_TIGHT)
+#define COIL_BREATH 0.0     // iter18: OFF. the coil rescaled `spiral` (the fold y coord) back and forth with section energy -> arm flicker. was 0.16
 #define COIL_ANCHOR -0.7    // log-radius where the coil breathes in place (bands pinned mid-screen, no slide)
 #define DRIVE_SPEED 0.22    // bands stream OUT from the centre like road lines (cycles/sec, time only)
 #define SPIN_SPEED 0.015    // slow hypnotic rotation (turns/sec, time only)
+// ITER14 SPIN SURGE: the rotation RATE breathes (prowl: ease off, then lean into the throttle).
+// Phase is the integral of rate = SPIN_SPEED*(1 + SPIN_SURGE*sin(2pi t/P)), so it stays monotonic (SURGE < 1).
+#define SPIN_SURGE 0.8      // rate swings 0.2x .. 1.8x SPIN_SPEED
+#define SPIN_SURGE_PERIOD 48.0   // seconds per ease-off/lean-in cycle
 #define TROUGH_DARK 0.94    // how black the gaps between arms are
 #define ARM_RIM 0.30        // lightness of the hot red leading edge of each arm
 // JULIA PROJECTED ONTO THE ARMS — the fractal is a texture printed on each spiral ribbon
-#define ARM_TEX_MIX 0.85      // 1.0 = arms carry only the arm-space Julia, 0.0 = old screen-space fractal
+#define ARM_TEX_MIX 1.0       // iter17: arms carry only the hex fold (was 0.85 with a screen-space Julia underlay)
 #define ARM_TEX_TILES 8.0     // Julia tiles per seam-wrap along the arm (integer keeps the atan seam clean)
 #define ARM_TEX_FLOW 0.12     // texture streams along the arm (time only) — iter5: 0.04 read as static
 #define ARM_JULIA_MORPH 0.07  // Julia c walks the inner-cardioid path (rad/sec, time only) — iter5: 0.02 read as static
@@ -30,6 +34,12 @@
 #define ARM_TRAIL_RIM 0.6     // trailing-edge rim strength relative to the leading rim
 #define ARM_BODY 0.34         // iter6: filled Julia interior gets a dim surface (was black -> read as isolated clumps)
 #define ARM_RIBBON_BASE 0.16  // iter6: faint continuous base across the whole ribbon under the filaments
+// ITER13 PROWL WAVE: headlight sweep — a soft band of light rolls OUTWARD along the arms (time only),
+// everything outside the band sits dimmer, so the road visibly moves toward you.
+#define PROWL_PERIOD 9.0     // seconds per wave
+#define PROWL_DENS 0.42      // waves per e-fold of radius (~1.2 bands on screen)
+#define PROWL_SHARP 3.0      // band sharpness (higher = narrower sweep)
+#define PROWL_DIM 0.5        // lightness outside the band (1.0 = no effect)
 
 // ============================================================================
 // AUDIO MAPPING (iter5) — one feature per visible role, all AMPLITUDE/OFFSET (never inside a
@@ -61,8 +71,8 @@
 #define SECTION_MOOD (SECTION_GATE * clamp(0.5 * MEDZ(energyMedian, energyMean, energyStandardDeviation) + 0.5 * MEDZ(bassMedian, bassMean, bassStandardDeviation) - 0.5 * MEDZ(spectralCentroidMedian, spectralCentroidMean, spectralCentroidStandardDeviation) - 0.5 * MEDZ(spectralRolloffMedian, spectralRolloffMean, spectralRolloffStandardDeviation), -1.0, 1.0))
 #define MOOD_RED 0.5       // how far an intense section pulls the arm hue toward pure red
 #define MOOD_VIOLET 0.08   // how far a calm section tilts the arm hue toward violet
-#define ENGINE_GROWL (0.70 + 0.30 * DRIVE_BASS)      // rest 0.70 = the calm look
-#define ENGINE_GROWL_TEX (0.80 + 0.25 * DRIVE_MIDS + 0.30 * DRIVE_HIT)
+#define ENGINE_GROWL (RIM_REST + (1.0 - RIM_REST) * BASS_KICK)   // iter15: was 0.70+0.30*DRIVE_BASS (sat ~0.85, no contrast)
+#define ENGINE_GROWL_TEX (0.80 + 0.25 * rezzMids + 0.30 * rezzHit)   // iter18: controller envelopes (was raw per-frame mids/flux -> brightness flicker)
 #define CARDIOID_K 0.96          // inset of the c path inside the main cardioid (1.0 = boundary, filament-rich; lower = fatter, smoother)
 #define CARDIOID_AUDIO_K 0.025   // centroid nudges the inset toward the boundary (more filigree when brighter)
 #define CARDIOID_AUDIO_TH 0.35   // spread nudges where along the cardioid c sits (rad)
@@ -78,6 +88,25 @@
 #define EYE_MOAT_OUT 2.4     // ... to this x EYE_R, so the ring reads as a ring, not the end of the coil
 #define EYE_EMERGE 0.13      // lead rims visibly streaming out of the eye
 #define EYE_BREATH D_(0.5 + 0.5 * SECTION_GATE * MEDZ(bassMedian, bassMean, bassStandardDeviation))   // slow bass -> ring breath
+// ITER15 BASS KICK: dead-zoned bass peaks flash the iris ring and the lead rims (SHADING only, no geometry).
+// Live USB feed: bassNormalized median ~0.43, peaks 0.77 -> the dead-zone keeps the rest dim and the kicks hot.
+// ITER18 RATCHET (controllers/rezz-ratchet.js): texture coords + fractal params move ONLY via monotonic
+// accumulators (audio changes their RATE, never their value); transients arrive as attack/release envelopes.
+uniform float rezzFlow;   // texture streams along the arm
+uniform float rezzDrive;  // bands stream out from the centre
+uniform float rezzSpin;   // per-level fold twist
+uniform float rezzMorph;  // slow hex/ring shape cycle
+uniform float rezzKick;   // bass kick envelope (attack 30ms / release 220ms)
+uniform float rezzMids;   // mids body envelope
+uniform float rezzHit;    // flux hit envelope
+#define BASS_KICK rezzKick   // iter18: envelope, was raw D_(smoothstep(0.40, 0.75, bassNormalized)) per frame
+// ITER16 CENTRE FLEX: kick bulges the centre outward (lens warp on radius only), springs back; outer arms untouched
+#define FLEX_AMT 0.12
+#define FLEX_R0  0.06
+#define FLEX_R1  0.55
+#define FLEX_ENV pow(BASS_KICK, 1.5)
+#define EYE_REST 0.40        // iris lightness between kicks (fraction of EYE_L)
+#define RIM_REST 0.50        // lead-rim lightness between kicks (fraction of ARM_RIM)
 
 // Function to check if pixel and surrounding area is solid white
 float getWhiteAmount(vec2 uv, vec2 pixelSize) {
@@ -138,6 +167,46 @@ vec2 julia(vec2 uv,float t){
 // Color palette system
 vec3 palette(float t, vec3 a, vec3 b, vec3 c, vec3 d) {
     return a + b*cos(6.28318*(c*t + d));
+}
+
+// ============================================================================
+// ITER17 HEX MIRROR-FOLD (transplanted from lattice-interactive/3 fractal(), controller-free)
+// ============================================================================
+#define HX_LEVELS 10
+#define HX_FIRST 2        // 3.frag used 4; arm space is ~4x denser per pixel, so draw from 2 levels earlier
+#define HX_SEAM_N 1.0     // MUST be an integer: fold periods per atan-seam jump (non-integer = seam ray)
+#define HX_HEXR 0.60      // hex rim radius (3.frag gHexR base)
+#define HX_RING 0.17      // centre ring radius (3.frag gCross base)
+#define HX_BORDER 0.028   // rim width (3.frag gBorder base)
+#define HX_SPIN 0.0133    // per-level twist rate, rad/sec (3.frag bTime*0.04), TIME ONLY
+
+mat2 hxRot(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
+float hxHex(vec2 p){ p = abs(p); return max(p.x + p.y * 0.57735027, max(p.x, p.y * 1.15470054)); }
+
+// returns (rim light ~0..1, depth field 0=coarse..1=fine, alpha coverage)
+vec3 hxFold(vec2 p, float pix, float spin, float zoom, float hexR, float ringR, float border){
+    float scale = zoom, alpha = 0.0, lumAcc = 0.0, fieldAcc = 0.0;
+    for (int i = 0; i < HX_LEVELS; i++){
+        p = 1.0 - abs(2.0 * fract(p - 0.5) - 1.0);
+        if (i == 0) p = 0.5 + (p - 0.5) * zoom;
+        p *= hxRot(float(i) * 0.39269908 + spin * (0.4 + float(i) * 0.05) + (seed3 - 0.5) * float(i) * 0.8);
+        scale *= 2.0;
+        if (i < HX_FIRST) continue;
+        vec2 a = abs(p);
+        float m = min(abs(hxHex(a) - hexR - 0.1), min(abs(length(a) - ringR), min(a.x, a.y)));
+        float ld = float(i - HX_FIRST) / float(HX_LEVELS - 1 - HX_FIRST);
+        float alias = pix * 0.5 * scale;                          // true pixel footprint at this level
+        float bw = border * (0.20 + 0.80 * ld);                   // coarse levels get thin rims
+        float res = smoothstep(bw * 1.6, bw * 0.5, alias);        // sub-pixel level -> 0, not haze
+        float rim = smoothstep(bw + alias, bw, m) * res;
+        float halo = smoothstep(bw * 1.6 + 0.004, bw * 1.1, m) * res;
+        float w = (1.0 - alpha) * (rim * 0.90 + halo * 0.07);     // weight IS alpha (front-to-back)
+        lumAcc += w * (rim * 0.95 + halo * 0.22);
+        fieldAcc += w * ld;
+        alpha += w;
+    }
+    float ia = 1.0 / max(alpha, 1e-3);
+    return vec3(lumAcc * ia, fieldAcc * ia, alpha);               // lum normalized (3.frag bug fix)
 }
 
 // Main image function
@@ -266,12 +335,16 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
     // phases are monotonic in time only. The Julia set is PROJECTED onto the arms as a texture.
     vec2 sp = (fragCoord * 2.0 - iResolution.xy) / iResolution.y;
     float spR = max(length(sp), 0.015);
-    float spA = atan(sp.y, sp.x) / 6.28318 + time * SPIN_SPEED;
+    float spLog = log(max(spR, 1e-4));
+    float flexW = 1.0 - smoothstep(log(FLEX_R0), log(FLEX_R1), spLog);
+    spR = exp(spLog - FLEX_AMT * FLEX_ENV * flexW);   // ITER16 radial-only, no angle term
+    float spinPhase = SPIN_SPEED * (time - SPIN_SURGE * SPIN_SURGE_PERIOD / 6.28318 * cos(6.28318 * time / SPIN_SURGE_PERIOD));   // ITER14
+    float spA = atan(sp.y, sp.x) / 6.28318 + spinPhase;
     float spTight = SPIRAL_TIGHT * (1.0 + COIL_BREATH * DRIVE_COIL);   // ITER8_COIL
-    float spiral = fract((log(spR) - COIL_ANCHOR) * spTight + spA * SPIRAL_ARMS - time * DRIVE_SPEED);
+    float spiral = fract((log(spR) - COIL_ANCHOR) * spTight + spA * SPIRAL_ARMS - rezzDrive);   // iter18 ratchet (was time * DRIVE_SPEED)
     float spiralArm = smoothstep(0.0, 0.08, spiral) * smoothstep(0.62, 0.42, spiral);
     // leading rim + dimmer trailing rim frame each ribbon so all 4 arms read as one coherent band
-    float leadRim = smoothstep(0.0, 0.035, spiral) * smoothstep(0.13 + 0.07 * DRIVE_BASS, 0.04, spiral);
+    float leadRim = smoothstep(0.0, 0.035, spiral) * smoothstep(0.13, 0.04, spiral)   /* iter15: rim width no longer wobbles with per-frame bass */;
     float trailRim = (ARM_TRAIL_RIM + 0.5 * DRIVE_AIR) * smoothstep(0.47, 0.545, spiral) * smoothstep(0.64, 0.565, spiral);
     float spiralRim = max(leadRim, trailRim);
     float depth = smoothstep(0.02, 0.75, spR);                   // vanishing point recedes into black
@@ -280,49 +353,29 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
     // rides the arm undistorted and shrinks toward the vanishing point like perspective.
     // u jumps by SPIRAL_TIGHT*2PI across the atan seam; tiling u by that / ARM_TEX_TILES keeps it seamless.
     float spTheta = spA * 6.28318;
-    float armU = log(spR) * (SPIRAL_ARMS / 6.28318) - SPIRAL_TIGHT * spTheta - time * ARM_TEX_FLOW;   // texture stays on the REST coil: rescaling tiles with the breathing coil tripled jitter (iter8 A/B)
+    float armU = log(spR) * (SPIRAL_ARMS / 6.28318) - SPIRAL_TIGHT * spTheta - rezzFlow;   // texture stays on the REST coil: rescaling tiles with the breathing coil tripled jitter (iter8 A/B)
     float armTile = SPIRAL_TIGHT * 6.28318 / ARM_TEX_TILES;
     float armAlong = abs(fract(armU / armTile) * 2.0 - 1.0);      // mirrored -> no seam between tiles
     float armAcross = clamp(spiral / 0.62, 0.0, 1.0);
     // mirrored across the ribbon centre: both edges carry the same Julia structure, so the rim
     // hugs lit texture instead of floating beside a dark exterior strip (iter4: "only 2 of 4 rims")
     float armMirror = abs(armAcross - 0.5) * 2.0;
-    vec2 jz = vec2((armAlong - 0.5) * 3.0, (armMirror - 0.5 + TEX_ACROSS_SLIDE * DRIVE_CHAOS) * ARM_TEX_ACROSS);
-    jz /= 1.0 + JULIA_AUDIO_ZOOM * DRIVE_KURT;                    // kurtosis zooms into the texture
-    // Julia-space size of one screen pixel, for crisp distance-estimate filaments
-    float jpx = clamp(max(fwidth(armAlong) * 3.0, fwidth(armMirror) * ARM_TEX_ACROSS), 1e-4, 0.05);
-    // iter10: c rides a curve just INSIDE the Mandelbrot main cardioid, so every Julia set on the path
-    // is connected and fills the ribbon (the old 0.7885 circle wandered into dust). Time walks theta
-    // monotonically; centroid/spread nudge theta and the inset k by small smoothed amounts.
-    float jTh = time * ARM_JULIA_MORPH + CARDIOID_AUDIO_TH * D_(MEDZ(spectralSpreadMedian, spectralSpreadMean, spectralSpreadStandardDeviation));
-    float jK = clamp(CARDIOID_K + CARDIOID_AUDIO_K * D_(MEDZ(spectralCentroidMedian, spectralCentroidMean, spectralCentroidStandardDeviation)), 0.85, 0.995);
-    vec2 jE = vec2(cos(jTh), sin(jTh));
-    vec2 jE2 = vec2(jE.x * jE.x - jE.y * jE.y, 2.0 * jE.x * jE.y);
-    vec2 jc = jK * (0.5 * jE - 0.25 * jE2);                        // c = k * (e^{iθ}/2 - e^{2iθ}/4)
-    vec2 jdz = vec2(1.0, 0.0);
-    float jn = 0.0;
-    for (int i = 0; i < 48; i++) {
-        jdz = 2.0 * vec2(jz.x * jdz.x - jz.y * jdz.y, jz.x * jdz.y + jz.y * jdz.x);
-        jz = vec2(jz.x * jz.x - jz.y * jz.y, 2.0 * jz.x * jz.y) + jc;
-        if (dot(jz, jz) > 16.0) break;
-        jn += 1.0;
-    }
-    // filaments: distance estimate -> thin crisp lines; the filled interior (never escaped) stays black
-    float jr = length(jz);
-    float jde = 0.5 * jr * log(max(jr, 1.0001)) / max(length(jdz), 1e-6);
-    float filament = jn >= 47.0 ? 0.0 : 1.0 - smoothstep(0.0, (ARM_FILAMENT_WIDTH + 1.6 * DRIVE_CREST) * jpx, jde);
-    float escGlow = jn >= 47.0 ? 0.0 : clamp((jn + 1.0 - log2(log2(max(dot(jz, jz), 1.0001)))) / ARM_TEX_GAIN, 0.0, 1.0);
-    float armTex = max(filament, escGlow * (ARM_GLOW_FLOOR + 0.22 * DRIVE_GRIT));
-    // iter6 RIBBON FILL: the filled interior is a dim surface, and the ribbon carries a faint base,
-    // so the Julia reads as a pattern printed across the whole ribbon instead of dust clumps on black
-    float ribbonCore = smoothstep(0.0, 0.35, 1.0 - armMirror);   // strongest mid-ribbon, fades to the rims
-    if (jn >= 47.0) armTex = max(armTex, ARM_BODY * (0.75 + 0.5 * DRIVE_MIDS));
-    armTex = max(armTex, ARM_RIBBON_BASE * (0.6 + 0.4 * ribbonCore));
-    // hue walk keyed to the texture's STRUCTURE only (no mids/grit amplitude), so fast audio brightens
-    // the texture without flickering its colour (iter9)
-    float armTexShape = max(max(filament, escGlow * ARM_GLOW_FLOOR), ARM_RIBBON_BASE * (0.6 + 0.4 * ribbonCore));
-    if (jn >= 47.0) armTexShape = max(armTexShape, ARM_BODY);
-    float texWalk = abs(fract(armTexShape * 1.3 + t * 0.02) * 2.0 - 1.0);
+    // ITER17 HEX FOLD ON THE ARMS (lattice-interactive/3): (armU, spiral) is the conformal equal-scale pair of
+    // the log-spiral, so the fold rides the ribbon undistorted and shrinks toward the vanishing point.
+    // armU jumps by SPIRAL_TIGHT*2PI across the atan seam; hxK makes that jump exactly HX_SEAM_N fold periods.
+    float hxK = HX_SEAM_N / (SPIRAL_TIGHT * 6.28318);
+    vec2 hp = vec2(armU, spiral) * hxK;
+    // analytic pixel footprint (fwidth spikes on the seam ray and would black it out via res)
+    float hxPix = 2.0 / (iResolution.y * spR) * length(vec2(SPIRAL_ARMS / 6.28318, SPIRAL_TIGHT)) * hxK;
+    vec3 hx = hxFold(hp, hxPix, rezzSpin, 1.0,   // iter18 ratchet (was time * HX_SPIN)
+                     HX_HEXR + 0.05 * sin(rezzMorph * 6.28318),      // iter18: smooth shape cycle on a ratchet clock (was kurtosis MEDZ, back and forth)
+                     HX_RING + 0.03 * sin(rezzMorph * 3.88322 + 1.0),  // iter18: ratchet clock (was bass-median breath)
+                     HX_BORDER);                                       // iter18: fixed width (raw per-frame crest made the lines pulse)
+    float ribbonCore = smoothstep(0.0, 0.35, 1.0 - armMirror);
+    float armTex = max(hx.x * clamp(hx.z, 0.0, 1.0),                 // rim light, black interiors
+                       ARM_RIBBON_BASE * 0.5 * (0.6 + 0.4 * ribbonCore));
+    // depth field -> hue walk: coarse outlines hot red, fine detail toward violet and into shadow
+    float texWalk = abs(fract(hx.y * 0.9 + t * 0.02) * 2.0 - 1.0);
     float texL = smoothstep(0.04, 0.8, armTex) * REZZ_CEIL * (1.0 - 0.65 * texWalk) * ENGINE_GROWL_TEX;
     rezzL = mix(rezzL * (1.0 - ARM_TEX_MIX), texL, ARM_TEX_MIX);
     rezzHue = mix(rezzHue, fract(1.0 - REZZ_SPAN * texWalk), ARM_TEX_MIX);
@@ -337,6 +390,10 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
     moodH = mix(moodH, 1.0, MOOD_RED * max(SECTION_MOOD, 0.0) * spiralArm);
     moodH -= MOOD_VIOLET * max(-SECTION_MOOD, 0.0) * spiralArm;
     rezzHue = fract(moodH);
+    // ITER13 PROWL: a band at constant phase moves to larger log-radius as time grows -> rolls outward
+    float prowlPhase = fract(log(spR) * PROWL_DENS - time / PROWL_PERIOD);
+    float prowlWave = pow(0.5 + 0.5 * cos(6.28318 * prowlPhase), PROWL_SHARP);
+    rezzL *= mix(PROWL_DIM, 1.0, prowlWave);
     // ITER11 REZZ EYE: rims emerge from the iris, the iris is a thin red ring, the pupil is black
     float eyeD = abs(log(spR) - log(EYE_R));
     float eyeRing = smoothstep(EYE_W, 0.0, eyeD);
@@ -346,7 +403,7 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
     rezzL *= 1.0 - eyeMoat;
     float eyeEmerge = smoothstep(EYE_R * EYE_MOAT_OUT, EYE_R * (EYE_MOAT_OUT + 0.8), spR) * (1.0 - smoothstep(0.24, 0.5, spR));
     float emergeL = leadRim * eyeEmerge * EYE_EMERGE;
-    float eyeL = eyeRing * EYE_L * (0.75 + 0.25 * EYE_BREATH);
+    float eyeL = eyeRing * EYE_L * (EYE_REST + (1.0 - EYE_REST) * BASS_KICK) * (0.85 + 0.15 * EYE_BREATH);   // ITER15 kick + slow breath
     rezzHue = mix(rezzHue, 1.0, max(eyeRing, step(rezzL, emergeL) * eyeEmerge));
     rezzL = max(rezzL, max(emergeL, eyeL));
     rezzL *= smoothstep(EYE_R * 0.80, EYE_R * 0.86, spR);        // pupil: crisp true-black disc
