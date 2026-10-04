@@ -412,3 +412,14 @@ rolloff 27%, flux hit ~5% (correct for a transient). First pass had the gate ope
 - **iter33: lattice lift.** THROB_FLOOR 0.45 -> 0.72 and EVIL_GAMMA 1.45 -> 1.25. With audio silent the
   lattice had vanished in the throb trough (lit 0.001-0.019).
 - **iter34:** LATTICE_GAIN 1.35 on texL (still capped by EVIL_CAP after the grade). The hex/ring cells read clearly again. Probe note: canvas readback from a setTimeout (not rAF) returned an all-black buffer (peak 0), so **always sample inside requestAnimationFrame**.
+- **iter35:** EYE_R 0.065 -> 0.085. The slit eye reads as the focal point (dark red iris, black vertical slit, red ring, black moat). Energy 0.116 at the read.
+- **iter36:** The trailing rim is now dim oxblood (hue 0.975, ARM_TRAIL_RIM 0.6 -> 0.42); it was a bright purple band that read "fun". Cold violet now lives only in the deep lattice levels. Note: the viewport flips between 1456x819 and 1527x784, so read the frame from each screenshot before parking.
+- **iter37:** autopilot shape drift. Each scene picks its own thorn taper (2-7) and ring tightness
+  (0.50-0.85), with the same smootherstep crossfade.
+- **INCIDENT: a stale controller ran after a page reload.** After the viewport-change reload the page ran
+  the ORIGINAL iter18 rezz-ratchet (8 keys) straight from the browser module cache. Arm spin, zoom,
+  autopilot, detail clocks and wavelets all read 0 (undefined uniform -> 0) with no visible error. It
+  was caught because `rezzScene` read null. Hot-swapped back with `loadControllers(bust)` (25 keys, spin
+  0.085 t/s). **Root-cause fix:** `index.js` now cache-busts the initial controller load in dev
+  (`{ bust: import.meta.env?.DEV }`). **Check:** after ANY reload, verify the controller key count
+  before trusting the frame.

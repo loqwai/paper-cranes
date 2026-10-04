@@ -31,7 +31,7 @@
 #define ARM_TEX_ACROSS 1.6    // Julia span across the ribbon (mirrored at the centre)
 #define ARM_FILAMENT_WIDTH 2.5   // distance-estimate line width in screen pixels
 #define ARM_GLOW_FLOOR 0.45   // dim escape-glow under the filaments so the ribbon body isn't empty
-#define ARM_TRAIL_RIM 0.6     // trailing-edge rim strength relative to the leading rim
+#define ARM_TRAIL_RIM 0.42 /* iter36: was 0.6 — the big purple trailing bands read "fun", now a dim oxblood edge */     // trailing-edge rim strength relative to the leading rim
 #define ARM_BODY 0.34         // iter6: filled Julia interior gets a dim surface (was black -> read as isolated clumps)
 #define ARM_RIBBON_BASE 0.16  // iter6: faint continuous base across the whole ribbon under the filaments
 // ITER13 PROWL WAVE: headlight sweep — a soft band of light rolls OUTWARD along the arms (time only),
@@ -231,6 +231,10 @@ float hxHex(vec2 p){ p = abs(p); return max(p.x + p.y * 0.57735027, max(p.x, p.y
 // returns (rim light ~0..1, depth field 0=coarse..1=fine, alpha coverage)
 vec3 hxFold(vec2 p, float pix, float spin, float zoom, float hexR, float ringR, float border){
     float scale = zoom, alpha = 0.0, lumAcc = 0.0, fieldAcc = 0.0;
+    // ITER37 autopilot shape drift: each scene picks its own thorn taper + ring tightness (smootherstep crossfade)
+    vec4 evLook = rzLook();
+    float thornK = 2.0 + 5.0 * evLook.z;
+    float ringK = 0.50 + 0.35 * evLook.w;
     for (int i = 0; i < HX_LEVELS; i++){
         // ITER23: shift BEFORE the fold by fract(clock): the fold repeats every 1 unit, so the fract wrap is
         // invisible and the crawl is forward-only forever (x only, so a wrap is a whole-period jump)
@@ -247,8 +251,8 @@ vec3 hxFold(vec2 p, float pix, float spin, float zoom, float hexR, float ringR, 
         // from the cell centre, and a tighter ring. Shape only: widths and clocks untouched.
         vec2 a30 = vec2(a.x * 0.8660254 - a.y * 0.5, a.x * 0.5 + a.y * 0.8660254);
         float star = min(hxHex(a), hxHex(abs(a30)) * 1.08);
-        float thorn = min(a.x * (1.0 + 4.0 * a.y), a.y * (1.0 + 4.0 * a.x));
-        float m = min(abs(star - hexR - 0.1), min(abs(length(a) - ringR * EVIL_RING), thorn));
+        float thorn = min(a.x * (1.0 + thornK * a.y), a.y * (1.0 + thornK * a.x));
+        float m = min(abs(star - hexR - 0.1), min(abs(length(a) - ringR * ringK), thorn));
         float ld = float(i - HX_FIRST) / float(HX_LEVELS - 1 - HX_FIRST);
         float alias = pix * 0.5 * scale;                          // true pixel footprint at this level
         float bw = border * (0.20 + 0.80 * ld);                   // coarse levels get thin rims
@@ -454,7 +458,7 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
     rezzL *= mix(1.0 - TROUGH_DARK, 1.0, spiralArm) * depth;
     rezzL = max(rezzL, spiralRim * depth * ARM_RIM * ENGINE_GROWL);  // hot red leading edge
     rezzHue = mix(rezzHue, 1.0, leadRim);                         // leading rim is pure red
-    rezzHue = mix(rezzHue, 0.80, trailRim * 0.7);                  // trailing rim is violet (treble only brightens it)
+    rezzHue = mix(rezzHue, 0.975, trailRim * 0.85);                // ITER36: trailing rim is dark oxblood now (was violet 0.80) — cold violet lives only in the deep lattice
     rezzHue = fract(rezzHue - (1.0 - spiralArm) * 0.05);          // gaps lean violet
     // section mood: unwrap to [0.5,1.5) so red (1.0) sits mid-range, lean, then fold back — no wrap seam
     float moodH = rezzHue < 0.5 ? rezzHue + 1.0 : rezzHue;
