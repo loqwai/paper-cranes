@@ -57,7 +57,27 @@ export const make = () => {
         env.bass = ease(env.bass, g * (features.bassNormalized ?? 0), 0.6, dt)
         env.mids = ease(env.mids, g * (features.midsNormalized ?? 0), 0.6, dt)
 
-        const kickTarget = g * smoothstep(0.40, 0.75, features.bassNormalized ?? 0)
+        // ── WAVELETS (iter32, needs &wavelet=true; every term is 0 without it) ──
+        // wavelet_bassHit is a raw, unbounded bass-energy delta: auto-gain it against a decaying peak.
+        const hit = Math.max(0, features.wavelet_bassHit ?? 0)
+        env.hitPeak = Math.max(hit, (env.hitPeak ?? 0) * Math.exp(-dt / 8.0))
+        // bassHit spikes for ~1 frame: hold it with an instant attack + 180ms decay so the kick envelope sees it
+        env.onset = Math.max(smoothstep(0.15, 0.7, hit / Math.max(env.hitPeak, 1e-6)), (env.onset ?? 0) * Math.exp(-dt / 0.18))
+        const onset = env.onset
+        // wavelet_punch rests ~0.35-0.55: use its excess over its own running mean
+        const punch = features.wavelet_punch ?? 0
+        env.punchMean = ease(env.punchMean ?? punch, punch, 4.0, dt)
+        env.punch = envelope(env.punch ?? 0, g * clamp01((punch - env.punchMean) * 5.0), 0.03, 0.35, dt)
+        // octave bands -> coarse/mid/fine fold-level brightness (low = band0-1, mid = band2-3, high = band4-5)
+        const band = (i) => features[`waveletBand${i}Normalized`] ?? 0
+        env.wLow = ease(env.wLow ?? 0, g * 0.5 * (band(0) + band(1)), 0.5, dt)
+        env.wMid = ease(env.wMid ?? 0, g * 0.5 * (band(2) + band(3)), 0.5, dt)
+        env.wHigh = ease(env.wHigh ?? 0, g * 0.5 * (band(4) + band(5)), 0.5, dt)
+
+        // kick = 50/50 FFT bass dead-zone + wavelet onset (cleaner on mic); onset is 0 without wavelets
+        const hasWavelet = features.wavelet_bassHit !== undefined
+        const fftKick = smoothstep(0.40, 0.75, features.bassNormalized ?? 0)
+        const kickTarget = g * (hasWavelet ? 0.5 * fftKick + 0.5 * onset : fftKick)
         env.kick = envelope(env.kick, kickTarget, 0.03, 0.22, dt)
         env.midsBody = ease(env.midsBody, g * smoothstep(0.45, 0.95, features.midsNormalized ?? 0), 0.35, dt)
         const hitTarget = g * smoothstep(0.30, 1.0, features.spectralFluxZScore ?? 0)
@@ -112,7 +132,7 @@ export const make = () => {
         phase.armSpin = ((phase.armSpin ?? 0) + armRate * dt) % 1
 
         // detail clocks: fine fold levels crawl forward; flux hits SURGE the rate, never the position
-        phase.detail += (0.25 + 0.9 * env.hit) * dt
+        phase.detail += (0.25 + 0.9 * env.hit + 0.8 * env.punch) * dt   // iter32: wavelet punch surges the crawl rate
         phase.detailSpin += Math.max(0.01, 0.05 + 0.035 * env.trend) * dt
 
         return {
@@ -130,7 +150,11 @@ export const make = () => {
             rezzZoom: phase.zoom,               // spiral log-r shift
             rezzZoomTex: phase.zoom * ZOOM_TEX, // arm-texture log-r shift (wrap-aligned)
             rezzDetail: phase.detail,
-            rezzDetailRate: 0.25 + 0.9 * env.hit,   // current rate, for the shader's speed-based LOD
+            rezzDetailRate: 0.25 + 0.9 * env.hit + 0.8 * env.punch,   // current rate, for the shader's speed-based LOD
+            rezzWLow: env.wLow,
+            rezzWMid: env.wMid,
+            rezzWHigh: env.wHigh,
+            rezzOnset: onset,
             rezzDetailSpin: phase.detailSpin,
             rezzGrit: env.grit,
             rezzDepth: env.depth,

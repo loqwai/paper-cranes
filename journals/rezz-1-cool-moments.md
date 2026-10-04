@@ -393,3 +393,22 @@ rolloff 27%, flux hit ~5% (correct for a transient). First pass had the gate ope
   Live: 0.070 turns/s (energy 0 at the read). bear-move is still chained in the URL but nothing uses it,
   so drop it on the next natural reload.
 - **iter30: EVIL GEOMETRY.** Fold rim is now a star (hex ∪ hex rotated 30°, 12 spikes), the cross axes are thorns `min(a.x*(1+4a.y), a.y*(1+4a.x))` that taper away from the cell centre, and the ring is narrower (EVIL_RING 0.65). Shape only; widths and clocks are untouched. Reads as red cracks and veins on black. Live, with audio silent (energy 0, so the entropy reveal is at its minimum): peak 0.114, **black 0.88**. Sparse in silence; should fill in when music returns.
+- **iter31: OMINOUS THROB.** A lub-dub heartbeat (two gaussians at 0.12 and 0.30 of each cycle) on the LATTICE brightness only (texL; rims and eye untouched). It's clocked by the forward-only rezzDrive x0.9 (~5 s per beat), so it pulses in silence too. Floor 0.45. Brightness, never coords. Audio returning (energy 0.016).
+- **iter32: WAVELETS** (`&wavelet=true`). `wavelet_bassHit` is raw and unbounded, so it's auto-gained against a
+  decaying peak (8 s), held with an instant attack and 180 ms decay, and blended 50/50 with the FFT bass
+  dead-zone into the kick envelope (flex / eye / rims). Wavelet octaves (band0-1 low, 2-3 mid, 4-5 high,
+  eased 0.5 s) set per-fold-level brightness: coarse levels follow low, fine levels follow high. Gain
+  0.75 + 0.7*band. `wavelet_punch` excess over its 4 s mean surges the detail crawl rate (+0.8, rate only).
+  bear-move was dropped from the URL on this reload (nothing uses it).
+- **AUDIO INPUT INCIDENT (this reload):** the input order changed after the Chrome relaunch, so the page
+  took "Default". The USB codec (now "PCM2902 ... Analog Mono (Left)") is silent on both channels; the
+  music is on the laptop speakers. Setting the PipeWire default source to the speaker MONITOR made Chrome
+  fail with `NotReadableError: Could not start audio source`, so **Chrome can't open a monitor through
+  "Default" here.** The default source is now the built-in mic `alsa_input.pci-0000_00_1f.3.analog-stereo.2`,
+  and it works: energy 0.059-0.064, gate open, kick 0.20-0.44 (mean 0.36, not pinned), onset 0.12-0.95,
+  wLow 0.19-0.36, wHigh 0.28-0.54. Old default to restore after the show:
+  `alsa_input.usb-Burr-Brown_from_TI_USB_Audio_CODEC-00.analog-mono-left`. The viewport is now 1527x784, so the
+  cursor park is at (1526, 783).
+- **iter33: lattice lift.** THROB_FLOOR 0.45 -> 0.72 and EVIL_GAMMA 1.45 -> 1.25. With audio silent the
+  lattice had vanished in the throb trough (lit 0.001-0.019).
+- **iter34:** LATTICE_GAIN 1.35 on texL (still capped by EVIL_CAP after the grade). The hex/ring cells read clearly again. Probe note: canvas readback from a setTimeout (not rAF) returned an all-black buffer (peak 0), so **always sample inside requestAnimationFrame**.

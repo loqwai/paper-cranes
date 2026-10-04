@@ -79,12 +79,14 @@
 #define JULIA_AUDIO_ZOOM 0.35    // kurtosis zooms the arm texture
 #define TEX_ACROSS_SLIDE 0.6     // entropy slides the texture across the ribbon
 #define EVIL_CAP 0.25           // iter26 darkwave cap (was FINAL_L_CAP 0.275)
+#define LATTICE_GAIN 1.35       // iter34: lattice line lift with audio live
+#define THROB_FLOOR 0.72 /* iter33: was 0.45 — stacked with gamma the lattice vanished in the trough */        // iter31 lattice brightness between heartbeats
 #define EVIL_RING 0.65          // iter30 narrower ring inside each cell
-#define EVIL_GAMMA 1.45         // iter26 contrast: >1 darkens mid-tones, keeps the hottest edges
+#define EVIL_GAMMA 1.25         // iter26 contrast: >1 darkens mid-tones, keeps the hottest edges
 #define FINAL_L_CAP 0.275        // hard lightness cap after every driver — never white
 // ITER11 REZZ EYE: the arms converge into a thin hot-red iris ring around a pure-black pupil.
 // Built in log-radius space so it belongs to the spiral (not a screen-space disc).
-#define EYE_R 0.065          // iris radius (uv units, screen height = 2)
+#define EYE_R 0.085          // iris radius (uv units, screen height = 2) — iter35: 0.065 -> 0.085, the sinister slit eye reads as the focal point
 #define EYE_W 0.18           // ring half-width in log-radius (~4.5px at 812px tall) — iter12: was 0.11, coil swallowed it
 #define EYE_IRIS_L 0.11     // iter28 iris fill lightness around the slit
 #define EYE_L 0.25           // ring lightness at full breath (HSL, before FINAL_L_CAP)
@@ -126,6 +128,10 @@ uniform float rezzDetailSpin;  // twist clock (centroid trend leans the rate)
 uniform float rezzGrit;   // spectralRoughness -> fine-level line brightness (grit)
 uniform float rezzDepth;  // spectralEntropy   -> how deep the fold is revealed
 uniform float rezzSharp;  // spectralCrest     -> rim contrast (halo cut, never width)
+// ITER32 WAVELET OCTAVES -> fold depth: low bands light the coarse levels, high bands the fine ones
+uniform float rezzWLow;   // waveletBand0-1 (43-170 Hz), eased
+uniform float rezzWMid;   // waveletBand2-3
+uniform float rezzWHigh;  // waveletBand4-5 (up to ~2.8 kHz)
 uniform float rezzAir;    // treble            -> violet sparkle on the finest levels
   // arm-texture log-r shift (wrap-aligned to whole fold periods)
 vec4 rzPreset(float i) {
@@ -255,6 +261,8 @@ vec3 hxFold(vec2 p, float pix, float spin, float zoom, float hexR, float ringR, 
         float vis = smoothstep(reveal + 0.15, reveal - 0.15, ld);
         rim *= vis; halo *= vis * (1.0 - 0.7 * rezzSharp);   // crest: crisper rims, less glow
         float lvGain = 1.0 + 0.7 * rezzGrit * ld + 0.9 * rezzAir * smoothstep(0.6, 1.0, ld);  // grit + air sparkle on the fine end
+        float wBand = ld < 0.5 ? mix(rezzWLow, rezzWMid, ld * 2.0) : mix(rezzWMid, rezzWHigh, ld * 2.0 - 1.0);
+        lvGain *= 0.75 + 0.7 * wBand;   // iter32: each depth breathes with its own wavelet octave
         float w = (1.0 - alpha) * (rim * 0.90 + halo * 0.07);     // weight IS alpha (front-to-back)
         lumAcc += w * (rim * 0.95 + halo * 0.22) * lvGain;
         fieldAcc += w * ld;
@@ -434,6 +442,12 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
     // ITER19 BUILD REVEAL: fine fold levels (violet end of texWalk) sit in shadow; a section build lifts
     // that shadow so the deeper lattice lights up. Brightness only (no coords, no width), eased envelope.
     float texL = smoothstep(0.04, 0.8, armTex) * REZZ_CEIL * (1.0 - 0.65 * texWalk * (1.0 - BUILD_REVEAL * rezzBuild)) * ENGINE_GROWL_TEX;
+    // ITER31 OMINOUS THROB: a slow double-beat heartbeat on the LATTICE brightness only (rims/eye untouched),
+    // clocked by the forward-only rezzDrive (~5 s per beat), so it pulses even in silence. Brightness, never coords.
+    float thPh = fract(rezzDrive * 0.9);
+    float throb = exp(-pow((thPh - 0.12) * 14.0, 2.0)) + 0.6 * exp(-pow((thPh - 0.30) * 14.0, 2.0));   // lub-dub
+    texL *= THROB_FLOOR + (1.0 - THROB_FLOOR) * clamp(throb, 0.0, 1.0);
+    texL *= LATTICE_GAIN;   // ITER34 lattice lines brighter (still under EVIL_CAP after the grade)
     rezzL = mix(rezzL * (1.0 - ARM_TEX_MIX), texL, ARM_TEX_MIX);
     rezzHue = mix(rezzHue, fract(1.0 - REZZ_SPAN * texWalk), ARM_TEX_MIX);
 
