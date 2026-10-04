@@ -336,6 +336,13 @@ const addListenersForFullscreen = (visualizer) => {
     }
     const handler = (ev) => { go(ev.type) }
     for (const event of events) window.addEventListener(event, handler, true);
+    // Re-arm whenever we drop out of fullscreen (Esc, focus loss) — otherwise the first success
+    // is the only one and every later gesture is ignored until a reload.
+    document.addEventListener('fullscreenchange', () => {
+        if (document.fullscreenElement || !done) return
+        done = false
+        for (const e of events) window.addEventListener(e, handler, true)
+    })
 }
 
 const main = async () => {
