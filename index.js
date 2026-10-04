@@ -379,7 +379,10 @@ const main = async () => {
     }
 
     // Load and CHAIN controllers — every `?controller=` runs as a left-fold pipeline each frame.
-    const controllerFns = await loadControllers(window.cranes, params.getAll('controller'))
+    // Dev: cache-bust the FIRST load too. Without it a page reload can run a stale controller module
+    // straight from the browser cache — mid-show, a reload silently brought back an hours-old version
+    // with half its uniforms missing (spin/zoom/autopilot read 0). Prod keeps normal caching.
+    const controllerFns = await loadControllers(window.cranes, params.getAll('controller'), { bust: import.meta.env?.DEV ?? false })
     if (controllerFns.length) {
         animateController(composeControllers(controllerFns))
     }
