@@ -23,6 +23,7 @@ Twitchiness shows up in a few distinct forms:
 | Symptom | Likely Cause |
 |---------|-------------|
 | Visuals flash white or blow out on every beat | Additive energy stacking, no clamp |
+| Visuals strobe, and smoothing them makes them late | Driving animation from a level instead of an [onset envelope](onset-detection.md) |
 | Elements jerk to random positions frame-to-frame | Using raw or zScore values for position/scale |
 | Everything moves in sync — no variety between elements | Correlated features, all tracking energy |
 | Visuals are calm then suddenly chaotic (or vice versa) | zScore used for smooth modulation |
@@ -123,6 +124,28 @@ Check via query params:
 ```
 
 Increase smoothing or FFT size to stabilize the input signal.
+
+**But be aware this is a bandage, and it is the reason visuals lag.** Smoothing
+hard enough to kill the shudder is also smoothing hard enough to arrive late;
+every setting of the knob is a compromise between strobing and lag. That is not
+a tuning failure, it is structural: a single signal is being asked to serve as
+both a *measurement* (wants fidelity, wants to be immediate) and an *animation
+driver* (wants continuity, must never jump), and those are opposing
+requirements.
+
+If you are reaching for more smoothing to stop a flash or a strobe, reach for an
+**onset envelope** instead. An envelope is synthesized from a discrete trigger,
+so it cannot shudder — there is no audio left in its path to shudder — and it
+does not lag, because nothing is averaging it. See
+[onset-detection.md](onset-detection.md).
+
+```glsl
+// Smoothing a level: the flash goes away, and so does the timing.
+float punch = bassNormalized;
+
+// An envelope: smooth AND on time, because those stopped being a tradeoff.
+float punch = onsetKick;
+```
 
 ---
 
