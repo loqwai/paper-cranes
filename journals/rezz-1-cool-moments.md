@@ -54,6 +54,12 @@ Brief (user, 2026-10-03): "vibe off of moody-octopus-2, but with a dark, rezz-li
   (iter10 had written to disk unvalidated).
 
 ## Cool moments
+- **iter18 RATCHET: flicker gone, confirmed by the user live** (2026-10-03): *"Not anymore no flicker."*
+  The per-pixel A/B couldn't see it, but the user's eye could. Moving every arm-texture coordinate and
+  fold parameter onto rezz-ratchet's monotonic accumulators (audio = rate only) plus attack/release
+  envelopes fixed the arm-fractal flicker. **Approved and protected from here on:** fractal-first arms
+  (iter17 hex fold) and the centre flex on the beat (iter16). Design hypothesis: **every texture/fold motion
+  goes through a monotonic accumulator.** If a coordinate can be pushed backwards by audio, it will flicker.
 
 ## Todo
 - [ ] Ribbon fill lost again by iter9 (sparse curl glyphs): keep Julia c inside the connected region — clamp the time orbit / section morph, or pick ARM_JULIA_RADIUS/c rest so drift can't leave it.
@@ -329,3 +335,36 @@ rolloff 27%, flux hit ~5% (correct for a transient). First pass had the gate ope
 ## Forks
 - `rezz-1 ⇐ lattice-interactive/3` (iter17): fractal transplant, not a fork. rezz-1's arm texture is now
   lattice-interactive/3's hex mirror-fold (`fractal()` lines 161-214), controller/wavelet uniforms dropped.
+
+## Fast-tick log (live show mode, 2026-10-03: one visible tweak per minute)
+- **iter19: BUILD REVEAL.** New `rezzBuild` in rezz-ratchet (3 s raw-energy envelope vs its 45 s average,
+  smoothstep 1.0-1.5, eased over 1.5 s). The shader lifts the fine-level shadow by `0.7*rezzBuild`, so the
+  deep violet lattice lights up on builds (brightness only). The shader-side build signal, an energyMedian
+  MEDZ, read 0 all the time because the median sits below the mean on this feed, so it's useless as a
+  build detector here. **Controller bugs found:** (1) after the Chrome relaunch the page ran a STALE
+  controller module with no rezzBuild key. Fixed by re-importing through `loadControllers(..., {bust:true})`
+  and `window._hotController`. That hot-swap restarts every phase at 0, so the texture jumps once.
+  (2) The long-term average was seeded from a near-silent first reading, which pinned build at 1.0. Now it
+  seeds only when the gate is above 0.9. Rest frame: peak 0.159-0.166, black 0.63. Will read 0 until a real
+  build.
+- **iter20: AUTOPILOT.** The user wants the picture to keep evolving between edits. New `rezzScene` in
+  rezz-ratchet: a monotonic clock, 70 s per scene (35 s at full build), starting at a random scene each
+  load. The shader hashes a preset per scene index (hex size 0.45-0.75, ring radius 0.10-0.24, violet lean
+  0-0.08, headlight-sweep depth 0.35-0.80) and crossfades to the next with smootherstep over the last 45% of
+  each scene. Shape/brightness/palette only, no coordinate offsets. The controller save didn't auto
+  hot-swap. A manual `loadControllers(bust)` did (scene 43 at first read). Frame: violet-leaning scene,
+  lattice dense, eye intact.
+- **iter21:** FLEX_AMT 0.12 -> 0.17. The approved centre flex is punchier, about 19% bulge on full kicks (model). Still radius-only and envelope-driven.
+- **iter22: BASS ZOOM RATCHET.** User: *"Need more zooming with the bass too. Use the ratcheting mechanism,
+  so we are always moving forward."* `rezzZoom` is forward-only: rate 0.045 + 0.95*kick envelope, in log r.
+  The shader subtracts it from log(spR) in `spiral` and from armU (as `rezzZoomTex`) **after** the iter16
+  flex, so the flex still rides on top. The eye, depth, prowl and hxPix stay on screen radius, so the eye
+  stays fixed. **Seamless wrap:** the spiral period is 0.625 and the arm-fold period is 1.6π² = 15.791, with
+  no exact common period, so the wrap is at 101 spiral periods (63.125) and the texture shift is scaled by
+  1.000641, giving exactly 4 fold periods (and 4·2^i at finer levels) per wrap. Checked in node: 101 / 4.
+  The fold is periodic in its input, so a whole-period jump is bit-identical apart from float error (~0.005
+  period at level 9). Live: zoom 0.16 -> 1.24 in 1.75 s while kick 0.3-0.9 (about 2x per second on kicks),
+  energy 0.05. **The wrap pop hasn't been seen live** (first wrap ~5-20 min in). The controller hot-swap reset
+  every phase once. Watch: kick surges move about 0.013 log-r per frame, which is 0.43 of a level-9 fold
+  period, near wagon-wheel. Those levels are mostly res-gated at that radius. Add the speed-based LOD if
+  fine detail strobes on kicks.

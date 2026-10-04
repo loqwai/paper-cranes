@@ -99,9 +99,27 @@ uniform float rezzMorph;  // slow hex/ring shape cycle
 uniform float rezzKick;   // bass kick envelope (attack 30ms / release 220ms)
 uniform float rezzMids;   // mids body envelope
 uniform float rezzHit;    // flux hit envelope
+uniform float rezzBuild;  // ITER19 section build 0..1 (3s energy envelope vs its 45s average, eased)
+// ITER20 AUTOPILOT: rezzScene (controller, monotonic, ~70s per scene) picks a hashed preset look per scene and
+// crossfades to the next with smootherstep over the last 45% of the scene. Shape/brightness/palette only,
+// never a coordinate offset, so nothing can run backwards.
+uniform float rezzScene;
+// ITER22 BASS ZOOM RATCHET: forward-only plunge in log r (drift + kick surge), wrapped seamlessly in the controller
+uniform float rezzZoom;     // spiral log-r shift
+uniform float rezzZoomTex;  // arm-texture log-r shift (wrap-aligned to whole fold periods)
+vec4 rzPreset(float i) {
+    return vec4(fract(sin(i * 12.9898) * 43758.5453), fract(sin(i * 78.233 + 1.7) * 43758.5453),
+                fract(sin(i * 37.719 + 4.1) * 43758.5453), fract(sin(i * 93.989 + 2.3) * 43758.5453));
+}
+vec4 rzLook() {   // x hex size, y ring radius, z violet lean, w prowl depth
+    float x = clamp((fract(rezzScene) - 0.55) / 0.45, 0.0, 1.0);
+    x = x * x * x * (x * (x * 6.0 - 15.0) + 10.0);
+    return mix(rzPreset(floor(rezzScene)), rzPreset(floor(rezzScene) + 1.0), x);
+}
+#define BUILD_REVEAL 0.7   // how much of the fine-level shadow lifts at full build (deep violet lattice lights up)
 #define BASS_KICK rezzKick   // iter18: envelope, was raw D_(smoothstep(0.40, 0.75, bassNormalized)) per frame
 // ITER16 CENTRE FLEX: kick bulges the centre outward (lens warp on radius only), springs back; outer arms untouched
-#define FLEX_AMT 0.12
+#define FLEX_AMT 0.17   // iter21: was 0.12 (14% measured) -> ~19% bulge on kicks, the approved centre flex made punchier
 #define FLEX_R0  0.06
 #define FLEX_R1  0.55
 #define FLEX_ENV pow(BASS_KICK, 1.5)
@@ -341,7 +359,7 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
     float spinPhase = SPIN_SPEED * (time - SPIN_SURGE * SPIN_SURGE_PERIOD / 6.28318 * cos(6.28318 * time / SPIN_SURGE_PERIOD));   // ITER14
     float spA = atan(sp.y, sp.x) / 6.28318 + spinPhase;
     float spTight = SPIRAL_TIGHT * (1.0 + COIL_BREATH * DRIVE_COIL);   // ITER8_COIL
-    float spiral = fract((log(spR) - COIL_ANCHOR) * spTight + spA * SPIRAL_ARMS - rezzDrive);   // iter18 ratchet (was time * DRIVE_SPEED)
+    float spiral = fract((log(spR) - rezzZoom - COIL_ANCHOR) * spTight + spA * SPIRAL_ARMS - rezzDrive);   // iter18 ratchet (was time * DRIVE_SPEED)
     float spiralArm = smoothstep(0.0, 0.08, spiral) * smoothstep(0.62, 0.42, spiral);
     // leading rim + dimmer trailing rim frame each ribbon so all 4 arms read as one coherent band
     float leadRim = smoothstep(0.0, 0.035, spiral) * smoothstep(0.13, 0.04, spiral)   /* iter15: rim width no longer wobbles with per-frame bass */;
@@ -353,7 +371,7 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
     // rides the arm undistorted and shrinks toward the vanishing point like perspective.
     // u jumps by SPIRAL_TIGHT*2PI across the atan seam; tiling u by that / ARM_TEX_TILES keeps it seamless.
     float spTheta = spA * 6.28318;
-    float armU = log(spR) * (SPIRAL_ARMS / 6.28318) - SPIRAL_TIGHT * spTheta - rezzFlow;   // texture stays on the REST coil: rescaling tiles with the breathing coil tripled jitter (iter8 A/B)
+    float armU = (log(spR) - rezzZoomTex) * (SPIRAL_ARMS / 6.28318) - SPIRAL_TIGHT * spTheta - rezzFlow;   // texture stays on the REST coil: rescaling tiles with the breathing coil tripled jitter (iter8 A/B)
     float armTile = SPIRAL_TIGHT * 6.28318 / ARM_TEX_TILES;
     float armAlong = abs(fract(armU / armTile) * 2.0 - 1.0);      // mirrored -> no seam between tiles
     float armAcross = clamp(spiral / 0.62, 0.0, 1.0);
@@ -368,15 +386,17 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
     // analytic pixel footprint (fwidth spikes on the seam ray and would black it out via res)
     float hxPix = 2.0 / (iResolution.y * spR) * length(vec2(SPIRAL_ARMS / 6.28318, SPIRAL_TIGHT)) * hxK;
     vec3 hx = hxFold(hp, hxPix, rezzSpin, 1.0,   // iter18 ratchet (was time * HX_SPIN)
-                     HX_HEXR + 0.05 * sin(rezzMorph * 6.28318),      // iter18: smooth shape cycle on a ratchet clock (was kurtosis MEDZ, back and forth)
-                     HX_RING + 0.03 * sin(rezzMorph * 3.88322 + 1.0),  // iter18: ratchet clock (was bass-median breath)
+                     HX_HEXR + 0.30 * (rzLook().x - 0.5) + 0.05 * sin(rezzMorph * 6.28318),   // iter20 autopilot hex size 0.45..0.75      // iter18: smooth shape cycle on a ratchet clock (was kurtosis MEDZ, back and forth)
+                     HX_RING + 0.14 * (rzLook().y - 0.5) + 0.03 * sin(rezzMorph * 3.88322 + 1.0),   // iter20 autopilot ring 0.10..0.24  // iter18: ratchet clock (was bass-median breath)
                      HX_BORDER);                                       // iter18: fixed width (raw per-frame crest made the lines pulse)
     float ribbonCore = smoothstep(0.0, 0.35, 1.0 - armMirror);
     float armTex = max(hx.x * clamp(hx.z, 0.0, 1.0),                 // rim light, black interiors
                        ARM_RIBBON_BASE * 0.5 * (0.6 + 0.4 * ribbonCore));
     // depth field -> hue walk: coarse outlines hot red, fine detail toward violet and into shadow
     float texWalk = abs(fract(hx.y * 0.9 + t * 0.02) * 2.0 - 1.0);
-    float texL = smoothstep(0.04, 0.8, armTex) * REZZ_CEIL * (1.0 - 0.65 * texWalk) * ENGINE_GROWL_TEX;
+    // ITER19 BUILD REVEAL: fine fold levels (violet end of texWalk) sit in shadow; a section build lifts
+    // that shadow so the deeper lattice lights up. Brightness only (no coords, no width), eased envelope.
+    float texL = smoothstep(0.04, 0.8, armTex) * REZZ_CEIL * (1.0 - 0.65 * texWalk * (1.0 - BUILD_REVEAL * rezzBuild)) * ENGINE_GROWL_TEX;
     rezzL = mix(rezzL * (1.0 - ARM_TEX_MIX), texL, ARM_TEX_MIX);
     rezzHue = mix(rezzHue, fract(1.0 - REZZ_SPAN * texWalk), ARM_TEX_MIX);
 
@@ -389,11 +409,12 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord){
     float moodH = rezzHue < 0.5 ? rezzHue + 1.0 : rezzHue;
     moodH = mix(moodH, 1.0, MOOD_RED * max(SECTION_MOOD, 0.0) * spiralArm);
     moodH -= MOOD_VIOLET * max(-SECTION_MOOD, 0.0) * spiralArm;
+    moodH -= 0.08 * rzLook().z * spiralArm;   // ITER20 autopilot: per-scene lean from blood red toward deep violet
     rezzHue = fract(moodH);
     // ITER13 PROWL: a band at constant phase moves to larger log-radius as time grows -> rolls outward
     float prowlPhase = fract(log(spR) * PROWL_DENS - time / PROWL_PERIOD);
     float prowlWave = pow(0.5 + 0.5 * cos(6.28318 * prowlPhase), PROWL_SHARP);
-    rezzL *= mix(PROWL_DIM, 1.0, prowlWave);
+    rezzL *= mix(mix(0.35, 0.80, rzLook().w), 1.0, prowlWave);   // iter20 autopilot: headlight sweep depth per scene
     // ITER11 REZZ EYE: rims emerge from the iris, the iris is a thin red ring, the pupil is black
     float eyeD = abs(log(spR) - log(EYE_R));
     float eyeRing = smoothstep(EYE_W, 0.0, eyeD);
