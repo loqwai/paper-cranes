@@ -77,19 +77,24 @@ const audioConfig = {
 }
 
 // Factor out common audio setup logic
+// ?audio_device=<label substring> pins the input by name (e.g. "USB Audio CODEC"), so a show
+// never depends on enumeration order. A name that matches nothing is an error, not the first device.
+const pickAudioInput = (audioInputs) => {
+    const wanted = params.get('audio_device')
+    if (!wanted) return audioInputs.length > 1 ? audioInputs[0] : undefined
+    const match = audioInputs.find(d => d.label.toLowerCase().includes(wanted.toLowerCase()))
+    if (!match) throw new Error(`audio_device "${wanted}" not found; inputs: ${audioInputs.map(d => d.label).join(', ')}`)
+    return match
+}
+
 const getAudioStream = async (config) => {
     const devices = await navigator.mediaDevices.enumerateDevices();
-    const audioInputs = devices.filter(device => device.kind === 'audioinput');
+    const input = pickAudioInput(devices.filter(device => device.kind === 'audioinput'));
+    window.cranes.audioInputLabel = input?.label ?? 'browser default';
 
-    const constraints = {
-        audio: {
-            ...config,
-            // Only specify deviceId if we have multiple audio inputs
-            ...(audioInputs.length > 1 ? { deviceId: { exact: audioInputs[0].deviceId } } : {})
-        }
-    };
-
-    return navigator.mediaDevices.getUserMedia(constraints);
+    return navigator.mediaDevices.getUserMedia({
+        audio: { ...config, ...(input ? { deviceId: { exact: input.deviceId } } : {}) }
+    });
 };
 
 // Factor out coordinate handling
@@ -127,18 +132,9 @@ const noAudio = { getFeatures: () => ({}) }
 // fallback when ?audio=tab is requested in a browser that can't capture tab audio.
 const setupMicAudio = async () => {
     try {
-        // get the default audio input
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const audioInputs = devices.filter(device => device.kind === 'audioinput');
-        const defaultAudioInput = audioInputs[0]?.deviceId
-
-        // Get microphone access first
-        await navigator.mediaDevices.getUserMedia({
-            audio: {
-                ...audioConfig,
-                ...(audioInputs.length > 1 && defaultAudioInput ? { deviceId: { exact: defaultAudioInput } } : {})
-            }
-        });
+        // Permission first: device labels are blank until it is granted, and pickAudioInput matches on labels.
+        const permission = await navigator.mediaDevices.getUserMedia({ audio: true });
+        permission.getTracks().forEach(track => track.stop());
         const audioContext = new AudioContext();
         await audioContext.resume();
 
@@ -315,8 +311,11 @@ document.addEventListener('fullscreenchange', () => {
 const addListenersForFullscreen = (visualizer) => {
     for (const event of events) {
         visualizer.addEventListener(event, async () => {
+            // A window that already covers the screen (the show browser) gains nothing from
+            // HTML5 fullscreen except Chrome's "Press Esc to exit full screen" bubble on the wall.
+            const coversScreen = window.innerWidth >= screen.width && window.innerHeight >= screen.height
             try {
-                await document.documentElement.requestFullscreen();
+                if (!coversScreen) await document.documentElement.requestFullscreen();
             } catch (e) {
                 console.error(`requesting fullscreen from event ${event} failed`, e);
             }
