@@ -2,6 +2,25 @@
 
 All notable non-shader feature changes to this project will be documented in this file.
 
+## 2026-10-06
+
+### Features
+
+- **[Show browser](jam-page.md#live-shows) (`scripts/vj/show.js`)** — A dedicated fullscreen Chrome for projecting, driven over CDP. Claude-in-Chrome painted a cursor in the middle of the wall, an orange window glow, and a "Claude is debugging this browser" banner; a Playwright launch adds the "controlled by automated test software" bar. The show browser has none of these. Mic and MIDI are granted up front so no prompt ever draws, screenshots never move the pointer, and the display stays awake while it runs. `/vibej2` now drives the display only through it, and no longer opens a Spotify tab.
+- **[Canvas-only jam page](jam-page.md)** — `/jam.html` draws nothing over the visual: no knob drawer, no "Shader updated" or snapshot toasts, no status chips, no pointer. MIDI knobs, `?remote=control`, and spacebar snapshots all still work, and knob moves still mirror into the URL.
+- **`?audio_device=<name>`** — Pin the mic input by label (e.g. `USB Audio CODEC`) instead of taking whatever enumerates first. A name that matches nothing leaves the page silent rather than opening a different device.
+
+### Fixes
+
+- **No "Press Esc to exit full screen" bubble on a projected wall** — Clicking the canvas no longer requests HTML5 fullscreen when the window already covers the screen.
+
+## 2026-09-07
+
+### Features
+
+- **[Onset envelopes](onset-detection.md)** — Visuals that hit **on** the beat instead of a second after it. An onset detector measures discrete events and is allowed to be noisy; an envelope generator animates a designed curve from each trigger, so motion stays smooth without the smoothing lag. ([#138](https://github.com/loqwai/paper-cranes/pull/138))
+- **Jam page remote control (`?remote=control`)** — Knob changes on the jam page drive remote displays over WebSocket. ([#140](https://github.com/loqwai/paper-cranes/pull/140))
+
 ## 2026-08-20
 
 ### Performance

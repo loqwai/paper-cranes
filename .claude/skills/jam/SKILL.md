@@ -6,7 +6,7 @@ allowed-tools: Bash Read Write Edit Grep Glob Agent mcp__claude-in-chrome__tabs_
 
 # Jam — Launch a Jam Page Session
 
-Open the jam page (`/jam.html`) with a shader, optional controller, and music source. The jam page is lighter than the editor — fullscreen shader + knob drawer + spacebar snapshots. No Monaco editor.
+Open the jam page (`/jam.html`) with a shader, optional controller, and music source. The jam page is lighter than the editor — the shader alone on screen + MIDI knobs + spacebar snapshots. No Monaco editor.
 
 ## Context
 
@@ -74,7 +74,7 @@ Remind them:
 - Share tab audio when prompted (the `?audio=tab` param triggers the picker)
 - **Spacebar** = snapshot preset to queue
 - **Backspace** = undo last snapshot
-- **Cmd+Shift+D** = toggle knob drawer
+- Knobs: MIDI controller, `/vjpad.html`, or `&knob_N=` in the URL (there is no on-screen drawer)
 - Shader and controller edits hot-swap without reload
 
 ### 8. Enter jam mode
