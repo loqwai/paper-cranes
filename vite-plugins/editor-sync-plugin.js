@@ -1,5 +1,5 @@
 import { readFile, writeFile, mkdir, readdir, unlink } from 'fs/promises'
-import { join, dirname } from 'path'
+import { join, dirname, resolve } from 'path'
 import chokidar from 'chokidar'
 
 const SHADER_DIR = 'shaders'
@@ -10,13 +10,8 @@ export function editorSyncPlugin() {
   return {
     name: 'vite-plugin-editor-sync',
 
-    // Controllers are dynamic-imported by the page, so they sit in Vite's module graph with no HMR
-    // accept boundary — left alone, Vite answers every controller edit with a FULL PAGE RELOAD,
-    // which blacks out the projected wall and resets the audio history. The chokidar watcher below
-    // sends `controller-update` instead, and jam.js re-imports the chain in place.
     handleHotUpdate({ file }) {
       if (file.endsWith('.frag')) return []
-      if (/[\\/]controllers[\\/][^\\/]+\.js$/.test(file)) return []
     },
 
     configureServer(server) {
@@ -198,10 +193,17 @@ export function editorSyncPlugin() {
         }
       })
 
-      // Watch controllers/ for hot-reload
+      // vite.config.js keeps controllers/ out of Vite's own watcher (a controller edit would
+      // otherwise full-reload the page — a black flash on the projected wall), so Vite never
+      // invalidates their transforms: a plain-URL import (every fresh page load) kept getting the
+      // version from server start. Invalidate here, then let jam.js re-import the chain in place.
       const controllerWatcher = chokidar.watch('controllers', { ignoreInitial: true })
       controllerWatcher.on('change', async (filePath) => {
         if (!filePath.endsWith('.js')) return
+        const abs = resolve(server.config.root, filePath)
+        for (const env of Object.values(server.environments)) {
+          env.moduleGraph.getModulesByFile(abs)?.forEach(mod => env.moduleGraph.invalidateModule(mod))
+        }
         const name = filePath.replace(/^controllers\//, '').replace(/\.js$/, '')
         server.ws.send({
           type: 'custom',
