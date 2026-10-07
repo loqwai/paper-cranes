@@ -167,4 +167,4 @@ For running a show, see [show-playbook.md](show-playbook.md) and the `/show` ski
 - After any session with design feedback, add the new rules here, quoting the user's own words
   and dating them.
 - Shader-specific decisions belong in that shader's doc (for example
-  `shaders/claude/wip/sun/sun.md`). Only taste that generalizes goes here.
+  `shaders/sun/sun.md`). Only taste that generalizes goes here.

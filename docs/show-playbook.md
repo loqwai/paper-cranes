@@ -122,9 +122,9 @@ The musical states come from `controllers/black-sun.js`:
   the SUPERNOVA, with a manual K8 COLLIDE. Until that lands, force a supernova with
   **K5 = 0.64**.
 
-## 6. Fork library (`shaders/claude/wip/sun/`)
+## 6. Fork library (`shaders/sun/`)
 
-Open a fork with `jam.html?shader=claude/wip/sun/N&controller=sun-N&wavelet=true&vj=1&remote=display`. Use
+Open a fork with `jam.html?shader=sun/N&controller=sun-N&wavelet=true&vj=1&remote=display`. Use
 `controller=sun` for N=1.
 
 | N | Look | Caveat |
@@ -164,7 +164,7 @@ node scripts/vj/show.js eval 'async (path) => {
   window.cranes.shader = src
   const u = new URL(location.href); u.searchParams.set("shader", path); history.replaceState({}, "", u)
   return { ok: true }
-}' '["claude/wip/sun/7"]'
+}' '["sun/7"]'
 ```
 
 The live controller keeps running. A fork's look depends mostly on its shader, and its
@@ -197,7 +197,7 @@ Full list: [vj-preferences.md](vj-preferences.md).
 
 ## 9. Open at the end of rehearsal
 
-The editing agent may already have fixed some of these. Check `shaders/claude/wip/sun/sun.md`.
+The editing agent may already have fixed some of these. Check `shaders/sun/sun.md`.
 
 - Frame-level brightness budget, so loud and **quiet** moments don't wash out the frame.
 - Grey veil over the night sky.
