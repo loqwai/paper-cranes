@@ -1,7 +1,7 @@
 // @fullscreen: true
 // @mobile: false
 // @tags: urchin, blackhole, sun, lattice, psychedelic, vangogh, claude
-// preset: https://visuals.beadfamous.com/?shader=claude/wip/sun/6&controller=sun-6&wavelet=true
+// preset: https://visuals.beadfamous.com/?shader=sun/6&controller=sun-6&wavelet=true
 // BLACK SUN — SUN VARIANT (sun-1.frag): 1.frag with the rays in sun colours — molten pale gold at the
 // eye cooling through saffron/amber/orange to ember-red tips — against the blue Van Gogh sky.
 // Everything below is 1.frag's design; only the palette table differs.

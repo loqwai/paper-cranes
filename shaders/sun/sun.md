@@ -17,13 +17,13 @@ It was captured right after a freeze. A stale controller state object was missin
 
 Audio: BlackHole 2ch as the OS default input. No knobs moved.
 
-Preset: `jam.html?shader=claude/wip/sun/1&controller=sun&vj=1&remote=display`
+Preset: `jam.html?shader=sun/1&controller=sun&vj=1&remote=display`
 
 ## 2.frag + controllers/sun-2.js — fork of live black-sun/sun-1 (2026-10-06, rehearsal)
 
 From here on, forks of this line go in `sun/` (user's call). Look at fork time: a defined orange plasma ball with swirling gold arcs on its surface, slimmer yellow→amber rays with pink filament arcs, and a deep blue Van Gogh tile ground showing between the rays (HAZE-CUT). The LSD cloud bands sweep across mid-frame in teal, olive, pink and amber stripes. Distortion fronts are slower and stronger now (BIG-WAVES, about 2.4× the old lensing), and they fire on large audio changes rather than every kick. The storyline engine was not in yet. No knobs moved.
 
-Preset: `jam.html?shader=claude/wip/sun/2&controller=sun-2&vj=1&remote=display`
+Preset: `jam.html?shader=sun/2&controller=sun-2&vj=1&remote=display`
 
 ## Storylines (live in black-sun/sun-1 + controllers/black-sun.js, 2026-10-06)
 
@@ -37,19 +37,19 @@ Distortion fronts now fire only on LARGE changes (z-jump > 1.3 over the 3 s enve
 
 The story engine has arrived, with sun drift and a night sky (see `docs/storylines.md`). Look at fork time is night at 0.63, with the sun drifted low and to the right: a magenta-and-orange plasma ball with swirling surface arcs and a lensed band crossing it, thin violet and magenta rays with pale spark beads streaming out, and the Van Gogh tiles faded to a dim indigo night with faint nebula colour behind. K5 STORY = 0 (auto). The binary companion was not in yet.
 
-Preset: `jam.html?shader=claude/wip/sun/3&controller=sun-3&vj=1&remote=display`
+Preset: `jam.html?shader=sun/3&controller=sun-3&vj=1&remote=display`
 
 ## 4.frag + controllers/sun-4.js — the first natural SUPERNOVA (2026-10-06, rehearsal)
 
 Forked live during the first supernova the music fired on its own (act 4, a few seconds after the detonation): a huge hot-gold plasma ball low in the frame, the scene blown into abstract LSD plasma (blue/violet/green/amber swirls), thin curling rays everywhere, sky half-dissolved. It also has the first audio-reactive galaxy gas (spiral arms around the sun: bass/kick widen and brighten them and billow the gas, mids set flow speed, flux sends a wave out along the arms, treble glints crests and deepens the star twinkle, roughness/entropy turbulence, drops wind the spiral tighter). The controller snapshot keeps its state on `window.__sun4State`, so it never shares state with the live `black-sun` controller.
 
-Preset: `jam.html?shader=claude/wip/sun/4&controller=sun-4&vj=1&remote=display` (starts at MAIN SEQUENCE; K5 STORY 0.64 forces SUPERNOVA)
+Preset: `jam.html?shader=sun/4&controller=sun-4&vj=1&remote=display` (starts at MAIN SEQUENCE; K5 STORY 0.64 forces SUPERNOVA)
 
 ## 5.frag + controllers/sun-5.js — /fork of live black-sun/sun-1 (2026-10-06, rehearsal)
 
 REBIRTH act (bs_act 6, 51 s in), night 0.52, abstract 0.37, **reach 0.76**: the occasional long-reach mode is on. A small, hot gold-orange plasma star sits upper-left, and long thin curling rays in amber, peach and violet stream across the whole frame and out past its edges. The ground is a half-night nebula sky of indigo, teal and olive gas bands over the faded tile texture. K5 STORY = 0 (auto), K6 REACH = 0 (auto). Captured before the binary companion, the plasma-outline removal and the nebula-gas audio pass.
 
-Preset: `jam.html?shader=claude/wip/sun/5&controller=sun-5&vj=1&remote=display`
+Preset: `jam.html?shader=sun/5&controller=sun-5&vj=1&remote=display`
 
 **2026-10-06, darker background (requested for sun/5 only).** The user said "We need that rainbow background darker so it's more spacey" (marker `SPACE-DARK`). The changes:
 - Day cloud bands render as dim veils (lsdBand lit 0.9 → 0.52) and bass surges them.
@@ -89,13 +89,13 @@ The sun, the rays and controllers/sun-5.js are unchanged. Headless check: `.clau
 
 REBIRTH act, night 0.70, abstract 0.61, reach 0.96 (full long-reach mode). Look at fork time is deep-space and spacey: a small hot gold plasma star lower-left of center, a dense spray of long fine curling rays in amber, rose and violet reaching across the whole frame, and a dark navy/indigo nebula with dim red, teal and violet gas veils and faint stars. **Caution:** this was captured during a live flicker problem (meter flicker 1.43). Somewhere a fast feature was driving nebula-gas brightness, and a background shiver fix was in progress. This fork likely carries that flicker, so check before using it in a show. K5/K6 on auto.
 
-Preset: `jam.html?shader=claude/wip/sun/6&controller=sun-6&vj=1&remote=display`
+Preset: `jam.html?shader=sun/6&controller=sun-6&vj=1&remote=display`
 
 ## 7.frag + controllers/sun-7.js — /fork of live black-sun/sun-1 (2026-10-06, rehearsal)
 
 The first fork with the **binary companion**. MAIN SEQUENCE (act 0), day-ish (night 0.15), reach 1.0. Look at fork time: a peach-gold plasma sun with swirling surface left of center, its rays fanning out amber-gold, and the smaller rose/crimson companion sun lower-right sending its own pink-violet tendrils across to tangle with the main star's rays. Behind them is a deep navy Van Gogh tile sky with LSD contour bands (teal/gold/violet/coral) sweeping around the edges. The meter was healthy again: flicker 0.22 (the shiver/flicker fix had landed), lum 0.30. K5/K6 on auto.
 
-Preset: `jam.html?shader=claude/wip/sun/7&controller=sun-7&vj=1&remote=display`
+Preset: `jam.html?shader=sun/7&controller=sun-7&vj=1&remote=display`
 
 ### Pass log (2026-10-06, binary star + shiver)
 
@@ -108,7 +108,7 @@ Preset: `jam.html?shader=claude/wip/sun/7&controller=sun-7&vj=1&remote=display`
 
 DYING act (bs_act 2), night 0.78, heat 0.22 (cool), reach 0, no kiss at that moment. Look at fork time: two small coral-rose stars in deep space, the companion at left and the main sun at right of center. They are close together and their thin magenta tendrils, beaded with pale sparks, reach toward each other in a dance. The night sky is a dark navy starfield under swirling psychedelic nebula gas in teal, green, rust, violet and blue. The frame is dim (lum 0.13), which is moody, and the critic flagged a grey veil over the night sky at this moment. Flicker 0.49. Captured before the brightness-budget fix and the quiet-never-brighter fix. K5/K6 on auto.
 
-Preset: `jam.html?shader=claude/wip/sun/8&controller=sun-8&vj=1&remote=display`
+Preset: `jam.html?shader=sun/8&controller=sun-8&vj=1&remote=display`
 
 ### Pass log (2026-10-06, brightness budget / quiet-safe / colour)
 
@@ -123,7 +123,7 @@ Preset: `jam.html?shader=claude/wip/sun/8&controller=sun-8&vj=1&remote=display`
 
 COLLAPSE act (bs_act 3), deep night 0.94, both stars small (size 0.23), no kiss in progress. The look at fork time is two small glowing coral-red suns drifting toward each other in deep space, with fine thin tendrils curling between them. Faint warm gas wisps arc between the stars, over a near-black starfield with dim smoky nebula veils. It is saturated (sat 0.80) but very dark (lum 0.027), which is the moody collapse beat. This is the first fork after the black-wall fix (no isnan), the magenta removal, the closed-form gamut map with frame time back to 17.6 ms, and the continuous plasma ramp. No knobs set.
 
-Preset: `jam.html?shader=claude/wip/sun/9&controller=sun-9&vj=1&remote=display`
+Preset: `jam.html?shader=sun/9&controller=sun-9&vj=1&remote=display`
 
 ### Legible channels (2026-10-06) — one musical element, one visual verb
 

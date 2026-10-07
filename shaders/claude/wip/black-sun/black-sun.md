@@ -227,4 +227,4 @@ Preset: `jam.html?shader=claude/wip/black-sun/sun-5&controller=black-sun-sun-5&v
 
 **Haze cut (sun-1, `HAZE-CUT`):** corona falloff steepened (exp 12→5 instead of 6→2.5, rest amplitude 0.45→0.3), ray glow width at rest 0.8→0.55 with the same bass peak, ray halo 0.16→0.07. 20 s meter after: lum 0.28, dark 0.08, lumMin 0.21, clip 0, flicker 0.20, hueConc 0.31, rResid 0.27.
 
-**Storylines + big waves (sun-1):** see `shaders/claude/wip/sun/sun.md` and `docs/storylines.md` — the line continues in `sun/`.
+**Storylines + big waves (sun-1):** see `shaders/sun/sun.md` and `docs/storylines.md` — the line continues in `sun/`.

@@ -4,7 +4,7 @@ A **storyline** turns a shader into something that plays out over minutes. It ru
 **acts**. Each act is a target vector of a few **story params**, and the music decides when the
 story moves on. The first storyline is the stellar life cycle in the sun shader. The engine lives in
 its controller, `controllers/black-sun.js` (`ACTS`); the shader is
-`shaders/claude/wip/black-sun/sun-1.frag`, and its forks go in `shaders/claude/wip/sun/`.
+`shaders/claude/wip/black-sun/sun-1.frag`, and its forks go in `shaders/sun/`.
 
 ## Why a controller
 
@@ -160,4 +160,4 @@ wall froze for about a minute that way when `bs_fAge` was added.
 - **Acts change only on musical causes.** `next(m, dwell)` returns `[act, cause]`; every transition (and every shutter resize) is logged to `actLog` with its cause and the feature values that fired it. The old per-act max dwell is gone; a single `FALLBACK` (420 s) remains for music that never moves, and it glides 2.5× slower to a gentle act (DYING/COLLAPSE fall back to REBIRTH, never SUPERNOVA). Steady music holds the act.
 - **SUPERNOVA needs a drop**, confirmed by the wavelet (`wavelet_confirmedDrop`) after a build has armed it.
 - **Kisses need an event:** a drop, a section change, a strong sustained onset cluster, or K7 by hand. No timer.
-- **Legible channels:** each musical element drives one visual verb — see the table in `shaders/claude/wip/sun/sun.md`. Retargeting tip: when porting to another shader, keep the one-element-one-verb rule; it's what makes the response readable from the back of the room.
+- **Legible channels:** each musical element drives one visual verb — see the table in `shaders/sun/sun.md`. Retargeting tip: when porting to another shader, keep the one-element-one-verb rule; it's what makes the response readable from the back of the room.
