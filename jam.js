@@ -5,8 +5,13 @@ import { loadControllers, composeControllers } from './src/controllerChain.js'
 
 const searchParams = new URLSearchParams(window.location.search)
 
-// Knob moves mirror into the URL (debounced) so a refresh keeps the set's state.
-const paramsManager = createParamsManager({ syncToUrl: true, remoteMode: false })
+// Knob moves mirror into the URL (debounced) so a refresh keeps the set's state. With
+// ?remote=control they also drive remote displays (MIDI here → the projector elsewhere).
+const paramsManager = createParamsManager({
+    syncToUrl: true,
+    remoteMode: searchParams.get('remote') === 'control',
+    onRemoteStatusChange: (status, info) => console.log(`[jam] remote ${status}`, info),
+})
 window.paramsManager = paramsManager
 
 const AUDIO_FEATURES = [
