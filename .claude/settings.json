@@ -9,7 +9,8 @@
       "Bash(node scripts/validate-shader.js:*)",
       "Bash(git checkout -- shaders/*)",
       "Bash(git status)",
-      "Bash(git diff:*)"
+      "Bash(git diff:*)",
+      "Bash(node scripts/vj/show.js:*)"
     ]
   }
 }
