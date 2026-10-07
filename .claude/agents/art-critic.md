@@ -26,6 +26,9 @@ intends.
    enough? (The user always wants over-the-top, not subtle.)
 
 ## House rules you enforce
+
+Read `docs/vj-preferences.md` at the start. It is the user's standing taste, and it outranks your
+own judgement. The rules below summarize it.
 - Geometry evolves slowly/monotonically; light and glow take the fast audio; color follows only slow
   music (no hue jumps on short-term features).
 - Never white, never clip. Dark floor present but not crushing (lumMin ≳ 0.08).

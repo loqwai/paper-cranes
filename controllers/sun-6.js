@@ -97,7 +97,7 @@ export function make() {
     act: 0, actT: 0, forced: -1, buildT: 0, armed: 0, calmT: 0, lowT: 0, nova: 0, novaT: 99,
     heat: 1.0, size: 1.0, power: 1.0, dark: 0.0, abstract: 0.0, chaos: 0.3, pull: 0.0,
     sink: 0.0, night: 0.0, move: 1.0, skyPh: 0,
-    galPh: 0, wind: 0, windTo: 0, fluxPh: 0, billow: 0, bassS: 0, kickS: 0, cX: -2.0, cY: 1.4, kiss: 0,
+    galPh: 0, wind: 0, windTo: 0, fluxPh: 0, billow: 0, cX: -2.0, cY: 1.4, kiss: 0,
     reach: 0, reachLeft: 0, sinceReach: 0, hotT: 0,
     // binary companion
     sunX: 0, sunY: 0.10, waveX: 0, waveY: 0.10,
@@ -109,7 +109,7 @@ export function make() {
   // A state object from an older version of this file may lack newer keys, or hold a NaN an older
   // version latched (bs_fAge did, and froze the wall: out() threw every frame). Repair those fields
   // to their defaults; keep every healthy one, so the clocks and the eye stay where they were.
-  const S = window.__blackSunState ??= {}
+  const S = window.__sun6State ??= {}
   for (const k in DEFAULTS) {
     const bad = typeof DEFAULTS[k] === 'number' && !Number.isFinite(S[k])
     if (!(k in S) || bad) S[k] = DEFAULTS[k]
@@ -261,11 +261,6 @@ export function make() {
     S.fluxPh += (0.05 + 0.9 * S.flux * gate) * dt
     // BILLOW: the only audio allowed to scale a background WARP — a slow (~4 s) ease of bass + roughness.
     // Warp amplitude that follows fast envelopes pushes the field back and forth every beat (shiver).
-    // BACKGROUND ENVELOPES: big layers flicker on the main envelopes (bass attack ~3 frames, kick ~1).
-    // Background light uses these instead: attack ~80 ms, release ~600 ms.
-    const arS = (p, x) => p + (clamp01(x) - p) * (1 - Math.exp(-dt / (x > p ? 0.08 : 0.6)))
-    S.bassS = arS(S.bassS, S.bass)
-    S.kickS = arS(S.kickS, S.kick)
     S.billow += (clamp01(0.6 * S.bass + 0.4 * S.rough) * gate - S.billow) * (1 - Math.exp(-dt / 4))
     // REACH: huge rays as an aesthetic that comes and goes, not the default. A window opens in
     // REBIRTH, on a sustained hot section (10 s), or by chance once ~3+ min have passed since the
@@ -327,7 +322,7 @@ export function make() {
       bs_heat: S.heat, bs_size: S.size, bs_power: S.power, bs_dark: S.dark, bs_abstract: S.abstract,
       bs_chaos: S.chaos, bs_pull: S.pull, bs_night: S.night,
       bs_sunX: S.sunX, bs_sunY: S.sunY, bs_cX: S.cX, bs_cY: S.cY, bs_cOn: S.cOn, bs_kiss: S.kiss, bs_waveX: S.waveX, bs_waveY: S.waveY,
-      bs_reach: S.reach, bs_billow: S.billow, bs_bassS: S.bassS, bs_kickS: S.kickS, bs_galPh: S.galPh, bs_wind: S.wind, bs_fluxPh: S.fluxPh,
+      bs_reach: S.reach, bs_billow: S.billow, bs_galPh: S.galPh, bs_wind: S.wind, bs_fluxPh: S.fluxPh,
       bs_nova: S.nova, bs_shell: Math.min(S.novaT, 30), bs_act: S.act, bs_actT: S.actT,
     }
     const bad = Object.keys(o).filter(k => !Number.isFinite(o[k]))

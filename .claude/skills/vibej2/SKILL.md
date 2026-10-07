@@ -188,7 +188,10 @@ node scripts/vj/show.js eval 'async (path) => {
 4. **Pre-show checklist, said to the user in one line** — Do Not Disturb on, break-reminder /
    screen-dimming apps quit, projector is the display `launch` chose. These are outside the
    page; nothing in the loop can catch them.
-5. **Read the shader's journal** (`journals/<name>-cool-moments.md`) and last HANDOFF. Todo +
+5. **Read `docs/vj-preferences.md` first.** It records the user's standing taste and applies to
+   every shader. Brief every sub-agent and the art critic with it, and append any new design
+   feedback the user gives during the set to it, in the user's own words and with a date.
+   Then **read the shader's journal** (`journals/<name>-cool-moments.md`) and last HANDOFF. Todo +
    History-of-changes = your rules. Never re-add a vetoed motif.
 6. **Ensure the page runtime** (see below) and screenshot-judge the frame as it stands. If it
    doesn't read, the first beats are legibility fixes.

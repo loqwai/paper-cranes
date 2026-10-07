@@ -84,8 +84,8 @@ float gKick, gKAge, gKAmp, gCrest, gPal, gRoll;
 uniform float bs_wAge, bs_wAmp;
 // STORY (controllers/black-sun.js ACTS): see docs/storylines.md
 uniform float bs_sunX, bs_sunY, bs_night, bs_galPh, bs_wind, bs_fluxPh, bs_reach;
-uniform float bs_billow, bs_bassS, bs_kickS;   // background-rate envelopes (attack ~80 ms, release ~600 ms)
-// bs_billow — NO-SHIVER: slow (~4 s) eased warp amplitude — the only audio that may scale a background warp
+uniform float bs_billow, bs_bassS, bs_kickS;   // NO-FLICKER (ported from black-sun/sun-1): background light rides slow envelopes (attack ~80 ms, release ~600 ms)
+// bs_billow —   // NO-SHIVER: slow (~4 s) eased warp amplitude — the only audio that may scale a background warp
 uniform float bs_cX, bs_cY, bs_cOn, bs_kiss, bs_waveX, bs_waveY;
 float gHeatOv = -1.0;              // COMPANION: >= 0 overrides the story heat in sunLch (the companion is always dark red)
 float gBendDir = 0.0, gBendAmt = 0.0;   // COMPANION: rays bend toward the other star
@@ -403,7 +403,7 @@ vec3 deepSpace(vec2 uv) {
     float v = 0.5 + 0.5 * sin(w.x * 2.2 + sin(w.y * 2.7));
     float fil = exp(-pow(sin(w.x * 3.3 + w.y * 1.4), 2.0) / 0.03);
     float k = v * 7.0;
-    vec3 gas = bandBlend(k, 0.85);
+    vec3 gas = bandBlend(k, 0.5);                                           // SPACEY: darker gas
     float fwave = exp(-pow(fract(lr * 0.35 - bs_fluxPh * 0.25) - 0.5, 2.0) / 0.006) * gFlux * G;   // flux: a wave along the arms
     float gasLit = (0.5 + 1.6 * armM) * (0.9 + 1.6 * bs_bassS * G + 0.8 * bs_kickS * G) * (1.0 + 2.0 * fwave);
     c += gas * (0.35 + 0.65 * dens) * (1.0 + 1.3 * fil) * gasLit * 0.55;
@@ -450,11 +450,11 @@ vec3 nebula(vec2 p) {
     for (float i = 1.0; i < 4.0; i++) q += sin(q.yx * (1.1 * i) + vec2(1.3, 2.1) * i) / i * 0.5;
     float v = 0.5 + 0.5 * sin(q.x * 1.7 + sin(q.y * 2.1));
     float k = v * 7.0;
-    vec3 c = bandBlend(k, 0.7);
+    vec3 c = bandBlend(k, 0.42);                                          // SPACEY: dim luminous veils (band L ~0.2–0.35), not a painted rainbow wall
     float fil = exp(-pow(sin(q.x * 3.0 + q.y), 2.0) / 0.02);
     float surge = bs_kickS * G * (0.4 + 1.2 * smoothstep(0.35, 0.9, v));   // kick: the bright gas flares (patches, not a painted ring)
     float fwave = exp(-pow(fract(q.x * 0.15 - bs_fluxPh * 0.3) - 0.5, 2.0) / 0.01) * gFlux * G;  // flux wave along the filaments
-    float lit = (0.45 + 0.35 * v) * (0.85 + 0.9 * bs_bassS * G + 0.5 * bs_kickS * G) * (1.0 + 0.5 * surge);
+    float lit = (0.25 + 0.45 * v * v) * (0.8 + 1.1 * bs_bassS * G + 0.6 * bs_kickS * G) * (1.0 + 0.6 * surge);   // SPACEY: deep gaps between veils; audio surges the bright edges
     vec3 o = c * lit + c * fil * (0.3 + 0.8 * fwave);
     o += pow(gamutLch(vec3(0.86, 0.08, radians(85.0))), vec3(1.0 / 2.2)) * fil * pow(max(0.0, sin(q.y * 7.0 + q.x * 3.0)), 12.0) * clamp(gTreb * 2.5, 0.0, 1.0) * G * 0.6;
     float oM = max(max(o.r, o.g), max(o.b, 1e-4));
@@ -463,10 +463,6 @@ vec3 nebula(vec2 p) {
 
 vec3 plasmaBall(vec3 col, vec2 d, float R, float m) {
     float G = GATE;
-    // SMALL-PULSE: a small or distant star pulses harder — swell and brightness scale inversely with
-    // its radius (tiny DYING/REBIRTH sun or the companion: big kick swell; red giant: subtle)
-    float pk = clamp(0.22 / max(R, 0.02), 0.6, 2.6);
-    R *= 1.0 + pk * (0.05 * gBass * G + 0.09 * gKick * G);
     vec2 p = d / R;
     float x = length(p);
     float z = sqrt(max(1.0 - x * x, 0.0));                                   // sphere bulge
@@ -483,7 +479,7 @@ vec3 plasmaBall(vec3 col, vec2 d, float R, float m) {
     float T = clamp(0.5 + 0.45 * v + 0.35 * (gran - 0.5), 0.0, 1.0);
     // magnetic arcs: thin bright curves where the warped field crosses zero; width floored by the
     // pixel footprint so they never alias into flicker
-    float hot = (0.9 + pk * (0.15 * gBass * G + 0.18 * gKick * G)) * (1.0 + 1.4 * bs_nova);   // CORE-HOT2: rest at 0.9, not 0.6 — the 0.6 rest was why the core sat below its corona   // bass core swell + kick surge; the supernova flash (knee-limited below)
+    float hot = (0.9 + 0.3 * gBass * G + 0.25 * gKick * G) * (1.0 + 1.4 * bs_nova);   // CORE-HOT2: rest at 0.9, not 0.6 — the 0.6 rest was why the core sat below its corona   // bass core swell + kick surge; the supernova flash (knee-limited below)
     float L = mix(0.87, 0.66, x * x) + 0.28 * (T - 0.5) * (1.0 - 0.6 * x * x) + 0.06 * z;   // BLEND: the limb ends at the corona's own lightness — no dark rim to read as a circle   // BALL-BOIL: stronger cell contrast now the line work is gone
     L += 0.13 * (gBass * G + 0.7 * gKick * G - 0.35) * (1.0 - x * x);       // CORE-PULSE: the core breathes ±~25% with bass/kick   // BALL-HOT: hot yellow-gold core, the brightest thing on screen
     float hue = mix(92.0, 32.0, clamp((1.0 - T) * 0.6 + x * x * 0.55, 0.0, 1.0));

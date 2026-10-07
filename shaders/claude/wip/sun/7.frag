@@ -463,10 +463,6 @@ vec3 nebula(vec2 p) {
 
 vec3 plasmaBall(vec3 col, vec2 d, float R, float m) {
     float G = GATE;
-    // SMALL-PULSE: a small or distant star pulses harder — swell and brightness scale inversely with
-    // its radius (tiny DYING/REBIRTH sun or the companion: big kick swell; red giant: subtle)
-    float pk = clamp(0.22 / max(R, 0.02), 0.6, 2.6);
-    R *= 1.0 + pk * (0.05 * gBass * G + 0.09 * gKick * G);
     vec2 p = d / R;
     float x = length(p);
     float z = sqrt(max(1.0 - x * x, 0.0));                                   // sphere bulge
@@ -483,7 +479,7 @@ vec3 plasmaBall(vec3 col, vec2 d, float R, float m) {
     float T = clamp(0.5 + 0.45 * v + 0.35 * (gran - 0.5), 0.0, 1.0);
     // magnetic arcs: thin bright curves where the warped field crosses zero; width floored by the
     // pixel footprint so they never alias into flicker
-    float hot = (0.9 + pk * (0.15 * gBass * G + 0.18 * gKick * G)) * (1.0 + 1.4 * bs_nova);   // CORE-HOT2: rest at 0.9, not 0.6 — the 0.6 rest was why the core sat below its corona   // bass core swell + kick surge; the supernova flash (knee-limited below)
+    float hot = (0.9 + 0.3 * gBass * G + 0.25 * gKick * G) * (1.0 + 1.4 * bs_nova);   // CORE-HOT2: rest at 0.9, not 0.6 — the 0.6 rest was why the core sat below its corona   // bass core swell + kick surge; the supernova flash (knee-limited below)
     float L = mix(0.87, 0.66, x * x) + 0.28 * (T - 0.5) * (1.0 - 0.6 * x * x) + 0.06 * z;   // BLEND: the limb ends at the corona's own lightness — no dark rim to read as a circle   // BALL-BOIL: stronger cell contrast now the line work is gone
     L += 0.13 * (gBass * G + 0.7 * gKick * G - 0.35) * (1.0 - x * x);       // CORE-PULSE: the core breathes ±~25% with bass/kick   // BALL-HOT: hot yellow-gold core, the brightest thing on screen
     float hue = mix(92.0, 32.0, clamp((1.0 - T) * 0.6 + x * x * 0.55, 0.0, 1.0));

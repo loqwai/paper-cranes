@@ -22,9 +22,6 @@
 //   bs_heat … bs_pull     STORY params (see ACTS); bs_nova detonation flash 1 → 0; bs_shell seconds since
 //                         the last supernova (capped 30); bs_act / bs_actT current act index + seconds in it
 //   bs_sunX, bs_sunY      the sun's position (sky path + sink); bs_night day → deep space
-//   bs_galPh, bs_wind, bs_fluxPh   galaxy arms: flow phase (mids rate), winding (eased step on events), flux wave clock
-//   bs_reach              0..1 huge-ray mode, eased; windows open in REBIRTH / hot sections / by chance; K6 forces
-//   bs_cX, bs_cY, bs_cOn, bs_kiss   binary companion position, presence, kiss envelope; bs_waveX/Y wave centre
 //   bs_irisScale          eye size, 0.7–1.25. Holds between SECTION changes (not kicks); each one eases
 //                         it to a new size over SHUTTER_SECS
 //   bs_shutter, bs_shutterAng   the camera-shutter transition: 0 → 1 → 0 blade cover over the
@@ -97,11 +94,6 @@ export function make() {
     act: 0, actT: 0, forced: -1, buildT: 0, armed: 0, calmT: 0, lowT: 0, nova: 0, novaT: 99,
     heat: 1.0, size: 1.0, power: 1.0, dark: 0.0, abstract: 0.0, chaos: 0.3, pull: 0.0,
     sink: 0.0, night: 0.0, move: 1.0, skyPh: 0,
-    galPh: 0, wind: 0, windTo: 0, fluxPh: 0, billow: 0, bassS: 0, kickS: 0, cX: -2.0, cY: 1.4, kiss: 0,
-    reach: 0, reachLeft: 0, sinceReach: 0, hotT: 0,
-    // binary companion
-    sunX: 0, sunY: 0.10, waveX: 0, waveY: 0.10,
-    cOn: 0, cR: 2.6, cPh: 2.6, cPrec: 0, kissT: 1, sinceKiss: 0, kissFired: 1,
     // section-change detector + shutter
     sustE: 0, sustF: 0, trend: 0, gateWas: null, sinceSection: 0,   // no event in the first 12 s (z-scores are noise until history fills)
     irisFrom: 1, irisTo: 1, shutterP: 1, shutterAng: 0, events: 0,
@@ -186,7 +178,7 @@ export function make() {
     S.sinceWave += dt
     S.wAge = Math.min(1, S.wAge + dt / 6)
     const jump = Math.max(f.energyZScore - S.sustE, f.bassZScore - S.bassSlow, (f.spectralFluxZScore - 1.2) * 0.8)
-    const fireWave = (amp, x = S.sunX, y = S.sunY) => { if (S.sinceWave < 8) return; S.sinceWave = 0; S.wAge = 0; S.wAmp = clamp01(amp); S.waveX = x; S.waveY = y }
+    const fireWave = (amp) => { if (S.sinceWave < 8) return; S.sinceWave = 0; S.wAge = 0; S.wAmp = clamp01(amp) }
     if (jump > 1.3 && gate > 0.5) fireWave(0.55 + (jump - 1.3))
 
     // ── STORY: musical state → act transitions → param glide
@@ -207,8 +199,7 @@ export function make() {
       if (i === S.act) return
       S.act = i; S.actT = 0
       if (i === 3) fireWave(0.8)                       // collapse: the space around it shudders inward
-      if (i === 4) { S.armed = 0; S.novaT = 0; S.sinceWave = 99; fireWave(1); S.windTo = Math.min(2, S.windTo + 0.4) }   // detonation
-      if (i === 6) S.windTo = 0                         // rebirth unwinds the galaxy (eased)
+      if (i === 4) { S.armed = 0; S.novaT = 0; S.sinceWave = 99; fireWave(1) }   // detonation
     }
     if (k5 > 0.02) goTo(Math.min(ACTS.length - 1, Math.floor(k5 * ACTS.length)))
     else {
@@ -222,62 +213,6 @@ export function make() {
     // incommensurate periods — a full wander takes many minutes. The act's `move` sets the rate (0 =
     // the sun holds still), slow energy nudges it, and `sink` lowers it toward the horizon.
     S.skyPh += 0.012 * S.move * (0.6 + 0.6 * S.energy) * dt
-    const pathX = 0.55 * Math.sin(S.skyPh * 2.0)
-    const pathY = 0.10 + 0.18 * (Math.sin(S.skyPh * 3.17 + 1.0) - Math.sin(1.0)) - S.sink   // phase 0 = the old fixed (0, 0.10)
-
-    // COMPANION: a small dark-red star. It enters from off-screen upper-left and spirals in over a
-    // few minutes (radius eases inward), then dances a slow, slightly elliptical, precessing orbit
-    // (mids speed the dance — a rate). The main star wobbles about the shared barycentre. KISS: on a
-    // drop or section change (30 s refractory), or a scripted approach every ~2.5 min of steady
-    // music, the orbit dips until the coronas overlap, a distortion front fires from the contact
-    // point, and they drift apart. SUPERNOVA flings it away; it re-forms and re-enters in REBIRTH.
-    const flung = S.act === 4 || S.act === 5
-    if (S.act === 6 && S.cOn < 0.05) { S.cR = 2.6; S.cPh = 2.6 }
-    S.cOn += ((flung ? 0 : 1) - S.cOn) * (1 - Math.exp(-dt / (flung ? 3 : 20)))
-    const cRTo = flung ? 3.5 : 0.78
-    S.cR += (cRTo - S.cR) * (1 - Math.exp(-dt / (flung ? 4 : 55)))
-    S.cPh -= (0.05 + 0.04 * S.mids * gate) * dt          // clockwise: from the upper-left it swoops in over the top
-    S.cPrec += 0.006 * dt
-    S.sinceKiss += dt
-    S.kissT = Math.min(1, S.kissT + dt / 10)
-    const kiss = Math.pow(Math.sin(Math.PI * S.kissT), 2)
-    const startKiss = () => { if (S.sinceKiss < 30 || S.cR > 1.2 || flung) return; S.sinceKiss = 0; S.kissT = 0; S.kissFired = 0 }
-    if (m.drop || S.sinceKiss > 150) startKiss()
-    const rEff = S.cR + (0.3 - S.cR) * kiss
-    const ex = rEff * Math.cos(S.cPh), ey = rEff * 0.78 * Math.sin(S.cPh)
-    const cp = Math.cos(S.cPrec), sp = Math.sin(S.cPrec)
-    const ox = ex * cp - ey * sp, oy = ex * sp + ey * cp
-    const wob = 0.12 * S.cOn * Math.min(1, 0.8 / Math.max(S.cR, 0.3))   // barycentre wobble, weak while it is still far out
-    S.sunX = pathX - ox * wob
-    S.sunY = pathY - oy * wob
-    S.cX = S.sunX + ox
-    S.cY = S.sunY + oy
-    S.kiss = kiss
-    if (!S.kissFired && S.kissT > 0.45) { S.kissFired = 1; S.sinceWave = 99; fireWave(1, (S.sunX + S.cX) / 2, (S.sunY + S.cY) / 2) }
-    // GALAXY: the spiral arms' flow (mids set the speed — a rate, never a jump), their winding (a one-way
-    // eased step on every drop / section change / supernova, capped), and an outward flux wave clock
-    S.galPh += (0.05 + 0.6 * S.mids * gate) * dt
-    S.wind += (S.windTo - S.wind) * (1 - Math.exp(-dt / 4))
-    S.fluxPh += (0.05 + 0.9 * S.flux * gate) * dt
-    // BILLOW: the only audio allowed to scale a background WARP — a slow (~4 s) ease of bass + roughness.
-    // Warp amplitude that follows fast envelopes pushes the field back and forth every beat (shiver).
-    // BACKGROUND ENVELOPES: big layers flicker on the main envelopes (bass attack ~3 frames, kick ~1).
-    // Background light uses these instead: attack ~80 ms, release ~600 ms.
-    const arS = (p, x) => p + (clamp01(x) - p) * (1 - Math.exp(-dt / (x > p ? 0.08 : 0.6)))
-    S.bassS = arS(S.bassS, S.bass)
-    S.kickS = arS(S.kickS, S.kick)
-    S.billow += (clamp01(0.6 * S.bass + 0.4 * S.rough) * gate - S.billow) * (1 - Math.exp(-dt / 4))
-    // REACH: huge rays as an aesthetic that comes and goes, not the default. A window opens in
-    // REBIRTH, on a sustained hot section (10 s), or by chance once ~3+ min have passed since the
-    // last one; it lasts 30–90 s and eases in/out over ~20 s. K6 REACH (knob_6) forces the amount.
-    S.sinceReach += dt
-    S.hotT = S.sustE > 0.5 ? S.hotT + dt : 0
-    const openReach = () => { if (S.reachLeft > 0 || S.sinceReach < 60) return; S.reachLeft = 30 + 60 * Math.random(); S.sinceReach = 0 }
-    if (S.act === 6 || S.hotT > 10 || (S.sinceReach > 180 && Math.random() < dt / 90)) openReach()
-    S.reachLeft = Math.max(0, S.reachLeft - dt)
-    const k6 = f.knob_6 ?? 0
-    const reachTo = k6 > 0.02 ? k6 : S.reachLeft > 0 ? 1 : 0
-    S.reach += (reachTo - S.reach) * (1 - Math.exp(-dt / 6))
 
     // SECTION changes — sustained excursions, not kicks: a ~3 s EMA of energy and flux z-scores, a
     // confident build/drop trend, or the quiet gate flipping (track boundary). Long refractory.
@@ -299,8 +234,6 @@ export function make() {
       S.irisTo = Math.min(1.25, Math.max(0.7, next))
       S.shutterP = 0
       fireWave(1)
-      S.windTo = Math.min(2, S.windTo + 0.2)
-      startKiss()
     }
 
     return out()
@@ -326,9 +259,7 @@ export function make() {
       bs_wAge: S.wAge, bs_wAmp: S.wAmp,
       bs_heat: S.heat, bs_size: S.size, bs_power: S.power, bs_dark: S.dark, bs_abstract: S.abstract,
       bs_chaos: S.chaos, bs_pull: S.pull, bs_night: S.night,
-      bs_sunX: S.sunX, bs_sunY: S.sunY, bs_cX: S.cX, bs_cY: S.cY, bs_cOn: S.cOn, bs_kiss: S.kiss, bs_waveX: S.waveX, bs_waveY: S.waveY,
-      bs_reach: S.reach, bs_billow: S.billow, bs_bassS: S.bassS, bs_kickS: S.kickS, bs_galPh: S.galPh, bs_wind: S.wind, bs_fluxPh: S.fluxPh,
-      bs_nova: S.nova, bs_shell: Math.min(S.novaT, 30), bs_act: S.act, bs_actT: S.actT,
+      bs_sunX: 0.55 * Math.sin(S.skyPh * 2.0), bs_sunY: 0.10 + 0.18 * (Math.sin(S.skyPh * 3.17 + 1.0) - Math.sin(1.0)) - S.sink,   // phase 0 = the old fixed (0, 0.10) bs_nova: S.nova, bs_shell: Math.min(S.novaT, 30), bs_act: S.act, bs_actT: S.actT,
     }
     const bad = Object.keys(o).filter(k => !Number.isFinite(o[k]))
     if (bad.length) throw new Error(`black-sun controller produced non-finite ${bad.join(', ')}`)
