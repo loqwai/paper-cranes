@@ -133,8 +133,9 @@ Facts the loop relies on:
 `/vibej2 [duration|count] [shader-path-or-name] [audio=<input name>]`
 
 - **No args** → run until stopped, shader = most recently modified `.frag`.
-- **`audio=<substring>`** → the input device to listen to, matched against device labels
-  (default `USB Audio CODEC`, the mixer feed). Passed to the page as `&audio_device=`. There is no
+- **`audio=<substring>`** → override the input device, matched against device labels and
+  passed to the page as `&audio_device=`. **Omitted → the OS default input** (whatever the user
+  has selected in macOS Sound settings); add no `audio_device` param at all then. There is no
   Spotify tab and no music tab — the music comes in on that input.
 - **Duration** (`90m`, `2h`) or bare integer (legacy: beat count) → soft budget; announce and
   wrap when reached.
@@ -167,15 +168,17 @@ node scripts/vj/show.js eval 'async (path) => {
 2. **Launch the show browser** on the jam page (canvas only: no drawer, no toasts, no
    indicators; MIDI still live):
    ```bash
-   node scripts/vj/show.js launch "http://localhost:$PORT/jam.html?shader=<path>&controller=<name>&vj=1&remote=display&audio_device=<audio>"
+   node scripts/vj/show.js launch "http://localhost:$PORT/jam.html?shader=<path>&controller=<name>&vj=1&remote=display[&audio_device=<audio>]"
    ```
+   Append `&audio_device=` only when the user passed `audio=`.
    `remote=display` joins the WebSocket hub so `scripts/vj/remote-send.js` and the vjpad reach
    the page. Add `&controller=` only when a matching `controllers/*.js` exists.
-3. **Verify the input** — the page exposes the device it actually opened:
+3. **Verify the input** — the page exposes the device it actually opened. Say it to the user in
+   the setup line ("listening on <label>") so a wrong OS default is caught before the set:
    ```bash
    node scripts/vj/show.js eval '() => ({ input: window.cranes.audioInputLabel ?? null, energy: window.cranes.flattenFeatures().energy })'
    ```
-   `input: null` means the name matched no device (the page logged the available labels to its
+   `input: null` (only possible with `audio=`) means the name matched no device (the page logged the available labels to its
    console — read them with `eval '() => navigator.mediaDevices.enumerateDevices().then(d => d.filter(x => x.kind === "audioinput").map(x => x.label))'`).
    **Do not start beats on the wrong input** — tell the user which inputs exist and stop.
 4. **Pre-show checklist, said to the user in one line** — Do Not Disturb on, break-reminder /

@@ -47,7 +47,7 @@ When a `.frag` file changes on disk, the jam page hot-swaps the shader code with
 `&audio_device=<label substring>` opens the input whose label contains it (case-insensitive), e.g.
 `&audio_device=USB Audio CODEC`. A name that matches nothing leaves the page silent rather than
 quietly opening another device; `window.cranes.audioInputLabel` reports what was opened. Without
-the param the first listed input is used.
+the param the page opens the OS default input.
 
 ## Live Shows
 

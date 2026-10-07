@@ -77,11 +77,11 @@ const audioConfig = {
 }
 
 // Factor out common audio setup logic
-// ?audio_device=<label substring> pins the input by name (e.g. "USB Audio CODEC"), so a show
-// never depends on enumeration order. A name that matches nothing is an error, not the first device.
+// No ?audio_device= → the OS default input. ?audio_device=<label substring> pins one by name
+// (e.g. "USB Audio CODEC"); a name that matches nothing is an error, never another device.
 const pickAudioInput = (audioInputs) => {
     const wanted = params.get('audio_device')
-    if (!wanted) return audioInputs.length > 1 ? audioInputs[0] : undefined
+    if (!wanted) return undefined
     const match = audioInputs.find(d => d.label.toLowerCase().includes(wanted.toLowerCase()))
     if (!match) throw new Error(`audio_device "${wanted}" not found; inputs: ${audioInputs.map(d => d.label).join(', ')}`)
     return match
@@ -90,11 +90,11 @@ const pickAudioInput = (audioInputs) => {
 const getAudioStream = async (config) => {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const input = pickAudioInput(devices.filter(device => device.kind === 'audioinput'));
-    window.cranes.audioInputLabel = input?.label ?? 'browser default';
-
-    return navigator.mediaDevices.getUserMedia({
+    const stream = await navigator.mediaDevices.getUserMedia({
         audio: { ...config, ...(input ? { deviceId: { exact: input.deviceId } } : {}) }
     });
+    window.cranes.audioInputLabel = stream.getAudioTracks()[0].label;
+    return stream;
 };
 
 // Factor out coordinate handling
