@@ -2,12 +2,11 @@
 
 ## What's New
 
-- **Smoother remote control** — the display no longer stutters while a knob is moving. Per-message URL rewriting and DOM work have been taken off the hot path; params still apply synchronously so nothing is added to knob→visual latency
+- **[Show browser](docs/jam-page.md#live-shows)** — `node scripts/vj/show.js launch '<jam url>'` projects a fullscreen Chrome with nothing on the wall but the visual: no banners, no cursor, no prompts. `/vibej2` drives it without ever touching the mouse
+- **[Onset envelopes](docs/onset-detection.md)** — visuals that land on the beat instead of a second after it
 - **[Wavelet audio analysis](docs/wavelet-analysis.md)** — Opt-in `?wavelet=true` multiresolution DWT alongside the FFT: octave bands, brightness/complexity axes, and a sharp low-latency deep-bass drop trigger
 - **[MIDI mapping page](docs/midi-mapping.md#mapping-page-midihtml)** — Visual `/midi.html` UI: see every device + mapping at once, click-to-learn knobs, edit indices inline
 - **[Jam page](docs/jam-page.md)** — Lean live session page: the shader alone on screen, MIDI knobs, spacebar snapshot queue. No editor overhead.
-- **[Multiplayer editor](docs/multiplayer-editor.md)** — Edit shaders together with live cursors and real-time sync
-- **[Tab audio capture](docs/tab-audio.md)** — Visualize Spotify or any browser tab with `?audio=tab`, no drivers needed
 
 See the full [changelog](docs/CHANGELOG.md) for more.
 
