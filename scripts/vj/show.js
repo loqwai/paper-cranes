@@ -146,10 +146,21 @@ const status = async () => {
   return withPage(async page => ({ up: true, url: page.url(), title: await page.title() }))
 }
 
-const stop = () => withPage(async page => {
-  await page.context().browser().newBrowserCDPSession().then(s => s.send('Browser.close'))
+// Raw CDP, not withPage: a show browser whose window was closed has zero pages, and Playwright's
+// connectOverCDP refuses it outright — exactly the stale state stop exists to clear.
+const stop = async () => {
+  if (!(await cdpUp())) return 'not running'
+  const { webSocketDebuggerUrl } = await fetch(`${CDP_URL}/json/version`).then(r => r.json())
+  const ws = new WebSocket(webSocketDebuggerUrl)
+  await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject })
+  ws.send(JSON.stringify({ id: 1, method: 'Browser.close' }))
+  const deadline = Date.now() + 10000
+  while (await cdpUp()) {
+    if (Date.now() > deadline) throw new Error(`show browser still answering on ${CDP_URL} 10s after Browser.close`)
+    await new Promise(r => setTimeout(r, 200))
+  }
   return 'closed'
-})
+}
 
 const commands = {
   launch: (url, ...rest) => {

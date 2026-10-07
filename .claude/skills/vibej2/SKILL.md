@@ -167,7 +167,11 @@ node scripts/vj/show.js eval 'async (path) => {
    answering.
 2. **Launch the show browser** on the jam page (canvas only: no drawer, no toasts, no
    indicators; MIDI still live):
+   **Always `stop` first** — a show browser left over from an earlier run can be alive with
+   zero pages (window closed, process still on the CDP port), and every other command refuses
+   it. `stop` closes it over raw CDP whatever state it is in; `not running` is fine.
    ```bash
+   node scripts/vj/show.js stop
    node scripts/vj/show.js launch "http://localhost:$PORT/jam.html?shader=<path>&controller=<name>&vj=1&remote=display[&audio_device=<audio>]"
    ```
    Append `&audio_device=` only when the user passed `audio=`.
@@ -184,7 +188,10 @@ node scripts/vj/show.js eval 'async (path) => {
 4. **Pre-show checklist, said to the user in one line** — Do Not Disturb on, break-reminder /
    screen-dimming apps quit, projector is the display `launch` chose. These are outside the
    page; nothing in the loop can catch them.
-5. **Read the shader's journal** (`journals/<name>-cool-moments.md`) and last HANDOFF. Todo +
+5. **Read `docs/vj-preferences.md` first.** It records the user's standing taste and applies to
+   every shader. Brief every sub-agent and the art critic with it, and append any new design
+   feedback the user gives during the set to it, in the user's own words and with a date.
+   Then **read the shader's journal** (`journals/<name>-cool-moments.md`) and last HANDOFF. Todo +
    History-of-changes = your rules. Never re-add a vetoed motif.
 6. **Ensure the page runtime** (see below) and screenshot-judge the frame as it stands. If it
    doesn't read, the first beats are legibility fixes.

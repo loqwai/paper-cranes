@@ -848,6 +848,10 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 
 ## Live Sessions: the Parent Stays Responsive
 
+**Show day:** run `/show`. It does the preflight, launch, watchers and hand-off. Follow
+[docs/show-playbook.md](docs/show-playbook.md) for the runbook, knob map, story, fork library and
+failure fixes.
+
 During any **live session** — a VJ set (`/vibej2`), a jam, a `/live-session`, anything where the
 user has a hand on a controller — the main Claude session is a **dispatcher, not a worker**. It
 triages what the user says, reads the meter, makes the ONE decision, and hands execution to a
