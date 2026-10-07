@@ -1,6 +1,7 @@
 // @fullscreen: true
 // @mobile: false
 // @tags: urchin, blackhole, sun, lattice, psychedelic, vangogh, claude
+// preset: https://visuals.beadfamous.com/?shader=claude/wip/black-sun/3
 // BLACK SUN (1.frag) — wip/urchin is the backbone: its spherized field of tube-spines radiates
 // from a black hole (wip/black-hole) whose accretion is a psychedelic sun. Behind it, the Van Gogh
 // tile sky from wip/sunflowers with the hex mirror-fold lattice from redaphid/lattice-interactive/3

@@ -154,3 +154,10 @@ wall froze for about a minute that way when `bs_fAge` was added.
 - **Sky path as Lissajous on a monotonic phase (2026-10-06):** never `mod`, never reversed (the-coat research). Phase 0 equals the old fixed sun position. Switching the shader from fixed to driven still jumped the sun ~0.32 once, because the controller's phase had already advanced by the time the shader picked it up. Swap a new uniform's consumer in before its producer starts moving.
 - **Night is its own axis, not `dark`:** `dark` dims, `night` changes what the sky *is*. DYING/COLLAPSE/NEBULA lean night, MAIN/REBIRTH lean day.
 - **Ball brightest, rays capped below it:** ball knee caps at 0.92, rays at 0.80, so the core always reads as the hottest thing (critic #1). The resting size stays; K4 ZOOM owns size.
+
+## Music-earned transitions and legible channels (2026-10-06)
+
+- **Acts change only on musical causes.** `next(m, dwell)` returns `[act, cause]`; every transition (and every shutter resize) is logged to `actLog` with its cause and the feature values that fired it. The old per-act max dwell is gone; a single `FALLBACK` (420 s) remains for music that never moves, and it glides 2.5× slower to a gentle act (DYING/COLLAPSE fall back to REBIRTH, never SUPERNOVA). Steady music holds the act.
+- **SUPERNOVA needs a drop**, confirmed by the wavelet (`wavelet_confirmedDrop`) after a build has armed it.
+- **Kisses need an event:** a drop, a section change, a strong sustained onset cluster, or K7 by hand. No timer.
+- **Legible channels:** each musical element drives one visual verb — see the table in `shaders/claude/wip/sun/sun.md`. Retargeting tip: when porting to another shader, keep the one-element-one-verb rule; it's what makes the response readable from the back of the room.

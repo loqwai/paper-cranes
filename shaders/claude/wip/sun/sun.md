@@ -96,3 +96,50 @@ Preset: `jam.html?shader=claude/wip/sun/6&controller=sun-6&vj=1&remote=display`
 The first fork with the **binary companion**. MAIN SEQUENCE (act 0), day-ish (night 0.15), reach 1.0. Look at fork time: a peach-gold plasma sun with swirling surface left of center, its rays fanning out amber-gold, and the smaller rose/crimson companion sun lower-right sending its own pink-violet tendrils across to tangle with the main star's rays. Behind them is a deep navy Van Gogh tile sky with LSD contour bands (teal/gold/violet/coral) sweeping around the edges. The meter was healthy again: flicker 0.22 (the shiver/flicker fix had landed), lum 0.30. K5/K6 on auto.
 
 Preset: `jam.html?shader=claude/wip/sun/7&controller=sun-7&vj=1&remote=display`
+
+### Pass log (2026-10-06, binary star + shiver)
+
+- **Binary companion (`bs_cX/cY/cOn/kiss`):** a small dark-red plasma star (heat forced to 0.32, same ball rendering). It enters off-screen upper-left and spirals in clockwise over the top (orbit radius eases 2.6 → 0.78, τ 55 s), then dances a slow elliptical, precessing orbit; mids speed the dance as a rate. The main star wobbles about the barycentre (weak while the companion is far). Rays of both stars lean toward each other (`gBendAmt`, stronger when close); a plasma bridge arcs between them when they are near and flares on a **kiss**. Kisses come on a drop or section change (30 s refractory) or a scripted approach every ~2.5 min: the orbit dips until the coronas overlap, and a distortion front fires from the contact point (waves now carry their own centre, `bs_waveX/Y`). SUPERNOVA flings it away; REBIRTH brings it back in from the upper-left. Its light answers mids/treble/roughness, not bass.
+- **Stars:** ±60% treble twinkle on per-star hashed phases; the brightest swell to 2–3 px on kicks.
+- **Ball:** core luminance kept up in cool acts (`CORE-HOT`), ±~25% core pulse; the limb now dissolves into the corona and the ray roots over its outer ~40% with the same hue band (`BLEND`); small/distant stars pulse harder (`SMALL-PULSE`, gain ∝ 0.22/radius, 0.6–2.6×).
+- **Shiver / forward motion / banding (user):** a clock inside `sin()` in a domain warp moves the field back and forth, and that read as shiver. The gas fields (`deepSpace`, `nebula`) now TRANSLATE on the monotonic flow clock and their warps carry no clock. Warp amplitude takes only `bs_billow` (a ~4 s ease of bass+roughness). Background light rides slower envelopes `bs_bassS/bs_kickS` (attack ~80 ms, release ~600 ms); the fast kick envelope on the big gas layer was the 1.2–1.4 flicker. Tile treble jitter replaced by a treble brightening. LSD bands blend across the full band width in OKLab (`bandBlend`), plus a 1-LSB dither. Clean 30 s after: flicker 0.20, clip 0, p95 17.5 ms, no jank spikes. The fix was ported to `sun/6.frag` and `controllers/sun-6.js` (state on `__sun6State`).
+
+## 8.frag + controllers/sun-8.js — /fork of live black-sun/sun-1 (2026-10-06, rehearsal)
+
+DYING act (bs_act 2), night 0.78, heat 0.22 (cool), reach 0, no kiss at that moment. Look at fork time: two small coral-rose stars in deep space, the companion at left and the main sun at right of center. They are close together and their thin magenta tendrils, beaded with pale sparks, reach toward each other in a dance. The night sky is a dark navy starfield under swirling psychedelic nebula gas in teal, green, rust, violet and blue. The frame is dim (lum 0.13), which is moody, and the critic flagged a grey veil over the night sky at this moment. Flicker 0.49. Captured before the brightness-budget fix and the quiet-never-brighter fix. K5/K6 on auto.
+
+Preset: `jam.html?shader=claude/wip/sun/8&controller=sun-8&vj=1&remote=display`
+
+### Pass log (2026-10-06, brightness budget / quiet-safe / colour)
+
+- **K7 KISS** (knob_7 rising edge past 0.5, 10 s guard) calls a kiss by hand; every kiss is logged to `window.__blackSunState.kissLog` with its cause (`knob` / `drop` / `section` / `scripted`); a scripted approach fires after 150 s with no kiss.
+- **Frame budget:** one OKLCH soft knee on the finished frame (L > 0.6 compressed toward ~0.82, chroma never pulled toward grey, decode → knee → encode), replacing stacked per-layer limiters. Broad gas layers surge on their bright arms/veils only (local contrast, not a frame lift). 60 s loud trace afterwards: frame-mean lumMax 0.34.
+- **Quiet-safe:** `bs_presence` = raw energy right now (0.25 s ease). The shader's GATE and every controller envelope are multiplied by it, so a sudden quiet gap relaxes the scene; energyMean lags ~8 s and hiss z-scores used to brighten silence.
+- **No grey:** LSD bands blend in OKLCH (an OKLab mix of complementary bands passed through grey and veiled the night sky). The night floor is navy-black (L 0.16). `gamutLch` lowers L by up to 0.12 before giving up chroma. The ball chroma was raised; ball-body saturation measured A/B on the same frame went 0.57–0.66 → 0.84–0.85. Scene chroma ×1.15 in the budget step. Dead `eyeTone` (mixed toward grey) removed.
+- **Gas without bands:** gas colour is a continuous function of the field (`gasHue`: hue sweeps the wheel with the field value) — no floor/fract band index in the gas any more. The gas is thin translucent veils with clear gaps (density², additive), so stars and navy space show through. The abstract nebula adds over a darkened scene instead of replacing it.
+- **Supernova:** no painted shell. The shock is the distortion front; it lights the gas it has crossed, wall to wall within ~6 s, fading with the flash. Ray roots fade up just outside the ball body (no spokes across it).
+
+## 9.frag + controllers/sun-9.js — /fork of live black-sun/sun-1 (2026-10-06, rehearsal; user: "It's decent right now")
+
+COLLAPSE act (bs_act 3), deep night 0.94, both stars small (size 0.23), no kiss in progress. The look at fork time is two small glowing coral-red suns drifting toward each other in deep space, with fine thin tendrils curling between them. Faint warm gas wisps arc between the stars, over a near-black starfield with dim smoky nebula veils. It is saturated (sat 0.80) but very dark (lum 0.027), which is the moody collapse beat. This is the first fork after the black-wall fix (no isnan), the magenta removal, the closed-form gamut map with frame time back to 17.6 ms, and the continuous plasma ramp. No knobs set.
+
+Preset: `jam.html?shader=claude/wip/sun/9&controller=sun-9&vj=1&remote=display`
+
+### Legible channels (2026-10-06) — one musical element, one visual verb
+
+The user: "I need a variety of legible music features affecting the scene!!!" Every channel now has its own layer and its own kind of motion, and cross-talk was removed so an audience member can point at the screen and name the instrument. Beat channels run on the wavelet (DWT) analysis — the page needs `&wavelet=true` (or wavelet enabled live) and the controller throws if those features are missing after warm-up.
+
+| musical element | source | visual verb (and nothing else uses it) |
+|---|---|---|
+| kick | `wavelet_bassHit` onset, 120 ms refractory → instant-attack envelope (~300 ms release) | main star SIZE punch +13% (small/far stars punch harder) + a short lensing thump around it. Onset → size peak measured on the wall: median 17 ms, p90 30 ms |
+| snare / mid transients | `waveletBand3/4ZScore` onset | one spark ring bursts out along every ray per hit (countable) |
+| hats / treble | `waveletBand5ZScore` envelope | the star field twinkles (±85%), the brightest stars swell; fine glints race out at the ray tips |
+| bass sustain | slow `bassNormalized` envelope (1.2 s up / 2.5 s down) | the nebula gas / galaxy arms swell and breathe; day tiles' gaps breathe; day sky sunlight |
+| melody / pitch | pitch-class steps + `waveletCentroidZScore` glides | the COMPANION: its brightness, its ray light, its size, and its orbit speed |
+| mids / vocals | mids envelope (~0.35 s) | tendril sway amplitude |
+| energy build | `energySlope × energyRSquared` | rays lengthen, the background flow and the plasma boil speed up |
+| drop | `wavelet_confirmedDrop` after an armed build | story events: kiss, COLLAPSE → SUPERNOVA, distortion fronts |
+
+Removed for legibility: bass/kick brightness on the rays, ball and corona; kick on gas and stars; treble on gas crests, tiles and the ball surface; flux flares and the flux blob; the post-composite surge gain. Act changes are now music-earned and logged in `window.__blackSunState.actLog` with their cause; the only non-musical exit is a ≥7 min fallback that glides 2.5× slower to a gentle act (never to SUPERNOVA). Kisses fire only on a drop, a section change, a strong onset cluster or K7 — no timer.
+
+Also: Starry-Night tile flow (tile rows follow a slow swirl field instead of perfect circles), night fully hides the tiles, night floor raised (base L 0.21, veils ×2.5), wavelet analysis enabled live on the wall over CDP (no reload) — Friday's launch URL now carries `&wavelet=true`.

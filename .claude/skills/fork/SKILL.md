@@ -55,6 +55,15 @@ If no numbered files exist, use `2.frag` as the first fork.
 
 Copy the current `.frag` to the new filename. Update any internal comments that reference the old name.
 
+- **Copy the controller too.** If the shader reads controller uniforms, copy
+  `controllers/<name>.js` to a frozen snapshot such as `controllers/<name>-<N>.js`. Otherwise the
+  fork changes whenever the live controller does.
+- **Add a preset line** right after the leading `// @` metadata (and after `#version` if present).
+  It must carry every query param the fork needs: controller, `wavelet=true` if wavelets are used,
+  and any knobs that matter. The list page extracts http(s) URLs from comments as presets and
+  applies their params:
+  `// preset: https://visuals.beadfamous.com/?shader=<path>&controller=<snapshot>&wavelet=true`
+
 ### 5. Write the companion doc
 
 Create `<new-name>.md` with:

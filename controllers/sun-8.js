@@ -46,33 +46,27 @@ const SECTION_REFRACTORY = 12
 //   sink     how far the sun sinks toward the horizon   night  day sky → deep space   move  how fast it drifts
 //
 // `next(m, dwell)` returns the next act index or -1. m = musical state (see below).
-// MUSIC-EARNED (user, 2026-10-06: "that sudden growth of the sun was not warranted by the music"):
-// every transition names its musical cause. Size jumps (SUPERNOVA, RED GIANT swell) happen only on an
-// event — a drop after a build, a build, calm/low stretches. The only non-musical exit is a long
-// ≥7 min fallback, and it glides 2.5× slower (`slow`) toward a gentle act, never toward SUPERNOVA.
-// Steady music simply holds the act. next(m, dwell) → [act, cause] | null.
-const FALLBACK = 420
 const ACTS = [
-  { name: 'MAIN SEQUENCE', ease: 40, min: 60, p: { heat: 1.0, size: 1.0, power: 1.0, dark: 0.0, abstract: 0.0, chaos: 0.3, pull: 0.0, sink: 0.0, night: 0.0, move: 1.0 },
-    next: (m, d) => m.building && d > 45 ? [3, 'build'] : m.calm && d > 60 ? [1, 'calm'] : d > FALLBACK ? [1, 'fallback'] : null },
-  { name: 'RED GIANT', ease: 60, min: 45, p: { heat: 0.55, size: 1.65, power: 0.75, dark: 0.15, abstract: 0.1, chaos: 0.2, pull: 0.0, sink: 0.05, night: 0.25, move: 0.5 },
-    next: (m, d) => m.building && d > 45 ? [3, 'build'] : m.low && d > 45 ? [2, 'low'] : d > FALLBACK ? [2, 'fallback'] : null },
-  { name: 'DYING', ease: 60, min: 45, p: { heat: 0.2, size: 0.45, power: 0.3, dark: 0.7, abstract: 0.0, chaos: 0.1, pull: 0.1, sink: 0.38, night: 0.8, move: 0.7 },
-    next: (m, d) => m.building && d > 30 ? [3, 'build'] : d > FALLBACK ? [6, 'fallback'] : null },
-  { name: 'COLLAPSE', ease: 25, min: 15, p: { heat: 0.4, size: 0.22, power: 0.2, dark: 0.85, abstract: 0.2, chaos: 0.6, pull: 1.0, sink: 0.38, night: 0.95, move: 0.0 },
-    next: (m, d) => m.drop && d > 15 ? [4, 'drop'] : d > FALLBACK ? [6, 'fallback'] : null },
-  { name: 'SUPERNOVA', ease: 4, min: 25, p: { heat: 1.4, size: 1.9, power: 2.0, dark: 0.0, abstract: 0.5, chaos: 1.0, pull: 0.0, sink: 0.3, night: 0.55, move: 0.0 },
-    next: (m, d) => d > 25 ? [5, 'detonation ran its course'] : null },
-  { name: 'NEBULA', ease: 30, min: 60, p: { heat: 0.8, size: 0.55, power: 0.55, dark: 0.3, abstract: 1.0, chaos: 0.7, pull: 0.0, sink: 0.12, night: 1.0, move: 0.6 },
-    next: (m, d) => m.calm && d > 60 ? [6, 'calm'] : d > FALLBACK ? [6, 'fallback'] : null },
-  { name: 'REBIRTH', ease: 45, min: 45, p: { heat: 1.2, size: 0.5, power: 0.8, dark: 0.4, abstract: 0.35, chaos: 0.3, pull: 0.0, sink: 0.0, night: 0.5, move: 0.9 },
-    next: (m, d) => m.building && d > 45 ? [0, 'build'] : d > FALLBACK ? [0, 'fallback'] : null },
+  { name: 'MAIN SEQUENCE', ease: 40, min: 60, max: 180, p: { heat: 1.0, size: 1.0, power: 1.0, dark: 0.0, abstract: 0.0, chaos: 0.3, pull: 0.0, sink: 0.0, night: 0.0, move: 1.0 },
+    next: (m, d) => m.building && d > 45 ? 3 : (m.calm && d > 60) || d > 180 ? 1 : -1 },
+  { name: 'RED GIANT', ease: 60, min: 45, max: 150, p: { heat: 0.55, size: 1.65, power: 0.75, dark: 0.15, abstract: 0.1, chaos: 0.2, pull: 0.0, sink: 0.05, night: 0.25, move: 0.5 },
+    next: (m, d) => m.building && d > 45 ? 3 : (m.low && d > 45) || d > 150 ? 2 : -1 },
+  { name: 'DYING', ease: 60, min: 45, max: 120, p: { heat: 0.2, size: 0.45, power: 0.3, dark: 0.7, abstract: 0.0, chaos: 0.1, pull: 0.1, sink: 0.38, night: 0.8, move: 0.7 },
+    next: (m, d) => (m.building && d > 30) || d > 120 ? 3 : -1 },
+  { name: 'COLLAPSE', ease: 25, min: 15, max: 90, p: { heat: 0.4, size: 0.22, power: 0.2, dark: 0.85, abstract: 0.2, chaos: 0.6, pull: 1.0, sink: 0.38, night: 0.95, move: 0.0 },
+    next: (m, d) => (m.drop && d > 15) || d > 90 ? 4 : -1 },
+  { name: 'SUPERNOVA', ease: 4, min: 25, max: 25, p: { heat: 1.4, size: 1.9, power: 2.0, dark: 0.0, abstract: 0.5, chaos: 1.0, pull: 0.0, sink: 0.3, night: 0.55, move: 0.0 },
+    next: (m, d) => d > 25 ? 5 : -1 },
+  { name: 'NEBULA', ease: 30, min: 60, max: 150, p: { heat: 0.8, size: 0.55, power: 0.55, dark: 0.3, abstract: 1.0, chaos: 0.7, pull: 0.0, sink: 0.12, night: 1.0, move: 0.6 },
+    next: (m, d) => (m.calm && d > 60) || d > 150 ? 6 : -1 },
+  { name: 'REBIRTH', ease: 45, min: 45, max: 75, p: { heat: 1.2, size: 0.5, power: 0.8, dark: 0.4, abstract: 0.35, chaos: 0.3, pull: 0.0, sink: 0.0, night: 0.5, move: 0.9 },
+    next: (m, d) => d > 60 ? 0 : -1 },
 ]
 const STORY_KEYS = ['heat', 'size', 'power', 'dark', 'abstract', 'chaos', 'pull', 'sink', 'night', 'move']
 
 // Inputs. Before the analyser has history these are undefined/NaN for a few frames; a NaN folded into
 // an envelope would stick forever, so audio state only advances on frames where all of them are numbers.
-const INPUTS = ['energy', 'pitchClass', 'energyMean', 'bassZScore', 'midsZScore', 'trebleZScore', 'energyNormalized',
+const INPUTS = ['energyMean', 'bassZScore', 'midsZScore', 'trebleZScore', 'energyNormalized',
   'spectralEntropyNormalized', 'spectralCentroidZScore', 'bassNormalized', 'energyZScore',
   'spectralFluxZScore', 'spectralRoughnessZScore', 'spectralCrestZScore', 'spectralRolloffZScore',
   'spectralCentroidMedian', 'spectralSkewMean', 'bassMedian', 'spectralEntropyMedian',
@@ -97,19 +91,17 @@ export function make() {
     flux: 0, rough: 0, crest: 0, roll: 0.5, kick: 0,
     curl: 0.5, dir: 0.5, flex: 0.5, wave: 0.5, len: 0.5, thick: 0.5,
     flow: 0, twist: 0, flexPh: 0, pal: 0, diskPh: 0,
-    kAge: 1, kAmp: 0, kRefr: 0, kT: 9, kDur: 0.35, kPeak: 0, fluxEnv: 0, fAge: 1, fId: 0, fAmp: 0,
+    kAge: 1, kAmp: 0, fluxEnv: 0, fAge: 1, fId: 0, fAmp: 0,
     bassSlow: 0, wAge: 1, wAmp: 0, sinceWave: 99,
     // story
-    act: 0, actT: 0, actLog: [], slow: 1, forced: -1, buildT: 0, armed: 0, calmT: 0, lowT: 0, nova: 0, novaT: 99,
+    act: 0, actT: 0, forced: -1, buildT: 0, armed: 0, calmT: 0, lowT: 0, nova: 0, novaT: 99,
     heat: 1.0, size: 1.0, power: 1.0, dark: 0.0, abstract: 0.0, chaos: 0.3, pull: 0.0,
     sink: 0.0, night: 0.0, move: 1.0, skyPh: 0,
-    galPh: 0, wind: 0, windTo: 0, fluxPh: 0, billow: 0, bassS: 0, kickS: 0,
-    // LEGIBLE channels
-    snAge: 1, snAmp: 0, snWas: 0, pitchMove: 0, pcWas: 0, build: 0, bassSus: 0, midsS: 0, cX: -2.0, cY: 1.4, kiss: 0,
+    galPh: 0, wind: 0, windTo: 0, fluxPh: 0, billow: 0, bassS: 0, kickS: 0, cX: -2.0, cY: 1.4, kiss: 0,
     reach: 0, reachLeft: 0, sinceReach: 0, hotT: 0,
     // binary companion
     sunX: 0, sunY: 0.10, waveX: 0, waveY: 0.10,
-    cOn: 0, cR: 2.6, cPh: 2.6, cPrec: 0, kissT: 1, sinceKiss: 0, kissFired: 1, k7Was: 0, kissLog: [], presence: 0,
+    cOn: 0, cR: 2.6, cPh: 2.6, cPrec: 0, kissT: 1, sinceKiss: 0, kissFired: 1, k7Was: 0, kissLog: [],
     // section-change detector + shutter
     sustE: 0, sustF: 0, trend: 0, gateWas: null, sinceSection: 0,   // no event in the first 12 s (z-scores are noise until history fills)
     irisFrom: 1, irisTo: 1, shutterP: 1, shutterAng: 0, events: 0,
@@ -138,24 +130,13 @@ export function make() {
       S.shutterAng += Math.abs(S.irisTo - S.irisFrom) * 1.2 * dt / SHUTTER_SECS   // blades turn while it runs
     }
     if (INPUTS.some(k => !Number.isFinite(f[k]))) return out()
-    // WAVELET (user, 2026-10-06: "use the wavelet uniforms"): the beat channels run on the DWT onsets,
-    // which lead the FFT by ~60 ms. The page must run wavelet analysis (?wavelet=true, or enabled live).
-    // No fallback to FFT onsets — missing wavelet features after warm-up is a launch error.
-    if (['wavelet_bassHit', 'wavelet_confirmedDrop', 'waveletBand3ZScore', 'waveletBand4ZScore', 'waveletBand5ZScore', 'waveletCentroidZScore'].some(k => !Number.isFinite(f[k]))) {
-      if (S.time > 6) throw new Error('black-sun: wavelet features missing — load the page with &wavelet=true')
-      return out()
-    }
 
-    // PRESENCE: the music is playing RIGHT NOW (raw energy, ~0.25 s ease). energyMean lags ~8 s, so on a
-    // sudden quiet gap the old gate stayed open while hiss sent crest/roughness/centroid z-scores
-    // spiking — the scene got BRIGHTER in silence. Everything audio-driven is multiplied by presence.
-    S.presence += (smoothstep(0.002, 0.01, f.energy) - S.presence) * (1 - Math.exp(-dt / 0.25))
-    const gate = smoothstep(0.003, 0.015, f.energyMean) * S.presence   // matches the shader's GATE (tuned to the BlackHole line feed)
+    const gate = smoothstep(0.003, 0.015, f.energyMean)   // matches the shader's GATE (tuned to the BlackHole line feed)
 
     // light envelopes — z-scores relative to the track, so they swing 0↔1 with the music
     S.bass     = envAR(S.bass, f.bassZScore * 0.7 + 0.25, 0.35, 0.05, dt)
     S.mids     = envAR(S.mids, f.midsZScore * 0.7 + 0.25, 0.25, 0.04, dt)
-    S.treb     = envAR(S.treb, f.waveletBand5ZScore * 0.8 + 0.25, 0.5, 0.08, dt)   // hats: wavelet band 5
+    S.treb     = envAR(S.treb, f.trebleZScore * 0.7 + 0.2, 0.35, 0.05, dt)
     S.energy   = ema(S.energy, f.energyNormalized, 0.05, dt)
     S.entropy  = ema(S.entropy, f.spectralEntropyNormalized, 0.04, dt)
     S.centroid = envAR(S.centroid, f.spectralCentroidZScore * 0.5 + 0.5, 0.10, 0.03, dt)
@@ -181,28 +162,12 @@ export function make() {
     S.twist  += (0.006 + 0.03 * Math.min(1, Math.max(-0.15, f.energySlope * f.energyRSquared * 3000))) * dt
     S.flexPh += (0.03 + 0.10 * smoothstep(0.10, 0.40, f.spectralSpreadMean)) * dt
     S.pal    += (1 / 1500) * (0.6 + 0.8 * gate) * dt   // ~25 min round the wheel
-    S.diskPh += (0.6 + 0.8 * S.build) * dt   // plasma boil; the build quickens it   // plasma/disk orbit, radians; NOT wrapped (inner/outer at non-integer ratios). mids + bass speed the boil
+    S.diskPh += (0.6 + 1.8 * S.mids * gate + 1.2 * S.bass * gate) * dt   // plasma/disk orbit, radians; NOT wrapped (inner/outer at non-integer ratios). mids + bass speed the boil
 
     // kick: envelope + one deliberate wavefront per onset
-    // KICK: wavelet bass onset (sharp, ~21 ms window) with a 120 ms refractory → envelope
-    S.kRefr -= dt
-    const wHit = f.wavelet_bassHit > 0.9 && S.kRefr <= 0
-    if (wHit) S.kRefr = 0.12
-    const kRaw = wHit ? clamp01(0.55 + 0.25 * f.wavelet_bassHit) * gate : 0
+    const kRaw = clamp01((Math.max(f.bassZScore, f.energyZScore) - 0.2) * 1.8) * gate
     const kPrev = S.kick
-    // KICK-EASE (user: "an ease-out animation after the beat"): HIT → glide back. Instant attack on
-    // the onset, then a cubic ease-out over T = 60% of the last inter-onset gap (0.25–0.45 s), so fast
-    // tempos don't smear into mush. A new onset mid-release re-triggers from the current value (never
-    // dips to zero first — no flicker).
-    S.kT += dt
-    if (kRaw > 0) {
-      const ioi = S.kT
-      S.kDur = Math.min(0.45, Math.max(0.25, 0.6 * (ioi > 0.15 && ioi < 2 ? ioi : 0.6)))
-      S.kPeak = Math.max(S.kick, kRaw)
-      S.kT = 0
-    }
-    const ku = Math.min(1, S.kT / S.kDur)
-    S.kick = S.kPeak * Math.pow(1 - ku, 3)   // release ~0.5 s: a hit blooms and glides off instead of strobing
+    S.kick = envAR(S.kick, kRaw, 0.6, 0.04, dt)   // release ~0.5 s: a hit blooms and glides off instead of strobing
     if (kRaw > 0.45 && kPrev < 0.30 && S.kAge > 0.55) { S.kAge = 0; S.kAmp = kRaw }
     else S.kAge = Math.min(1, S.kAge + dt / 3)
 
@@ -233,28 +198,25 @@ export function make() {
     S.lowT = S.sustE < -0.25 || gate < 0.5 ? S.lowT + dt : 0
     const m = {
       building: S.buildT > 8,
-      drop: S.armed > 0 && f.wavelet_confirmedDrop > 1.0 && f.energyZScore - S.sustE > 0.4,   // the drop: wavelet-confirmed
+      drop: S.armed > 0 && f.energyZScore > 0.8 && f.energyZScore - S.sustE > 0.5,
       calm: S.calmT > 15,
       low: S.lowT > 10,
     }
     const k5 = f.knob_5 ?? 0
-    const goTo = (i, cause) => {
+    const goTo = (i) => {
       if (i === S.act) return
-      S.actLog.push({ t: +S.time.toFixed(1), from: ACTS[S.act].name, to: ACTS[i].name, cause, eZ: +f.energyZScore.toFixed(2), sustE: +S.sustE.toFixed(2), trend: +S.trend.toFixed(2) })
-      if (S.actLog.length > 50) S.actLog.shift()
-      S.slow = cause === 'fallback' ? 2.5 : 1
       S.act = i; S.actT = 0
       if (i === 3) fireWave(0.8)                       // collapse: the space around it shudders inward
       if (i === 4) { S.armed = 0; S.novaT = 0; S.sinceWave = 99; fireWave(1); S.windTo = Math.min(2, S.windTo + 0.4) }   // detonation
       if (i === 6) S.windTo = 0                         // rebirth unwinds the galaxy (eased)
     }
-    if (k5 > 0.02) goTo(Math.min(ACTS.length - 1, Math.floor(k5 * ACTS.length)), 'knob')
+    if (k5 > 0.02) goTo(Math.min(ACTS.length - 1, Math.floor(k5 * ACTS.length)))
     else {
       const nx = ACTS[S.act].next(m, S.actT)
-      if (nx && S.actT >= ACTS[S.act].min) goTo(nx[0], nx[1])
+      if (nx >= 0 && S.actT >= ACTS[S.act].min) goTo(nx)
     }
     const A = ACTS[S.act]
-    for (const k of STORY_KEYS) S[k] = S[k] + (A.p[k] - S[k]) * (1 - Math.exp(-dt * 3 / (A.ease * S.slow)))
+    for (const k of STORY_KEYS) S[k] = S[k] + (A.p[k] - S[k]) * (1 - Math.exp(-dt * 3 / A.ease))
     S.nova = S.novaT < 30 ? Math.exp(-S.novaT / 6) : 0  // the detonation flash, one big eased event
     // SKY PATH: a monotonic phase (never wrapped, never reversed) drives a slow Lissajous with
     // incommensurate periods — a full wander takes many minutes. The act's `move` sets the rate (0 =
@@ -266,15 +228,15 @@ export function make() {
     // COMPANION: a small dark-red star. It enters from off-screen upper-left and spirals in over a
     // few minutes (radius eases inward), then dances a slow, slightly elliptical, precessing orbit
     // (mids speed the dance — a rate). The main star wobbles about the shared barycentre. KISS: on a
-    // drop or section change (30 s refractory), or a strong sustained onset cluster — never on a timer
-    // — the orbit dips until the coronas overlap, a distortion front fires from the contact
+    // drop or section change (30 s refractory), or a scripted approach every ~2.5 min of steady
+    // music, the orbit dips until the coronas overlap, a distortion front fires from the contact
     // point, and they drift apart. SUPERNOVA flings it away; it re-forms and re-enters in REBIRTH.
     const flung = S.act === 4 || S.act === 5
     if (S.act === 6 && S.cOn < 0.05) { S.cR = 2.6; S.cPh = 2.6 }
     S.cOn += ((flung ? 0 : 1) - S.cOn) * (1 - Math.exp(-dt / (flung ? 3 : 20)))
     const cRTo = flung ? 3.5 : 0.78
     S.cR += (cRTo - S.cR) * (1 - Math.exp(-dt / (flung ? 4 : 55)))
-    S.cPh -= (0.04 + 0.12 * S.pitchMove) * dt            // melody: pitch movement drives the companion's dance          // clockwise: from the upper-left it swoops in over the top
+    S.cPh -= (0.05 + 0.04 * S.mids * gate) * dt          // clockwise: from the upper-left it swoops in over the top
     S.cPrec += 0.006 * dt
     S.sinceKiss += dt
     S.kissT = Math.min(1, S.kissT + dt / 10)
@@ -286,14 +248,13 @@ export function make() {
       if (S.kissLog.length > 50) S.kissLog.shift()
     }
     // K7 KISS (knob_7): a rising edge past 0.5 calls a kiss by hand — only a 10 s guard, so it can be
-    // thrown on a drop. Otherwise a kiss happens ONLY on a meaningful musical event (user, 2026-10-06:
-    // "only as the result of a significant audio event that makes sense"): a drop, a section change
-    // (below), or a strong sustained onset cluster. No timer, no random kisses.
+    // thrown on a drop. The musical triggers stay: a drop, a section change (below), and a scripted
+    // approach after 150 s of nothing, so one always comes within a few minutes of steady music.
     const k7 = f.knob_7 ?? 0
     if (k7 > 0.5 && S.k7Was <= 0.5) startKiss('knob', 10)
     S.k7Was = k7
     if (m.drop) startKiss('drop')
-    if (S.fluxEnv > 0.7 && S.sustF > 0.8) startKiss('onsets')
+    if (S.sinceKiss > 150) startKiss('scripted')
     const rEff = S.cR + (0.3 - S.cR) * kiss
     const ex = rEff * Math.cos(S.cPh), ey = rEff * 0.78 * Math.sin(S.cPh)
     const cp = Math.cos(S.cPrec), sp = Math.sin(S.cPrec)
@@ -307,25 +268,7 @@ export function make() {
     if (!S.kissFired && S.kissT > 0.45) { S.kissFired = 1; S.sinceWave = 99; fireWave(1, (S.sunX + S.cX) / 2, (S.sunY + S.cY) / 2) }
     // GALAXY: the spiral arms' flow (mids set the speed — a rate, never a jump), their winding (a one-way
     // eased step on every drop / section change / supernova, capped), and an outward flux wave clock
-    // LEGIBLE: each musical element gets ONE visual verb (sun.md table). Envelopes for those verbs:
-    //   snare  — a mid-band flux onset → one spark ring bursting out along the rays (countable)
-    //   melody — pitch movement (pitch-class steps + centroid motion) → the companion
-    //   build  — confident energy trend → ray reach + background flow speed
-    //   bass sustain — slow bassNormalized → nebula gas breathing
-    //   mids   — mid-speed mids envelope → tendril sway amplitude
-    const snRaw = clamp01((Math.max(f.waveletBand3ZScore, f.waveletBand4ZScore) - 0.35) * 1.6) * gate   // snare-ish: wavelet bands 3/4 onsets
-    if (snRaw > 0.35 && S.snWas < 0.2 && S.snAge > 0.25) { S.snAge = 0; S.snAmp = clamp01(snRaw * 1.4) }
-    else S.snAge = Math.min(1, S.snAge + dt / 0.9)
-    S.snWas = snRaw
-    const pc = f.pitchClass ?? 0
-    const step = Math.min(Math.abs(pc - S.pcWas), 1 - Math.abs(pc - S.pcWas))
-    S.pcWas = pc
-    const pm = clamp01(step * 6 + Math.abs(f.waveletCentroidZScore) * 0.4) * gate   // melody: pitch-class steps + wavelet centroid glides
-    S.pitchMove += (pm - S.pitchMove) * (1 - Math.exp(-dt / (pm > S.pitchMove ? 0.12 : 0.9)))
-    S.build += (clamp01(S.trend * 0.8) * gate - S.build) * (1 - Math.exp(-dt / 2))
-    S.bassSus += (clamp01(f.bassNormalized) * gate - S.bassSus) * (1 - Math.exp(-dt / (f.bassNormalized * gate > S.bassSus ? 1.2 : 2.5)))
-    S.midsS += (clamp01(f.midsZScore * 0.6 + 0.3) * gate - S.midsS) * (1 - Math.exp(-dt / 0.35))
-    S.galPh += (0.05 + 0.5 * S.build) * dt   // build accelerates the background flow
+    S.galPh += (0.05 + 0.6 * S.mids * gate) * dt
     S.wind += (S.windTo - S.wind) * (1 - Math.exp(-dt / 4))
     S.fluxPh += (0.05 + 0.9 * S.flux * gate) * dt
     // BILLOW: the only audio allowed to scale a background WARP — a slow (~4 s) ease of bass + roughness.
@@ -337,11 +280,12 @@ export function make() {
     S.kickS = arS(S.kickS, S.kick)
     S.billow += (clamp01(0.6 * S.bass + 0.4 * S.rough) * gate - S.billow) * (1 - Math.exp(-dt / 4))
     // REACH: huge rays as an aesthetic that comes and goes, not the default. A window opens in
-    // REBIRTH or on a sustained hot section (10 s); it lasts 30–90 s and eases in/out over ~20 s. K6 REACH (knob_6) forces the amount.
+    // REBIRTH, on a sustained hot section (10 s), or by chance once ~3+ min have passed since the
+    // last one; it lasts 30–90 s and eases in/out over ~20 s. K6 REACH (knob_6) forces the amount.
     S.sinceReach += dt
     S.hotT = S.sustE > 0.5 ? S.hotT + dt : 0
     const openReach = () => { if (S.reachLeft > 0 || S.sinceReach < 60) return; S.reachLeft = 30 + 60 * Math.random(); S.sinceReach = 0 }
-    if (S.act === 6 || S.hotT > 10) openReach()   // music-earned only (no random windows)
+    if (S.act === 6 || S.hotT > 10 || (S.sinceReach > 180 && Math.random() < dt / 90)) openReach()
     S.reachLeft = Math.max(0, S.reachLeft - dt)
     const k6 = f.knob_6 ?? 0
     const reachTo = k6 > 0.02 ? k6 : S.reachLeft > 0 ? 1 : 0
@@ -366,7 +310,6 @@ export function make() {
       S.irisFrom = irisScale()
       S.irisTo = Math.min(1.25, Math.max(0.7, next))
       S.shutterP = 0
-      S.actLog.push({ t: +S.time.toFixed(1), shutter: +S.irisTo.toFixed(2), cause: 'section', eZ: +f.energyZScore.toFixed(2), sustE: +S.sustE.toFixed(2), sustF: +S.sustF.toFixed(2), trend: +S.trend.toFixed(2) })
       fireWave(1)
       S.windTo = Math.min(2, S.windTo + 0.2)
       startKiss('section')
@@ -384,20 +327,18 @@ export function make() {
   function out() {
     const o = {
       bs_time: S.time, bs_eye: S.eye,
-      bs_presence: S.presence,
       bs_bass: S.bass, bs_mids: S.mids, bs_treb: S.treb, bs_energy: S.energy, bs_entropy: S.entropy,
       bs_centroid: S.centroid, bs_pump: S.pump, bs_drop: S.drop, bs_flux: S.flux, bs_rough: S.rough,
       bs_crest: S.crest, bs_roll: S.roll, bs_kick: S.kick,
       bs_curl: S.curl, bs_dir: S.dir, bs_flex: S.flex, bs_wave: S.wave, bs_len: S.len, bs_thick: S.thick,
       bs_flow: fract(S.flow), bs_twist: fract(S.twist), bs_flexPh: fract(S.flexPh), bs_pal: fract(S.pal),
-      bs_kAge: S.kAge, bs_kAmp: S.kAmp, bs_kickEase: S.kick,
+      bs_kAge: S.kAge, bs_kAmp: S.kAmp,
       bs_irisScale: irisScale(), bs_shutter: Math.sin(Math.PI * S.shutterP), bs_shutterAng: fract(S.shutterAng), bs_diskPh: S.diskPh,
       bs_fAge: S.fAge, bs_fId: S.fId, bs_fAmp: S.fAmp,
       bs_wAge: S.wAge, bs_wAmp: S.wAmp,
       bs_heat: S.heat, bs_size: S.size, bs_power: S.power, bs_dark: S.dark, bs_abstract: S.abstract,
       bs_chaos: S.chaos, bs_pull: S.pull, bs_night: S.night,
       bs_sunX: S.sunX, bs_sunY: S.sunY, bs_cX: S.cX, bs_cY: S.cY, bs_cOn: S.cOn, bs_kiss: S.kiss, bs_waveX: S.waveX, bs_waveY: S.waveY,
-      bs_snAge: S.snAge, bs_snAmp: S.snAmp, bs_pitchMove: S.pitchMove, bs_build: S.build, bs_bassSus: S.bassSus, bs_midsS: S.midsS,
       bs_reach: S.reach, bs_billow: S.billow, bs_bassS: S.bassS, bs_kickS: S.kickS, bs_galPh: S.galPh, bs_wind: S.wind, bs_fluxPh: S.fluxPh,
       bs_nova: S.nova, bs_shell: Math.min(S.novaT, 30), bs_act: S.act, bs_actT: S.actT,
     }

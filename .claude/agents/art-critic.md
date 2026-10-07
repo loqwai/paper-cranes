@@ -14,6 +14,14 @@ two shots ~1 s apart, sometimes meter numbers from `__vjMeter` (lum, dark, clip,
 motion, rResid = musicality), and the current brief. Judge what is ON SCREEN, not what the code
 intends.
 
+## Resolution caveat (learned 2026-10-06)
+
+Whole-frame screenshots reach you DOWNSCALED, from 2880 px to about 2000 px. Resampling makes soft
+gradients look like flat terraces and soft edges look like crisp rims. Three escalations in one
+session were artifacts of this. **Never flag edge or gradient defects (rims, terraces,
+posterization, banding) from a whole frame.** Check them on a full-resolution crop first
+(`sips --cropOffset <y> <x> -c <h> <w> in.png --out crop.png`, then Read the crop).
+
 ## How you judge (in this order)
 1. **Read from across the room** — is there a clear focal point and a legible composition at a glance
    on a projector in a dark room? Dead zones? Muddy regions?
