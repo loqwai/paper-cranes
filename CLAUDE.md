@@ -356,6 +356,7 @@ uniform float another;   // = 1.2
 - `audio=tab` - Capture audio from a browser tab instead of mic. Chrome/Edge only. See [docs/tab-audio.md](docs/tab-audio.md)
 - `audio_file=<url>` - Play a deterministic audio file through the analyzer. See [docs/audio-file-playback.md](docs/audio-file-playback.md)
 - `wavelet=true` - Enable opt-in wavelet (DWT) analysis alongside FFT. Adds `wavelet*` uniforms (octave bands, centroid/spread, bassHit trigger, FFT×wavelet combos). See [docs/wavelet-analysis.md](docs/wavelet-analysis.md)
+- `audio_device=<label substring>` - Open the mic input whose label contains this (e.g. `USB Audio CODEC`); no match means no audio, never a different device
 - `audio_time=<seconds>` - Start audio file playback at this offset (default: 0)
 - `time=<seconds>` - Hold time constant (useful for deterministic screenshots/testing)
 - `vj=1` - Install the VJ runtime on the display: cursor-hide, GL validator, aesthetic meter, frame-time probe, and health signals POSTed to `/__vj-signal`. This is how the auto-VJ loop sees a page it cannot screenshot. See [docs/vj-telemetry.md](docs/vj-telemetry.md)
@@ -470,11 +471,12 @@ paramsManager.setShader(code)      // Syncs shader to remote
 ├── scripts/
 │   ├── remap-knobs.js          # Utility to remap knob assignments in shaders
 │   └── vj/                     # Live-VJ tooling — see docs/vj-telemetry.md
+│       ├── show.js             #   the show browser: fullscreen Chrome driven over CDP (launch/eval/shot)
 │       ├── aesthetic-meter.js  #   FETCHED BY URL at runtime; do not move
 │       ├── remote-send.js      #   push update-params to the display from a shell
 │       ├── watch-release.js    #   emit a line when a fader is released
 │       └── knob-correlate.js   #   which audio feature was that gesture imitating?
-├── jam.js                       # Jam page UI (knob drawer + spacebar snapshots)
+├── jam.js                       # Jam page: canvas only, MIDI + spacebar snapshots, no on-screen UI
 ├── index.js                     # Main entry point
 ├── edit.js                      # Editor interface
 ├── list.js                      # Shader list/gallery page
