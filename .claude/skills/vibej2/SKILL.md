@@ -167,7 +167,11 @@ node scripts/vj/show.js eval 'async (path) => {
    answering.
 2. **Launch the show browser** on the jam page (canvas only: no drawer, no toasts, no
    indicators; MIDI still live):
+   **Always `stop` first** — a show browser left over from an earlier run can be alive with
+   zero pages (window closed, process still on the CDP port), and every other command refuses
+   it. `stop` closes it over raw CDP whatever state it is in; `not running` is fine.
    ```bash
+   node scripts/vj/show.js stop
    node scripts/vj/show.js launch "http://localhost:$PORT/jam.html?shader=<path>&controller=<name>&vj=1&remote=display[&audio_device=<audio>]"
    ```
    Append `&audio_device=` only when the user passed `audio=`.

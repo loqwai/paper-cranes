@@ -10,8 +10,13 @@ export function editorSyncPlugin() {
   return {
     name: 'vite-plugin-editor-sync',
 
+    // Controllers are dynamic-imported by the page, so they sit in Vite's module graph with no HMR
+    // accept boundary — left alone, Vite answers every controller edit with a FULL PAGE RELOAD,
+    // which blacks out the projected wall and resets the audio history. The chokidar watcher below
+    // sends `controller-update` instead, and jam.js re-imports the chain in place.
     handleHotUpdate({ file }) {
       if (file.endsWith('.frag')) return []
+      if (/[\\/]controllers[\\/][^\\/]+\.js$/.test(file)) return []
     },
 
     configureServer(server) {
