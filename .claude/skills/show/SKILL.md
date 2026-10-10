@@ -28,7 +28,7 @@ Read it once, and use it for anything this skill doesn't cover. Brief every agen
 P=$(./scripts/dev-port); echo "port $P"
 curl -s -o /dev/null -w '%{http_code}\n' "http://localhost:$P/"
 git branch --show-current; git fetch -q origin && git status -sb | head -1
-grep -c 'controllers' vite-plugins/editor-sync-plugin.js && grep -n 'return \[\]' vite-plugins/editor-sync-plugin.js
+grep -n "'\*\*/controllers/\*\*'" vite.config.js && grep -n "chokidar.watch('controllers'" vite-plugins/editor-sync-plugin.js
 node scripts/vj/show.js displays
 system_profiler SPAudioDataType | grep -i -A2 'BlackHole'
 ```
@@ -37,7 +37,7 @@ system_profiler SPAudioDataType | grep -i -A2 'BlackHole'
 |---|---|
 | Dev server | HTTP `200`. If not, start `npm run dev` in a background Bash, then recheck. |
 | Branch | `peter-show` and not `behind`. If behind, ask before running `git pull --ff-only`. |
-| No-reload controller fix (PR #144) | `handleHotUpdate` returns `[]` for the `controllers/` regex |
+| No-reload controller fix (PR #144) | Both greps hit: `vite.config.js` ignores `**/controllers/**`, and `editor-sync-plugin.js` runs its own `chokidar.watch('controllers')` |
 | Projector | `displays` lists more than the built-in panel. `launch` uses the **last** display, so confirm with the user if there's only one. |
 | BlackHole present | It appears in the audio device list. It's verified as the active input after launch in step 3. |
 
@@ -54,7 +54,7 @@ routed into it.
 ```bash
 node scripts/vj/show.js stop
 node scripts/vj/show.js launch "http://localhost:$P/jam.html?shader=<shader>&controller=<controller>&wavelet=true&vj=1&remote=display"
-node scripts/vj/show.js eval '() => ({ input: window.cranes.audioInputLabel ?? null, energy: window.cranes.flattenFeatures().energy, meter: typeof window.__vjMeter, validate: typeof window.__vjValidate })'
+node scripts/vj/show.js eval 'async () => { await new Promise(r => setTimeout(r, 2000)); return { input: window.cranes.audioInputLabel ?? null, energy: window.cranes.flattenFeatures().energy, meter: typeof window.__vjMeter, validate: typeof window.__vjValidate } }'
 node scripts/vj/show.js eval 'async () => { const a = window.cranes.controllerFeatures?.bs_time; await new Promise(r => setTimeout(r, 1000)); return { before: a, after: window.cranes.controllerFeatures?.bs_time, keys: Object.keys(window.cranes.controllerFeatures || {}).length } }'
 ```
 
