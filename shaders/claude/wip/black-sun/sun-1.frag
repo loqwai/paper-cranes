@@ -94,11 +94,14 @@
 // controllers/black-sun.js as bs_* uniforms — see the CONTROLLER block below.
 
 // ============================================================================
-// KNOBS knob_1..knob_10 (MIDI) — 0 = the designed look. Swap a line for its constant to pin it.
+// KNOBS knob_1..knob_16 (MIDI) — 0 = the designed look. Swap a line for its constant to pin it.
 // knob_5..7 are read by controllers/black-sun.js, not here:
 // @knob: 5 STORY
 // @knob: 6 REACH
 // @knob: 7 KISS
+// knob_15/16 place the main sun (controllers/black-sun.js; 0 = automatic drift):
+// @knob: 15 SUN X
+// @knob: 16 SUN Y
 // ============================================================================
 #define ZOOM        (0.55 * exp(knob_4 * 1.0033))   // K4 ZOOM — eye/sun/rays/lens scale about the centre, 0.55×..1.5× on an exp curve (0 = eye ~28% of screen height)
 // #define ZOOM 0.55
@@ -118,6 +121,14 @@ float gSwell = 1.0;   // KICK-SWELL: the whole main star (ball, corona, ray root
 // #define REACT 1.0
 #define FADE        (1.0 - knob_10)           // K10 FADE — master fade to black (1 = black wall)
 // #define FADE 1.0
+#define WARMTH      (knob_11 * 0.55)          // K11 WARMTH — pulls every hue toward sun gold the short way round (1 = 55% of the way)
+// #define WARMTH 0.0
+#define SPARKLE     (1.0 + knob_12 * 2.0)     // K12 SPARKLE — star field + lattice glints, 1×..3×
+// #define SPARKLE 1.0
+#define GLOW        (1.0 + knob_13 * 1.5)     // K13 GLOW — corona brightness, 1×..2.5×
+// #define GLOW 1.0
+#define DARK_FLOOR  (knob_14)                 // K14 DARK FLOOR — sinks the darks toward black, brights untouched
+// #define DARK_FLOOR 0.0
 
 #define SUN vec2(bs_sunX, bs_sunY)   // SKY-PATH: the controller drifts the sun slowly (story acts set the rate; dying sinks it)
 
@@ -375,7 +386,7 @@ vec3 sky(vec2 uv, float t, float sm) {
     q.x += q.y * 0.5;
     vec3 lat = lattice(q, t);
     float vis = smoothstep(1.7, 0.30, L) * LATTICE_AMT;
-    vec3 latCol = mc(14.0, 0.55 + 0.3 * lat.y) * lat.x * LATTICE_LIT * (1.0 + SPARK * 0.8 + 0.3 * AIR) * 1.6;   // + AIR: airy sections glint
+    vec3 latCol = mc(14.0, 0.55 + 0.3 * lat.y) * lat.x * LATTICE_LIT * (1.0 + SPARK * 0.8 + 0.3 * AIR) * 1.6 * SPARKLE;   // + AIR: airy sections glint
     f = mix(f, f * 0.55 + latCol, clamp(lat.z, 0.0, 1.0) * vis);
 
     // sunlight scattered into the sky — hue-cycling bloom around the hole
@@ -483,7 +494,7 @@ vec3 deepSpace(vec2 uv) {
     float tw = 1.0 + 0.85 * clamp(gTreb * 1.8, 0.0, 1.0) * G * sin(bs_time * 1.3 + hs * 40.0) - 0.2;   // LEGIBLE hats: the star field twinkles
     float big = step(0.975, hs);
     float star = step(0.9, hs) * exp(-dot(sp, sp) / (0.012 * (1.0 + big * 3.0 * clamp(gTreb * 1.5, 0.0, 1.0) * G))) * tw;
-    c += mix(vec3(0.75, 0.8, 1.0), vec3(1.0, 0.85, 0.7), hash12(cid + 9.0)) * star * 1.6 * (0.85 + 0.35 * AIR) * (1.0 - 0.6 * dens) * smoothstep(0.4, 0.8, bs_night);
+    c += mix(vec3(0.75, 0.8, 1.0), vec3(1.0, 0.85, 0.7), hash12(cid + 9.0)) * star * 1.6 * SPARKLE * (0.85 + 0.35 * AIR) * (1.0 - 0.6 * dens) * smoothstep(0.4, 0.8, bs_night);
     float cM = max(max(c.r, c.g), max(c.b, 1e-4));
     float cK = cM < 0.7 ? cM : 0.7 + 0.2 * (1.0 - exp(-(cM - 0.7) / 0.2));
     return c * (cK / cM);
@@ -586,7 +597,7 @@ vec3 blackSun(vec3 col, vec2 d, float t, float m) {   // m = EYE morph 0..1 (one
     float rays = 0.5 + 0.5 * cos(q.x * 2.0 + q.y * 0.6);
     float reach = RH * (0.55 + 0.9 * rays + FLARE * 0.9 + 1.8 * gFlux * GATE) * (0.9 + 0.25 * PUNCH);   // PUNCH: a punchy low end reaches further   // AUDIO-5X: flux throws flares
     float env = exp(-max(r - RH, 0.0) / reach);
-    vec3 corona = mc(14.0, 0.75 + 0.2 * rays) * env * (0.55 + 0.75 * rays) * CORONA_GLOW * (1.0 + 2.0 * gFlux * GATE);   // orange ↔ coral flares
+    vec3 corona = mc(14.0, 0.75 + 0.2 * rays) * env * (0.55 + 0.75 * rays) * CORONA_GLOW * GLOW * (1.0 + 2.0 * gFlux * GATE);   // orange ↔ coral flares
 
     // photon ring
     float pr = exp(-pow((r - RH * 1.06) / (RH * 0.05), 2.0));
@@ -910,6 +921,8 @@ void mainImage(out vec4 O, in vec2 g) {
     // (VIVID — additive layers of different hues average toward grey), then gamut-mapped in OKLCH.
     // Nothing is ever mixed toward grey.
     vec3 lchB = rgb2oklch(pow(max(f, vec3(0.0)), vec3(2.2)));
+    lchB.x *= mix(1.0, smoothstep(0.02, 0.5, lchB.x), DARK_FLOOR);   // K14: only L below 0.5 sinks
+    lchB.z += atan(sin(1.31 - lchB.z), cos(1.31 - lchB.z)) * WARMTH;   // K11: 1.31 rad ≈ OKLCH sun gold
     float LB = lchB.x < 0.6 ? lchB.x : 0.6 + 0.22 * (1.0 - exp(-(lchB.x - 0.6) / 0.22));
     f = pow(gamutLch(vec3(LB, lchB.y * (1.15 + 0.12 * TONAL), lchB.z)), vec3(1.0 / 2.2));
     f *= min(1.0, 0.93 / max(max(f.r, f.g), max(f.b, 1e-4)));   // NEVER-WHITE: scale, don't clip — hue survives
