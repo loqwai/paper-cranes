@@ -140,6 +140,8 @@ const setupMicAudio = async () => {
             }
         });
         const audioContext = new AudioContext();
+        // iOS can hold resume() pending until a user gesture; the first tap resumes it (addListenersForFullscreen)
+        window.cranes.audioContext = audioContext
         await audioContext.resume();
 
         const stream = await getAudioStream(audioConfig);
@@ -252,12 +254,12 @@ const setupCranesState = () => {
 }
 
 // Animation function for the shader rendering
-const animateShader = ({ render, audio, fragmentShader }) => {
-    requestAnimationFrame(() => animateShader({ render, audio, fragmentShader }))
+const animateShader = ({ render, fragmentShader }) => {
+    requestAnimationFrame(() => animateShader({ render, fragmentShader }))
 
     try {
         // Get audio features and store in measuredAudioFeatures
-        window.cranes.measuredAudioFeatures = audio.getFeatures() || {}
+        window.cranes.measuredAudioFeatures = window.cranes.audio.getFeatures() || {}
 
         // Get flattened features using the centralized method
         const features = window.cranes.flattenFeatures()
@@ -321,6 +323,7 @@ const addListenersForFullscreen = (visualizer) => {
                 console.error(`requesting fullscreen from event ${event} failed`, e);
             }
             askForWakeLock().catch(e => console.warn('Wake lock failed after user gesture:', e))
+            window.cranes.audioContext?.resume()
         }, { once: true });
     }
 }
@@ -344,7 +347,10 @@ const main = async () => {
 
     // Load shader and audio
     const { code: fragmentShader, fullscreen: shaderFullscreen } = await getInitialShader()
-    const audio = await setupAudio()
+    // Render without waiting on audio: the mic prompt (or an iOS resume() held for a gesture)
+    // must not leave a first-time visitor staring at a black screen.
+    window.cranes.audio = noAudio
+    setupAudio().then(audio => { window.cranes.audio = audio })
     const canvas = getVisualizerDOMElement()
 
     if (!window.location.href.includes('edit') && params.get('embed') !== 'true') addListenersForFullscreen(canvas)
@@ -367,7 +373,7 @@ const main = async () => {
     // Initialize visualizer and start shader animation loop
     const render = await makeVisualizer(visualizerConfig)
 
-    requestAnimationFrame(() => animateShader({ render, audio, fragmentShader }))
+    requestAnimationFrame(() => animateShader({ render, fragmentShader }))
 }
 
 main()
