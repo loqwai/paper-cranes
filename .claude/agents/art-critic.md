@@ -39,7 +39,7 @@ Read `docs/vj-preferences.md` at the start. It is the user's standing taste, and
 own judgement. The rules below summarize it.
 - Geometry evolves slowly/monotonically; light and glow take the fast audio; color follows only slow
   music (no hue jumps on short-term features).
-- Never white, never clip. Dark floor present but not crushing (lumMin ≳ 0.08).
+- Never clip. White is allowed; washout and clipping are not. Dark floor present but not crushing (lumMin ≳ 0.08).
 - No object overlays or screen-space gimmicks; no painted "rings" — the user dislikes drawn ripple
   rings (distortion-only waves via previous-frame warping are wanted).
 - Prefer subtraction: often the best suggestion is removing a layer.

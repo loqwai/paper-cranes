@@ -70,7 +70,13 @@ Then take one look with `node scripts/vj/show.js shot .claude/vj-shots/show-star
 
 ## 4. Arm the watchers
 
-Health alerts: a Monitor with a 30-minute timeout, re-armed whenever it expires.
+Three always-on Monitors, each with a 30-minute timeout and re-armed whenever it expires.
+
+The page writes `.claude/vj-signals.jsonl`, and the critic logs to `.claude/vj-critic.md`, in the
+**serving checkout**: the dev server's cwd from the preflight. Point both tails there. A tail on a
+different checkout never fires.
+
+Health alerts:
 
 ```bash
 tail -n 0 -F .claude/vj-signals.jsonl | grep -E --line-buffered '"type":"(clip|too-dark|shiver|boot)"|"type":"flicker","flicker":([2-9]|[1-9][0-9])'
@@ -98,6 +104,13 @@ touch .claude/vj-critic.md; tail -n 0 -F .claude/vj-critic.md | grep -E --line-b
 Weigh the critic's fixes against the user's words and docs/vj-preferences.md; the user always
 wins.
 
+**Dial releases:** one line each time the user lets go of a dial, naming the knobs that moved
+and their old and new values. It polls over CDP, so it needs no `vjtrack=1`.
+
+```bash
+node scripts/vj/watch-dials.js 2>&1
+```
+
 ## 5. Write the recovery snapshot
 
 Write `.claude/vj-state.json`:
@@ -105,10 +118,13 @@ Write `.claude/vj-state.json`:
 
 ## 6. Hand off
 
-Tell the user in one line: the wall is up, the input label, and both watchers are armed. Then
-invoke `/vibej2` with the shader path for the live loop, unless the user only wanted the wall up.
-In that case, say that it's ready, and that `/vibej2` starts the loop and `/show panic <fork>` is
-the escape hatch.
+Tell the user in one line: the wall is up, the input label, and all three watchers are armed.
+Then invoke `/vibej2` with the shader path. This is required: the show always runs the live loop,
+which listens for dial releases and steers the visual from them. (`/show check` is the
+preflight-only path.)
+
+**Scratch copy:** edits go to a `-wip` copy of the boot shader (for example `sun-1-wip`),
+hot-swapped in. The boot shader itself stays untouched as the panic fallback.
 
 ## Panic: `/show panic <fork>`
 

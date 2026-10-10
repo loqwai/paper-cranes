@@ -204,10 +204,14 @@ node scripts/vj/show.js eval 'async (path) => {
    fields changes).
 10. **Announce the cadence** to the user in one line: "Live loop: I check every ~90 s while
    tuning, stretch to ~5 min when healthy, and I see your messages immediately."
-11. *(Optional, phase 2 / if available)* Arm a persistent Monitor on `.claude/vj-signals.jsonl`
+11. **Arm the dial-release wake:** a Monitor on `node scripts/vj/watch-dials.js 2>&1` (30 min,
+    re-armed on expiry). It polls the knobs over CDP and prints `RELEASE K<n> a→b … | all={…}`
+    when the user lets go of a dial. (`watch-release.js` needs `vjtrack=1`, which is banned at
+    shows; keep it for knob-correlate sessions only.)
+12. *(Optional, phase 2 / if available)* Arm a persistent Monitor on `.claude/vj-signals.jsonl`
    (page-posted health alerts) or, lacking that, on the target `.frag` (external edits). Arm
    once — check TaskList first on any re-entry.
-12. Run **Beat #1** immediately, then re-arm the wakeup (see The Beat).
+13. Run **Beat #1** immediately, then re-arm the wakeup (see The Beat).
 
 ### Page runtime — ensure, don't install
 
@@ -285,13 +289,16 @@ Order within a Beat:
    '{"evoPhase":<value>}'` pins it back (the pad-pin path overrides controller outputs;
    `manualFeatures` does NOT), and `null` releases it.
 
-5. **Triage user words FIRST** if any arrived since the last beat — same table as v1 ("too
+5. **Dial releases are user words.** On a `RELEASE` line, read which knobs moved and in which
+   direction, and interpret the intent: the dials steer the visual. A dial held at an extreme is
+   a request to bake that direction into the shader. Make ONE move from it, as for a message.
+   **Triage user words FIRST** if any arrived since the last beat — same table as v1 ("too
    subtle" / "shivery" / "flashing" / "washed out" / "get rid of X" / repeated asks ⇒ 3–5×
    stronger). A repeated complaint means the previous fix failed: prefer ONE decisive pass over
    another partial patch (the 2026-08-18 oscillation survived four partial fixes).
 6. **Pick at most ONE move** (the features guide it; archetype table and hard
    guardrails unchanged from v1 — no object-overlays, no screen-space warps, no transients on
-   geometry, audio in amplitude/gate never in phase args, palette never white, prefer
+   geometry, audio in amplitude/gate never in phase args, no clipping or washout, prefer
    subtract/fix). Healthy frame + no user input + nothing learned ⇒ a no-move beat is correct.
 7. **Apply via the atomic edit macro** (below). Never edit-then-swap as separate calls.
 8. **D2 LOOK** after any compositional change; revert or retune in the same beat if worse.
