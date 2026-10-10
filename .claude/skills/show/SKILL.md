@@ -83,6 +83,8 @@ tail -n 0 -F .claude/vj-signals.jsonl | grep -E --line-buffered '"type":"(clip|t
    append to the log (confirmed in the 2026-10-09 test drive).
 2. Allow it read-only access only: `show.js shot`, plus `show.js eval` to read
    `__vjMeter`/`controllerFeatures` and for its waits.
+   Have it summarise `__vjMeter` in the browser (e.g. average the last 100 samples): returning the
+   raw object prints its whole 900-sample buffer, about 330KB.
 3. It loops about every 2.5 min for ~40 min. Each cycle it takes a shot pair and the meter, and
    appends a `### critic #N — <time> — <score>/10` verdict with a `**Fix next:**` line to
    `.claude/vj-critic.md`.
