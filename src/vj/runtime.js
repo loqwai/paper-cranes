@@ -29,7 +29,7 @@ export const startVjRuntime = async () => {
   // 3. aesthetic meter (5-probe kit + shiver probe; IIFE that installs window.__vjMeter)
   if (!window.__vjMeter) {
     try { eval(await fetch('/scripts/vj/aesthetic-meter.js?t=' + Date.now()).then(r => r.text())) } catch (e) { post({ type: 'error', what: 'meter-install', info: String(e) }) }
-    if (window.__vjMeter && !window.__vjMeter.timer) window.__vjMeter.timer = setInterval(window.__vjMeter.sample, 100)
+    if (window.__vjMeter && !window.__vjMeter.timer) window.__vjMeter.timer = setInterval(() => window.__vjMeter.sample(), 100)
   }
   // 3b. JANK PROBE — the loop kept being told "the visual stutters" with no way to confirm it.
   // Sample rAF deltas; report the worst frame and how many frames blew past 32 ms (2 dropped

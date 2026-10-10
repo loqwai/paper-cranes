@@ -25,7 +25,7 @@
   const rgb2h = (r, g, b) => { const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn; if (d < 1e-6) return null; let h; if (mx === r) h = ((g - b) / d) % 6; else if (mx === g) h = (b - r) / d + 2; else h = (r - g) / d + 4; return (h / 6 + 1) % 1 }
   M.sample = () => {
     try {
-      cx.drawImage(cv, 0, 0, W, H); const d = cx.getImageData(0, 0, W, H).data; const n = W * H
+      cx.drawImage(cv, 0, 0, W, H); const d = M.px = cx.getImageData(0, 0, W, H).data; const n = W * H   // M.px: later probes reuse this read — each drawImage of the WebGL canvas stalls on the GPU
       let lum = 0, dark = 0, clip = 0, diff = 0, hx = 0, hy = 0, hn = 0, sat = 0
       const cur = new Float32Array(n)
       for (let i = 0; i < n; i++) {
@@ -60,7 +60,7 @@
   M.offKickFlicker = (secs = 60) => { const now = performance.now() / 1000; const b = M.buf.filter(s => now - s.t <= secs); const mask = b.map(s => s.kick > 0.5); for (let i = 0; i < b.length; i++) { if (b[i].kick > 0.5) { for (let k = 1; k <= 4; k++) if (i + k < b.length) mask[i + k] = true } } const mo = []; for (let i = 0; i < b.length; i++) if (!mask[i]) mo.push(b[i].motion); if (mo.length < 10) return null; const mean = mo.reduce((a, c) => a + c, 0) / mo.length; let fl = 0, n = 0; for (let i = 2; i < mo.length; i++) { fl += Math.abs(mo[i] - 2 * mo[i - 1] + mo[i - 2]); n++ } return { offKickSamples: mo.length, motionOff: +mean.toFixed(4), flickerOff: +((fl / n) / (mean || 1e-9)).toFixed(2) } }
   const baseSummary = M.summary
   M.summary = (secs = 60) => { const r = baseSummary(secs); const now = performance.now() / 1000; const b = M.buf.filter(s => now - s.t <= secs); if (b.length) { r.lumMin = +Math.min(...b.map(s => s.lum)).toFixed(3); r.lumMax = +Math.max(...b.map(s => s.lum)).toFixed(3) } return r }
-  M.timer = setInterval(M.sample, 100)
+  M.timer = setInterval(() => M.sample(), 100)   // late-bound: the shiver probe below wraps M.sample after this line
   return 'meter installed'
 })()
 
@@ -136,9 +136,6 @@ window.__vjMeter.residR = (secs=60) => {
 ;(() => {
   const M = window.__vjMeter; if (!M || M.shiver) return
   const W = M.W, H = M.H, R = 12
-  const cv = document.querySelector('canvas')
-  const c = document.createElement('canvas'); c.width = W; c.height = H
-  const cx = c.getContext('2d', { willReadFrequently: true })
   const cxp = (W - 1) / 2, cyp = (H - 1) / 2, rMax = Math.hypot(cxp, cyp)
   const ring = new Int8Array(W * H)
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
@@ -149,7 +146,7 @@ window.__vjMeter.residR = (secs=60) => {
   M.sample = () => {
     base()
     try {
-      cx.drawImage(cv, 0, 0, W, H); const d = cx.getImageData(0, 0, W, H).data
+      const d = M.px
       const L = new Float32Array(W * H)
       for (let i = 0; i < W * H; i++) L[i] = 0.2126 * d[i * 4] / 255 + 0.7152 * d[i * 4 + 1] / 255 + 0.0722 * d[i * 4 + 2] / 255
       let edges = 0
