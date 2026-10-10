@@ -27,6 +27,7 @@ Read it once, and use it for anything this skill doesn't cover. Brief every agen
 ```bash
 P=$(./scripts/dev-port); echo "port $P"
 curl -s -o /dev/null -w '%{http_code}\n' "http://localhost:$P/"
+lsof -a -p "$(lsof -nP -iTCP:$P -sTCP:LISTEN -t | head -1)" -d cwd -Fn | tail -1   # which checkout serves the wall
 git branch --show-current; git fetch -q origin && git status -sb | head -1
 grep -n "'\*\*/controllers/\*\*'" vite.config.js && grep -n "chokidar.watch('controllers'" vite-plugins/editor-sync-plugin.js
 node scripts/vj/show.js displays
@@ -36,6 +37,7 @@ system_profiler SPAudioDataType | grep -i -A2 'BlackHole'
 | Check | ✅ when |
 |---|---|
 | Dev server | HTTP `200`. If not, start `npm run dev` in a background Bash, then recheck. |
+| Server checkout | The cwd is the checkout you'll edit. Edits in any other checkout never reach the wall (2026-10-09: the server ran from the main checkout while edits went to `peter-show`). |
 | Branch | `peter-show` and not `behind`. If behind, ask before running `git pull --ff-only`. |
 | No-reload controller fix (PR #144) | Both greps hit: `vite.config.js` ignores `**/controllers/**`, and `editor-sync-plugin.js` runs its own `chokidar.watch('controllers')` |
 | Projector | `displays` lists more than the built-in panel. `launch` uses the **last** display, so confirm with the user if there's only one. |
@@ -76,8 +78,9 @@ tail -n 0 -F .claude/vj-signals.jsonl | grep -E --line-buffered '"type":"(clip|t
 
 **The art critic:**
 
-1. Start one background agent of type `art-critic`. If it lacks Bash, use `general-purpose`
-   adopting `.claude/agents/art-critic.md`.
+1. Start one background `general-purpose` agent that reads and adopts `.claude/agents/art-critic.md`.
+   Don't use the `art-critic` type itself: it is Read/Glob/Grep only, so it can't take shots or
+   append to the log (confirmed in the 2026-10-09 test drive).
 2. Allow it read-only access only: `show.js shot`, plus `show.js eval` to read
    `__vjMeter`/`controllerFeatures` and for its waits.
 3. It loops about every 2.5 min for ~40 min. Each cycle it takes a shot pair and the meter, and

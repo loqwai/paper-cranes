@@ -24,7 +24,7 @@
 // ============================================================================
 // AUDIO-REACTIVE PARAMETERS (swap constants for audio uniforms)
 // ============================================================================
-#define GATE (smoothstep(0.003, 0.015, energyMean) * bs_presence)   // QUIET-SAFE: × presence (raw energy now) — a quiet gap relaxes every audio term instead of letting hiss z-scores brighten the scene
+#define GATE (smoothstep(0.003, 0.015, energyMean) * bs_presence * REACT)   // × K9 REACT; QUIET-SAFE: × presence (raw energy now) — a quiet gap relaxes every audio term instead of letting hiss z-scores brighten the scene
 // AUDIO-5X: the BlackHole feed sits at energyMean ≈ 0.015–0.08; the old 0.01–0.06 gate held everything at ~25%
 // #define GATE 0.0
 
@@ -59,15 +59,31 @@
 // Ray shape (slow stats), motion clocks (audio sets the rate) and light envelopes now come from
 // controllers/black-sun.js as bs_* uniforms — see the CONTROLLER block below.
 
-// ── knobs (0 = the designed look) ──
+// ============================================================================
+// KNOBS knob_1..knob_10 (MIDI) — 0 = the designed look. Swap a line for its constant to pin it.
+// knob_5..7 are read by controllers/black-sun.js, not here:
+// @knob: 5 STORY
+// @knob: 6 REACH
+// @knob: 7 KISS
+// ============================================================================
 #define ZOOM        (0.55 * exp(knob_4 * 1.0033))   // K4 ZOOM — eye/sun/rays/lens scale about the centre, 0.55×..1.5× on an exp curve (0 = eye ~28% of screen height)
+// #define ZOOM 0.55
 // BOOT: before the controller's first frame every bs_* is 0 — size 0 would hide the sun until it ran.
 #define BS_SIZE (bs_time > 0.0 ? bs_size : 1.0)
 #define BS_SCALE (bs_time > 0.0 ? bs_irisScale : 1.0)
 float gSwell = 1.0;   // KICK-SWELL: the whole main star (ball, corona, ray roots, lens) swells on each kick
 #define HOLE_R      ((0.16 + knob_1 * 0.10) * BS_SCALE * ZOOM * BS_SIZE * gSwell)   // K1 HOLE SIZE × section-change shutter size (controller) × K4 ZOOM
+// #define HOLE_R (0.16 * BS_SCALE * ZOOM * BS_SIZE * gSwell)
 #define HUE_SPIN    (knob_2)                  // K2 HUE SPIN
+// #define HUE_SPIN 0.0
 #define LATTICE_AMT (0.55 + knob_3 * 0.45)   // K3 LATTICE
+// #define LATTICE_AMT 0.55
+#define CLOUD_CALM  (knob_8 * 0.85)           // K8 CLOUD CALM — fades the contour-banded clouds back to blue brush tiles (1 = 85% calmer)
+// #define CLOUD_CALM 0.0
+#define REACT       (1.0 + knob_9 * 1.5)      // K9 REACT — scales every audio term through GATE, 1×..2.5× (the end-of-frame knee still guards white)
+// #define REACT 1.0
+#define FADE        (1.0 - knob_10)           // K10 FADE — master fade to black (1 = black wall)
+// #define FADE 1.0
 
 #define SUN vec2(bs_sunX, bs_sunY)   // SKY-PATH: the controller drifts the sun slowly (story acts set the rate; dying sinks it)
 
@@ -306,7 +322,7 @@ vec3 sky(vec2 uv, float t, float sm) {
     float ph = gPhase + 0.35 / (L + 0.35);                  // hue bends harder near the sun
     vec3 base = mc(12.0 + 0.8 * (0.5 + 0.5 * sin(sin(L - .1) + ph)), 0.55);   // VANGOGH-SKY: sky blue ↔ deep blue
     float bandK = floor(max(clN - clT, 0.0) / 0.022);                    // LSD-CLOUDS: contour band index from depth inside the cloud
-    vec3 tile = mix(mc(12.0 + 0.9 * hash12(id), 0.85), lsdBand(bandK, 0.9 + 0.1 * hT), cl);   // blue brush-tiles; psychedelic contour-banded clouds
+    vec3 tile = mix(mc(12.0 + 0.9 * hash12(id), 0.85), lsdBand(bandK, 0.9 + 0.1 * hT), cl * (1.0 - CLOUD_CALM));   // blue brush-tiles; psychedelic contour-banded clouds
     tile *= 1.0 + (1.4 * kFlash + 0.35 * bs_bassSus * GATE) * kT;              // the kick front lights the tiles it crosses
     vec3 f = mix(base * mix(0.45, 0.16, bs_night), tile,   // DAY-BLUE: lit tile gaps by day, the dark floor only at night
                  st(abs(lc.x - .5), thX, sm * yd) * st(abs(lc.y - .5), thY, sm * xd));   // DARK-FLOOR3: the gaps between tiles are the dark floor
@@ -853,6 +869,7 @@ void mainImage(out vec4 O, in vec2 g) {
     float LB = lchB.x < 0.6 ? lchB.x : 0.6 + 0.22 * (1.0 - exp(-(lchB.x - 0.6) / 0.22));
     f = pow(gamutLch(vec3(LB, lchB.y * 1.15, lchB.z)), vec3(1.0 / 2.2));
     f *= min(1.0, 0.93 / max(max(f.r, f.g), max(f.b, 1e-4)));   // NEVER-WHITE: scale, don't clip — hue survives
+    f *= FADE;   // K10: after the knee, so fading never shifts hue; the feedback zone reads it back and dims a touch faster
     f += (hash12(g + fract(bs_time) * 61.0) - 0.5) / 255.0;   // SOFT-BANDS: 1-LSB dither against 8-bit stepping in dark gas
     f = clamp(f, 0.0, 1.0);   // NO-OVERFLOW: never an out-of-range value into the framebuffer (the feedback reads it back). NOT isnan/isinf: on this GPU (ANGLE/Metal, fast-math) that blacked the whole wall
     O = vec4(f, 1.0);
