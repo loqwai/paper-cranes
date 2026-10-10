@@ -15,6 +15,22 @@ The rehearsal is over. Everything below is merged to `main` unless it says other
 
 Escape hatch: `/show panic sun/7` hot-swaps a known-good fork without a reload.
 
+## Backup: render on a second computer
+
+The dev server listens on all interfaces. On the backup computer (same network, no client
+isolation), open the jam page by this laptop's IP (`ipconfig getifaddr en0`; it was
+`10.201.98.218` at rehearsal and will change at the venue):
+
+```
+http://<IP>:6969/jam.html?shader=claude/wip/black-sun/sun-1&controller=black-sun&wavelet=true&remote=display
+```
+
+Chrome blocks the mic and MIDI on plain `http://<ip>`, so launch it with
+`--user-data-dir=/tmp/cranes-backup --unsafely-treat-insecure-origin-as-secure=http://<IP>:6969`
+(or set that address in `chrome://flags/#unsafely-treat-insecure-origin-as-secure`). It then uses
+its own default audio input. The Twister only drives the laptop's page; forwarding the dials needs
+the laptop page on `remote=control`.
+
 ## Gotchas learned tonight
 
 - **The dev server runs from `~/Projects/paper-cranes` (main), not this worktree.** Edits here

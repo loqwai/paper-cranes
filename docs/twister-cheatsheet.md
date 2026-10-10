@@ -40,6 +40,8 @@ All dials at **0** give the show look.
   first 8% of the dial. To pin the sun hard left or at the bottom, turn
   just past 0.08.
 - **STORY above 0 locks an act.** Back to 0 for the automatic story.
+- **Turn STORY fully left before the show.** Its ring may sit near 1, and
+  the first nudge would lock the last act.
 - **FADE** is the safe exit at the end of the set.
 - **First touch can jump.** The Twister is absolute: a dial lands on
   wherever its ring sits.
