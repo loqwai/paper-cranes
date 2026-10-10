@@ -211,6 +211,33 @@ throws. Uniforms:
 
 Meter at the end of the pass: clip 0, flicker 0.30, p95 17.7 ms, lum 0.46 (bright — the sun dominates). rResid stayed near 0 on this window.
 
+### sun-1 — show-night pass (2026-10-09): knobs 1–10, slow features, sky calm
+
+The user can't touch the dials tonight, so **knobs at 0 are the show look**, and every improvement is baked into the defaults.
+
+**Knobs:**
+- K1–K4 are as before; each now has a commented-out constant swap line.
+- K5 STORY, K6 REACH and K7 KISS are read by `controllers/black-sun.js`; the shader only labels them with `@knob:`.
+- New: K8 CLOUD CALM (extra calm on top of the default), K9 REACT (audio 1×–2.5× through GATE), K10 FADE (master fade to black).
+
+**Slow, long-term features** (`SLOW_GATE` block). These follow the guidance in `wavelet-scope/legible.frag`: each verb maps to something you can hear. Each feature reads the character of the current section, never a single moment, and drives an amount (never a phase or position), so the picture evolves through a set without anyone touching it and nothing can flash. Where the raw level depends on input gain, the feature uses a gain-independent ratio:
+
+| Feature | Visual verb | Why it can't flash |
+|---|---|---|
+| AIR: treble share of the band medians | lattice glints; stars brighten in deep space | a median over 8 s, and a ratio, so gain doesn't matter |
+| BODY: mids share | gold cloud bands spread; galaxy arms widen in deep space | a median ratio; it moves a threshold slowly |
+| TONAL: `spectralCrestMedian` | whole-frame chroma lift, 1.15 → 1.27 | a median; it only ever adds chroma, never mixes toward grey |
+| GRIT: `spectralRoughnessMedian` | the sun's granulation contrast (the mean is kept) | a median; contrast only, so the overall brightness holds |
+| DYN: energy std ÷ mean | deeper dark floor; wider empty gaps in deep space | window statistics; it only ever darkens |
+| PUNCH: bass std ÷ mean | corona reach ×0.9–1.15 | window statistics |
+| BRIGHTEN: centroid slope × R² | sky glow ±0.05 | a regression over the window, clamped |
+
+All seven features are multiplied by a slow gate on `energyMean`, so silence brings back the resting look.
+
+**Sky calm, baked in** (art-critic #1). The cloud bands sit about 40% calmer than before, reaching the full 40% at the sun and fading to about 22% at the edge, and the tiles near the sun dim a little, so the sun owns the centre. It's a move in hue back toward the blue brush tiles, not toward grey.
+
+**No grey halo** (art-critic #2). The sun's corona glows used to be added on top of the blue sky, which averaged to grey. Now they occlude the sky beneath them first (lowering lightness), then add their own colour.
+
 ## sun-5.frag + controllers/black-sun-sun-5.js — fork of live sun-1 (2026-10-06, rehearsal)
 
 Eye phase (bs_eye 0.89): a big eye fills the center — a small churning plasma-sun core (gold with magenta/violet plasma seams) inside a gold ring, wrapped in a wide dark-amber iris of curved pale-gold filament spokes with ember crypt dots, a soft gold limbus, and broad molten-gold sun rays flaring out between violet-blue tile wedges of sky; the left cloud band is starting to carry psychedelic stripe colors (lime/coral/gold tiles). Captured mid-pass on: plasma-sun center, LSD-poster cloud bands, audio reactivity. Very warm/bright overall at this moment. No knobs. Controller snapshot alongside.
