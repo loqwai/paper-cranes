@@ -109,7 +109,7 @@
 #define BS_SIZE (bs_time > 0.0 ? bs_size : 1.0)
 #define BS_SCALE (bs_time > 0.0 ? bs_irisScale : 1.0)
 float gSwell = 1.0;   // KICK-SWELL: the whole main star (ball, corona, ray roots, lens) swells on each kick
-#define HOLE_R      ((0.16 + knob_1 * 0.10) * BS_SCALE * ZOOM * BS_SIZE * gSwell)   // K1 HOLE SIZE × section-change shutter size (controller) × K4 ZOOM
+#define HOLE_R      (0.16 * (1.0 + knob_1 * 1.2) * BS_SCALE * ZOOM * BS_SIZE * gSwell)   // K1 HOLE SIZE 1×..2.2× (the old 1×..1.6× drowned in the story's own size drift) × shutter size (controller) × K4 ZOOM
 // #define HOLE_R (0.16 * BS_SCALE * ZOOM * BS_SIZE * gSwell)
 #define HUE_SPIN    (knob_2)                  // K2 HUE SPIN
 // #define HUE_SPIN 0.0
