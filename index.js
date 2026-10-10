@@ -356,7 +356,7 @@ const main = async () => {
     const visualizerConfig = {
         canvas,
         video: videoInput && await openVideoInput(videoInput),
-        videoMix: parseVideoMix(params.get('video_mix')),
+        videoMix: videoInput ? parseVideoMix(params.get('video_mix')) : 1,
         initialImageUrl: params.get('image') ?? 'images/placeholder-image.png',
         fullscreen: params.get('fullscreen') === 'true' || shaderFullscreen
     }

@@ -1,8 +1,9 @@
 // ?video=<label substring> opens the camera / capture card whose label contains it; ?video=default
 // takes the OS default camera. A name that matches nothing is an error, never another device.
 // ?video_mix=<0..1>, default 1: how much of the backbuffer is live video vs the real last frame.
+// Absent or empty (?video_mix=) means the default.
 export const parseVideoMix = (raw) => {
-    const mix = Number(raw ?? 1)
+    const mix = Number(raw || 1)
     if (Number.isNaN(mix) || mix < 0 || mix > 1) throw new Error(`video_mix "${raw}" must be a number in 0..1`)
     return mix
 }

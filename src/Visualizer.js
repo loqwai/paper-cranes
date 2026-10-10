@@ -12,7 +12,7 @@ import {
 
 import { shaderWrapper } from './shader-transformers/shader-wrapper.js'
 import { keepScreenAwake } from './wakeLock.js'
-import { makeVideoBackbuffer } from './video/videoBackbuffer.js'
+import { makeVideoBackbuffer, watchVideoFrames } from './video/videoBackbuffer.js'
 
 // Simple full-screen quad
 const positions = [
@@ -132,6 +132,8 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen, vide
         return () => {}
     }
 
+    const videoFrames = video && watchVideoFrames(video)
+
     // Recover from GPU context loss (common on mobile/desktop switch)
     let contextLost = false
     canvas.addEventListener('webglcontextlost', (e) => {
@@ -144,7 +146,7 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen, vide
         frameBuffers = [createFramebufferInfo(gl), createFramebufferInfo(gl)]
         frameBuffers.forEach(setFramebufferTexParams)
         bufferInfo = createBufferInfoFromArrays(gl, { position: positions })
-        videoBackbuffer = video && makeVideoBackbuffer(gl, video, positions)
+        videoBackbuffer = video && makeVideoBackbuffer(gl, video, videoFrames, positions)
         programInfo = null
         lastFragmentShader = null
         lastCanvasWidth = 0
@@ -178,7 +180,7 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen, vide
     frameBuffers.forEach(setFramebufferTexParams)
 
     let bufferInfo = createBufferInfoFromArrays(gl, { position: positions })
-    let videoBackbuffer = video && makeVideoBackbuffer(gl, video, positions)
+    let videoBackbuffer = video && makeVideoBackbuffer(gl, video, videoFrames, positions)
 
     resizeCanvasToDisplaySize(gl.canvas, 1)
 

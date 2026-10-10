@@ -34,26 +34,39 @@ const coverScale = (videoAspect, canvasAspect) => videoAspect > canvasAspect
     ? [canvasAspect / videoAspect, 1]
     : [1, videoAspect / canvasAspect]
 
-export const makeVideoBackbuffer = (gl, video, positions) => {
+// Lives as long as the video, not the GL context: a context restore rebuilds the backbuffer but must
+// not start a second rVFC loop. take() is true once per decoded frame; without rVFC, always.
+export const watchVideoFrames = (video) => {
+    if (!video.requestVideoFrameCallback) return { take: () => true }
+    let fresh = true
+    const watch = () => video.requestVideoFrameCallback(() => {
+        fresh = true
+        watch()
+    })
+    watch()
+    const take = () => {
+        const was = fresh
+        fresh = false
+        return was
+    }
+    return { take }
+}
+
+export const makeVideoBackbuffer = (gl, video, frames, positions) => {
     const programInfo = createProgramInfo(gl, [vertex, fragment])
     const bufferInfo = createBufferInfoFromArrays(gl, { position: positions })
     const texture = createTexture(gl, { min: gl.LINEAR, mag: gl.LINEAR, wrap: gl.CLAMP_TO_EDGE, width: 1, height: 1 })
     const pure = createFramebufferInfo(gl)
     const mixed = createFramebufferInfo(gl)
 
-    // Upload only when the decoder hands over a new frame; without rVFC, every render.
-    let fresh = true
-    const watch = () => video.requestVideoFrameCallback(() => {
-        fresh = true
-        watch()
-    })
-    if (video.requestVideoFrameCallback) watch()
-
+    // A fresh texture is empty, so the first upload ignores the frame watcher.
+    let filled = false
     const upload = () => {
-        if (!fresh || video.readyState < video.HAVE_CURRENT_DATA) return
+        if (video.readyState < video.HAVE_CURRENT_DATA) return
+        if (!frames.take() && filled) return
         gl.bindTexture(gl.TEXTURE_2D, texture)
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video)
-        fresh = !video.requestVideoFrameCallback
+        filled = true
     }
 
     const pass = (target, prev, videoMix) => {
