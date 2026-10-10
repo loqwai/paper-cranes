@@ -108,7 +108,7 @@ export function make() {
     snAge: 1, snAmp: 0, snWas: 0, pitchMove: 0, pcWas: 0, build: 0, bassSus: 0, midsS: 0, cX: -2.0, cY: 1.4, kiss: 0,
     reach: 0, reachLeft: 0, sinceReach: 0, hotT: 0,
     // binary companion
-    sunX: 0, sunY: 0.10, waveX: 0, waveY: 0.10,
+    sunX: 0, sunY: 0.10, waveX: 0, waveY: 0.10, handX: 0, handY: 0.10,
     cOn: 0, cR: 2.6, cPh: 2.6, cPrec: 0, kissT: 1, sinceKiss: 0, kissFired: 1, k7Was: 0, kissLog: [], presence: 0,
     // section-change detector + shutter
     sustE: 0, sustF: 0, trend: 0, gateWas: null, sinceSection: 0,   // no event in the first 12 s (z-scores are noise until history fills)
@@ -262,6 +262,18 @@ export function make() {
     S.skyPh += 0.012 * S.move * (0.6 + 0.6 * S.energy) * dt
     const pathX = 0.55 * Math.sin(S.skyPh * 2.0)
     const pathY = 0.10 + 0.18 * (Math.sin(S.skyPh * 3.17 + 1.0) - Math.sin(1.0)) - S.sink   // phase 0 = the old fixed (0, 0.10)
+    // K15 SUN X / K16 SUN Y place the sun by hand. Each axis blends in over the first 8% of its dial so
+    // lifting one off 0 never jumps it (or the other axis), and the hand position glides (~0.3 s) from
+    // wherever the sky path had it. Frame units: y spans ±1, x spans ±aspect; 0.3 margin keeps it on screen.
+    const aspect = window.innerWidth / window.innerHeight
+    const handAxis = (k, auto, half, key) => {
+      const w = Math.min(1, k / 0.08)
+      if (w === 0) { S[key] = auto; return auto }
+      S[key] += ((k * 2 - 1) * (half - 0.3) - S[key]) * (1 - Math.exp(-dt / 0.3))
+      return auto + (S[key] - auto) * w
+    }
+    const handX = handAxis(f.knob_15 ?? 0, pathX, aspect, 'handX')
+    const handY = handAxis(f.knob_16 ?? 0, pathY, 1, 'handY')
 
     // COMPANION: a small dark-red star. It enters from off-screen upper-left and spirals in over a
     // few minutes (radius eases inward), then dances a slow, slightly elliptical, precessing orbit
@@ -299,8 +311,8 @@ export function make() {
     const cp = Math.cos(S.cPrec), sp = Math.sin(S.cPrec)
     const ox = ex * cp - ey * sp, oy = ex * sp + ey * cp
     const wob = 0.12 * S.cOn * Math.min(1, 0.8 / Math.max(S.cR, 0.3))   // barycentre wobble, weak while it is still far out
-    S.sunX = pathX - ox * wob
-    S.sunY = pathY - oy * wob
+    S.sunX = handX - ox * wob
+    S.sunY = handY - oy * wob
     S.cX = S.sunX + ox
     S.cY = S.sunY + oy
     S.kiss = kiss
