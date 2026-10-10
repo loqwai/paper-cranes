@@ -68,7 +68,11 @@ const handleShaderError = (gl, wrappedFragmentShader, newFragmentShader) => {
     console.error(`Error information:`, window.cranes.error);
 }
 
-const calculateResolutionRatio = (frameTime, renderTimes, lastResolutionRatio) => {
+// Downscale below ~40fps. The old 50ms trigger left a 20–50ms dead band: a GPU-bound wall stalling
+// to ~27fps (13ms frames broken by 80–150ms stalls) averaged 37ms and never scaled.
+// `ceiling` is the highest ratio that hasn't failed on this display size, so a ratio that was too
+// slow is never climbed back into (no resolution pop every 20 frames).
+const calculateResolutionRatio = (frameTime, renderTimes, lastResolutionRatio, ceiling) => {
     // Ignore frame times from background/throttled tabs — they're artificially
     // long and cause resolution downscaling that clears the canvas on return.
     if (frameTime > 200) return lastResolutionRatio
@@ -80,8 +84,8 @@ const calculateResolutionRatio = (frameTime, renderTimes, lastResolutionRatio) =
     // Calculate average frame time over last 20 frames
     const avgFrameTime = renderTimes.reduce((a, b) => a + b) / renderTimes.length
 
-    if (avgFrameTime > 50) return Math.max(0.5, lastResolutionRatio - 0.5)
-    if (avgFrameTime < 20 && lastResolutionRatio < 1) return Math.min(1, lastResolutionRatio + 0.25)
+    if (avgFrameTime > 25) return Math.max(0.5, lastResolutionRatio - 0.25)
+    if (avgFrameTime < 17.5 && lastResolutionRatio < ceiling) return Math.min(ceiling, lastResolutionRatio + 0.25)
     return lastResolutionRatio
 }
 
@@ -181,6 +185,8 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
     let pendingShaderSource = null
     let renderTimes = []
     let lastResolutionRatio = 1
+    let resolutionCeiling = 1
+    let lastClientSize = ''
     let lastCanvasWidth = 0
     let lastCanvasHeight = 0
     let useInitialTextureAsPrev = false
@@ -218,9 +224,16 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         const frameTime = currentTime - lastRender
 
         // Skip resolution scaling during warmup to avoid shader compilation skewing the average
+        // A new display size (window moved to another screen) gets a fresh chance at full resolution
+        const clientSize = `${gl.canvas.clientWidth}x${gl.canvas.clientHeight}`
+        if (clientSize !== lastClientSize) {
+            lastClientSize = clientSize
+            resolutionCeiling = 1
+        }
         const resolutionRatio = frameNumber < 60
             ? lastResolutionRatio
-            : calculateResolutionRatio(frameTime, renderTimes, lastResolutionRatio)
+            : calculateResolutionRatio(frameTime, renderTimes, lastResolutionRatio, resolutionCeiling)
+        if (resolutionRatio < lastResolutionRatio) resolutionCeiling = resolutionRatio
 
         // Check if canvas display size changed (window resize)
         resizeCanvasToDisplaySize(gl.canvas, lastResolutionRatio)
