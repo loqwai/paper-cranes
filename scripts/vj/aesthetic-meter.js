@@ -1,5 +1,5 @@
 // Aesthetic meter for /vibej — paste into the display tab (or `await import`) to sample the WebGL
-// canvas at 10 Hz and summarise motion / flicker / dark floor / clipping / hue drift, correlated
+// canvas at 2 Hz (PERIOD_MS) and summarise motion / flicker / dark floor / clipping / hue drift, correlated
 // against live audio features. Written live 2026-08-18 (lattice-vj/2 exploration run).
 //
 //   window.__vjMeter.summary(60)  → last 60 s
@@ -9,7 +9,7 @@
 //   dark       fraction of pixels with L < 0.08  (want > 0.10: a real dark floor)
 //   clip       fraction with L > 0.92 or any channel > 0.98 (want ≈ 0)
 //   sat        mean HSV saturation
-//   motion     mean |ΔL| between consecutive samples (100 ms apart)
+//   motion     mean |ΔL| between consecutive samples (PERIOD_MS apart)
 //   flicker    mean |2nd difference of motion| / mean motion — high = jittery alternation, low = smooth
 //   motionVsEnergy / motionVsBass   Pearson r of motion against raw energy / bassNormalized:
 //              > 0.3 = the picture moves WITH the music; ≈ 0 = it moves regardless
@@ -21,7 +21,10 @@
   const W = 64, H = 36
   const c2 = document.createElement('canvas'); c2.width = W; c2.height = H
   const cx = c2.getContext('2d', { willReadFrequently: true })
-  const M = window.__vjMeter = { buf: [], prev: null, timer: null, W, H }
+  // Each sample's drawImage of the WebGL canvas stalls on the GPU; at 10 Hz that hitched ~1 frame in 5
+  // on a GPU-bound 2560×1440 wall. Sample-count windows below are written as seconds × HZ.
+  const PERIOD_MS = 500, HZ = 1000 / PERIOD_MS
+  const M = window.__vjMeter = { buf: [], prev: null, timer: null, W, H, PERIOD_MS, HZ }
   const rgb2h = (r, g, b) => { const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn; if (d < 1e-6) return null; let h; if (mx === r) h = ((g - b) / d) % 6; else if (mx === g) h = (b - r) / d + 2; else h = (r - g) / d + 4; return (h / 6 + 1) % 1 }
   M.sample = () => {
     try {
@@ -38,7 +41,7 @@
       }
       const f = window.cranes?.flattenFeatures?.() ?? {}
       M.buf.push({ t: performance.now() / 1000, lum: lum / n, dark: dark / n, clip: clip / n, sat: sat / n, motion: M.prev ? diff / n : 0, hue: hn ? (Math.atan2(hy, hx) / 6.283 + 1) % 1 : null, hueConc: hn ? Math.hypot(hx, hy) / hn : 0, energy: f.energy ?? 0, bass: f.bassNormalized ?? 0, kick: f.wavelet_bassHit ?? 0, gate: f.quietGate ?? 0 })
-      M.prev = cur; if (M.buf.length > 900) M.buf.shift()
+      M.prev = cur; if (M.buf.length > 90 * HZ) M.buf.shift()
     } catch (e) { M.err = String(e) }
   }
   M.summary = (secs = 60) => {
@@ -55,16 +58,16 @@
   M.hueHist = () => { const cv2 = document.querySelector('canvas'); const c3 = document.createElement('canvas'); c3.width = W; c3.height = H; const cx3 = c3.getContext('2d'); cx3.drawImage(cv2, 0, 0, W, H); const d = cx3.getImageData(0, 0, W, H).data; const bins = new Array(12).fill(0); let tot = 0; for (let i = 0; i < W * H; i++) { const r = d[i * 4] / 255, g = d[i * 4 + 1] / 255, b = d[i * 4 + 2] / 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b), dd = mx - mn; if (dd < 0.15) continue; let h; if (mx === r) h = ((g - b) / dd) % 6; else if (mx === g) h = (b - r) / dd + 2; else h = (r - g) / dd + 4; h = (h / 6 + 1) % 1; bins[Math.floor(h * 12) % 12] += dd; tot += dd } const n = bins.map(x => +(x / (tot || 1)).toFixed(2)); const order = n.map((v, i) => [v, i]).sort((a, b) => b[0] - a[0]); return { bins: n, modes: order.slice(0, 3).map(([v, i]) => ({ hue: +(i / 12).toFixed(2), w: v })), spread: n.filter(x => x > 0.05).length } }
   // onset gain: mean motion 0-300ms AFTER each bass hit vs 100-200ms before. >1.3 = kicks visible.
   // Caveat: collapses on wobble bass (hits > ~1.2/s -> windows overlap, gain -> 1).
-  M.onsetResponse = (secs = 60) => { const now = performance.now() / 1000; const b = M.buf.filter(s => now - s.t <= secs); if (b.length < 20) return null; const mo = b.map(s => s.motion); const base = mo.reduce((a, c) => a + c, 0) / mo.length; let hits = 0, post = 0, postN = 0, pre = 0, preN = 0; for (let i = 2; i < b.length - 3; i++) { if (b[i].kick > 0.5 && b[i - 1].kick <= 0.5) { hits++; for (let k = 0; k < 3; k++) { post += mo[i + k]; postN++ } for (let k = 1; k <= 2; k++) { pre += mo[i - k]; preN++ } } } return { hits, base: +base.toFixed(4), postKick: +(post / (postN || 1)).toFixed(4), preKick: +(pre / (preN || 1)).toFixed(4), gain: +((post / (postN || 1)) / (pre / (preN || 1) || 1e-9)).toFixed(2) } }
+  M.onsetResponse = (secs = 60) => { const now = performance.now() / 1000; const b = M.buf.filter(s => now - s.t <= secs); if (b.length < 2 * HZ) return null; const mo = b.map(s => s.motion); const base = mo.reduce((a, c) => a + c, 0) / mo.length; let hits = 0, post = 0, postN = 0, pre = 0, preN = 0; for (let i = 2; i < b.length - 3; i++) { if (b[i].kick > 0.5 && b[i - 1].kick <= 0.5) { hits++; for (let k = 0; k < 3; k++) { post += mo[i + k]; postN++ } for (let k = 1; k <= 2; k++) { pre += mo[i - k]; preN++ } } } return { hits, base: +base.toFixed(4), postKick: +(post / (postN || 1)).toFixed(4), preKick: +(pre / (preN || 1)).toFixed(4), gain: +((post / (postN || 1)) / (pre / (preN || 1) || 1e-9)).toFixed(2) } }
   // flicker excluding kick windows -- "twitchy" without counting musical punches
-  M.offKickFlicker = (secs = 60) => { const now = performance.now() / 1000; const b = M.buf.filter(s => now - s.t <= secs); const mask = b.map(s => s.kick > 0.5); for (let i = 0; i < b.length; i++) { if (b[i].kick > 0.5) { for (let k = 1; k <= 4; k++) if (i + k < b.length) mask[i + k] = true } } const mo = []; for (let i = 0; i < b.length; i++) if (!mask[i]) mo.push(b[i].motion); if (mo.length < 10) return null; const mean = mo.reduce((a, c) => a + c, 0) / mo.length; let fl = 0, n = 0; for (let i = 2; i < mo.length; i++) { fl += Math.abs(mo[i] - 2 * mo[i - 1] + mo[i - 2]); n++ } return { offKickSamples: mo.length, motionOff: +mean.toFixed(4), flickerOff: +((fl / n) / (mean || 1e-9)).toFixed(2) } }
+  M.offKickFlicker = (secs = 60) => { const now = performance.now() / 1000; const b = M.buf.filter(s => now - s.t <= secs); const mask = b.map(s => s.kick > 0.5); for (let i = 0; i < b.length; i++) { if (b[i].kick > 0.5) { for (let k = 1; k <= Math.ceil(0.4 * HZ); k++) if (i + k < b.length) mask[i + k] = true } } const mo = []; for (let i = 0; i < b.length; i++) if (!mask[i]) mo.push(b[i].motion); if (mo.length < HZ) return null; const mean = mo.reduce((a, c) => a + c, 0) / mo.length; let fl = 0, n = 0; for (let i = 2; i < mo.length; i++) { fl += Math.abs(mo[i] - 2 * mo[i - 1] + mo[i - 2]); n++ } return { offKickSamples: mo.length, motionOff: +mean.toFixed(4), flickerOff: +((fl / n) / (mean || 1e-9)).toFixed(2) } }
   const baseSummary = M.summary
   M.summary = (secs = 60) => { const r = baseSummary(secs); const now = performance.now() / 1000; const b = M.buf.filter(s => now - s.t <= secs); if (b.length) { r.lumMin = +Math.min(...b.map(s => s.lum)).toFixed(3); r.lumMax = +Math.max(...b.map(s => s.lum)).toFixed(3) } return r }
-  M.timer = setInterval(() => M.sample(), 100)   // late-bound: the shiver probe below wraps M.sample after this line
+  M.timer = setInterval(() => M.sample(), PERIOD_MS)   // late-bound: the shiver probe below wraps M.sample after this line
   return 'meter installed'
 })()
 
-// lagCorr(secs): cross-correlation of frame motion vs bass at lags 0..6 samples (0-600ms @10Hz).
+// lagCorr(secs): cross-correlation of frame motion vs bass at lags 0..6 samples (0–3 s at 2 Hz; it was 0–600 ms at 10 Hz).
 // Answers "how LATE is the visual response?" — usable on wobble tracks where onsetResponse() is
 // blind (>1.2 hits/s). peakLagMs ≈ spring latency. Insight 2026-08-18 iter 109: 2Hz springs lag
 // ~300ms; at 140BPM wobble (430ms/hit) that lands the reaction almost on the NEXT hit — only the
@@ -73,7 +76,7 @@
 window.__vjMeter.lagCorr = (secs=60) => {
   const M = window.__vjMeter, buf = M.buf || M.samples || M._buf;
   if (!buf) return {err:'no buffer'};
-  const n = Math.min(buf.length, Math.round(secs*10));
+  const n = Math.min(buf.length, Math.round(secs*M.HZ));
   const rows = buf.slice(-n);
   const mo = rows.map(r=>r.motion), ba = rows.map(r=>r.bass ?? r.energy);
   const corr = (a,b) => { const m=Math.min(a.length,b.length); const am=a.slice(0,m), bm=b.slice(0,m);
@@ -83,7 +86,7 @@ window.__vjMeter.lagCorr = (secs=60) => {
   const out=[];
   for (let lag=0; lag<=6; lag++) out.push(+corr(mo.slice(lag), ba.slice(0, ba.length-lag)).toFixed(3));
   const peak = out.indexOf(Math.max(...out));
-  return {lags:out, peakLagMs:peak*100, peakR:out[peak]};
+  return {lags:out, peakLagMs:peak*M.PERIOD_MS, peakR:out[peak]};
 };
 
 // residR(secs): decomposes musicality by TIMESCALE. rRaw = motion×energy (phrase/section
@@ -94,10 +97,10 @@ window.__vjMeter.lagCorr = (secs=60) => {
 // registers in whole-frame motion; that's fine visually but this metric pair names the split.
 window.__vjMeter.residR = (secs=60) => {
   const M=window.__vjMeter, buf=M.buf||M.samples||M._buf; if(!buf) return {err:'no buffer'};
-  const n=Math.min(buf.length, Math.round(secs*10)); const rows=buf.slice(-n);
+  const n=Math.min(buf.length, Math.round(secs*M.HZ)); const rows=buf.slice(-n);
   const mo=rows.map(r=>r.motion), en=rows.map(r=>r.energy);
   const med=(a,i,w)=>{const s=a.slice(Math.max(0,i-w),Math.min(a.length,i+w+1)).slice().sort((x,y)=>x-y); return s[Math.floor(s.length/2)];};
-  const resid=mo.map((v,i)=>v-med(mo,i,10));
+  const resid=mo.map((v,i)=>v-med(mo,i,Math.round(M.HZ)));
   const corr=(a,b)=>{const m=a.length; const ma=a.reduce((x,y)=>x+y,0)/m, mb=b.reduce((x,y)=>x+y,0)/m;
     let num=0,da=0,db=0; for(let i=0;i<m;i++){const x=a[i]-ma,y=b[i]-mb;num+=x*y;da+=x*x;db+=y*y;}
     return num/Math.sqrt(da*db+1e-9);};
@@ -172,10 +175,10 @@ window.__vjMeter.residR = (secs=60) => {
   M.shiver = (secs = 60) => {
     const now = performance.now() / 1000
     const b = M.buf.filter(s => now - s.t <= secs && s.prof)
-    if (b.length < 40) return { n: b.length, note: 'need more samples' }
+    if (b.length < 4 * M.HZ) return { n: b.length, note: 'need more samples' }
     const mean = a => a.reduce((x, y) => x + y, 0) / a.length
     const med = (a, i, w) => { const s2 = a.slice(Math.max(0, i - w), Math.min(a.length, i + w + 1)).slice().sort((x, y) => x - y); return s2[Math.floor(s2.length / 2)] }
-    const detr = a => a.map((x, i) => x - med(a, i, 15))
+    const detr = a => a.map((x, i) => x - med(a, i, Math.round(1.5 * M.HZ)))
     const dt = (b[b.length - 1].t - b[0].t) / (b.length - 1)
     const ac = a => {
       const m = mean(a), c0 = mean(a.map(x => (x - m) ** 2)) || 1e-12

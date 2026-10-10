@@ -29,7 +29,7 @@ export const startVjRuntime = async () => {
   // 3. aesthetic meter (5-probe kit + shiver probe; IIFE that installs window.__vjMeter)
   if (!window.__vjMeter) {
     try { eval(await fetch('/scripts/vj/aesthetic-meter.js?t=' + Date.now()).then(r => r.text())) } catch (e) { post({ type: 'error', what: 'meter-install', info: String(e) }) }
-    if (window.__vjMeter && !window.__vjMeter.timer) window.__vjMeter.timer = setInterval(() => window.__vjMeter.sample(), 100)
+    if (window.__vjMeter && !window.__vjMeter.timer) window.__vjMeter.timer = setInterval(() => window.__vjMeter.sample(), window.__vjMeter.PERIOD_MS)
   }
   // 3b. JANK PROBE — the loop kept being told "the visual stutters" with no way to confirm it.
   // Sample rAF deltas; report the worst frame and how many frames blew past 32 ms (2 dropped
@@ -74,7 +74,7 @@ export const startVjRuntime = async () => {
   let prevGate = 1
   setInterval(() => {
     const M = window.__vjMeter; if (!M) return
-    const s = M.summary(10); if (!s || s.n < 20) return
+    const s = M.summary(10); if (!s || s.n < 2 * M.HZ) return
     if (s.clip > 0.005) alert('clip', { clip: s.clip })
     if (s.flicker > 0.7 && s.motion > 0.005) alert('flicker', { flicker: s.flicker })
     if (s.lumMin < 0.06 && s.gate > 0.9) alert('too-dark', { lumMin: s.lumMin })
@@ -94,7 +94,7 @@ export const startVjRuntime = async () => {
   let prevKnobs = ''
   setInterval(() => {
     const M = window.__vjMeter; if (!M) return
-    const s = M.summary(20); if (!s || s.n < 20) return
+    const s = M.summary(20); if (!s || s.n < 2 * M.HZ) return
     const k = knobVec(), ks = JSON.stringify(k)
     const changed = ks !== prevKnobs; prevKnobs = ks
     post({ type: 'pulse', s, r: M.residR ? M.residR(20) : null, jank: window.__vjJank?.summary?.() ?? null, knobs: changed ? k : undefined })
