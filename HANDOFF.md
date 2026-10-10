@@ -1,164 +1,64 @@
-# HANDOFF — live show rig
+# HANDOFF · Friday show, 2026-10-09
 
-Written 2026-08-18, the night before the show. Branch: `live-show-rig`.
+The rehearsal is over. Everything below is merged to `main` unless it says otherwise.
 
-Everything below was verified against the real thing, not inferred from the code. Where something
-is unverified it says so.
+## At the venue
 
----
+1. Plug in the projector, Twister and audio. **Set the projector to 1920×1080 at 60 Hz** in
+   macOS Display settings. This lowers GPU load, and older USB-C to HDMI adapters are HDMI 1.4.
+2. Make sure the macOS input is **BlackHole 2ch** with the music routed into it.
+3. Turn on Do Not Disturb, and quit any break-reminder or screen-dimming app.
+4. In Claude Code, from this worktree, run **`/show`**. It runs the preflight, launches the wall,
+   checks audio, arms the watchers, and always starts `/vibej2`, which listens to your dials.
+5. Ask Claude to **resend the Twister ring colours**. They reset whenever the Twister is replugged.
+6. Keep the cheat sheet open: `glow -p docs/twister-cheatsheet.md`.
 
-## Start here (the 60-second version)
+Escape hatch: `/show panic sun/7` hot-swaps a known-good fork without a reload.
 
-```fish
-# 1. dev server (branch-derived port; main = 6969)
-npm run dev
+## Gotchas learned tonight
 
-# 2. display — on the laptop, and it MUST be localhost
-#    http://localhost:6969/?shader=redaphid/chromadepth-lattice/6&remote=display&fullscreen=true&controller=lattice-nav&wavelet=true&room=<ROOM>&audio=tab
+- **The dev server runs from `~/Projects/paper-cranes` (main), not this worktree.** Edits here
+  only reach the wall after a PR to `main` and `git pull --ff-only` there. Signals and the critic
+  log live in that checkout's `.claude/`. `/show` preflight now prints the serving checkout.
+- **Dials at 0 give the show look.** STORY above 0 locks an act. SUN X/Y at 0 means automatic
+  drift; manual control blends in over the first 8% of the dial.
+- **The Twister is absolute.** The first touch of a dial jumps to wherever its ring sits.
+- **Flicker around 1.2–1.6 now and then is fine.** The health monitor alerts only at 2 or more.
+- **There is no "no white" rule.** No clipping and no washout still apply.
 
-# 3. phone — loaded from production, so venue wifi does not matter
-#    https://visuals.beadfamous.com/vj?room=<ROOM>&relay=relay.beadfamous.com
-#    https://visuals.beadfamous.com/vjpad?room=<ROOM>&relay=relay.beadfamous.com
-```
+## What changed tonight (PRs #148–#157)
 
-Last room used: `v3v3b2m15v`. **Pick a fresh one.** The room name is the ONLY access control —
-anyone who joins your room drives your display. Treat it as a password, not a label.
+| PR | Change |
+|----|--------|
+| #148 | Knobs 1–10 with the `#define` swap pattern, plus /show preflight fixes |
+| #149 | Slow long-term audio features, calmer sky around the sun, deeper dark floor |
+| #150 | Removed the hard-edged disc around the companion star |
+| #151, #153 | Auto-downscale now triggers on a stuttering display, and recovers after a backoff |
+| #152, #155 | Meter: one GPU read per sample, at 2 Hz (it was the remaining stutter) |
+| #154 | MIDI: ports opened explicitly. Before this, the Twister never reached the page |
+| #156 | `/show` always listens to the dials (`scripts/vj/watch-dials.js`) and always runs `/vibej2` |
+| #157 | K11 WARMTH, K12 SPARKLE, K13 GLOW, K14 DARK FLOOR, K15/K16 move the main sun |
 
-Opening look: ZOOM 1.00 / COLOUR 0.62 / WARP 0.9.
+Not merged: `peter-show` has `docs/twister-cheatsheet.md` and this file.
 
----
+## Open items
 
-## Why the URLs are shaped like that
+- **K1 HOLE SIZE is too subtle.** Branch `k1-hole-size-wip` has a one-line fix (1×–2.2×). It
+  hasn't been verified on the wall; check it with K1 at 0 and 1, then merge.
+- **The shiver detector reads about 0.9–1.0 constantly** now that its probe runs, and the 2 Hz
+  meter changed what it measures. It's muted in the health monitor; recalibrate it after the show.
+- **The controller's kick detector fires on noise** (`bs_kick` spikes while `bassZScore` is
+  negative). The kick swell follows it, so it can pulse off the beat.
+- **The art-critic agent type can't run commands.** `/show` launches the critic as
+  `general-purpose`, adopting `.claude/agents/art-critic.md`.
+- **`scripts/validate-shader.js` is broken** (its `glslangValidator` binary is missing). Use the
+  page's `__vjValidate` instead.
+- **Twister ring colours** are a best guess at its colour wheel; adjust any that look wrong.
+  Making the page resend them on connect would remove step 5.
 
-**The display must be `localhost`.** A bare LAN IP is not a secure context, so the browser refuses
-the microphone. `localhost` is the only origin that gets audio.
+## Recovery
 
-**The phone loads from production, not from the laptop.** Venue and hotel wifi usually has client
-isolation on, so the phone cannot reach the laptop at all. Loading the controller from
-`visuals.beadfamous.com` and meeting the display on a public relay sidesteps the LAN entirely.
-Verified end to end: a fader dragged on the production page arrived as a live shader uniform on
-the localhost display.
+`.claude/vj-state.json` holds the last show URL and audio device. If the wall dies:
+`node scripts/vj/show.js stop`, then run `/show`.
 
-**`&relay=` is needed only because production is built from `main`,** which still has the old dead
-default host. Merge `live-show-rig` → `main` and that parameter disappears. Everything else works
-without the merge.
-
-**Keep `&wavelet=true`.** This shader reads 18 wavelet uniforms and most of its spring features
-come from them. Without it the music channels silently flatline — it looks dull, not broken.
-
-**A cloudflared tunnel is NOT needed and was deliberately retired.** It works, but it publishes the
-whole dev server including `POST /__save-shader`, which writes `.frag` files with no
-authentication. Traversal is blocked so writes stay inside `shaders/`, but anyone with the URL
-could overwrite the art mid-set. If you fall back to a tunnel, know that is the trade.
-
----
-
-## Audio: use TAB audio
-
-This was the biggest open question of the session and it is now settled.
-
-| path | raw `energy` | `quietGate` | verdict |
-|---|---|---|---|
-| **tab** (`&audio=tab`) | 0.079, mean 0.098, peak 0.183 | **0.996, computed** | works |
-| mic | only ever seen below the gate, in a quiet room | 0 | **unproven under volume** |
-
-`quietGate` is computed from **raw** `energy` in `controllers/wavelet-ease.js:159` —
-`(energy - 0.015) / 0.05`, fully open at 0.065 — **not** from a normalized feature. This is the
-trap: normalized features can swing 0→0.9 and look reactive while the gate stays shut and the 16
-gated uses in the shader stay dead. It reads as "a bit dull", never as "broken".
-
-**Sharing tab audio needs a real human click** — `getDisplayMedia` requires genuine user
-activation, so Claude cannot do it for you. Click **"Share tab audio"** on the overlay, pick the
-music tab, and make sure the **"Share tab audio" checkbox is ticked** — sharing a tab without it
-gives silent audio and everything downstream reads zero.
-
-Tab audio does not survive closing or navigating the source tab. The overlay re-shows itself when
-sharing stops, so you will see it happen.
-
----
-
-## Gotchas that cost real time
-
-- **A backgrounded tab freezes rendering.** Chrome throttles `requestAnimationFrame` to a stop, so
-  `frameCount` stops climbing. Check `document.hidden` before diagnosing a "stalled renderer".
-  Keep the display foreground / fullscreen.
-- **TAKE OVER makes effects go deaf.** The phone's six music faders are `energySpring`,
-  `waveletBass/Band2/Band5Spring`, `melodyFlow`, `spectralCrestSmooth`. Any effect driven *only* by
-  those stops responding to music the moment you take over. Two of the three sparkle drivers and
-  the entire palette-hue journey were in exactly this state during the rehearsal.
-- **`quietGate` pinned to 1 through real silence** will let raw normalized features blow up into
-  hue-spin and flashing from nothing. Fine while music plays; RELEASE that channel if you go quiet.
-- **Screen goes black → tap another shader on the phone.** Previously verified recovery.
-- **`/vibej` rewrites its target `.frag` every minute.** Point it at
-  `shaders/redaphid/wip/lattice-vj/1.frag` — a byte-copy of `chromadepth-lattice/6` kept as the
-  scratch copy — never at committed art.
-
----
-
-## Infrastructure notes
-
-**Relay:** `wss://relay.beadfamous.com/ws/<room>` — a Durable Object per room, using the
-Hibernation API so it evicts from memory while idle without dropping sockets. Source in
-`workers/remote-relay/`, deploy with `npx wrangler deploy` from that directory. Protocol matches
-the dev-server WebSocket exactly: relay verbatim to every other client, never echo the sender,
-drop non-JSON, broadcast `connectedClients` on join and leave.
-
-**Do not use `paper-cranes-remote.loqwai.workers.dev` or anything on `*.hypnodroid.com`.** A
-wildcard Cloudflare Access app guards both and 302s the WebSocket upgrade to a login page. This is
-why `iceland.hypnodroid.com` could not be used despite being requested — it was created, inherited
-the block, and was removed cleanly (no stray DNS record). `beadfamous.com` carries no Access app.
-**No Zero Trust policy was modified.** If you want `iceland` to work, add a Bypass policy for that
-hostname yourself — that is a deliberate hole in your security posture and your call to make.
-
-**Message type is `update-params`**, not `params`. Anything sent as `params` reaches
-`RemoteDisplay` and falls through to its default `postMessage` branch — it looks delivered and does
-nothing. A `null` value RELEASES a param (deletes the key) rather than pinning it.
-
-**Short links** `2cb.pw/02bn3` (vj) and `2cb.pw/o6zmx` (vjpad) are written into the `short-urls` KV
-namespace but **2cb.pw itself is broken** — root 500s, valid keys 404. The namespace had no other
-keys at all, so the Worker is probably bound elsewhere or unhealthy. Its source is not in this
-repo. Use the full URLs.
-
----
-
-**Track names:** the Spotify MCP server hangs — `SpotifyPlayback` was called once and returned
-nothing for 1800s before aborting, so it likely needs re-auth. Do not wait on it. `/vibej` does not
-need it: its documented path scrapes the now-playing widget from an `open.spotify.com` tab, and
-failing that, the audio features alone are enough to pick moves (the rehearsal ran entirely that
-way).
-
-## Test harnesses
-
-```fish
-node scripts/test/relay-roundtrip.js relay.beadfamous.com   # relay: verbatim, no echo, room isolation
-node scripts/test/tunnel-bridge.js https://<tunnel>         # only if you fall back to a tunnel
-node scripts/validate-shader.js shaders/<path>.frag         # static lint
-```
-
----
-
-## Repo state
-
-- `index.js` no longer reloads the display on every shader change — it hot-swaps
-  `window.cranes.shader` when the changed file is the one on screen, and ignores everything else.
-  Without this, every `/vibej` tick cost a black frame, an audio-context restart and the whole
-  500-frame feature history, once a minute, usually for a file not even being shown.
-- `shaders/redaphid/wip/lattice-vj/1.frag` carries two rehearsal edits (see
-  `journals/lattice-vj-1-cool-moments.md` for the reasoning and the audio fingerprints).
-- **Uncommitted and left alone deliberately:** `package-lock.json`, `shader-dates.json`, and the
-  deleted `working-shaders.txt` — these are yours, from before this session.
-- `.wrangler/` is untracked build cache from deploying the worker. Safe to delete; worth
-  gitignoring if it becomes annoying.
-- `npm install` was never run. The only pulled commit added HTML/CSS/JS and one `vite.config.js`
-  line — no dependency changes.
-
-## Still open
-
-- `/vibej` rehearsal reached **iteration 2 of 10** before the browser disconnected. Nothing was
-  left half-written; the shader is clean and lints clean.
-- The three effects found deaf under TAKE OVER deserve a design pass: every effect wants at least
-  one driver outside the phone's fader set. Safe-by-construction drivers:
-  `waveletCentroidSpring`, `spectralRoughnessSmooth`, `wubDepth`, `sectionMode`/`sectionMix`,
-  `evoPhase`.
-- Signals the controller exports that this shader still ignores: `bassNoteFlow` (bassline pitch
-  contour), `evoPhase` / `energyLong`, `sectionMix`.
+The previous handoff (2026-08-18, live-show-rig) is in git history: `git show f606102:HANDOFF.md`.
