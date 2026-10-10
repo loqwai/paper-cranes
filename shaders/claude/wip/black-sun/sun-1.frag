@@ -41,7 +41,7 @@
 // #define KICK 0.0
 
 // LIGHT: sky tiles breathe with the mids
-#define SKY_GLOW (0.90 + 0.22 * midsNormalized * GATE)
+#define SKY_GLOW (0.90 + 0.22 * midsNormalized * GATE + 0.05 * BRIGHTEN)
 // #define SKY_GLOW 1.0
 
 // LIGHT: lattice line sparkle with the highs
@@ -55,6 +55,40 @@
 // COLOR: only the slowest music — key median + brightness mean
 #define HUE_BASE (pitchClassMedian * 0.35 + spectralCentroidMean * 0.15)
 // #define HUE_BASE 0.0
+
+// ── SLOW / LONG-TERM: section character over the ~8 s history window. One feature → one verb, all
+// subtle, all amounts (never phases or positions), so the picture evolves across a set hands-off and
+// none of it can flash. Ratios where the raw level depends on input gain. Quiet-safe: slow gate.
+#define SLOW_GATE (smoothstep(0.003, 0.015, energyMean))
+#define BAND_SUM  (max(bassMedian + midsMedian + trebleMedian, 1e-3))
+
+// LIGHT: airy sections (treble share of the band medians) → the lattice glints more (deep space: stars brighten)
+#define AIR (smoothstep(0.15, 0.40, trebleMedian / BAND_SUM) * SLOW_GATE)
+// #define AIR 0.0
+
+// SHAPE: full-bodied sections (mids share) → the gold cloud bands spread further (deep space: arms widen)
+#define BODY (smoothstep(0.30, 0.65, midsMedian / BAND_SUM) * SLOW_GATE)
+// #define BODY 0.0
+
+// COLOR: tonal sections (crest median — clear notes vs noise) → the whole frame gets more vivid
+#define TONAL (smoothstep(0.35, 1.2, spectralCrestMedian) * SLOW_GATE)
+// #define TONAL 0.0
+
+// SHAPE: gritty / dissonant sections (roughness median) → the sun's granulation boils harder
+#define GRIT (smoothstep(0.04, 0.16, spectralRoughnessMedian) * SLOW_GATE)
+// #define GRIT 0.0
+
+// LIGHT: dynamic music (energy std / mean — drops and builds vs a flat wall) → a deeper dark floor (deep space: wider gaps)
+#define DYN (smoothstep(0.25, 0.9, energyStandardDeviation / max(energyMean, 0.004)) * SLOW_GATE)
+// #define DYN 0.0
+
+// SHAPE: punchy low end (bass std / mean) → the corona reaches further
+#define PUNCH (smoothstep(0.2, 0.7, bassStandardDeviation / max(bassMean, 0.01)) * SLOW_GATE)
+// #define PUNCH 0.0
+
+// LIGHT: a confident brightening trend (centroid slope × R²) → the sky lifts a touch; ±, clamped
+#define BRIGHTEN (clamp(spectralCentroidSlope * spectralCentroidRSquared * 4000.0, -1.0, 1.0) * SLOW_GATE)
+// #define BRIGHTEN 0.0
 
 // Ray shape (slow stats), motion clocks (audio sets the rate) and light envelopes now come from
 // controllers/black-sun.js as bs_* uniforms — see the CONTROLLER block below.
@@ -303,7 +337,7 @@ vec3 sky(vec2 uv, float t, float sm) {
     vec2 cc = vec2(cos((id.y + .5) / xd), sin((id.y + .5) / xd)) * (id.x + .5) / yd;
     cc = rotate2D(cc, -h) + SUN;
     float clN = noise(cc * vec2(.5, 1) - vec2(t * .2, 0));               // CLOUD-PRESENCE: clouds may sweep the whole frame, not just the upper part
-    float clT = 0.012 - 0.018 * gEnergy * GATE;                         // TILE-DANCE: the gold band's ragged edge advances with the energy envelope
+    float clT = 0.012 - 0.018 * gEnergy * GATE - 0.006 * BODY;   // TILE-DANCE: the band's ragged edge advances with the energy envelope; BODY: mids-heavy sections spread it
     float cl = smoothstep(clT - 0.0015, clT + 0.0015, clN);
     lc += noise(lc * vec2(1, 4) + id) * vec2(.7, .2);
     // TILE-DANCE: every brush tile answers the music — the gold band leads, the blue tiles follow at a
@@ -322,9 +356,15 @@ vec3 sky(vec2 uv, float t, float sm) {
     float ph = gPhase + 0.35 / (L + 0.35);                  // hue bends harder near the sun
     vec3 base = mc(12.0 + 0.8 * (0.5 + 0.5 * sin(sin(L - .1) + ph)), 0.55);   // VANGOGH-SKY: sky blue ↔ deep blue
     float bandK = floor(max(clN - clT, 0.0) / 0.022);                    // LSD-CLOUDS: contour band index from depth inside the cloud
-    vec3 tile = mix(mc(12.0 + 0.9 * hash12(id), 0.85), lsdBand(bandK, 0.9 + 0.1 * hT), cl * (1.0 - CLOUD_CALM));   // blue brush-tiles; psychedelic contour-banded clouds
+    // SKY-CALM: the patchwork sits ~40% calmer by default, most of all around the sun so the sun owns the
+    // centre — bands fade back toward the blue brush tiles (a hue move, never toward grey) and dim a touch.
+    // K8 CLOUD CALM adds on top.
+    float calmR = 0.40 * mix(1.0, 0.55, smoothstep(0.3, 1.5, L));
+    float calm = clamp(calmR + CLOUD_CALM, 0.0, 0.92);
+    vec3 tile = mix(mc(12.0 + 0.9 * hash12(id), 0.85), lsdBand(bandK, 0.9 + 0.1 * hT), cl * (1.0 - calm));
+    tile *= 1.0 - 0.5 * calmR * (1.0 - smoothstep(0.3, 1.2, L));   // blue brush-tiles; psychedelic contour-banded clouds
     tile *= 1.0 + (1.4 * kFlash + 0.35 * bs_bassSus * GATE) * kT;              // the kick front lights the tiles it crosses
-    vec3 f = mix(base * mix(0.45, 0.16, bs_night), tile,   // DAY-BLUE: lit tile gaps by day, the dark floor only at night
+    vec3 f = mix(base * mix(0.45, 0.16, bs_night) * (0.85 - 0.3 * DYN), tile,   // DAY-BLUE: lit gaps by day, dark floor at night; DYN: dynamic music digs it deeper
                  st(abs(lc.x - .5), thX, sm * yd) * st(abs(lc.y - .5), thY, sm * xd));   // DARK-FLOOR3: the gaps between tiles are the dark floor
     f *= SKY_GLOW;
 
@@ -335,7 +375,7 @@ vec3 sky(vec2 uv, float t, float sm) {
     q.x += q.y * 0.5;
     vec3 lat = lattice(q, t);
     float vis = smoothstep(1.7, 0.30, L) * LATTICE_AMT;
-    vec3 latCol = mc(14.0, 0.55 + 0.3 * lat.y) * lat.x * LATTICE_LIT * (1.0 + SPARK * 0.8) * 1.6;
+    vec3 latCol = mc(14.0, 0.55 + 0.3 * lat.y) * lat.x * LATTICE_LIT * (1.0 + SPARK * 0.8 + 0.3 * AIR) * 1.6;   // + AIR: airy sections glint
     f = mix(f, f * 0.55 + latCol, clamp(lat.z, 0.0, 1.0) * vis);
 
     // sunlight scattered into the sky — hue-cycling bloom around the hole
@@ -420,7 +460,7 @@ vec3 deepSpace(vec2 uv) {
     vec2 dS = uv - SUN;
     float rS = max(length(dS), 1e-3), aS = atan(dS.y, dS.x), lr = log(rS);
     float arm = 0.5 + 0.5 * cos(2.0 * aS - (2.6 + 1.3 * bs_wind) * lr + bs_galPh);   // integer angle multiple → no seam
-    float armM = pow(arm, mix(3.5, 1.2, clamp(bs_bassSus * G * 1.3, 0.0, 1.0)));   // LEGIBLE bass sustain: the arms widen and breathe   // bass/kick: arms widen
+    float armM = pow(arm, mix(3.5 - 0.8 * BODY, 1.2, clamp(bs_bassSus * G * 1.3, 0.0, 1.0)));   // LEGIBLE bass sustain: the arms widen and breathe   // bass/kick: arms widen
     float turb = 1.0 + 1.2 * bs_billow + 0.5 * bs_chaos;                                    // NO-SHIVER: warp amplitude eases slowly (bs_billow), never per-beat
     vec2 q = uv * 1.1 + vec2(1.0, 0.35) * bs_galPh * 0.12;                 // FORWARD: the gas streams one way on the monotonic flow clock
     float dens = smoothstep(0.3, 0.7, s_noise(q * 0.7) * 0.6 + s_noise(q * 1.6 + 4.1) * 0.4);
@@ -430,7 +470,7 @@ vec3 deepSpace(vec2 uv) {
     vec3 gas = gasHue(v + 0.3 * fil, 0.62);
     float fwave = exp(-pow(fract(lr * 0.35 - bs_fluxPh * 0.25) - 0.5, 2.0) / 0.006) * 0.0;
     float gasLit = (0.4 + 1.6 * armM) * (0.6 + 1.8 * bs_bassSus * G);   // LEGIBLE bass sustain: big slow swell of the gas   // BUDGET: the surge lands on the arms (contrast), not the whole field
-    float veil = dens * (0.4 + 0.6 * fil);                       // TRANSLUCENT: thin veils, wide clear gaps of open space
+    float veil = dens * (0.4 + 0.6 * fil) * (1.0 - 0.3 * DYN);   // DYN: dynamic music opens wider gaps of empty space                       // TRANSLUCENT: thin veils, wide clear gaps of open space
     c += gas * veil * gasLit * 0.95;   // NIGHT-FLOOR: veils ×2.5
     float crest = smoothstep(0.8, 1.0, arm) * pow(max(0.0, sin(w.x * 9.0 + w.y * 5.0)), 18.0);
     c += pow(gamutLch(vec3(0.85, 0.08, radians(85.0))), vec3(1.0 / 2.2)) * crest * 0.0;          // treble glints on the crests
@@ -443,7 +483,7 @@ vec3 deepSpace(vec2 uv) {
     float tw = 1.0 + 0.85 * clamp(gTreb * 1.8, 0.0, 1.0) * G * sin(bs_time * 1.3 + hs * 40.0) - 0.2;   // LEGIBLE hats: the star field twinkles
     float big = step(0.975, hs);
     float star = step(0.9, hs) * exp(-dot(sp, sp) / (0.012 * (1.0 + big * 3.0 * clamp(gTreb * 1.5, 0.0, 1.0) * G))) * tw;
-    c += mix(vec3(0.75, 0.8, 1.0), vec3(1.0, 0.85, 0.7), hash12(cid + 9.0)) * star * 1.6 * (1.0 - 0.6 * dens) * smoothstep(0.4, 0.8, bs_night);
+    c += mix(vec3(0.75, 0.8, 1.0), vec3(1.0, 0.85, 0.7), hash12(cid + 9.0)) * star * 1.6 * (0.85 + 0.35 * AIR) * (1.0 - 0.6 * dens) * smoothstep(0.4, 0.8, bs_night);
     float cM = max(max(c.r, c.g), max(c.b, 1e-4));
     float cK = cM < 0.7 ? cM : 0.7 + 0.2 * (1.0 - exp(-(cM - 0.7) / 0.2));
     return c * (cK / cM);
@@ -507,7 +547,7 @@ vec3 plasmaBall(vec3 col, vec2 d, float R, float m) {
     float v = sin(qq.x * 2.6 + sin(qq.y * 3.1));
     // PLASMA-RICH: large swirl + two finer boiling octaves (granulation), all forward-flowing
     float gran = noise(qq * 7.0 + bs_diskPh * 0.1) * 0.6 + noise(qq * 15.0 - bs_diskPh * 0.17) * 0.4;
-    float T = clamp(0.5 + 0.34 * v + 0.42 * gran, 0.0, 1.0);
+    float T = clamp(0.5 + 0.34 * v + 0.42 * gran + 0.35 * GRIT * (gran - 0.5), 0.0, 1.0);   // GRIT: rough sections boil harder (contrast only, mean kept)
     // magnetic arcs: thin bright curves where the warped field crosses zero; width floored by the
     // pixel footprint so they never alias into flicker
     float hot = 1.0 * (1.0 + 1.4 * bs_nova);   // CORE-HOT2: rest at 0.9, not 0.6 — the 0.6 rest was why the core sat below its corona   // bass core swell + kick surge; the supernova flash (knee-limited below)
@@ -531,7 +571,7 @@ vec3 plasmaBall(vec3 col, vec2 d, float R, float m) {
     float flare = 0.0;
     float cor = exp(-max(x - 0.75, 0.0) * mix(7.0, 3.5, boil * 0.6 + flare)) * (1.0 - 0.5 * inside) * 0.55;   // BLEND: corona overlaps the limb on both sides   // HAZE-CUT: steeper corona falloff
     vec3 corona = sunLch(0.66, 0.16, mix(34.0, 52.0, boil)) * cor;   // same hue band as the limb and the ray roots
-    col += corona;
+    col = col * (1.0 - 0.6 * clamp(cor * 1.8, 0.0, 1.0)) + corona;   // NO-GREY-HALO: the glow occludes the blue under it (L down first) instead of adding orange onto blue → grey
     return mix(col, ball, inside);
 }
 
@@ -544,7 +584,7 @@ vec3 blackSun(vec3 col, vec2 d, float t, float m) {   // m = EYE morph 0..1 (one
     vec2 q = vec2(a * 3.0, log(r / RH) * 2.6 - t * 0.35);
     for (float i = 1.0; i < 6.0; i++) q += sin(q.yx * i + vec2(t * 0.5, -t * 0.3) + i * 1.7) / i * 0.55;
     float rays = 0.5 + 0.5 * cos(q.x * 2.0 + q.y * 0.6);
-    float reach = RH * (0.55 + 0.9 * rays + FLARE * 0.9 + 1.8 * gFlux * GATE);   // AUDIO-5X: flux throws flares
+    float reach = RH * (0.55 + 0.9 * rays + FLARE * 0.9 + 1.8 * gFlux * GATE) * (0.9 + 0.25 * PUNCH);   // PUNCH: a punchy low end reaches further   // AUDIO-5X: flux throws flares
     float env = exp(-max(r - RH, 0.0) / reach);
     vec3 corona = mc(14.0, 0.75 + 0.2 * rays) * env * (0.55 + 0.75 * rays) * CORONA_GLOW * (1.0 + 2.0 * gFlux * GATE);   // orange ↔ coral flares
 
@@ -554,7 +594,8 @@ vec3 blackSun(vec3 col, vec2 d, float t, float m) {   // m = EYE morph 0..1 (one
 
     float outside = smoothstep(RH * 0.98, RH * 1.03, r);
     col = mix(sunDisc(d, RH * (1.0 + 0.06 * gBass * GATE)), col, outside);   // SUN-DISC replaces the black horizon
-    col += (corona * (1.0 - 0.55 * m) + ring) * outside;
+    vec3 cAdd = (corona * (1.0 - 0.55 * m) + ring) * outside;
+    col = col * (1.0 - 0.5 * clamp(max(cAdd.r, max(cAdd.g, cAdd.b)) * 1.5, 0.0, 1.0)) + cAdd;   // NO-GREY-HALO: occlude, don't stack orange on blue
 
     // PLASMA-BALL: the eye is one powerful glowing plasma sphere — no black, no straight spokes. The
     // sun disc swells into it as the morph runs. Domain-warped plasma with curling magnetic arcs over a
@@ -867,7 +908,7 @@ void mainImage(out vec4 O, in vec2 g) {
     // Nothing is ever mixed toward grey.
     vec3 lchB = rgb2oklch(pow(max(f, vec3(0.0)), vec3(2.2)));
     float LB = lchB.x < 0.6 ? lchB.x : 0.6 + 0.22 * (1.0 - exp(-(lchB.x - 0.6) / 0.22));
-    f = pow(gamutLch(vec3(LB, lchB.y * 1.15, lchB.z)), vec3(1.0 / 2.2));
+    f = pow(gamutLch(vec3(LB, lchB.y * (1.15 + 0.12 * TONAL), lchB.z)), vec3(1.0 / 2.2));
     f *= min(1.0, 0.93 / max(max(f.r, f.g), max(f.b, 1e-4)));   // NEVER-WHITE: scale, don't clip — hue survives
     f *= FADE;   // K10: after the knee, so fading never shifts hue; the feedback zone reads it back and dims a touch faster
     f += (hash12(g + fract(bs_time) * 61.0) - 0.5) / 255.0;   // SOFT-BANDS: 1-LSB dither against 8-bit stepping in dark gas
