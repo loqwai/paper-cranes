@@ -28,6 +28,12 @@ export const openVideoInput = async (wanted) => {
     video.playsInline = true
     video.srcObject = stream
     await video.play()
-    window.cranes.videoInputLabel = stream.getVideoTracks()[0].label
+    const track = stream.getVideoTracks()[0]
+    window.cranes.videoInputLabel = track.label
+    // An unplugged card ends the track and the last frame would freeze on screen with no error.
+    track.addEventListener('ended', () => {
+        console.error(`video input "${track.label}" ended`)
+        window.cranes.videoInputLabel = null
+    })
     return video
 }

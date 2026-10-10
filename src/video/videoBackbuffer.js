@@ -56,8 +56,10 @@ export const makeVideoBackbuffer = (gl, video, frames, positions) => {
     const programInfo = createProgramInfo(gl, [vertex, fragment])
     const bufferInfo = createBufferInfoFromArrays(gl, { position: positions })
     const texture = createTexture(gl, { min: gl.LINEAR, mag: gl.LINEAR, wrap: gl.CLAMP_TO_EDGE, width: 1, height: 1 })
-    const pure = createFramebufferInfo(gl)
-    const mixed = createFramebufferInfo(gl)
+    // Same sampling as Visualizer's frame backbuffers, so getLastFrameColor reads identically.
+    const attachments = [{ format: gl.RGBA, min: gl.NEAREST, mag: gl.NEAREST, wrap: gl.REPEAT }]
+    const pure = createFramebufferInfo(gl, attachments)
+    const mixed = createFramebufferInfo(gl, attachments)
 
     // A fresh texture is empty, so the first upload ignores the frame watcher.
     let filled = false
@@ -85,7 +87,7 @@ export const makeVideoBackbuffer = (gl, video, frames, positions) => {
         return target.attachments[0]
     }
 
-    const resize = (width, height) => [pure, mixed].forEach(fb => resizeFramebufferInfo(gl, fb, undefined, width, height))
+    const resize = (width, height) => [pure, mixed].forEach(fb => resizeFramebufferInfo(gl, fb, attachments, width, height))
 
     // Returns { video, prev }: the cover-fit video, and what the shader should read as its last frame.
     const draw = (prev, videoMix) => {

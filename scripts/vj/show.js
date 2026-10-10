@@ -41,7 +41,7 @@ const CHROME_FLAGS = [
   '--disable-backgrounding-occluded-windows',
 ]
 
-// Mic + MIDI granted over CDP rather than --use-fake-ui-for-media-stream, so no prompt ever draws.
+// Mic, camera and MIDI granted over CDP rather than --use-fake-ui-for-media-stream, so no prompt ever draws.
 const PERMISSIONS = ['microphone', 'camera', 'midi', 'midi-sysex']
 
 const cdpUp = async () => {
