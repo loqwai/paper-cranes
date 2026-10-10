@@ -73,7 +73,7 @@ Then take one look with `node scripts/vj/show.js shot .claude/vj-shots/show-star
 Health alerts: a Monitor with a 30-minute timeout, re-armed whenever it expires.
 
 ```bash
-tail -n 0 -F .claude/vj-signals.jsonl | grep -E --line-buffered '"type":"(clip|too-dark|shiver|boot)"|"type":"flicker","flicker":(1\.[2-9]|[2-9])'
+tail -n 0 -F .claude/vj-signals.jsonl | grep -E --line-buffered '"type":"(clip|too-dark|shiver|boot)"|"type":"flicker","flicker":([2-9]|[1-9][0-9])'
 ```
 
 **The art critic:**
