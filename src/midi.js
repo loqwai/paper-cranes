@@ -83,6 +83,9 @@ const attachInput = (input) => {
 
     updateKnobValue(knobName, value)
   })
+  // addEventListener doesn't implicitly open a port the way onmidimessage does — without this the
+  // Twister's CCs reached Chrome but never this listener
+  input.open()
 }
 
 // MIDI Access request
