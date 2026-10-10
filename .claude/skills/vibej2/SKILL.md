@@ -298,7 +298,7 @@ Order within a Beat:
    another partial patch (the 2026-08-18 oscillation survived four partial fixes).
 6. **Pick at most ONE move** (the features guide it; archetype table and hard
    guardrails unchanged from v1 — no object-overlays, no screen-space warps, no transients on
-   geometry, audio in amplitude/gate never in phase args, palette never white, prefer
+   geometry, audio in amplitude/gate never in phase args, no clipping or washout, prefer
    subtract/fix). Healthy frame + no user input + nothing learned ⇒ a no-move beat is correct.
 7. **Apply via the atomic edit macro** (below). Never edit-then-swap as separate calls.
 8. **D2 LOOK** after any compositional change; revert or retune in the same beat if worse.
