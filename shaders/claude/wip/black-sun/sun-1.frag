@@ -856,7 +856,10 @@ void mainImage(out vec4 O, in vec2 g) {
         gHeatOv = 0.32;
         if (length(dC) < compR * 3.0) {   // PERF: the companion ball + corona only near it
             vec3 withC = plasmaBall(f, dC, compR * (1.0 + 0.12 * bs_pitchMove + 0.15 * bs_kiss), 1.0);
-            f = mix(f, mix(f, withC * (0.7 + 0.7 * bs_pitchMove), 1.0), bs_cOn);
+            // NO-DISC: the melody gain rides the ball + corona only and is 1.0 well inside the PERF cutoff —
+            // scaling the whole 3×compR circle (sky included) drew a hard-edged pale/dark disc round the companion
+            float cGain = mix(1.0, 0.7 + 0.7 * bs_pitchMove, 1.0 - smoothstep(compR * 0.9, compR * 2.0, length(dC)));
+            f = mix(f, withC * cGain, bs_cOn);
         }
         gBass = sb; gKick = sk; gHeatOv = -1.0;
     }
