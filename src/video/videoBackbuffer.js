@@ -61,14 +61,18 @@ export const makeVideoBackbuffer = (gl, video, frames, positions) => {
     const pure = createFramebufferInfo(gl, attachments)
     const mixed = createFramebufferInfo(gl, attachments)
 
-    // A fresh texture is empty, so the first upload ignores the frame watcher.
-    let filled = false
+    // Storage is reallocated only when the video size changes; every other frame overwrites in place.
+    let width = 0
+    let height = 0
     const upload = () => {
         if (video.readyState < video.HAVE_CURRENT_DATA) return
-        if (!frames.take() && filled) return
+        const sized = width === video.videoWidth && height === video.videoHeight
+        if (!frames.take() && sized) return
         gl.bindTexture(gl.TEXTURE_2D, texture)
+        if (sized) return gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, video)
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video)
-        filled = true
+        width = video.videoWidth
+        height = video.videoHeight
     }
 
     const pass = (target, prev, videoMix) => {

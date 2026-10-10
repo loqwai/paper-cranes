@@ -457,6 +457,9 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   │   ├── RemoteController.js # Sends commands to displays
 │   │   ├── RemoteDisplay.js    # Receives commands from controllers
 │   │   └── WebSocketClient.js  # WebSocket client wrapper
+│   ├── video/
+│   │   ├── videoSource.js      # ?video= camera/capture-card input, ?video_mix= parsing
+│   │   └── videoBackbuffer.js  # Cover-fits live video into the previous-frame texture
 │   ├── vj/
 │   │   └── runtime.js          # ?vj=1 page runtime (validator, meter, jank probe, signals)
 │   ├── Visualizer.js           # WebGL rendering

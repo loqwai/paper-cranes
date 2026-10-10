@@ -352,11 +352,11 @@ const main = async () => {
     window.shader = fragmentShader
     setupCanvasEvents(canvas)
 
-    const videoInput = params.get('video')
+    const hasVideo = params.has('video')
     const visualizerConfig = {
         canvas,
-        video: videoInput && await openVideoInput(videoInput),
-        videoMix: videoInput ? parseVideoMix(params.get('video_mix')) : 1,
+        video: hasVideo && await openVideoInput(params.get('video')),
+        videoMix: hasVideo ? parseVideoMix(params.get('video_mix')) : 1,
         initialImageUrl: params.get('image') ?? 'images/placeholder-image.png',
         fullscreen: params.get('fullscreen') === 'true' || shaderFullscreen
     }
