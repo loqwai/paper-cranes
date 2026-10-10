@@ -190,7 +190,7 @@ Full list: [vj-preferences.md](vj-preferences.md).
 2. **Every layer visibly reacts to the music.** Size reactions for the back of the room.
 3. **Color follows only slow music.** No hue jumps from short-term features.
 4. **Backgrounds stream forward.** Use monotonic clocks with no shiver.
-5. **No white, no clipping, no washout.** Quiet must never mean brighter.
+5. **No clipping, no washout.** White is allowed. Quiet must never mean brighter.
 6. **No painted rings.** Ripples are distortion only, fired by big audio changes.
 7. **Keep 60 fps.** "Too slow" stops everything.
 8. **Fork good moments.** Your words outrank the critic.

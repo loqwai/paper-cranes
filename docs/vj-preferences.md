@@ -77,7 +77,7 @@ For running a show, see [show-playbook.md](show-playbook.md) and the `/show` ski
   buffer overflow" (2026-10-06). Keep magenta out of the palettes, and guard against overflow
   artefacts that read as magenta: clamp and sanitize what feedback buffers store (finite, 0..1),
   gamut-map so every output channel lands in 0..1, and guard pow/sqrt/division.
-- **Never white, never clipped.** Clipping in the focal object is noticed right away.
+- **Never clipped.** Clipping in the focal object is noticed right away. White itself is allowed (user, 2026-10-09: "There shouldn't be a 'no white' rule"); it's clipping and washout that read as broken.
 - **Palettes should belong to the scene.** "Blend the eye in", "make sure its color palette makes
   sense". Separate color families pasted together read as a sticker.
 - **Palettes the user has liked:**
