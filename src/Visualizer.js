@@ -12,6 +12,7 @@ import {
 
 import { shaderWrapper } from './shader-transformers/shader-wrapper.js'
 import { keepScreenAwake } from './wakeLock.js'
+import { makeVideoBackbuffer } from './video/videoBackbuffer.js'
 
 // Simple full-screen quad
 const positions = [
@@ -113,7 +114,7 @@ void main() {
     gl_Position = position;
 }`
 
-export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) => {
+export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen, video, videoMix = 1 }) => {
     // Not awaited: the screen lock must never sit between the user and the visual.
     askForWakeLock()
 
@@ -143,6 +144,7 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         frameBuffers = [createFramebufferInfo(gl), createFramebufferInfo(gl)]
         frameBuffers.forEach(setFramebufferTexParams)
         bufferInfo = createBufferInfoFromArrays(gl, { position: positions })
+        videoBackbuffer = video && makeVideoBackbuffer(gl, video, positions)
         programInfo = null
         lastFragmentShader = null
         lastCanvasWidth = 0
@@ -176,6 +178,7 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
     frameBuffers.forEach(setFramebufferTexParams)
 
     let bufferInfo = createBufferInfoFromArrays(gl, { position: positions })
+    let videoBackbuffer = video && makeVideoBackbuffer(gl, video, positions)
 
     resizeCanvasToDisplaySize(gl.canvas, 1)
 
@@ -273,6 +276,7 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
                 gl.clear(gl.COLOR_BUFFER_BIT)
             })
             gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+            if (videoBackbuffer) videoBackbuffer.resize(newWidth, newHeight)
 
             gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
             lastCanvasWidth = gl.canvas.width
@@ -284,25 +288,28 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         const frame = frameBuffers[frameNumber % 2]
         const prevFrame = frameBuffers[(frameNumber + 1) % 2]
 
+        const usePrevTexture = frameNumber === 0 || useInitialTextureAsPrev
+        const realPrevTexture = usePrevTexture ? initialTexture : prevFrame.attachments[0]
+        useInitialTextureAsPrev = false
+        const videoFrame = videoBackbuffer?.draw(realPrevTexture, videoMix)
+        const prevTexture = videoFrame?.prev ?? realPrevTexture
+        const startTexture = videoFrame?.video ?? initialTexture
+
         gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, frame.framebuffer)
         gl.viewport(0, 0, frame.width, frame.height)
-
-        const usePrevTexture = frameNumber === 0 || useInitialTextureAsPrev
-        const prevTexture = usePrevTexture ? initialTexture : prevFrame.attachments[0]
-        useInitialTextureAsPrev = false
 
         let uniforms = {
             iTime: time,
             iFrame: frameNumber,
             time,
             prevFrame: prevTexture,
-            initialFrame: initialTexture,
+            initialFrame: startTexture,
             resolution: [frame.width, frame.height],
             frame: frameNumber,
             iRandom: Math.random(),
             iResolution: [frame.width, frame.height, 0],
             iMouse: [features.touchX, features.touchY, features.touched ? 1: 0, 0],
-            iChannel0: initialTexture,
+            iChannel0: startTexture,
             iChannel1: prevTexture,
             iChannel2: initialTexture,
             iChannel3: prevTexture,
@@ -315,6 +322,7 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         // resolve string references to other uniforms (e.g., time_val=time)
         uniforms = resolveReferences(uniforms)
 
+        if (videoBackbuffer) gl.useProgram(programInfo.program)
         setBuffersAndAttributes(gl, programInfo, bufferInfo)
         setUniforms(programInfo, uniforms)
         drawBufferInfo(gl, bufferInfo)

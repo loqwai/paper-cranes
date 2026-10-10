@@ -12,6 +12,7 @@ const maybeStartWavelet = async (params, audioContext, sourceNode) => {
     window.cranes.waveletProcessor = wavelet
 }
 import { makeVisualizer, askForWakeLock } from './src/Visualizer.js'
+import { openVideoInput, parseVideoMix } from './src/video/videoSource.js'
 import { getInitialShader, loadShader } from './src/shaderLoader.js'
 import { loadControllers, composeControllers } from './src/controllerChain.js'
 
@@ -351,8 +352,11 @@ const main = async () => {
     window.shader = fragmentShader
     setupCanvasEvents(canvas)
 
+    const videoInput = params.get('video')
     const visualizerConfig = {
         canvas,
+        video: videoInput && await openVideoInput(videoInput),
+        videoMix: parseVideoMix(params.get('video_mix')),
         initialImageUrl: params.get('image') ?? 'images/placeholder-image.png',
         fullscreen: params.get('fullscreen') === 'true' || shaderFullscreen
     }

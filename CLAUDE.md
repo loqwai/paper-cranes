@@ -356,6 +356,7 @@ uniform float another;   // = 1.2
 - `audio=tab` - Capture audio from a browser tab instead of mic. Chrome/Edge only. See [docs/tab-audio.md](docs/tab-audio.md)
 - `audio_file=<url>` - Play a deterministic audio file through the analyzer. See [docs/audio-file-playback.md](docs/audio-file-playback.md)
 - `wavelet=true` - Enable opt-in wavelet (DWT) analysis alongside FFT. Adds `wavelet*` uniforms (octave bands, centroid/spread, bassHit trigger, FFT×wavelet combos). See [docs/wavelet-analysis.md](docs/wavelet-analysis.md)
+- `video=<label substring>` - Use a camera/capture card as the backbuffer: `getLastFrameColor`/`prevFrame`/`iChannel0` return the live video. `video=default` for the default camera, `video_mix=<0..1>` (default 1) keeps feedback trails. No match is an error. See [docs/video-input.md](docs/video-input.md)
 - `audio_device=<label substring>` - Open the mic input whose label contains this (e.g. `USB Audio CODEC`); no match means no audio, never a different device. Omitted → the OS default input
 - `audio_time=<seconds>` - Start audio file playback at this offset (default: 0)
 - `time=<seconds>` - Hold time constant (useful for deterministic screenshots/testing)

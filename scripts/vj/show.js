@@ -42,7 +42,7 @@ const CHROME_FLAGS = [
 ]
 
 // Mic + MIDI granted over CDP rather than --use-fake-ui-for-media-stream, so no prompt ever draws.
-const PERMISSIONS = ['microphone', 'midi', 'midi-sysex']
+const PERMISSIONS = ['microphone', 'camera', 'midi', 'midi-sysex']
 
 const cdpUp = async () => {
   try {
