@@ -39,7 +39,7 @@ Escape hatch: `/show panic sun/7` hot-swaps a known-good fork without a reload.
 | #156 | `/show` always listens to the dials (`scripts/vj/watch-dials.js`) and always runs `/vibej2` |
 | #157 | K11 WARMTH, K12 SPARKLE, K13 GLOW, K14 DARK FLOOR, K15/K16 move the main sun |
 
-Not merged: `peter-show` has `docs/twister-cheatsheet.md` and this file.
+#158 added this file and `docs/twister-cheatsheet.md`.
 
 ## Open items
 
