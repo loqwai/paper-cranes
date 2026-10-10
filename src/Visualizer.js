@@ -70,8 +70,9 @@ const handleShaderError = (gl, wrappedFragmentShader, newFragmentShader) => {
 
 // Downscale below ~40fps. The old 50ms trigger left a 20–50ms dead band: a GPU-bound wall stalling
 // to ~27fps (13ms frames broken by 80–150ms stalls) averaged 37ms and never scaled.
-// `ceiling` is the highest ratio that hasn't failed on this display size, so a ratio that was too
-// slow is never climbed back into (no resolution pop every 20 frames).
+// `ceiling` is the highest ratio that hasn't failed recently, so a ratio that was too slow isn't
+// climbed straight back into (no resolution pop every 20 frames). It recovers one step after a
+// backoff (20 s, doubling per failure) so a transient stall can't pin the wall at 0.5 for the night.
 const calculateResolutionRatio = (frameTime, renderTimes, lastResolutionRatio, ceiling) => {
     // Ignore frame times from background/throttled tabs — they're artificially
     // long and cause resolution downscaling that clears the canvas on return.
@@ -187,6 +188,8 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
     let lastResolutionRatio = 1
     let resolutionCeiling = 1
     let lastClientSize = ''
+    let ceilingRetryAt = 0
+    let ceilingRetryDelay = 20000
     let lastCanvasWidth = 0
     let lastCanvasHeight = 0
     let useInitialTextureAsPrev = false
@@ -229,11 +232,19 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         if (clientSize !== lastClientSize) {
             lastClientSize = clientSize
             resolutionCeiling = 1
+            ceilingRetryDelay = 20000
         }
         const resolutionRatio = frameNumber < 60
             ? lastResolutionRatio
             : calculateResolutionRatio(frameTime, renderTimes, lastResolutionRatio, resolutionCeiling)
-        if (resolutionRatio < lastResolutionRatio) resolutionCeiling = resolutionRatio
+        if (resolutionRatio < lastResolutionRatio) {
+            resolutionCeiling = resolutionRatio
+            ceilingRetryAt = currentTime + ceilingRetryDelay
+            ceilingRetryDelay = Math.min(ceilingRetryDelay * 2, 320000)
+        } else if (resolutionCeiling < 1 && currentTime > ceilingRetryAt) {
+            resolutionCeiling = Math.min(1, resolutionCeiling + 0.25)
+            ceilingRetryAt = currentTime + ceilingRetryDelay
+        }
 
         // Check if canvas display size changed (window resize)
         resizeCanvasToDisplaySize(gl.canvas, lastResolutionRatio)
