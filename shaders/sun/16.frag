@@ -2,7 +2,7 @@
 // @mobile: false
 // @tags: urchin, blackhole, sun, lattice, psychedelic, vangogh, claude
 // preset: https://visuals.beadfamous.com/?shader=sun/16&controller=sun-16&wavelet=true&knob_1=0&knob_2=1&knob_3=1&knob_4=0.425&knob_5=0&knob_6=0.984&knob_7=0&knob_8=0&knob_9=0.567&knob_10=0.724&knob_11=0.921&knob_12=0.512&knob_13=0&knob_14=0.795&knob_15=0&knob_16=0.425
-// SUN/15: fork of claude/wip/black-sun/sun-1-show, 2026-10-10 02:06 MST (show, after RELOAD-REBAKE + FAN-ROOT). Anchors COLD-START baked: a fresh boot shows the finished look.
+// SUN/16: fork of claude/wip/black-sun/sun-1-show, 2026-10-10 02:16 MST (same code as sun/15) (show, after RELOAD-REBAKE + FAN-ROOT). Anchors COLD-START baked: a fresh boot shows the finished look.
 // BLACK SUN — SUN VARIANT (sun-1.frag): 1.frag with the rays in sun colours — molten pale gold at the
 // eye cooling through saffron/amber/orange to ember-red tips — against the blue Van Gogh sky.
 // Everything below is 1.frag's design; only the palette table differs.

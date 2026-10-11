@@ -59,8 +59,8 @@ the laptop page on `remote=control`.
 
 ## Open items
 
-- **K1 HOLE SIZE is too subtle.** Branch `k1-hole-size-wip` has a one-line fix (1×–2.2×). It
-  hasn't been verified on the wall; check it with K1 at 0 and 1, then merge.
+- **K1 HOLE SIZE is obsolete.** The hole was removed during the show ("We need that hole gone"),
+  and K1 is now TRIP in sun-1-show and forks 15–17. Branch `k1-hole-size-wip` can be deleted.
 - **The shiver detector reads about 0.9–1.0 constantly** now that its probe runs, and the 2 Hz
   meter changed what it measures. It's muted in the health monitor; recalibrate it after the show.
 - **The controller's kick detector fires on noise** (`bs_kick` spikes while `bassZScore` is
