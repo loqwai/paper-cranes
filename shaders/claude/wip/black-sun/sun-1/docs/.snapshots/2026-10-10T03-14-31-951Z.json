@@ -1,0 +1,97 @@
+{
+  "timestamp": "2026-10-10T03:14:31.951Z",
+  "shader": "claude/wip/black-sun/sun-1",
+  "name": null,
+  "knobs": {
+    "knob_3": 0.2283464566929134,
+    "knob_1": 0.7480314960629921
+  },
+  "audio": {
+    "bass": {
+      "normalized": 0.5,
+      "zScore": 1,
+      "slope": 0,
+      "rSquared": 1
+    },
+    "energy": {
+      "normalized": 0.5,
+      "zScore": 1,
+      "slope": 0,
+      "rSquared": 1
+    },
+    "mids": {
+      "normalized": 0.5,
+      "zScore": 1,
+      "slope": 0,
+      "rSquared": 1
+    },
+    "treble": {
+      "normalized": 0.5,
+      "zScore": 1,
+      "slope": 0,
+      "rSquared": 1
+    },
+    "spectralCentroid": {
+      "normalized": 0.5,
+      "zScore": 1,
+      "slope": 0,
+      "rSquared": 1
+    },
+    "spectralFlux": {
+      "normalized": 0.5,
+      "zScore": 1,
+      "slope": 0,
+      "rSquared": 1
+    },
+    "spectralEntropy": {
+      "normalized": 0.5,
+      "zScore": 1,
+      "slope": 0,
+      "rSquared": 1
+    },
+    "spectralRoughness": {
+      "normalized": 0.5,
+      "zScore": 1,
+      "slope": 0,
+      "rSquared": 1
+    },
+    "spectralKurtosis": {
+      "normalized": 0.5,
+      "zScore": 1,
+      "slope": 0,
+      "rSquared": 1
+    },
+    "spectralSpread": {
+      "normalized": 0.5,
+      "zScore": 1,
+      "slope": 0,
+      "rSquared": 1
+    },
+    "spectralCrest": {
+      "normalized": 0.5,
+      "zScore": 1,
+      "slope": 0,
+      "rSquared": 1
+    },
+    "spectralRolloff": {
+      "normalized": 0.5,
+      "zScore": 1,
+      "slope": 0,
+      "rSquared": 1
+    },
+    "spectralSkew": {
+      "normalized": 0.5,
+      "zScore": 1,
+      "slope": 0,
+      "rSquared": 1
+    },
+    "pitchClass": {
+      "normalized": 0.5,
+      "zScore": 1,
+      "slope": 0,
+      "rSquared": 1
+    }
+  },
+  "musicTab": null,
+  "userNote": null
+}

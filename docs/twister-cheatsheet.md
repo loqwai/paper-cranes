@@ -1,38 +1,39 @@
-# Twister · sun-1
+# Twister · sun-1-show (giant orbited sun)
 
-All dials at **0** give the show look.
+Remapped 2026-10-10 (KNOB-MAP) so every dial changes the giant scene. Dials marked * still need the
+staged fix (`.claude/vj-tools/sun-1-show.knobs-fix2.frag`) to read strongly.
 
 ## Layout
 
 |        | 1           | 2           | 3          | 4          |
 |--------|-------------|-------------|------------|------------|
-| **R1** | 🟠 HOLE     | 🩷 HUE SPIN | 🔵 LATTICE | 🟠 ZOOM    |
-| **R2** | 🟢 STORY    | 🟢 REACH    | 🟢 KISS    | 🔵 CALM    |
-| **R3** | 🟡 REACT    | 🔴 FADE     | 🩷 WARMTH  | 🩵 SPARKLE |
-| **R4** | 🩵 GLOW     | 🟣 DARK     | 🟠 SUN X   | 🟠 SUN Y   |
+| **R1** | 🟢 TRIP     | 🩷 HUE SPIN | 🩵 FAN     | 🟠 ZOOM    |
+| **R2** | 🟢 STORY    | 🟠 REACH    | 🟠 SPEED   | 🔵 SKY SWAP* |
+| **R3** | 🟡 REACT    | 🎨 PAINT    | 🩷 WARMTH  | 🩵 SPARKLE |
+| **R4** | 🩵 GLOW     | 🟣 DARK*    | 🟠 SUN X   | 🟠 SUN Y   |
 
-🟠 sun · 🩷 colour · 🔵 sky · 🟢 story · 🟡 audio · 🔴 fade · 🩵 light · 🟣 dark
+🟠 giant · 🩷 colour · 🔵 sky · 🟢 story · 🟡 audio · 🩵 light · 🟣 dark · 🎨 brush
 
 ## Dials
 
-| K  | Name       | Turn up to…                                       |
-|----|------------|---------------------------------------------------|
-| 1  | HOLE       | grow the sun's core                               |
-| 2  | HUE SPIN   | rotate the whole palette (1 = full turn = 0)      |
-| 3  | LATTICE    | strengthen the spiral lattice                     |
-| 4  | ZOOM       | scale the sun, rays and lens (0.55× → 1.5×)       |
-| 5  | STORY      | force an act: act = floor(k × 7)                  |
-| 6  | REACH      | force the huge-ray mode                           |
-| 7  | KISS       | past 0.5 calls a companion kiss (10 s guard)      |
-| 8  | CALM       | fade the patchwork clouds back to blue tiles      |
-| 9  | REACT      | more reaction to the music (1× → 2.5×)            |
-| 10 | FADE       | fade the wall to black                            |
-| 11 | WARMTH     | pull every colour toward sun gold                 |
-| 12 | SPARKLE    | stars and lattice glints (1× → 3×)                |
-| 13 | GLOW       | corona brightness (1× → 2.5×)                     |
-| 14 | DARK       | push the darks toward black                       |
-| 15 | SUN X      | place the sun left → right                        |
-| 16 | SUN Y      | place the sun bottom → top                        |
+| K  | Name       | Turn up to…                                                              |
+|----|------------|--------------------------------------------------------------------------|
+| 1  | TRIP       | past 0.5 switches to the trip story (fades in ~6 s, starts at HATCHLING)  |
+| 2  | HUE SPIN   | turn the whole finished palette (1 = full turn = 0); magenta is guarded  |
+| 3  | FAN        | cyan Julia fan brightness 0.15×→1.4× and reach (was LATTICE)             |
+| 4  | ZOOM       | giant radius 0.75→1.60 half-heights                                      |
+| 5  | STORY      | force an act: act = floor(k × 7); 0 = automatic story                    |
+| 6  | REACH      | prominence (plasma arch) height 0.4×→1.8×                                |
+| 7  | SPEED      | giant surface turn + boil rate 1×→4× (rate only, never jumps; was KISS)  |
+| 8  | SKY SWAP   | flip the act's backdrop (day tiles ↔ deep space) and clear the nebula veil; works in every act |
+| 9  | REACT      | every audio reaction 1×→3.5×                                             |
+| 10 | PAINT      | irregular brush dabs + broken colour along the orbit, surface and sky    |
+| 11 | WARMTH     | pull the giant, corona and arches toward gold (90%); the sky and backdrop stay blue at any setting |
+| 12 | SPARKLE    | stars (count + brightness, round), glints, fan filaments, spicules 1×→4× |
+| 13 | GLOW       | corona + chromosphere 0.4×→3.4×                                          |
+| 14 | DARK       | sink the darks toward black (hard, below L 0.62)                         |
+| 15 | SUN X      | slide the giant (and the companion's path) left ↔ right                  |
+| 16 | SUN Y      | slide the giant up ↔ down                                                |
 
 ## Remember
 
@@ -40,7 +41,9 @@ All dials at **0** give the show look.
   first 8% of the dial. To pin the sun hard left or at the bottom, turn
   just past 0.08.
 - **STORY above 0 locks an act.** Back to 0 for the automatic story.
-- **FADE** is the safe exit at the end of the set.
+- **PAINT** (K10) sets brushwork strength. There is no fade knob: the wall stays 100% bright.
+- **SPEED** (K7) no longer calls a kiss; kisses come only from the music.
+- **HUE SPIN** at 0 and at 1 look the same (a full turn).
 - **First touch can jump.** The Twister is absolute: a dial lands on
   wherever its ring sits.
 - **Replug resets the ring colours.** Ask Claude to resend them.
