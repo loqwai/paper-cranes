@@ -44,6 +44,8 @@ staged fix (`.claude/vj-tools/sun-1-show.knobs-fix2.frag`) to read strongly.
 - **PAINT** (K10) sets brushwork strength. There is no fade knob: the wall stays 100% bright.
 - **SPEED** (K7) no longer calls a kiss; kisses come only from the music.
 - **HUE SPIN** at 0 and at 1 look the same (a full turn).
+- **Turn STORY fully left before the show.** Its ring may sit near 1, and
+  the first nudge would lock the last act.
 - **First touch can jump.** The Twister is absolute: a dial lands on
   wherever its ring sits.
 - **Replug resets the ring colours.** Ask Claude to resend them.
