@@ -5,8 +5,10 @@
 //            positions. Wrapped at WRAP so float32 keeps ~1 ms precision on a multi-day run.
 //   lp_e     the eruption clock, ∫ speed × (1 + 3 × K6 ERUPT) dt: the surface boils and the flares
 //            fire faster as ERUPT rises, still without a jump. Wrapped at WRAP like lp_u.
-//   lp_seam  0, except for SEAM seconds after either clock wraps, when the shader dissolves the old
-//            frame into the new one so the jump never shows as a cut.
+//   lp_seam  0, except for SEAM seconds after lp_u wraps, when the shader dissolves the old frame
+//            into the new one so the jump never shows as a cut.
+//   lp_seamE the same dissolve for an lp_e wrap. Separate so 1.frag, which never reads lp_e, never
+//            dissolves without a real discontinuity.
 
 const WRAP = 8192
 const SEAM = 4
@@ -19,6 +21,7 @@ const clamp01 = x => Math.min(1, Math.max(0, x))
 export function make() {
   const S = window.__sunLampState ??= { u: 0, seam: SEAM, lastT: null }
   S.e ??= S.u
+  S.seamE ??= SEAM
 
   return (f) => {
     const now = performance.now() / 1000
@@ -29,14 +32,16 @@ export function make() {
     S.u += speed * dt
     S.e += speed * (1 + 3 * clamp01(f.knob_6 ?? 0)) * dt
     S.seam += dt
+    S.seamE += dt
     if (S.u >= WRAP) {
       S.u -= WRAP
       S.seam = 0
     }
     if (S.e >= WRAP) {
       S.e -= WRAP
-      S.seam = 0
+      S.seamE = 0
     }
-    return { lp_u: S.u, lp_e: S.e, lp_seam: S.seam < SEAM ? 0.97 * (1 - S.seam / SEAM) : 0 }
+    const fade = t => t < SEAM ? 0.97 * (1 - t / SEAM) : 0
+    return { lp_u: S.u, lp_e: S.e, lp_seam: fade(S.seam), lp_seamE: fade(S.seamE) }
   }
 }

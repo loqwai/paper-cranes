@@ -10,7 +10,7 @@
 #define TAU 6.28318530718
 #define PI  3.14159265359
 
-uniform float lp_u, lp_e, lp_seam;
+uniform float lp_u, lp_e, lp_seam, lp_seamE;
 
 // ============================================================================
 // KNOBS — 0 everywhere is the designed look
@@ -448,7 +448,7 @@ vec3 giantStar(vec3 f, vec2 uv0) {
         float fine = pow(s_noise(vec2(phi * 38.0 + rot * 40.0, h * 1.2 - FLUX_PH * 0.08)), 3.0);
         float cor = helm * exp(-h * 1.7 / (1.0 + 1.5 * knob_13)) * (0.55 + 0.45 * fine) * (0.35 + 1.3 * SUN_BREATH) * GLOW * (1.0 + 0.5 * E);
         cor = cor / (1.0 + cor);
-        cor *= 1.0 - 0.5 * smoothstep(1.4, 1.8, rho);
+        cor *= (1.0 - 0.5 * smoothstep(1.4, 1.8, rho)) * smoothstep(2.2, 1.3, h);
         add += sunLch(0.70, 0.13, 70.0) * cor * 0.8 * (1.0 + 2.5 * knob_13);
         occ = clamp(cor * 1.6, 0.0, 1.0) * 0.9 * knob_13;
         float chrom = exp(-h / 0.022) * step(-0.01, hgt) * 1.5;
@@ -504,7 +504,8 @@ vec3 giantStar(vec3 f, vec2 uv0) {
         body = giantSurface(p, z, rot, boil);
         cov = smoothstep(1.0, 0.985, rho);
     }
-    return mix(f * (1.0 - occ) + add, body, cov);
+    float lit = 1.0 - gNight * gDay;
+    return mix(f * (1.0 - occ * lit) + add * lit, body, cov);
 }
 
 // ============================================================================
@@ -546,7 +547,7 @@ vec3 sea(vec2 uv) {
 }
 
 // ============================================================================
-// SPIRAL — a log-spiral twist round the sun, then a 12-way smooth kaleidoscope
+// SPIRAL — a log-spiral twist round the sun, then a six-way smooth kaleidoscope
 // ============================================================================
 vec2 swirl(vec2 uv) {
     float w = min(SPIRAL / 0.6, 1.0) - 0.85 * smoothstep(0.6, 0.72, SPIRAL) + 0.5 * smoothstep(0.72, 1.0, SPIRAL);
@@ -686,7 +687,8 @@ void mainImage(out vec4 O, in vec2 g) {
     lin *= pow(0.03, DIM);
     f = pow(lin, vec3(1.0 / 2.2));
 
-    if (lp_seam > 0.001) f = mix(f, getLastFrameColor(g / r).rgb, lp_seam);
+    float seam = max(lp_seam, lp_seamE);
+    if (seam > 0.001) f = mix(f, getLastFrameColor(g / r).rgb, seam);
     f += (hash12(g + fract(lp_u) * 61.0) - 0.5) / 255.0;
     O = vec4(clamp(f, 0.0, 1.0), 1.0);
 }
