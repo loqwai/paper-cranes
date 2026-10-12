@@ -446,10 +446,11 @@ vec3 giantStar(vec3 f, vec2 uv0) {
         float h = max(hgt, 0.0);
         float helm = 0.35 + 0.65 * pow(s_noise(vec2(phi * 2.3 + rot * 3.0, 1.7)), 2.0);
         float fine = pow(s_noise(vec2(phi * 38.0 + rot * 40.0, h * 1.2 - FLUX_PH * 0.08)), 3.0);
-        float cor = helm * exp(-h * 1.7) * (0.55 + 0.45 * fine) * (0.35 + 1.3 * SUN_BREATH) * GLOW * (1.0 + 0.5 * E);
+        float cor = helm * exp(-h * 1.7 / (1.0 + 1.5 * knob_13)) * (0.55 + 0.45 * fine) * (0.35 + 1.3 * SUN_BREATH) * GLOW * (1.0 + 0.5 * E);
         cor = cor / (1.0 + cor);
         cor *= 1.0 - 0.5 * smoothstep(1.4, 1.8, rho);
-        add += sunLch(0.66, 0.10, 72.0) * cor * 0.8;
+        add += sunLch(0.70, 0.13, 70.0) * cor * 0.8 * (1.0 + 2.5 * knob_13);
+        occ = clamp(cor * 1.6, 0.0, 1.0) * 0.9 * knob_13;
         float chrom = exp(-h / 0.022) * step(-0.01, hgt) * 1.5;
         float spic = pow(s_noise(vec2(phi * GIANT_R * 120.0, h * 9.0 - boil * 0.6)), 5.0) * exp(-h / (0.045 * (1.0 + E)));
         add += sunLch(0.62, 0.17, 58.0) * chrom * 0.9 * (0.6 + 0.4 * GLOW)
@@ -554,14 +555,15 @@ vec2 swirl(vec2 uv) {
     return GIANT_C + rot2(w * 2.2 * log(max(length(d) / GIANT_R, 1.0))) * d;
 }
 
-vec2 kaleido(vec2 uv) {
+vec2 kaleido(vec2 uv, float w) {
     vec2 d = uv - GIANT_C;
     if (dot(d, d) < 1e-8) return uv;
     float a0 = atan(FAN_DIR.y, FAN_DIR.x) + lp_u * 0.01;
     float a = atan(d.y, d.x) - a0;
     a = atan(sin(a), cos(a));
     float af = KSEG / PI * asin(0.985 * sin(PI * a / KSEG));
-    return GIANT_C + length(d) * vec2(cos(a0 + af), sin(a0 + af));
+    float aT = a0 + mix(a, af, w);
+    return GIANT_C + length(d) * vec2(cos(aT), sin(aT));
 }
 
 vec4 sceneAt(vec2 uv0, float t, float sm) {
@@ -624,9 +626,7 @@ void mainImage(out vec4 O, in vec2 g) {
     gSunC = mix(vec2(SUN_X, SUN_Y), path, gDay);
 
     float kw = smoothstep(0.6, 0.72, SPIRAL);
-    vec4 sc = vec4(0.0);
-    if (kw < 0.999) sc = sceneAt(uv0, t, sm);
-    if (kw > 0.001) sc = mix(sc, sceneAt(kaleido(uv0), t, sm), kw);
+    vec4 sc = sceneAt(kw > 0.001 ? kaleido(uv0, kw) : uv0, t, sm);
     vec3 f = sc.rgb;
     float rhoG = sc.a;
 
