@@ -1,0 +1,892 @@
+# Paper Cranes / Beadfamous - Music Visualization System
+
+## Project Overview
+A real-time browser-based music visualization system that:
+- Performs advanced audio analysis from microphone input
+- Drives GPU-accelerated WebGL visualizations 
+- Controls LED lights through screen scraping
+- Works on mobile devices
+- Supports physical bead bracelets that link to specific visualizations
+
+## Architecture
+
+### Audio Processing Pipeline
+```
+Microphone → MediaStream → AudioContext → WindowNode (Hanning) → FFT Analyzer → Workers → Features → Shader
+```
+
+### Key Components
+
+#### 1. AudioProcessor (`src/audio/AudioProcessor.js`)
+- **FFT Size**: 4096 (optimized from 32768 for ~85ms latency)
+- **Smoothing**: 0.15 exponential smoothing factor
+- **Analyzer Smoothing**: 0.2 time constant
+- Uses Web Workers for parallel feature extraction
+- Extracts 15 audio features from hypnosound library
+
+#### 2. WorkerRPC (`src/audio/WorkerRPC.js`)
+- Manages worker communication with 30ms timeout
+- Handles feature calculation in parallel
+- Returns smoothed default values on timeout
+
+#### 3. Visualizer (`src/Visualizer.js`)
+- WebGL2 context with frame buffer ping-ponging
+- Passes audio features as uniforms to shaders
+- Supports previous frame access for feedback effects
+- Dynamic resolution scaling for performance
+
+## Audio Features Available
+
+Each feature has 11 statistical variations:
+- **Current value** (e.g., `bass`)
+- **Normalized** (0-1 range, e.g., `bassNormalized`)
+- **Mean** (historical average)
+- **Median** (historical median)
+- **Min/Max** (historical range)
+- **StandardDeviation** (variability)
+- **ZScore** (-1 to 1, for detecting anomalies/drops)
+- **Slope** (linear regression slope over history window — is the feature rising or falling?)
+- **Intercept** (predicted value at start of history window)
+- **RSquared** (0-1, how well a linear trend fits — 1.0 = perfect trend, 0 = no trend)
+
+### Core Features:
+- SpectralCentroid, SpectralFlux, SpectralSpread, SpectralRolloff
+- SpectralRoughness, SpectralKurtosis, SpectralEntropy, SpectralCrest
+- SpectralSkew, PitchClass
+- Bass, Mids, Treble
+- Energy
+- Beat detection
+
+## Audio Features Reference (Hypnosound)
+
+### The 14 Core Features
+
+| Feature | Range | Measures | Musical Meaning | Independence |
+|---------|-------|----------|-----------------|--------------|
+| **bass** | 0-1 | 0-400Hz energy | Low-end power | Independent from treble |
+| **mids** | 0-1 | Mid-range energy | Body/warmth | Semi-independent |
+| **treble** | 0-1 | High freq energy | Brightness/air | Independent from bass |
+| **energy** | 0-1 | Total amplitude | Loudness | Correlates with bass |
+| **pitchClass** | 0-1 | Note (0-11)/12 | Which note playing | Independent from timbre |
+| **spectralCentroid** | 0-1+ | Center of mass | Brightness/pitch center | Semi-correlates with pitchClass |
+| **spectralSpread** | 0-1+ | Frequency variance | Harmonic width | Independent from centroid |
+| **spectralSkew** | varies | Distribution tilt | Dark vs bright tilt | Independent from spread |
+| **spectralKurtosis** | 0-1 | Peakedness | Focus vs diffuse | Independent from skew |
+| **spectralFlux** | 0-1+ | Rate of change | Timbral motion | Semi-correlates with energy |
+| **spectralRolloff** | 0-1+ | High freq cutoff | Where highs die | Independent from others |
+| **spectralRoughness** | 0-1+ | Dissonance | Grittiness/beating | Independent from pitch |
+| **spectralEntropy** | 0-1+ | Unpredictability | Chaos vs order | Independent from most |
+| **spectralCrest** | 0-1+ | Peak/mean ratio | Spiky vs smooth | Independent from others |
+
+### Statistical Variations (11 per feature)
+
+Each audio feature provides 11 statistical variations calculated over a rolling window (default 500 frames):
+
+1. **value** - Raw current value from the analyzer
+2. **normalized** - Min-max normalized to 0-1 range (relative to history)
+3. **mean** - Historical average (baseline character)
+4. **median** - Historical median (robust center)
+5. **min** - Historical minimum (lower bound)
+6. **max** - Historical maximum (upper bound)
+7. **standardDeviation** - Variability measure
+8. **zScore** - Standardized score: `(value - mean) / (stdDev * 2.5)` → roughly -1 to 1
+9. **slope** - Linear regression slope over history window (rate of change of the trend)
+10. **intercept** - Y-intercept of the regression line (predicted value at window start)
+11. **rSquared** - Coefficient of determination (0-1, how well a linear trend fits the data)
+
+### When to Use Each Statistical Variation
+
+- **zScore**: Detect anomalies, drops, spikes - "is this unusual?"
+- **normalized**: Smooth 0-1 modulation - "where in the range?"
+- **mean/median**: Baseline behavior, slow changes - "what's the average character?"
+- **min/max**: Historical context - "what are the extremes?"
+- **standardDeviation**: Detect stability vs volatility
+- **slope**: Detect trends - "is this feature rising or falling over time?" Positive = rising, negative = falling
+- **intercept**: Predict baseline - "where was this feature heading from?" Useful with slope for extrapolation
+- **rSquared**: Detect confidence in trends - "is the change steady or chaotic?" High rSquared + high slope = confident build/drop
+- **value**: Raw analysis (less common in shaders)
+
+### Feature Independence Matrix
+
+**Highly Covariant (avoid pairing):**
+- `energy` + `bass` (both increase with loud low frequencies)
+- `energy` + `spectralFlux` (big changes often involve energy changes)
+- `spectralCentroid` + `pitchClass` (both relate to pitch)
+- `spectralSpread` + `spectralKurtosis` (both describe distribution shape)
+- `spectralSpread` + `spectralEntropy` (wider often means more complex)
+
+**Independent Pairings (good for variety):**
+- `bass` vs `treble` (opposite frequency ranges)
+- `spectralCentroid` vs `spectralRoughness` (pitch center vs dissonance)
+- `spectralEntropy` vs `spectralCrest` (chaos vs peakiness)
+- `spectralFlux` vs `spectralRolloff` (change rate vs cutoff)
+- `spectralSkew` vs `energy` (harmonic tilt vs loudness)
+- `pitchClass` vs `spectralKurtosis` (pitch vs distribution shape)
+
+### Feature Domains (for choosing independent features)
+
+Group features by domain and pick from DIFFERENT domains for variety:
+
+**Frequency Bands:**
+- `bass`, `mids`, `treble` (0-400Hz, mid-range, high freq)
+
+**Spectral Shape:**
+- `spectralCentroid` (center), `spectralSpread` (width)
+- `spectralSkew` (tilt), `spectralKurtosis` (peakedness)
+
+**Spectral Quality:**
+- `spectralRoughness` (dissonance), `spectralEntropy` (chaos), `spectralCrest` (peakiness)
+
+**Temporal:**
+- `spectralFlux` (rate of change)
+
+**Tonal:**
+- `pitchClass` (which note), `spectralRolloff` (harmonic cutoff)
+
+**Energy:**
+- `energy` (total loudness)
+
+### Shader Design Patterns
+
+#### Simple Frequency Reactivity
+```glsl
+// Respond to different frequency bands
+#define LOW_ENERGY (bassNormalized)
+#define MID_ENERGY (midsNormalized)
+#define HIGH_ENERGY (trebleNormalized)
+```
+
+#### Complex Timbral Analysis
+```glsl
+// Respond to spectral characteristics
+#define BRIGHTNESS (spectralCentroidNormalized)
+#define HARMONIC_WIDTH (spectralSpreadNormalized)
+#define DISSONANCE (spectralRoughnessNormalized)
+#define CHAOS (spectralEntropyNormalized)
+```
+
+#### Musical Structure Detection
+```glsl
+// Detect drops, builds, transitions
+#define IS_DROP (energyZScore > 0.5)
+#define IS_BUILDING (spectralFluxZScore > 0.3)
+#define TIMBRAL_SHIFT (spectralFluxZScore)
+```
+
+#### Trend Detection with Linear Regression
+```glsl
+// Slope tells you WHERE the music is heading
+#define BASS_RISING (bassSlope > 0.0)
+#define ENERGY_TREND (energySlope)           // Positive = building, negative = dropping
+#define BRIGHTNESS_TREND (spectralCentroidSlope)  // Rising = getting brighter
+
+// rSquared tells you HOW CONFIDENT that trend is
+#define TREND_CONFIDENCE (energyRSquared)     // 1.0 = steady build/drop, 0.0 = chaotic
+#define STEADY_BUILD (energySlope > 0.0 && energyRSquared > 0.5)  // Confident build-up
+
+// Combine slope + rSquared for musical awareness
+#define CONFIDENT_RISE(feature) (feature##Slope * feature##RSquared)
+// High when rising steadily, low when chaotic or falling
+
+// Intercept provides the trend's baseline
+#define PREDICTED_BASELINE (energyIntercept)  // Where the trend started from
+```
+
+#### Creating Visual Variety
+```glsl
+// Choose independent features from different domains
+#define RIBBON_1 (bassZScore)           // Frequency domain
+#define RIBBON_2 (trebleZScore)          // Frequency domain (opposite)
+#define RIBBON_3 (spectralCentroidNormalized)  // Spectral shape
+#define RIBBON_4 (spectralKurtosisZScore)      // Spectral shape (different aspect)
+#define RIBBON_5 (spectralRoughnessNormalized) // Spectral quality
+#define RIBBON_6 (pitchClassNormalized)        // Tonal
+```
+
+## Performance Optimizations
+
+### Latency Reduction (from ~1000ms to ~100ms)
+1. **FFT Size**: Reduced from 16384 to 4096 
+   - Query param: `?fft_size=4096`
+2. **Smoothing**: Reduced from 0.8 to 0.05-0.2
+   - Query param: `?smoothing=0.15`
+3. **Worker Timeout**: Optimized to 30ms
+
+### Jitter Reduction
+- Exponential smoothing on all features
+- Different smoothing factors for z-scores vs raw values
+- Smart initialization to prevent jumps
+
+### Browser-Specific Fixes
+- Firefox: Automatic microphone reconnection every 5 seconds
+- Chrome: Proper async initialization of audio worklet
+
+## Shader Development
+
+> **Full tutorial:** See [docs/MAKING_A_NEW_SHADER.md](docs/MAKING_A_NEW_SHADER.md) for the complete guide including utility functions, design patterns, and common pitfalls.
+>
+> **Advanced techniques:** See [docs/advanced-shader-techniques.md](docs/advanced-shader-techniques.md) for the hard-won stuff — signal conditioning (the iris/1 discipline: smoothed features, monotonic phases, rate-not-angle, quietGate), discontinuity fixes (fract-wrap windowing, no transients in phases), making ChromaDepth POP (and the hue-locked-to-depth + no-averaging rules), bass-you-can-feel, drag/pinch navigation (pan units, per-area rotation inverts the axis, "no idle pan"), breaking tiling (incommensurate domain warp seeded by slow audio), per-device seeds, spatial paths/landmarks, and the screenshot/feature-injection verification workflow.
+
+### Shader Structure
+```glsl
+// Use #define for audio-reactive parameters
+#define CIRCLE_RADIUS (spectralCentroidZScore)
+#define COLOR_SHIFT (bassNormalized * 0.5)
+
+// In main code
+vec3 position = vec3(CIRCLE_RADIUS, 0.1, 0.1);
+```
+
+### Available Uniforms
+- All audio features (see above)
+- `iTime` - Time in seconds
+- `iResolution` - Screen resolution
+- `iFrame` - Frame number
+- `iChannel0-3` - Texture samplers
+- `beat` - Boolean beat detection
+
+### Utility Functions
+- `rgb2hsl(vec3)` / `hsl2rgb(vec3)` - Color space conversion
+- `getLastFrameColor(vec2 uv)` - Previous frame access
+
+### Best Practices
+1. Use z-scores for detecting drops/beats
+2. Use normalized values for smooth modulation
+3. Use mean/median for baseline behavior
+4. Avoid divide-by-zero and white-out
+5. Center visuals in viewport
+6. Maintain 60fps on mobile
+
+## Controllers (JavaScript Companions to Shaders)
+
+Controllers are JavaScript modules (`controllers/*.js`) that run once per frame with persistent state. They fill gaps GLSL can't: exponential decay, accumulators, state machines, double-precision math. Loaded via `?controller=<name>`. **Default to shader logic** — only use a controller when the shader literally cannot hold the state you need. Controller outputs become shader uniforms (must be explicitly declared with `uniform float`). See [docs/controllers.md](docs/controllers.md) for the full guide.
+
+**Chaining (repeat `?controller=`):** controllers run as a **left-fold pipeline** (`src/controllerChain.js`). Each gets `{ ...base features, ...everything earlier stages added this frame }` and returns the features it adds; **URL order = pipeline order, last wins on key clash**; a cross-cutting controller (smoother/recorder/clamp) goes **last**. NOT deduped — each `?controller=` is its own stage with its own `make()`/state (so a controller listed twice runs twice, and one that attaches global listeners does so once per instance). `make()` may be `async` (awaited before joining the loop). **Prefer chaining over wrapping** — compose at the URL (`?controller=wavelet-ease&controller=my-fx`) instead of importing one controller inside another. (A few existing controllers — `lattice-nav`, `gesture-knobs` — still self-import `wavelet-ease`; leave them, but write new ones to be chained.)
+
+## Knob/MIDI Control System
+
+### Available Knobs
+- `knob_1` through `knob_200` — all are available as float uniforms (0-1 range)
+- Set via URL query params (e.g., `?knob_1=0.5`), MIDI controllers, or the ParamsManager API
+- MIDI controllers auto-map CCs to knobs with per-device profiles persisted in localStorage. Manage mappings visually at `/midi.html`. See [docs/midi-mapping.md](docs/midi-mapping.md)
+- The phone touch surface at `/vjpad.html` builds its pads from `vjpad-layouts.json` plus whatever knobs the shader declares. See [docs/vjpad.md](docs/vjpad.md)
+
+### Naming a knob in the shader (convention)
+
+Give a knob a name on the line that uses it and the tooling picks it up — no
+separate config, no restating:
+
+```glsl
+gThetaStep = PI * (0.125 + EXA(knob_141, 0.20));   // K141 TWIST STEP (PI*0.025 .. PI*0.225)
+// @knob: 141 TWIST STEP        // explicit form; wins over the K-comment
+```
+
+`vite-plugins/shader-plugin.js` extracts every referenced `knob_N` plus its name
+into a `knobs` field in `shaders.json` (`"1|131:FOLD RATIO|…"`). The name is the
+leading run of ALL-CAPS words after the K-number — it stops at the first
+lowercase word, so the rest of the comment stays free for explanation. The VJ pad
+uses this to label pads for any shader with no setup step.
+
+### The #define Swap Pattern (Recommended)
+
+Use `#define` to alias audio parameters so you can easily swap between audio-reactive and constant values during development:
+
+```glsl
+// ============================================================================
+// AUDIO-REACTIVE PARAMETERS (swap constants for audio uniforms)
+// ============================================================================
+
+// Active: audio-reactive
+#define SCALE_MOD (-spectralEntropyZScore * 0.08)
+// #define SCALE_MOD 0.0
+
+// Active: audio-reactive
+#define HUE_SHIFT (pitchClassNormalized * 0.3)
+// #define HUE_SHIFT 0.0
+
+// Active: constant (for testing)
+// #define BRIGHTNESS (1.0 + bassZScore * 0.12)
+#define BRIGHTNESS 1.0
+```
+
+**Benefits:**
+- Comment/uncomment to switch between audio and static
+- Test visuals without audio enabled (`?noaudio=true`)
+- Tune constant values before mapping to audio
+- Keep audio mapping documentation inline with the code
+
+### Switching to Knob Mode
+Replace audio features with knob controls:
+```glsl
+// Audio mode
+#define PARAM (spectralFluxZScore)
+
+// Knob mode
+#define PARAM (knob_71)
+```
+
+### URL Parameters as Uniforms
+
+Any numeric query parameter automatically becomes a float uniform:
+
+```
+?shader=my-shader&my_param=0.5&another=1.2
+```
+
+These are available in your shader as:
+```glsl
+// Automatically injected as uniforms
+uniform float my_param;  // = 0.5
+uniform float another;   // = 1.2
+```
+
+**Note:** Only numeric values work. Known params (`shader`, `noaudio`, `fft_size`, etc.) and `knob_*` params are excluded.
+
+## Query Parameters
+
+### Core Parameters
+- `shader` - Shader file to load (e.g., `?shader=star`)
+- `fft_size` - FFT window size (default: 4096)
+- `smoothing` - Smoothing factor (default: 0.15)
+- `history_size` - Statistical history buffer (default: 500)
+- `noaudio` - Disable audio input (for testing)
+- `embed` - Embed mode (disables audio)
+- `fullscreen` - Start in fullscreen
+- `remote` - Remote mode: `display` (receive commands) or `control` (send commands)
+- `audio=tab` - Capture audio from a browser tab instead of mic. Chrome/Edge only. See [docs/tab-audio.md](docs/tab-audio.md)
+- `audio_file=<url>` - Play a deterministic audio file through the analyzer. See [docs/audio-file-playback.md](docs/audio-file-playback.md)
+- `wavelet=true` - Enable opt-in wavelet (DWT) analysis alongside FFT. Adds `wavelet*` uniforms (octave bands, centroid/spread, bassHit trigger, FFT×wavelet combos). See [docs/wavelet-analysis.md](docs/wavelet-analysis.md)
+- `audio_device=<label substring>` - Open the mic input whose label contains this (e.g. `USB Audio CODEC`); no match means no audio, never a different device. Omitted → the OS default input
+- `audio_time=<seconds>` - Start audio file playback at this offset (default: 0)
+- `time=<seconds>` - Hold time constant (useful for deterministic screenshots/testing)
+- `vj=1` - Install the VJ runtime on the display: cursor-hide, GL validator, aesthetic meter, frame-time probe, and health signals POSTed to `/__vj-signal`. This is how the auto-VJ loop sees a page it cannot screenshot. See [docs/vj-telemetry.md](docs/vj-telemetry.md)
+- `vjtrack=1` - With `vj=1`, also log every knob move at 10Hz with the full audio-feature vector, for working out which feature a fader is imitating. **Off by default and not for use during a show** — it is a ~17KB JSON serialise + fetch every 2s on the render thread
+
+### Dynamic Override
+All parameters can be overridden at runtime via:
+```javascript
+window.cranes.manualFeatures.smoothing = 0.2
+window.cranes.manualFeatures.fft_size = 8192
+```
+
+## Remote Control Mode
+
+The system supports controlling a remote display from another device (phone, laptop, etc.) via WebSocket.
+
+### Setup
+1. Start the dev server with WebSocket support: `npm run dev`
+2. Open the **display** (TV/projector): `http://localhost:6969/?remote=display`
+3. Open the **controller** (phone/laptop):
+   - List page: `http://localhost:6969/list.html?remote=control`
+   - Edit page: `http://localhost:6969/edit.html?remote=control`
+
+### How It Works
+- **Display mode** (`?remote=display`): Listens for commands via WebSocket
+- **Control mode** (`?remote=control`): Sends commands to all connected displays
+
+### List Page Remote Control
+- Tapping a shader sends it to all connected displays
+- Fullscreen button sends shader with fullscreen flag
+
+### Edit Page Remote Control
+- Saving shader code sends it to all connected displays in real-time
+- Knob/slider changes are synced to displays automatically
+- Shows connection status indicator (green = connected, displays count)
+
+### Multiplayer Editor
+Multiple people can edit the same shader simultaneously with live cursors via WebSocket. Each tab gets a random identity. No CRDT — edits apply in arrival order. See [docs/multiplayer-editor.md](docs/multiplayer-editor.md)
+
+### Editor-Filesystem Sync (dev mode only)
+Ctrl+S in the editor writes to disk via `/__save-shader` endpoint. External `.frag` changes push back via HMR. HMR updates suppress multiplayer broadcast to avoid stomping concurrent edits. See [docs/editor-filesystem-sync.md](docs/editor-filesystem-sync.md)
+
+### Architecture
+```
+Controller (edit.html?remote=control)
+    ↓ WebSocket
+Dev Server (Vite + remote-ws-plugin WebSocket server)
+    ↓ Broadcast
+Display (index.html?remote=display)
+```
+
+**Hot-path rule (`src/remote/RemoteDisplay.js`):** inbound params are applied **synchronously on
+arrival**. This is the knob→uniform path for a control surface someone plays in time with music,
+so nothing may be deferred into it — batching applies into a `requestAnimationFrame` adds up to a
+full frame (~16ms) of lag whenever the renderer's rAF is queued first. The genuinely expensive
+per-message work has been moved out instead: the URL mirror is debounced to 750ms (it only exists
+so a refresh preserves state) and per-message DOM work was removed outright.
+
+### ParamsManager
+The `ParamsManager` (`src/params/ParamsManager.js`) is the unified system for handling all shader parameters:
+- Single source of truth for knobs, settings, and shader code
+- Automatically syncs to URL (debounced)
+- Automatically syncs to remote displays (when in control mode)
+- Maintains compatibility with `window.cranes.manualFeatures`
+
+```javascript
+// Usage in edit.js
+const paramsManager = createParamsManager({
+    syncToUrl: true,
+    remoteMode: true,  // Enable WebSocket sync
+})
+
+paramsManager.set('knob_71', 0.5)  // Syncs to URL + remote
+paramsManager.setShader(code)      // Syncs shader to remote
+```
+
+## File Structure
+```
+/
+├── src/
+│   ├── audio/
+│   │   ├── AudioProcessor.js    # Main audio processing
+│   │   ├── WorkerRPC.js        # Worker communication
+│   │   ├── analyzer.js         # Worker analyzer loader
+│   │   ├── tabAudioSource.js   # ?audio=tab capture via getDisplayMedia
+│   │   ├── tabAudioButton.js   # Tab audio overlay UI
+│   │   └── audioFileSource.js  # ?audio_file= deterministic playback
+│   ├── midi/
+│   │   └── MidiMapper.js       # MIDI CC→knob mapping with profiles
+│   ├── multiplayer/
+│   │   ├── MultiplayerEditor.js # Live collaborative editing
+│   │   ├── identity.js         # Random per-tab identity generation
+│   │   └── multiplayer.css     # Cursor and peer chip styles
+│   ├── params/
+│   │   └── ParamsManager.js    # Unified params (URL, remote, features)
+│   ├── remote/
+│   │   ├── RemoteController.js # Sends commands to displays
+│   │   ├── RemoteDisplay.js    # Receives commands from controllers
+│   │   └── WebSocketClient.js  # WebSocket client wrapper
+│   ├── vj/
+│   │   └── runtime.js          # ?vj=1 page runtime (validator, meter, jank probe, signals)
+│   ├── Visualizer.js           # WebGL rendering
+│   ├── shaderLoader.js         # Centralized shader loading
+│   └── shader-transformers/     # Shader preprocessing
+├── shaders/                     # GLSL visualization shaders
+│   ├── wip/Codex/             # Codex-created shaders go here
+│   ├── plasma.frag
+│   └── melted-satin/2.frag
+├── controllers/                 # JS companions to shaders (frame-persistent state)
+│   ├── example.js              # Documented example
+│   └── griz-coat.js            # Drop sustain with exponential decay
+├── scripts/
+│   ├── remap-knobs.js          # Utility to remap knob assignments in shaders
+│   └── vj/                     # Live-VJ tooling — see docs/vj-telemetry.md
+│       ├── show.js             #   the show browser: fullscreen Chrome driven over CDP (launch/eval/shot)
+│       ├── aesthetic-meter.js  #   FETCHED BY URL at runtime; do not move
+│       ├── remote-send.js      #   push update-params to the display from a shell
+│       ├── watch-release.js    #   emit a line when a fader is released
+│       └── knob-correlate.js   #   which audio feature was that gesture imitating?
+├── jam.js                       # Jam page: canvas only, MIDI + spacebar snapshots, no on-screen UI
+├── index.js                     # Main entry point
+├── edit.js                      # Editor interface
+├── list.js                      # Shader list/gallery page
+├── vite.config.js               # Vite build configuration
+└── vite-plugins/
+    ├── remote-ws-plugin.js      # WebSocket server for remote control
+    ├── editor-sync-plugin.js    # Bidirectional editor↔disk sync (dev only)
+    ├── vj-signal-plugin.js      # /__vj-signal endpoint; writes .Codex/vj-signals.jsonl (dev only)
+    └── shader-plugin.js         # Shader discovery, metadata, and manifest generation
+```
+
+## Development Workflow
+
+### Local Development
+```bash
+npm install
+npm run dev  # Serves on localhost:6969
+```
+
+### Creating Visualizations
+1. Create new `.frag` file in `shaders/`
+2. Access via `?shader=filename` (without .frag)
+3. Use audio features as uniforms
+4. Test with different music styles
+
+### Deployment
+- Auto-deploys to visuals.beadfamous.com via Cloudflare Pages
+- PRs to `shaders/<github-username>/` auto-merge
+- No backend required (static hosting)
+- **Images and static assets must go in `public/`** — see [docs/errata.md](docs/errata.md)
+
+### Branch Preview URLs
+Every branch gets a Cloudflare Pages preview deployment at:
+```
+https://<branch-name>.paper-cranes-visuals.pages.dev/
+```
+
+For example, a branch called `webcam-background` is accessible at:
+```
+https://webcam-background.paper-cranes-visuals.pages.dev/?shader=my-shader
+```
+
+Use this to link to specific shaders: append `?shader=<path>` (without `.frag`).
+
+### PR Shader Links
+When creating a PR that adds shaders, **always include preview links** in the PR body using the branch preview URL convention. For example:
+
+```markdown
+| Shader | Link |
+|--------|------|
+| my-shader | [preview](https://<branch>.paper-cranes-visuals.pages.dev/?shader=path/to/my-shader) |
+```
+
+This lets reviewers click through and test each shader directly.
+
+## Codex-Specific Instructions
+
+### Where to Put Your Shaders
+
+Shaders go under `shaders/<github-username>/wip/<shader-name>/`. Iterations are numbered files. Each shader in `wip/` gets a single markdown doc named `<shader-name>.md` in the same directory.
+
+```
+shaders/Codex/wip/cosmic-bloom/
+├── 1.frag              # First iteration
+├── 2.frag              # Second iteration
+└── cosmic-bloom.md     # Design intent, audio mapping, iteration notes
+```
+
+```bash
+shaders/Codex/wip/cosmic-bloom/1.frag           # Good
+shaders/Codex/wip/cosmic-bloom/cosmic-bloom.md   # Good — one doc per shader
+shaders/wip/Codex/my-shader.frag                 # Old convention, still works
+shaders/my-shader.frag                             # Bad - don't put in root
+```
+
+**Document as you iterate.** The `<shader-name>.md` should include:
+- Visual intent and design concept
+- Which audio features drive what and why
+- What changed between numbered iterations (e.g. "2.frag: switched from spectralFlux to spectralEntropy for the color shift — less jittery on sparse tracks")
+
+The `wip/` directory is filtered from the mobile list by default, so experimental shaders won't clutter the production list.
+
+### Shader Metadata System
+Add metadata comments at the top of shader files to control list page behavior:
+
+```glsl
+// @fullscreen: true    // Shader handles non-square aspect ratios well
+// @mobile: true        // Shader performs well on mobile devices
+// @favorite: true      // Show in favorites filter
+// @tags: rave, ambient // Comma-separated tags
+#version 300 es
+precision highp float;
+...
+```
+
+**Metadata tags:**
+- `@fullscreen: true/false` - Shader handles non-square aspect ratios. When `true`, the shader **automatically stretches to fill the screen** without needing `?fullscreen=true` in the URL.
+- `@mobile: true/false` - Is shader performant on mobile?
+- `@favorite: true` - Mark as a favorite for quick access
+- `@tags: tag1, tag2` - Categorization tags
+
+Metadata is extracted at build time and included in `dist/shaders.json`.
+
+`vite-plugins/shader-plugin.js` also derives, per shader:
+- `modified` — last-commit date, used by the list page's "newest first" sort.
+  **Cloudflare Pages clones shallow (depth 1)**, so a live `git log` there returns the
+  single build commit for every file — 346 identical dates, a sort that does nothing,
+  and no visible symptom because every shader still *has* a date. So real history is
+  baked into a committed **`shader-dates.json`** (`scripts/shader-dates.js`), and the
+  build prefers it whenever live history is shallow or degenerate. Live git still wins
+  when it is genuinely usable (local dev), and the baked file is refreshed
+  automatically on any local dev-server start or build — regenerate manually with
+  `npm run shader-dates`. The build refuses to overwrite the baked file from a shallow
+  clone, and logs a loud warning if the result has fewer than 2 distinct dates.
+  If dates are genuinely unavailable, `modified` is `null` and the list page hides ages
+  and removes the "newest" sort rather than showing a fabricated order.
+- `presets` — preset URLs read from the shader source. The list page used to fetch all
+  345 `.frag` files (6.5MB) on every load to find these; it now ships in `shaders.json`.
+- `prettyName` — display name, and `tags` normalised to always be an array (a single
+  `@tags: foo` used to come through as a bare string).
+
+`images.json` (from `public/images/`) is generated alongside it to power the list
+page's image picker.
+
+**Important:** The `@fullscreen: true` metadata is the recommended way to enable fullscreen for shaders that support non-square viewports. It works in both normal mode and remote display mode.
+
+### List Page Features
+The list page (`/list.html`) is the live-performance tool: designed for one thumb,
+a phone, and a dark room. All controls sit in a fixed **bottom bar** (thumb zone):
+`FIND / SORT / FAVS / TAGS / SET / ROLL`.
+
+- **Tap-to-copy-and-navigate**: Tapping a row copies the URL and opens the shader.
+  Fullscreen-on-tap is on by default (toggle in the Sort sheet).
+- **Sort**: newest-modified (default), recently shown, A→Z, or shuffled.
+  `modified` comes from git history at build time — see below.
+- **Tag filter**: chips built from `@tags`, plus per-device tags you add yourself.
+  Tap a chip to include, again to exclude, again to reset. Multiple includes are OR.
+  Top-level folders appear as chips too.
+- **Search**: fuzzy — matches names, tags and folders, ignores case and punctuation,
+  and allows skipped letters (`chrmdpth` finds chromadepth).
+- **Favorites**: `@favorite: true` from the file, merged with stars you tap.
+- **Setlist**: `+` on any row queues a shader; `GO` plays the queue in the perform
+  overlay where **NEXT is a single tap**.
+- **Perform overlay**: runs the shader in a same-origin iframe so the list never
+  unloads. Also gives an **image picker** (replaces hand-editing `?image=`) and
+  runtime tagging.
+- **Remembered params**: returning from a shader page captures that page's URL via
+  `document.referrer`, so anything hand-edited over there (knobs, `image`,
+  `controller`) is reused next time. Rows with saved settings show a `saved` badge.
+- **Roll**: weighted random — favourites and never-played shaders float up, anything
+  played in the last couple of hours sinks.
+
+Per-device state (stars, your tags, recents, remembered params, setlist, scroll
+position) lives in `localStorage` under `cranes-list-*`. That is deliberate: at a
+party the site is static and there is no server to write to. The `.frag` metadata
+stays the permanent, shareable, in-repo truth and these merge on top of it.
+
+### Good Example Shaders to Study
+Look at these for reference:
+- `melted-satin/1.frag` - #define swap pattern, frame feedback, HSL manipulation
+- `wip/chromatic-flow.frag` - Mobile-optimized raymarching, #define pattern, zoom camera
+- `plasma.frag` - Simple but effective
+- `subtronics.frag` - Image-based with audio modulation
+- `redaphid/zebra/tie-dye.frag` - Complex knob-based control
+
+## Code Style Guidelines
+- Use arrow functions
+- Early returns (single line when possible)
+- No semicolons
+- Latest ECMAScript features
+- Follow .eslintrc configuration
+
+## PWA App Install
+
+Shaders can be installed as standalone apps (Add to Home Screen) on mobile and desktop.
+
+### How It Works
+1. Each shader gets a pre-built manifest at `/manifests/<shader-name>.json` (generated by `vite-plugins/shader-plugin.js`)
+2. At page load, the manifest is fetched and its `start_url` is overridden with the current page URL — so the installed app preserves all query params (`image=`, knobs, etc.)
+3. Tapping/clicking 7 times within 1 second triggers the browser's native install prompt (no visible UI)
+
+### App Naming
+- Manifest `name`: `"Paper Cranes - <display name>"`
+- Manifest `short_name`: the display name (max 12 chars)
+- Display name comes from `@name` metadata if set, otherwise from the shader path
+- When the last path segment is numeric or very short (e.g. `wooli/2`), the parent folder is included → `"wooli 2"`
+- Names are lowercase
+
+### Query Param Preservation
+The installed PWA opens with whatever URL the user was on when they installed. For example, installing from `?shader=wooli/2&image=images/wooli.png` means the app always opens with that image.
+
+### Relevant Files
+- `index.html` — manifest link injection + 7-tap install trigger
+- `vite-plugins/shader-plugin.js` — `prettifyShaderName()`, `makeManifest()`, `generateManifests()`
+- `public/icons/` — shared PWA icons (all shaders use the same set)
+- `service-worker.js` — offline caching
+
+## ChromaDepth Shader Variants
+
+ChromaDepth 3D glasses create depth from color: red=near, green=middle, blue/violet=far. To create a chromadepth version of an existing shader:
+
+1. Replace the color palette with HSL-based depth mapping: `hue = t * 0.75` (0=red, 0.75=violet)
+2. Use `seed2` to shift the hue mapping so each device is unique
+3. Map fractal interior → red (near), boundary → green (mid), exterior → blue (far)
+4. Make edge glow red/orange (pops forward), background elements blue/violet (recedes)
+5. On beat, shift hue toward red (`hue -= 0.05`) for a "pop forward" effect
+6. Use HSL not Oklch — chromadepth needs raw spectral hue order
+7. Keep saturation high (~0.9+), lightness moderate (0.05-0.55), no white
+
+**Full guide:** See [docs/MAKING_A_NEW_SHADER.md](docs/MAKING_A_NEW_SHADER.md#creating-chromadepth-versions-of-existing-shaders)
+
+**Reference shaders:** `wooli/chromadepth-1.frag`, `wooli/chromadepth-2.frag`, `Codex/chromadepth-julia.frag`
+
+## Common Issues & Solutions
+
+### Audio Not Working
+1. Check microphone permissions
+2. Ensure not muted in OS
+3. Try `?noaudio=false` explicitly
+4. Check browser console for worker errors
+
+### Visualization Stuttering
+1. Reduce FFT size: `?fft_size=2048`
+2. Increase smoothing: `?smoothing=0.25`
+3. Check GPU performance in dev tools
+
+### Graph Showing Solid Color
+- Audio features not flowing (check workers)
+- NaN/undefined values (check console)
+- Missing audio input (check permissions)
+
+## Testing Different Configurations
+
+### Ultra-responsive (more jittery)
+`?shader=plasma&fft_size=2048&smoothing=0.3`
+
+### Ultra-smooth (more latency)
+`?shader=plasma&fft_size=8192&smoothing=0.08`
+
+### Balanced (default)
+`?shader=plasma&fft_size=4096&smoothing=0.15`
+
+## Advanced Topics
+
+### Frame Feedback Effects
+```glsl
+vec4 prev = getLastFrameColor(uv + offset);
+fragColor = mix(prev, newColor, 0.1);
+```
+
+### Beat-Reactive Transitions
+```glsl
+if (beat) {
+    // Instant change on beat
+    color = vec3(1.0, 0.0, 0.0);
+} else {
+    // Smooth transition
+    color = mix(oldColor, targetColor, 0.1);
+}
+```
+
+### Multi-Feature Correlation
+```glsl
+// Combine multiple features for complex behavior
+float intensity = bassNormalized * energyZScore;
+float complexity = spectralEntropyNormalized * spectralFluxZScore;
+```
+
+## Key Insights for AI/LLM Development
+
+1. **Audio-Visual Latency**: The system prioritizes low latency (~100ms) over perfect smoothness. This is critical for live performance.
+
+2. **Statistical Context**: Z-scores and historical statistics provide semantic meaning to raw audio data, enabling musically-aware visualizations.
+
+3. **Performance Balance**: Every optimization involves tradeoffs between latency, smoothness, and computational load.
+
+4. **Browser Differences**: Firefox and Chrome handle Web Audio differently, requiring browser-specific mitigations.
+
+5. **Worker Architecture**: Parallel processing via Web Workers is essential for real-time performance with 15+ audio features.
+
+6. **Shader Philosophy**: Shaders should be artistic, reactive, and performant - avoiding dead zones while maintaining visual coherence.
+
+## Shader Validation
+
+Use the CLI to validate shader syntax before committing:
+```bash
+node scripts/validate-shader.js shaders/wip/Codex/my-shader.frag
+```
+
+This will check for:
+- GLSL syntax errors
+- Missing required uniforms
+- Common mistakes
+
+## Mobile Optimization for Raymarching Shaders
+
+Raymarching (fractals, SDFs) is expensive. Use these limits for mobile:
+
+| Parameter | Desktop | Mobile |
+|-----------|---------|--------|
+| Raymarch steps | 100+ | 50 max |
+| Fractal iterations | 15+ | 8 max |
+| Surface threshold | 0.0005 | 0.002 |
+| Max distance | 30+ | 20 |
+| Normal epsilon | 0.0005 | 0.003 |
+
+**Expensive operations to avoid/simplify on mobile:**
+- Soft shadows (32 iterations) → remove or use 1-sample hack
+- Ambient occlusion (5 samples) → reduce to 2 samples
+- Multiple specular lights → single light
+- High-precision normals → larger epsilon
+
+**Example cheap AO (2 samples instead of 5):**
+```glsl
+float cheapAO(vec3 p, vec3 n) {
+    float d1 = sdf(p + n * 0.1);
+    float d2 = sdf(p + n * 0.3);
+    return clamp(0.5 + (d1 + d2) * 2.0, 0.0, 1.0);
+}
+```
+
+## Camera Movement Patterns
+
+### Lateral Movement (drifting left/right/up/down)
+```glsl
+vec3 camOffset = vec3(
+    spectralCentroidZScore * 0.04,  // X: left/right
+    midsZScore * 0.02,               // Y: up/down
+    0.0
+);
+vec3 ro = basePosition + camOffset;
+```
+
+### Zoom Effect (push in/pull out)
+Move along the view direction, not world axes:
+```glsl
+vec3 toTarget = normalize(lookAt - baseRo);
+float zoomAmount = spectralFluxZScore * 0.15;
+vec3 ro = baseRo + toTarget * zoomAmount;  // Moves toward/away from target
+```
+
+### FOV Zoom (feels like zooming without moving)
+```glsl
+float fov = 1.8 * (1.0 - energyZScore * 0.1);  // Lower = zoomed in
+vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
+```
+
+## Common Shader Mistakes to Avoid
+
+1. **Dividing by zero**: Always add small epsilon `max(value, 0.001)`
+2. **White-out on loud audio**: Clamp values `clamp(intensity, 0.0, 1.0)`
+3. **Not handling aspect ratio**: Use `uv.x *= iResolution.x / iResolution.y` for non-square viewports
+4. **Too much feedback**: `mix(prev, new, 0.1)` can accumulate to white - use `mix(prev * 0.99, new, 0.1)`
+5. **Hardcoded resolution**: Always use `iResolution`, never hardcode 1920x1080
+6. **Metadata before #version**: If your shader has `#version 300 es`, it MUST be the first line. Put metadata comments (`// @fullscreen: true`) on line 2, not line 1. Shaders without `#version` (ShaderToy-style) can have metadata on line 1.
+
+## Codex Skills
+
+| Skill | Purpose |
+|-------|---------|
+| `/jam` | Launch a jam session — open the jam page with shader + controller + music source. Lighter than `/live-session`: no editor, just knobs + snapshots. |
+| `/live-session` | Launch a live creative session — open Chrome with shader editor + audio source, connect Codex-in-Chrome, and jam. Optionally pass a shader path or SoundCloud/Spotify URL. See [docs/live-session-insights.md](docs/live-session-insights.md). |
+| `/fork` | Save the current shader + knob state as a new numbered iteration. Reads knobs from the browser, copies the `.frag`, writes a companion doc. |
+| `/record` | Record a music video from the current shader canvas. Uses MediaRecorder API, restarts the music track, auto-stops after duration. |
+| `/preset` | Save knob state as a named preset (live) or batch-process the snapshot queue (`/preset process`). |
+| `/solo` | Toggle a shader between knob mode and audio mode. Auto-detects current mode and switches. Use `/solo knobs` or `/solo audio` to force a mode. Defaults to the modified `.frag` in the worktree. |
+| `/changelog` | Update docs/CHANGELOG.md and README with recent features. |
+| `/pr` | Create a PR, request review, and open in browser. |
+
+## Live Sessions: the Parent Stays Responsive
+
+**Show day:** run `/show`. It does the preflight, launch, watchers and hand-off. Follow
+[docs/show-playbook.md](docs/show-playbook.md) for the runbook, knob map, story, fork library and
+failure fixes.
+
+During any **live session** — a VJ set (`/vibej2`), a jam, a `/live-session`, anything where the
+user has a hand on a controller — the main Codex session is a **dispatcher, not a worker**. It
+triages what the user says, reads the meter, makes the ONE decision, and hands execution to a
+subagent (`Agent` tool, `subagent_type: "fork"` — a fork inherits the full session context). Then
+it goes back to listening.
+
+**The parent NEVER does inline:** browser-side verification waits (`await new Promise(r =>
+setTimeout(...))`), multi-step analysis, journal or doc writing, repo archaeology, long
+edit-then-verify cycles, batch screenshot review. All of it goes to a fork.
+
+**"However trivial they seem to you"** is the operative clause, inherited from the Relay
+coordinator role: every violation feels individually too small to delegate — one `curl` to check a
+claim, one quick file read, one 20-second wait. Each is defensible alone; together they are the
+whole failure. *The judgement "this one is small enough" is itself the thing to stop making.*
+
+**Why, mechanically:** a `<task-notification>` only reaches the parent **between turns**. A long
+parent turn is dead air — monitors fire, the user presses a button, and nothing is heard until the
+turn ends. On 2026-08-20 a LEARN press waited **~3 minutes** for a reply purely because the parent
+was mid-turn running verification waits.
+
+**The corollary that actually fixed it:** when work must be *instant*, push it out of the agent
+loop entirely and into the page. The `?vj=1` runtime now runs the LEARN correlation in-browser and
+answers the phone over the WebSocket in **tens of milliseconds** — 56 ms measured from WebSocket
+delivery to the answer being posted, ~180 ms end-to-end including the confirm-watcher poll, worst
+case bounded at ~450 ms by the two poll intervals — with no model in the path.
+**Delegate work that needs a model; put work that needs to be instant in the page.**
+
+**Concurrency:** only ONE subagent at a time may drive the display page or the target `.frag`. The
+parent holds that token and must not spawn a second page-touching fork while one is running.
+Doc-only forks can run in parallel, but give each one distinct files — two agents editing the same
+file is a lost edit.
+
+Full treatment, including the failure modes that produced these rules:
+[docs/live-session-architecture.md](docs/live-session-architecture.md).
+
+## Misc Notes
+- Use far less time when running sleep than you ordinarily would; if it were 5 seconds, do 1 instead.
+- When creating a PR or pushing to one, consider whether the changes include features a user would be excited about. If so, ask the user if they'd like you to run `/changelog` to update the docs.

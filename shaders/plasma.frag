@@ -20,12 +20,14 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
 		vec3 p = vec3(0,0,5.) + normalize(vec3(p, -1.))*d;
         float rz = map(p);
 		float f =  clamp((rz - map(p+.1))*0.5, -.1, 1. );
-        vec3 l = vec3(0.1,0.3,.4) + vec3(5., 2.5, 3.)*f;
+        vec3 l = vec3(0.1,0.3,.4) * (1.0 + energyZScore * 0.2) + vec3(5., 2.5, 3.)*f;
         cl = cl*l + smoothstep(2.5, .0, rz)*.7*l;
 		d += min(rz, 1.);
 	}
     cl= rgb2hsl(cl);
-    cl.x = fract(cl.x + spectralCentroid);
+    cl.x = fract(cl.x + spectralCentroid + (beat ? 0.12 : 0.0));
+    cl.y = clamp(cl.y + bassZScore * 0.15, 0.0, 1.0);
+    cl.z = clamp(cl.z + trebleZScore * 0.08, 0.0, 1.0);
     // cl.y = fract(cl.y );
     cl = hsl2rgb(cl);
     fragColor = vec4(cl, 1.);

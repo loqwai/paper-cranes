@@ -472,3 +472,10 @@ User, 02:17: "I need more, subtle features affected by the audio uniforms. many 
 - The tile sky's own audio verbs are unchanged: rings turn on FLOW_D, clouds sweep, treble shimmers, bass lights the tiles.
 - At +120 s the blue tile rings were arriving round the giant and the sky stayed blue. At +250 s the input was silent (energy 0) and the story had gone to dark act 2 (night 0.79, dark 0.69), so the frame read lum 0.07 and the final look couldn't be judged yet. p95 18.3–18.4 ms.
 - Rollback: `.claude/vj-tools/sun-1-show.pre-ogsky.frag`. That backup predates ROOT-HUE3; to undo only OG-SKY, revert its 4 `OG_SKY` lines.
+
+### 2026-10-10 ~19:45 — SOLAR-FLARE replaces the camera shutter (all set shaders)
+User, before going live: "I don't want the camera shutter effect … Replace it with a better, more thematic effect."
+- The section-change shutter (8 spiral aperture blades over the ball sun) is gone. In its place, a **solar flare surge** on the same `bs_shutter` / `bs_shutterAng` envelope: soft radial coronal streamers stretch out to ~2.5 radii and turn forward on `bs_shutterAng`, the limb flares hot gold, and a heat ripple travels outward. The ripple displaces the streamer field and is never drawn as a ring. It peaks mid-envelope, where `bs_irisScale` resizes the sun, so the resize stays hidden.
+- Lighten-only blend toward fixed OKLCH sun hues (ember h38 → amber h60 → hot gold h82, L ≤ 0.84), so it can't clip, darken or turn magenta whatever HUE SPIN is doing.
+- Applied by codemod (`.claude/vj-tools/pre-solarflare/codemod.mjs`) to sun-1-safe, sun-1-show, sun/10–17 and `.claude/vj-tools/sun-1-show.pre-giant.frag`. All 11 blocks were byte-identical, and all 11 compile under `__vjValidate`. The controller is unchanged.
+- Rollback: `.claude/vj-tools/pre-solarflare/` (one copy per file).
