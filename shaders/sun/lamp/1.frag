@@ -37,12 +37,12 @@ uniform float lp_u, lp_seam;
 #define FAN_S      (1.02 + 0.4 * knob_3)       // K3 FAN arm reach
 #define GIANT_R    (1.1 + 1.1 * knob_4)        // K4 SUN SIZE radius in half-heights
 #define TEMP       (knob_5)                    // K5 COLOR TEMP neutral to ~1900K candle
-#define REACH      (1.78 + 1.0 * knob_6)       // K6 REACH prominence height
+#define REACH      (1.78 + 1.6 * knob_6)       // K6 REACH prominence height
 #define SPACE_MIX  (knob_8)                    // K8 SKY SWAP day tiles to deep space
 #define FILL       (knob_9)                    // K9 FILL lifts the background in its own hues
 #define PAINT_AMT  (knob_10)                   // K10 PAINT brush dabs
 #define WARMTH     (knob_11 * 0.9)             // K11 WARMTH pulls the giant toward gold
-#define SPARKLE    (2.5 + 1.5 * knob_12)       // K12 SPARKLE glints, filaments, spicules
+#define SPARKLE    (2.5 + 4.5 * knob_12)       // K12 SPARKLE glints, filaments, spicules
 #define GLOW       (0.4 + 3.0 * knob_13)       // K13 GLOW corona and chromosphere
 #define DARK_FLOOR (knob_14)                   // K14 DARK sinks the darks
 #define SUN_X      (0.87 * (1.0 - 2.0 * knob_15))    // K15 SUN X home, centre at 0.5, mirrored at 1
@@ -442,7 +442,7 @@ vec3 giantStar(vec3 f, vec2 uv0) {
         for (int i = 0; i < 4; i++) {
             float lc = BUD_PH * 0.012 + float(i) * 0.25;
             float cyc = fract(lc), id = floor(lc) + float(i) * 7.0;
-            float c0 = (hash12(vec2(id, 3.1)) - 0.5) * 1.6;
+            float c0 = (hash12(vec2(id, 3.1)) - 0.5) * 2.8;
             float span = (0.05 + 0.07 * hash12(vec2(id, 8.7))) * GIANT_R;
             float H = (0.06 + 0.16 * hash12(vec2(id, 1.3))) * REACH * smoothstep(0.0, 0.45, cyc) + 1e-3;
             float life = smoothstep(0.0, 0.12, cyc) * smoothstep(1.0, 0.7, cyc);
@@ -550,7 +550,8 @@ void mainImage(out vec4 O, in vec2 g) {
     // lamp stage, in linear light: WASH, then COLOR TEMP, then DIM
     vec3 lin = pow(f, vec3(2.2));
     float Y = dot(lin, LUMA);
-    lin = mix(lin, pow(Y, 1.0 - 0.45 * WASH) * vec3(1.0, 0.985, 0.95) / dot(vec3(1.0, 0.985, 0.95), LUMA), WASH);
+    lin = mix(lin, pow(Y, 1.0 - 0.6 * WASH) * vec3(1.0, 0.985, 0.95) / dot(vec3(1.0, 0.985, 0.95), LUMA), WASH);
+    lin = mix(lin, vec3(dot(lin, LUMA)), 0.7 * sqrt(TEMP));
     vec3 warm = lin * pow(vec3(1.0, 0.36, 0.07), vec3(TEMP));
     lin = warm * min(dot(lin, LUMA) / max(dot(warm, LUMA), 1e-5), 3.0);
     lin *= min(1.0, 1.0 / max(max(lin.r, lin.g), max(lin.b, 1e-4)));
