@@ -622,7 +622,7 @@ void mainImage(out vec4 O, in vec2 g) {
     gHorC = mix(mix(lchc(0.24, 0.06, 258.0), lchc(0.86, 0.05, 228.0), gLit), lchc(0.74, 0.17, 50.0), gGold);
     gSunR = SIZE_R;
     gTex = pow(gSunR / 1.1, 0.6);
-    vec2 path = vec2(mix(1.25, -1.25, clamp((DAY - 0.12) / 0.72, 0.0, 1.0)), HY + e * (1.15 + 0.5 * gSunR) - 0.4 * gSunR);
+    vec2 path = vec2(mix(1.25, -1.25, clamp((DAY - 0.12) / 0.72, 0.0, 1.0)), HY + e * (1.15 + 0.5 * gSunR) - gSunR * (0.4 + 0.9 * smoothstep(0.0, -0.4, e)));
     gSunC = mix(vec2(SUN_X, SUN_Y), path, gDay);
 
     float kw = smoothstep(0.6, 0.72, SPIRAL);
