@@ -47,7 +47,7 @@ DIM, COLOR TEMP and WASH run in linear light after the show's OKLCH white-out kn
 
 ## Clock
 
-`controllers/sun-lamp.js` returns `lp_u`, the integral of the SPEED rate, and `lp_e`, the eruption clock, which runs up to 4× faster as ERUPT rises. Each clock has its own dissolve, `lp_seam` and `lp_seamE`, and 1.frag reads only `lp_seam`, so lamp 1 never dissolves on an `lp_e` wrap. Every motion in the shader is a fixed multiple of it, so turning SPEED changes rates and never jumps the picture. Both wrap at 8192. For `lp_u` that is about 45 minutes at full SPEED and 15 hours at rest. The wrap keeps float32 precise on a run of several days. At a wrap, that clock's own dissolve (`lp_seam` for `lp_u`, `lp_seamE` for `lp_e`) blends the previous frame over the new one, fading out over four seconds, so the change of pose reads as a dissolve instead of a cut.
+`controllers/sun-lamp.js` returns `lp_u`, the integral of the SPEED rate, and `lp_e`, the eruption clock, which runs up to 4× faster as ERUPT rises. Each clock has its own dissolve, `lp_seam` and `lp_seamE`, and 1.frag reads only `lp_seam`, so lamp 1 never dissolves on an `lp_e` wrap. Every motion in the shader is a fixed multiple of one of these clocks, so turning SPEED or ERUPT changes rates and never jumps the picture. Both wrap at 8192. For `lp_u` that is about 45 minutes at full SPEED and 15 hours at rest. The wrap keeps float32 precise on a run of several days. At a wrap, that clock's own dissolve (`lp_seam` for `lp_u`, `lp_seamE` for `lp_e`) blends the previous frame over the new one, fading out over four seconds, so the change of pose reads as a dissolve instead of a cut.
 
 ## What was cut from the show, and why
 
