@@ -33,7 +33,7 @@ For a warm room, try the sunset: `&knob_18=0.8&knob_4=0.35&knob_11=0.25`. For a 
 | K15 | SUN X | home, lower right | 0.5 is centred, 1 is mirrored to the left |
 | K16 | SUN Y | home, low | 0.5 is centred, 1 is mirrored to the top |
 | K17 | WASH | full colour | near-white light that keeps the sun's light and dark pattern |
-| K18 | DAY CYCLE | the space scene | a horizon, sea and sky come in, and the sun runs sunrise (about 0.15), noon (0.5), sunset (0.75 to 0.85) and night (1). Sunset turns the sun orange on its own. K15 and K16 are ignored while the day is up |
+| K18 | DAY CYCLE | the space scene | a horizon, sea and sky come in, and the sun runs sunrise (about 0.15), noon (0.5), sunset (0.75 to 0.85) and night (1). Sunset turns the sun orange on its own. From 0.12 up, DAY CYCLE takes over the background: K15 and K16 are ignored, K8 SKY SWAP does nothing, K12 SPIRAL no longer twists the sky (it still curls the fan and folds the kaleidoscope), and the FAN is cut to 25% by day and to 0 at night |
 
 Show knob numbers keep their meaning, so MIDI muscle memory carries over. The new dials use numbers the show freed: K1 was TRIP, K5 was STORY, K9 was REACT, and K17 and K18 are new. In lamp 2, K6, K11 and K12 changed jobs: REACH became ERUPT, WARMTH became SUN COLOR and SPARKLE became SPIRAL. FAN and GLOW are rebased so that 0 matches the show's photograph (`docs/shots/sun/17-moment-0221.png`), because the show's own 0 dimmed them. The photograph also ran PAINT 0.72 and DARK 0.80, so at 0 the lamp has no brush dabs and a brighter sky. K15 and K16 move away from home, so the sun reaches the centre at 0.5.
 
@@ -47,7 +47,7 @@ DIM, COLOR TEMP and WASH run in linear light after the show's OKLCH white-out kn
 
 ## Clock
 
-`controllers/sun-lamp.js` returns `lp_u`, the integral of the SPEED rate, and `lp_e`, the eruption clock, which runs up to 4× faster as ERUPT rises. Every motion in the shader is a fixed multiple of it, so turning SPEED changes rates and never jumps the picture. Both wrap at 8192. For `lp_u` that is about 45 minutes at full SPEED and 15 hours at rest. The wrap keeps float32 precise on a run of several days. At either wrap, `lp_seam` blends the previous frame over the new one, fading out over four seconds, so the change of pose reads as a dissolve instead of a cut.
+`controllers/sun-lamp.js` returns `lp_u`, the integral of the SPEED rate, and `lp_e`, the eruption clock, which runs up to 4× faster as ERUPT rises. Each clock has its own dissolve, `lp_seam` and `lp_seamE`, and 1.frag reads only `lp_seam`, so lamp 1 never dissolves on an `lp_e` wrap. Every motion in the shader is a fixed multiple of it, so turning SPEED changes rates and never jumps the picture. Both wrap at 8192. For `lp_u` that is about 45 minutes at full SPEED and 15 hours at rest. The wrap keeps float32 precise on a run of several days. At either wrap, `lp_seam` blends the previous frame over the new one, fading out over four seconds, so the change of pose reads as a dissolve instead of a cut.
 
 ## What was cut from the show, and why
 
@@ -59,5 +59,5 @@ DIM, COLOR TEMP and WASH run in linear light after the show's OKLCH white-out kn
 
 ## Iterations
 
-- **1.frag.** The first lamp. In testing at 1920×1080 with headless Chrome on Metal, the median frame took about 6.3 ms, against about 12.9 ms for `sun/17` at the show preset.
+- **1.frag.** The first lamp. The controller is shared, so since lamp 2, lamp 1's SPEED also tops out at 3× the show's pace (the show's pace is at about 0.63, not 1). In testing at 1920×1080 with headless Chrome on Metal, the median frame took about 6.3 ms, against about 12.9 ms for `sun/17` at the show preset.
 - **2.frag.** Dials that play. SUN SIZE engulfs the wall, SUN COLOR replaces WARMTH, ERUPT replaces REACH, SPIRAL replaces SPARKLE, and DAY CYCLE (K18) is new. FAN, GLOW and SPEED got wider ranges. The SUN COLOR first pass turned a big sun salmon, so lightness is now capped as the hue reddens. The first kaleidoscope used 12 narrow wedges, which only showed rings, so it now uses 6. Its fade-in also rendered the scene twice (18.8 ms), so it now morphs the fold angle in one pass. During that 0.6 to 0.72 stretch, one seam runs along the ray opposite the fan. With the sun at home that ray is off screen. On the same harness, lamp 2 measured 6.7 to 7.0 ms with every dial at 0 and 9.1 ms in the heaviest maxed case, against 11.7 to 13.6 ms for `sun/17`.
