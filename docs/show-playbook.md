@@ -137,6 +137,9 @@ Open a fork with `jam.html?shader=sun/N&controller=sun-N&wavelet=true&vj=1&remot
 | 6 | Deep-space REBIRTH, full reach, navy nebula | **Has the flicker bug (1.4)** unless the fix has been ported. Check before using |
 | 7 | **First companion kiss era**: peach-gold sun plus a rose companion, tangled tendrils | Healthy (flicker 0.22) |
 | 8 | Two small stars dancing in a DYING night, swirling nebula | Dim, with a grey veil over the sky; before the brightness fixes |
+| 15 | **Giant orbited sun**: ember limb lower right, cyan Julia fan from a luminous gold root, indigo starfield (show, 02:06 on 2026-10-10) | Cold-start baked: shows the finished look at once, even on a fresh boot. Its controller shares `__blackSunState` |
+| 16 | Same code and dials as 15, forked again at 02:16 to mark a story moment (act 1, fan spread wide) | Cold-start baked, like 15 |
+| 17 | Same code and dials as 15. Marks the companion transiting the giant (02:21) | Cold-start baked, like 15 |
 
 - **Controllers that share state:** forks 2, 3, 5, 7, 8 and `sun.js` keep state on
   `window.__blackSunState`, the same global as the live controller. Load them in a fresh page; never

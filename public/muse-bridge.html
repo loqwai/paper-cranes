@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Muse → Starship mind link</title>
+<style>
+  /* The parent holds the headband. The child holds the ship. One message between them. */
+  :root{
+    --ink:#06040d; --panel:#140e20; --line:#2c2240; --text:#ece4f3; --dim:#8d80a3; --faint:#5b5070;
+    --live:#5ef0a8; --warn:#f6c453; --err:#ff6f7d;
+    --k1:#ffb24d; --k2:#3fe6ff; --k3:#c08bff; --k4:#ff6aa0; --k5:#9af07a; --k6:#ff8d5e;
+    --mono:ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--ink);color:var(--text);font-family:var(--mono);overflow:hidden}
+  #stage{position:fixed;inset:0;display:flex;flex-direction:column}
+  iframe{flex:1;width:100%;border:none;background:#000;display:block}
+
+  /* connect overlay */
+  #overlay{
+    position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:16px;padding:24px;text-align:center;background:radial-gradient(120% 80% at 50% 32%,#181028 0%,var(--ink) 70%);
+    transition:opacity .45s ease;
+  }
+  #overlay.gone{opacity:0;pointer-events:none}
+  .eyebrow{font-size:11px;letter-spacing:.34em;text-transform:uppercase;color:var(--faint)}
+  h1{font-size:21px;font-weight:800;letter-spacing:-.01em;margin:2px 0 0}
+  p.lead{max-width:340px;font-size:13px;line-height:1.55;color:#b6abc7;margin:0}
+  button{padding:15px 24px;border-radius:13px;border:none;cursor:pointer;background:var(--live);color:#06231a;
+    font-family:inherit;font-size:16px;font-weight:800;letter-spacing:.02em}
+  button:active{transform:translateY(1px)}
+  button:focus-visible{outline:2px solid var(--k2);outline-offset:3px}
+  #skip{background:transparent;color:var(--dim);font-size:12px;font-weight:400;padding:6px}
+  #err{color:var(--err);font-size:12px;max-width:340px;min-height:14px;line-height:1.5}
+
+  /* HUD — the mind link's vital signs */
+  #hud{
+    position:fixed;left:10px;bottom:10px;z-index:15;font-size:11px;line-height:1.6;color:#b6abc7;
+    background:rgba(8,5,16,.6);border:1px solid var(--line);border-radius:10px;padding:9px 11px;
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;transition:opacity .4s ease;min-width:188px;
+  }
+  #hud.show{opacity:1}
+  #hud .hrow{display:flex;justify-content:space-between;gap:12px;align-items:center}
+  #hud b{color:var(--text);font-weight:600}
+  #hud .warn{color:var(--warn)}
+  #hud hr{border:none;border-top:1px solid var(--line);margin:7px 0}
+  .kn{display:flex;align-items:center;gap:7px;margin-top:3px}
+  .kn .lbl{width:50px;color:var(--dim)}
+  .kn .bar{flex:1;height:6px;border-radius:3px;background:#241a30;overflow:hidden}
+  .kn .bar i{display:block;height:100%;width:0%}
+  .kn .v{width:30px;text-align:right;color:var(--faint)}
+  #status{position:fixed;top:10px;right:10px;z-index:15;font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+    padding:5px 10px;border-radius:999px;border:1px solid var(--line);color:var(--dim);background:rgba(8,5,16,.6);opacity:0;transition:opacity .3s}
+  #status.show{opacity:1}
+  #status.live{color:#06231a;background:var(--live);border-color:var(--live);font-weight:700}
+  #status.warn{color:var(--warn);border-color:var(--warn)}
+  @media (prefers-reduced-motion: reduce){#overlay,#hud,#status{transition:none}}
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <iframe id="cranes" allow="microphone; fullscreen; autoplay; midi" title="Starship"></iframe>
+</div>
+
+<div id="status"></div>
+
+<div id="hud">
+  <div class="hrow"><span>rate</span><span><b id="hRate">0</b> Hz</span></div>
+  <div class="hrow"><span>posted</span><span><b id="hPost">0</b>/s</span></div>
+  <div class="hrow"><span>stale</span><span id="hStale">0.0s</span></div>
+  <hr>
+  <div class="kn"><span class="lbl">glow</span><span class="bar"><i id="b0" style="background:var(--k1)"></i></span><span class="v" id="v0">0</span></div>
+  <div class="kn"><span class="lbl">spin</span><span class="bar"><i id="b1" style="background:var(--k2)"></i></span><span class="v" id="v1">0</span></div>
+  <div class="kn"><span class="lbl">color</span><span class="bar"><i id="b2" style="background:var(--k3)"></i></span><span class="v" id="v2">0</span></div>
+  <div class="kn"><span class="lbl">gaze x</span><span class="bar"><i id="b3" style="background:var(--k4)"></i></span><span class="v" id="v3">0</span></div>
+  <div class="kn"><span class="lbl">gaze y</span><span class="bar"><i id="b4" style="background:var(--k5)"></i></span><span class="v" id="v4">0</span></div>
+  <div class="kn"><span class="lbl">mist</span><span class="bar"><i id="b5" style="background:var(--k6)"></i></span><span class="v" id="v5">0</span></div>
+</div>
+
+<div id="overlay">
+  <div class="eyebrow">muse · starship</div>
+  <h1>Mind link</h1>
+  <p class="lead">Put on the headband and the ship feels your thoughts: calm minds paint quiet skies, busy minds set the veil glowing and tilt the flight path. The knobs stay yours — the brain gets its own controls (17–22).</p>
+  <button id="go">Connect Muse</button>
+  <button id="skip">fly without the headband</button>
+  <div id="err"></div>
+  <p class="lead" style="font-size:11px;color:var(--faint)">Chrome with Bluetooth + mic · Android or desktop · not iOS</p>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════
+   CONFIG — starship on the local dev server, audio + MIDI live in
+   the iframe. The Muse rides on the MIND LINK knobs only, so it
+   never fights the kids' physical controls (knobs 1..16).
+     knob_17 MIND GLOW  ← arousal        (psychic veil brightness)
+     knob_18 MIND SPIN  ← AF7 activity   (slow starfield roll)
+     knob_19 MIND COLOR ← frontal asymmetry (veil hue)
+     knob_20 GAZE X     ← frontal asymmetry (flight path drift)
+     knob_21 GAZE Y     ← TP9↔TP10 balance
+     knob_22 DREAM MIST ← AF8 activity   (summons nebula)
+════════════════════════════════════════════════════════════════ */
+const CRANES_ORIGIN = window.location.origin
+const SHADER = 'claude/wip/starship/1'
+const IFRAME_SRC = `${CRANES_ORIGIN}/?shader=${encodeURIComponent(SHADER)}&fullscreen=true&midi=true`
+
+/* ════════════════════════════════════════════════════════════════
+   PART 1 · Muse link (the proven path: connect, heartbeat, reconnect)
+════════════════════════════════════════════════════════════════ */
+const MUSE_SERVICE='0000fe8d-0000-1000-8000-00805f9b34fb'
+const CONTROL='273e0001-4c4d-454d-96be-f03bac821358'
+const EEG_UUID=['273e0003','273e0004','273e0005','273e0006'].map(p=>p+'-4c4d-454d-96be-f03bac821358')
+const GYRO_UUID='273e0009-4c4d-454d-96be-f03bac821358'
+const RING=256, SCALE=0.48828125, GYRO_SCALE=0.0074768, HEARTBEAT_MS=10000, STALE_MS=2000
+
+let device=null,control=null,heartbeat=null,stale=null,reconnecting=false
+const buf=EEG_UUID.map(()=>new Float32Array(RING).fill(0))
+const head=EEG_UUID.map(()=>0)
+const gyro={x:new Float32Array(RING),y:new Float32Array(RING),z:new Float32Array(RING),head:0,sx:0,sy:0,sz:0}
+let lastPacket=0, samplesSec=0, rateHz=0, postsSec=0, postRate=0
+
+const $=id=>document.getElementById(id)
+const setErr=m=>{ $('err').textContent=m }
+const setStatus=(t,cls)=>{ const s=$('status'); s.textContent=t; s.className='show'+(cls?' '+cls:'') }
+
+const encode=cmd=>{const s=`X${cmd}\n`;const a=new Uint8Array(s.length);for(let i=0;i<s.length;i++)a[i]=s.charCodeAt(i);a[0]=a.length-1;return a}
+const send=async(ch,cmd)=>{const b=encode(cmd);try{await ch.writeValueWithoutResponse(b)}catch{await ch.writeValue(b)}}
+
+const decode=dv=>{
+  const out=new Array(12);let s=0
+  for(let i=2;i<20;i+=3){
+    const b0=dv.getUint8(i),b1=dv.getUint8(i+1),b2=dv.getUint8(i+2)
+    out[s++]=SCALE*(((b0<<4)|(b1>>4))-0x800)
+    out[s++]=SCALE*((((b1&0x0f)<<8)|b2)-0x800)
+  }
+  return out
+}
+const onEEG=(ci,ev)=>{
+  const s=decode(ev.target.value);let h=head[ci]
+  for(let i=0;i<s.length;i++){buf[ci][h]=s[i];h=(h+1)%RING}
+  head[ci]=h; lastPacket=performance.now()
+  if(ci===0) samplesSec+=s.length*4
+}
+
+const go=async()=>{
+  if(!(navigator.bluetooth&&navigator.bluetooth.requestDevice)){
+    setErr('Web Bluetooth is blocked here. Open this page directly in Chrome — not inside an embed or preview frame.');return
+  }
+  try{
+    setErr('')
+    device=await navigator.bluetooth.requestDevice({filters:[{namePrefix:'Muse'}],optionalServices:[MUSE_SERVICE]})
+    device.addEventListener('gattserverdisconnected',onDrop)
+    await open()
+    start()
+  }catch(e){ setErr((e.message||e)+'') }
+}
+const open=async()=>{
+  setStatus('connecting','warn')
+  const server=await device.gatt.connect()
+  const svc=await server.getPrimaryService(MUSE_SERVICE)
+  control=await svc.getCharacteristic(CONTROL)
+  for(let i=0;i<EEG_UUID.length;i++){
+    const ch=await svc.getCharacteristic(EEG_UUID[i])
+    await ch.startNotifications()
+    ch.addEventListener('characteristicvaluechanged',e=>onEEG(i,e))
+  }
+  // gyroscope: head motion → gaze steering + scope trace (re-subscribed on every reconnect)
+  const gch=await svc.getCharacteristic(GYRO_UUID)
+  await gch.startNotifications()
+  gch.addEventListener('characteristicvaluechanged',ev=>{
+    const dv=ev.target.value
+    for(let s=0;s<3;s++){
+      const o=2+s*6
+      const gx=dv.getInt16(o)*GYRO_SCALE,gy=dv.getInt16(o+2)*GYRO_SCALE,gz=dv.getInt16(o+4)*GYRO_SCALE
+      gyro.x[gyro.head]=gx;gyro.y[gyro.head]=gy;gyro.z[gyro.head]=gz
+      gyro.head=(gyro.head+1)%RING
+      gyro.sx+=(gx-gyro.sx)*0.08;gyro.sy+=(gy-gyro.sy)*0.08;gyro.sz+=(gz-gyro.sz)*0.08
+    }
+  })
+  await send(control,'h');await send(control,'p21');await send(control,'s');await send(control,'d')
+  lastPacket=performance.now()
+  clearInterval(heartbeat); heartbeat=setInterval(()=>send(control,'d').catch(()=>{}),HEARTBEAT_MS)
+  clearInterval(stale); stale=setInterval(()=>{ if(performance.now()-lastPacket>STALE_MS) send(control,'d').catch(()=>{}) },1000)
+  setStatus('live','live')
+}
+const onDrop=()=>{
+  clearInterval(heartbeat);clearInterval(stale)
+  postZeros()                       // don't let the ship freeze on stale brain values
+  setStatus('reconnecting','warn')
+  if(reconnecting)return; reconnecting=true; retry(800)
+}
+const retry=async d=>{
+  await new Promise(r=>setTimeout(r,d))
+  try{ await open(); reconnecting=false }
+  catch{ const n=Math.min(d*2,8000); setTimeout(()=>retry(n),n) }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   PART 2 · Signal → mind-link knobs (z-score, clamp, guard, smooth)
+════════════════════════════════════════════════════════════════ */
+const chanU=new Float32Array(4)       // smoothed per-channel activity 0..1
+// six OUTPUT knob values, in the order shown in the HUD
+const out={ k17:0, k18:0.5, k19:0.5, k20:0.5, k21:0.5, k22:0 }
+
+const readKnobs=()=>{
+  let sum=0
+  for(let c=0;c<4;c++){
+    const b=buf[c], h=head[c]
+    let m=0;for(let i=0;i<RING;i++)m+=b[i];m/=RING
+    let v=0;for(let i=0;i<RING;i++){const d=b[i]-m;v+=d*d;}v=Math.sqrt(v/RING)
+    const latest=b[(h-1+RING)%RING]
+    let u=0
+    if(v>=1e-6){ let z=(latest-m)/v; if(Number.isFinite(z)){ z=Math.max(-3,Math.min(3,z)); u=(z+3)/6 } }
+    chanU[c]+=(u-chanU[c])*0.15
+    sum+=chanU[c]
+  }
+  const arousal=sum/4
+  const asym=0.5+(chanU[1]-chanU[2])*0.5     // AF7-AF8 frontal balance → 0..1
+  const postBal=0.5+(chanU[0]-chanU[3])*0.5  // TP9-TP10 posterior balance → 0..1
+  // ease toward targets at different speeds (fast hands, slow weather)
+  out.k17 += (arousal            - out.k17)*0.06    // MIND GLOW ← arousal (slow)
+  out.k18 += (chanU[1]           - out.k18)*0.12    // MIND SPIN ← AF7
+  out.k19 += (asym               - out.k19)*0.10    // MIND COLOR ← asymmetry
+  // gaze follows the pilot's head (gyro yaw/pitch), not asymmetry — the ship looks where you look
+  out.k20 += ((0.5+Math.max(-0.5,Math.min(0.5,gyro.sz/150))) - out.k20)*0.30   // GAZE X ← head yaw
+  out.k21 += ((0.5+Math.max(-0.5,Math.min(0.5,gyro.sx/150))) - out.k21)*0.30   // GAZE Y ← head pitch
+  void postBal
+  out.k22 += (chanU[2]           - out.k22)*0.10    // DREAM MIST ← AF8
+}
+
+/* ════════════════════════════════════════════════════════════════
+   PART 3 · The bridge — one throttled update-params per frame
+════════════════════════════════════════════════════════════════ */
+let iframeWin=null
+const postKnobs=()=>{
+  if(!iframeWin) return
+  iframeWin.postMessage({
+    type:'update-params',
+    data:{ knob_17:out.k17, knob_18:out.k18, knob_19:out.k19, knob_20:out.k20, knob_21:out.k21, knob_22:out.k22 }
+  }, CRANES_ORIGIN)
+  postsSec++
+}
+const postZeros=()=>{
+  if(!iframeWin) return
+  iframeWin.postMessage({type:'update-params',
+    data:{ knob_17:0, knob_18:0.5, knob_19:0.5, knob_20:0.5, knob_21:0.5, knob_22:0 }}, CRANES_ORIGIN)
+}
+
+/* ════════════════════════════════════════════════════════════════
+   PART 4 · Loop + HUD
+════════════════════════════════════════════════════════════════ */
+let running=false
+let scopeRunning=false
+const installScope=()=>{
+  // Lives INSIDE the iframe document: a fullscreened iframe enters the top
+  // layer and nothing in the parent can paint above it (z-index irrelevant).
+  // The loop NEVER dies — it rebuilds the canvas after every iframe reload.
+  if(scopeRunning)return; scopeRunning=true
+  const iframe=$('cranes')
+  const names=['TP9','AF7','AF8','TP10']
+  const colors=['#9af07a','#3fe6ff','#c08bff','#ff6aa0']
+  const gcolors=['#f6c453','#ff8d5e','#5ef0a8']
+  // slow ~15s baseline per channel so short spikes (blink, focus) stand out huge
+  const base=names.map(()=>({m:0,v:1,seen:false}))
+  const zhist=names.map(()=>new Float32Array(RING).fill(0))
+  const zhead=[0,0,0,0]
+  const zColor=az=>az<1?'#8d80a3':az<2?'#f6c453':'#ff6f7d'
+  let c=null,ctx=null
+  const mk=()=>{
+    const idoc=iframe.contentDocument
+    idoc.getElementById('eegScope')?.remove()
+    c=idoc.createElement('canvas')
+    c.id='eegScope';c.width=640;c.height=360
+    c.style.cssText='position:fixed;top:10px;left:10px;z-index:2147483647;background:rgba(8,5,16,.8);border:1px solid #2c2240;border-radius:10px;pointer-events:none'
+    idoc.body.appendChild(c)
+    ctx=c.getContext('2d')
+  }
+  const TW=360,bx=8+TW+16,bw=110,bcx=bx+bw/2
+  const loop=()=>{
+    try{
+      if(!c||!c.isConnected||c.ownerDocument!==iframe.contentDocument)mk()
+      ctx.clearRect(0,0,c.width,c.height)
+      for(let ch=0;ch<4;ch++){
+        const b=buf[ch],h=head[ch],y0=34+ch*50,amp=20
+        // instantaneous = mean of freshest 12 samples; z against SLOW baseline
+        let inst=0;for(let k=1;k<=12;k++)inst+=b[(h-k+RING)%RING];inst/=12
+        const bs=base[ch]
+        if(!bs.seen){bs.m=inst;bs.v=1;bs.seen=true}
+        const d=inst-bs.m
+        bs.m+=d*0.0016;bs.v+=(d*d-bs.v)*0.0016
+        const sd=Math.sqrt(bs.v)||1
+        const z=Math.max(-4,Math.min(4,d/sd))
+        zhist[ch][zhead[ch]]=z;zhead[ch]=(zhead[ch]+1)%RING
+        ctx.strokeStyle='#241a30';ctx.lineWidth=1
+        ctx.beginPath();ctx.moveTo(8,y0);ctx.lineTo(8+TW,y0);ctx.stroke()
+        ctx.strokeStyle=colors[ch];ctx.lineWidth=1.6;ctx.beginPath()
+        for(let i=0;i<RING;i++){
+          const zv=zhist[ch][(zhead[ch]+i)%RING]
+          const x=8+(i/(RING-1))*TW,y=y0-(zv/4)*amp
+          i?ctx.lineTo(x,y):ctx.moveTo(x,y)
+        }
+        ctx.stroke()
+        ctx.fillStyle=colors[ch];ctx.font='bold 12px ui-monospace,monospace';ctx.textAlign='left'
+        ctx.fillText(names[ch],12,y0-amp-3)
+        // magnitude bar filling from center + big σ readout
+        ctx.fillStyle='#241a30';ctx.fillRect(bx,y0-9,bw,18)
+        ctx.fillStyle=zColor(Math.abs(z));ctx.fillRect(bcx,y0-8,(z/4)*(bw/2),16)
+        ctx.fillStyle='#5b5070';ctx.fillRect(bcx-0.5,y0-11,1,22)
+        ctx.fillStyle=zColor(Math.abs(z));ctx.font='bold 14px ui-monospace,monospace'
+        ctx.fillText((z>=0?'+':'')+z.toFixed(1)+'σ',bx+bw+8,y0+5)
+      }
+      const gy0=322,gamp=22
+      let gmx=60
+      for(let i=0;i<RING;i++)gmx=Math.max(gmx,Math.abs(gyro.x[i]),Math.abs(gyro.y[i]),Math.abs(gyro.z[i]))
+      ctx.strokeStyle='#241a30';ctx.beginPath();ctx.moveTo(8,gy0);ctx.lineTo(8+TW,gy0);ctx.stroke()
+      ;[gyro.x,gyro.y,gyro.z].forEach((arr,ai)=>{
+        ctx.strokeStyle=gcolors[ai];ctx.lineWidth=1.2;ctx.beginPath()
+        for(let i=0;i<RING;i++){
+          const x=8+(i/(RING-1))*TW,y=gy0-(arr[(gyro.head+i)%RING]/gmx)*gamp
+          i?ctx.lineTo(x,y):ctx.moveTo(x,y)
+        }
+        ctx.stroke()
+      })
+      ctx.fillStyle='#f6c453';ctx.font='bold 11px ui-monospace,monospace';ctx.textAlign='left'
+      ctx.fillText('GYRO head  yaw '+gyro.sz.toFixed(0)+'  pitch '+gyro.sx.toFixed(0)+'  roll '+gyro.sy.toFixed(0),12,gy0-gamp-2)
+      ctx.fillStyle='#8d80a3';ctx.font='10px ui-monospace,monospace'
+      ctx.fillText('z vs 15s baseline — big bar = pilot just did something',bx-4,352)
+      if(lastPacket&&performance.now()-lastPacket>2000){
+        ctx.fillStyle='#f6c453';ctx.font='bold 12px ui-monospace,monospace'
+        ctx.fillText('MUSE RECONNECTING…',bx-4,20)
+      }
+    }catch(e){/* iframe mid-reload — keep looping */}
+    requestAnimationFrame(loop)
+  }
+  loop()
+}
+const start=()=>{
+  $('overlay').classList.add('gone')
+  $('hud').classList.add('show')
+  installScope()
+  if(running)return; running=true
+  setInterval(()=>{ rateHz=samplesSec;samplesSec=0; postRate=postsSec;postsSec=0 },1000)
+  requestAnimationFrame(frame)
+}
+const frame=now=>{
+  readKnobs()
+  postKnobs()
+  // HUD
+  $('hRate').textContent=rateHz
+  $('hPost').textContent=postRate
+  const vals=[out.k17,out.k18,out.k19,out.k20,out.k21,out.k22]
+  for(let i=0;i<6;i++){ $('b'+i).style.width=(vals[i]*100).toFixed(0)+'%'; $('v'+i).textContent=vals[i].toFixed(2) }
+  const st=lastPacket?(now-lastPacket)/1000:0
+  const hs=$('hStale'); hs.textContent=st.toFixed(1)+'s'; hs.className=st>1.5?'warn':''
+  requestAnimationFrame(frame)
+}
+
+// boot
+const iframe=$('cranes')
+iframe.src=IFRAME_SRC
+iframe.addEventListener('load',()=>{ iframeWin=iframe.contentWindow; installScope() })
+$('go').addEventListener('click',go)
+$('skip').addEventListener('click',()=>{ $('overlay').classList.add('gone') })
+</script>
+</body>
+</html>

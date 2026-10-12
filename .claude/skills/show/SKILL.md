@@ -18,7 +18,9 @@ Read it once, and use it for anything this skill doesn't cover. Brief every agen
   `sun/1` pairs with `controller=sun`. For any other shader, add `&controller=` only if
   a matching `controllers/*.js` exists.
 - **`audio=<label>`:** appends `&audio_device=<label>`. Without it, the page uses the OS default
-  input, which should be BlackHole 2ch. Don't pass `audio_device` otherwise.
+  input, which should be BlackHole 2ch. Don't pass `audio_device` otherwise, unless step 3 shows
+  Chrome opened something else: with the Background Music app installed, Chrome's default input can
+  differ from the macOS default (2026-10-10). Then relaunch with `audio=BlackHole`.
 - **`check`:** run step 1 only, then stop.
 - **`panic <fork>`:** run the Panic section only.
 
@@ -79,7 +81,7 @@ different checkout never fires.
 Health alerts:
 
 ```bash
-tail -n 0 -F .claude/vj-signals.jsonl | grep -E --line-buffered '"type":"(clip|too-dark|shiver|boot)"|"type":"flicker","flicker":([2-9]|[1-9][0-9])'
+tail -n 0 -F .claude/vj-signals.jsonl | grep -E --line-buffered '"type":"(clip|too-dark|boot)"|"type":"flicker","flicker":([2-9]|[1-9][0-9])'
 ```
 
 **The art critic:**
@@ -108,7 +110,17 @@ wins.
 and their old and new values. It polls over CDP, so it needs no `vjtrack=1`.
 
 ```bash
-node scripts/vj/watch-dials.js 2>&1
+while true; do node scripts/vj/watch-dials.js 2>&1 | grep --line-buffered RELEASE; sleep 2; done
+```
+
+The loop matters: one failed CDP poll kills `watch-dials.js`. The health grep leaves out `shiver`
+because the detector reads 0.9–1.0 constantly; recalibrate it before trusting it again.
+
+**Stray pages:** Chrome is often the default browser, so any link opened anywhere on the laptop
+(an OAuth login, a Slack link) lands in the show Chrome, on the wall. Arm a guard that closes them:
+
+```bash
+node .claude/skills/sun-set/stray-guard.mjs 2>&1
 ```
 
 ## 5. Write the recovery snapshot

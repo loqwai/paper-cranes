@@ -59,7 +59,7 @@ uniform float drop_glow;    // taco-kandi controller — sustained drop signal
 #define PITCH_FLASH (smoothstep(0.5, 1.0, abs(pitchClassZScore)) * 0.15)
 
 // Treble shimmer — high-treble spikes pump core lightness for sparkle (matches Paralyzer riffs)
-#define TREBLE_SHIMMER (smoothstep(0.3, 1.0, max(trebleZScore, 0.0)) * 0.18)
+#define TREBLE_SHIMMER (smoothstep(0.3, 1.0, max(trebleZScore, 0.0)) * 0.24)
 
 // CALM_WARM breath — slow 0.4Hz lightness pump on warm-bass-calm passages.
 // Fires when: low energy + mid-dominant + dark centroid (warm/intimate music).
@@ -113,7 +113,7 @@ uniform float drop_glow;    // taco-kandi controller — sustained drop signal
 // Magenta lives at ~3.0-3.5 rad; we deliberately skip past it via a mid-circle anchor.
 // Drift restricted to ±0.20 rad so the hue stays in family even with seeds + pitch.
 // seeds shrink to *0.05 so per-device tilt is barely-perceptible (was 0.15 — too loud).
-#define HUE_DRIFT (iTime * 0.004 + pitchClassNormalized * 0.03 + midsNormalized * 0.04)
+#define HUE_DRIFT (iTime * 0.004 + pitchClassNormalized * 0.03 + midsNormalized * 0.04 + spectralCentroidNormalized * 0.04)
 // Core: hot orange family, knob_5 nudges 0.55 → 0.75 (orange→amber). Capped, no magenta.
 #define CORE_HUE   (mix(0.55, 0.75, knob_5) + HUE_DRIFT * 0.5 + seed2 * 0.05)
 // Corona: deep blue-violet family, knob_5 nudges 4.0 → 4.4 (cobalt→indigo). No magenta path.
@@ -657,7 +657,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float r2_a = ru.x + ru.y * 0.6;
         float r2_y = sin(r2_a * 3.5 - iTime * 0.27 + seed3 * TAU) * 0.09;
         float r2 = exp(-pow((ru.y - 0.04 - r2_y) * 28.0, 2.0));
-        float r2_amp = smoothstep(0.4, 0.9, spectralEntropyNormalized) * 0.50;
+        float r2_amp = smoothstep(0.4, 0.9, spectralEntropyNormalized) * 0.65;
         vec3 r2_col = oklch2rgb(vec3(0.74, 0.16, CORONA_HUE - 0.6));  // teal-cyan (CORONA - 0.6 = ~3.5 rad = cyan, NOT magenta)
         // Ribbon 3: counter-flowing, tonal (pitchClass)
         float r3_x_phase = iTime * 0.18 + pitchClassNormalized * TAU * 0.5 + seed4 * TAU;
@@ -776,7 +776,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // blue-on-the-left fringes. Activates on flux+drop. Stays subtle so the logo
     // outline reads cleanly. From the-coat-25 lines 632-647 (adapted for our edge).
     {
-        float prism_amt = 0.003 + spectralFluxNormalized * 0.005 + drop_glow * 0.004;
+        float prism_amt = 0.003 + spectralFluxNormalized * 0.005 + drop_glow * 0.004 + spectralEntropyNormalized * 0.004;
         float thin = 0.005 + bass_smooth * 0.004;
         float eR = getEdgeGlow(uv + vec2( prism_amt, 0.0), thin);
         float eG = getEdgeGlow(uv,                            thin);

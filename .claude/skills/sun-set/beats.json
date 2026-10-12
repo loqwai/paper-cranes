@@ -1,0 +1,17 @@
+[
+  { "n": 1, "name": "pre-party", "file": "shaders/claude/wip/black-sun/sun-1-safe.frag", "path": "claude/wip/black-sun/sun-1-safe", "cue": "breakdown" },
+  { "n": 2, "name": "orbit", "file": "shaders/sun/10.frag", "path": "sun/10", "cue": "build",
+    "holdAnchors": ["sky_return", "no_space", "lattice_mix"], "features": { "scene_force": 2 } },
+  { "n": 3, "name": "fractal-sky", "file": "shaders/sun/10.frag", "path": "sun/10", "cue": "build" },
+  { "n": 4, "name": "sun-cast", "file": "shaders/sun/11.frag", "path": "sun/11", "cue": "breakdown" },
+  { "n": 5, "name": "painterly", "file": "shaders/sun/12.frag", "path": "sun/12", "cue": "build" },
+  { "n": 6, "name": "sun-surface", "file": "shaders/sun/13.frag", "path": "sun/13", "cue": "drop" },
+  { "n": 7, "name": "julia-arms", "file": ".claude/vj-tools/sun-1-show.pre-giant.frag", "path": null, "cue": "build" },
+  { "n": 8, "name": "giant", "file": "shaders/sun/14.frag", "path": "sun/14", "cue": "drop" },
+  { "n": 9, "name": "fan-root", "file": "shaders/sun/15.frag", "path": "sun/15", "cue": "drop" },
+  { "n": 10, "name": "kiss", "file": "shaders/sun/16.frag", "path": "sun/16", "cue": "drop" },
+  { "n": 11, "name": "transit", "file": "shaders/sun/17.frag", "path": "sun/17", "cue": "build" },
+  { "n": 12, "name": "audio-web", "file": "shaders/claude/wip/black-sun/sun-1-show.frag", "path": "claude/wip/black-sun/sun-1-show", "cue": "breakdown",
+    "holdAnchors": ["FADE_T25", "FADE_T26"] },
+  { "n": 13, "name": "og-sky", "file": "shaders/claude/wip/black-sun/sun-1-show.frag", "path": "claude/wip/black-sun/sun-1-show", "cue": null }
+]

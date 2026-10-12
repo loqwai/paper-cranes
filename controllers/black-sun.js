@@ -29,6 +29,33 @@
 //                         it to a new size over SHUTTER_SECS
 //   bs_shutter, bs_shutterAng   the camera-shutter transition: 0 → 1 → 0 blade cover over the
 //                         transition, and a blade angle (turns) that only advances while it runs
+//   bs_trip               K1 TRIP story mix, 0 → 1 eased over ~6 s (K1 ≥ 0.5). bs_act stays the CLASSIC
+//                         act index the shader branches on (the trip act's `role`); bs_tripAct is the trip act
+//   bs_julia, bs_jR       Julia-arm weight, and |c| (shape, eased per act)   bs_jTurn  c angle clock (turns)
+//   bs_descend, bs_dive   self-similar dive amount, and its clock (turns; one octave per turn)
+//   bs_fractal            fractal-garden sky weight   bs_tripHue  palette family (turns, 0 … 300°/360)
+//
+// EVOLUTION — slow music character (all 0..1, time constants 10–20 s; safe for colour and mix weights):
+//   bs_moodChaos     spectralEntropyMean      busy/noisy vs tonal
+//   bs_moodGrit      spectralRoughnessMedian  dissonance / beating
+//   bs_moodFocus     spectralKurtosisMean     peaked, focused spectrum
+//   bs_moodSpike     spectralCrestMean        spiky transients vs smooth pads
+//   bs_moodTilt      spectralSkewMean         dark vs bright tilt
+//   bs_moodAir       spectralRolloffMean      how high the highs reach
+//   bs_moodVolatile  flux + roughness std-dev volatile vs steady sections
+//   bs_moodWave      waveletCentroidNormalized  DWT brightness centre
+//   bs_moodRise      energy/centroid slope × R²   0.5 flat, 1 confident build, 0 confident fall
+//   bs_moodKey       pitchClassMedian, circularly smoothed over 20 s (turns: 0..1 around the key wheel)
+// bs_evo*            monotonic clocks in turns (fract), one per mood above (Chaos, Grit, Focus, Spike, Air,
+//                    Volatile, Wave, Rise). Each runs at 0.003 + 0.03 × its mood turns/s, slower in silence —
+//                    the music sets the RATE only, so use integer multiples / sin(2π·evo) for geometry
+// DRAMATIC, SAFE (envelopes, never raw flashes):
+//   bs_dropEnv       0..1: confirmed drop (wavelet_confirmedDrop, or energy+bass z-scores high); 150 ms
+//                    attack, ~3 s release, 8 s refractory
+//   bs_buildEnv      0..1: confident build (energy/centroid slope × R²); 6 s attack, 3 s release
+//   bs_shiftPulse    0..1: timbral shift (flux z-score + entropy change rate); 0.3 s attack, 2.5 s release
+//   bs_evoJump       one-way plateau step: +1 per confirmed drop, eased over ~3 s. Never decreases —
+//                    use fract()/mod for the new geometric state; it never strobes back
 
 const EYE_SECS = 180
 const SHUTTER_SECS = 1.6
@@ -70,6 +97,41 @@ const ACTS = [
 ]
 const STORY_KEYS = ['heat', 'size', 'power', 'dark', 'abstract', 'chaos', 'pull', 'sink', 'night', 'move']
 
+// ── TRIP STORY (K1 ≥ 0.5) — the same engine, a second arc for an audience that knows the first. The
+// classic params above still glide (so the existing shader follows the trip with no edits), plus four
+// trip params the shader hooks read:
+//   julia    Julia-arm weight/reach   jR  |c| of the arms (shape; eased per act, never audio)
+//   descend  rate of the self-similar dive (bs_dive)   fractal  fractal-garden sky weight
+// `hue` is the act's OKLCH palette family in degrees, kept in 0..300 so no glide ever crosses magenta;
+// LUCID takes its hue from the slow key instead. `role` = the classic act whose side effects the act
+// borrows (3 inward shudder, 4 detonation + companion flung, 5 companion flung, 6 companion re-forms).
+// Every exit is music-earned (build / drop / calm / low) or the long gentle FALLBACK.
+const TRIP_ACTS = [
+  { name: 'HATCHLING', role: 0, ease: 40, min: 45, hue: 45,
+    p: { heat: 0.9, size: 0.6, power: 0.6, dark: 0.2, abstract: 0.1, chaos: 0.25, pull: 0.0, sink: 0.0, night: 0.4, move: 0.6, julia: 0.35, jR: 0.70, descend: 0.0, fractal: 0.0 },
+    next: (m, d) => m.building && d > 30 ? [1, 'build'] : m.low && d > 45 ? [6, 'low'] : d > FALLBACK ? [1, 'fallback'] : null },
+  { name: 'UNFURL', role: 0, ease: 30, min: 40, hue: 75,
+    p: { heat: 1.0, size: 0.8, power: 1.3, dark: 0.1, abstract: 0.2, chaos: 0.4, pull: 0.0, sink: 0.0, night: 0.3, move: 0.9, julia: 1.0, jR: 0.7885, descend: 0.1, fractal: 0.1 },
+    next: (m, d) => m.drop && d > 20 ? [2, 'drop'] : m.calm && d > 60 ? [3, 'calm'] : d > FALLBACK ? [3, 'fallback'] : null },
+  { name: 'DIVE', role: 3, ease: 12, min: 30, hue: 200,
+    p: { heat: 0.7, size: 0.35, power: 0.9, dark: 0.35, abstract: 0.6, chaos: 0.6, pull: 0.4, sink: 0.0, night: 0.8, move: 0.2, julia: 0.8, jR: 0.76, descend: 1.0, fractal: 0.7 },
+    next: (m, d) => m.drop && d > 40 ? [5, 'drop'] : m.calm && d > 30 ? [3, 'calm'] : m.low && d > 30 ? [6, 'low'] : d > FALLBACK ? [3, 'fallback'] : null },
+  { name: 'GARDEN', role: 5, ease: 45, min: 60, hue: 270,
+    p: { heat: 0.8, size: 0.5, power: 0.6, dark: 0.3, abstract: 1.0, chaos: 0.5, pull: 0.0, sink: 0.1, night: 1.0, move: 0.5, julia: 0.6, jR: 0.74, descend: 0.35, fractal: 1.0 },
+    next: (m, d) => m.building && d > 45 ? [4, 'build'] : d > FALLBACK ? [4, 'fallback'] : null },
+  { name: 'TWIN', role: 0, ease: 30, min: 30, hue: 220,
+    p: { heat: 1.1, size: 0.9, power: 1.0, dark: 0.15, abstract: 0.3, chaos: 0.5, pull: 0.2, sink: 0.0, night: 0.6, move: 0.8, julia: 0.9, jR: 0.7885, descend: 0.2, fractal: 0.3 },
+    next: (m, d) => m.drop && d > 15 ? [5, 'drop'] : m.low && d > 45 ? [6, 'low'] : d > FALLBACK ? [6, 'fallback'] : null },
+  { name: 'BLOOM', role: 4, ease: 5, min: 25, hue: 40,
+    p: { heat: 1.3, size: 1.5, power: 1.8, dark: 0.0, abstract: 0.6, chaos: 0.9, pull: 0.0, sink: 0.1, night: 0.5, move: 0.0, julia: 1.0, jR: 0.79, descend: 0.6, fractal: 0.5 },
+    next: (m, d) => d > 25 ? [6, 'bloom ran its course'] : null },
+  { name: 'LUCID', role: 6, ease: 45, min: 45, hue: null,
+    p: { heat: 1.0, size: 0.6, power: 0.8, dark: 0.3, abstract: 0.4, chaos: 0.3, pull: 0.0, sink: 0.0, night: 0.6, move: 0.8, julia: 0.7, jR: 0.72, descend: 0.3, fractal: 0.4 },
+    next: (m, d) => m.building && d > 45 ? [1, 'build'] : m.calm && d > 60 ? [0, 'calm'] : d > FALLBACK ? [0, 'fallback'] : null },
+]
+const TRIP_KEYS = ['julia', 'jR', 'descend', 'fractal']
+const TRIP_REST = { julia: 0, descend: 0, fractal: 0 }   // K1 below 0.5: the trip layers glide out; jR holds
+
 // Inputs. Before the analyser has history these are undefined/NaN for a few frames; a NaN folded into
 // an envelope would stick forever, so audio state only advances on frames where all of them are numbers.
 const INPUTS = ['energy', 'pitchClass', 'energyMean', 'bassZScore', 'midsZScore', 'trebleZScore', 'energyNormalized',
@@ -86,6 +148,37 @@ const rate = (aPerFrame, dt) => 1 - Math.pow(1 - aPerFrame, dt / FRAME)
 const ema = (p, x, a, dt) => p + (clamp01(x) - p) * rate(a, dt)
 const envAR = (p, x, att, rel, dt) => { x = clamp01(x); return p + (x - p) * rate(x > p ? att : rel, dt) }
 const fract = x => x - Math.floor(x)
+
+// LATTICE-FEAT-1 feature bank → bs_f0..bs_f39, each conditioned to 0..1 (0.5 = neutral).
+// Kinds: n = already normalized, z = zScore (-1..1 → 0..1), tr = trend (sign(slope) × rSquared),
+// sd = volatility (stdDev over the min..max range). Speeds: fast = light (80 ms / 500 ms),
+// mid = 250 ms / 1.2 s, slow = shape (3 s / 8 s) — only slow channels may steer geometry rates.
+//  0 bassNormalized      1 midsNormalized      2 trebleNormalized     3 energyNormalized
+//  4 spectralFluxNorm    5 spectralCrestNorm   6 spectralRoughNorm    7 spectralCentroidNorm
+//  8..13 waveletBand0..5Normalized             14 pitchClassNorm      15 spectralRolloffNorm
+// 16 bassZ  17 trebleZ  18 entropyZ  19 spreadZ  20 skewZ  21 kurtosisZ  22 centroidZ  23 fluxZ
+// 24 waveletCentroidZ  25 waveletSpreadZ  26 waveletTiltZ  27 energyZ
+// 28 energy trend  29 centroid trend  30 entropy trend  31 waveletTilt trend
+// 32 flux volatility  33 roughness volatility  34 bass volatility
+// 35 spreadNorm  36 kurtosisNorm  37 skewNorm  38 entropyNorm  39 waveletTiltNorm
+const FB_SPEC = [
+  ...['bass', 'mids', 'treble', 'energy', 'spectralFlux', 'spectralCrest', 'spectralRoughness', 'spectralCentroid',
+    'waveletBand0', 'waveletBand1', 'waveletBand2', 'waveletBand3', 'waveletBand4', 'waveletBand5',
+    'pitchClass', 'spectralRolloff'].map(k => [k, 'n', 'fast']),
+  ...['bass', 'treble', 'spectralEntropy', 'spectralSpread', 'spectralSkew', 'spectralKurtosis', 'spectralCentroid',
+    'spectralFlux', 'waveletCentroid', 'waveletSpread', 'waveletTilt', 'energy'].map(k => [k, 'z', 'mid']),
+  ...['energy', 'spectralCentroid', 'spectralEntropy', 'waveletTilt'].map(k => [k, 'tr', 'slow']),
+  ...['spectralFlux', 'spectralRoughness', 'bass'].map(k => [k, 'sd', 'slow']),
+  ...['spectralSpread', 'spectralKurtosis', 'spectralSkew', 'spectralEntropy', 'waveletTilt'].map(k => [k, 'n', 'slow']),
+]
+const FB_SPEED = { fast: [0.08, 0.5], mid: [0.25, 1.2], slow: [3, 8] }
+const fbTarget = (f, [k, kind]) => {
+  const g = (s) => f[k + s]
+  if (kind === 'n') return g('Normalized')
+  if (kind === 'z') return 0.5 + 0.5 * g('ZScore')
+  if (kind === 'tr') return 0.5 + 0.5 * Math.sign(g('Slope')) * g('RSquared')
+  return 2 * g('StandardDeviation') / Math.max(g('Max') - g('Min'), 1e-6)
+}
 
 export function make() {
   // State lives on the page, not in this closure: a hot swap of this file calls make() again, and a
@@ -113,6 +206,17 @@ export function make() {
     // section-change detector + shutter
     sustE: 0, sustF: 0, trend: 0, gateWas: null, sinceSection: 0,   // no event in the first 12 s (z-scores are noise until history fills)
     irisFrom: 1, irisTo: 1, shutterP: 1, shutterAng: 0, events: 0,
+    // EVOLUTION (slow moods → monotonic clocks) and dramatic-but-safe events
+    mChaos: 0.5, mGrit: 0.5, mFocus: 0.5, mSpike: 0.5, mTilt: 0.5, mAir: 0.5, mVolatile: 0.5, mWave: 0.5, mRise: 0.5,
+    keyX: 1, keyY: 0,
+    eChaos: 0, eGrit: 0, eFocus: 0, eSpike: 0, eAir: 0, eVolatile: 0, eRise: 0, eWave: 0,
+    dropEnv: 0, dropHold: 0, dropRefr: 0, buildEnv: 0, shiftPulse: 0, entFast: 0.5, entSlow: 0.5,
+    jump: 0, jumpTo: 0,
+    latSpin: null, latRot: null,   // LATTICE-FEAT-1: seeded from bs_time below so the swap is seamless
+    // TRIP story (K1)
+    tripOn: 0, trip: 0, tripAct: 0, tripActT: 0, tripLog: [], tripSlow: 1,
+    julia: 0, jR: 0.70, descend: 0, fractal: 0, dive: 0, jTurn: 0, tripHue: 45,
+    budPh: null,   // BUD-CLOCK: seeded from diskPh below so the arms don't jump when BUD_PH switches over
   }
   // A state object from an older version of this file may lack newer keys, or hold a NaN an older
   // version latched (bs_fAge did, and froze the wall: out() threw every frame). Repair those fields
@@ -122,6 +226,14 @@ export function make() {
     const bad = typeof DEFAULTS[k] === 'number' && !Number.isFinite(S[k])
     if (!(k in S) || bad) S[k] = DEFAULTS[k]
   }
+  if (!Array.isArray(S.fb) || S.fb.length !== FB_SPEC.length) S.fb = FB_SPEC.map(() => 0.5)
+  S.fb = S.fb.map(v => Number.isFinite(v) ? v : 0.5)
+  if (!Number.isFinite(S.latSpin)) S.latSpin = S.time * 0.004
+  if (!Number.isFinite(S.latRot)) S.latRot = S.time * 0.0015
+  if (!Number.isFinite(S.budPh)) S.budPh = S.diskPh
+  if (!Number.isFinite(S.spT)) S.spT = S.time    // K7 SPEED clocks: seeded so nothing jumps on hot-swap
+  if (!Number.isFinite(S.spB)) S.spB = S.budPh
+  if (!Number.isFinite(S.flowPh)) { S.flowPh = 0; S.flowB = 0 }   // FLOW-CLOCK: seeded so nothing jumps on hot-swap
 
   return (f) => {
     const now = performance.now() / 1000
@@ -248,13 +360,51 @@ export function make() {
       if (i === 4) { S.armed = 0; S.novaT = 0; S.sinceWave = 99; fireWave(1); S.windTo = Math.min(2, S.windTo + 0.4) }   // detonation
       if (i === 6) S.windTo = 0                         // rebirth unwinds the galaxy (eased)
     }
-    if (k5 > 0.02) goTo(Math.min(ACTS.length - 1, Math.floor(k5 * ACTS.length)), 'knob')
+    // K1 TRIP: ≥ 0.5 runs the trip arc. The classic act and its dwell freeze while it runs, and the
+    // shared params glide from wherever they are, so flipping K1 either way is a morph, never a cut.
+    const tripOn = (f.knob_1 ?? 0) >= 0.5
+    S.trip += ((tripOn ? 1 : 0) - S.trip) * (1 - Math.exp(-dt / 6))
+    const tripGoTo = (i, cause) => {
+      if (i === S.tripAct) return
+      S.tripLog.push({ t: +S.time.toFixed(1), from: TRIP_ACTS[S.tripAct].name, to: TRIP_ACTS[i].name, cause, eZ: +f.energyZScore.toFixed(2), sustE: +S.sustE.toFixed(2), trend: +S.trend.toFixed(2) })
+      if (S.tripLog.length > 50) S.tripLog.shift()
+      S.tripSlow = cause === 'fallback' ? 2.5 : 1
+      S.tripAct = i; S.tripActT = 0
+      if (cause === 'drop') S.armed = 0                 // a drop is spent once
+      const role = TRIP_ACTS[i].role
+      if (role === 3) fireWave(0.8)
+      if (role === 4) { S.armed = 0; S.novaT = 0; S.sinceWave = 99; fireWave(1); S.windTo = Math.min(2, S.windTo + 0.4) }
+      if (role === 6) S.windTo = 0
+    }
+    if (tripOn) {
+      S.tripActT += dt
+      if (k5 > 0.02) tripGoTo(Math.min(TRIP_ACTS.length - 1, Math.floor(k5 * TRIP_ACTS.length)), 'knob')
+      else {
+        const nx = TRIP_ACTS[S.tripAct].next(m, S.tripActT)
+        if (nx && S.tripActT >= TRIP_ACTS[S.tripAct].min) tripGoTo(nx[0], nx[1])
+      }
+    } else if (k5 > 0.02) goTo(Math.min(ACTS.length - 1, Math.floor(k5 * ACTS.length)), 'knob')
     else {
       const nx = ACTS[S.act].next(m, S.actT)
       if (nx && S.actT >= ACTS[S.act].min) goTo(nx[0], nx[1])
     }
-    const A = ACTS[S.act]
-    for (const k of STORY_KEYS) S[k] = S[k] + (A.p[k] - S[k]) * (1 - Math.exp(-dt * 3 / (A.ease * S.slow)))
+    const TA = TRIP_ACTS[S.tripAct]
+    const A = tripOn ? TA : ACTS[S.act]
+    const glideSlow = tripOn ? S.tripSlow : S.slow
+    for (const k of STORY_KEYS) S[k] = S[k] + (A.p[k] - S[k]) * (1 - Math.exp(-dt * 3 / (A.ease * glideSlow)))
+    for (const k of TRIP_KEYS) {
+      const to = tripOn ? TA.p[k] : TRIP_REST[k] ?? S[k]
+      S[k] += (to - S[k]) * (1 - Math.exp(-dt * 3 / (tripOn ? TA.ease * S.tripSlow : 18)))
+    }
+    // colour follows only slow music: the act's family, or (LUCID) the 20 s key folded into 0..300°
+    const keyT = fract(Math.atan2(S.keyY, S.keyX) / (Math.PI * 2) + 1)
+    const hueTo = TA.hue ?? 300 * (1 - Math.abs(2 * keyT - 1))
+    if (tripOn) S.tripHue += (hueTo - S.tripHue) * (1 - Math.exp(-dt / 30))
+    // geometry only evolves forward: the music sets these clocks' RATES, never their positions
+    S.dive += S.descend * (0.04 + 0.08 * S.build) * dt
+    S.jTurn += (1 / 240) * (1 + S.pitchMove + 0.5 * S.build) * dt
+    const roleAct = tripOn ? TA.role : S.act
+    S.tripOn = tripOn ? 1 : 0
     S.nova = S.novaT < 30 ? Math.exp(-S.novaT / 6) : 0  // the detonation flash, one big eased event
     // SKY PATH: a monotonic phase (never wrapped, never reversed) drives a slow Lissajous with
     // incommensurate periods — a full wander takes many minutes. The act's `move` sets the rate (0 =
@@ -281,10 +431,10 @@ export function make() {
     // drop or section change (30 s refractory), or a strong sustained onset cluster — never on a timer
     // — the orbit dips until the coronas overlap, a distortion front fires from the contact
     // point, and they drift apart. SUPERNOVA flings it away; it re-forms and re-enters in REBIRTH.
-    const flung = S.act === 4 || S.act === 5
-    if (S.act === 6 && S.cOn < 0.05) { S.cR = 2.6; S.cPh = 2.6 }
+    const flung = roleAct === 4 || roleAct === 5
+    if (roleAct === 6 && S.cOn < 0.05) { S.cR = 2.6; S.cPh = 2.6 }
     S.cOn += ((flung ? 0 : 1) - S.cOn) * (1 - Math.exp(-dt / (flung ? 3 : 20)))
-    const cRTo = flung ? 3.5 : 0.78
+    const cRTo = flung ? 3.5 : tripOn && S.tripAct === 4 ? 0.5 : 0.78   // TWIN: the companion waltzes close
     S.cR += (cRTo - S.cR) * (1 - Math.exp(-dt / (flung ? 4 : 55)))
     S.cPh -= (0.04 + 0.12 * S.pitchMove) * dt            // melody: pitch movement drives the companion's dance          // clockwise: from the upper-left it swoops in over the top
     S.cPrec += 0.006 * dt
@@ -297,13 +447,9 @@ export function make() {
       S.kissLog.push({ t: +S.time.toFixed(1), cause })
       if (S.kissLog.length > 50) S.kissLog.shift()
     }
-    // K7 KISS (knob_7): a rising edge past 0.5 calls a kiss by hand — only a 10 s guard, so it can be
-    // thrown on a drop. Otherwise a kiss happens ONLY on a meaningful musical event (user, 2026-10-06:
-    // "only as the result of a significant audio event that makes sense"): a drop, a section change
-    // (below), or a strong sustained onset cluster. No timer, no random kisses.
-    const k7 = f.knob_7 ?? 0
-    if (k7 > 0.5 && S.k7Was <= 0.5) startKiss('knob', 10)
-    S.k7Was = k7
+    // A kiss happens ONLY on a meaningful musical event (user, 2026-10-06: "only as the result of a
+    // significant audio event that makes sense"): a drop, a section change (below), or a strong
+    // sustained onset cluster. K7 is SPEED now (2026-10-10), not a manual kiss.
     if (m.drop) startKiss('drop')
     if (S.fluxEnv > 0.7 && S.sustF > 0.8) startKiss('onsets')
     const rEff = S.cR + (0.3 - S.cR) * kiss
@@ -337,9 +483,18 @@ export function make() {
     S.build += (clamp01(S.trend * 0.8) * gate - S.build) * (1 - Math.exp(-dt / 2))
     S.bassSus += (clamp01(f.bassNormalized) * gate - S.bassSus) * (1 - Math.exp(-dt / (f.bassNormalized * gate > S.bassSus ? 1.2 : 2.5)))
     S.midsS += (clamp01(f.midsZScore * 0.6 + 0.3) * gate - S.midsS) * (1 - Math.exp(-dt / 0.35))
+    S.budPh += (0.5 + 0.9 * S.bassSus) * dt   // BUD-CLOCK: Julia arms turn faster under sustained bass; rate only, never reverses
+    const speed = Math.pow(4, clamp01(f.knob_7 ?? 0))   // K7 SPEED: 1×..4× rate on the giant's turn + boil clocks (rate only, never reverses)
+    S.spT += speed * dt
+    S.spB += speed * (0.5 + 0.9 * S.bassSus) * dt
     S.galPh += (0.05 + 0.5 * S.build) * dt   // build accelerates the background flow
     S.wind += (S.windTo - S.wind) * (1 - Math.exp(-dt / 4))
     S.fluxPh += (0.05 + 0.9 * S.flux * gate) * dt
+    // FLOW-CLOCK: the backdrop's travel clock. Rate follows bass (attack ~150 ms, release ~600 ms) plus
+    // loudness, so loud bass passages visibly stream and quiet ones drift. Rate only, never reverses.
+    const fb = clamp01(f.bassNormalized) * gate
+    S.flowB += (fb - S.flowB) * (1 - Math.exp(-dt / (fb > S.flowB ? 0.15 : 0.6)))
+    S.flowPh += (0.1 + 3.2 * Math.pow(S.flowB, 1.5) + 0.5 * S.energy * gate) * dt
     // BILLOW: the only audio allowed to scale a background WARP — a slow (~4 s) ease of bass + roughness.
     // Warp amplitude that follows fast envelopes pushes the field back and forth every beat (shiver).
     // BACKGROUND ENVELOPES: big layers flicker on the main envelopes (bass attack ~3 frames, kick ~1).
@@ -353,7 +508,7 @@ export function make() {
     S.sinceReach += dt
     S.hotT = S.sustE > 0.5 ? S.hotT + dt : 0
     const openReach = () => { if (S.reachLeft > 0 || S.sinceReach < 60) return; S.reachLeft = 30 + 60 * Math.random(); S.sinceReach = 0 }
-    if (S.act === 6 || S.hotT > 10) openReach()   // music-earned only (no random windows)
+    if (roleAct === 6 || S.hotT > 10) openReach()   // music-earned only (no random windows)
     S.reachLeft = Math.max(0, S.reachLeft - dt)
     const k6 = f.knob_6 ?? 0
     const reachTo = k6 > 0.02 ? k6 : S.reachLeft > 0 ? 1 : 0
@@ -384,12 +539,81 @@ export function make() {
       startKiss('section')
     }
 
+    evolve(f, dt)
+    featureBank(f, dt)
     return out()
+  }
+
+  // EVOLUTION — the scene drifts with the music's slow character. Optional features: a missing or
+  // non-finite one falls back to a neutral value instead of freezing the whole controller.
+  function evolve(f, dt) {
+    const num = (x, d) => Number.isFinite(x) ? x : d
+    const slowTo = (p, x, tc) => p + (clamp01(x) - p) * (1 - Math.exp(-dt / tc))
+    const live = S.presence
+
+    S.mChaos    = slowTo(S.mChaos,    smoothstep(0.80, 1.00, num(f.spectralEntropyMean, 0.9)), 12)
+    S.mGrit     = slowTo(S.mGrit,     smoothstep(0.05, 0.45, num(f.spectralRoughnessMedian, 0.25)), 12)
+    S.mFocus    = slowTo(S.mFocus,    smoothstep(0.20, 0.80, num(f.spectralKurtosisMean, 0.5)), 12)
+    S.mSpike    = slowTo(S.mSpike,    smoothstep(0.03, 0.25, num(f.spectralCrestMean, 0.1)), 12)
+    S.mTilt     = slowTo(S.mTilt,     smoothstep(0.30, 0.70, num(f.spectralSkewMean, 0.5)), 12)
+    S.mAir      = slowTo(S.mAir,      smoothstep(0.30, 0.90, num(f.spectralRolloffMean, 0.6)), 12)
+    S.mVolatile = slowTo(S.mVolatile, 0.7 * smoothstep(0.03, 0.25, num(f.spectralFluxStandardDeviation, 0.1))
+                                    + 0.3 * smoothstep(0.005, 0.06, num(f.spectralRoughnessStandardDeviation, 0.02)), 10)
+    S.mWave     = slowTo(S.mWave,     num(f.waveletCentroidNormalized, 0.5), 15)
+    const trendE = Math.max(-1, Math.min(1, num(f.energySlope, 0) * 600)) * num(f.energyRSquared, 0)
+    const trendC = Math.max(-1, Math.min(1, num(f.spectralCentroidSlope, 0) * 600)) * num(f.spectralCentroidRSquared, 0)
+    S.mRise     = slowTo(S.mRise, 0.5 + 0.5 * Math.max(-1, Math.min(1, 2 * trendE + trendC)), 10)
+
+    // key: pitchClassMedian is circular, so smooth on the unit circle (no 11 → 0 jump)
+    const key = num(f.pitchClassMedian, 0) * Math.PI * 2
+    const kc = 1 - Math.exp(-dt / 20)
+    S.keyX += (Math.cos(key) - S.keyX) * kc
+    S.keyY += (Math.sin(key) - S.keyY) * kc
+
+    // clocks in turns; the music sets only the RATE, so they never run backwards
+    const r = (m) => (0.003 + 0.03 * m) * (0.3 + 0.7 * live) * dt
+    S.eChaos += r(S.mChaos); S.eGrit += r(S.mGrit); S.eFocus += r(S.mFocus); S.eSpike += r(S.mSpike)
+    S.eAir += r(S.mAir); S.eVolatile += r(S.mVolatile); S.eWave += r(S.mWave)
+    S.eRise += r(Math.max(0, S.mRise - 0.5) * 2)
+
+    // DRAMATIC, SAFE: envelopes for brightness/saturation swells, never raw flashes
+    S.dropRefr = Math.max(0, S.dropRefr - dt)
+    S.dropHold = Math.max(0, S.dropHold - dt)
+    const hit = num(f.wavelet_confirmedDrop, 0) > 0.5 || (num(f.energyZScore, 0) > 0.6 && num(f.bassZScore, 0) > 0.5)
+    if (hit && live > 0.5 && S.dropRefr === 0 && S.sinceSection > 6) {
+      S.dropHold = 0.3
+      S.dropRefr = 8
+      S.jumpTo += 1
+    }
+    S.dropEnv += ((S.dropHold > 0 ? 1 : 0) - S.dropEnv) * (1 - Math.exp(-dt / (S.dropHold > 0 ? 0.05 : 1.0)))
+    S.jump += (S.jumpTo - S.jump) * (1 - Math.exp(-dt / 1.0))
+
+    const build = smoothstep(0.05, 0.30, Math.max(0, trendE) + 0.5 * Math.max(0, trendC)) * live
+    S.buildEnv += (build - S.buildEnv) * (1 - Math.exp(-dt / (build > S.buildEnv ? 6 : 3)))
+
+    const ent = num(f.spectralEntropyNormalized, 0.5)
+    S.entFast += (ent - S.entFast) * (1 - Math.exp(-dt / 0.5))
+    S.entSlow += (ent - S.entSlow) * (1 - Math.exp(-dt / 6))
+    const shift = clamp01(0.6 * Math.max(0, num(f.spectralFluxZScore, 0) - 0.3) + 0.4 * smoothstep(0.03, 0.2, Math.abs(S.entFast - S.entSlow))) * live
+    S.shiftPulse += (shift - S.shiftPulse) * (1 - Math.exp(-dt / (shift > S.shiftPulse ? 0.3 : 2.5)))
   }
 
   function irisScale() {
     const p = S.shutterP, e = p * p * (3 - 2 * p)
     return S.irisFrom + (S.irisTo - S.irisFrom) * e
+  }
+
+  // LATTICE-FEAT-1: a missing or non-finite feature holds its channel where it was.
+  function featureBank(f, dt) {
+    FB_SPEC.forEach((spec, i) => {
+      const x = fbTarget(f, spec)
+      if (!Number.isFinite(x)) return
+      const [att, rel] = FB_SPEED[spec[2]]
+      const y = clamp01(x)
+      S.fb[i] += (y - S.fb[i]) * (1 - Math.exp(-dt / (y > S.fb[i] ? att : rel)))
+    })
+    S.latSpin += dt * 0.004 * (0.75 + 0.5 * S.fb[30])   // entropy trend speeds the lattice morph (rate only)
+    S.latRot += dt * 0.0015 * (0.7 + 0.6 * S.fb[39])    // wavelet tilt speeds the whole-lattice turn
   }
 
   // Fail loud: a NaN reaching the shader silently blanks whatever reads it (bs_pal did, before INPUTS).
@@ -411,7 +635,19 @@ export function make() {
       bs_sunX: S.sunX, bs_sunY: S.sunY, bs_cX: S.cX, bs_cY: S.cY, bs_cOn: S.cOn, bs_kiss: S.kiss, bs_waveX: S.waveX, bs_waveY: S.waveY,
       bs_snAge: S.snAge, bs_snAmp: S.snAmp, bs_pitchMove: S.pitchMove, bs_build: S.build, bs_bassSus: S.bassSus, bs_midsS: S.midsS,
       bs_reach: S.reach, bs_billow: S.billow, bs_bassS: S.bassS, bs_kickS: S.kickS, bs_galPh: S.galPh, bs_wind: S.wind, bs_fluxPh: S.fluxPh,
-      bs_nova: S.nova, bs_shell: Math.min(S.novaT, 30), bs_act: S.act, bs_actT: S.actT,
+      bs_nova: S.nova, bs_shell: Math.min(S.novaT, 30), bs_act: S.tripOn ? TRIP_ACTS[S.tripAct].role : S.act, bs_actT: S.tripOn ? S.tripActT : S.actT,
+      bs_moodChaos: S.mChaos, bs_moodGrit: S.mGrit, bs_moodFocus: S.mFocus, bs_moodSpike: S.mSpike,
+      bs_moodTilt: S.mTilt, bs_moodAir: S.mAir, bs_moodVolatile: S.mVolatile, bs_moodWave: S.mWave, bs_moodRise: S.mRise,
+      bs_moodKey: fract(Math.atan2(S.keyY, S.keyX) / (Math.PI * 2) + 1),
+      bs_evoChaos: fract(S.eChaos), bs_evoGrit: fract(S.eGrit), bs_evoFocus: fract(S.eFocus), bs_evoSpike: fract(S.eSpike),
+      bs_evoAir: fract(S.eAir), bs_evoVolatile: fract(S.eVolatile), bs_evoRise: fract(S.eRise), bs_evoWave: fract(S.eWave),
+      bs_dropEnv: S.dropEnv, bs_buildEnv: S.buildEnv, bs_shiftPulse: S.shiftPulse, bs_evoJump: S.jump,
+      bs_latSpin: S.latSpin, bs_latRot: S.latRot,
+      bs_trip: S.trip, bs_tripAct: S.tripAct, bs_tripActT: S.tripActT, bs_julia: S.julia, bs_jR: S.jR,
+      bs_descend: S.descend, bs_fractal: S.fractal, bs_dive: fract(S.dive), bs_jTurn: fract(S.jTurn), bs_tripHue: S.tripHue / 360,
+      bs_budPh: S.budPh,
+      bs_spT: S.spT, bs_spB: S.spB, bs_flowPh: S.flowPh,
+      ...Object.fromEntries(S.fb.map((v, i) => [`bs_f${i}`, v])),
     }
     const bad = Object.keys(o).filter(k => !Number.isFinite(o[k]))
     if (bad.length) throw new Error(`black-sun controller produced non-finite ${bad.join(', ')}`)

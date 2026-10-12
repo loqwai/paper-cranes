@@ -15,6 +15,22 @@ The rehearsal is over. Everything below is merged to `main` unless it says other
 
 Escape hatch: `/show panic sun/7` hot-swaps a known-good fork without a reload.
 
+## Backup: render on a second computer
+
+The dev server listens on all interfaces. On the backup computer (same network, no client
+isolation), open the jam page by this laptop's IP (`ipconfig getifaddr en0`; it was
+`10.201.98.218` at rehearsal and will change at the venue):
+
+```
+http://<IP>:6969/jam.html?shader=claude/wip/black-sun/sun-1&controller=black-sun&wavelet=true&remote=display
+```
+
+Chrome blocks the mic and MIDI on plain `http://<ip>`, so launch it with
+`--user-data-dir=/tmp/cranes-backup --unsafely-treat-insecure-origin-as-secure=http://<IP>:6969`
+(or set that address in `chrome://flags/#unsafely-treat-insecure-origin-as-secure`). It then uses
+its own default audio input. The Twister only drives the laptop's page; forwarding the dials needs
+the laptop page on `remote=control`.
+
 ## Gotchas learned tonight
 
 - **The dev server runs from `~/Projects/paper-cranes` (main), not this worktree.** Edits here
@@ -43,8 +59,8 @@ Escape hatch: `/show panic sun/7` hot-swaps a known-good fork without a reload.
 
 ## Open items
 
-- **K1 HOLE SIZE is too subtle.** Branch `k1-hole-size-wip` has a one-line fix (1×–2.2×). It
-  hasn't been verified on the wall; check it with K1 at 0 and 1, then merge.
+- **K1 HOLE SIZE is obsolete.** The hole was removed during the show ("We need that hole gone"),
+  and K1 is now TRIP in sun-1-show and forks 15–17. Branch `k1-hole-size-wip` can be deleted.
 - **The shiver detector reads about 0.9–1.0 constantly** now that its probe runs, and the 2 Hz
   meter changed what it measures. It's muted in the health monitor; recalibrate it after the show.
 - **The controller's kick detector fires on noise** (`bs_kick` spikes while `bassZScore` is

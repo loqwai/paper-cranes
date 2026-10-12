@@ -1,0 +1,111 @@
+{
+  "timestamp": "2026-10-10T05:14:47.801Z",
+  "shader": "claude/wip/black-sun/sun-1-wip",
+  "name": null,
+  "knobs": {
+    "knob_5": 1,
+    "knob_10": 0.12598425196850394,
+    "knob_12": 1,
+    "knob_3": 0.07874015748031496,
+    "knob_8": 0.8031496062992126,
+    "knob_4": 0.8110236220472441,
+    "knob_2": 0.984251968503937,
+    "knob_7": 0.15748031496062992,
+    "knob_16": 0.31496062992125984,
+    "knob_15": 0,
+    "knob_9": 0.14173228346456693,
+    "knob_13": 0.6377952755905512,
+    "knob_6": 0.6614173228346457,
+    "knob_11": 1,
+    "knob_14": 0.23622047244094488,
+    "knob_17": 0
+  },
+  "audio": {
+    "bass": {
+      "normalized": 0.717,
+      "zScore": 0.689,
+      "slope": 0,
+      "rSquared": 0.049
+    },
+    "energy": {
+      "normalized": 0.404,
+      "zScore": -0.409,
+      "slope": 0,
+      "rSquared": 0.003
+    },
+    "mids": {
+      "normalized": 0.433,
+      "zScore": 0.189,
+      "slope": 0,
+      "rSquared": 0.001
+    },
+    "treble": {
+      "normalized": 0.404,
+      "zScore": -0.215,
+      "slope": 0,
+      "rSquared": 0
+    },
+    "spectralCentroid": {
+      "normalized": 0.525,
+      "zScore": -0.193,
+      "slope": 0,
+      "rSquared": 0.001
+    },
+    "spectralFlux": {
+      "normalized": 0.184,
+      "zScore": -0.089,
+      "slope": 0,
+      "rSquared": 0
+    },
+    "spectralEntropy": {
+      "normalized": 0.635,
+      "zScore": -0.44,
+      "slope": 0,
+      "rSquared": 0.002
+    },
+    "spectralRoughness": {
+      "normalized": 0.349,
+      "zScore": -0.396,
+      "slope": 0,
+      "rSquared": 0.009
+    },
+    "spectralKurtosis": {
+      "normalized": 0.447,
+      "zScore": -0.019,
+      "slope": 0,
+      "rSquared": 0.001
+    },
+    "spectralSpread": {
+      "normalized": 0.685,
+      "zScore": -0.204,
+      "slope": 0,
+      "rSquared": 0.003
+    },
+    "spectralCrest": {
+      "normalized": 0.444,
+      "zScore": 0.348,
+      "slope": 0,
+      "rSquared": 0.004
+    },
+    "spectralRolloff": {
+      "normalized": 0.535,
+      "zScore": -0.247,
+      "slope": 0,
+      "rSquared": 0.002
+    },
+    "spectralSkew": {
+      "normalized": 0.492,
+      "zScore": 0.202,
+      "slope": 0,
+      "rSquared": 0
+    },
+    "pitchClass": {
+      "normalized": 0,
+      "zScore": -0.602,
+      "slope": -0.0001,
+      "rSquared": 0.001
+    }
+  },
+  "musicTab": null,
+  "userNote": null
+}

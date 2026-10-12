@@ -170,3 +170,26 @@ For running a show, see [show-playbook.md](show-playbook.md) and the `/show` ski
   `shaders/sun/sun.md`). Only taste that generalizes goes here.
 
 - **Flicker tolerance (2026-10-09):** occasional meter flicker around 1.2–1.6 is fine ("Flickering is ok at this level occasionally"). Only alert on 2 or more, or on sustained runs.
+
+- 2026-10-09 (sun-1, pre-party, MAIN→RED GIANT, K1 0.75 / K3 ~0.2 / K4 0.14): "This was very beautiful so far." The bright opaque patchwork tile background was part of what they loved. The critic wanted it dimmed; the user wins.
+
+- 2026-10-09 (~21:55–22:05, sun-1-wip): "Let's riff on OG sky significantly. Let's avoid space for a while. We need to evolve in new, fractally ways." Then: "Let's mix in some of the lattice-3-interactive 3. Slowly, over time, into the sky." Then: "background fractal is way too fast and streaming down and to the right". Background fractals must zoom or rotate slowly about the centre, with NO net directional flow, and must never be anchored to a moving object.
+
+- 2026-10-09 (sun-1-wip, fractal sky + lattice): "I need less of this contrasted green/pink banded colors; Use oklch and expert algorithmic color schemes." Use OKLCH harmony (analogous/split-comp on one slow base hue), moderate chroma, smooth hue (no fract banding), and no high-chroma green↔pink complements.
+
+- 2026-10-09: "I need the lattice to be affected in many, many ways subtly by audio features. We have 100+. Use them!!!"
+
+- 2026-10-09 (~22:25–23:00, sun-1-wip): "I need much more painterly sense." Brush-stroke tendrils, broken colour, canvas grain and irregular, overlapping dabs beat airbrushed glow, pixel speckle and regular brick-like stroke grids.
+- 2026-10-09: "I want to communicate with you wordlessly, through the dials. Use intuition." Read each dial release as words. When a dial keeps returning to an extreme, bake that direction into the shader. Tonight CALM, WARMTH and PAINT went to 1 again and again; REACT and GLOW were pulled low.
+- 2026-10-09: "Turn off that dimming knob, switch it, I want 100% bright all the time." No master fade or dimming knob. K10 became PAINT.
+- 2026-10-09: "We need that hole gone." No black eclipse disc and no black-hole core.
+- 2026-10-09: "The sun's surface needs a more 'sunlike' nature." Granulation (boiling cells with dark lanes), limb darkening, faculae near the limb, and soft umbra/penumbra sunspots, never spiky dots.
+- **Never put a test or diagnostic shader on the wall (2026-10-09).** A flat-colour perf test shader swapped onto the projector read to the user as "it crashed". Every swap the show browser sees must be the real art.
+- 2026-10-09 (sun-1-show): "Stop pulsing the sun to the beat. I need other primary effects. And you need to deeply understand and use the audio features available to you." The sun takes sustained bass only (slow breathing); beats go to other layers, each with its own verb, chosen from a measured feature census (`.claude/vj-tools/feature-census.js`).
+- 2026-10-09: "It's gray and dark." With DARK at 1 this meant the grey, not the darkness: deep blacks with saturated, luminous colour on top. Raise chroma and contrast, not overall lightness. WARMTH must not swing blues through red into maroon.
+- 2026-10-09: "I need the tendrils to be similar to the julia sets we use for the moody-octopus series." Then: "Give me complex details in the tendrils." Julia-set arms grow from the sun, with c drifting on a monotonic clock, plus orbit-trap filaments, curls and beads.
+- 2026-10-09: "Fade it in. If you are capable of it." New layers cross-fade in over ~75 s (`FADE_T*` baked at hot-swap), never cut in.
+- 2026-10-10 (sun-1-show): "Let's make the sun more intimidating, like it's this close, large, celestial body we're orbiting that exists in the lower right of the screen. I want impossibly interesting celestial detail as if we are a small moon orbiting." The sun can be a colossal off-screen body seen as a vast limb, with multi-scale surface detail (granulation, sunspots, faculae, spicules, prominence arches, corona, CMEs), rather than a ball in the middle.
+- 2026-10-10 (~01:20, sun-1-show giant): "I need more audio reactivity. It looks static." Repeat complaint; motion read ~0.03 all night. Every layer gets its own loud verb in light and rate (forward accumulators scaled by energy envelopes); 3-5x stronger than tasteful.
+- 2026-10-10 (~02:17, sun-1-show): "I need more, subtle features affected by the audio uniforms. many different ones". A repeat of the 2026-10-09 ask. Wire many distinct features (12+, across domains and stat variants), each a small 5–15% verb on its own element, rather than a few loud ones.
+- 2026-10-10 (~02:35, sun-1-show): "let's slowly go to the og sky". The original sun-1 Van Gogh blue tile sky, reached by a slow crossfade over minutes, never a cut.
