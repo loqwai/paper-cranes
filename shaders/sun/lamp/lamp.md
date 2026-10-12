@@ -1,12 +1,14 @@
 # sun lamp
 
-The giant from the 2026-10-09 sun show (`sun/17`, the late-set close orbit), reworked as office light for a projector. It has no story and no audio. It drifts slowly by itself, and every dial at 0 gives the full-brightness look.
+The giant from the 2026-10-09 sun show (`sun/17`, the late-set close orbit), reworked as office light for a projector. It has no story and no audio. It drifts slowly by itself, and every dial at 0 gives the full-brightness look. The current lamp is `2.frag`. `1.frag` is kept as it was.
 
 ## Launch
 
 ```
-https://visuals.beadfamous.com/?shader=sun/lamp/1&controller=sun-lamp&noaudio=true
+https://visuals.beadfamous.com/?shader=sun/lamp/2&controller=sun-lamp&noaudio=true
 ```
+
+For a warm room, try the sunset: `&knob_18=0.8&knob_4=0.35&knob_11=0.25`. For a wall of orange light, try `&knob_4=1&knob_11=0.5`.
 
 `@fullscreen: true` stretches the frame to the projector without any extra parameter. The controller is required, because without it the clock sits at 0 and the scene does not move.
 
@@ -16,23 +18,24 @@ https://visuals.beadfamous.com/?shader=sun/lamp/1&controller=sun-lamp&noaudio=tr
 |---|---|---|---|
 | K1 | DIM | full light | about 3% (linear light, exponential curve, so the dial feels even) |
 | K2 | HUE SPIN | the designed palette | one full turn of the finished palette (0.5 is the opposite hues) |
-| K3 | FAN | the show's full cyan fan | brighter, longer arms |
-| K4 | SUN SIZE | radius 1.1 half-heights | radius 2.2, so the sun fills most of the wall |
+| K3 | FAN | the show's full cyan fan | the fan fills the top of the frame |
+| K4 | SUN SIZE | radius 1.1 half-heights | radius 5 on an exponential curve: about 0.6 fills the wall, and past 0.75 the whole projection is glowing surface. The granules are rescaled as the sun grows, so they stay crisp |
 | K5 | COLOR TEMP | neutral | about 1900K candle, luminance kept (the brightest areas pale toward white rather than dim, since candle colour can't be that bright) |
-| K6 | REACH | the show's prominence height | taller prominences |
-| K7 | SPEED | calm drift, 0.15 × the show's pace | the show's pace |
+| K6 | ERUPT | the show's surface and prominences | harder boiling, huge looping arcs, and past about 0.6, flare jets that fire from the limb every 15 to 30 seconds at calm SPEED |
+| K7 | SPEED | calm drift, 0.15 × the show's pace | 3 × the show's pace (the show's pace is at about 0.63) |
 | K8 | SKY SWAP | Van Gogh tile sky | deep-space nebula |
 | K9 | FILL | no lift | background lifted about 3.5×, in its own blues |
 | K10 | PAINT | clean | brush dabs over the whole frame |
-| K11 | WARMTH | as designed | the giant and its corona lean to gold |
-| K12 | SPARKLE | the show's glints | brighter lattice glints, filaments and spicules |
-| K13 | GLOW | the show's corona | corona and chromosphere much brighter (8.5× before the soft limit) |
+| K11 | SUN COLOR | the designed gold | orange by 0.25 to 0.5, ember red by 0.75, crimson at 1. Lightness is capped as it reddens so the colour stays rich instead of going salmon |
+| K12 | SPIRAL | straight fan | up to 0.6 the fan and sky twist into a log spiral round the sun. From 0.6 to 0.72 the frame folds into a six-way kaleidoscope round the sun centre, and past that it winds again. Centre the sun (K15, K16 at 0.5) for the full mandala |
+| K13 | GLOW | the show's corona | a golden corona that washes the sky around the sun |
 | K14 | DARK | full brightness | darks sink toward black |
 | K15 | SUN X | home, lower right | 0.5 is centred, 1 is mirrored to the left |
 | K16 | SUN Y | home, low | 0.5 is centred, 1 is mirrored to the top |
 | K17 | WASH | full colour | near-white light that keeps the sun's light and dark pattern |
+| K18 | DAY CYCLE | the space scene | a horizon, sea and sky come in, and the sun runs sunrise (about 0.15), noon (0.5), sunset (0.75 to 0.85) and night (1). Sunset turns the sun orange on its own. K15 and K16 are ignored while the day is up |
 
-Show knob numbers keep their meaning, so MIDI muscle memory carries over. The new dials use numbers the show freed: K1 was TRIP, K5 was STORY, K9 was REACT, and K17 is new. FAN, REACH, SPARKLE and GLOW are rebased so that 0 matches the show's photograph (`docs/shots/sun/17-moment-0221.png`), because the show's own 0 dimmed them. The grade is not rebased: the photograph also ran PAINT 0.72, WARMTH 0.92 and DARK 0.80, so at 0 the lamp has no brush dabs, no gold lean and a brighter sky. Set those three to get the photograph back. K15 and K16 move away from home, so the sun reaches the centre at 0.5.
+Show knob numbers keep their meaning, so MIDI muscle memory carries over. The new dials use numbers the show freed: K1 was TRIP, K5 was STORY, K9 was REACT, and K17 and K18 are new. In lamp 2, K6, K11 and K12 changed jobs: REACH became ERUPT, WARMTH became SUN COLOR and SPARKLE became SPIRAL. FAN and GLOW are rebased so that 0 matches the show's photograph (`docs/shots/sun/17-moment-0221.png`), because the show's own 0 dimmed them. The photograph also ran PAINT 0.72 and DARK 0.80, so at 0 the lamp has no brush dabs and a brighter sky. K15 and K16 move away from home, so the sun reaches the centre at 0.5.
 
 DIM, COLOR TEMP and WASH run in linear light after the show's OKLCH white-out knee, in this order: WASH, then COLOR TEMP, then DIM. They change the light without touching the look, and they never produce a negative value or NaN.
 
@@ -44,7 +47,7 @@ DIM, COLOR TEMP and WASH run in linear light after the show's OKLCH white-out kn
 
 ## Clock
 
-`controllers/sun-lamp.js` returns `lp_u`, the integral of the SPEED rate. Every motion in the shader is a fixed multiple of it, so turning SPEED changes rates and never jumps the picture. `lp_u` wraps at 8192. That is about 2.3 hours at full speed and 15 hours at rest. The wrap keeps float32 precise on a run of several days. At the wrap, `lp_seam` blends the previous frame over the new one, fading out over four seconds, so the change of pose reads as a dissolve instead of a cut.
+`controllers/sun-lamp.js` returns `lp_u`, the integral of the SPEED rate, and `lp_e`, the eruption clock, which runs up to 4× faster as ERUPT rises. Every motion in the shader is a fixed multiple of it, so turning SPEED changes rates and never jumps the picture. Both wrap at 8192. For `lp_u` that is about 45 minutes at full SPEED and 15 hours at rest. The wrap keeps float32 precise on a run of several days. At either wrap, `lp_seam` blends the previous frame over the new one, fading out over four seconds, so the change of pose reads as a dissolve instead of a cut.
 
 ## What was cut from the show, and why
 
@@ -57,3 +60,4 @@ DIM, COLOR TEMP and WASH run in linear light after the show's OKLCH white-out kn
 ## Iterations
 
 - **1.frag.** The first lamp. In testing at 1920×1080 with headless Chrome on Metal, the median frame took about 6.3 ms, against about 12.9 ms for `sun/17` at the show preset.
+- **2.frag.** Dials that play. SUN SIZE engulfs the wall, SUN COLOR replaces WARMTH, ERUPT replaces REACH, SPIRAL replaces SPARKLE, and DAY CYCLE (K18) is new. FAN, GLOW and SPEED got wider ranges. The SUN COLOR first pass turned a big sun salmon, so lightness is now capped as the hue reddens. The first kaleidoscope used 12 narrow wedges, which only showed rings, so it now uses 6. Its fade-in also rendered the scene twice (18.8 ms), so it now morphs the fold angle in one pass. During that 0.6 to 0.72 stretch, one seam runs along the ray opposite the fan. With the sun at home that ray is off screen. On the same harness, lamp 2 measured 6.7 to 7.0 ms with every dial at 0 and 9.1 ms in the heaviest maxed case, against 11.7 to 13.6 ms for `sun/17`.
