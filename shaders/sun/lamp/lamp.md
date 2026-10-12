@@ -18,7 +18,7 @@ https://visuals.beadfamous.com/?shader=sun/lamp/1&controller=sun-lamp&noaudio=tr
 | K2 | HUE SPIN | the designed palette | one full turn of the finished palette (0.5 is the opposite hues) |
 | K3 | FAN | the show's full cyan fan | brighter, longer arms |
 | K4 | SUN SIZE | radius 1.1 half-heights | radius 2.2, so the sun fills most of the wall |
-| K5 | COLOR TEMP | neutral | about 1900K candle, luminance kept |
+| K5 | COLOR TEMP | neutral | about 1900K candle, luminance kept (the brightest areas pale toward white rather than dim, since candle colour can't be that bright) |
 | K6 | REACH | the show's prominence height | taller prominences |
 | K7 | SPEED | calm drift, 0.15 × the show's pace | the show's pace |
 | K8 | SKY SWAP | Van Gogh tile sky | deep-space nebula |
@@ -32,7 +32,7 @@ https://visuals.beadfamous.com/?shader=sun/lamp/1&controller=sun-lamp&noaudio=tr
 | K16 | SUN Y | home, low | 0.5 is centred, 1 is mirrored to the top |
 | K17 | WASH | full colour | near-white light that keeps the sun's light and dark pattern |
 
-Show knob numbers keep their meaning, so MIDI muscle memory carries over. The new dials use numbers the show freed: K1 was TRIP, K5 was STORY, K9 was REACT, and K17 is new. FAN, REACH, SPARKLE and GLOW are rebased so that 0 matches the show's photograph (`docs/shots/sun/17-moment-0221.png`), because the show's own 0 dimmed them. K15 and K16 move away from home, so the sun reaches the centre at 0.5.
+Show knob numbers keep their meaning, so MIDI muscle memory carries over. The new dials use numbers the show freed: K1 was TRIP, K5 was STORY, K9 was REACT, and K17 is new. FAN, REACH, SPARKLE and GLOW are rebased so that 0 matches the show's photograph (`docs/shots/sun/17-moment-0221.png`), because the show's own 0 dimmed them. The grade is not rebased: the photograph also ran PAINT 0.72, WARMTH 0.92 and DARK 0.80, so at 0 the lamp has no brush dabs, no gold lean and a brighter sky. Set those three to get the photograph back. K15 and K16 move away from home, so the sun reaches the centre at 0.5.
 
 DIM, COLOR TEMP and WASH run in linear light after the show's OKLCH white-out knee, in this order: WASH, then COLOR TEMP, then DIM. They change the light without touching the look, and they never produce a negative value or NaN.
 
@@ -44,7 +44,7 @@ DIM, COLOR TEMP and WASH run in linear light after the show's OKLCH white-out kn
 
 ## Clock
 
-`controllers/sun-lamp.js` returns `lp_u`, the integral of the SPEED rate. Every motion in the shader is a fixed multiple of it, so turning SPEED changes rates and never jumps the picture. `lp_u` wraps at 8192. That is about 2.3 hours at full speed and 15 hours at rest. The wrap keeps float32 precise on a run of several days. At the wrap, `lp_seam` blends the previous frame over the new one for about a second, so the change of pose reads as a dissolve instead of a cut.
+`controllers/sun-lamp.js` returns `lp_u`, the integral of the SPEED rate. Every motion in the shader is a fixed multiple of it, so turning SPEED changes rates and never jumps the picture. `lp_u` wraps at 8192. That is about 2.3 hours at full speed and 15 hours at rest. The wrap keeps float32 precise on a run of several days. At the wrap, `lp_seam` blends the previous frame over the new one, fading out over four seconds, so the change of pose reads as a dissolve instead of a cut.
 
 ## What was cut from the show, and why
 

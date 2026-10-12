@@ -495,7 +495,7 @@ void mainImage(out vec4 O, in vec2 g) {
     rays *= rayL > 0.9 ? (0.9 + 0.25 * (rayL - 0.9)) / rayL : 1.0;
 
     vec3 f = bg * 0.8;
-    f -= fbm(uv0 * 100.0) * 0.05;
+    if (!hid) f -= fbm(uv0 * 100.0) * 0.05;
     f = max(f, vec3(0.0));
     f = giantStar(f, uv0);
 
@@ -554,7 +554,9 @@ void mainImage(out vec4 O, in vec2 g) {
     lin = mix(lin, vec3(dot(lin, LUMA)), 0.7 * sqrt(TEMP));
     vec3 warm = lin * pow(vec3(1.0, 0.36, 0.07), vec3(TEMP));
     lin = warm * min(dot(lin, LUMA) / max(dot(warm, LUMA), 1e-5), 3.0);
-    lin *= min(1.0, 1.0 / max(max(lin.r, lin.g), max(lin.b, 1e-4)));
+    float lM = max(max(lin.r, lin.g), lin.b);
+    float lY = dot(lin, LUMA);
+    lin = mix(lin, vec3(lY), clamp((lM - 1.0) / max(lM - lY, 1e-5), 0.0, 1.0));
     lin *= pow(0.03, DIM);
     f = pow(lin, vec3(1.0 / 2.2));
 
