@@ -9,11 +9,14 @@ export const initRemoteDisplay = () => {
   console.log('[Remote Display] Initializing...')
 
   const handleMessage = (message) => {
-    console.log('[Remote Display] Received:', message.type, message.data)
+    if (message.type !== 'audio-features') console.log('[Remote Display] Received:', message.type, message.data)
 
     switch (message.type) {
       case 'update-params':
         applyParams(message.data)
+        break
+
+      case 'audio-features':
         break
 
       case 'status':

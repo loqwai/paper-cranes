@@ -162,6 +162,11 @@ const setupAudio = async () => {
         return noAudio
     }
 
+    if (params.get('audio') === 'remote') {
+        const { setupRemoteAudio } = await import('./src/remote/audioFeatureStream.js')
+        return setupRemoteAudio()
+    }
+
     if (params.get('audio') === 'tab') {
         const { setupTabAudio, isTabAudioSupported } = await import('./src/audio/tabAudioSource.js')
         // Tab audio relies on getDisplayMedia exposing audio tracks — only
@@ -343,7 +348,11 @@ const main = async () => {
 
     // Load shader and audio
     const { code: fragmentShader, fullscreen: shaderFullscreen } = await getInitialShader()
-    const audio = await setupAudio()
+    let audio = await setupAudio()
+    if (params.get('audio_send') === 'true') {
+        const { withAudioFeatureSender } = await import('./src/remote/audioFeatureStream.js')
+        audio = withAudioFeatureSender(audio)
+    }
     const canvas = getVisualizerDOMElement()
 
     if (!window.location.href.includes('edit') && params.get('embed') !== 'true') addListenersForFullscreen(canvas)
