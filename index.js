@@ -348,9 +348,9 @@ const main = async () => {
 
     // Load shader and audio
     const { code: fragmentShader, fullscreen: shaderFullscreen } = await getInitialShader()
+    if (params.get('audio_send') === 'true' && params.get('audio') === 'remote') throw new Error('audio=remote and audio_send=true together would re-broadcast received features')
     let audio = await setupAudio()
     if (params.get('audio_send') === 'true') {
-        if (params.get('audio') === 'remote') throw new Error('audio=remote and audio_send=true together would re-broadcast received features')
         const { withAudioFeatureSender } = await import('./src/remote/audioFeatureStream.js')
         audio = withAudioFeatureSender(audio)
     }
