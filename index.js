@@ -164,6 +164,11 @@ const setupAudio = async () => {
         return noAudio
     }
 
+    if (params.get('audio') === 'remote') {
+        const { setupRemoteAudio } = await import('./src/remote/audioFeatureStream.js')
+        return setupRemoteAudio()
+    }
+
     if (params.get('audio') === 'tab') {
         const { setupTabAudio, isTabAudioSupported } = await import('./src/audio/tabAudioSource.js')
         // Tab audio relies on getDisplayMedia exposing audio tracks — only
@@ -346,10 +351,15 @@ const main = async () => {
 
     // Load shader and audio
     const { code: fragmentShader, fullscreen: shaderFullscreen } = await getInitialShader()
+    if (params.get('audio_send') === 'true' && params.get('audio') === 'remote') throw new Error('audio=remote and audio_send=true together would re-broadcast received features')
     // Render without waiting on audio: the mic prompt (or an iOS resume() held for a gesture)
     // must not leave a first-time visitor staring at a black screen.
     window.cranes.audio = noAudio
-    setupAudio().then(audio => { window.cranes.audio = audio })
+    setupAudio().then(async audio => {
+        if (params.get('audio_send') !== 'true') return void (window.cranes.audio = audio)
+        const { withAudioFeatureSender } = await import('./src/remote/audioFeatureStream.js')
+        window.cranes.audio = withAudioFeatureSender(audio)
+    })
     const canvas = getVisualizerDOMElement()
 
     if (!window.location.href.includes('edit') && params.get('embed') !== 'true') addListenersForFullscreen(canvas)

@@ -354,6 +354,8 @@ uniform float another;   // = 1.2
 - `fullscreen` - Start in fullscreen
 - `remote` - Remote mode: `display` (receive commands) or `control` (send commands)
 - `audio=tab` - Capture audio from a browser tab instead of mic. Chrome/Edge only. See [docs/tab-audio.md](docs/tab-audio.md)
+- `audio_send=true` - Broadcast this page's audio features over the remote WebSocket (works with mic, `audio=tab`, or `audio_file`)
+- `audio=remote` - Take audio features from a machine running `audio_send=true` instead of the local mic. Same dev server or `room=`
 - `audio_file=<url>` - Play a deterministic audio file through the analyzer. See [docs/audio-file-playback.md](docs/audio-file-playback.md)
 - `wavelet=true` - Enable opt-in wavelet (DWT) analysis alongside FFT. Adds `wavelet*` uniforms (octave bands, centroid/spread, bassHit trigger, FFT×wavelet combos). See [docs/wavelet-analysis.md](docs/wavelet-analysis.md)
 - `audio_device=<label substring>` - Open the mic input whose label contains this (e.g. `USB Audio CODEC`); no match means no audio, never a different device. Omitted → the OS default input
