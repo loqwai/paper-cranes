@@ -1,12 +1,14 @@
 # sun lamp
 
-The giant from the 2026-10-09 sun show (`sun/17`, the late-set close orbit), reworked as office light for a projector. It has no story and no audio. It drifts slowly by itself, and every dial at 0 gives the full-brightness look. The current lamp is `2.frag`. `1.frag` is kept as it was.
+The giant from the 2026-10-09 sun show (`sun/17`, the late-set close orbit), reworked as office light for a projector. It has no story and no audio. It drifts slowly by itself, and every dial at 0 gives the full-brightness look. The current lamp is `3.frag`, which adds show-like life on K16 ANIMATE. `1.frag` and `2.frag` are kept as they were.
 
 ## Launch
 
 ```
-https://visuals.beadfamous.com/?shader=sun/lamp/2&controller=sun-lamp&noaudio=true
+https://visuals.beadfamous.com/?shader=sun/lamp/3&controller=sun-lamp&noaudio=true&knob_16=1
 ```
+
+Lamp 2 is still at `?shader=sun/lamp/2&controller=sun-lamp&noaudio=true`.
 
 For a warm room, try the sunset: `&knob_18=0.8&knob_4=0.35&knob_11=0.25`. For a wall of orange light, try `&knob_4=1&knob_11=0.5`.
 
@@ -31,9 +33,10 @@ For a warm room, try the sunset: `&knob_18=0.8&knob_4=0.35&knob_11=0.25`. For a 
 | K13 | GLOW | the show's corona | a golden corona that washes the sky around the sun |
 | K14 | DARK | full brightness | darks sink toward black |
 | K15 | SUN X | home, lower right | 0.5 is centred, 1 is mirrored to the left |
-| K16 | SUN Y | home, low | 0.5 is centred, 1 is mirrored to the top |
+| K16 | ANIMATE (3.frag) | still, the same as lamp 2 | show-like life at about the show's pace. In 1.frag and 2.frag, K16 is still SUN Y |
 | K17 | WASH | full colour | near-white light that keeps the sun's light and dark pattern |
-| K18 | DAY CYCLE | the space scene | a horizon, sea and sky come in, and the sun runs sunrise (about 0.15), noon (0.5), sunset (0.75 to 0.85) and night (1). Sunset turns the sun orange on its own. From 0.12 up, DAY CYCLE takes over the background: K15 and K16 are ignored, K8 SKY SWAP does nothing, K12 SPIRAL no longer twists the sky (it still curls the fan and folds the kaleidoscope), and the FAN is cut to 25% by day and to 0 at night |
+| K18 | DAY CYCLE | the space scene | a horizon, sea and sky come in, and the sun runs sunrise (about 0.15), noon (0.5), sunset (0.75 to 0.85) and night (1). Sunset turns the sun orange on its own. From 0.12 up, DAY CYCLE takes over the background: K15 and the SUN Y dial are ignored, K8 SKY SWAP does nothing, K12 SPIRAL no longer twists the sky (it still curls the fan and folds the kaleidoscope), and the FAN is cut to 25% by day and to 0 at night |
+| K19 | SUN Y (3.frag) | home, low | 0.5 is centred, 1 is mirrored to the top. 3.frag moved SUN Y here from K16 |
 
 Show knob numbers keep their meaning, so MIDI muscle memory carries over. The new dials use numbers the show freed: K1 was TRIP, K5 was STORY, K9 was REACT, and K17 and K18 are new. In lamp 2, K6, K11 and K12 changed jobs: REACH became ERUPT, WARMTH became SUN COLOR and SPARKLE became SPIRAL. FAN and GLOW are rebased so that 0 matches the show's photograph (`docs/shots/sun/17-moment-0221.png`), because the show's own 0 dimmed them. The photograph also ran PAINT 0.72 and DARK 0.80, so at 0 the lamp has no brush dabs and a brighter sky. K15 and K16 move away from home, so the sun reaches the centre at 0.5.
 
@@ -61,3 +64,4 @@ DIM, COLOR TEMP and WASH run in linear light after the show's OKLCH white-out kn
 
 - **1.frag.** The first lamp. The controller is shared, so since lamp 2, lamp 1's SPEED also tops out at 3× the show's pace (the show's pace is at about 0.63, not 1). In testing at 1920×1080 with headless Chrome on Metal, the median frame took about 6.3 ms, against about 12.9 ms for `sun/17` at the show preset.
 - **2.frag.** Dials that play. SUN SIZE engulfs the wall, SUN COLOR replaces WARMTH, ERUPT replaces REACH, SPIRAL replaces SPARKLE, and DAY CYCLE (K18) is new. FAN, GLOW and SPEED got wider ranges. The SUN COLOR first pass turned a big sun salmon, so lightness is now capped as the hue reddens. The first kaleidoscope used 12 narrow wedges, which only showed rings, so it now uses 6. Its fade-in also rendered the scene twice (18.8 ms), so it now morphs the fold angle in one pass. During that 0.6 to 0.72 stretch, one seam runs along the ray opposite the fan. With the sun at home that ray is off screen. On the same harness, lamp 2 measured 6.7 to 7.0 ms with every dial at 0 and 9.1 ms in the heaviest maxed case, against 11.7 to 13.6 ms for `sun/17`.
+- **3.frag.** Show-like life without music. A synthetic signal made of layered sine waves breathes the corona, fan glow and granule contrast, sways the prominences and makes the spicules and fan filaments sparkle. The waves' frequencies are whole multiples of the clock wrap, so the pattern never visibly repeats and the wrap is seamless. About every 30 to 80 seconds a build and release swell lifts all three, and every couple of minutes a soft event fires: a prominence surge, a fan bloom, a ribbon flare on the sunspots, or a CME plume off the limb. The same signal also nudges the rates of the boil, the fan turn and the sky flow, without ever reversing them. It runs on `lp_m`, a new controller clock integrated at the K16 ANIMATE rate, so turning K16 never jumps the picture. K16 at 0 freezes the clock and fades the life out, which looks the same as lamp 2. SUN Y moved to K19. Sun size, position, colour, colour temperature, DIM, WASH, DAY CYCLE, HUE SPIN and FILL are never animated. Lamps 1 and 2 never read `lp_m`, so they behave exactly as before.
