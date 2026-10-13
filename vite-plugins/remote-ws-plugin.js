@@ -47,7 +47,7 @@ export function remoteWsPlugin() {
         ws.on('message', (msg) => {
           try {
             const message = JSON.parse(msg.toString())
-            console.log(
+            if (message.type !== 'audio-features') console.log(
               `[WS] Received: ${message.type}`,
               message.data ? JSON.stringify(message.data).slice(0, 100) : ''
             )
