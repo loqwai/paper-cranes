@@ -158,6 +158,9 @@ Open a fork with `jam.html?shader=sun/N&controller=sun-N&wavelet=true&vj=1&remot
 | Dev server down (background `npm run dev` exited 143) | `curl -s -o /dev/null -w '%{http_code}' localhost:6969/` | Restart `npm run dev`. The wall reconnects |
 | Jank spikes (130–150 ms worst-case frames) | `jank.over100` in the pulses | Usually a shader recompile during a hot-swap. If they come with no edits, look for expensive event branches |
 | Wrong or silent input | `window.cranes.audioInputLabel`, `energy` | Fix the macOS default input. `audio_device=` only overrides it |
+| Scene dim and nearly frozen while music plays | `energyMean` vs the GATE thresholds; `bs_presence` | The gates are calibrated for a different input level. Rescale GATE/SLOW_GATE/presence in the `-wip` shader and the controller to the input's actual `energyMean` range |
+| Looks samey; rays short; the story never builds | `bs_power`/`bs_build` flat for minutes | The story envelopes were tuned on another set. Sample features for ~25 s, find the 2–3 that move with this music and are independent, and drive ray reach/brightness from smoothed envelopes of those (rate and light only, never phase) |
+| Ghost copies of the suns, or a smeared second exposure | A composition offset or pan was added recently | The previous-frame feedback UV must get the same offset as the frame, or last frame's bright objects come back misregistered |
 | **Panic: get a known-good look on the wall now** | — | Hot-swap. Never `goto` (snippet below) |
 
 ```bash
@@ -184,6 +187,13 @@ previous-frame feedback kept it black.
 - **Never** write the page's boot shader while it is on the wall. HMR pushes it over any
   hot-swap, which is how a broken edit reached the wall. Iterate on a `-wip.frag` copy, verify
   it in a separate headless page, then promote it.
+
+### Lesson from 2026-10-17: the art critic contradicts itself
+
+Over a long set the critic undoes its own advice. It asked for the gas palette to be narrowed
+(#82), then for a second hue family to be added back, driven by bass (#88). Hold each palette
+decision once it's made, keep colour off fast audio, and act on a critic note only when it repeats
+or the meter backs it up.
 
 ## 8. Show rules
 

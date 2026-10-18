@@ -232,6 +232,7 @@ export function make() {
   if (!Number.isFinite(S.latRot)) S.latRot = S.time * 0.0015
   if (!Number.isFinite(S.budPh)) S.budPh = S.diskPh
   if (!Number.isFinite(S.spT)) S.spT = S.time    // K7 SPEED clocks: seeded so nothing jumps on hot-swap
+  if (!Number.isFinite(S.tileT) || S.tileSeed !== 2) { S.tileT = S.time; S.tileSeed = 2 }   // SKY-RATE: tile clock seeded to bs_time at swap so nothing jumps
   if (!Number.isFinite(S.spB)) S.spB = S.budPh
   if (!Number.isFinite(S.flowPh)) { S.flowPh = 0; S.flowB = 0 }   // FLOW-CLOCK: seeded so nothing jumps on hot-swap
 
@@ -495,6 +496,7 @@ export function make() {
     const fb = clamp01(f.bassNormalized) * gate
     S.flowB += (fb - S.flowB) * (1 - Math.exp(-dt / (fb > S.flowB ? 0.15 : 0.6)))
     S.flowPh += (0.1 + 3.2 * Math.pow(S.flowB, 1.5) + 0.5 * S.energy * gate) * dt
+    S.tileT += (0.5 + 0.8 * smoothstep(0.35, 0.75, S.energy) * gate) * dt   // SKY-RATE: tile swirl rate 0.5x at rest .. 1.3x loud (rate, never angle)
     // BILLOW: the only audio allowed to scale a background WARP — a slow (~4 s) ease of bass + roughness.
     // Warp amplitude that follows fast envelopes pushes the field back and forth every beat (shiver).
     // BACKGROUND ENVELOPES: big layers flicker on the main envelopes (bass attack ~3 frames, kick ~1).
@@ -634,7 +636,7 @@ export function make() {
       bs_chaos: S.chaos, bs_pull: S.pull, bs_night: S.night,
       bs_sunX: S.sunX, bs_sunY: S.sunY, bs_cX: S.cX, bs_cY: S.cY, bs_cOn: S.cOn, bs_kiss: S.kiss, bs_waveX: S.waveX, bs_waveY: S.waveY,
       bs_snAge: S.snAge, bs_snAmp: S.snAmp, bs_pitchMove: S.pitchMove, bs_build: S.build, bs_bassSus: S.bassSus, bs_midsS: S.midsS,
-      bs_reach: S.reach, bs_billow: S.billow, bs_bassS: S.bassS, bs_kickS: S.kickS, bs_galPh: S.galPh, bs_wind: S.wind, bs_fluxPh: S.fluxPh,
+      bs_reach: S.reach, bs_billow: S.billow, bs_bassS: S.bassS, bs_kickS: S.kickS, bs_galPh: S.galPh, bs_tileT: S.tileT,   /* SKY-RATE */ bs_wind: S.wind, bs_fluxPh: S.fluxPh,
       bs_nova: S.nova, bs_shell: Math.min(S.novaT, 30), bs_act: S.tripOn ? TRIP_ACTS[S.tripAct].role : S.act, bs_actT: S.tripOn ? S.tripActT : S.actT,
       bs_moodChaos: S.mChaos, bs_moodGrit: S.mGrit, bs_moodFocus: S.mFocus, bs_moodSpike: S.mSpike,
       bs_moodTilt: S.mTilt, bs_moodAir: S.mAir, bs_moodVolatile: S.mVolatile, bs_moodWave: S.mWave, bs_moodRise: S.mRise,

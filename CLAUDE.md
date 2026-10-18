@@ -834,6 +834,7 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 4. **Too much feedback**: `mix(prev, new, 0.1)` can accumulate to white - use `mix(prev * 0.99, new, 0.1)`
 5. **Hardcoded resolution**: Always use `iResolution`, never hardcode 1920x1080
 6. **Metadata before #version**: If your shader has `#version 300 es`, it MUST be the first line. Put metadata comments (`// @fullscreen: true`) on line 2, not line 1. Shaders without `#version` (ShaderToy-style) can have metadata on line 1.
+7. **Shifting the frame without shifting the feedback**: any composition offset or pan applied to `uv` must also be applied to the `getLastFrameColor()` lookup, or last frame's bright objects get blended back in at the old position as ghost copies.
 
 ## Claude Code Skills
 

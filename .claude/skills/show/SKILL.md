@@ -67,6 +67,7 @@ node scripts/vj/show.js eval 'async () => { const a = window.cranes.controllerFe
 | Input | `input` contains `BlackHole` and `energy > 0`. If not, stop and fix the OS input. |
 | Runtime | `meter` = `object` and `validate` = `function` |
 | Controller | `after > before`, with keys present. If the time doesn't advance, the controller is throwing; see playbook section 7, "Picture frozen". |
+| Shader gate | With music playing, the shader's own quiet gate (`smoothstep` on `energyMean` × `bs_presence`) sits near 1. If it sits low, the gate thresholds were calibrated for a different input level, and the scene will read as silence: dim and nearly frozen. Recalibrate the thresholds in the `-wip` copy before handing off. `energy > 0` alone doesn't prove this. The meter's `gate` uses its own thresholds, so on a different input it can read 0 while the shader is fine. |
 
 Then take one look with `node scripts/vj/show.js shot .claude/vj-shots/show-start.png`, and Read it.
 
@@ -136,7 +137,10 @@ which listens for dial releases and steers the visual from them. (`/show check` 
 preflight-only path.)
 
 **Scratch copy:** edits go to a `-wip` copy of the boot shader (for example `sun-1-wip`),
-hot-swapped in. The boot shader itself stays untouched as the panic fallback.
+hot-swapped in. The boot shader itself stays untouched as the panic fallback. Check `git status`
+first: if the `-wip` file is already tracked, it holds an earlier set's live state, so don't copy
+over it. Start the session from it, or make a fresh copy under a new name. At wind-down, save the
+session's result as the next numbered fork rather than leaving it in the `-wip` file.
 
 ## Panic: `/show panic <fork>`
 

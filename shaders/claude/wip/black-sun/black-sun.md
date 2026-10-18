@@ -479,3 +479,14 @@ User, before going live: "I don't want the camera shutter effect … Replace it 
 - Lighten-only blend toward fixed OKLCH sun hues (ember h38 → amber h60 → hot gold h82, L ≤ 0.84), so it can't clip, darken or turn magenta whatever HUE SPIN is doing.
 - Applied by codemod (`.claude/vj-tools/pre-solarflare/codemod.mjs`) to sun-1-safe, sun-1-show, sun/10–17 and `.claude/vj-tools/sun-1-show.pre-giant.frag`. All 11 blocks were byte-identical, and all 11 compile under `__vjValidate`. The controller is unchanged.
 - Rollback: `.claude/vj-tools/pre-solarflare/` (one copy per file).
+
+## sun-6 — 2026-10-17 live iteration (forked from sun-1)
+The ask: longer rays, and react to the music actually playing, because the story was tuned on a different set. Each edit is tagged in the source.
+- RAYS-TRACK / RAYS-TRACK2: the story envelopes (bs_power, bs_build) can sit flat when the set changes, which floored ray reach. Reach is now floored at sqrt(max(power, 0.6)) and driven by bs_energy, bs_bass and bs_flux. Resting reach is about 2×, FAR-REACH is half-on at rest, and the major rays throw toward the frame edges on loud passages.
+- RIM-ARC: gasHue narrowed to a blue→violet arc (h 228→292, no magenta) with a thin gold crest accent. The old sweep put olive/brown beside violet ("lime against brown", plus the 10-09 green/pink banding veto).
+- BOLD-RAYS: ray bases about 1.5× wider and brighter, flaring on the kick and flux envelopes. Gas veils dimmed so the dark floor survives.
+- FRAME-BAL: the whole frame is offset by 0.7× the binary's centroid, so the pair frames the centre. Off when K15/K16 place the sun by hand.
+- GHOST-FIX: FRAME-BAL first caused ghost sun discs, because the prev-frame feedback UV wasn't shifted with the frame. The feedback UV now subtracts the same offset. Sky gaps sink to indigo-black.
+- SKY-RATE: the tile sky swirls on its own controller clock, bs_tileT, at 0.5× speed at rest up to 1.3× on loud passages. The envelope sets a rate, never an angle.
+- GOLD-SUN: the core stays gold→amber in cool acts, with crimson only at the limb, plus limb darkening. The corona hugs the limb, so there's no grey halo disc over the tiles.
+- NIGHT-FLOOR / NIGHT-FLOOR2 (**unverified**: the wind-down interrupted the check): in the night act the ray cores hold L ≥ 0.7 and lean rose, the gas gets a small resting lift, and the ray cap no longer chokes the web to maroon against a near-black sky.
