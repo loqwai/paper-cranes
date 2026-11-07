@@ -12,6 +12,7 @@
 //   node scripts/vj/show.js shot <file.png>               capture the page (not the screen)
 //   node scripts/vj/show.js status                        is it up, and what is it showing
 //   node scripts/vj/show.js displays                      list displays (index for --display)
+//   node scripts/vj/show.js move <N>                      move the running show to display N, no reload
 //   node scripts/vj/show.js stop                          close the show browser
 //
 // Env: SHOW_CDP_PORT, SHOW_CHROME, SHOW_PROFILE, SHOW_CHROME_FLAGS (extra Chrome flags).
@@ -269,6 +270,11 @@ const commands = {
   shot: file => shot(file),
   status: () => status(),
   displays: () => listDisplays(),
+  move: index => {
+    const displays = listDisplays()
+    const display = pickDisplay(displays, parseInt(index))
+    return withPage((page, context) => moveToDisplay(page, context, [...displays].sort(leftToRight).indexOf(display)))
+  },
   stop: () => stop(),
 }
 
