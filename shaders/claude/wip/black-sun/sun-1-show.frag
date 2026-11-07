@@ -13,6 +13,17 @@
 //   LIGHT:    all the audio (corona glow, flares, rim punch, lattice sparkle, sky glow).
 //   COLOR:    slow medians/means only.
 // Needs ?controller=black-sun (controllers/black-sun.js) for all frame-persistent state.
+//
+// SLIM (2026-11): this is the 2cb.pw/ada-sun bead shader. On Windows, Chrome compiles WebGL through
+// ANGLE → D3D11 → FXC, which inlines every function call and unrolls loops it can count, and its
+// compile time grows much faster than the code. The full build took ~98 s to show a first frame there.
+//   COLD-BOOT: every FADE_IN* (and OG_X/OG2) is held at the look a fresh load shows. Those fades were
+//     anchored to one live show's clock (248 s .. 3139 s), so a fresh load sat in that look anyway;
+//     the giant, the Julia fan and the later story layers stay in the file but are never reached.
+//   Shared bodies: one rolled loop draws both plasma balls, one draws all three ray sets, and noise
+//     samples and OKLCH colours go through noise4() / encLch4() (see ROLLED). gamutLch() now clips to
+//     sRGB instead of the closed-form pull toward grey (the per-site loop was the single biggest cost).
+//   Measure: fxc /T ps_5_0 /O1 on ANGLE's HLSL, ~13.4k → ~3.5k instruction slots.
 
 #define TAU 6.28318530718
 #define PI  3.14159265359
@@ -36,73 +47,73 @@
 //   EFFECT        feature (controller env)              layer                 envelope
 // ============================================================================
 #define FADE_T0     248.183   // FADE-IN: re-baked to the page's bs_time at every hot-swap that adds a layer · RELOAD-REBAKE
-#define FADE_IN     (smoothstep(FADE_T0, FADE_T0 + 75.0, bs_time))
+#define FADE_IN     0.0   // COLD-BOOT: the look a fresh load shows, held
 #define FADE_T1     248.183   // FADE-IN 2: Julia detail, giant cap, no-pulse — re-baked at swap · RELOAD-REBAKE
-#define FADE_IN2    (smoothstep(FADE_T1, FADE_T1 + 75.0, bs_time))
+#define FADE_IN2    0.0   // COLD-BOOT: the look a fresh load shows, held
 #define FADE_T2     1100.436   // SHIVER-2 re-anchor time (bs_time at swap)
 #define GAL_T2      57.1587   // bs_galPh at swap
-#define FADE_IN3    (smoothstep(FADE_T2, FADE_T2 + 75.0, bs_time))
+#define FADE_IN3    0.0   // COLD-BOOT: the look a fresh load shows, held
 #define FADE_T4     248.183   // BUDS + cool gas, re-baked at swap · RELOAD-REBAKE
-#define FADE_IN4    (smoothstep(FADE_T4, FADE_T4 + 75.0, bs_time))
+#define FADE_IN4    0.0   // COLD-BOOT: the look a fresh load shows, held
 #define FADE_T5     248.183   // DARK-FLOOR unit, re-baked at swap · RELOAD-REBAKE
-#define FADE_IN5    (smoothstep(FADE_T5, FADE_T5 + 60.0, bs_time))
+#define FADE_IN5    0.0   // COLD-BOOT: the look a fresh load shows, held
 #define FADE_T6     248.183   // PINWHEEL: re-baked to bs_time at swap · RELOAD-REBAKE
-#define FADE_IN6    (smoothstep(FADE_T6, FADE_T6 + 30.0, bs_time))
+#define FADE_IN6    0.0   // COLD-BOOT: the look a fresh load shows, held
 #define FADE_T7     248.183   // GIANT: bs_time at swap (baked) · RELOAD-REBAKE
-#define FADE_IN7    (smoothstep(FADE_T7, FADE_T7 + 60.0, bs_time))
+#define FADE_IN7    0.0   // COLD-BOOT: the look a fresh load shows, held
 #define FADE_T8     248.183   // GIANT-2: bs_time at swap (baked) · RELOAD-REBAKE
 #define GAL_T8      57.1587   // GIANT-2: bs_galPh at swap (baked) · RELOAD-REBAKE
-#define FADE_IN8    (smoothstep(FADE_T8, FADE_T8 + 30.0, bs_time))
+#define FADE_IN8    0.0   // COLD-BOOT: the look a fresh load shows, held
 #define EASE8       (30.0 * (clamp((bs_time - FADE_T8) / 30.0, 0.0, 1.0) - pow(clamp((bs_time - FADE_T8) / 30.0, 0.0, 1.0), 3.0) + 0.5 * pow(clamp((bs_time - FADE_T8) / 30.0, 0.0, 1.0), 4.0)))   // ∫(1 − smoothstep): a clock that glides to a stop
 #define FADE_T9     248.183   // GIANT-3: bs_time at swap (baked) · RELOAD-REBAKE
-#define FADE_IN9    (smoothstep(FADE_T9, FADE_T9 + 30.0, bs_time))
+#define FADE_IN9    0.0   // COLD-BOOT: the look a fresh load shows, held
 #define FADE_T10    248.183   // GIANT-4: bs_time at swap (baked) · RELOAD-REBAKE
-#define FADE_IN10   (smoothstep(FADE_T10, FADE_T10 + 30.0, bs_time))
+#define FADE_IN10   0.0   // COLD-BOOT: the look a fresh load shows, held
 #define FADE_T11    248.183   // GIANT-5: bs_time at swap (baked) · RELOAD-REBAKE
-#define FADE_IN11   (smoothstep(FADE_T11, FADE_T11 + 30.0, bs_time))
+#define FADE_IN11   0.0   // COLD-BOOT: the look a fresh load shows, held
 #define FADE_T12    248.183   // SURFACE-3D: bs_time at swap (baked) · RELOAD-REBAKE
-#define FADE_IN12   (smoothstep(FADE_T12, FADE_T12 + 40.0, bs_time))
+#define FADE_IN12   0.0   // COLD-BOOT: the look a fresh load shows, held
 #define FADE_T13    248.183   // EMBER-LIMB: bs_time at swap (baked) · RELOAD-REBAKE
-#define FADE_IN13   (smoothstep(FADE_T13, FADE_T13 + 40.0, bs_time))
+#define FADE_IN13   0.0   // COLD-BOOT: the look a fresh load shows, held
 #define FADE_T14    248.183   // FAN-FILL: bs_time at swap (baked) · RELOAD-REBAKE
-#define FADE_IN14   (smoothstep(FADE_T14, FADE_T14 + 40.0, bs_time))
+#define FADE_IN14   0.0   // COLD-BOOT: the look a fresh load shows, held
 #define FADE_T15    248.183   // PLASMA-ARCH: bs_time at swap (baked) · RELOAD-REBAKE
-#define FADE_IN15   (smoothstep(FADE_T15, FADE_T15 + 30.0, bs_time))
+#define FADE_IN15   0.0   // COLD-BOOT: the look a fresh load shows, held
 #define BUD0        207.992   // PLASMA-ARCH: bs_budPh at swap (baked) · RELOAD-REBAKE
 #define FADE_T16    248.183   // LIMB-LAW: bs_time at swap (baked) · RELOAD-REBAKE
-#define FADE_IN16   (smoothstep(FADE_T16, FADE_T16 + 30.0, bs_time))
+#define FADE_IN16   0.0   // COLD-BOOT: the look a fresh load shows, held
 #define FADE_T17    248.183   // FANLIFT: bs_time at swap (baked) · RELOAD-REBAKE
-#define FADE_IN17   (smoothstep(FADE_T17, FADE_T17 + 30.0, bs_time))
+#define FADE_IN17   0.0   // COLD-BOOT: the look a fresh load shows, held
 #define BUD1        207.992   // FANLIFT: bs_budPh at swap (baked, so the sky turn starts from zero) · RELOAD-REBAKE
 #define SKY_ROT     (max(BUD_PH - BUD1, 0.0) * 0.014 * FADE_IN17)   // FANLIFT: the tile sky turns about its centre on the bass-rated forward clock (product of non-decreasing terms, never reverses)
 #define FADE_T18    248.183   // AUDIO-PASS: bs_time at swap (baked) · RELOAD-REBAKE
-#define FADE_IN18   (smoothstep(FADE_T18, FADE_T18 + 30.0, bs_time))
+#define FADE_IN18   0.0   // COLD-BOOT: the look a fresh load shows, held
 #define BUD2        207.992   // AUDIO-PASS: bs_budPh at swap (baked) · RELOAD-REBAKE
 #define FLX2        60.917   // AUDIO-PASS: bs_fluxPh at swap (baked) · RELOAD-REBAKE
 #define BUD_D2      (max(BUD_PH - BUD2, 0.0) * FADE_IN18)       // AUDIO-PASS: bass-rated forward clock since the swap (never reverses)
 #define FLX_D2      (max(bs_fluxPh - FLX2, 0.0) * FADE_IN18)    // AUDIO-PASS: flux-rated forward clock since the swap
 #define FLARE_HIT   (bs_fAmp * exp(-4.5 * bs_fAge) * GATE)      // AUDIO-PASS: flux onset, instant attack, ~400 ms decay
 #define FADE_T19    248.183   // KNOB-MAP: bs_time at swap (baked) · RELOAD-REBAKE
-#define FADE_IN19   (smoothstep(FADE_T19, FADE_T19 + 8.0, bs_time))
+#define FADE_IN19   0.0   // COLD-BOOT: the look a fresh load shows, held
 #define T_S         (7616.1585 + (bs_spT - 7616.1585))     // K7 SPEED: the giant's turn clock, rate = SPEED dial (offsets baked at swap, so no jump)
 #define BUD_S       (5903.8370 + (bs_spB - 5903.8370))     // K7 SPEED: bass-rated boil clock × SPEED
 #define FADE_T20    248.183   // MOTION: bs_time at swap (baked) · RELOAD-REBAKE
-#define FADE_IN20   (smoothstep(FADE_T20, FADE_T20 + 20.0, bs_time))
+#define FADE_IN20   0.0   // COLD-BOOT: the look a fresh load shows, held
 #define FLOW0       103.402   // MOTION: bs_flowPh at swap, baked a little ahead so nothing jumps
 #define FLOW_D      max(bs_flowPh - FLOW0, 0.0)   // MOTION: bass + loudness rated forward clock since the swap (controller FLOW-CLOCK)
 #define C_FLUX0     60.917   // FAN-FOLLOW: bs_fluxPh at swap (baked, so c does not jump) · RELOAD-REBAKE
 #define FADE_T21    248.183   // PAINT-FLOW: bs_time at swap (baked) · RELOAD-REBAKE
-#define FADE_IN21   (smoothstep(FADE_T21, FADE_T21 + 20.0, bs_time))
+#define FADE_IN21   0.0   // COLD-BOOT: the look a fresh load shows, held
 #define FADE_T22    811.2981666666841   // FAN-ROOT: bs_time at swap (baked)
-#define FADE_IN22   (smoothstep(FADE_T22, FADE_T22 + 60.0, bs_time))
+#define FADE_IN22   0.0   // COLD-BOOT: the look a fresh load shows, held
 #define FADE_T23    2056.725   // AUDIO-WEB: bs_time at swap (baked)
-#define FADE_IN23   (smoothstep(FADE_T23, FADE_T23 + 75.0, bs_time))
+#define FADE_IN23   0.0   // COLD-BOOT: the look a fresh load shows, held
 #define FADE_T24    2448.561   // ROOT-HUE: bs_time at swap (baked)
-#define FADE_IN24   (smoothstep(FADE_T24, FADE_T24 + 25.0, bs_time))
+#define FADE_IN24   0.0   // COLD-BOOT: the look a fresh load shows, held
 #define FADE_T25    2587.724   // OG-SKY: bs_time at swap (baked)
-#define OG_X        (clamp((bs_time - FADE_T25) / 240.0, 0.0, 1.0))
+#define OG_X        0.0
 #define FADE_T26    3139.336   // OG-SKY2: bs_time at swap (baked)
-#define OG2         (smoothstep(FADE_T26, FADE_T26 + 60.0, bs_time))   // OG-SKY2: the tile sky holds through night acts as a dark Starry-Night cobalt; the giant keeps a resting ember glow in silence
+#define OG2         0.0   // OG-SKY2: the tile sky holds through night acts as a dark Starry-Night cobalt; the giant keeps a resting ember glow in silence
 #define OG_SKY      (OG_X * OG_X * OG_X * (OG_X * (OG_X * 6.0 - 15.0) + 10.0))   // OG-SKY (user, 02:3x: "lets slowly go to the og sky"): smootherstep over 4 min to the Van Gogh tile sky
 // AUDIO-WEB (user, 2026-10-10 02:17: "I need more, subtle features affected by the audio uniforms. many different ones").
 // One feature → one small verb on its own element. Light/amplitude only, presence-gated, about ±10–25% of that element.
@@ -332,6 +343,23 @@ float noise(in vec2 p) {
                    dot(hash22(i + vec2(1, 1)), f - vec2(1, 1)), u.x), u.y);
 }
 
+// SLIM: FXC (Chrome on Windows: ANGLE → D3D11) inlines every call site and unrolls any loop whose trip
+// count it can prove, and its compile time grows much faster than the code does. ROLLED is 0 at run time
+// but opaque to FXC, so a loop bounded with it stays one rolled copy of its body.
+#define ROLLED min(iFrame, 0)
+
+// SLIM: up to four independent noise() samples through one rolled loop — FXC inlines every call site,
+// so a function that needs several samples carries one copy of noise() instead of one per sample
+vec4 noise4(vec2 a, vec2 b, vec2 c, vec2 d, int n) {
+    vec4 r = vec4(0.0);
+    for (int k = 0; k < 4; k++) {
+        if (k >= n + ROLLED) break;
+        float v = noise(k == 0 ? a : k == 1 ? b : k == 2 ? c : d);
+        if (k == 0) r.x = v; else if (k == 1) r.y = v; else if (k == 2) r.z = v; else r.w = v;
+    }
+    return r;
+}
+
 float s_noise(vec2 p) { return noise(p) * 0.5 + 0.5; }
 
 float fbm(vec2 p) {
@@ -376,20 +404,22 @@ const vec3 MIAMI[15] = vec3[15](
 // into the gold of the sky strokes. K2 HUE SPIN still turns everything.
 // GAMUT-MAP: shrink chroma at constant L/hue until the colour fits sRGB — clamping RGB instead
 // flattened out-of-gamut hues (the neon-plastic teal) into saturated channels. Linear RGB out.
-vec3 gamutLch(vec3 lch) {
-    // GAMUT-FAST: one conversion, closed form, continuous. An out-of-gamut colour is pulled toward its
-    // own-lightness grey just far enough that every channel fits — at constant L and (≈) hue. Continuous
-    // in the input, so smooth gradients stay smooth: the old discrete L-step search terraced the
-    // plasma, and its 9 conversions per call were most of the frame-time regression.
-    vec3 c = oklch2rgb(lch);
-    float g = lch.x * lch.x * lch.x;
-    float t = 1.0;
-    for (int i = 0; i < 3; i++) {
-        float ci = c[i], di = ci - g;
-        if (ci > 1.0) t = min(t, (1.0 - g) / di);
-        if (ci < 0.0) t = min(t, g / (g - ci));
+float wrapPi(float x) { return x - TAU * floor((x + PI) / TAU); }   // SLIM: angle wrapped to [-π, π) — what atan(sin(x), cos(x)) gave, without the atan
+
+vec3 gamutLch(vec3 lch) { return clamp(oklch2rgb(lch), 0.0, 1.0); }   // SLIM: clip per colour site; the finished frame is gamut-mapped once at the end
+vec3 encLch(vec3 lch) { return pow(gamutLch(lch), vec3(1.0 / 2.2)); }
+// SLIM: OKLCH → encoded sRGB for up to four colours through one rolled loop — one inlined conversion
+// instead of one per colour. Callers build the OKLCH triples first (the *V helpers), then convert.
+void encLch4(inout vec3 a, inout vec3 b, inout vec3 c, inout vec3 d, int n) {
+    for (int k = 0; k < 4; k++) {
+        if (k >= n + ROLLED) break;
+        vec3 v = encLch(k == 0 ? a : k == 1 ? b : k == 2 ? c : d);
+        if (k == 0) a = v; else if (k == 1) b = v; else if (k == 2) c = v; else d = v;
     }
-    return clamp(vec3(g) + (c - vec3(g)) * max(t, 0.0), 0.0, 1.0);
+}
+vec3 psyV(float h, float l, float cs) {   // psyC's OKLCH triple
+    float L = clamp(l * 1.35, 0.0, 0.88);
+    return vec3(L, 0.17 * cs * smoothstep(0.0, 0.30, l) * (1.0 - smoothstep(0.70, 0.95, L)), fract(h) * TAU);
 }
 
 // LSD-CLOUDS: 1960s poster-art contour bands for the cloud masses. Adjacent bands are near-
@@ -407,6 +437,10 @@ vec3 lsdBand(float k, float lit) {
 // GAS-HUE: the gas's colour is a CONTINUOUS function of its field — hue sweeps the wheel with the
 // field value (no floor/fract band index anywhere), so the psychedelic multi-hue look comes from the
 // gas's own variation and nothing can step. Anchored to the sun gold; turns slowly with the palette.
+vec3 gasHueV(float v, float L) {   // the gas hue as an OKLCH triple (GAS-COOL is held off: FADE_IN4 is 0 under COLD-BOOT)
+    float hh = 250.0 + 35.0 * (0.5 + 0.5 * sin(v * 5.2 + gPal * TAU * 0.5)) + 8.0 * sin(gPal * TAU);
+    return vec3(min(L * 1.05, 0.80), 0.12, radians(hh));
+}
 vec3 gasHue(float v, float L) {
     float hh = 250.0 + 35.0 * (0.5 + 0.5 * sin(v * 5.2 + gPal * TAU * 0.5)) + 8.0 * sin(gPal * TAU);   // GAS-BLUE (user rule: the sky stays blue, never brown or maroon): indigo ↔ cobalt, was rust → amber
     vec3 warm = gamutLch(vec3(min(L * 1.05, 0.80), 0.12, radians(hh)));
@@ -427,37 +461,33 @@ vec3 bandBlend(float k, float lit) {
     return pow(gamutLch(vec3(mix(a.x, b.x, f), max(a.y, b.y), a.z + dh * f)), vec3(1.0 / 2.2));
 }
 
-vec3 miamiLinR(int i, float lit, float cMul, bool sway) {
-    vec3 e = MIAMI[i];
-    float L = min(e.x * lit, 0.86);
-    float C = e.y * cMul * (0.55 + 0.45 * smoothstep(0.05, 0.35, L)) * (1.0 - smoothstep(0.82, 0.92, L));
-    float rot = (sway ? radians(i >= 12 && i <= 13 ? 15.0 : 20.0) * sin(gPal * TAU) : gPal * TAU) + HUE_SPIN * TAU;
-    return gamutLch(vec3(L, C, radians(e.z) + rot));
-}
-vec3 miamiLin(int i, float lit) { return miamiLinR(i, lit, 1.0, true); }   // SKY-LOCK: every table colour sways at most ±20° (sky ±15°) — the ground stays Van Gogh blue; only the LSD cloud bands and plasma veins ride the full palette clock
 // idx may be fractional: blends neighbouring palette entries (gradients along a tendril)
-vec3 mc(float idx, float lit) {
+// SLIM: neighbouring table entries are blended in OKLCH and converted once (was two conversions and an
+// RGB blend). Every fractional index in use sits between neighbours within ~20° of hue.
+vec3 mcV(float idx, float lit) {
     idx = clamp(idx, 0.0, 14.0);
     int i0 = int(floor(idx)); int i1 = min(i0 + 1, 14);
-    return pow(mix(miamiLin(i0, lit), miamiLin(i1, lit), fract(idx)), vec3(1.0 / 2.2));
+    vec3 e = mix(MIAMI[i0], MIAMI[i1], fract(idx));
+    float L = min(e.x * lit, 0.86);
+    float C = e.y * (0.55 + 0.45 * smoothstep(0.05, 0.35, L)) * (1.0 - smoothstep(0.82, 0.92, L));
+    float rot = radians(i0 == 12 || i0 == 13 ? 15.0 : 20.0) * sin(gPal * TAU) + HUE_SPIN * TAU;
+    return vec3(L, C, radians(e.z) + rot);
 }
+vec3 mc(float idx, float lit) { return encLch(mcV(idx, lit)); }
 // SKY-COBALT: the tile sky stays in the Van Gogh cobalt/teal family. HUE SPIN may lean it ±20° and the
 // palette clock sways it ±15° at a quarter of the old speed; it never rotates round to umber or maroon.
-vec3 skyLin(int i, float lit) {
-    vec3 e = MIAMI[i];
+vec3 mcSkyV(float idx, float lit) {   // SLIM: blended in OKLCH, one conversion (as mc)
+    idx = clamp(idx, 12.0, 14.0);
+    int i0 = int(floor(idx)); int i1 = min(i0 + 1, 14);
+    vec3 e = mix(MIAMI[i0], MIAMI[i1], fract(idx));
     float L = min(e.x * lit, 0.86);
     float C = e.y * (0.55 + 0.45 * smoothstep(0.05, 0.35, L)) * (1.0 - smoothstep(0.82, 0.92, L));
     float rot = radians(15.0) * sin(gPal * TAU * 0.25) + radians(20.0) * sin(HUE_SPIN * TAU);
-    return gamutLch(vec3(L, C, radians(e.z) + rot));
+    return vec3(L, C, radians(e.z) + rot);
 }
-vec3 mcSky(float idx, float lit) {
-    idx = clamp(idx, 12.0, 14.0);
-    int i0 = int(floor(idx)); int i1 = min(i0 + 1, 14);
-    return pow(mix(skyLin(i0, lit), skyLin(i1, lit), fract(idx)), vec3(1.0 / 2.2));
-}
-vec3 skyBand(float k, float lit) {   // SKY-COBALT: cloud contour bands in cobalt ↔ deep blue, with rare gold accents
-    vec3 blue = mcSky(12.0 + 0.45 * mod(k, 3.0), lit);
-    return mix(blue, mcSky(14.0, lit * 0.85), step(0.86, hash12(vec2(k, 3.1))));
+vec3 skyBandV(float k, float lit) {   // SKY-COBALT: cloud contour bands in cobalt ↔ deep blue, with rare gold accents (a select, so one triple)
+    bool gold = hash12(vec2(k, 3.1)) >= 0.86;
+    return mcSkyV(gold ? 14.0 : 12.0 + 0.45 * mod(k, 3.0), gold ? lit * 0.85 : lit);
 }
 
 
@@ -502,7 +532,8 @@ vec3 sky(vec2 uv, float t, float sm) {
     // circles around the sun — breaks the concentric-ring read; the field drifts forward on galPh
     float tW = t < FADE_T8 ? FADE_T2 * .25 + max(t - FADE_T2, 0.0) * .06 : FADE_T2 * .25 + max(FADE_T8 - FADE_T2, 0.0) * .06 + 0.06 * EASE8;   // SHIVER-4: a moving clock inside noise() rocked the rows; it glides to a stop               // SHIVER-2: the warp clock re-anchored at swap, 4× slower — no jump, far less rocking
     vec2 sw = uv * 0.6 + vec2(t < FADE_T8 ? GAL_T2 * 0.04 + max(bs_galPh - GAL_T2, 0.0) * 0.015 : GAL_T2 * 0.04 + (GAL_T8 - GAL_T2) * 0.015 + 0.0008 * EASE8, 0.0);   // SHIVER-4: the scrolling offset displaced the rings in and out; it glides to a stop
-    vec2 u = rotate2D(uv - SKY_C, noise(uv + tW) * .3 + SKY_ROT) + vec2(noise(sw), noise(sw + 5.3)) * 0.7;
+    vec4 nzS = noise4(uv + tW, sw, sw + 5.3, vec2(0.0), 3);
+    vec2 u = rotate2D(uv - SKY_C, nzS.x * .3 + SKY_ROT) + nzS.yz * 0.7;
     float yd = 60.;
     vec2 id = vec2((length(u) + .01) * yd, 0.);
     float xd = max(floor(id.x) * .09, .09);
@@ -513,10 +544,11 @@ vec3 sky(vec2 uv, float t, float sm) {
     id -= lc;
     vec2 cc = vec2(cos((id.y + .5) / xd), sin((id.y + .5) / xd)) * (id.x + .5) / yd;
     cc = rotate2D(cc, -h) + SKY_C;
-    float clN = noise(cc * vec2(.5, 1) - vec2(t * .2 + FLOW_D * 0.3, 0));   // MOTION: clouds sweep faster on bass               // CLOUD-PRESENCE: clouds may sweep the whole frame, not just the upper part
+    vec4 nzC = noise4(cc * vec2(.5, 1) - vec2(t * .2 + FLOW_D * 0.3, 0), lc * vec2(1, 4) + id, vec2(0.0), vec2(0.0), 2);
+    float clN = nzC.x;   // MOTION: clouds sweep faster on bass               // CLOUD-PRESENCE: clouds may sweep the whole frame, not just the upper part
     float clT = 0.012 - 0.006 * BODY;   // NO-SHIVER: the band edge no longer rides the energy envelope   // TILE-DANCE: the band's ragged edge advances with the energy envelope; BODY: mids-heavy sections spread it
     float cl = smoothstep(clT - 0.0015, clT + 0.0015, clN);
-    lc += noise(lc * vec2(1, 4) + id) * vec2(.7, .2);
+    lc += nzC.y * vec2(.7, .2);
     lc += (vec2(hash12(id + 2.9), hash12(id + 6.3)) - 0.5) * vec2(0.12, 0.16) * OG2;   // OG-SKY2: tiles sit off-grid, painterly not brick
     // TILE-DANCE: every brush tile answers the music — the gold band leads, the blue tiles follow at a
     // quarter strength. Envelopes only (controller); per-tile hashed phases on a monotonic clock.
@@ -532,14 +564,23 @@ vec3 sky(vec2 uv, float t, float sm) {
 
     float L = length(uv - SKY_C);
     float ph = gPhase + 0.35 / (L + 0.35);                  // hue bends harder near the sun
-    vec3 base = mcSky(12.0 + 0.8 * (0.5 + 0.5 * sin(sin(L - .1) + ph)), 0.55);   // VANGOGH-SKY: sky blue ↔ deep blue
     float bandK = floor(max(clN - clT, 0.0) / 0.022);                    // LSD-CLOUDS: contour band index from depth inside the cloud
+    // LATTICE: log-polar → it zooms into the hole forever (self-similar, monotonic), spiral arms
+    vec2 d = uv - SKY_C;
+    float ang = atan(d.y, d.x);
+    vec2 q = vec2(ang / TAU * 6.0, log(max(L, 1e-3)) * 0.95 - t * 0.045);
+    q.x += q.y * 0.5;
+    vec3 lat = lattice(q, t);
+    vec3 base = mcSkyV(12.0 + 0.8 * (0.5 + 0.5 * sin(sin(L - .1) + ph)), 0.55);   // VANGOGH-SKY: sky blue ↔ deep blue
+    vec3 tileC = mcSkyV(12.0 + 0.9 * hash12(id), 0.85), bandC = skyBandV(bandK, 0.9 + 0.1 * hT), latCol = mcV(14.0, 0.55 + 0.3 * lat.y);
+    encLch4(base, tileC, bandC, latCol, 4);   // SLIM: the four sky colours in one conversion
+
     // SKY-CALM: the patchwork sits ~40% calmer by default, most of all around the sun so the sun owns the
     // centre — bands fade back toward the blue brush tiles (a hue move, never toward grey) and dim a touch.
     // K8 CLOUD CALM adds on top.
     float calmR = 0.40 * mix(1.0, 0.55, smoothstep(0.3, 1.5, L));
     float calm = clamp(calmR + CLOUD_CALM, 0.0, 0.92);
-    vec3 tile = mix(mcSky(12.0 + 0.9 * hash12(id), 0.85), skyBand(bandK, 0.9 + 0.1 * hT), cl * (1.0 - calm));
+    vec3 tile = mix(tileC, bandC, cl * (1.0 - calm));
     tile *= 1.0 - 0.5 * calmR * (1.0 - smoothstep(0.3, 1.2, L));   // blue brush-tiles; psychedelic contour-banded clouds
     tile *= 1.0 + (1.4 * kFlash * (1.0 - FADE_IN15) + 0.35 * bs_bassSus * GATE) * kT;
     tile *= 1.0 + FADE_IN18 * 0.45 * clamp(RAY_HATS * 1.5, 0.0, 1.0) * (0.5 + 0.5 * sin(length(cc - SKY_C) * 16.0 - FLX_D2 * 6.0 - bs_galPh * 2.0));   // AUDIO-PASS: treble shimmer ripples outward through the tiles   // NO-STROKE: the front no longer paints a lit ring on the tiles — pure refraction only
@@ -549,14 +590,8 @@ vec3 sky(vec2 uv, float t, float sm) {
                  wTile);   // DARK-FLOOR3: the gaps between tiles are the dark floor
     f *= SKY_GLOW;
 
-    // LATTICE: log-polar → it zooms into the hole forever (self-similar, monotonic), spiral arms
-    vec2 d = uv - SKY_C;
-    float ang = atan(d.y, d.x);
-    vec2 q = vec2(ang / TAU * 6.0, log(max(L, 1e-3)) * 0.95 - t * 0.045);
-    q.x += q.y * 0.5;
-    vec3 lat = lattice(q, t);
     float vis = smoothstep(1.7, 0.30, L) * LATTICE_AMT;
-    vec3 latCol = mc(14.0, 0.55 + 0.3 * lat.y) * lat.x * LATTICE_LIT * (1.0 + SPARK * 0.8 + 0.3 * AIR) * 1.6 * SPARKLE;   // + AIR: airy sections glint
+    latCol *= lat.x * LATTICE_LIT * (1.0 + SPARK * 0.8 + 0.3 * AIR) * 1.6 * SPARKLE;   // + AIR: airy sections glint
     f = mix(f, f * 0.55 + latCol, clamp(lat.z, 0.0, 1.0) * vis);
 
     // sunlight scattered into the sky — hue-cycling bloom around the hole
@@ -605,20 +640,20 @@ vec3 sunDisc(vec2 d, float R) {
     // NO-WINDING: differential rotation as two RIGIDLY rotating layers (inner fast, outer slow)
     // blended by radius — a single radius-dependent spin winds tighter forever into rings.
     float amp = 0.9 + 0.9 * gBass * G;                                       // bass: turbulence amplitude
-    vec2 pi_ = rot2(bs_diskPh * 0.55) * p, po = rot2(bs_diskPh * 0.25) * p;
-    float vi = sin(pi_.x * 3.1 + bs_diskPh * 0.7 + amp * sin(pi_.y * 4.3 - bs_diskPh * 0.5 + amp * 0.8 * sin(length(pi_) * 6.0 - bs_diskPh * 0.9 + pi_.x * 2.0)));
-    float vo = sin(po.x * 3.1 + bs_diskPh * 0.7 + amp * sin(po.y * 4.3 - bs_diskPh * 0.5 + amp * 0.8 * sin(length(po) * 6.0 - bs_diskPh * 0.9 + po.x * 2.0)));
-    float v = mix(vi, vo, smoothstep(0.25, 0.85, x));
-    p = mix(pi_, po, smoothstep(0.25, 0.85, x));
+    // SLIM: one rigid layer at the outer rate (the disc shows only as a rim round the ball before the eye forms)
+    p = rot2(bs_diskPh * 0.25) * p;
+    float v = sin(p.x * 3.1 + bs_diskPh * 0.7 + amp * sin(p.y * 4.3 - bs_diskPh * 0.5 + amp * 0.8 * sin(x * 6.0 - bs_diskPh * 0.9 + p.x * 2.0)));
     float v01 = 0.5 + 0.5 * v;
-    float gran = noise(p * 9.0 + vec2(bs_diskPh * 0.15, -bs_diskPh * 0.1));   // convection cells
+    float gran = 0.5 * sin(p.x * 9.0 + 1.3) * sin(p.y * 9.0 - bs_diskPh * 0.15);   // convection cells (SLIM: product of sines, was noise())
     float fil = pow(1.0 - abs(sin(v * 3.0 + p.y * 2.0)), 14.0);              // filament loops
     float mu = sqrt(max(1.0 - x * x, 0.0));                                  // limb darkening
     float T = clamp(0.25 + 0.5 * v01 + 0.3 * gran, 0.0, 1.0);
-    vec3 c = mc(mix(11.0, 7.0, T), 0.6 + 0.4 * T) * (0.5 + 0.7 * mu);   // SUN-DISC2: brighter photosphere
+    vec3 cP = mcV(mix(11.0, 7.0, T), 0.6 + 0.4 * T), cV = psyV(0.88 + 0.06 * sin(gPal * TAU), 0.42, 1.0), cG = mcV(14.0, 1.0), cX = vec3(0.0);
+    encLch4(cP, cV, cG, cX, 3);   // SLIM: photosphere, vein and glint colours in one conversion
+    vec3 c = cP * (0.5 + 0.7 * mu);   // SUN-DISC2: brighter photosphere
     float seam = exp(-v * v / 0.02) * (0.5 + 0.5 * mu);
-    c = mix(c, psyC(0.88 + 0.06 * sin(gPal * TAU), 0.42, 1.0), seam * 0.55);   // magenta/violet veins (slow palette)
-    c += mc(14.0, 1.0) * fil * mu * (0.15 + 1.6 * gTreb * G);               // treble: filament glints
+    c = mix(c, cV, seam * 0.55);   // magenta/violet veins (slow palette)
+    c += cG * fil * mu * (0.15 + 1.6 * gTreb * G);               // treble: filament glints
     c *= 0.7 + 1.1 * SUN_BREATH;                                            // NO-BEAT: only sustained bass breathes the sun
     float cM = max(max(c.r, c.g), max(c.b, 1e-4));
     float cK = cM < 0.55 ? cM : 0.55 + 0.33 * (1.0 - exp(-(cM - 0.55) / 0.33));
@@ -645,12 +680,13 @@ vec3 deepSpace(vec2 uv) {
     float armM = pow(arm, mix(3.5 - 0.8 * BODY, 1.2, clamp(bs_bassSus * G * 1.3, 0.0, 1.0)));   // LEGIBLE bass sustain: the arms widen and breathe   // bass/kick: arms widen
     float turb = 1.0 + 1.2 * bs_billow + 0.5 * bs_chaos;                                    // NO-SHIVER: warp amplitude eases slowly (bs_billow), never per-beat
     vec2 q = uv * 1.1 + vec2(1.0, 0.35) * (bs_galPh * 0.12 + FLOW_D * 0.04);                 // FORWARD: the gas streams one way on the monotonic flow clock
-    float dens = smoothstep(mix(0.22, 0.36, FADE_IN5), mix(0.62, 0.74, FADE_IN5), s_noise(q * 0.7) * 0.6 + s_noise(q * 1.6 + 4.1) * 0.4);   // GAS-LIFT: more veil, still gapped
-    vec2 w = q + vec2(noise(q * 1.3), noise(q * 1.3 + 7.7)) * turb;            // FORWARD: no clock inside the warp
+    vec4 nzD = noise4(q * 0.7, q * 1.6 + 4.1, q * 1.3, q * 1.3 + 7.7, 4);
+    float dens = smoothstep(mix(0.22, 0.36, FADE_IN5), mix(0.62, 0.74, FADE_IN5), (nzD.x * 0.5 + 0.5) * 0.6 + (nzD.y * 0.5 + 0.5) * 0.4);   // GAS-LIFT: more veil, still gapped
+    vec2 w = q + nzD.zw * turb;            // FORWARD: no clock inside the warp
     float v = 0.5 + 0.5 * sin(w.x * 2.2 + sin(w.y * 2.7));
     float fil = exp(-pow(sin(w.x * 3.3 + w.y * 1.4), 2.0) / 0.03);
-    vec3 gasCool = pow(gamutLch(vec3(0.68, 0.13, radians(250.0 + AW_TILT + 15.0 * sin(gPal * TAU)))), vec3(1.0 / 2.2));   // SPLIT-COMP: indigo filaments against the warm veils
-    vec3 gas = mix(gasHue(v + 0.3 * fil, 0.62), gasCool, smoothstep(0.25, 0.85, fil) * 0.8);
+    vec3 gasCool = vec3(0.68, 0.13, radians(250.0 + AW_TILT + 15.0 * sin(gPal * TAU)));   // SPLIT-COMP: indigo filaments against the warm veils
+    vec3 gas = encLch(mix(gasHueV(v + 0.3 * fil, 0.62), gasCool, smoothstep(0.25, 0.85, fil) * 0.8));   // SLIM: blended in OKLCH (both indigo), one conversion
     float fwave = exp(-pow(fract(lr * 0.35 - bs_fluxPh * 0.25) - 0.5, 2.0) / 0.006) * 0.0;
     float gasLit = (0.4 + 1.6 * armM) * (0.6 + 1.8 * bs_bassSus * G);   // LEGIBLE bass sustain: big slow swell of the gas   // BUDGET: the surge lands on the arms (contrast), not the whole field
     float veil = dens * (0.4 + 0.6 * fil) * (1.0 - 0.3 * DYN) * (1.0 + AW_GAS);   // DYN: dynamic music opens wider gaps of empty space                       // TRANSLUCENT: thin veils, wide clear gaps of open space
@@ -690,13 +726,14 @@ vec3 starLayer(vec2 uv) {
     return sc * ((m < 0.55 ? m : 0.55 + 0.3 * (1.0 - exp(-(m - 0.55) / 0.3))) / m);
 }
 
-vec3 sunLchK(float L, float C, float hDeg, float keepL) {
+vec3 sunLchV(float L, float C, float hDeg, float keepL) {   // STORY-HEAT applied, as an OKLCH triple
     float hc = clamp(gHeatOv >= 0.0 ? gHeatOv : bs_heat, 0.0, 1.6);
     if (hc < 1.0) {   // NO-MAGENTA: cooling stops at crimson
         hDeg = max(hDeg - (1.0 - hc) * 62.0, 22.0); L *= mix(0.45 + 0.55 * hc, 0.85 + 0.15 * hc, keepL); C *= 0.85 + 0.15 * hc; }
     else { L = min(L + (hc - 1.0) * 0.22, 0.88); C *= 1.0 - (hc - 1.0) * 0.6; hDeg += (hc - 1.0) * 12.0; }
-    return pow(gamutLch(vec3(L, C, radians(hDeg))), vec3(1.0 / 2.2));
+    return vec3(L, C, radians(hDeg));
 }
+vec3 sunLchK(float L, float C, float hDeg, float keepL) { return encLch(sunLchV(L, C, hDeg, keepL)); }
 vec3 sunLch(float L, float C, float hDeg) { return sunLchK(L, C, hDeg, 0.0); }
 
 // STORY-NEBULA: the scene dissolving into pure plasma (bs_abstract) — domain-warped flow through the
@@ -714,7 +751,7 @@ vec3 nebula(vec2 p) {
     // terms carry no clock — a clock inside sin() moves the field back and forth, which read as shiver.
     vec2 q = p * 1.2 + vec2(1.0, 0.35) * (bs_galPh * 0.15 + FLOW_D * 0.05);   // MOTION: veils stream on bass
     q += normalize(dS + 1e-4) * 0.3 * bs_billow * exp(-rS * 0.6);                     // NO-SHIVER: the bulge eases in over seconds, it never pumps per beat
-    q += vec2(noise(q * 0.9), noise(q * 0.9 + 3.7)) * (1.4 + 0.8 * bs_chaos + 0.6 * bs_billow);
+    q += noise4(q * 0.9, q * 0.9 + 3.7, vec2(0.0), vec2(0.0), 2).xy * (1.4 + 0.8 * bs_chaos + 0.6 * bs_billow);
     for (float i = 1.0; i < 4.0; i++) q += sin(q.yx * (1.1 * i) + vec2(1.3, 2.1) * i) / i * 0.5;
     float v = 0.5 + 0.5 * sin(q.x * 1.7 + sin(q.y * 2.1));
     vec3 c = gasHue(v, 0.55);
@@ -729,7 +766,8 @@ vec3 nebula(vec2 p) {
     return o * ((oM < 0.65 ? oM : 0.65 + 0.2 * (1.0 - exp(-(oM - 0.65) / 0.2))) / oM);
 }
 
-vec3 plasmaBall(vec3 col, vec2 d, float R, float m) {
+// SLIM: the ball composites as col * A + B, so it is built without col and both stars share one inlined copy (see BALLS in mainImage)
+vec4 plasmaBall(vec2 d, float R) {
     float G = GATE;
     // SMALL-PULSE: a small or distant star pulses harder — swell and brightness scale inversely with
     // its radius (tiny DYING/REBIRTH sun or the companion: big kick swell; red giant: subtle)
@@ -742,12 +780,15 @@ vec3 plasmaBall(vec3 col, vec2 d, float R, float m) {
     // two rigidly rotating layers (inner fast, outer slow), blended by radius — no winding into rings
     vec2 qi = rot2(bs_diskPh * 0.45) * q, qo = rot2(bs_diskPh * 0.2) * q;
     vec2 qq = mix(qi, qo, smoothstep(0.2, 0.9, x));
-    vec2 w = vec2(noise(qq * 1.7 + vec2(bs_diskPh * 0.21, 0.0)), noise(qq * 1.7 + vec2(5.2, -bs_diskPh * 0.17)));
+    float angB = atan(p.y, p.x);
+    vec4 nzB = noise4(qq * 1.7 + vec2(bs_diskPh * 0.21, 0.0), qq * 1.7 + vec2(5.2, -bs_diskPh * 0.17), vec2(angB * 3.0 / TAU * 6.0, x * 2.0 - bs_diskPh * 0.4), vec2(0.0), 3);
+    vec2 w = nzB.xy;
     qq += w * 1.1 * swirl;                                                   // domain warp → curling, never straight
     for (float i = 1.0; i < 4.0; i++) qq += sin(qq.yx * (1.3 * i) + vec2(bs_diskPh * 0.35, -bs_diskPh * 0.27) * i) / i * 0.45 * swirl;
     float v = sin(qq.x * 2.6 + sin(qq.y * 3.1));
     // PLASMA-RICH: large swirl + two finer boiling octaves (granulation), all forward-flowing
-    float gran = noise(qq * 7.0 + bs_diskPh * 0.1) * 0.6 + noise(qq * 15.0 - bs_diskPh * 0.17) * 0.4;
+    vec4 nzG = noise4(qq * 7.0 + bs_diskPh * 0.1, qq * 15.0 - bs_diskPh * 0.17, vec2(0.0), vec2(0.0), 2);
+    float gran = nzG.x * 0.6 + nzG.y * 0.4;
     float T = clamp(0.5 + 0.34 * v + 0.42 * gran + 0.35 * GRIT * (gran - 0.5), 0.0, 1.0);   // GRIT: rough sections boil harder (contrast only, mean kept)
     // magnetic arcs: thin bright curves where the warped field crosses zero; width floored by the
     // pixel footprint so they never alias into flicker
@@ -758,25 +799,27 @@ vec3 plasmaBall(vec3 col, vec2 d, float R, float m) {
     L += 0.0;       // CORE-PULSE: the core breathes ±~25% with bass/kick   // BALL-HOT: hot yellow-gold core, the brightest thing on screen
     float Tr = clamp(T * (1.0 - 0.35 * x * x), 0.0, 1.0);
     float hue = Tr < 0.5 ? mix(24.0, 48.0, Tr * 2.0) : mix(48.0, 92.0, Tr * 2.0 - 1.0);   // NO-MAGENTA: lanes are deep crimson, not magenta
-    vec3 ball = sunLchK(clamp(L, 0.36, 0.90), mix(0.21, 0.15, Tr), hue, 1.0 - x * x) * hot;   // VIVID: richer chroma   // CORE-HOT: a cool act shifts the core's hue but barely dims it — the core stays brighter than corona and rays in every act; only the limb takes the full cooling
+    float boil = nzB.z * 0.5 + 0.5;
+    vec3 bB = sunLchV(clamp(L, 0.36, 0.90), mix(0.21, 0.15, Tr), hue, 1.0 - x * x), bS = sunLchV(0.86, 0.12, 84.0, 0.0), bC = sunLchV(0.66, 0.16, mix(34.0, 52.0, boil), 0.0), bX = vec3(0.0);
+    encLch4(bB, bS, bC, bX, 3);   // SLIM: body, sparkle and corona colours in one conversion
+    vec3 ball = bB * hot;   // VIVID: richer chroma   // CORE-HOT: a cool act shifts the core's hue but barely dims it — the core stays brighter than corona and rays in every act; only the limb takes the full cooling
     // NO-OUTLINE2: no line work on the surface at all — any thin bright curve over the cell pattern read
     // as an outline around the dark lanes. Treble now makes the hottest granules sparkle instead.
-    ball += sunLch(0.86, 0.12, 84.0) * pow(smoothstep(0.55, 1.0, gran), 4.0) * z * 0.15;
+    ball += bS * pow(smoothstep(0.55, 1.0, gran), 4.0) * z * 0.15;
     float bM = max(max(ball.r, ball.g), max(ball.b, 1e-4));
     float bK = bM < 0.7 ? bM : 0.7 + 0.22 * (1.0 - exp(-(bM - 0.7) / 0.22));
     ball *= bK / bM;
     float inside = 1.0 - smoothstep(0.62, 1.12, x);                         // SOFT-LIMB/BLEND: the ball dissolves into corona + ray roots over its outer ~40% — no edge to point at
     // corona boiling off the limb, red-orange, bleeding into the ray roots; flux throws flares
     float ang = atan(p.y, p.x);
-    float boil = noise(vec2(ang * 3.0 / TAU * 6.0, x * 2.0 - bs_diskPh * 0.4)) * 0.5 + 0.5;
     float flare = 0.0;
     float cor = exp(-max(x - 0.75, 0.0) * mix(7.0, 3.5, boil * 0.6 + flare)) * (1.0 - 0.5 * inside) * 0.55;   // BLEND: corona overlaps the limb on both sides   // HAZE-CUT: steeper corona falloff
-    vec3 corona = sunLch(0.66, 0.16, mix(34.0, 52.0, boil)) * cor;   // same hue band as the limb and the ray roots
-    col = col * (1.0 - 0.6 * clamp(cor * 1.8, 0.0, 1.0)) + corona;   // NO-GREY-HALO: the glow occludes the blue under it (L down first) instead of adding orange onto blue → grey
-    return mix(col, ball, inside);
+    vec3 corona = bC * cor;   // same hue band as the limb and the ray roots
+    // NO-GREY-HALO: the glow occludes the blue under it (L down first) instead of adding orange onto blue → grey
+    return vec4(corona * (1.0 - inside) + ball * inside, (1.0 - 0.6 * clamp(cor * 1.8, 0.0, 1.0)) * (1.0 - inside));
 }
 
-vec3 blackSun(vec3 col, vec2 d, float t, float m) {   // m = EYE morph 0..1 (one-way)
+vec3 blackSun(vec3 col, vec2 d, float t, float m, vec4 ballAB) {   // m = EYE morph 0..1 (one-way)
     float RH = HOLE_R;
     float r = max(length(d), 1e-4);
     float a = atan(d.y, d.x);
@@ -807,7 +850,7 @@ vec3 blackSun(vec3 col, vec2 d, float t, float m) {   // m = EYE morph 0..1 (one
     float RI = HOLE_R * 3.3;
     float pupR = RH * (1.0 - 0.16 * gPump * G * m);           // the shutter closes down to this
     float RB = mix(RH, RI * 0.92, m);
-    col = plasmaBall(col, d, RB, m);
+    col = col * ballAB.a + ballAB.rgb;   // plasmaBall(d, RB), built in mainImage
 
     // SOLAR-FLARE: on a section change the sun throws a flare surge (it replaced the camera-shutter
     // blades). The corona blooms out in soft radial streamers that turn forward on bs_shutterAng, the
@@ -853,36 +896,35 @@ vec3 blackSun(vec3 col, vec2 d, float t, float m) {   // m = EYE morph 0..1 (one
     // NO-WINDING: inner and outer disk rotate rigidly at different speeds and blend by radius
     // (a radius-dependent orbit phase winds into ever-tighter rings).
     float turbI, turbO;
-    {
-        vec2 qd = vec2(ea * 4.0 + bs_diskPh * 4.0, log(er / RH) * 2.4);
-        for (float i = 1.0; i < 4.0; i++) qd += sin(qd.yx * i + i * 1.3) / i * (0.45 + 0.5 * gMids * G2);   // mids: turbulence
+    {   // SLIM: inner (xy) and outer (zw) turbulence advance together in one loop
+        float lr = log(er / RH) * 2.4;
+        vec4 qd = vec4(ea * 4.0 + bs_diskPh * 4.0, lr, ea * 4.0 + bs_diskPh * 1.6, lr);
+        for (float i = 1.0; i < 4.0; i++) qd += sin(qd.yxwz * i + i * 1.3) / i * (0.45 + 0.5 * gMids * G2);   // mids: turbulence
         turbI = 0.5 + 0.5 * sin(qd.x + qd.y * 0.5);
-        qd = vec2(ea * 4.0 + bs_diskPh * 1.6, log(er / RH) * 2.4);
-        for (float i = 1.0; i < 4.0; i++) qd += sin(qd.yx * i + i * 1.3) / i * (0.45 + 0.5 * gMids * G2);
-        turbO = 0.5 + 0.5 * sin(qd.x + qd.y * 0.5);
+        turbO = 0.5 + 0.5 * sin(qd.z + qd.w * 0.5);
     }
     float turb = mix(turbI, turbO, smoothstep(rin, rout * 0.7, er));
     turb = mix(0.5, turb, 0.7 + 0.6 * gMids * G2);
     float dop = 0.5 + 0.5 * cos(ea);                                       // approaching side = +x
     float glint = pow(turb, 10.0) * clamp(gTreb * 2.5, 0.0, 1.0) * G2;    // treble hot spots
-    vec3 diskC = sunLch(0.55 + 0.2 * turb, 0.19, mix(24.0, 40.0, dop)) * (0.35 + 1.1 * dop * dop);   // DISK-MAGENTA: hot magenta/red so it separates from the gold ball
-    diskC += mc(14.0, 1.0) * glint * 1.5;
+    vec2 nd = dd / max(length(dd), 1e-4);                                  // (cos, sin) of the far side's angle
+    float turb2 = turb;                                                    // SLIM: the far side reuses the disk's turbulence
+    float dop2 = 0.5 + 0.5 * nd.x;
+    vec3 dA = sunLchV(0.55 + 0.2 * turb, 0.19, mix(24.0, 40.0, dop), 0.0), dG = mcV(14.0, 1.0), dF = sunLchV(0.55 + 0.15 * turb2, 0.18, mix(24.0, 40.0, dop2), 0.0), dR = mcV(mix(9.0, 7.0, dop2), 0.95);
+    encLch4(dA, dG, dF, dR, 4);   // SLIM: near disk, glint, far side and photon ring colours in one conversion
+    vec3 diskC = dA * (0.35 + 1.1 * dop * dop);   // DISK-MAGENTA: hot magenta/red so it separates from the gold ball
+    diskC += dG * glint * 1.5;
     // near (front) half of the primary image: drawn over the shadow
     float front = step(dd.y, 0.0);
     diskSum += diskC * bandP * diskAmp * mix(outside, 1.0, front) * (0.5 + 0.5 * turb);
     // lensed far side: a ring hugging the shadow, bright over the top, faint underneath
-    float sa = atan(dd.y, dd.x);
     float halo = exp(-pow((r - RH * 1.42) / (RH * 0.26), 2.0)) * outside;
-    float over = mix(0.30, 1.0, smoothstep(-0.4, 0.7, sin(sa)));
-    vec2 q2 = vec2(sa * 4.0 + bs_diskPh * 2.4, log(r / RH) * 2.4);
-    for (float i = 1.0; i < 3.0; i++) q2 += sin(q2.yx * i + i * 2.1) / i * 0.5;
-    float turb2 = 0.5 + 0.5 * sin(q2.x + q2.y * 0.5);
-    float dop2 = 0.5 + 0.5 * cos(sa);
-    diskSum += sunLch(0.55 + 0.15 * turb2, 0.18, mix(24.0, 40.0, dop2)) * halo * over * (0.4 + 0.6 * turb2) * (0.3 + 0.9 * dop2) * diskAmp * 0.9;
+    float over = mix(0.30, 1.0, smoothstep(-0.4, 0.7, nd.y));
+    diskSum += dF * halo * over * (0.4 + 0.6 * turb2) * (0.3 + 0.9 * dop2) * diskAmp * 0.9;
     // photon ring: thin, hugging the shadow, swells with the bass
     float prW = RH * (0.018 + 0.03 * gBass * G2);
     float pr2 = exp(-pow((r - RH * 1.04) / prW, 2.0));
-    diskSum += mc(mix(9.0, 7.0, dop2), 0.95) * pr2 * (0.5 + 1.6 * gBass * G2 + 0.8 * gKick * G2) * (1.0 - m);   // photon ring only in the black-hole phase — no gold outline on the ball
+    diskSum += dR * pr2 * (0.5 + 1.6 * gBass * G2 + 0.8 * gKick * G2) * (1.0 - m);   // photon ring only in the black-hole phase — no gold outline on the ball
     float dM = max(max(diskSum.r, diskSum.g), max(diskSum.b, 1e-4));
     float dK = dM < 0.5 ? dM : 0.5 + 0.35 * (1.0 - exp(-(dM - 0.5) / 0.35));
     col = col * (1.0 - 0.5 * clamp(dM, 0.0, 1.0)) + diskSum * (dK / dM);   // GARGANTUA: knee-limited, and the disk occludes what's behind it
@@ -935,16 +977,17 @@ vec4 tendrilLayer(float a, float sl, float N, float layer, float m) {
         float rootBoost = 1.0;                                   // bass floods the bases
         float lit = grad * grain;   // SUN-RAYS3: rays read as light even in a quiet passage
         float rHue = mix(88.0, 24.0, pow(u, 0.8))   /* NO-MAGENTA: tips end crimson */ + 15.0 * (h - 0.5) * 2.0 - (layer > 0.5 ? 18.0 : 0.0);   // RAY-GRADE: yellow root → amber → ember → red-magenta tip, ±15° per ray
-        vec3 rayC = sunLch(mix(0.80, 0.62, u) * (0.75 + 0.25 * core), 0.16, rHue);
+        vec3 rayC = sunLchV(mix(0.80, 0.62, u) * (0.75 + 0.25 * core), 0.16, rHue, 0.0), glC = mcV(14.0, 1.0), flC = sunLchV(0.82, 0.14, 70.0, 0.0), snC = vec3(0.86, 0.12, radians(95.0));
+        encLch4(rayC, glC, flC, snC, 4);   // SLIM: ray, glint, flare and snare-spark colours in one conversion
         vec3 c = rayC * (1.3 * e + 0.07 * halo + 0.7 * core) * lit * I;
         float tipSpark = pow(max(0.0, cos(sl * 14.0 - gFlow * TAU * 4.0 + h * TAU)), mix(18.0, 6.0, clamp(gTreb * 1.5, 0.0, 1.0))) * smoothstep(0.25, 0.9, u);   // treble: sparks thicken and race out; low spatial freq so they don't shimmer
-        c += mc(14.0, 1.0) * tipSpark * core * clamp(gTreb * 3.0, 0.0, 1.0) * G * 3.2 * smoothstep(1.0, 0.8, u);   // LEGIBLE hats: glints race out at the tips
+        c += glC * tipSpark * core * clamp(gTreb * 3.0, 0.0, 1.0) * G * 3.2 * smoothstep(1.0, 0.8, u);   // LEGIBLE hats: glints race out at the tips
         // LEGIBLE snare: one bright spark ring bursts out along every ray per mid-band hit — countable
         float snF = exp(-pow((u - bs_snAge * 1.15) / 0.04, 2.0)) * bs_snAmp * pow(1.0 - bs_snAge, 2.0) * (layer < 0.5 ? 1.0 : 0.5);   // eased fade as the ring flies out
-        c += pow(gamutLch(vec3(0.86, 0.12, radians(95.0))), vec3(1.0 / 2.2)) * snF * (0.6 * e + 1.2 * core) * 2.2;   // AUDIO-5X   // treble: gold glints race out along the rays
+        c += snC * snF * (0.6 * e + 1.2 * core) * 2.2;   // AUDIO-5X   // treble: gold glints race out along the rays
         if (layer < 0.5 && abs(mod(id, N) - floor(bs_fId * N)) < 0.5) {      // FLUX-FLARE: a plasma blob breaks off the limb and rides one ray out
             float fb = exp(-pow((u - bs_fAge * 1.1) / 0.07, 2.0)) * (1.0 - bs_fAge) * bs_fAmp;
-            c += sunLch(0.82, 0.14, 70.0) * fb * e * 2.2;
+            c += flC * fb * e * 2.2;
         }
         acc += c;                                                        // rays EMIT: light adds, the final soft-limit keeps it off white
         cov = max(cov, e * I);
@@ -952,21 +995,6 @@ vec4 tendrilLayer(float a, float sl, float N, float layer, float m) {
     return vec4(acc, cov);
 }
 
-// returns (colour, cover); q = position relative to the eye
-vec4 urchin(vec2 q, float m) {
-    float r = max(length(q), 1e-4);
-    float a = atan(q.y, q.x);
-    float r0 = mix(HOLE_R * 1.4, HOLE_R * 3.3 * 0.86, m);              // roots start inside the iris and grow out of its fibres
-    gR0 = r0;
-    float sl = log(r / r0);
-    if (sl < -0.12) return vec4(0.0);                                  // SOFT-LIMB: roots start inside the limb and fade up through the glow
-    vec4 back = tendrilLayer(a, sl, 41.0, 1.0, m);                    // thin, counter-turning
-    vec4 front = tendrilLayer(a, sl, 26.0, 0.0, m);                   // fat, the main field
-    vec4 o;
-    o.rgb = front.rgb + back.rgb * 0.6;   // SUN-RAYS: light from both layers adds
-    o.a = max(front.a, back.a * 0.8);
-    return o;
-}
 
 // JULIA-ARMS (moody-octopus family): the sun's tendrils are the escape field of a Julia set centred
 // on the core. c rides the 0.7885 circle on the mids-rated gas clock (one-way drift, never audio in
@@ -1323,9 +1351,10 @@ void mainImage(out vec4 O, in vec2 g) {
     float wSp = mix(mix(smoothstep(0.0, 0.7, bs_night), 1.0 - smoothstep(0.0, 0.7, bs_night), SPACE_MIX), SPACE_MIX, OG_SKY);   // OG-SKY: every act settles on the tile sky; K8 SKY SWAP still flips it to deep space
     vec3 bg = vec3(0.0);
     if (!hid) {   // PERF-SKY: only the backdrop the act shows is drawn (uniform weight, coherent branch)
-        if (wSp < 0.001) bg = sky(uv, t, sm);
-        else if (wSp > 0.999) bg = deepSpace(uv);
-        else bg = mix(sky(uv, t, sm), deepSpace(uv), wSp);
+        vec3 tileSky = vec3(0.0), space = vec3(0.0);   // SLIM: one inlined copy of each backdrop (FXC inlines every call site)
+        if (wSp < 0.999) tileSky = sky(uv, t, sm);
+        if (wSp > 0.001) space = deepSpace(uv);
+        bg = mix(tileSky, space, wSp);
         bg *= 1.0 - 0.35 * bs_dark;
         gSkyTile *= 1.0 - wSp;   // OG-SKY2: only the tile backdrop counts
         if (FADE_IN23 > 0.001) bg += starLayer(uv) * FADE_IN23 * (1.0 - 0.8 * OG2 * gSkyTile) * (1.0 - OG_SKY * smoothstep(0.06, 0.22, dot(bg, vec3(0.299, 0.587, 0.114))));   // OG-SKY: stars stay in the dark gaps, not over opaque tiles   // AUDIO-WEB/STARS: the starfield over every backdrop
@@ -1339,8 +1368,36 @@ void mainImage(out vec4 O, in vec2 g) {
     float fadeIn = FADE_IN;
     vec2 dArm = fi7 < 0.5 ? d0 : uv0 - limbP;                 // GIANT: the Julia arms fade out at the old sun, then erupt from the giant's limb
     float wArm = fi7 < 0.5 ? 1.0 - smoothstep(0.0, 0.5, fi7) : smoothstep(0.5, 1.0, fi7);
-    vec4 urc = hid ? vec4(0.0) : mix(fadeIn < 1.0 ? urchin(d0, m) : vec4(0.0), juliaArms(dArm, m), fadeIn) * wArm;   // JULIA-ARMS crossfade from the old urchin
-    gBendAmt = 0.0;
+    // BINARY geometry (used by the RAYS loop and the companion below)
+    vec2 C = vec2(bs_cX, bs_cY);
+    vec2 dC = uv0 - C;
+    float compR = 0.16 * 3.3 * 0.92 * ZOOM * 0.42;
+    float sepV = length(C - SUN);
+    // RAYS (SLIM): the urchin's two tendril layers and the companion's rays in one rolled loop, so FXC keeps a
+    // single copy of tendrilLayer. k 0: back layer, thin and counter-turning; k 1: front, fat, the main field
+    // (both rooted inside the iris and growing out of its fibres, unlensed, centred on the eye); k 2: the
+    // companion's rays, leaning toward the main star. COLD-BOOT: FADE_IN is held at 0, so the Julia fan
+    // never mixes in.
+    float bendU = gBendAmt;
+    vec4 backL = vec4(0.0), frontL = vec4(0.0), cr = vec4(0.0);
+    for (int k = 0; k < 4; k++) {
+        if (k >= 3 + ROLLED) break;
+        bool comp = k == 2;
+        vec2 q = comp ? dC : d0;
+        float rq = max(length(q), 1e-4);
+        float r0 = comp ? compR * 0.85 : mix(HOLE_R * 1.4, HOLE_R * 3.3 * 0.86, m);
+        float sl = log(rq / r0);
+        bool on = comp ? bs_cOn > 0.01 && sl > -0.12 && rq < 1.3 : !hid && sl >= -0.12;   // SOFT-LIMB: roots fade up through the glow; PERF: companion rays only within reach
+        if (!on) continue;
+        gR0 = r0;
+        gHeatOv = comp ? 0.32 : -1.0;
+        gBendDir = comp ? atan(SUN.y - C.y, SUN.x - C.x) : atan(bs_cY - SUN.y, bs_cX - SUN.x);
+        gBendAmt = comp ? 0.55 * smoothstep(1.6, 0.4, sepV) : bendU;
+        vec4 v = tendrilLayer(atan(q.y, q.x), sl, k == 0 ? 41.0 : k == 1 ? 26.0 : 14.0, k == 0 ? 1.0 : 0.0, comp ? 1.0 : m);
+        if (k == 0) backL = v; else if (k == 1) frontL = v; else cr = v;
+    }
+    gHeatOv = -1.0; gBendAmt = 0.0;
+    vec4 urc = mix(vec4(frontL.rgb + backL.rgb * 0.6, max(frontL.a, backL.a * 0.8)), juliaArms(dArm, m), fadeIn) * wArm;   // SUN-RAYS: light from both layers adds; JULIA-ARMS crossfade from the old urchin
     float rayM = max(max(urc.r, urc.g), max(urc.b, 1e-4));
     float rayK = rayM < 0.55 ? rayM : 0.55 + 0.25 * (1.0 - exp(-(rayM - 0.55) / 0.25));   // rays peak (≤ 0.80) below the ball core (≤ 0.92)
     vec3 rays = urc.rgb * (rayK / rayM);   // SUN-RAYS: hue-preserving knee — linear up to 0.55 so pumps read, soft above
@@ -1360,39 +1417,34 @@ void mainImage(out vec4 O, in vec2 g) {
 
     // PERF-NOFLOWERS: sunflower field removed (user: too slow) — urchin + sky fill the frame
 
-    f -= fbm(uv0 * 100.0) * 0.05;                           // canvas grain (unlensed — it's the canvas)
+    f -= (0.47 + 0.03 * (hash12(floor(uv0 * 200.0)) - 0.5)) * 0.05;   // canvas grain (unlensed — it's the canvas). SLIM: one hash per ~5 px cell; the 4-octave fbm it replaces was a ~0.47 mean with a faint ripple
     f = max(f, vec3(0.0));
 
     // ── the black sun at the urchin's heart, drawn in screen space over the lensed world
     float abK = clamp(bs_abstract, 0.0, 1.0) * (1.0 - 0.75 * SPACE_MIX);   // K8 SKY SWAP clears the nebula veil
     f = f * (1.0 - 0.45 * abK) + nebula(uv0) * abK * 0.55;   // story abstract: translucent plasma veils over a darkened scene — stars and sky show through
     // BINARY: the companion's rays (bending toward the main star) go in before the main star is drawn
-    vec2 C = vec2(bs_cX, bs_cY);
-    vec2 dC = uv0 - C;
-    float compR = 0.16 * 3.3 * 0.92 * ZOOM * 0.42;
-    float sepV = length(C - SUN);
-    if (bs_cOn > 0.01) {
-        float sb = gBass, sk = gKick;
-        gKick = 0.0;   // LEGIBLE melody: the companion answers pitch movement (bs_pitchMove), nothing else
-        gHeatOv = 0.32;
-        gBendDir = atan(SUN.y - C.y, SUN.x - C.x); gBendAmt = 0.55 * smoothstep(1.6, 0.4, sepV);
-        float rC = max(length(dC), 1e-4), r0C = compR * 0.85;
-        gR0 = r0C;
-        float slC = log(rC / r0C);
-        if (slC > -0.12 && rC < 1.3) {   // PERF: companion rays only within reach
-            vec4 cr = tendrilLayer(atan(dC.y, dC.x), slC, 14.0, 0.0, 1.0);
-            f += cr.rgb * (0.4 + 1.3 * bs_pitchMove) * bs_cOn;
-            // RAY-CROSS: where a main-star ray and a companion ray overlap, the touch shows in a stark
-            // contrasting colour — the gold/crimson rays' complement (electric cyan → violet, swaying on
-            // the slow palette clock), brightest where both are strong, flaring on kicks/treble and kisses
-            float xr = urc.a * cr.a * bs_cOn;
-            float xAmp = xr * 0.9 * (1.0 + 1.5 * bs_kiss + smoothstep(1.2, 0.4, sepV));
-            f += pow(gamutLch(vec3(0.78, 0.15, radians(200.0 + 25.0 * sin(gPal * TAU)))), vec3(1.0 / 2.2)) * xAmp * 1.4;
-            f += pow(gamutLch(vec3(0.88, 0.07, radians(215.0))), vec3(1.0 / 2.2)) * pow(xr, 3.0) * 1.2;   // sparkle at the crossing points
-        }
-        gBass = sb; gKick = sk; gHeatOv = -1.0; gBendAmt = 0.0;
+    if (bs_cOn > 0.01) {   // LEGIBLE melody: the companion answers pitch movement (bs_pitchMove), nothing else; cr is 0 out of reach
+        f += cr.rgb * (0.4 + 1.3 * bs_pitchMove) * bs_cOn;
+        // RAY-CROSS: where a main-star ray and a companion ray overlap, the touch shows in a stark
+        // contrasting colour — the gold/crimson rays' complement (electric cyan → violet, swaying on
+        // the slow palette clock), brightest where both are strong, flaring on kicks/treble and kisses
+        float xr = urc.a * cr.a * bs_cOn;
+        float xAmp = xr * 0.9 * (1.0 + 1.5 * bs_kiss + smoothstep(1.2, 0.4, sepV));
+        f += pow(gamutLch(vec3(0.78, 0.15, radians(200.0 + 25.0 * sin(gPal * TAU)))), vec3(1.0 / 2.2)) * xAmp * 1.4;
+        f += pow(gamutLch(vec3(0.88, 0.07, radians(215.0))), vec3(1.0 / 2.2)) * pow(xr, 3.0) * 1.2;   // sparkle at the crossing points
     }
-    if (fi7 < 0.999) f = mix(blackSun(f, d0, t, m), f, fi7);   // GIANT: the old sun fades out
+    // BALLS (SLIM): the main ball and the companion's ball in one loop, so FXC keeps a single copy of plasmaBall
+    vec4 ballM = vec4(0.0), ballC = vec4(0.0, 0.0, 0.0, 1.0);
+    int nBall = bs_cOn > 0.01 && length(dC) < compR * 3.0 ? 2 : 1;
+    for (int k = 0; k < 4; k++) {
+        if (k >= nBall + ROLLED) break;
+        gHeatOv = k == 0 ? -1.0 : 0.32;
+        vec4 b = plasmaBall(k == 0 ? d0 : dC, k == 0 ? mix(HOLE_R, HOLE_R * 3.3 * 0.92, m) : compR * (1.0 + 0.12 * bs_pitchMove + 0.15 * bs_kiss));
+        if (k == 0) ballM = b; else ballC = b;
+    }
+    gHeatOv = -1.0;
+    if (fi7 < 0.999) f = mix(blackSun(f, d0, t, m, ballM), f, fi7);   // GIANT: the old sun fades out
     f = giantStar(f, uv0, fi7);
     if (bs_cOn > 0.01) {
         // BRIDGE: when the stars are close a plasma bridge arcs between them; a kiss flares it.
@@ -1413,7 +1465,7 @@ void mainImage(out vec4 O, in vec2 g) {
         gKick = 0.0;
         gHeatOv = 0.32;
         if (length(dC) < compR * 3.0) {   // PERF: the companion ball + corona only near it
-            vec3 withC = plasmaBall(f, dC, compR * (1.0 + 0.12 * bs_pitchMove + 0.15 * bs_kiss), 1.0);
+            vec3 withC = f * ballC.a + ballC.rgb;   // plasmaBall(dC, ...), built in the BALLS loop
             // NO-DISC: the melody gain rides the ball + corona only and is 1.0 well inside the PERF cutoff —
             // scaling the whole 3×compR circle (sky included) drew a hard-edged pale/dark disc round the companion
             float cGain = mix(1.0, 0.7 + 0.7 * bs_pitchMove, 1.0 - smoothstep(compR * 0.9, compR * 2.0, length(dC)));
@@ -1496,22 +1548,22 @@ void mainImage(out vec4 O, in vec2 g) {
     float skyDom = 1.0 - smoothstep(0.0, 0.06, dot(f, vec3(0.2126, 0.7152, 0.0722)) - dot(sky0, vec3(0.2126, 0.7152, 0.0722)));   // only where the sky is what shows (fan, corona, arches untouched)
     float skyT = OG2 * gSkyTile * skyDom * smoothstep(1.0, 1.06, rhoG);
     float tileL = (0.22 + 0.45 * lchB.x) * skyT;
-    float oliveW = skyT * smoothstep(1.1, 0.5, abs(atan(sin(lchB.z - 1.75), cos(lchB.z - 1.75)))) * (1.0 - smoothstep(0.40, 0.58, lchB.x));
-    lchB.z += atan(sin(4.54 - lchB.z), cos(4.54 - lchB.z)) * oliveW;
+    float oliveW = skyT * smoothstep(1.1, 0.5, abs(wrapPi(lchB.z - 1.75))) * (1.0 - smoothstep(0.40, 0.58, lchB.x));
+    lchB.z += wrapPi(4.54 - lchB.z) * oliveW;
     lchB.y = max(lchB.y, 0.10 * max(skyT * step(lchB.x, tileL), oliveW));
     lchB.x = max(lchB.x, tileL);
     // OG-SKY2 / REST-EMBER: in silence the giant keeps a resting ember glow (L≈0.25, saturated, h≈43°);
     // it relaxes but never goes black. Fades out as the music comes in, so loud passages are untouched.
     float qW = OG2 * (1.0 - smoothstep(0.0, 0.35, GATE / REACT)) * (1.0 - smoothstep(0.96, 1.0, rhoG)) * fi7;
     float liftE = step(lchB.x, 0.25 * qW) * qW;
-    lchB.z += atan(sin(0.75 - lchB.z), cos(0.75 - lchB.z)) * 0.6 * liftE;
+    lchB.z += wrapPi(0.75 - lchB.z) * 0.6 * liftE;
     lchB.y = max(lchB.y, 0.12 * liftE);
     lchB.x = max(lchB.x, 0.25 * qW);
     lchB.z += HUE_ROT;                                                // K2 HUE SPIN: the whole palette turns
-    float dWarm = atan(sin(1.31 - lchB.z), cos(1.31 - lchB.z));
+    float dWarm = wrapPi(1.31 - lchB.z);
     float warmM = 1.0 - smoothstep(1.3, 1.65, rhoG) * fi7;   // WARM-SCOPE (user rule: the sky stays blue): WARMTH acts on the giant, corona and arches only
     lchB.z += dWarm * WARMTH * warmM * smoothstep(2.0, 0.8, abs(dWarm));   // WARM-WINDOW: only hues within ~115° of gold lean in; navy no longer swings through red to maroon   // K11: 1.31 rad ≈ OKLCH sun gold
-    float cob = smoothstep(0.6, 0.25, abs(atan(sin(lchB.z - 4.55), cos(lchB.z - 4.55)))) * fi7 * smoothstep(0.98, 1.02, rhoG);   // COBALT: deep chromatic blue space so the ember body pops
+    float cob = smoothstep(0.6, 0.25, abs(wrapPi(lchB.z - 4.55))) * fi7 * smoothstep(0.98, 1.02, rhoG);   // COBALT: deep chromatic blue space so the ember body pops
     lchB.x *= 1.0 - 0.15 * cob; lchB.y *= 1.0 + 0.4 * cob;
     float pkO = PAINT_AMT * (1.0 - FADE_IN21);   // PAINT-FLOW: the orbit-row dabs crossfade out (skipped once the fade completes)
     if (pkO > 0.002) {   // K10 PAINT: irregular, overlapping dabs that run along the orbit; broken colour, bristle streaks, dark seams
@@ -1555,22 +1607,22 @@ void mainImage(out vec4 O, in vec2 g) {
     }
     // EMBER (critic #57): warm tones on and round the giant hold chroma and split by lightness — dark →
     // saturated ember, light → pale gold — so salmon (light, reddish, mid-chroma) has nowhere to land.
-    float wE = fi7 * (1.0 - smoothstep(1.5, 1.8, rhoG)) * smoothstep(0.8, 0.45, abs(atan(sin(lchB.z - 0.70), cos(lchB.z - 0.70)))) * FADE_IN21;
-    lchB.z += atan(sin(1.31 - lchB.z), cos(1.31 - lchB.z)) * smoothstep(0.62, 0.80, lchB.x) * wE;
+    float wE = fi7 * (1.0 - smoothstep(1.5, 1.8, rhoG)) * smoothstep(0.8, 0.45, abs(wrapPi(lchB.z - 0.70))) * FADE_IN21;
+    lchB.z += wrapPi(1.31 - lchB.z) * smoothstep(0.62, 0.80, lchB.x) * wE;
     lchB.y = mix(lchB.y, max(lchB.y, 0.15), wE);
     // ROOT-HUE (critics #65/#68/#69/#71, user rule: no hot magenta, ever): round the companion, every
     // violet → magenta → raspberry hue (≈270°..30°) lands on ember gold (h 30–60). The lilac halo was
     // crimson rays + the cyan ray-cross summed; the raspberry core was the heat-0.32 crimson floor (22°).
     // Cyan (200°) and the indigo sky (≤ 265°, dark) are left alone. Applied after HUE SPIN and WARMTH.
     float cmM = bs_cOn * (1.0 - smoothstep(compR * 1.8, compR * 3.4, length(uv0 - C))) * FADE_IN24;
-    float dRb = atan(sin(lchB.z - 5.78), cos(lchB.z - 5.78));
+    float dRb = wrapPi(lchB.z - 5.78);
     float cmW = cmM * smoothstep(1.05, 0.70, abs(dRb)) * smoothstep(0.12, 0.30, lchB.x);
     float cmS = smoothstep(-0.25, 0.1, dRb);   // 1 = the raspberry side (rotates up through red), 0 = the violet side (fades out)
     float cmT = 0.524 + 0.524 * smoothstep(0.2, 0.75, lchB.x);   // dark → ember h 30°, light → gold h 60°
-    lchB.z += atan(sin(cmT - lchB.z), cos(cmT - lchB.z)) * cmW * cmS;
+    lchB.z += wrapPi(cmT - lchB.z) * cmW * cmS;
     lchB.y = mix(lchB.y, clamp(lchB.y, 0.14, 0.19), cmW * cmS);
-    lchB.z += atan(sin(4.61 - lchB.z), cos(4.61 - lchB.z)) * cmW * (1.0 - cmS);   // ROOT-HUE2: the violet side turns DOWN to the sky indigo (h 264°), never through magenta and never grey
-    float mg = smoothstep(0.45, 0.15, abs(atan(sin(lchB.z - 5.72), cos(lchB.z - 5.72))));   // NO-MAGENTA: hues near 328° lose most of their chroma
+    lchB.z += wrapPi(4.61 - lchB.z) * cmW * (1.0 - cmS);   // ROOT-HUE2: the violet side turns DOWN to the sky indigo (h 264°), never through magenta and never grey
+    float mg = smoothstep(0.45, 0.15, abs(wrapPi(lchB.z - 5.72)));   // NO-MAGENTA: hues near 328° lose most of their chroma
     lchB.y *= 1.0 - 0.8 * mg;
     float LB = lchB.x < 0.6 ? lchB.x : 0.6 + 0.22 * (1.0 - exp(-(lchB.x - 0.6) / 0.22));
     f = pow(gamutLch(vec3(LB, lchB.y * (1.15 + 0.12 * TONAL), lchB.z)), vec3(1.0 / 2.2));
