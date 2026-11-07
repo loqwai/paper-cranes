@@ -480,20 +480,6 @@ vec3 blackSun(vec3 col, vec2 d, float t, float m) {   // m = EYE morph 0..1 (one
     float RB = mix(RH, RI * 0.92, m) * (1.0 + 0.07 * gBass * G + 0.04 * gKick * G);
     col = plasmaBall(col, d, RB, m);
 
-    // SHUTTER: on a section change the eye resizes behind a camera aperture — N overlapping blades
-    // swing in (spiral edges) and out again while bs_shutterAng turns them. Cover is 0 between events.
-    if (bs_shutter > 0.001) {
-        float N = 8.0, seg = TAU / N;
-        float ang = a - bs_shutterAng * TAU - 0.9 * log(r / RH);           // spiral blade edges
-        float local = mod(ang, seg) - 0.5 * seg;
-        float apR = mix(RI, pupR * 0.9, bs_shutter);                       // aperture closes to the pupil and reopens
-        float poly = r * cos(local) / cos(0.5 * seg);                      // N-gon distance
-        float blade = smoothstep(apR - 0.004, apR + 0.004, poly) * (1.0 - smoothstep(RI * 1.0, RI * 1.06, r));
-        float edge = exp(-pow((poly - apR) / (RH * 0.04), 2.0)) + 0.6 * exp(-pow(local / 0.02, 2.0)) * step(apR, poly);
-        vec3 bladeC = mc(10.0, 0.45 + 0.25 * (0.5 + 0.5 * cos(local * N))) + mc(8.0, 0.9) * edge * 0.8;
-        col = mix(col, bladeC, blade * smoothstep(0.0, 0.25, bs_shutter));
-    }
-
     // GARGANTUA: tilted accretion disk around the shadow (black-hole phase; a ghost of it stays as the
     // eye forms). Analytic 2D lensing: the near side crosses in front of the shadow, the far side is
     // lensed UP and over the top (and faintly under) as a ring hugging the shadow; thin photon ring;
