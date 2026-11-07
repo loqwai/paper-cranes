@@ -122,7 +122,7 @@ The musical states come from `controllers/black-sun.js`:
   the SUPERNOVA, with a manual K8 COLLIDE. Until that lands, force a supernova with
   **K5 = 0.64**.
 
-## 6. Fork library (`shaders/sun/`)
+## 6. Fork library (`shaders/claude/wip/sun/`)
 
 Open a fork with `jam.html?shader=sun/N&controller=sun-N&wavelet=true&vj=1&remote=display`. Use
 `controller=sun` for N=1.
@@ -167,7 +167,7 @@ node scripts/vj/show.js eval 'async (path) => {
   window.cranes.shader = src
   const u = new URL(location.href); u.searchParams.set("shader", path); history.replaceState({}, "", u)
   return { ok: true }
-}' '["sun/7"]'
+}' '["claude/wip/sun/7"]'
 ```
 
 The live controller keeps running. A fork's look depends mostly on its shader, and its
@@ -179,7 +179,7 @@ The wall went fully black mid-set. The cause was a shader output guard using `is
 which the show Chrome's GPU path (ANGLE/Metal) mis-evaluates, zeroing every pixel; the
 previous-frame feedback kept it black.
 
-- **Recovery:** `/show panic sun/7` (a live hot-swap) brought the picture back in 2 s.
+- **Recovery:** `/show panic claude/wip/sun/7` (a live hot-swap) brought the picture back in 2 s.
 - **Never** use `isnan`/`isinf`. Clamp at the source.
 - **Never** write the page's boot shader while it is on the wall. HMR pushes it over any
   hot-swap, which is how a broken edit reached the wall. Iterate on a `-wip.frag` copy, verify
@@ -200,7 +200,7 @@ Full list: [vj-preferences.md](vj-preferences.md).
 
 ## 9. Open at the end of rehearsal
 
-The editing agent may already have fixed some of these. Check `shaders/sun/sun.md`.
+The editing agent may already have fixed some of these. Check `shaders/claude/wip/sun/sun.md`.
 
 - Frame-level brightness budget, so loud and **quiet** moments don't wash out the frame.
 - Grey veil over the night sky.
@@ -208,4 +208,4 @@ The editing agent may already have fixed some of these. Check `shaders/sun/sun.m
 - Binary inspiral leading to a **collision supernova**, plus K8 COLLIDE.
 - Musicality: rResid is still near 0 or negative, and motion sometimes rises when the music is
   quiet.
-- Porting the flicker fix into `sun/6.frag`.
+- Porting the flicker fix into `claude/wip/sun/6.frag`.

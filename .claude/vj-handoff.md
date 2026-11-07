@@ -3,7 +3,7 @@
 ## Wall
 - Show Chrome on the XGIMI (CDP 9333), `jam.html?shader=claude/wip/black-sun/sun-1-wip&controller=black-sun&wavelet=true&vj=1&remote=display&audio_device=USB%20Audio%20CODEC`. Dev server: `npm run dev` from `~/Projects/paper-cranes` (6969), branch `peter-show`.
 - Audio: USB Audio CODEC. Recovery snapshot: `.claude/vj-state.json`.
-- Panic forks (frozen, compile-checked): `sun/10`, `sun/11` (`/show panic sun/11`).
+- Panic forks (frozen, compile-checked): `claude/wip/sun/10`, `claude/wip/sun/11` (`/show panic claude/wip/sun/11`).
 
 ## Live in sun-1-wip.frag (uncommitted)
 NO-SHIVER-2/3/4, LIMB-1b, GLOW-PULSE-1, COLLAPSE-LIFT-1b, COMPANION-LOOK-1, SCENES-2b (ORBIT/ECLIPSE, now gated off by no-space), NO-FLASH-1, SKY-RETURN-1, FRACTAL-SKY-1, FRACTAL-CALM-1b, LATTICE-MIX-1, EVO-WIRE-1, ZOOM-K4-1 (K4 flies into the fractal), SUN-CAST-1b (dwarf, red giant, pulsar, binary), PERF-CAST-1.
@@ -25,11 +25,11 @@ NO-SHIVER-2/3/4, LIMB-1b, GLOW-PULSE-1, COLLAPSE-LIFT-1b, COMPANION-LOOK-1, SCEN
 
 ## Other work
 - PR #161 (video capture → `getLastFrameColor`), worktree `~/Projects/paper-cranes-video`, branch `video-capture`: 4 review rounds, last clean, CI green, still draft. Bring onto the wall = merge into the served checkout (one reload) when the capture card is plugged in; use `video=<label>`.
-- Uncommitted: `scripts/twister-dials.js` (live dial grid: `node scripts/twister-dials.js`), forks sun/10–11, controller edits, journal + prefs.
+- Uncommitted: `scripts/twister-dials.js` (live dial grid: `node scripts/twister-dials.js`), forks claude/wip/sun/10–11, controller edits, journal + prefs.
 - Post-show fixes: `src/midi.js` should reopen its own port; `scripts/vj/show.js` goto should hold the CDP grant until audio starts; vite should ignore `.claude/**`.
 
 ## Session 2 (22:25 to ~23:00)
-- Forks `sun/12` and `sun/13` are panic-safe snapshots of the live wall (`/show panic sun/13`), with controllers frozen as `sun-12.js` and `sun-13.js`.
+- Forks `claude/wip/sun/12` and `claude/wip/sun/13` are panic-safe snapshots of the live wall (`/show panic claude/wip/sun/13`), with controllers frozen as `sun-12.js` and `sun-13.js`.
 - K10 is now PAINT (the fade is a constant 1). K1 and K17–K20 are the tendril params (curl, count, length, width, sway), now audio-driven via `#define`s in sun-1-wip; the knob lines are commented underneath.
 - The Twister bank-2 CC16–19 → knob_17–20 remap was done live in localStorage (they had been bound to the dial push-switches).
 - Jank is CPU-side: a flat shader still drops about 9 frames per 600. The suspects are the CDP pollers and the 40-channel controller. The MIDI watchdog was slowed to 20 s.
