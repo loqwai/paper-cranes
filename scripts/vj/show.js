@@ -21,8 +21,44 @@ import { chromium } from 'playwright'
 
 const CDP_PORT = parseInt(process.env.SHOW_CDP_PORT || '9333')
 const CDP_URL = `http://127.0.0.1:${CDP_PORT}`
-const CHROME = process.env.SHOW_CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-const PROFILE = join(homedir(), 'Library', 'Application Support', 'paper-cranes-show')
+
+// Displays come back as { name, left, top, width, height } in OS screen coordinates (top-left
+// origin of the primary screen), primary first.
+const PLATFORMS = {
+  darwin: {
+    chrome: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    profile: join(homedir(), 'Library', 'Application Support', 'paper-cranes-show'),
+    displays: () => {
+      const js = 'ObjC.import("AppKit");const s=$.NSScreen.screens;const o=[];for(let i=0;i<s.count;i++){const c=s.objectAtIndex(i),f=c.frame;o.push({name:ObjC.unwrap(c.localizedName),x:f.origin.x,y:f.origin.y,w:f.size.width,h:f.size.height})};JSON.stringify(o)'
+      const screens = JSON.parse(execFileSync('osascript', ['-l', 'JavaScript', '-e', js]).toString())
+      const mainH = screens[0].h
+      // NSScreen is bottom-left origin.
+      return screens.map(s => ({ name: s.name, left: s.x, top: mainH - (s.y + s.h), width: s.w, height: s.h }))
+    },
+    keepAwake: pid => spawn('caffeinate', ['-dimsu', '-w', String(pid)], { detached: true, stdio: 'ignore' }).unref(),
+  },
+  win32: {
+    chrome: join(process.env.PROGRAMFILES, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+    profile: join(process.env.LOCALAPPDATA || homedir(), 'paper-cranes-show'),
+    displays: () => {
+      const ps = 'Add-Type -AssemblyName System.Windows.Forms; @([System.Windows.Forms.Screen]::AllScreens | Sort-Object { -not $_.Primary }, { $_.Bounds.X } | % { @{ name = $_.DeviceName; left = $_.Bounds.X; top = $_.Bounds.Y; width = $_.Bounds.Width; height = $_.Bounds.Height } }) | ConvertTo-Json -Compress'
+      return JSON.parse(execFileSync('powershell.exe', ['-NoProfile', '-Command', ps]).toString())
+    },
+    // SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED) lasts as long as this PowerShell lives.
+    keepAwake: pid => spawn('powershell.exe', ['-NoProfile', '-Command',
+      `Add-Type -Name P -Namespace W -MemberDefinition '[DllImport("kernel32.dll")] public static extern uint SetThreadExecutionState(uint f);'; [W.P]::SetThreadExecutionState(0x80000003) | Out-Null; Wait-Process -Id ${pid}`,
+    ], { detached: true, stdio: 'ignore', windowsHide: true }).unref(),
+    // With mixed display scaling, --window-position lands on the wrong screen (measured: a 150%
+    // primary + 100% secondary put the window on the primary), so the window is moved in Chrome's
+    // own screen coordinates after launch.
+    placeByChrome: true,
+  },
+}
+
+const platform = PLATFORMS[process.platform]
+if (!platform) throw new Error(`show.js supports ${Object.keys(PLATFORMS).join(', ')}, not ${process.platform}`)
+const CHROME = process.env.SHOW_CHROME || platform.chrome
+const PROFILE = platform.profile
 
 const CHROME_FLAGS = [
   `--remote-debugging-port=${CDP_PORT}`,
@@ -35,7 +71,7 @@ const CHROME_FLAGS = [
   '--disable-notifications',
   '--disable-features=Translate,MediaRouter,GlobalMediaControls,PrivacySandboxSettings4',
   '--autoplay-policy=no-user-gesture-required',
-  // A projected window is often "occluded" by nothing macOS can see; never let Chrome throttle it.
+  // A projected window is often "occluded" by nothing the OS can see; never let Chrome throttle it.
   '--disable-background-timer-throttling',
   '--disable-renderer-backgrounding',
   '--disable-backgrounding-occluded-windows',
@@ -53,13 +89,7 @@ const cdpUp = async () => {
   }
 }
 
-const listDisplays = () => {
-  const js = 'ObjC.import("AppKit");const s=$.NSScreen.screens;const o=[];for(let i=0;i<s.count;i++){const c=s.objectAtIndex(i),f=c.frame;o.push({name:ObjC.unwrap(c.localizedName),x:f.origin.x,y:f.origin.y,w:f.size.width,h:f.size.height})};JSON.stringify(o)'
-  const screens = JSON.parse(execFileSync('osascript', ['-l', 'JavaScript', '-e', js]).toString())
-  const mainH = screens[0].h
-  // NSScreen is bottom-left origin; Chrome's --window-position is top-left origin of the main screen.
-  return screens.map((s, index) => ({ index, name: s.name, left: s.x, top: mainH - (s.y + s.h), width: s.w, height: s.h }))
-}
+const listDisplays = () => platform.displays().map((d, index) => ({ index, ...d }))
 
 // Default to the last display: with a projector attached that is the projector, alone it is the laptop.
 const pickDisplay = (requested) => {
@@ -99,6 +129,26 @@ const ensureFullscreen = async (page) => {
   await cdp.detach()
 }
 
+// Same order as listDisplays: primary first, then left to right.
+const moveToDisplay = async (page, context, index) => {
+  const session = await context.browser().newBrowserCDPSession()
+  // grantPermissions replaces the origin's whole grant set, so the show permissions ride along or the mic is revoked.
+  await session.send('Browser.grantPermissions', { origin: new URL(page.url()).origin, permissions: ['audioCapture', 'midi', 'midiSysex', 'windowManagement'] })
+  const screens = await page.evaluate(async () => (await getScreenDetails()).screens
+    .map(s => ({ name: s.label, primary: s.isPrimary, left: s.left, top: s.top, width: s.width, height: s.height }))
+    .sort((a, b) => (b.primary - a.primary) || (a.left - b.left)))
+  const target = screens[index]
+  if (!target) throw new Error(`Chrome sees no screen ${index}; has ${JSON.stringify(screens)}`)
+  const cdp = await context.newCDPSession(page)
+  const { windowId } = await cdp.send('Browser.getWindowForTarget')
+  await cdp.send('Browser.setWindowBounds', { windowId, bounds: { windowState: 'normal' } })
+  await cdp.send('Browser.setWindowBounds', { windowId, bounds: { left: target.left, top: target.top, width: target.width, height: target.height } })
+  await cdp.send('Browser.setWindowBounds', { windowId, bounds: { windowState: 'fullscreen' } })
+  await cdp.detach()
+  await session.detach()
+  return target.name
+}
+
 const goto = (url) => withPage(async (page, context) => {
   await grant(context, url)
   await page.goto(url)
@@ -119,15 +169,16 @@ const launch = async (url, displayIndex) => {
     'about:blank',
   ], { detached: true, stdio: 'ignore' })
   chrome.unref()
-  // Keep the display awake for as long as the show browser lives.
-  spawn('caffeinate', ['-dimsu', '-w', String(chrome.pid)], { detached: true, stdio: 'ignore' }).unref()
+  platform.keepAwake(chrome.pid)
 
   const deadline = Date.now() + 15000
   while (!(await cdpUp())) {
     if (Date.now() > deadline) throw new Error(`Chrome did not open ${CDP_URL} within 15s (pid ${chrome.pid})`)
     await new Promise(r => setTimeout(r, 200))
   }
-  return { reused: false, pid: chrome.pid, display: display.name, url: await goto(url) }
+  const shown = await goto(url)
+  const placed = platform.placeByChrome ? await withPage((page, context) => moveToDisplay(page, context, display.index)) : display.name
+  return { reused: false, pid: chrome.pid, display: placed, url: shown }
 }
 
 // The expression is evaluated in the page; if it yields a function, it is called with the args.
