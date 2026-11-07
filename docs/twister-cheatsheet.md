@@ -54,4 +54,4 @@ staged fix (`.claude/vj-tools/sun-1-show.knobs-fix2.frag`) to read strongly.
 
 ## Escape hatch
 
-Tell Claude `/show panic sun/7`. It hot-swaps a known-good fork without a reload. The controller keeps running.
+Tell Claude `/show panic claude/wip/sun/7`. It hot-swaps a known-good fork without a reload. The controller keeps running.

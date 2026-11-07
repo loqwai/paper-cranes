@@ -254,7 +254,7 @@ Preset: `jam.html?shader=claude/wip/black-sun/sun-5&controller=black-sun-sun-5&v
 
 **Haze cut (sun-1, `HAZE-CUT`):** corona falloff steepened (exp 12→5 instead of 6→2.5, rest amplitude 0.45→0.3), ray glow width at rest 0.8→0.55 with the same bass peak, ray halo 0.16→0.07. 20 s meter after: lum 0.28, dark 0.08, lumMin 0.21, clip 0, flicker 0.20, hueConc 0.31, rResid 0.27.
 
-**Storylines + big waves (sun-1):** see `shaders/sun/sun.md` and `docs/storylines.md` — the line continues in `sun/`.
+**Storylines + big waves (sun-1):** see `shaders/claude/wip/sun/sun.md` and `docs/storylines.md` — the line continues in `sun/`.
 
 ### 2026-10-09 show — sun-1-wip: shiver fixes (live, hot-swapped)
 - Shiver probe read 0.92 (edge/radial retrace ~40). Two audio-driven *positions* found:
@@ -477,5 +477,5 @@ User, 02:17: "I need more, subtle features affected by the audio uniforms. many 
 User, before going live: "I don't want the camera shutter effect … Replace it with a better, more thematic effect."
 - The section-change shutter (8 spiral aperture blades over the ball sun) is gone. In its place, a **solar flare surge** on the same `bs_shutter` / `bs_shutterAng` envelope: soft radial coronal streamers stretch out to ~2.5 radii and turn forward on `bs_shutterAng`, the limb flares hot gold, and a heat ripple travels outward. The ripple displaces the streamer field and is never drawn as a ring. It peaks mid-envelope, where `bs_irisScale` resizes the sun, so the resize stays hidden.
 - Lighten-only blend toward fixed OKLCH sun hues (ember h38 → amber h60 → hot gold h82, L ≤ 0.84), so it can't clip, darken or turn magenta whatever HUE SPIN is doing.
-- Applied by codemod (`.claude/vj-tools/pre-solarflare/codemod.mjs`) to sun-1-safe, sun-1-show, sun/10–17 and `.claude/vj-tools/sun-1-show.pre-giant.frag`. All 11 blocks were byte-identical, and all 11 compile under `__vjValidate`. The controller is unchanged.
+- Applied by codemod (`.claude/vj-tools/pre-solarflare/codemod.mjs`) to sun-1-safe, sun-1-show, claude/wip/sun/10–17 and `.claude/vj-tools/sun-1-show.pre-giant.frag`. All 11 blocks were byte-identical, and all 11 compile under `__vjValidate`. The controller is unchanged.
 - Rollback: `.claude/vj-tools/pre-solarflare/` (one copy per file).

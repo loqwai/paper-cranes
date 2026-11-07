@@ -60,7 +60,7 @@ const rewrite = (src, { at, wall = '', hold = [], cold = false }) => {
     return pre + name + gap + v.toFixed(3)   // always a float literal: GLSL ES has no int → float
   })
 
-  // RELOAD-REBAKE guard: without max() the warp jumps when FADE_T8 lands before FADE_T2 (sun/14 lacks it)
+  // RELOAD-REBAKE guard: without max() the warp jumps when FADE_T8 lands before FADE_T2 (claude/wip/sun/14 lacks it)
   const GUARD = '(FADE_T8 - FADE_T2) * .06'
   if (out.includes(GUARD)) {
     out = out.replaceAll(GUARD, 'max(FADE_T8 - FADE_T2, 0.0) * .06')
@@ -74,7 +74,7 @@ const rewrite = (src, { at, wall = '', hold = [], cold = false }) => {
     diff.push({ anchor: 'FADE', from: '1 - knob_10', to: '1.0', why: 'patch' })
   }
 
-  // SUN-CAST ramp (sun/11–13): the cast arrives one star at a time from its anchor
+  // SUN-CAST ramp (claude/wip/sun/11–13): the cast arrives one star at a time from its anchor
   const CAST = /float tc = (?:bs_time < (\d+(?:\.\d+)?) \? bs_time : bs_time - \1|max\(bs_time - (-?\d+(?:\.\d+)?), 0\.0\));/
   const mc = out.match(CAST)
   const wc = wall.match(CAST)
@@ -85,7 +85,7 @@ const rewrite = (src, { at, wall = '', hold = [], cold = false }) => {
     out = out.replace(CAST, next)
   }
 
-  // JS ramps that sun/10–13 baked as constants; the night eased them in from the page over these seconds
+  // JS ramps that claude/wip/sun/10–13 baked as constants; the night eased them in from the page over these seconds
   const RAMPS = { sky_return: 90, no_space: 20, lattice_mix: 180 }
   for (const [name, secs] of Object.entries(RAMPS)) {
     const own = out.match(new RegExp(`^const float ${name} = (\\d+(?:\\.\\d+)?);.*$`, 'm'))
@@ -122,7 +122,7 @@ const page = async (src, opts, rewrite) => {
     try { return rewrite(src, { at, wall, hold: opts.hold, cold: opts.cold }) } catch (e) { return { error: e.message } }
   })()
   if (out.error) return { ok: false, why: out.error }
-  const bare = s => String(s).replace(/^[ \t]*\/\/.*$/gm, '')   // comment-only lines: sun/16 and 17 are sun/15 with new header comments
+  const bare = s => String(s).replace(/^[ \t]*\/\/.*$/gm, '')   // comment-only lines: claude/wip/sun/16 and 17 are claude/wip/sun/15 with new header comments
   const same = bare(out.src) === bare(wall)
   if (!same) {
     const v = window.__vjValidate(out.src)
