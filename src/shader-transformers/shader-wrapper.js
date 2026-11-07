@@ -17,8 +17,10 @@ const getQueryParamUniforms = (shader, otherUniforms = '') => {
     const knownParams = new Set(['shader', 'audio', 'noaudio', 'embed', 'fullscreen', 'remote', 'fft_size', 'smoothing', 'history_size', 'controller', 'performance'])
     const knownUniforms = getKnownUniforms()
 
-    // Combine shader and other uniform declarations, strip whitespace for matching
-    const allCode = (shader + otherUniforms).replace(/\s+/g, ' ')
+    // Every name already declared, including comma lists (`uniform float a, b, c;`): a second
+    // declaration of the same name is a compile error.
+    const declared = new Set([...(shader + otherUniforms).matchAll(/\buniform\s+\w+\s+([^;]+);/g)]
+        .flatMap(m => m[1].split(',').map(name => name.trim().split(/[\s[]/)[0])))
 
     const uniforms = []
     for (let [key, value] of params) {
@@ -26,12 +28,11 @@ const getQueryParamUniforms = (shader, otherUniforms = '') => {
         if (knownParams.has(key)) continue
         if (key.startsWith('knob_')) continue  // Already handled
         if (key.includes('.')) continue  // Skip metadata params like param.min, param.max
-        // Check if uniform is already declared
-        const declaration = `uniform float ${key};`.replace(/\s+/g, ' ')
-        if (allCode.includes(declaration)) continue
+        if (declared.has(key)) continue
         // Create uniform if value is numeric OR references a known uniform
         if (!isNaN(parseFloat(value)) || knownUniforms.has(value)) {
             uniforms.push(`uniform float ${key};`)
+            declared.add(key)
         }
     }
     return uniforms.join('\n')
