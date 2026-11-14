@@ -29,7 +29,7 @@
 // #define GATE 0.0
 // NO-FLASH-1: LIGHT gate — REACT may scale motion/size (GATE) but frame-wide BRIGHTNESS only gets ≤1.3×,
 // and the light terms below ride the 80 ms / 600 ms envelopes, so the wall swells instead of blinking.
-#define LGATE (smoothstep(0.003, 0.015, energyMean) * bs_presence * (1.0 + knob_9 * 0.3))
+#define LGATE (smoothstep(0.003, 0.015, energyMean) * bs_presence * (1.8 + knob_9 * 0.4))   // KID-REACT-1: light swells harder (was 1.0 base)
 
 // LIGHT: corona brightness swells with the low end
 #define CORONA_GLOW (0.70 + 1.0 * bs_bassS * LGATE)   // NO-FLASH-1: was 1.6 × bs_bass × GATE (0.7→4.7 swings at REACT 1)   // AUDIO-5X: bass envelope, not raw normalized
@@ -131,7 +131,7 @@ float gSwell = 1.0;   // KICK-SWELL: the whole main star (ball, corona, ray root
 // #define LATTICE_AMT 0.55
 #define CLOUD_CALM  (0.85 + knob_8 * 0.15)    // K8 CLOUD CALM — BAKE-1: the old K8=1 (85% calm) is now the 0 look; the dial takes it to fully calm
 // #define CLOUD_CALM 0.0
-#define REACT       (1.0 + knob_9 * 1.5)      // K9 REACT — scales every audio term through GATE, 1×..2.5× (the end-of-frame knee still guards white)
+#define REACT       (3.5 + knob_9 * 1.0)   // PUNCH-1: 2.5 → 3.5      // KID-REACT-1 (user, 2026-10-19: "way more reactive", for a 6-year-old): base was 1.0   // K9 REACT — scales every audio term through GATE, 1×..2.5× (the end-of-frame knee still guards white)
 // #define REACT 1.0
 #define FADE        1.0                       // K10-PAINT: no master fade — the user wants the wall 100% bright, always
 #define PAINT       (1.0 + knob_10)           // K10 PAINT — BAKE-1: the old K10=1 is now the 0 look; 1 = about twice that again
@@ -144,7 +144,7 @@ float gSwell = 1.0;   // KICK-SWELL: the whole main star (ball, corona, ray root
 #define DARK_FLOOR  (knob_14)                 // K14 DARK FLOOR — sinks the darks toward black, brights untouched
 // #define DARK_FLOOR 0.0
 #define PAINT_HUE    (0.9 * (1.0 + 0.3 * PAINT))   // PAINT-1: broken-colour hue spread (rad, peak-to-peak-ish) — 0 = off
-#define PAINT_FLOOR  0.17   // PAINT-1: soft OKLab-L floor so darks stay mid-tone paint, never crushed (lumMin ≥ 0.08)
+#define PAINT_FLOOR  0.10   // DARK-FLOOR-3: 0.17 → 0.10 so the dimmed gaps can reach dark ≥ 0.1; PAINT-1: soft OKLab-L floor so darks stay mid-tone paint, never crushed (lumMin ≥ 0.08)
 #define PAINT_STROKE min(0.8 + 0.2 * PAINT, 1.0)   // PAINT-2: tendrils as loaded-brush strokes (bristle streaks, dry-brush tips, value along the stroke) — 0 = glow tubes
 #define PAINT_GRAIN  (0.035 * (1.0 + PAINT))  // PAINT-3: canvas-weave amplitude
 #define PAINT_GLAZE  (0.45 * (1.0 + PAINT))   // PAINT-5: glaze value variation on the halo/rays — 0 = flat
@@ -202,6 +202,10 @@ uniform float bs_wAge, bs_wAmp;
 // STORY (controllers/black-sun.js ACTS): see docs/storylines.md
 uniform float bs_sunX, bs_sunY, bs_night, bs_galPh, bs_wind, bs_fluxPh, bs_reach;
 uniform float bs_billow, bs_bassS, bs_kickS;
+uniform float bs_ufoPh;   // UFO-1: saucer launch clock (controller)
+uniform float bs_boomN, bs_boomAge;
+uniform float bs_flyPh, bs_flySpd;   // FLY-1: forward flight clock + speed (controller)
+uniform float bs_fireAge, bs_fireN;   // TORPEDO-1: seconds since the last torpedo + torpedo count (controller)   // BOOM-1: explosion count + seconds since the last one (controller)
 // LEGIBLE: one musical element → one visual verb (see sun.md 'Legible channels')
 uniform float bs_snAge, bs_snAmp, bs_pitchMove, bs_build, bs_bassSus, bs_midsS;   // background-rate envelopes (attack ~80 ms, release ~600 ms)
 // bs_billow — NO-SHIVER: slow (~4 s) eased warp amplitude — the only audio that may scale a background warp
@@ -588,7 +592,7 @@ vec3 sunDisc(vec2 d, float R) {
     float T = clamp(0.25 + 0.5 * v01 + 0.3 * gran, 0.0, 1.0);
     vec3 c = mc(mix(11.0, 7.0, T), 0.6 + 0.4 * T) * (0.5 + 0.7 * mu);   // SUN-DISC2: brighter photosphere
     float seam = exp(-v * v / 0.02) * (0.5 + 0.5 * mu);
-    c = mix(c, psyC(0.88 + 0.06 * sin(gPal * TAU), 0.42, 1.0), seam * 0.55);   // magenta/violet veins (slow palette)
+    c = mix(c, psyC(0.04 + 0.03 * sin(gPal * TAU), 0.42, 1.0), seam * 0.55);   // SEAM-EMBER-1: ember red-orange veins, was magenta/violet (0.88) — no hot magenta in the sun palette
     c += mc(14.0, 1.0) * fil * mu * (0.15 + 1.6 * gTreb * G);               // treble: filament glints
     c *= 0.7 + 1.1 * gBass * G + 0.6 * gKick * G;                           // bass swell + kick flare
     float cM = max(max(c.r, c.g), max(c.b, 1e-4));
@@ -621,7 +625,7 @@ vec3 deepSpace(vec2 uv) {
     float fil = exp(-pow(sin(w.x * 3.3 + w.y * 1.4), 2.0) / 0.03);
     vec3 gas = gasHue(v + 0.3 * fil, 0.62);
     float fwave = exp(-pow(fract(lr * 0.35 - bs_fluxPh * 0.25) - 0.5, 2.0) / 0.006) * 0.0;
-    float gasLit = (0.4 + 1.6 * armM) * (0.6 + 1.8 * bs_bassSus * G);   // LEGIBLE bass sustain: big slow swell of the gas   // BUDGET: the surge lands on the arms (contrast), not the whole field
+    float gasLit = (0.4 + 1.6 * armM) * (0.6 + 1.8 * bs_bassSus * G + 1.4 * bs_kickS * G);   // PUNCH-1: the gas flashes on every kick   // LEGIBLE bass sustain: big slow swell of the gas   // BUDGET: the surge lands on the arms (contrast), not the whole field
     float veil = dens * (0.4 + 0.6 * fil) * (1.0 - 0.3 * DYN);   // DYN: dynamic music opens wider gaps of empty space                       // TRANSLUCENT: thin veils, wide clear gaps of open space
     c += gas * veil * gasLit * 0.95 * (1.0 + 0.25 * smoothstep(0.2, 1.0, bs_pull));   // COLLAPSE-LIFT-1b: act 3 veils +35% (pull is unique to COLLAPSE, eased)   // NIGHT-FLOOR: veils ×2.5
     float crest = smoothstep(0.8, 1.0, arm) * pow(max(0.0, sin(w.x * 9.0 + w.y * 5.0)), 18.0);
@@ -975,6 +979,38 @@ vec4 urchin(vec2 q, float m) {
     return o;
 }
 
+// CAVE-1 (user, 2026-10-19: "make the setting of space to under ground"): flying down a rock tunnel. q is the screen
+// point relative to the heading; depth runs on the forward-only flight clock. Bass lights the lava cracks, kicks
+// flash the crystals. The angle seam is hidden by averaging both sides of it.
+float caveN(vec2 p, float u) { return s_noise(p); }
+vec3 caveCol(vec2 q) {
+    float r = max(length(q), 0.02), u = abs(atan(q.y, q.x)) / TAU;   // CAVE-2: mirrored angle, so the wall texture has no seam
+    float z = 0.6 / r + bs_flyPh * 0.6;
+    vec2 tc = vec2(u * 16.0, z * 2.0);   // CAVE-3: rough striated rock, thin lava cracks (the wide bright bands knee'd into pink)
+    float rock = caveN(tc, u) * 0.5 + caveN(tc * 2.7 + 3.7, u) * 0.3 + caveN(vec2(tc.x * 6.0, tc.y * 0.8) + 1.3, u) * 0.2;
+    rock = smoothstep(0.25, 0.8, rock);
+    vec3 c = mix(vec3(0.07, 0.05, 0.04), vec3(0.55, 0.40, 0.26), rock);
+    float lava = 1.0 - smoothstep(0.0, 0.018, abs(caveN(tc * 1.4 + 9.1, u) - 0.5));
+    c += vec3(0.95, 0.38, 0.03) * lava * (0.25 + 0.9 * bs_bassS);
+    vec2 cid = floor(tc * 1.5);
+    float h = hash12(cid + 11.0), h2 = hash12(cid + 23.0);
+    float cr = exp(-dot(fract(tc * 1.5) - 0.5, fract(tc * 1.5) - 0.5) / 0.012) * step(0.9, h);
+    vec3 crysC = h2 < 0.33 ? vec3(0.2, 0.9, 1.0) : h2 < 0.66 ? vec3(0.3, 1.0, 0.45) : vec3(0.6, 0.4, 1.0);
+    c += crysC * cr * (0.6 + 1.6 * bs_kickS);
+    // CAVE-EYES-1: cave critters — pairs of glowing eyes peek from the walls, blink on their own clocks, widen on kicks
+    vec2 eg = vec2(tc.x * 0.9, tc.y * 0.7);
+    vec2 eid = floor(eg), ef = fract(eg) - 0.5;
+    float eh = hash12(eid + 41.0);
+    if (eh > 0.88) {
+        float open = smoothstep(0.0, 0.06, abs(fract(bs_time * 0.23 + eh * 13.0) - 0.04) - 0.03);
+        vec2 ep = vec2(abs(ef.x) - 0.12, ef.y / max(open * (0.7 + 0.5 * bs_kickS), 0.05));
+        float eye = 1.0 - smoothstep(0.06, 0.085, length(ep));
+        float pupil = 1.0 - smoothstep(0.02, 0.035, length(ep - vec2(0.02 * sin(bs_time + eh * 9.0), 0.0)));
+        c = mix(c, vec3(0.75, 1.0, 0.25) * (1.0 - 0.9 * pupil), eye * open);
+    }
+    return c * (0.12 + 0.88 * smoothstep(0.04, 0.85, r));
+}
+
 void mainImage(out vec4 O, in vec2 g) {
     vec2 r = iResolution.xy;
     float ar = r.x / r.y;
@@ -1005,6 +1041,7 @@ void mainImage(out vec4 O, in vec2 g) {
     if (scene_force > 1.5) orbA = 0.005 * t;                // preview: keep orbiting
     orbA *= wGeo > 0.0 ? 1.0 : 0.0;
     vec2 uvScr = uv0;
+    vec2 gPan = vec2(knob_15 > 0.05 ? knob_15 - 0.5 : 0.0, knob_16 > 0.05 ? knob_16 - 0.5 : 0.0) * vec2(6.0, 4.0);   // MAP-1 (user, 2026-10-19: "make the map bigger to explore"): steering slides the world 6x further
     uv0 = gSun + rot2(orbA) * (uv0 - gSun);
     float sm = 3. / r.y;
     gPhase = HUE_BASE + t * 0.006 + HUE_SPIN + seed;
@@ -1026,15 +1063,18 @@ void mainImage(out vec4 O, in vec2 g) {
     // backdrop: Van Gogh tile sky + lattice spiralling into the hole, kept dim behind the urchin
     float noSp = clamp(no_space, 0.0, 1.0);
     float skyRet = max(clamp(sky_return, 0.0, 1.0), noSp);   // SKY-RETURN-1 / FRACTAL-SKY-1
-    vec3 skyC = noSp > 0.999 ? fractalSky(uv, t, sm) : sky(uv, t, sm);   // PERF-1: never both once space is fully off
-    if (noSp > 0.001 && noSp <= 0.999) skyC = mix(skyC, fractalSky(uv, t, sm), noSp);   // FRACTAL-SKY-1
+    vec3 skyC = noSp > 0.999 ? fractalSky(uv + gPan, t, sm) : sky(uv + gPan, t, sm);   // PERF-1: never both once space is fully off
+    if (noSp > 0.001 && noSp <= 0.999) skyC = mix(skyC, fractalSky(uv + gPan, t, sm), noSp);   // FRACTAL-SKY-1
     float latW = clamp(lattice_mix * (0.7 + 0.5 * bs_moodChaos), 0.0, 0.6);   // EVO-WIRE-1: high-entropy music lets more lattice through
     if (latW > 0.01) {   // LATTICE-MIX-1: brightness-matched so the blend never steps the sky up or down
-        vec3 lc = latticeSky(uv, t);
+        vec3 lc = latticeSky(uv + gPan, t);
         float sL = dot(skyC, vec3(0.2126, 0.7152, 0.0722)), lL = max(dot(lc, vec3(0.2126, 0.7152, 0.0722)), 1e-3);
         skyC = mix(skyC, lc * clamp(sL / lL, 0.5, 1.6), latW);
     }
-    vec3 bg = mix(skyC, deepSpace(uv), smoothstep(0.0, 0.7, bs_night) * (1.0 - skyRet)) * (1.0 - 0.35 * bs_dark * (1.0 - skyRet) * (1.0 - 0.35 * smoothstep(0.2, 1.0, bs_pull)));   // COLLAPSE-LIFT-1b: collapse keeps more of the sky floor   // NIGHT-FLOOR: dark acts dim the sky less (night acts sat at lum 0.03)   // NIGHT-LIFT: dark acts stay readable on a projector (0.8 left DYING at lum 0.03)   // story night: Van Gogh day → deep space; dark dims
+    float dfL = dot(skyC, vec3(0.2126, 0.7152, 0.0722));   // DARK-FLOOR-2: dim only the low-luminance gaps (uniform scale keeps hue), brights untouched
+    skyC *= mix(0.4, 1.0, smoothstep(0.12, 0.26, dfL));
+    vec3 bg =mix(skyC, deepSpace(uv + gPan), smoothstep(0.0, 0.7, bs_night) * (1.0 - skyRet)) * (1.0 - 0.35 * bs_dark * (1.0 - skyRet) * (1.0 - 0.35 * smoothstep(0.2, 1.0, bs_pull)));   // COLLAPSE-LIFT-1b: collapse keeps more of the sky floor   // NIGHT-FLOOR: dark acts dim the sky less (night acts sat at lum 0.03)   // NIGHT-LIFT: dark acts stay readable on a projector (0.8 left DYING at lum 0.03)   // story night: Van Gogh day → deep space; dark dims
+    bg = mix(bg, caveCol(uvScr - vec2(knob_15 > 0.05 ? 0.5 - knob_15 : 0.0, knob_16 > 0.05 ? 0.5 - knob_16 : 0.0) * vec2(ar, 1.0) * 0.8), smoothstep(3330.0, 3350.0, bs_time));   // CAVE-1: underground fades in over 20 s (baked at hot-swap)
 
 
     // the urchin radiates from the eye: same centre, unlensed, roots on the limbal ring
@@ -1101,6 +1141,7 @@ void mainImage(out vec4 O, in vec2 g) {
         float dd = length(fd - (hash22(cd) - 0.5) * 0.6);
         f += vec3(0.85, 0.80, 0.70) * step(0.86, hd) * smoothstep(0.05, 0.0, dd) * (0.25 + 0.35 * bs_midsS) * gOrb;
     }
+    vec2 uvC = mod(uv0 + gPan + vec2(3.0, 2.0), vec2(6.0, 4.0)) - vec2(3.0, 2.0);   // MAP-1: the small suns live in a wrapped 6x4 world, so flying keeps finding them
     // SUN-CAST-1: the sun's cast arrives one at a time and sits behind the main star's glow. Paths are
     // constant-rate clocks or the controller's monotonic bs_evo* turns × whole numbers (wrap invisible);
     // audio only ever sets light. Baked ramp: on a fresh load the cast replays from bs_time 0.
@@ -1108,11 +1149,19 @@ void mainImage(out vec4 O, in vec2 g) {
         float tc = bs_time < 2970.0 ? bs_time : bs_time - 2970.0;
         float wD = smoothstep(20.0, 60.0, tc), wG = smoothstep(80.0, 120.0, tc);
         float wP = smoothstep(140.0, 180.0, tc), wB = smoothstep(200.0, 240.0, tc);
+        // BOOM-1: the target star vanishes in the blast and grows back over ~6 s
+        int bT = int(mod(bs_boomN, 4.0));
+        float bHide = smoothstep(0.0, 0.12, bs_boomAge) * (1.0 - smoothstep(2.5, 8.0, bs_boomAge));
+        float bW0 = bT == 0 ? wD : bT == 1 ? wG : bT == 2 ? wP : wB;
+        if (bT == 0) wD *= 1.0 - bHide;
+        if (bT == 1) wG *= 1.0 - bHide;
+        if (bT == 2) wP *= 1.0 - bHide;
+        if (bT == 3) wB *= 1.0 - bHide;
         float zc = clamp(ZOOM / 0.55, 0.6, 2.2);
         float air = clamp(bs_moodAir, 0.0, 1.0);
         // blue-white dwarf: zips round a wide ellipse; airiness/treble lights it
         float aD = TAU * bs_evoAir + bs_time * 0.03;
-        vec2 dD = uv0 - vec2(1.25 * cos(aD), 0.62 * sin(aD) + 0.08);
+        vec2 dD = uvC - vec2(1.25 * cos(aD), 0.62 * sin(aD) + 0.08);
         float RD = 0.045 * zc;
         if (wD > 0.001 && length(dD) < RD * 6.0) {
             vec3 b = castStar(f, dD, RD, 1.5, 0.35);
@@ -1126,7 +1175,7 @@ void mainImage(out vec4 O, in vec2 g) {
         // red giant: drifts in from the left edge, then circles lazily; bass breathes its light
         float aG = bs_time * 0.015;
         vec2 cG = mix(vec2(-2.5, 0.72), vec2(-1.3, 0.5), wG) + 0.07 * vec2(cos(aG), sin(aG));
-        vec2 dG2 = uv0 - cG;
+        vec2 dG2 = uvC - cG;
         float RG = 0.30 * zc;
         if (wG > 0.001 && length(dG2) < RG * 2.4) {
             vec3 b = castStar(f, dG2, RG, 0.28, 0.6) * (0.85 + 0.3 * clamp(bs_bassS, 0.0, 1.0));
@@ -1134,7 +1183,7 @@ void mainImage(out vec4 O, in vec2 g) {
         }
         // pulsar: two light beams sweeping round; the sweep is an evo clock, a drop lights the beams
         vec2 cP = vec2(1.05, -0.62) + 0.05 * vec2(cos(bs_time * 0.02), sin(bs_time * 0.017));
-        vec2 dP = uv0 - cP;
+        vec2 dP = uvC - cP;
         float RP = 0.05 * zc;
         if (wP > 0.001) {
             vec2 ax = vec2(cos(TAU * bs_evoSpike * 2.0), sin(TAU * bs_evoSpike * 2.0));
@@ -1149,9 +1198,19 @@ void mainImage(out vec4 O, in vec2 g) {
         float aB = TAU * bs_evoRise * 3.0;
         vec2 oB = 0.11 * zc * vec2(cos(aB), sin(aB) * 0.8);
         float RB2 = 0.05 * zc;
-        if (wB > 0.001 && length(uv0 - cB) < 0.11 * zc + RB2 * 4.0) {   // PERF-CAST-1: each twin only near itself
-            if (length(uv0 - cB - oB) < RB2 * 4.0) f = mix(f, castStar(f, uv0 - cB - oB, RB2, 0.9, 0.4), wB);
-            if (length(uv0 - cB + oB) < RB2 * 3.2) f = mix(f, castStar(f, uv0 - cB + oB, RB2 * 0.8, 0.45, 0.4), wB);
+        if (wB > 0.001 && length(uvC - cB) < 0.11 * zc + RB2 * 4.0) {   // PERF-CAST-1: each twin only near itself
+            if (length(uvC - cB - oB) < RB2 * 4.0) f = mix(f, castStar(f, uvC - cB - oB, RB2, 0.9, 0.4), wB);
+            if (length(uvC - cB + oB) < RB2 * 3.2) f = mix(f, castStar(f, uvC - cB + oB, RB2 * 0.8, 0.45, 0.4), wB);
+        }
+        // BOOM-1: the blast — a white-hot flash, then spiky sparks flying out and cooling to ember
+        vec2 bC = bT == 0 ? vec2(1.25 * cos(aD), 0.62 * sin(aD) + 0.08) : bT == 1 ? cG : bT == 2 ? cP : cB;
+        float ba = bs_boomAge;
+        if (bW0 > 0.001 && ba < 4.0) {
+            vec2 bd = uvC - bC; float br = length(bd);
+            float flash = exp(-ba * 2.2) * exp(-br * br / (0.03 + ba * 0.12));   // BOOM-2: bigger, longer flash so it reads from the couch
+            float spikes = pow(0.5 + 0.5 * cos(atan(bd.y, bd.x) * 13.0 + bs_boomN * 2.1), 5.0);
+            float shell = exp(-pow((br - ba * 0.9 * zc) / (0.04 + ba * 0.06), 2.0)) * (0.3 + 1.6 * spikes) * exp(-ba * 0.8);
+            f += (vec3(1.0, 0.85, 0.5) * flash * 1.6 + mix(vec3(1.0, 0.75, 0.3), vec3(0.95, 0.3, 0.06), smoothstep(0.0, 1.5, ba)) * shell) * bW0;
         }
     }
     f = blackSun(f, d0, t, m);
@@ -1280,6 +1339,87 @@ void mainImage(out vec4 O, in vec2 g) {
     // The framebuffer is 8-bit, so that feedback snapped slow gradients to flat steps — the terraces
     // in the sun's interior. The fibres it was smoothing are long gone; the ball renders fresh.
 
+    // CAVE-2: the cave replaces everything that isn't bright (space gas, sky, the giant's haze); suns, rays and
+    // later layers (stars, fireworks, UFOs) stay on top
+    {
+        vec2 hdC = vec2(knob_15 > 0.05 ? 0.5 - knob_15 : 0.0, knob_16 > 0.05 ? 0.5 - knob_16 : 0.0) * vec2(ar, 1.0) * 0.8;
+        float keep = smoothstep(0.5, 0.85, dot(f, vec3(0.2126, 0.7152, 0.0722)));
+        f = mix(f, caveCol(uvScr - hdC), smoothstep(3330.0, 3350.0, bs_time) * (1.0 - keep) * 0.92);
+    }
+
+    // FLY-1: flying through space — four star layers rush outward from the heading point. The sticks (K15/K16)
+    // steer the heading, the flight clock bs_flyPh only ever moves forward, and speed stretches stars into streaks.
+    {
+        vec2 vp = vec2(knob_15 > 0.05 ? 0.5 - knob_15 : 0.0, knob_16 > 0.05 ? 0.5 - knob_16 : 0.0) * vec2(ar, 1.0) * 0.8;
+        vec2 q = uvScr - vp;
+        vec2 rd = normalize(q + 1e-4);
+        float star = 0.0;
+        for (int L = 0; L < 4; L++) {
+            float zp = bs_flyPh * 0.2 + float(L) * 0.25;
+            float z = fract(zp);
+            vec2 g = q * mix(16.0, 1.2, z);
+            vec2 id = floor(g);
+            float h = hash12(id + float(L) * 17.3 + floor(zp) * 3.1);
+            if (h < 0.8) continue;
+            vec2 d = fract(g) - 0.5 - (vec2(hash12(id + 5.1), hash12(id + 9.7)) - 0.5) * 0.6;
+            float al = dot(d, rd), ac = dot(d, vec2(-rd.y, rd.x));
+            float len = 0.02 + 0.12 * bs_flySpd * z;
+            star += exp(-ac * ac / 0.0012) * exp(-max(abs(al) - len, 0.0) * 40.0) * smoothstep(0.0, 0.3, z) * (1.0 - smoothstep(0.85, 1.0, z));
+        }
+        vec3 starC = mix(vec3(0.80, 0.88, 1.0), 0.55 + 0.45 * cos(TAU * (atan(q.y, q.x) / TAU + bs_flyPh * 0.05 + vec3(0.0, 0.33, 0.67))), knob_9);   // HYPER-1: hyperspace paints the warp streaks rainbow
+        f += starC * min(star, 1.5) * 0.85;
+    }
+
+    // SHIELD-1: Y (shields, K13) — a cyan hex-shimmer bubble glows in from the screen edges while held
+    if (knob_13 > 0.01) {
+        vec2 sp = uvScr / vec2(ar, 1.0);
+        float edge = smoothstep(0.55, 1.15, length(sp));
+        vec2 hx = uvScr * 9.0; hx.x += 0.5 * mod(floor(hx.y), 2.0);
+        float cell = 1.0 - smoothstep(0.38, 0.48, length(fract(hx) - 0.5));
+        float shimmer = 0.6 + 0.4 * sin(bs_time * 6.0 + length(uvScr) * 12.0);
+        f += vec3(0.25, 0.85, 1.0) * knob_13 * (edge * 0.9 + edge * (1.0 - cell) * 0.6) * shimmer;
+    }
+
+    // TORPEDO-1: a rainbow firework bursts ahead of the ship on every fire press (screen space, so it always lands on screen)
+    if (bs_fireAge < 1.6) {
+        vec2 hd = vec2(knob_15 > 0.05 ? 0.5 - knob_15 : 0.0, knob_16 > 0.05 ? 0.5 - knob_16 : 0.0) * vec2(ar, 1.0) * 0.8;
+        vec2 tp = hd + (vec2(hash12(vec2(bs_fireN, 1.3)), hash12(vec2(bs_fireN, 7.1))) - 0.5) * vec2(ar, 1.0) * 0.6;
+        vec2 bd = uvScr - tp; float br = length(bd), a = bs_fireAge, ang = atan(bd.y, bd.x);
+        float spokes = pow(0.5 + 0.5 * cos(ang * 9.0 + bs_fireN * 1.7), 8.0);
+        float ring = exp(-pow((br - a * 0.7) / (0.015 + a * 0.04), 2.0)) * (0.3 + 1.5 * spokes) * exp(-a * 1.8);
+        float core = exp(-a * 4.0) * exp(-br * br / (0.004 + a * 0.03));
+        vec3 col = 0.5 + 0.5 * cos(TAU * (ang / TAU + bs_fireN * 0.13 + vec3(0.0, 0.33, 0.67)));
+        f += col * ring * 1.3 + vec3(1.0, 0.95, 0.8) * core * 1.5;
+    }
+
+    // UFO-1: flying saucers launch out of the sun (user, 2026-10-19: "ufos" from the sun). Each rides its
+    // own lap of the controller clock bs_ufoPh: born inside the limb, it grows and flies out along a
+    // random heading, then fades at the edge. Bass/kicks speed the clock; kicks flash the rim lights.
+    for (int i = 0; i < 5; i++) {
+        float ph = bs_ufoPh * 0.06 + float(i) * 0.2;   // UFO-2: ~4× more often
+        float k = fract(ph), sd = hash12(vec2(float(i) * 7.3, floor(ph)));
+        // UFO-3: always on screen — leave from the sun (or the nearest on-screen point when it is off the edge)
+        // and fly to a random spot inside the frame, drawn in screen space so the ORBIT turn can't carry them off
+        vec2 lim = vec2(ar, 1.0) * 0.88;
+        vec2 o = clamp(SUN, -lim, lim);
+        vec2 tgt = (vec2(hash12(vec2(sd, 3.1)), hash12(vec2(sd, 8.7))) * 2.0 - 1.0) * lim;
+        vec2 dir = normalize(tgt - o + 1e-4);
+        vec2 pos = mix(o, tgt, 1.0 - pow(1.0 - k, 1.6)) + vec2(-dir.y, dir.x) * 0.04 * sin(k * 14.0 + sd * 20.0);
+        float sz = mix(0.025, 0.09, smoothstep(0.0, 0.35, k)) * (1.0 + 0.9 * bs_kickS);   // KID-REACT-1 / PUNCH-1: saucers bounce hard on the kick
+        if (length(uvScr - pos) > sz * 4.5) continue;   // PERF-UFO-1: only pixels near a saucer pay for it (5 saucers × every 4K pixel halved the frame rate)
+        float a = smoothstep(0.02, 0.12, k) * (1.0 - smoothstep(0.8, 1.0, k));
+        vec2 p = rot2(0.25 * sin(k * 9.0 + sd * 13.0)) * (uvScr - pos) / sz;
+        float hull = 1.0 - smoothstep(-0.06, 0.06, length(p * vec2(1.0, 3.4)) - 1.0);
+        float dome = (1.0 - smoothstep(0.4, 0.46, length(p - vec2(0.0, 0.1)))) * smoothstep(0.08, 0.14, p.y);
+        float lights = smoothstep(0.16, 0.05, length(vec2(fract(p.x * 2.2 + k * 6.0) - 0.5, p.y * 4.0))) * step(abs(p.x), 0.85);
+        float halo = exp(-dot(p, p) * 0.35);
+        vec3 hullC = mix(vec3(0.30, 0.38, 0.44), vec3(0.78, 0.82, 0.84), smoothstep(-0.3, 0.3, p.y));
+        f += vec3(0.20, 0.85, 0.70) * halo * a * (0.18 + 0.35 * bs_kickS);
+        f = mix(f, hullC, hull * a);
+        f = mix(f, vec3(0.35, 0.95, 0.80), dome * a);
+        f += vec3(1.0, 0.78, 0.30) * lights * hull * a * (0.5 + 1.5 * bs_kickS);
+    }
+
     f = max(f, vec3(0.0));
     // BUDGET: one hue-preserving soft knee on the FINISHED frame, in OKLab L (chroma kept), instead of
     // per-layer limiters that still stacked into whole-frame washes on loud moments. Below L 0.6 nothing
@@ -1306,6 +1446,10 @@ void mainImage(out vec4 O, in vec2 g) {
     lchB.y = length(ab0); lchB.z = atan(ab0.y, ab0.x);   // BAKE-1: cool violet lives only in the deepest shadows (OKLab mix, never through pink), so the baked warmth has something to sit against
     lchB.z += hSh;   // PAINT-1a: broken colour — warm and cool neighbour patches on a slow drifting field, after K11 so warmth can't collapse it; steps toward hot pink are damped
     lchB.x = 0.5 * (lchB.x + PAINT_FLOOR + sqrt((lchB.x - PAINT_FLOOR) * (lchB.x - PAINT_FLOOR) + 0.004));   // PAINT-1a: soft floor — mid-tone darks, after K14 sinks them
+    // NO-PINK-1: last-word guard. The cool-violet shadow mix (OKLab) dragged the giant's orange darks
+    // through hot pink. Any saturated hue in the pink-magenta band (~295°-360°) rotates forward to ember red.
+    float hW = mod(lchB.z, TAU);
+    lchB.z = mix(hW, TAU + 0.45, smoothstep(5.1, 5.5, hW) * smoothstep(0.05, 0.11, lchB.y));
     float LB = lchB.x < 0.6 ? lchB.x : 0.6 + 0.22 * (1.0 - exp(-(lchB.x - 0.6) / 0.22));
     f = pow(gamutLch(vec3(LB, lchB.y * (1.35 + 0.12 * TONAL), lchB.z)), vec3(1.0 / 2.2));   // PAINT-4: +20% chroma (sat was 0.41)
     f *= min(1.0, 0.93 / max(max(f.r, f.g), max(f.b, 1e-4)));   // NEVER-WHITE: scale, don't clip — hue survives

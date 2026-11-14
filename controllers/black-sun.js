@@ -299,8 +299,16 @@ export function make() {
     // kick: envelope + one deliberate wavefront per onset
     // KICK: wavelet bass onset (sharp, ~21 ms window) with a 120 ms refractory → envelope
     S.kRefr -= dt
-    const wHit = f.wavelet_bassHit > 0.9 && S.kRefr <= 0
+    const wHit = f.wavelet_bassHit > 0.4 && S.kRefr <= 0   // MIC-KICK-1: the laptop mic peaks ~0.55 (the BlackHole line feed cleared 0.9)
     if (wHit) S.kRefr = 0.12
+    // BOOM-1 (user, 2026-10-19: "make some suns explode"): a bass hit at most every 5 s blows up the next small sun
+    S.boomRefr = (S.boomRefr ?? 0) - dt; S.boomAge = (S.boomAge ?? 9) + dt; S.boomN = S.boomN ?? 0
+    const fireDown = (f.knob_20 ?? 0) > 0.5   // SHIP-FIRE-1: K20 FIRE — the gamepad's fire button sets it; each press blows up a sun, no wait
+    const fire = fireDown && !S.fireWas
+    S.fireWas = fireDown
+    S.fireAge = (S.fireAge ?? 9) + dt; S.fireN = S.fireN ?? 0
+    if (fire) { S.fireAge = 0; S.fireN += 1 }   // TORPEDO-1: each press also bursts a firework in front of the ship
+    if (fire || ((wHit || (f.energyZScore ?? 0) > 0.45) && S.boomRefr <= 0 && gate > 0.3)) { S.boomN += 1; S.boomAge = 0; S.boomRefr = 2.5 }   // PUNCH-1: a blast every 2.5 s at most (was 5)
     const kRaw = wHit ? clamp01(0.55 + 0.25 * f.wavelet_bassHit) * gate : 0
     const kPrev = S.kick
     // KICK-EASE (user: "an ease-out animation after the beat"): HIT → glide back. Instant attack on
@@ -488,7 +496,16 @@ export function make() {
     const speed = Math.pow(4, clamp01(f.knob_7 ?? 0))   // K7 SPEED: 1×..4× rate on the giant's turn + boil clocks (rate only, never reverses)
     S.spT += speed * dt
     S.spB += speed * (0.5 + 0.9 * S.bassSus) * dt
-    S.galPh += (0.05 + 0.5 * S.build) * dt   // build accelerates the background flow
+    const partyDown = (f.knob_21 ?? 0) > 0.5   // UFO-PARTY-1: K21 — a gamepad button pours saucers out of the sun for 4 s
+    if (partyDown && !S.partyWas) S.ufoBoostT = 4
+    S.partyWas = partyDown
+    S.ufoBoostT = Math.max(0, (S.ufoBoostT ?? 0) - dt)
+    S.ufoPh = (S.ufoPh || 0) + (0.1 + 0.6 * S.bassSus + 0.8 * S.kickS) * (S.ufoBoostT > 0 ? 8 : 1) * dt   // UFO-1: saucer launch clock; bass and kicks speed the fleet (rate only, forward)
+    // FLY-1 (user, 2026-10-19: "let us fly through space"): forward flight clock; thrust (K4) is warp speed, bass/kicks push
+    const flyTo = 0.25 + 0.8 * S.bassSus + 0.6 * S.kickS + 2.5 * clamp01(f.knob_4 ?? 0) + 6.0 * clamp01(f.knob_9 ?? 0)   // HYPER-1: X (hyperspace, K9) is a real warp jump
+    S.flySpd = (S.flySpd ?? 0) + (flyTo - (S.flySpd ?? 0)) * (1 - Math.exp(-dt / 0.4))
+    S.flyPh = (S.flyPh ?? 0) + S.flySpd * dt
+    S.galPh += (0.05 + 0.5 * S.build + 0.15 * S.bassSus) * dt   // build accelerates the background flow; GAS-RATE-BASS-1: sustained bass speeds it (rate only, forward)
     S.wind += (S.windTo - S.wind) * (1 - Math.exp(-dt / 4))
     S.fluxPh += (0.05 + 0.9 * S.flux * gate) * dt
     // FLOW-CLOCK: the backdrop's travel clock. Rate follows bass (attack ~150 ms, release ~600 ms) plus
@@ -636,7 +653,7 @@ export function make() {
       bs_chaos: S.chaos, bs_pull: S.pull, bs_night: S.night,
       bs_sunX: S.sunX, bs_sunY: S.sunY, bs_cX: S.cX, bs_cY: S.cY, bs_cOn: S.cOn, bs_kiss: S.kiss, bs_waveX: S.waveX, bs_waveY: S.waveY,
       bs_snAge: S.snAge, bs_snAmp: S.snAmp, bs_pitchMove: S.pitchMove, bs_build: S.build, bs_bassSus: S.bassSus, bs_midsS: S.midsS,
-      bs_reach: S.reach, bs_billow: S.billow, bs_bassS: S.bassS, bs_kickS: S.kickS, bs_galPh: S.galPh, bs_tileT: S.tileT,   /* SKY-RATE */ bs_wind: S.wind, bs_fluxPh: S.fluxPh,
+      bs_reach: S.reach, bs_billow: S.billow, bs_bassS: S.bassS, bs_kickS: S.kickS, bs_galPh: S.galPh, bs_ufoPh: S.ufoPh, bs_flyPh: S.flyPh, bs_flySpd: S.flySpd, bs_fireAge: S.fireAge, bs_fireN: S.fireN, bs_boomN: S.boomN, bs_boomAge: S.boomAge, bs_tileT: S.tileT,   /* SKY-RATE */ bs_wind: S.wind, bs_fluxPh: S.fluxPh,
       bs_nova: S.nova, bs_shell: Math.min(S.novaT, 30), bs_act: S.tripOn ? TRIP_ACTS[S.tripAct].role : S.act, bs_actT: S.tripOn ? S.tripActT : S.actT,
       bs_moodChaos: S.mChaos, bs_moodGrit: S.mGrit, bs_moodFocus: S.mFocus, bs_moodSpike: S.mSpike,
       bs_moodTilt: S.mTilt, bs_moodAir: S.mAir, bs_moodVolatile: S.mVolatile, bs_moodWave: S.mWave, bs_moodRise: S.mRise,
