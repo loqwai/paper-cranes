@@ -19,23 +19,22 @@ iteration speed is maxed — burst mode chains beats without ending the turn.
 
 ## Context
 
-Arguments:
-!`echo "$ARGUMENTS"`
+Arguments: `$ARGUMENTS`
 
-Dev server port (from `scripts/dev-port` — branch-derived, `PORT` env overrides):
-!`./scripts/dev-port`
+Platform, port, dev server, state file, show browser and recent page signals, in one
+shell-agnostic call (the same from bash, zsh, fish, Git Bash and PowerShell):
+!`node scripts/vj/context.js`
 
-Dev server status:
-!`PORT=$(./scripts/dev-port); curl -s -o /dev/null -w "%{http_code}" http://localhost:$PORT/ 2>/dev/null || echo "not running"`
+## Runs on macOS, Windows and Linux
 
-Existing state file (if a run is in progress):
-!`cat .claude/vj-state.json 2>/dev/null || echo "(none)"`
+Every command in this skill is `node …` plus POSIX shell, so it is the same on every machine.
+On Windows, run them with the **Bash tool (Git Bash)**, never PowerShell: the quoting below is
+written for bash. Everything OS-specific lives inside `scripts/vj/show.js`; the per-OS facts
+the loop must know are in the table under "The show browser". Never hardcode a port: read it
+from the Context block (`./scripts/dev-port`, branch-derived, 6969 on `main`).
 
-Show browser (the projected window; `{"up":false}` until launched):
-!`node scripts/vj/show.js status 2>&1 | tail -1`
-
-Recent page signals (page-as-sensor; empty until a ?vj=1 page has booted):
-!`tail -5 .claude/vj-signals.jsonl 2>/dev/null || echo "(none)"`
+**Machine-local quirks** (which input, the gain that suits this room, a slow GPU) belong in an
+uncommitted `.claude/skills/local-rig/SKILL.md` on that machine. Read it at setup if it exists.
 
 ## Parent stays responsive; delegate everything else
 
@@ -88,14 +87,50 @@ node scripts/vj/show.js launch '<url>' [--display N]   # idempotent: reuses a ru
 node scripts/vj/show.js goto '<url>'                   # full reload (resets feature history!)
 node scripts/vj/show.js eval '<fn or expr>' '[args]'   # runs in the page, prints JSON
 node scripts/vj/show.js shot .claude/vj-shots/<name>.png   # the PAGE, via CDP; pointer never moves
+node scripts/vj/show.js focus                          # raise the show window to the front
+node scripts/vj/show.js unstick                        # black wall + healthy audio: flush feedback buffers
+node scripts/vj/show.js move <N>                       # move a running show to display N, no reload
 node scripts/vj/show.js status | displays | stop
 ```
 
-What this buys, verified on the real screen with `screencapture` on 2026-10-06: no toolbar, no
-infobar, no window glow, no pointer, no permission prompt (mic + MIDI are granted over CDP), and
-`caffeinate` holds the display awake for exactly as long as the show Chrome lives. `shot` and
-`eval` move nothing on screen, so a screenshot is free to take mid-show — there is no cursor to
-re-park, ever.
+What this buys (macOS verified on the real screen 2026-10-06, Windows 11 on 2026-11-14): no
+toolbar, no infobar, no window glow, no pointer, no permission prompt (mic + MIDI are stored in
+the show profile and granted over CDP), and the display is held awake for exactly as long as the
+show Chrome lives. `shot` and `eval` move nothing on screen, so a screenshot is free to take
+mid-show — there is no cursor to re-park, ever.
+
+| | macOS | Windows | Linux |
+|---|---|---|---|
+| Chrome | `/Applications/Google Chrome.app` | `%PROGRAMFILES%\Google\Chrome` | google-chrome / chromium on PATH |
+| Show profile | `~/Library/Application Support/paper-cranes-show` | `%LOCALAPPDATA%\paper-cranes-show` | `~/.config/paper-cranes-show` |
+| Keep awake | `caffeinate` | `SetThreadExecutionState` | `systemd-inhibit` |
+| Window must stay in front | no | **yes** (below) | no |
+| OS input setting | System Settings → Sound → Input | Settings → System → Sound → Input | Sound settings / pavucontrol |
+| Notifications off | Focus → Do Not Disturb | Win+N → Do not disturb | desktop DND toggle |
+| Overlays to quit | break-reminder / dimming apps | Xbox Game Bar, Discord, Steam, GeForce overlays; dimming apps | screen dimmers |
+
+Overrides on every OS: `SHOW_CHROME`, `SHOW_PROFILE`, `SHOW_CDP_PORT`, `SHOW_CHROME_FLAGS`.
+
+**Windows: the show window must stay in front.** Windows stops painting a covered Chrome window
+(the terminal you launched from counts): the wall goes black and the page stops answering CDP,
+so every `show.js` call times out after 30 s. `launch` and `goto` raise the window themselves
+and Chrome's occlusion tracker is off, but a click elsewhere can bury it again. **Any `show.js`
+timeout on Windows: run `show.js focus`, then retry.** Keep the terminal on another screen.
+
+**Windows: a URL change recompiles for minutes.** Chrome on Windows compiles WebGL through ANGLE
+into Direct3D. A big shader (the 99 KB sun line) pinned the GPU process for 1–3 minutes on a
+Surface while the page was frozen. ANGLE caches compiled programs, but every numeric URL param
+becomes a uniform, so a new or changed param is new source and a cache miss. **Mid-set: never
+`goto`, never add a URL param, never edit `src/**`, `index.js` or `scripts/vj/*.js` (HMR
+reloads the page).** Hot-swaps and `window.cranes.*` changes are fine. Before doors, boot once on
+the exact show URL so the cache is warm. If `eval` times out and `focus` didn't help, the GPU is
+compiling (Task Manager: Chrome's GPU process busy): wait, don't relaunch, which only starts
+another compile.
+
+**Black wall, healthy audio** (`lum` 0 while `energy` moves and frames advance): a feedback
+shader read a NaN or black frame from its own previous frame and keeps drawing black. Seen on
+sun-1 at boot. `show.js unstick` swaps plasma in for 1.5 s and back, flushing the buffers with
+no reload; controller state survives.
 
 Facts the loop relies on:
 - **`launch` defaults to the LAST display** — the projector when one is attached. Run
@@ -107,9 +142,9 @@ Facts the loop relies on:
 - Clicking the canvas no longer requests HTML5 fullscreen when the window already covers the
   screen, so a stray click cannot summon Chrome's "Press Esc to exit full screen" bubble.
 - Things `show.js` CANNOT govern, which go on the pre-show checklist: OS overlays from other
-  apps (a break-reminder app dimmed the whole screen during the 2026-10-06 test), macOS
-  notifications (turn on Do Not Disturb), and the macOS orange mic-in-use dot (OS-drawn, a few
-  pixels top-right, cannot be hidden by any app).
+  apps (a break-reminder app dimmed the whole screen during the 2026-10-06 test), OS
+  notifications (Do Not Disturb, per the table), and the macOS orange mic-in-use dot (OS-drawn, a
+  few pixels top-right, cannot be hidden by any app; Windows puts its mic icon in the taskbar).
 
 ## Philosophy (unchanged where it worked)
 
@@ -135,8 +170,13 @@ Facts the loop relies on:
 - **No args** → run until stopped, shader = most recently modified `.frag`.
 - **`audio=<substring>`** → override the input device, matched against device labels and
   passed to the page as `&audio_device=`. **Omitted → the OS default input** (whatever the user
-  has selected in macOS Sound settings); add no `audio_device` param at all then. There is no
-  Spotify tab and no music tab — the music comes in on that input.
+  has selected in the OS sound settings); add no `audio_device` param at all then. There is no
+  Spotify tab and no music tab — the music comes in on that input: a line feed (BlackHole,
+  Voicemeeter, a USB interface) or a microphone hearing the room.
+- **`gain=<x>`** → `&audio_gain=<x>`, a gain stage before all analysis. The loudness gates
+  (shader `GATE`s, `quietGate`, the black-sun presence ramp) are absolute and tuned for a line
+  feed. **A laptop mic hearing a speaker arrives 10–30× quieter and never opens them: the visual
+  idles all set.** Setup step 3 calibrates it. Default 1 (line feed).
 - **Duration** (`90m`, `2h`) or bare integer (legacy: beat count) → soft budget; announce and
   wrap when reached.
 - **Shader path** → same resolution rules as v1 (full path / relative / no-ext / bare unique
@@ -182,11 +222,21 @@ node scripts/vj/show.js eval 'async (path) => {
    ```bash
    node scripts/vj/show.js eval '() => ({ input: window.cranes.audioInputLabel ?? null, energy: window.cranes.flattenFeatures().energy })'
    ```
+   **Calibrate the level with music playing.** Loud music on a line feed reads `energy`
+   0.02–0.06. Below ~0.01 (a mic), trim the gain live, no reload, until it lands there:
+   ```bash
+   node scripts/vj/show.js eval 'async (g) => { window.cranes.inputGain.gain.value = g; await new Promise(r => setTimeout(r, 5000)); const f = window.cranes.flattenFeatures(); return { energy: f.energy, energyMean: f.energyMean } }' '[16]'
+   ```
+   Measured 2026-11-14, Surface internal mic, Echo Studio at 45% across the room: ×1 → 0.001,
+   ×16 → 0.015, ×32 → 0.023. Record it as `audioGain` in `.claude/vj-state.json` and in the
+   local-rig skill. It goes in the launch URL (`&audio_gain=`) only at the next cold launch,
+   never mid-set (see the Windows recompile note).
    `input: null` (only possible with `audio=`) means the name matched no device (the page logged the available labels to its
    console — read them with `eval '() => navigator.mediaDevices.enumerateDevices().then(d => d.filter(x => x.kind === "audioinput").map(x => x.label))'`).
    **Do not start beats on the wrong input** — tell the user which inputs exist and stop.
-4. **Pre-show checklist, said to the user in one line** — Do Not Disturb on, break-reminder /
-   screen-dimming apps quit, projector is the display `launch` chose. These are outside the
+4. **Pre-show checklist, said to the user in one line** — Do Not Disturb on, overlay /
+   break-reminder / screen-dimming apps quit (per-OS list in the table), projector is the display
+   `launch` chose, and on Windows the show window stays in front. These are outside the
    page; nothing in the loop can catch them.
 5. **Read `docs/vj-preferences.md` first.** It records the user's standing taste and applies to
    every shader. Brief every sub-agent and the art critic with it, and append any new design
@@ -199,7 +249,7 @@ node scripts/vj/show.js eval 'async (path) => {
    (`Object.keys(window.cranes.messageParams)`).
 8. Target must be a SCRATCH COPY, never committed art.
 9. Write the recovery snapshot `.claude/vj-state.json`:
-   `{ shaderPath, showUrl, audioDevice, room, port, moveStyle, mode: "live-loop", startedAt }`
+   `{ shaderPath, showUrl, audioDevice, audioGain, room, port, moveStyle, mode: "live-loop", startedAt }`
    (no iteration counter — beats are counted in-context; update this file only when one of these
    fields changes).
 10. **Announce the cadence** to the user in one line: "Live loop: I check every ~90 s while
@@ -243,7 +293,10 @@ Order within a Beat:
 2. **B0 LOOK** — `node scripts/vj/show.js shot .claude/vj-shots/<beat>.png`, then Read it; judge
    visually (clip? dark floor? focal point? legible? shivering?). The shot is taken over CDP —
    nothing on the wall moves, so look as often as judgement needs.
-3. **Meter** — `__vjMeter.summary(50)` + `residR(50)`. **If gate < 0.9 (track boundary): make no
+3. **Meter** — `__vjMeter.summary(50)` + `residR(50)`. `gate` is `quietGate` when the controller
+   provides it (wavelet-ease), else the same energy formula computed by the meter, so it means
+   "loud enough" on every controller. A gate that never rises while music plays is an input-level
+   problem (setup step 3), not a track boundary. **If gate < 0.9 (track boundary): make no
    metric-driven move; stay in-turn and wait ~20 s browser-side, then re-check — never burn a
    wakeup on a dirty window (and note the 60 s wakeup floor makes short wakeups impossible
    anyway).** Thresholds: clip = 0 always; flicker > 0.7 = act, don't
@@ -406,6 +459,9 @@ parking, `fullscreen=true` ejecting the tab) are gone with the show browser. New
 
 - **Don't let beats become cron in disguise.** If every beat is a fixed 60 s no-op, you've
   rebuilt v1; stretch the healthy hold and let events/user words drive the fast path.
+- **`ScheduleWakeup` may be missing** outside `/loop` in some harness builds. The fallback
+  heartbeat works everywhere: a Bash call with `run_in_background: true` running `sleep <secs>`;
+  the harness re-invokes the session when it exits. Same delays as the table.
 - **Never skip the re-arm.** A beat that ends without ScheduleWakeup (or stop) parks the loop
   silently — the exact v1 failure this design exists to kill.
 - **Meter windows and wake times are decoupled** — a 30 s beat still reads a 50 s meter window;

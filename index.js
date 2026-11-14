@@ -141,7 +141,14 @@ const setupMicAudio = async () => {
         await audioContext.resume();
 
         const stream = await getAudioStream(audioConfig);
-        const sourceNode = audioContext.createMediaStreamSource(stream);
+        // ?audio_gain=<x> scales the input before any analysis. Loudness gates (shader GATEs,
+        // wavelet-ease's quietGate) are absolute and tuned for a line feed; a laptop mic hearing a
+        // speaker across the room arrives 10-30x quieter and never opens them. The node is exposed so
+        // the gain can be trimmed live: window.cranes.inputGain.gain.value = 8
+        const inputGain = new GainNode(audioContext, { gain: parseFloat(params.get('audio_gain') ?? '1') });
+        audioContext.createMediaStreamSource(stream).connect(inputGain);
+        window.cranes.inputGain = inputGain;
+        const sourceNode = inputGain;
         const historySize = parseInt(params.get('history_size') ?? '500');
         const fftSize = parseInt(params.get('fft_size') ?? '4096');
         const smoothing = parseFloat(params.get('smoothing') ?? '0.15');
