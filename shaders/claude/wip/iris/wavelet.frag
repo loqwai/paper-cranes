@@ -154,8 +154,14 @@ uniform float spectralRolloffNormalized;    // high-freq cutoff → outer reach
 
 // LEVEL FAMILY → SIZE / DEPTH / THICKNESS. Band energies set how BIG/BOLD/DEEP, by region.
 #define LINE_THICK  (width * (5.0 + energy_env * 5.0) * (0.4 + knob_18 * 1.6))            // loudness = line weight
-#define size  (baseSize * mix(0.55, 1.10, knob_7) * (1.0 + waveletBand2Spring * 0.18 * MOD_LEVEL))   // mid energy = facet size
-#define offc  (baseOffc * mix(0.70, 1.45, knob_8) * (1.0 + waveletBand5Spring * 0.15 * MOD_LEVEL))   // treble energy = arm spread
+// PER-DEVICE SEEDS (same as redaphid/iris/1): each phone keeps 4 random seeds, so the same
+// link looks different per phone. ?seed= pins it. Hue +-70deg, shape +-8%, spin direction.
+#define SEED_HUE     ((seed - 0.5) * 2.4)
+#define SEED_SPIN    (seed4 < 0.5 ? -1.0 : 1.0)
+#define SEED_SIZE    (1.0 + (seed2 - 0.5) * 0.16)
+#define SEED_SPREAD  (1.0 + (seed3 - 0.5) * 0.16)
+#define size  (baseSize * SEED_SIZE * mix(0.55, 1.10, knob_7) * (1.0 + waveletBand2Spring * 0.18 * MOD_LEVEL))   // mid energy = facet size
+#define offc  (baseOffc * SEED_SPREAD * mix(0.70, 1.45, knob_8) * (1.0 + waveletBand5Spring * 0.15 * MOD_LEVEL))   // treble energy = arm spread
 #define DEPTH (mix(0.18, 0.50, knob_17) + waveletBassSpring * 0.14 * MOD_LEVEL)                       // bass energy = core depth
 
 // TEXTURE FAMILY → DETAIL / SPARKLE / EDGE. Transients/grit set fine structure (below + IRIDESCENCE/EDGE_GLOW).
@@ -229,7 +235,7 @@ float df(vec2 p) {
     ip -= vec2(offc*size*petalFocus, 0.0);                                 // KURTOSIS focuses/diffuses
     ip.y += ip.x * skewStretch;                                            // SKEW shears the petal shape (leans, never spins back)
     vec2 cp = ip;
-    rot(ip, spin_angle);                         // the ONLY continuous rotation — monotonic
+    rot(ip, spin_angle * SEED_SPIN);                         // the ONLY continuous rotation — monotonic
     float dd = dodec(vec3(ip, off*size));
     float cd = length(cp - vec2(0.2*sin(morph_phase*0.7), 0.0)) - 0.125*size;
     cd = abs(cd) - width*0.5;
@@ -290,7 +296,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   // blended in by ZOOM_DEEP. As knob_1 climbs, more recursion levels accumulate.
   if (ZOOM_DEEP > 0.001) {
     vec2 ps = p * 0.5;
-    rot(ps, 0.61 + spin_angle*0.5);                    // counter-spin so sublayer doesn't lock to mainlayer
+    rot(ps, 0.61 + spin_angle*SEED_SPIN*0.5);                    // counter-spin so sublayer doesn't lock to mainlayer
     float d2 = df(ps);
     d = pmin(d, d2 - 0.005, 0.04 + 0.06*ZOOM_DEEP) - ZOOM_DEEP*0.003;
   }
@@ -514,7 +520,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   if (hue < 0.0) hue += TAU;
   float L   = baseL;
 
-  vec3 col  = oklch2rgb(vec3(L, C, hue));
+  vec3 col  = oklch2rgb(vec3(L, C, hue + SEED_HUE));
 
   // iter67 PHOTON-RING RIM (port from magic-peach iter14 plasma rim lighting).
   // Bright narrow gaussian bell at the limbal radius — reads as a "photon sphere" /

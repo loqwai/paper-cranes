@@ -46,8 +46,14 @@ uniform float pitch_pulse;   // melodic-jump flash
 #define RIPPLE_FREQ (10.0 + knob_13 * 16.0 + ZOOM_DEEP * 32.0)  // more nested ringing on zoom-in
 // COLOR MIX (iq-style, driven by the fractal SDF): knob_2 = hue base, knob_3 = hue frequency, knob_4 = chroma
 // fractal exploration:
-#define size  (baseSize * mix(0.55, 1.10, knob_7))       // knob_7 facet size
-#define offc  (baseOffc * mix(0.70, 1.45, knob_8))       // knob_8 arm spread
+// PER-DEVICE SEEDS (same as redaphid/iris/1): each phone keeps 4 random seeds, so the same
+// link looks different per phone. ?seed= pins it. Hue +-70deg, shape +-8%, spin direction.
+#define SEED_HUE     ((seed - 0.5) * 2.4)
+#define SEED_SPIN    (seed4 < 0.5 ? -1.0 : 1.0)
+#define SEED_SIZE    (1.0 + (seed2 - 0.5) * 0.16)
+#define SEED_SPREAD  (1.0 + (seed3 - 0.5) * 0.16)
+#define size  (baseSize * SEED_SIZE * mix(0.55, 1.10, knob_7))       // knob_7 facet size
+#define offc  (baseOffc * SEED_SPREAD * mix(0.70, 1.45, knob_8))       // knob_8 arm spread
 // DEPTH moved to knob_17 (knob_9 is now gaze Y — the user keeps turning it)
 #define DEPTH (mix(0.18, 0.50, knob_17))
 // knob_10 base twist + zoom-deep adds curl (deeper = more spiral pull into the recursion)
@@ -110,7 +116,7 @@ float df(vec2 p) {
     rot(ip, petalI * TAU/float(rep) + TWIST + petalBreath);
     ip -= vec2(offc*size, 0.0);
     vec2 cp = ip;
-    rot(ip, spin_angle);                         // continuous monotonic spin
+    rot(ip, spin_angle * SEED_SPIN);                         // continuous monotonic spin
     float dd = dodec(vec3(ip, off*size));
     float cd = length(cp - vec2(0.2*sin(morph_phase*0.7), 0.0)) - 0.125*size;
     cd = abs(cd) - width*0.5;
@@ -162,7 +168,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   // blended in by ZOOM_DEEP. As knob_1 climbs, more recursion levels accumulate.
   if (ZOOM_DEEP > 0.001) {
     vec2 ps = p * 0.5;
-    rot(ps, 0.61 + spin_angle*0.5);                    // counter-spin so sublayer doesn't lock to mainlayer
+    rot(ps, 0.61 + spin_angle*SEED_SPIN*0.5);                    // counter-spin so sublayer doesn't lock to mainlayer
     float d2 = df(ps);
     d = pmin(d, d2 - 0.005, 0.04 + 0.06*ZOOM_DEEP) - ZOOM_DEEP*0.003;
   }
@@ -382,7 +388,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   if (hue < 0.0) hue += TAU;
   float L   = baseL;
 
-  vec3 col  = oklch2rgb(vec3(L, C, hue));
+  vec3 col  = oklch2rgb(vec3(L, C, hue + SEED_HUE));
 
   // iter67 PHOTON-RING RIM (port from magic-peach iter14 plasma rim lighting).
   // Bright narrow gaussian bell at the limbal radius — reads as a "photon sphere" /
