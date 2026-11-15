@@ -5,10 +5,10 @@ Fusion of the **sun set** (2026-10-09/10 show, `.claude/skills/sun-set/JOURNEY.m
 hero; the sun is a story told *through* it.
 
 ```
-?shader=claude/wip/sun-lattice/1&controller=lattice-nav&wavelet=true
+?shader=claude/wip/sun-lattice/2&controller=lattice-nav&wavelet=true
 ```
 
-Add `&audio_gain=16` on a laptop mic hearing a speaker (see `/vibej2` setup step 3). For the
+Add `&audio_gain=32` on a laptop mic hearing a speaker (see `/vibej2` setup step 3). For the
 tuned lattice look, append lattice-vj/9's baked preset (knobs + nav + paletteShift/warpGrow) from
 `redaphid/wip/lattice-vj/9.md`.
 
@@ -31,9 +31,17 @@ house rules allow (`docs/vj-preferences.md`):
 
 - **1.frag**: fork of lattice-vj/9 + the sun as above. Beat 1 of the dry run (slb1): start
   radius 0.12 → 0.22, because a 0.12 sun at boot read as a speck from across the room.
+- **2.frag**: the dry-run result (slb3), heat falloff 1.6 → 0.9. The burn now reaches the cells
+  around the sun: one cell glows gold at the heart with warm spill into its neighbours, so it reads
+  as a sun burning *in* the lattice rather than a glow spot on top. Health after: clip 0, lum 0.23,
+  hue drift 0.003/min, gate 0.87.
 
 ## Dry run notes (2026-11-14, Windows Surface, internal mic, Echo Studio)
 
 - Cold load 3 s on Windows (the 99 KB sun line takes 1–3 min there). This is the lighter, safer
   show shader on that machine.
 - Boot health: clip 0, lum 0.195, dark 0.19, lumMin 0.16, sat 0.83.
+- Mic gain ×32 opens lattice-nav's quietGate fully on loud music (×16 left it near 0.3).
+- Over the run: clip 0 throughout, lumMin ≥ 0.15, no jank (p95 16.8 ms). Spotify paused itself at
+  a track boundary twice; the loop resumed it.
+- Open: hueConc reached 0.83 once (a mostly blue field); the prefs flag a monochrome frame above ~0.85.
