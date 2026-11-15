@@ -58,7 +58,14 @@ uniform float waveletBassZScore; // self-calibrating bass spike — kick zoom (w
 // iTime*Δrate, and that jump grows as iTime grows → the spin speeds up over time. Accumulated
 // phases never do that — the bass-speedup is baked into the accumulator's RATE in the
 // controller, so here we only scale by the STATIC knob (a constant factor can't accelerate).
-#define spin_angle   (spinPhase * knob_2 * 2.0)
+// PER-DEVICE SEEDS: index.js gives every phone 4 persistent random seeds (seed..seed4), so the same
+// NFC tag looks different on each phone. A ?seed= in the URL pins them. The preset keeps its
+// character: hue shifts up to +-70deg, shape +-8%, and spin direction flips on seed4.
+#define SEED_HUE     ((seed - 0.5) * 2.4)
+#define SEED_SPIN    (seed4 < 0.5 ? -1.0 : 1.0)
+#define SEED_SIZE    (1.0 + (seed2 - 0.5) * 0.16)
+#define SEED_SPREAD  (1.0 + (seed3 - 0.5) * 0.16)
+#define spin_angle   (spinPhase * knob_2 * 2.0 * SEED_SPIN)
 #define morph_phase  (morphPhase)
 #define flow_phase   (flowPhase)
 #define hue_phase    (huePhase)
@@ -157,8 +164,8 @@ uniform float spectralRolloffNormalized; // high-freq cutoff → outer reach
 
 // LEVEL FAMILY → SIZE / DEPTH / THICKNESS. Band energies set how BIG/BOLD/DEEP, by region.
 #define LINE_THICK  (width * (5.0 + energy_env * 5.0) * (0.4 + knob_26 * 1.6))            // loudness = line weight
-#define size  (baseSize * mix(0.55, 1.10, knob_3) * (1.0 + waveletBand2Spring * 0.18 * MOD_LEVEL))   // mid energy = facet size
-#define offc  (baseOffc * mix(0.70, 1.45, knob_27) * (1.0 + waveletBand5Spring * 0.15 * MOD_LEVEL))   // treble energy = arm spread
+#define size  (baseSize * SEED_SIZE * mix(0.55, 1.10, knob_3) * (1.0 + waveletBand2Spring * 0.18 * MOD_LEVEL))   // mid energy = facet size
+#define offc  (baseOffc * SEED_SPREAD * mix(0.70, 1.45, knob_27) * (1.0 + waveletBand5Spring * 0.15 * MOD_LEVEL))   // treble energy = arm spread
 #define DEPTH (mix(0.18, 0.50, knob_18) + waveletBassSpring * 0.14 * MOD_LEVEL)                       // bass energy = core depth
 
 // TEXTURE FAMILY → DETAIL / SPARKLE / EDGE. Transients/grit set fine structure (below + IRIDESCENCE/EDGE_GLOW).
@@ -525,7 +532,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Oklab -> Oklch (L, C, hue)
     float C = sqrt(ax * ax + ay * ay);
-    float hue = atan(ay, ax);
+    float hue = atan(ay, ax) + SEED_HUE; // per-device hue rotation
     if (hue < 0.0) hue += TAU;
     float L = baseL;
 
