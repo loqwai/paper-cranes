@@ -1,4 +1,5 @@
 // @fullscreen: true
+//https://visuals.beadfamous.com/?shader=claude/wip/iris/2&controller=dodeca-bloom&fullscreen=true&knob_1=0.606&knob_2=0.425&knob_3=0.449&knob_4=0.835&knob_5=0.732&knob_6=0.181&knob_7=0.827&knob_8=1&knob_9=0.811&knob_10=0.74&knob_11=1&knob_12=0.819&knob_13=0.024
 // @mobile: false
 // License: CC0
 //  Seed: ShaderToy golden-dodecahedron kaleidoscope, recolored to plasma-event-horizon Oklch.
