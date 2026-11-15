@@ -75,6 +75,7 @@ node scripts/vj/show.js eval 'async () => { const a = window.cranes.controllerFe
 | Input | `input` is the expected device and `energy > 0`. If not, stop and fix the OS input. On a mic, calibrate `gain` (/vibej2 setup step 3). |
 | Runtime | `meter` = `object` and `validate` = `function` |
 | Controller | `after > before`, with keys present. If the time doesn't advance, the controller is throwing; see playbook section 7, "Picture frozen". |
+| Shader gate | With music playing, the shader's own quiet gate (`smoothstep` on `energyMean` × `bs_presence`, or `quietGate`) sits near 1. If it sits low, the input is quieter than the line feed the gates were tuned for, and the scene reads as silence: dim and nearly frozen. `energy > 0` alone doesn't prove this. Fix the **level**, not the shader, in this order: (1) raise the OS input volume (macOS mic at 27% barely registered, 80% worked, 2026-11-14); (2) `audio_gain`, live via `window.cranes.inputGain` (/vibej2 setup step 3); (3) only if neither reaches it, rescale the gate thresholds in the `-wip` copy, and note it in the shader doc, since a line feed then holds the gates open. The meter's `gate` is `quietGate` when the controller provides it, else the same energy formula, so it also reads low at a low input level. |
 
 Then take one look with `node scripts/vj/show.js shot .claude/vj-shots/show-start.png`, and Read it.
 A black frame while `energy` moves is a poisoned feedback buffer: `node scripts/vj/show.js unstick`.
@@ -146,7 +147,10 @@ which listens for dial releases and steers the visual from them. (`/show check` 
 preflight-only path.)
 
 **Scratch copy:** edits go to a `-wip` copy of the boot shader (for example `sun-1-wip`),
-hot-swapped in. The boot shader itself stays untouched as the panic fallback.
+hot-swapped in. The boot shader itself stays untouched as the panic fallback. Check `git status`
+first: if the `-wip` file is already tracked, it holds an earlier set's live state, so don't copy
+over it. Start the session from it, or make a fresh copy under a new name. At wind-down, save the
+session's result as the next numbered fork rather than leaving it in the `-wip` file.
 
 ## Panic: `/show panic <fork>`
 

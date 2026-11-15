@@ -223,7 +223,14 @@ node scripts/vj/show.js eval 'async (path) => {
    node scripts/vj/show.js eval '() => ({ input: window.cranes.audioInputLabel ?? null, energy: window.cranes.flattenFeatures().energy })'
    ```
    **Calibrate the level with music playing.** Loud music on a line feed reads `energy`
-   0.02–0.06. Below ~0.01 (a mic), trim the gain live, no reload, until it lands there:
+   0.02–0.06. Below ~0.01 (a mic), first check the **OS input volume**, then trim the page gain.
+   - macOS: `osascript -e 'input volume of (get volume settings)'`; below ~70 a MacBook mic barely
+     registers (2026-11-14: 27% gave energy ~0.005, 80% fixed it). Raise it with
+     `osascript -e 'set volume input volume 80'`.
+   - Windows: Settings → System → Sound → (input device) → Input volume. The Surface internal mic
+     at its default still needed ×32 page gain.
+   - Linux: `pactl get-source-volume @DEFAULT_SOURCE@`.
+   Then trim the page gain live, no reload, until `energy` lands in range:
    ```bash
    node scripts/vj/show.js eval 'async (g) => { window.cranes.inputGain.gain.value = g; await new Promise(r => setTimeout(r, 5000)); const f = window.cranes.flattenFeatures(); return { energy: f.energy, energyMean: f.energyMean } }' '[16]'
    ```
