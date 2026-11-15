@@ -24,6 +24,7 @@
 - **Mic-only gates:** for line-in/BlackHole, set the `REACT-MICGATE-1` gates back to 0.003/0.015 (shader GATE and controller).
 - **No music files on the machine** for repeatable A/B tests. Laptop-speaker test sounds have almost no bass.
 - **CLI validator:** `scripts/validate-shader.js` can't run because its glslang binary is missing from node_modules. Use the page validator (`window.__vjValidate`).
+- **Kick flash bypasses the haze cap:** `REACT-KICK-1` multiplies the rays *after* the cap (`sun-1-reactive.frag:1056`), so a kick can push rays to about 3.2x the cap. Measured clip was 0 every time; if a loud venue washes out, move the kick gain before the cap and widen `capL` by the kick envelope.
 - **Unproven flicker spike:** one alert read 1.25 and couldn't be reproduced; everything since has been 0.09–0.85.
 
 ## show-mode (`~/mechs/show-mode/`, not a git repo)
