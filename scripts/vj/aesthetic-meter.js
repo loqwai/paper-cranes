@@ -15,8 +15,13 @@
 //              > 0.3 = the picture moves WITH the music; ≈ 0 = it moves regardless
 //   hueDriftPerMin  circular-mean hue drift, turns/min (user asked ≤ ~0.03)
 //   hueConc    hue concentration 0..1 (1 = monochrome field, 0 = every hue at once)
+
 (() => {
   if (window.__vjMeter) clearInterval(window.__vjMeter.timer)
+  // quietGate comes from the wavelet-ease controller. Pages running another controller (black-sun,
+  // sun-N) never set it, so the gate read 0 and every beat looked like a track boundary. Same
+  // formula as wavelet-ease, unsmoothed: the meter averages its window anyway.
+  const quietGateOf = f => Math.min(1, Math.max(0, ((f.energy ?? 0) - 0.015) / 0.05))
   const cv = document.querySelector('canvas')
   const W = 64, H = 36
   const c2 = document.createElement('canvas'); c2.width = W; c2.height = H
@@ -40,7 +45,7 @@
         if (M.prev) diff += Math.abs(l - M.prev[i])
       }
       const f = window.cranes?.flattenFeatures?.() ?? {}
-      M.buf.push({ t: performance.now() / 1000, lum: lum / n, dark: dark / n, clip: clip / n, sat: sat / n, motion: M.prev ? diff / n : 0, hue: hn ? (Math.atan2(hy, hx) / 6.283 + 1) % 1 : null, hueConc: hn ? Math.hypot(hx, hy) / hn : 0, energy: f.energy ?? 0, bass: f.bassNormalized ?? 0, kick: f.wavelet_bassHit ?? 0, gate: f.quietGate ?? 0 })
+      M.buf.push({ t: performance.now() / 1000, lum: lum / n, dark: dark / n, clip: clip / n, sat: sat / n, motion: M.prev ? diff / n : 0, hue: hn ? (Math.atan2(hy, hx) / 6.283 + 1) % 1 : null, hueConc: hn ? Math.hypot(hx, hy) / hn : 0, energy: f.energy ?? 0, bass: f.bassNormalized ?? 0, kick: f.wavelet_bassHit ?? 0, gate: f.quietGate ?? quietGateOf(f) })
       M.prev = cur; if (M.buf.length > 90 * HZ) M.buf.shift()
     } catch (e) { M.err = String(e) }
   }

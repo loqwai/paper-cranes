@@ -1,3 +1,5 @@
+import { pathToFileURL } from 'node:url'
+
 const DEFAULT_PORT = 6969
 
 export const getPort = () => {
@@ -9,4 +11,4 @@ const main = () => {
   process.stdout.write(String(getPort()))
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main()
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main()

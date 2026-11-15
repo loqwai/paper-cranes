@@ -11,6 +11,10 @@
       "Bash(git status)",
       "Bash(git diff:*)",
       "Bash(node scripts/vj/show.js:*)"
+    ],
+    "deny": [
+      "Bash(pkill -f vite:*)",
+      "Bash(pkill vite:*)"
     ]
   }
 }
