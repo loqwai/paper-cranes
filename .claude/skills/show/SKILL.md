@@ -15,7 +15,7 @@ Read it once, and use it for anything this skill doesn't cover. Brief every agen
 
 - **No args:** the live line, `shader=claude/wip/black-sun/sun-1` + `controller=black-sun`.
 - **`<shader-path>`:** for a fork, `sun/N` pairs with `controller=sun-N`, and
-  `sun/1` pairs with `controller=sun`. For any other shader, add `&controller=` only if
+  `claude/wip/sun/1` pairs with `controller=sun`. For any other shader, add `&controller=` only if
   a matching `controllers/*.js` exists.
 - **`audio=<label>`:** appends `&audio_device=<label>`. Without it, the page uses the OS default
   input: the line feed (BlackHole 2ch on macOS; Voicemeeter or VB-Cable on Windows) or a mic.
@@ -155,7 +155,7 @@ session's result as the next numbered fork rather than leaving it in the `-wip` 
 ## Panic: `/show panic <fork>`
 
 This gets a known-good look on the wall without a reload. **Never use `goto` mid-set.** Pick a
-fork from the playbook's fork library; `sun/7` is the healthy default.
+fork from the playbook's fork library; `claude/wip/sun/7` is the healthy default.
 
 ```bash
 node scripts/vj/show.js eval 'async (path) => {

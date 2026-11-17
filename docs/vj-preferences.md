@@ -167,7 +167,7 @@ For running a show, see [show-playbook.md](show-playbook.md) and the `/show` ski
 - After any session with design feedback, add the new rules here, quoting the user's own words
   and dating them.
 - Shader-specific decisions belong in that shader's doc (for example
-  `shaders/sun/sun.md`). Only taste that generalizes goes here.
+  `shaders/claude/wip/sun/sun.md`). Only taste that generalizes goes here.
 
 - **Flicker tolerance (2026-10-09):** occasional meter flicker around 1.2–1.6 is fine ("Flickering is ok at this level occasionally"). Only alert on 2 or more, or on sustained runs.
 

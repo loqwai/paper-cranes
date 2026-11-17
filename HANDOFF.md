@@ -13,7 +13,7 @@ The rehearsal is over. Everything below is merged to `main` unless it says other
 5. Ask Claude to **resend the Twister ring colours**. They reset whenever the Twister is replugged.
 6. Keep the cheat sheet open: `glow -p docs/twister-cheatsheet.md`.
 
-Escape hatch: `/show panic sun/7` hot-swaps a known-good fork without a reload.
+Escape hatch: `/show panic claude/wip/sun/7` hot-swaps a known-good fork without a reload.
 
 ## Backup: render on a second computer
 

@@ -1,4 +1,4 @@
-// sun-lamp — the clocks shaders/sun/lamp/3.frag reads (2.frag skips lp_m; 1.frag reads only lp_u and
+// sun-lamp — the clocks shaders/claude/wip/sun/lamp/3.frag reads (2.frag skips lp_m; 1.frag reads only lp_u and
 // lp_seam). No audio.
 //
 //   lp_u     travel seconds, ∫ speed dt. K7 SPEED sets the rate: 0.15× (calm drift) .. 3× the show's

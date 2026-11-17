@@ -82,16 +82,16 @@ or calm > 15 s).
 | # | Name | File | Night | Hold | Advance on | Critic |
 |---|---|---|---|---|---|---|
 | 1 | pre-party | `claude/wip/black-sun/sun-1-safe` | J2–J3 20:19–21:00 | 7:07 | breakdown | 6–8 (#1–#4) |
-| 2 | orbit | `sun/10`, sky ramps held, `scene_force` 2 | J5 21:00–21:10 | 1:30 | build | not running |
-| 3 | fractal-sky | `sun/10` | J7 21:41–21:58 | 3:18 | build | not running |
-| 4 | sun-cast | `sun/11` | J8 22:00–22:20 | 3:28 | breakdown | not running |
-| 5 | painterly | `sun/12` | J9 22:22–22:38 | 2:47 | build | not running |
-| 6 | sun-surface | `sun/13` | J10 22:38–22:45 | 1:30 | drop | not running |
+| 2 | orbit | `claude/wip/sun/10`, sky ramps held, `scene_force` 2 | J5 21:00–21:10 | 1:30 | build | not running |
+| 3 | fractal-sky | `claude/wip/sun/10` | J7 21:41–21:58 | 3:18 | build | not running |
+| 4 | sun-cast | `claude/wip/sun/11` | J8 22:00–22:20 | 3:28 | breakdown | not running |
+| 5 | painterly | `claude/wip/sun/12` | J9 22:22–22:38 | 2:47 | build | not running |
+| 6 | sun-surface | `claude/wip/sun/13` | J10 22:38–22:45 | 1:30 | drop | not running |
 | 7 | julia-arms | `.claude/vj-tools/sun-1-show.pre-giant.frag` | J12–J13 23:29–23:50 | 3:39 | build | 4.5–7.5 (#19–#30) |
-| 8 | giant | `sun/14` | J15 00:37–01:16 | 6:57 | drop | 8–8.5 (#45–#50) |
-| 9 | fan-root | `sun/15` | J16–J18 01:17–02:06 | 10:15 | drop | 7.5–8 (#63–#66) |
-| 10 | kiss | `sun/16` | J19 02:16 | 1:30 | drop | 7 (#68) |
-| 11 | transit | `sun/17` | J19 02:21 | 1:30 | build | 7–8 (#67, #69) |
+| 8 | giant | `claude/wip/sun/14` | J15 00:37–01:16 | 6:57 | drop | 8–8.5 (#45–#50) |
+| 9 | fan-root | `claude/wip/sun/15` | J16–J18 01:17–02:06 | 10:15 | drop | 7.5–8 (#63–#66) |
+| 10 | kiss | `claude/wip/sun/16` | J19 02:16 | 1:30 | drop | 7 (#68) |
+| 11 | transit | `claude/wip/sun/17` | J19 02:21 | 1:30 | build | 7–8 (#67, #69) |
 | 12 | audio-web | `claude/wip/black-sun/sun-1-show`, OG-SKY held | J19 02:25 | 1:30 | breakdown | 8.5 (#70–#72) |
 | 13 | og-sky | `claude/wip/black-sun/sun-1-show` | J20 02:29–02:45 | 2:47, then hold to the end | — | never scored with music |
 
@@ -110,20 +110,20 @@ say only where that matters.
   the story then sat ~15 min in act 4 and ~15 min in a too-dark act 3 (#8–#18). `sun-1-safe` is
   `sun-1` with the K10 master fade removed.
 
-### 2 · orbit (sun/10, ramps held, ORBIT pinned) · J5
+### 2 · orbit (claude/wip/sun/10, ramps held, ORBIT pinned) · J5
 
 - **Sees:** the story star slides off and a giant gold plasma limb fills the lower right over deep
   space; the world turns slowly about it (`orbit-l.png`).
 - **Words:** "A feeling of galactic minisculity by being next to the giant, powerful, radiating sun
   from the lower right corner, feeling like we're orbiting it for a while… let's make sure not to
   flash"
-- **How:** `sun/10` still carries SCENES-2b. The swap holds `sky_return`/`no_space`/`lattice_mix` at
+- **How:** `claude/wip/sun/10` still carries SCENES-2b. The swap holds `sky_return`/`no_space`/`lattice_mix` at
   0 (the wall at 21:00, before J7) and sets `scene_force` 2, which pins ORBIT and keeps the ECLIPSE
   black moon away ("We need that hole gone"). Beat 3 clears `scene_force`.
 - **Watch:** on the night this was a forced preview (21:00–21:07). Whether the auto scene cycle
   ever showed it to the room is not recorded. ORBIT cuts in at the swap: land it on the build.
 
-### 3 · fractal-sky (sun/10, forked 21:58) · J7
+### 3 · fractal-sky (claude/wip/sun/10, forked 21:58) · J7
 
 - **Sees:** the space look fades over 20 s, the patchwork tile sky returns over 90 s and goes
   self-similar, turning slowly about the centre, while the `lattice-interactive/3` folds grow in over
@@ -131,11 +131,11 @@ say only where that matters.
 - **Words:** "Let's riff on OG sky significantly. Let's avoid space for a while. We need to evolve
   in new, fractally ways" · "Let's mix in some of the lattice-3-interactive 3. Slowlly, over time,
   Into the sky" · "GIVE ME ZOOM CONTROL"
-- **Dials:** the `sun/10.md` vector; K5 0.67 locks SUPERNOVA (`--auto-story` frees it).
+- **Dials:** the `claude/wip/sun/10.md` vector; K5 0.67 locks SUPERNOVA (`--auto-story` frees it).
 - **Watch:** the green/pink banding the user objected to at 22:17 is in beats 2–6. Before PERF-1 the
   two skies together hit p95 33 ms, so watch the frame time during the 20 s ramp.
 
-### 4 · sun-cast (sun/11, 22:20) · J8
+### 4 · sun-cast (claude/wip/sun/11, 22:20) · J8
 
 - **Sees:** a blue-white dwarf (20–60 s), a red giant drifting in (80–120 s), a pulsar (140–180 s)
   and a binary pair (200–240 s) arrive behind the main star over the pink-lattice sky (`cast-c.png`).
@@ -145,7 +145,7 @@ say only where that matters.
   patches out.
 - **Watch:** the banding ("I need less of this contrasted green/pink banded colors").
 
-### 5 · painterly (sun/12) · J9
+### 5 · painterly (claude/wip/sun/12) · J9
 
 - **Sees:** brush-stroke tendrils, broken OKLCH colour, canvas grain; the black eclipse moon from
   `paint-2c.png` is gone (NO-ECLIPSE-1).
@@ -156,7 +156,7 @@ say only where that matters.
   near 1, REACH and GLOW pulled low.
 - **Watch:** the regular brick-like stroke grid and pink rays (the painterly2 fixes never landed).
 
-### 6 · sun-surface (sun/13) · J10
+### 6 · sun-surface (claude/wip/sun/13) · J10
 
 - **Sees:** granulation with dark lanes, limb darkening, faculae and two slow sunspots on the
   painterly suns over the brick-tile vortex (`sunsurf2.png`).
@@ -177,7 +177,7 @@ say only where that matters.
 - **Watch:** an unearned giant size jump (#24, 4.5); a saturated cyan halo (#27); the tile ring
   turning umber (#32); "It's gray and dark" (23:25).
 
-### 8 · giant (sun/14, 01:16) · J15
+### 8 · giant (claude/wip/sun/14, 01:16) · J15
 
 - **Sees:** the old ball sun fades out over 60 s as a colossal ember body rises in the lower right
   with the cyan Julia fan off its limb and the companion on the limb (`giant5-a.png`).
@@ -189,28 +189,28 @@ say only where that matters.
 - **Watch:** fan aliasing (#51); a grey blot at the fan root (#52, #59); a drop can flood ~70% of the
   frame with an amber smear (#54; SMEAR-LOCAL fixed it from beat 9); the sky turning umber (#42–#44).
 
-### 9 · fan-root (sun/15, 02:06) · J16–J18
+### 9 · fan-root (claude/wip/sun/15, 02:06) · J16–J18
 
 - **Sees:** the giant with a crown of cyan and azure Julia plumes from a luminous gold-to-cyan root,
   streaming forward on the bass-rated flow clock over an indigo starfield
   (`docs/shots/sun/15-fork-0206.png`).
 - **Words:** "I need more audio reactivity. It looks static"
 - **Dials:** the 01:17–01:20 tour of the new dial map (HUE 1, FAN 1, GLOW 1, DARK 1), then settling
-  to the `sun/15.md` vector the night ended on.
+  to the `claude/wip/sun/15.md` vector the night ended on.
 - **Watch:** the companion's raspberry core and violet halo (#65); grey-lilac arm tips (#66).
 
-### 10 · kiss (sun/16, 02:16) · J19
+### 10 · kiss (claude/wip/sun/16, 02:16) · J19
 
-- **Same code as sun/15:** the swap skips the recompile and only sets the beat. Wait for the music to
+- **Same code as claude/wip/sun/15:** the swap skips the recompile and only sets the beat. Wait for the music to
   earn a kiss (`window.__blackSunState.kissLog`).
 - **Sees at 02:16:** the companion upper left trailing beaded field lines, the crown spread wide
   (`docs/shots/sun/16-moment-0216.png`).
 - **Words:** none; the user ran `/fork` for the third time in ten minutes.
 - **Watch:** the starfield vanished at the act change (#68; fixed in beat 12).
 
-### 11 · transit (sun/17, 02:21) · J19
+### 11 · transit (claude/wip/sun/17, 02:21) · J19
 
-- **Same code as sun/15.** Wait for the companion to cross the giant's face
+- **Same code as claude/wip/sun/15.** Wait for the companion to cross the giant's face
   (`docs/shots/sun/17-moment-0221.png`).
 - **Words:** none; `/fork` at 02:21.
 
@@ -238,9 +238,9 @@ say only where that matters.
 advance is a `window.cranes.shader` hot-swap inside one `show.js eval`.
 
 **The anchor problem.** Every fork bakes `FADE_T*` and phase anchors against the `bs_*` clocks of
-the moment it was saved. `sun/14` has `FADE_T7` = 5132 s: on a page at bs_time 600 it shows the
-pre-giant look for 75 minutes. `sun/15`–`17` are COLD-START (every fade at −1000), so they cut in at
-once. `sun/10`–`13` come from the `sun-1-wip` line, which had no `FADE_T` anchors; only their page
+the moment it was saved. `claude/wip/sun/14` has `FADE_T7` = 5132 s: on a page at bs_time 600 it shows the
+pre-giant look for 75 minutes. `claude/wip/sun/15`–`17` are COLD-START (every fade at −1000), so they cut in at
+once. `claude/wip/sun/10`–`13` come from the `sun-1-wip` line, which had no `FADE_T` anchors; only their page
 ramps and the cast are re-timed.
 
 `swap.mjs` reads the wall's current source and the live clocks (sampled twice, 400 ms apart, then
@@ -252,7 +252,7 @@ predicted 3 s ahead) and rewrites:
 | `BUD*`, `FLX2`, `C_FLUX0`, `FLUX0`, `FLOW0` | the wall has it → keep; else that clock's value at +3 s |
 | `GAL_T8` | moves with `FADE_T8`: kept with it, else max(galPh at +3 s, `GAL_T2`), so the sky offset is continuous at the switch |
 | `FADE_T2`, `GAL_T2` | never moved: they enter the sky warp `tW`/`sw` directly, and moving them jumps the sky (RELOAD-REBAKE) |
-| `tW` guard | adds `max(FADE_T8 - FADE_T2, 0.0)` where it is missing (`sun/14`) |
+| `tW` guard | adds `max(FADE_T8 - FADE_T2, 0.0)` where it is missing (`claude/wip/sun/14`) |
 | cast `tc` (11–13) | keep the wall's cast; else `max(bs_time - (now + 3), 0.0)`, so the cast arrives again |
 | `sky_return` / `no_space` / `lattice_mix` (10–13) | keep the wall's; else ramp over 90 / 20 / 180 s, as the page did that night |
 | `FADE` (10–11) | `1.0 - knob_10` → `1.0` ("I want 100% bright all the time") |
@@ -267,7 +267,7 @@ offset (the fan's c, the flow) — a jump. RELOAD-REBAKE left `FLOW0` alone for 
 6 → 7 line change, and anything the outgoing beat had that the incoming one lacks. Land those swaps
 on the cue.
 
-Dry run, no page: `node .claude/skills/sun-set/swap.mjs dry shaders/sun/14.frag --time 2100 --bud
+Dry run, no page: `node .claude/skills/sun-set/swap.mjs dry shaders/claude/wip/sun/14.frag --time 2100 --bud
 2000 --flux 330 --flow 2000 --gal 190 [--wall prev.frag] [--out next.frag]` prints the anchor diff.
 Chain `--out` into the next `--wall` to rehearse the whole set.
 
