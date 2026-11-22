@@ -15,6 +15,11 @@ clit-set/2). Audio running, fps 90. Subtle moves only.
   with teal edges, on deep black. The filaments visibly coil and ripple one way. Audio `energy 0.045,
   mids high (0.95 norm), centroid very low (0.02)`. What worked: the traveling waves on a one-way phase
   (1.8 rad/s) plus the output magenta guard, which kept the violet and red clean.
+- **03:41, iter 6, jellyfish tendrils (voyage ≈3.7)**: coral-red ring tendrils hanging from a
+  periwinkle-lace canopy, teal-edged, over a wide black gap. With the coil and undulate waves they
+  ripple like a jellyfish. Audio `energy 0.021, bass 0.48, mids 0.80, centroid 0.32, entropy 0.53`.
+  Hot pink 0.065. What worked: domain waves are most legible on long isolated filaments over black;
+  in the dense lace mass they read as churn.
 
 ## Todo
 

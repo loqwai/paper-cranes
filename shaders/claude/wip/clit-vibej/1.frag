@@ -326,6 +326,15 @@ void mainImage(out vec4 P, vec2 V) {
     vec3 col = mix(bg, lace_col * LACE_GAIN, lace);
     // The braid (where both traps cross) is where the beat lands: a bass punch lights the filigree, locally
     col += mix(lace_col, vec3(1.0, 0.88, 0.7), 0.55) * lace_fine * (0.3 + 0.9 * TREB_ENV * REACT + 0.6 * PUNCH * REACT);   // treble sparkles the braid
+    // PEARLS (vibej iter 7): sparse soft pinpoints on the braid. Cells live in fractal space, so they ride
+    // the geometry and shimmer as the coil/undulate waves pass; each twinkles on its own phase. Spectral
+    // crest (peaky, tonal sound: cs_pearl) brings more of them out. Local light only.
+    vec2 pq = C * zoom * 120.0;
+    float pid = hash21(floor(pq) + 3.3);
+    float pon = step(1.0 - 0.05 * (PEARL / 0.3), pid);
+    float pdot = smoothstep(0.38, 0.08, length(fract(pq) - 0.5));
+    float ptw = 0.5 + 0.5 * sin(FLOW * 50.0 + pid * 60.0);
+    col += mix(lace_col, vec3(1.0, 0.93, 0.82), 0.6) * lace_fine * pon * pdot * ptw * 0.55;
 
     // Rim — body silhouette edges (fades at depth, where every pixel is an edge)
     float rim = smoothstep(0.1, 0.5, edge * 20.0) * (1.0 - smoothstep(0.8, 2.2, lz));

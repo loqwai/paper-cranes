@@ -64,3 +64,4 @@ during the show are listed per iteration below.
   and 26° are now squeezed toward the arc's two edges with a cubic curve, and the arc's middle loses up
   to 45% chroma. L is kept. Result: hot-pink share 0.18–0.28 → 0.06–0.13, white 0, grey ≤ 4%.
 - **iter 6** (03:40): every kick surges the coil and undulate waves forward: `WAVE_PHASE += cs_beat·TAU·0.35` (~0.24 rad per full kick, eased 0.12 s, never back). Rhythm in the motion, not the light.
+- **iter 7** (03:43): pearls are back. `PEARL` (spectral crest) was defined but unused. It now drives sparse soft pinpoints on the braid: fractal-space cells that ride the geometry and shimmer as the waves pass, each on its own twinkle phase, at density 5%·PEARL/0.3 and gain 0.55.
