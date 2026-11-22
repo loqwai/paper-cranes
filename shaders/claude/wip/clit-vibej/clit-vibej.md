@@ -68,3 +68,4 @@ during the show are listed per iteration below.
 - **iter 8** (03:44): treble (`TREB_ENV`) cools the rim hue toward teal (palette t 0.66, up to 50%), the mirror of a build warming it to red. Colour only.
 - **iter 9** (03:47): a timbre shift (`cs_shift`, spectral flux and entropy change, unused before) turns the lace palette up to 0.6 rad. Colour only.
 - **iter 10** (03:48): the braid (`lace_fine`, which carries the treble sparkle, punch and pearls) now fades where it changes faster than a pixel (`fwidth(lx+ly)` 1.5 to 4) at any depth, not only past 3x. The dense lace at home was churning into chalky speckle on the 408 px phone canvas. Grey 8.6% → 2.8%.
+- **iter 11** (03:50): the main lace also dims, by up to half, where it is sub-pixel (`fwidth(min(lx,ly))` 2 to 6) at any depth. At voyage 2.25 the bass-thickened, coil-churned lace mass filled the frame as chalky speckle (grey 9%, vivid 0.26). After: grey 3%, vivid 0.39.

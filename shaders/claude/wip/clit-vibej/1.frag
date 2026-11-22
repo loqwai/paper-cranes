@@ -266,6 +266,9 @@ void mainImage(out vec4 P, vec2 V) {
     // Coherence gate, depth only: past ~3x, drop lace that changes faster than a pixel (speckle)
     float coh = smoothstep(0.6, 1.6, lz);
     lace *= 1.0 - coh * smoothstep(1.5, 5.0, fwidth(min(lx, ly)));
+    // vibej iter 11: at any depth, sub-pixel lace dims by up to half toward the velvet floor, so the dense
+    // mass (thickened by bass, churned by the coil) reads as velvet with clean filaments, not chalky speckle
+    lace *= 1.0 - 0.5 * smoothstep(2.0, 6.0, fwidth(min(lx, ly)));
     lace_fine *= 1.0 - coh * 0.7;
     // vibej iter 10: at any depth, the braid fades where it changes faster than a pixel. Its sparkle, punch and
     // pearls stay on clean filaments instead of churning the dense lace mass into chalky speckle (phone 408 px).

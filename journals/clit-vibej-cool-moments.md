@@ -32,6 +32,8 @@ clit-set/2). Audio running, fps 90. Subtle moves only.
 - `clit-vibej/1 ← clit-set/2` (2026-11-22, 0de6d953): fork for the live /vibej show.
 
 ## Design hypotheses for v(next)
+- On a 408 px phone canvas the dense orbit-trap lace averages to chalky grey. Gate lace by its own
+  fwidth at every depth, not only at deep zoom. Bass thickening and the coil both feed the speckle.
 - Hard colour rules belong at the output, not per term. Any motion plus trails blends neighbouring
   hues, so a palette that avoids magenta per term still makes magenta once things move.
 - "Undulate and coil" without sway means traveling waves on a one-way phase: a barber-pole twist in the
