@@ -75,7 +75,10 @@ operator; `/show` launches jam.html.
 
 ### Coaster controls
 
-k1, k2 and k4 are rates, not positions: you fly the fractal instead of placing the camera.
+Opt-in: add `&coaster=1` to the show URL. Without it, k1/k2/k4 are the usual X, Y and ZOOM positions,
+so links and NFC tags that bake those knobs look the same as before.
+
+With `coaster=1`, k1, k2 and k4 are rates, not positions: you fly the fractal instead of placing the camera.
 
 - **k4 THROTTLE** dives forward into the lace. 0 hovers on the voyage; the higher the dial, the faster the
   dive. It only goes forward. At about 3.7x the coaster climbs: the dive eases back out over 8 s while

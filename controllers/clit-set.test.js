@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { fresh, step, place, nav, loopDelta, steer, WAYPOINTS, LEG_SECS, LOOP_SECS, legSecs, LZ_CAP, STEER_LIMIT } from './clit-set.js'
+import { fresh, step, place, nav, loopDelta, steer, WAYPOINTS, ZOOM_MAX, LEG_SECS, LOOP_SECS, legSecs, PAN_SPAN, LZ_CAP, STEER_LIMIT } from './clit-set.js'
 
 const run = (S, f, secs, dt = 1 / 60) => {
   let out
@@ -10,6 +10,7 @@ const run = (S, f, secs, dt = 1 / 60) => {
 const HOME = WAYPOINTS[0]
 const loud = { energy: 0.3, energyNormalized: 0.9, energyZScore: 0.8, bassZScore: 0.9, spectralCentroidZScore: 1.2 }
 const quiet = { energy: 0, energyNormalized: 0.1 }
+const C = { ...quiet, coaster: 1 }
 
 describe('clit-set controller navigation', () => {
   it('opens at home with every knob at 0', () => {
@@ -90,15 +91,68 @@ describe('clit-set controller navigation', () => {
     expect(back.cs_navA).toBeCloseTo(HOME.A, 1)
   })
 
+  it('a knob twist glides instead of snapping', () => {
+    const S = fresh()
+    run(S, quiet, 1)
+    const first = step(S, { ...quiet, knob_1: 1 }, 1 / 60)
+    expect(first.cs_cy).toBeLessThan(0.05)
+    const settled = run(S, { ...quiet, knob_1: 1 }, 8)
+    expect(settled.cs_cy - place(S.voyage).cy).toBeCloseTo(PAN_SPAN, 2)
+  })
+
+  it('a small X or Y nudge from 0 moves the camera a small distance from wherever the voyage is', () => {
+    const k = Array(16).fill(0)
+    for (let u = 0; u < WAYPOINTS.length; u += 0.37) {
+      const auto = nav(k, u)
+      for (const i of [0, 1]) {
+        for (const d of [0.01, 0.04, 0.08, 0.1]) {
+          const kn = [...k]
+          kn[i] = d
+          const moved = nav(kn, u)
+          const dist = Math.hypot(moved.cx - auto.cx, moved.cy - auto.cy)
+          expect(dist).toBeLessThanOrEqual(0.1 * PAN_SPAN + 1e-9)
+          expect(dist).toBeGreaterThan(0)
+        }
+      }
+    }
+  })
+
+  it('the settled camera follows a slow X nudge smoothly, with no jump at the bottom of the dial', () => {
+    const S = fresh()
+    run(S, quiet, 1)
+    const start = step(S, quiet, 1 / 60).cs_cy
+    let prev = start
+    for (let i = 1; i <= 60; i++) {
+      const out = step(S, { ...quiet, knob_1: 0.1 * i / 60 }, 1 / 60)
+      expect(Math.abs(out.cs_cy - prev)).toBeLessThan(0.01)
+      prev = out.cs_cy
+    }
+    expect(Math.abs(run(S, { ...quiet, knob_1: 0.1 }, 8).cs_cy - start)).toBeLessThan(0.1)
+  })
+
+  it('without ?coaster, ZOOM is a position: a baked knob_4 settles at a fixed depth and never dives on', () => {
+    const S = fresh()
+    for (let i = 0; i < 6; i++) {
+      const out = run(S, { ...quiet, knob_4: 0.3 }, 10)
+      expect(out.cs_lz).toBeCloseTo(Math.min(ZOOM_MAX, place(S.voyage).lz + 0.3 * ZOOM_MAX), 1)
+      expect(out.cs_lz).toBeLessThanOrEqual(ZOOM_MAX + 1e-9)
+    }
+    expect(S.dive).toBe(0)
+    const drop = { energy: 0.3, energyNormalized: 0.9, energyZScore: 0.9, bassZScore: 0.9 }
+    run(S, { ...drop, knob_4: 1 }, 1)
+    expect(S.surge).toBe(0)
+    expect(S.dive).toBe(0)
+  })
+
   it('THROTTLE dives forward one way, faster the further the dial is up', () => {
     const slow = fresh(), fast = fresh()
-    run(slow, { ...quiet, knob_4: 0.3 }, 3)
-    run(fast, { ...quiet, knob_4: 1 }, 3)
+    run(slow, { ...C, knob_4: 0.3 }, 3)
+    run(fast, { ...C, knob_4: 1 }, 3)
     expect(fast.dive).toBeGreaterThan(slow.dive * 2)
     let prev = 0
     const S = fresh()
     for (let i = 0; i < 300; i++) {
-      const out = step(S, { ...quiet, knob_4: 0.5 }, 1 / 60)
+      const out = step(S, { ...C, knob_4: 0.5 }, 1 / 60)
       expect(out.cs_dive).toBeGreaterThanOrEqual(prev - 1e-9)
       prev = out.cs_dive
     }
@@ -108,7 +162,7 @@ describe('clit-set controller navigation', () => {
     const S = fresh()
     let maxLz = 0, climbed = false, v0 = null
     for (let t = 0; t < 30; t += 1 / 60) {
-      const out = step(S, { ...quiet, knob_4: 1 }, 1 / 60)
+      const out = step(S, { ...C, knob_4: 1 }, 1 / 60)
       maxLz = Math.max(maxLz, out.cs_lz)
       if (out.cs_climb > 0 && v0 === null) { v0 = S.voyage; climbed = true }
     }
@@ -124,13 +178,13 @@ describe('clit-set controller navigation', () => {
     expect(steer(1)).toBeCloseTo(1, 6)
     expect(steer(0.1)).toBeLessThan(-0.5)
     const idle = fresh()
-    const a = run(idle, quiet, 4)
+    const a = run(idle, C, 4)
     expect(Math.abs(idle.panX) + Math.abs(idle.panY)).toBe(0)
     const S = fresh()
-    const p1 = run(S, { ...quiet, knob_1: 1 }, 2).cs_cy - place(S.voyage).cy
-    const p2 = run(S, { ...quiet, knob_1: 1 }, 2).cs_cy - place(S.voyage).cy
+    const p1 = run(S, { ...C, knob_1: 1 }, 2).cs_cy - place(S.voyage).cy
+    const p2 = run(S, { ...C, knob_1: 1 }, 2).cs_cy - place(S.voyage).cy
     expect(p2).toBeGreaterThan(p1)
-    run(S, { ...quiet, knob_1: 1 }, 20)
+    run(S, { ...C, knob_1: 1 }, 20)
     expect(S.panX).toBeCloseTo(STEER_LIMIT, 6)
     expect(a.cs_cy).toBeCloseTo(nav(Array(16).fill(0), idle.voyage).cy, 1)
   })
@@ -138,9 +192,9 @@ describe('clit-set controller navigation', () => {
   it('a drop surges the dive forward, more at a higher throttle', () => {
     const drop = { energy: 0.3, energyNormalized: 0.9, energyZScore: 0.9, bassZScore: 0.9 }
     const hover = fresh(), full = fresh()
-    for (const S of [hover, full]) run(S, quiet, 7)
-    run(hover, { ...drop, knob_4: 0 }, 0.5)
-    run(full, { ...drop, knob_4: 1 }, 0.5)
+    for (const S of [hover, full]) run(S, C, 7)
+    run(hover, { ...drop, coaster: 1, knob_4: 0 }, 0.5)
+    run(full, { ...drop, coaster: 1, knob_4: 1 }, 0.5)
     expect(hover.surge).toBe(0)
     expect(full.surge).toBeGreaterThan(hover.surge)
   })
@@ -183,6 +237,12 @@ describe('clit-set controller navigation', () => {
     const b = run(S, { ...live, spectralCrestNormalized: 1, spectralKurtosisZScore: 1 }, 4)
     expect(b.cs_pearl).toBeGreaterThan(0.8)
     expect(b.cs_focus).toBeGreaterThan(0.8)
+  })
+
+  it('zoom never passes the cap where the lace turns to speckle', () => {
+    const k = Array(16).fill(0)
+    k[3] = 1
+    for (let u = 0; u < WAYPOINTS.length; u += 0.25) expect(nav(k, u).lz).toBeLessThanOrEqual(ZOOM_MAX)
   })
 
   it('voyage0 starts the journey at a waypoint and wraps', () => {

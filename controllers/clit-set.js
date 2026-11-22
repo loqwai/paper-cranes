@@ -48,20 +48,25 @@
 //   cs_beat        colour phase (turns): +BEAT_STEP x kick strength on every kick, eased 0.12 s, never back
 //   cs_drive       0..1 loudness envelope (energy z-score, 0.5 = average) that sets the spin's rate
 // cs_jump is NOT a waypoint index: it counts drops (+1 each, never decreases) and only turns the hue.
-// knob_3 VOYAGE at 0 = autopilot: the voyage drifts through WAYPOINTS by itself. VOYAGE blends from the
-// autopilot to a hand scrub over its first 8%, along the shorter way round the loop. knob_6 POWER,
-// knob_7 BODY, knob_8 CURL add on top of the voyage. Those targets glide through a two-pole ease.
-// COASTER (rate controls, after the glide): knob_4 THROTTLE dives forward (log zoom, one way) at a speed
-// set by the dial; knob_1 / knob_2 STEER (0.5 = straight, the rest is a turn rate; untouched 0 = straight).
-// A drop surges the throttle. At LZ_CAP the coaster climbs: the dive eases back out while the voyage moves
-// on half a waypoint, so the next drop starts on new terrain. knob_5 TURN is a scratch: it skips both
-// glides and turns the picture with the hand, 0→1 = two full turns, on top of the voyage and the spin.
+// knob_1 X, knob_2 Y, knob_3 VOYAGE at 0 = autopilot: the voyage drifts through WAYPOINTS by itself.
+// X and Y push the camera from wherever the voyage has it: the dial value times PAN_SPAN, so a small
+// nudge is a small move (no jump at the bottom of the dial). VOYAGE blends from the autopilot to a hand
+// scrub over its first 8%, along the shorter way round the loop. knob_4 ZOOM, knob_6 POWER, knob_7 BODY,
+// knob_8 CURL add on top of the voyage. Every target glides through a two-pole ease.
+// knob_5 TURN is the exception: a scratch. It skips both glides and turns the picture with the hand,
+// 0→1 = two full turns, on top of the voyage and the spin.
+// ?coaster=1 turns X, Y and ZOOM into rate controls applied after the glide: knob_4 THROTTLE dives
+// forward (log zoom, one way) at a speed set by the dial; knob_1 / knob_2 STEER (0.5 = straight, the
+// rest is a turn rate; untouched 0 = straight). A drop surges the throttle. At LZ_CAP the coaster
+// climbs: the dive eases back out while the voyage moves on half a waypoint, so the next drop starts on
+// new terrain. Opt-in because the NFC variants bake knob_4 as a ZOOM position.
 
 const KNOBS = 16
 const TAU = Math.PI * 2
 export const SCRATCH = 2 * TAU     // TURN (knob_5) full travel, rad
 const SCRATCH_TAU = 0.05          // short enough to follow a hand, long enough to hide MIDI's 128 steps
-export const ZOOM_MAX = 1.1      // log zoom cap of the voyage's own waypoints (3x)
+export const ZOOM_MAX = 1.1      // log zoom cap (3x): the orbit-trap lace turns to speckle past ~3-4x
+export const PAN_SPAN = 0.8      // X/Y: a full dial pans 0.8 in the fractal plane (2/3 of the screen height)
 // COASTER. 2.frag is not self-similar under zoom (the lace turns to speckle past ~3.5x, its coherence
 // gate fades it), so the dive cannot run forever: at LZ_CAP it climbs back out under a voyage move.
 export const THROTTLE_RATE = 0.12   // log zoom per second at full throttle (home to the cap in ~11 s)
@@ -144,14 +149,14 @@ export const place = (u) => {
 
 // Knobs + autopilot clock + spin → navigation target. Pure in the clocks: no audio argument.
 // Fallback in shaders/clit-set/2.frag mirrors this with base = HOME and no spin.
-export const nav = (k, autoU, spin = 0) => {
+export const nav = (k, autoU, spin = 0, coaster = false) => {
   const n = WAYPOINTS.length
   const scrub = clamp01((k[2] - 0.08) / 0.92) * (n - 0.001)
   const base = place(autoU + loopDelta(autoU, scrub, n) * manual(k[2]))
   return {
-    cx: base.cx,
-    cy: base.cy,
-    lz: Math.min(ZOOM_MAX, base.lz),
+    cx: coaster ? base.cx : base.cx - k[1] * PAN_SPAN,
+    cy: coaster ? base.cy : base.cy + k[0] * PAN_SPAN,
+    lz: Math.min(ZOOM_MAX, base.lz + (coaster ? 0 : k[3] * ZOOM_MAX)),
     rot: base.rot + spin,
     A: base.A + k[5] * 1.4,
     B: base.B - k[6] * 0.4,
@@ -185,6 +190,7 @@ export const fresh = () => ({
 })
 
 export const step = (S, f, dt) => {
+  const coaster = num(f.coaster, 0) > 0.5
   S.time += dt
 
   // PRESENCE: everything that adds light is multiplied by this, so silence relaxes to the resting look
@@ -235,7 +241,7 @@ export const step = (S, f, dt) => {
     S.punchFrom = S.punch
     S.punchAge = 0
     S.kickRefr = 0.18
-    if (S.climb === 0) S.diveTo += KICK_DIVE * S.kickAmp * S.throttle
+    if (coaster && S.climb === 0) S.diveTo += KICK_DIVE * S.kickAmp * S.throttle
   }
   S.kickAge = Math.min(1, S.kickAge + dt / KICK_SECS)
   // BEAT: a colour phase that steps forward on every kick (eased 0.12 s) and never goes back
@@ -263,7 +269,7 @@ export const step = (S, f, dt) => {
     S.dropHold = 0.6
     S.dropRefr = DROP_REFRACTORY
     S.jumpTo += 1
-    if (S.climb === 0) S.surge += SURGE * S.throttle
+    if (coaster && S.climb === 0) S.surge += SURGE * S.throttle
   }
   S.drop = toward(S.drop, S.dropHold > 0 ? 1 : 0, dt, S.dropHold > 0 ? 0.05 : 1.2)
   S.jump = toward(S.jump, S.jumpTo, dt, 0.5)
@@ -315,7 +321,7 @@ export const step = (S, f, dt) => {
   // quickens with the music; it never reverses and never stops. Never wrapped: the glide would unwind it.
   S.drive = env(S.drive, clamp01(0.5 + 0.5 * num(f.energyZScore, 0) + 1.5 * eLocal) * live, dt, 0.08, 0.35)
   S.drift += dt * SPIN.base * (SPIN.lo * clock + (SPIN.hi - SPIN.lo) * S.drive)
-  const target = nav(S.knobs.map(v => v ?? 0), S.voyage)
+  const target = nav(S.knobs.map(v => v ?? 0), S.voyage, 0, coaster)
   S.navMid ??= { ...target }
   S.nav ??= { ...target }
   for (const key in target) {
@@ -323,27 +329,29 @@ export const step = (S, f, dt) => {
     S.nav[key] = toward(S.nav[key], S.navMid[key], dt, NAV_TAU)
   }
   // COASTER: throttle and steer are rates on top of the glided voyage, eased 0.2 s so a hand reads at once
-  S.throttle = toward(S.throttle, clamp01(num(f.knob_4, 0)), dt, 0.2)
-  S.steerX = toward(S.steerX, steer(num(f.knob_1, 0)), dt, 0.2)
-  S.steerY = toward(S.steerY, steer(num(f.knob_2, 0)), dt, 0.2)
-  S.surge = toward(S.surge, 0, dt, 1.5)
-  if (S.climb === 0) {
-    S.diveTo += THROTTLE_RATE * (S.throttle + S.surge) * dt
-    S.panX = Math.max(-STEER_LIMIT, Math.min(STEER_LIMIT, S.panX + S.steerX * STEER_RATE * dt))
-    S.panY = Math.max(-STEER_LIMIT, Math.min(STEER_LIMIT, S.panY + S.steerY * STEER_RATE * dt))
-    if (S.nav.lz + S.dive >= LZ_CAP) {
-      S.climb = CLIMB_SECS
-      S.diveTo = 0
-      S.surge = 0
+  if (coaster) {
+    S.throttle = toward(S.throttle, clamp01(num(f.knob_4, 0)), dt, 0.2)
+    S.steerX = toward(S.steerX, steer(num(f.knob_1, 0)), dt, 0.2)
+    S.steerY = toward(S.steerY, steer(num(f.knob_2, 0)), dt, 0.2)
+    S.surge = toward(S.surge, 0, dt, 1.5)
+    if (S.climb === 0) {
+      S.diveTo += THROTTLE_RATE * (S.throttle + S.surge) * dt
+      S.panX = Math.max(-STEER_LIMIT, Math.min(STEER_LIMIT, S.panX + S.steerX * STEER_RATE * dt))
+      S.panY = Math.max(-STEER_LIMIT, Math.min(STEER_LIMIT, S.panY + S.steerY * STEER_RATE * dt))
+      if (S.nav.lz + S.dive >= LZ_CAP) {
+        S.climb = CLIMB_SECS
+        S.diveTo = 0
+        S.surge = 0
+      }
+    } else {
+      // CLIMB: back out of the dive and onto the track's centre while the voyage carries on to new terrain
+      S.climb = Math.max(0, S.climb - dt)
+      S.voyage = (S.voyage + CLIMB_VOYAGE * dt / CLIMB_SECS) % WAYPOINTS.length
+      S.panX = toward(S.panX, 0, dt, CLIMB_SECS / 4)
+      S.panY = toward(S.panY, 0, dt, CLIMB_SECS / 4)
     }
-  } else {
-    // CLIMB: back out of the dive and onto the track's centre while the voyage carries on to new terrain
-    S.climb = Math.max(0, S.climb - dt)
-    S.voyage = (S.voyage + CLIMB_VOYAGE * dt / CLIMB_SECS) % WAYPOINTS.length
-    S.panX = toward(S.panX, 0, dt, CLIMB_SECS / 4)
-    S.panY = toward(S.panY, 0, dt, CLIMB_SECS / 4)
+    S.dive = toward(S.dive, S.diveTo, dt, S.climb > 0 ? CLIMB_SECS / 4 : 0.15)
   }
-  S.dive = toward(S.dive, S.diveTo, dt, S.climb > 0 ? CLIMB_SECS / 4 : 0.15)
 
   const turn = clamp01(num(f.knob_5, 0)) * SCRATCH
   S.scratch = S.scratch === null ? turn : toward(S.scratch, turn, dt, SCRATCH_TAU)
