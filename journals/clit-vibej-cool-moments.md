@@ -26,6 +26,11 @@ clit-set/2). Audio running, fps 90. Subtle moves only.
   with lace chains (orange/teal beads) running along each loop and coral flares on the left rim. Audio
   `energy 0.026, bass 0.40, mids 0.53, treble 0.48, centroid 0.51, entropy 0.73`. Hot pink 0.02, grey 4%.
   What worked: clean filaments after iter 13, and the coil reading as the loops winding inward.
+- **04:28, 2.frag, the ride (voyage 3.8)**: a periwinkle tube with lace filigree walls, the amber rails
+  running from the bottom edge into the dark core, and coral rings sweeping past. Audio `energy 0.033,
+  treble 0.85, centroid 0.60, entropy 0.76, mids 0.21`. Vivid 0.75, grey 1.7%. What worked: the
+  pale-star waypoints make clean tube walls; the rails sell "roller coaster" when the roll puts them
+  near the floor.
 
 ## Todo
 - `[ ] 2.frag tube walls speckle on the phone with live audio (grey 6-12%, hot pink up to 0.18 from red/violet speckle blending), though the same scale is clean without audio (grey 1-4%). Suspects: the coil churn and treble braid sparkle at the tube's compressed scale. Try a per-pixel supersample of the wall, or drop COIL_AMP on 2.frag.`
