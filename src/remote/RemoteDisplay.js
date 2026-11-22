@@ -9,7 +9,7 @@ export const initRemoteDisplay = () => {
   console.log('[Remote Display] Initializing...')
 
   const handleMessage = (message) => {
-    if (message.type !== 'audio-features') console.log('[Remote Display] Received:', message.type, message.data)
+    if (!['audio-features', 'inspect', 'inspect-reply', 'inspect-hello', 'midi-event'].includes(message.type)) console.log('[Remote Display] Received:', message.type, message.data)
 
     switch (message.type) {
       case 'update-params':
@@ -17,6 +17,13 @@ export const initRemoteDisplay = () => {
         break
 
       case 'audio-features':
+        break
+
+      case 'inspect':
+      case 'inspect-reply':
+      case 'inspect-hello':
+      case 'midi-event':
+        // remote-inspect traffic (src/remote/inspectClient.js); not for this handler
         break
 
       case 'status':
