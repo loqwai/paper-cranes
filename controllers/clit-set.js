@@ -106,7 +106,7 @@ export const fresh = () => ({
   build: 0, drop: 0, dropHold: 0, dropRefr: 0, jump: 0, jumpTo: 0,
   shift: 0, entFast: 0.5, entSlow: 0.5,
   hueX: 1, hueY: 0, knobs: Array(KNOBS).fill(null), breath: 0.5,
-  voyage: 0, nav: null, navMid: null,
+  voyage: 0, voyageSeeded: false, nav: null, navMid: null,
 })
 
 export const step = (S, f, dt) => {
@@ -186,7 +186,14 @@ export const step = (S, f, dt) => {
   // BREATH: slow loudness, thickens the lace on loud passages and thins it to a hairline in quiet ones
   S.breath = toward(S.breath, clamp01(num(f.energyNormalized, 0.5)) * live + 0.3 * (1 - live), dt, 1.5)
 
-  // VOYAGE: the autopilot clock only moves forward; a little faster on loud building music, never backwards
+  // VOYAGE: the autopilot clock only moves forward; a little faster on loud building music, never backwards.
+  // ?voyage0=<u> starts the journey at u (in waypoints, wraps mod WAYPOINTS.length) on the first frame,
+  // so each NFC tag can open on its own place. Missing = 0 = home.
+  if (!S.voyageSeeded) {
+    const n = WAYPOINTS.length
+    S.voyage = ((num(f.voyage0, 0) % n) + n) % n
+    S.voyageSeeded = true
+  }
   S.voyage = (S.voyage + dt / LEG_SECS * (1 + 0.3 * live * S.build)) % WAYPOINTS.length
   const target = nav(S.knobs.map(v => v ?? 0), S.voyage)
   S.navMid ??= { ...target }
