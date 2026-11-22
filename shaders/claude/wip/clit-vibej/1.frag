@@ -66,7 +66,8 @@ uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 // Audio sets only the RATE (cs_flow quickens with energy and kicks, cs_drift is the music-rate spin
 // integral); amplitudes are constant. Fades in over the first 10 s after page load.
 // ============================================================================
-#define WAVE_PHASE (HAS_CTL ? (cs_flow * TAU * 3.0 + cs_drift * 20.0) : iTime * 0.8)   // ~0.6 rad/s silent, ~3 loud
+// iter 6: + cs_beat (kick counter, eased 0.12 s, never back): every kick surges the waves ~0.24 rad forward
+#define WAVE_PHASE (HAS_CTL ? (cs_flow * TAU * 3.0 + cs_drift * 20.0 + cs_beat * TAU * 0.35) : iTime * 0.8)   // ~0.6 rad/s silent, ~3 loud, + kick surges
 #define WAVE_RAMP (HAS_CTL ? smoothstep(0.0, 10.0, cs_time) : 1.0)   // 10 s fade-in from page load
 #define COIL_AMP (0.22 * WAVE_RAMP)     // rad of barber-pole twist per iteration (iterations 2+)
 #define UND_AMP  (0.045 * WAVE_RAMP)    // screen units of traveling ripple on the input domain

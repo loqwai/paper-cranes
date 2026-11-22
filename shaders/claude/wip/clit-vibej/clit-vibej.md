@@ -63,3 +63,4 @@ during the show are listed per iteration below.
   gamma (R 0.88, B 0.95) leaning violet toward pink. At the output, hues inside the arc between 288°
   and 26° are now squeezed toward the arc's two edges with a cubic curve, and the arc's middle loses up
   to 45% chroma. L is kept. Result: hot-pink share 0.18–0.28 → 0.06–0.13, white 0, grey ≤ 4%.
+- **iter 6** (03:40): every kick surges the coil and undulate waves forward: `WAVE_PHASE += cs_beat·TAU·0.35` (~0.24 rad per full kick, eased 0.12 s, never back). Rhythm in the motion, not the light.
