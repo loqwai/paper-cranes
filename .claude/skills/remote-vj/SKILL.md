@@ -16,7 +16,10 @@ vault note `kb/reference/paper-cranes-live-tunnel.md`.
 The live checkout is `/home/hypnodroid/Projects/paper-cranes-live` (its own worktree; never the
 primary checkout). The soul cloudflared container already routes
 `cranes-local.hypnodroid.com` to `host.docker.internal:6977` behind the default
-"Protect hypnodroid.com" Access app, so only the dev server needs starting:
+"Protect hypnodroid.com" Access app, so only the dev server needs starting. On a new or rebuilt machine run
+`scripts/remote/setup-cranes-local.sh --check` first; it reports every missing piece
+(see `docs/cranes-local-setup.md`).
+
 
 ```bash
 cd /home/hypnodroid/Projects/paper-cranes-live
