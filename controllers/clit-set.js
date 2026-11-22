@@ -143,7 +143,7 @@ export const step = (S, f, dt) => {
 
   // BANDS: attack fast, release slow
   S.bass = env(S.bass, clamp01(num(f.bassZScore, 0) * 1.2) * live, dt, 0.04, 0.5)
-  S.mids = env(S.mids, clamp01(num(f.midsZScore, 0) * 0.8 + 0.2) * live, dt, 0.08, 0.6)
+  S.mids = env(S.mids, clamp01(num(f.midsZScore, 0) * 0.8 + 0.2) * live, dt, 0.25, 0.8)   // lace light: swells, never flashes
   S.treb = env(S.treb, clamp01(num(f.trebleZScore, 0) * 0.9 + 0.15) * live, dt, 0.05, 0.4)
 
   // KICK: wavelet onset when ?wavelet=true, else a rising edge of the bass z-score

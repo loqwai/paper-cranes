@@ -77,7 +77,10 @@ uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 // Many subtle features, each on its own channel, all slow-released envelopes: alive, never flashing.
 #define BREATH (HAS_CTL ? cs_breath : energyNormalized)                       // energy, 1.5 s
 #define PULSE (1.0 + (HAS_CTL ? cs_bass : clamp(bassZScore, 0.0, 1.0)) * 0.07 * REACT)
-#define LACE_GAIN ((0.75 + (HAS_CTL ? cs_mids : midsNormalized) * 0.6 * REACT) * (0.85 + 0.3 * BREATH))
+// Lace light: mids (0.25 s attack), loudness (1.5 s) and music presence each lift it a little; silence
+// relaxes to the resting look, a full loud passage roughly doubles it (the tone map keeps it unclipped)
+#define PRESENCE (HAS_CTL ? cs_presence : 1.0)
+#define LACE_GAIN ((0.72 + (HAS_CTL ? cs_mids : midsNormalized) * REACT) * (1.0 + 0.4 * BREATH) * (1.0 + 0.3 * PRESENCE))
 #define RIM_INTENSITY (0.3 + (HAS_CTL ? cs_treb : trebleNormalized) * 1.1 * REACT)
 #define TWINKLE ((HAS_CTL ? cs_treb : trebleNormalized) * REACT)
 #define RIM_WARMTH clamp(0.25 + SEED_WARM + BUILD_INTENSITY * 0.35, 0.0, 1.0)
@@ -211,7 +214,7 @@ void mainImage(out vec4 P, vec2 V) {
     z = 1. - smoothstep(1., -6., ly) * smoothstep(1., -6., lx);
 
     // Lace from the orbit traps. Thresholds slide with depth so deep zooms keep a dark floor.
-    float lace_lo = -2.0 + SEED_LACE + K_LACE * 0.9 + LACE_BLOOM * 0.6 + LACE_BREATH * 0.5 * REACT - lz * 0.6;
+    float lace_lo = -2.0 + SEED_LACE + K_LACE * 0.9 + LACE_BLOOM * 0.6 + LACE_BREATH * 0.9 * REACT - lz * 0.6;
     float lace_hi = lace_lo - 3.0;
     float lace_x = smoothstep(lace_lo, lace_hi, lx);
     float lace_y = smoothstep(lace_lo, lace_hi, ly);
