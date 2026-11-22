@@ -192,6 +192,8 @@ const setupAudio = async () => {
     if (fileConfig) {
         try {
             const audioContext = new AudioContext()
+            // Exposed so the first tap resumes it (Chrome's autoplay policy starts it suspended)
+            window.cranes.audioContext = audioContext
             const { sourceNode, audioBuffer, startSource } = await initAudioFromFile({ config: fileConfig, audioContext })
             window.cranes.audioBuffer = audioBuffer
             window.cranes.startSource = startSource
