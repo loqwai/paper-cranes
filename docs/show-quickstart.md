@@ -10,7 +10,7 @@ https://2cb.pw/clit-now
 ```
 
 The coordinator repoints this short link to the best build. On 2026-11-22 it 301s to the techno
-build on the `clit-set-polish` preview (below). Then:
+build on prod (below). Then:
 
 1. **Tap the canvas once.** The first touch, click or key press starts audio and goes fullscreen.
 2. Allow the microphone when the browser asks.
@@ -20,8 +20,8 @@ build on the `clit-set-polish` preview (below). Then:
 
 | Use | URL |
 |---|---|
-| Techno build (preview) | `https://clit-set-polish.paper-cranes-visuals.pages.dev/?shader=clit-set/2&controller=clit-set&wavelet=true&fft_size=2048&smoothing=0.3` |
-| Prod | `https://visuals.beadfamous.com/?shader=clit-set/2&controller=clit-set&wavelet=true&fft_size=2048&smoothing=0.3` (carries the techno build once PR #181 is merged and deployed; before that it is the older build) |
+| Prod (techno build, PR #181) | `https://visuals.beadfamous.com/?shader=clit-set/2&controller=clit-set&wavelet=true&fft_size=2048&smoothing=0.3` |
+| Same build, branch preview | `https://clit-set-polish.paper-cranes-visuals.pages.dev/?shader=clit-set/2&controller=clit-set&wavelet=true&fft_size=2048&smoothing=0.3` |
 | Remote-controllable | `https://cranes-local.hypnodroid.com/?shader=clit-set/2&controller=clit-set&wavelet=true&midi=true` |
 
 The remote-controllable URL needs Cloudflare Access login, the dev server on this machine (soul)
@@ -48,17 +48,16 @@ operator; `/show` launches jam.html.
 
 ## 4. `/show` on the show Mac (a fresh agent)
 
-1. Use a checkout of `main` (or the branch the coordinator names). Run `npm install` if
-   `node_modules` is missing, then `npm run dev`.
+1. Use a checkout of `main`: `git fetch origin && git checkout main && git pull --ff-only`. Run
+   `npm install` if `node_modules` is missing, then `npm run dev`.
 2. Read `.claude/skills/show/SKILL.md`, then run `/show` with no args.
 3. With no args it launches
    `http://localhost:<port>/jam.html?shader=clit-set/2&controller=clit-set&wavelet=true&vj=1&remote=display`
    on the last display. That already carries `controller` and `wavelet=true`.
 4. On a line feed, run `/show audio=BlackHole` (or the device label). On a mic, add `gain=<x>` only
    if the step-3 check shows `cs_presence` low while music plays.
-5. Until #181 is merged, `main` has the older build. For the techno build, run
-   `git fetch origin && git checkout clit-set-polish` first, or skip `/show` and open the
-   techno preview URL above in a fullscreen browser on the projector.
+5. Main carries the techno build, so `/show` with no args needs nothing extra. Without an agent,
+   open the prod URL above in a fullscreen browser on the projector.
 
 ## 5. Knob map (16 Twister dials, all at 0 = autopilot)
 
@@ -77,14 +76,20 @@ operator; `/show` launches jam.html.
 ## 6. Fallbacks and panic
 
 1. **Picture wrong or frozen, on a phone or browser with no agent:** reload the link, then tap once.
-2. **Older known-good build:** `https://visuals.beadfamous.com/?shader=clit-set/2&controller=clit-set&wavelet=true&fft_size=2048&smoothing=0.3`.
+2. **Other known-good fork:** `https://visuals.beadfamous.com/?shader=clit-set/1&controller=clit-set&wavelet=true&fft_size=2048&smoothing=0.3`.
 3. **Last resort:** `https://visuals.beadfamous.com/?shader=clit/2` (the original fractal, no controller).
 4. **With an agent on the show Mac:** `/show panic clit-set/2` hot-swaps to the known-good fork with no
    reload.
 5. **With an agent on cranes-local:** `PORT=6977 node scripts/remote/cranes-remote.js shader clit-set/2`
    (hot swap, no reload), then `… status` and check `audio.running` is `true`.
 
-## 7. Don'ts
+## 7. Known gap
+
+`2cb.pw/clit-new/2` to `/201` (the NFC bead variants) point at prod `clit-set/3`, `/4` and `/5`. Prod
+does not serve those frags until PR #180 is merged and deployed, so those links do not render yet.
+`clit-now` and `clit-new/1` are unaffected.
+
+## 8. Don'ts
 
 - **Never edit `index.js` or `src/*.js` in `/home/hypnodroid/Projects/paper-cranes-live`** while
   Aaron's phone is on cranes-local, and never restart its Vite server. Either reloads his phone,
