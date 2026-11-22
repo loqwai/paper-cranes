@@ -28,6 +28,9 @@ clit-set/2). Audio running, fps 90. Subtle moves only.
   centroid 0.32`. Cause: the beat hue rotation crossing into the magenta arc, amplified by iter 1's
   mids chroma lift. Fix: clamp the rotated OKLab hue at the arc edge. Don't remove that guard.
 
+- iter 13 (03:54): iters 10 and 11 dotted thread cores dark (fwidth of an unclamped log trap). Clamp
+  to the transition band before any fwidth gate on the orbit-trap logs.
+
 ## Forks
 - `clit-vibej/1 ← clit-set/2` (2026-11-22, 0de6d953): fork for the live /vibej show.
 
