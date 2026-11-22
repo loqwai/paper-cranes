@@ -68,9 +68,9 @@ glide speed stays above 40% of linear even at the waypoint). Missing means 0, th
 | 5 | rose carpet | A 2.45, B 0.3: a full-field rose and teal carpet, the farthest region from home |
 
 Each leg glides for its whole 80 s. Mid-glide, the camera pulls back a little, so each leg reads as
-rising, flying and settling. On top of the voyage, an always-on **drift** sways the view (rotation
-±0.3 rad over 47 s, zoom breath 0..0.24 over 31 s, pan ±0.05 over 37 s and 53 s). It runs on its own
-clock, which loudness speeds from 0.7x to 2x: the music changes the drift's rate, never its path.
+rising, flying and settling. On top of the voyage, an always-on **spin** turns the view one way only
+(0.02 rad/s in silence, 0.02 to 0.06 rad/s following the energy z-score). The music changes the spin's
+rate, never its direction. Nothing on the geometry oscillates: no sine on zoom, pan or rotation.
 
 ### Colour (OKLCH, gamut-mapped)
 
@@ -142,7 +142,16 @@ plus eased knobs `cs_k9..cs_k16`. The behaviour test is `controllers/clit-set.te
   with loudness) that release after the hit, so the frame changed most while the music fell; and the
   tone map's overshoot branch landed the hot ember on exactly 1.0. Fix: no dwell plus the drift clock;
   steady lace gain; bass/kick light only the rim, the braid and the ember; constant trails; lace breath
-  0.9 → 0.3; tone-map knee at 0.94. Meters (`scripts/vj/probe.js`, 30 s window): flicker 1.27 → 0.36,
+  0.9 → 0.3 (2026-11-22: 0); tone-map knee at 0.94. Meters (`scripts/vj/probe.js`, 30 s window): flicker 1.27 → 0.36,
   clip 0.023 → 0, motionVsEnergy -0.54 → +0.17, rResid -0.20 → +0.17, structure change per 2 s
   0.14 → 0.49. `cs_jump` was never a waypoint index (it counts drops and turns the hue); the voyage
   index is now exported as `cs_voyage` (0..6).
+- **2.frag, 2026-11-22 shiver fix**: 12dd8ca9's sine sway (zoom breath, rotation and pan) read as
+  shiver on the show's probe (shiverScore 0.92). Geometry now only evolves: a one-way spin replaces the
+  sway, the mid-glide zoom pull-back is gone, and the spin is applied after the 1.8 s glide so its
+  beat-scale quickening is not a beat late. Light that changed the radial brightness profile was also
+  read as zoom jitter, so it no longer follows audio: kick and treble on rim, braid and ember, the lace
+  threshold (cs_shift, breath), focal radius (cs_focus), vignette (cs_spread), the drop spotlight
+  (k15 SPOT still works) and the hue turn's effect on lace lightness. Audio now drives the spin rate and
+  the slow colour. Remaining shiver source: the voyage legs' shape morph (A, curl), measured alone at
+  voyage 1.15 to 1.6 with no audio: shiverScore 0.96, zoomAbs 0.097.

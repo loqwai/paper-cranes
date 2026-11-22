@@ -38,14 +38,14 @@
 //
 // NAVIGATION (clit-set/2+). Audio never moves the camera or the shape: position, zoom, rotation, power,
 // body and curl come from the knobs and the autopilot clocks only. The audio links are the clocks' RATES:
-// a confident build (cs_build) speeds the voyage clock up to 1.3x, loudness speeds the drift clock 0.7x..2x.
+// a confident build (cs_build) speeds the voyage clock up to 1.3x, loudness sets the spin rate (0.02-0.06 rad/s).
 // Neither ever changes direction or position on the path.
 //   cs_cx, cs_cy   camera centre in the fractal plane      cs_lz   log zoom (0 = home, ZOOM_MAX = 3x)
 //   cs_rot         view rotation (rad)                     cs_curl per-iteration rotation (rad)
 //   cs_navA, cs_navB  fractal power / body offset
 //   cs_voyage      autopilot position in waypoints, 0..WAYPOINTS.length (5.x = gliding from the last back home)
-//   cs_drift       drift clock (s): the always-on sway (rot / zoom breath / pan) runs on it
-//   cs_drive       0..1 loudness envelope that sets the drift clock's rate (0.7x silence .. 2x loud)
+//   cs_drift       spin (rad): one-way, always-on view rotation, already included in cs_rot
+//   cs_drive       0..1 loudness envelope (energy z-score, 0.5 = average) that sets the spin's rate
 // cs_jump is NOT a waypoint index: it counts drops (+1 each, never decreases) and only turns the hue.
 // knob_1 X, knob_2 Y, knob_3 VOYAGE at 0 = autopilot: the voyage drifts through WAYPOINTS by itself.
 // X and Y push the camera from wherever the voyage has it: the dial value times PAN_SPAN, so a small
@@ -58,11 +58,15 @@ const TAU = Math.PI * 2
 export const ZOOM_MAX = 1.1      // log zoom cap (3x): the orbit-trap lace turns to speckle past ~3-4x
 export const PAN_SPAN = 0.8      // X/Y: a full dial pans 0.8 in the fractal plane (2/3 of the screen height)
 export const LEG_SECS = 80       // each leg glides the whole 80 s, no dwell (loop 480 s): never parked
-// DRIFT: always-on, time-driven camera sway on top of the voyage, so the picture never holds still
-// (Aaron: "We should always be moving forward in the animation"). Incommensurate periods, so the
-// four sways never turn round together. Audio only changes the drift clock's RATE (DRIFT_RATE).
-export const DRIFT = { rot: 0.3, rotP: 47, lz: 0.12, lzP: 31, pan: 0.05, cxP: 37, cyP: 53 }
-export const DRIFT_RATE = { base: 0.7, music: 1.3 }   // drift clock: 0.7 s/s in silence, up to 2.0 s/s on loud
+// SPIN: an always-on, one-way view rotation on top of the voyage, so the picture never holds still
+// (Aaron: "We should always be moving forward in the animation"). Geometry only evolves: no sine on
+// zoom, pan or rotation (a sway reads as shiver on the show's probe and on the wall). Rotation about
+// the screen centre keeps the radial profile, so it moves every pixel without breathing anything.
+// Audio only changes the RATE: 0.02 rad/s in silence (~5 min a turn), 0.02-0.06 rad/s with music,
+// following the energy z-score both ways (0.08 s attack, 0.35 s release). The floor beats the steepest
+// waypoint turn (vortex eye → jellyfish, -0.9 rad in a leg, ≤ 0.015 rad/s), so the view never turns
+// backwards. No per-kick surge: a 0.4 s rate jerk read as zoom jitter on the shiver probe.
+export const SPIN = { base: 0.02, music: 0.04 }
 const NAV_TAU = 0.9              // two cascaded poles ≈ 1.8 s glide, smooth start and stop
 const HOME = { name: 'home', cx: 0.77, cy: 0, lz: 0, rot: 0, A: 1.5, B: 0.55, curl: 0 }
 
@@ -88,33 +92,26 @@ export const place = (u) => {
   const w = ((u % n) + n) % n
   const i = Math.floor(w)
   const a = WAYPOINTS[i], b = WAYPOINTS[(i + 1) % n]
-  // Never parked: part linear, part eased, so the glide speed never drops below 40% of linear
+  // Never parked: part linear, part eased, so the glide speed never drops below 40% of linear.
+  // Each leg is one way in every coordinate (no mid-glide pull-back: that zoomed out and back in).
   const t = w - i
   const g = lerp(t, smoothstep(0, 1, t), 0.6)
   const out = {}
   for (const key of ['cx', 'cy', 'lz', 'rot', 'A', 'B', 'curl']) out[key] = lerp(a[key], b[key], g)
-  out.lz = Math.max(0, out.lz - 0.35 * Math.sin(Math.PI * g))
   return out
 }
 
-// Knobs + autopilot clock + drift clock → navigation target. Pure in the clocks: no audio argument.
-// Fallback in shaders/clit-set/2.frag mirrors this with base = HOME and no drift.
-export const drift = (d) => ({
-  rot: DRIFT.rot * Math.sin(d * TAU / DRIFT.rotP),
-  lz: DRIFT.lz * (1 - Math.cos(d * TAU / DRIFT.lzP)),
-  cx: DRIFT.pan * Math.sin(d * TAU / DRIFT.cxP),
-  cy: DRIFT.pan * Math.sin(d * TAU / DRIFT.cyP),
-})
-export const nav = (k, autoU, d = 0) => {
+// Knobs + autopilot clock + spin → navigation target. Pure in the clocks: no audio argument.
+// Fallback in shaders/clit-set/2.frag mirrors this with base = HOME and no spin.
+export const nav = (k, autoU, spin = 0) => {
   const n = WAYPOINTS.length
   const scrub = clamp01((k[2] - 0.08) / 0.92) * (n - 0.001)
   const base = place(autoU + loopDelta(autoU, scrub, n) * manual(k[2]))
-  const sway = drift(d)
   return {
-    cx: base.cx + sway.cx - k[1] * PAN_SPAN,
-    cy: base.cy + sway.cy + k[0] * PAN_SPAN,
-    lz: Math.min(ZOOM_MAX, base.lz + sway.lz + k[3] * ZOOM_MAX),
-    rot: base.rot + sway.rot + k[4] * TAU,
+    cx: base.cx - k[1] * PAN_SPAN,
+    cy: base.cy + k[0] * PAN_SPAN,
+    lz: Math.min(ZOOM_MAX, base.lz + k[3] * ZOOM_MAX),
+    rot: base.rot + spin + k[4] * TAU,
     A: base.A + k[5] * 1.4,
     B: base.B - k[6] * 0.4,
     curl: base.curl + k[7] * 0.45,
@@ -236,11 +233,11 @@ export const step = (S, f, dt) => {
     S.voyageSeeded = true
   }
   S.voyage = (S.voyage + dt / LEG_SECS * (1 + 0.3 * live * S.build)) % WAYPOINTS.length
-  // DRIFT clock: always forward. Loudness (0.15 s attack, 0.6 s release) speeds it up, so the sway
-  // visibly quickens with the music; it never reverses and never stops.
-  S.drive = env(S.drive, clamp01(num(f.energyNormalized, 0)) * live, dt, 0.15, 0.6)
-  S.drift += dt * (DRIFT_RATE.base + DRIFT_RATE.music * S.drive)
-  const target = nav(S.knobs.map(v => v ?? 0), S.voyage, S.drift)
+  // SPIN: always forward. Loudness (0.08 s attack, 0.35 s release) speeds it up, so the turn visibly
+  // quickens with the music; it never reverses and never stops. Never wrapped: the glide would unwind it.
+  S.drive = env(S.drive, clamp01(0.5 + 0.5 * num(f.energyZScore, 0)) * live, dt, 0.08, 0.35)
+  S.drift += dt * (SPIN.base + SPIN.music * S.drive)
+  const target = nav(S.knobs.map(v => v ?? 0), S.voyage)
   S.navMid ??= { ...target }
   S.nav ??= { ...target }
   for (const key in target) {
@@ -253,7 +250,9 @@ export const step = (S, f, dt) => {
     cs_A: S.A, cs_B: S.B, cs_kick: S.kick, cs_bass: S.bass, cs_mids: S.mids, cs_treb: S.treb,
     cs_build: S.build, cs_drop: S.drop, cs_jump: S.jump, cs_shift: S.shift, cs_hue: hue,
     cs_breath: S.breath, cs_pearl: S.pearl, cs_focus: S.focus, cs_spread: S.spread, cs_grit: S.grit, cs_tone: S.tone,
-    cs_cx: S.nav.cx, cs_cy: S.nav.cy, cs_lz: S.nav.lz, cs_rot: S.nav.rot,
+    // The spin goes on after the glide: it is already smooth (an integral of an eased rate), and through
+    // the 1.8 s glide its beat-scale quickening landed a beat late (rResid went negative)
+    cs_cx: S.nav.cx, cs_cy: S.nav.cy, cs_lz: S.nav.lz, cs_rot: S.nav.rot + S.drift,
     cs_navA: S.nav.A, cs_navB: S.nav.B, cs_curl: S.nav.curl,
     cs_voyage: S.voyage, cs_drift: S.drift, cs_drive: S.drive,
   }

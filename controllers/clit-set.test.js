@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { fresh, step, place, nav, drift, loopDelta, WAYPOINTS, ZOOM_MAX, LEG_SECS, PAN_SPAN, DRIFT } from './clit-set.js'
+import { fresh, step, place, nav, loopDelta, WAYPOINTS, ZOOM_MAX, LEG_SECS, PAN_SPAN } from './clit-set.js'
 
 const run = (S, f, secs, dt = 1 / 60) => {
   let out
@@ -26,14 +26,15 @@ describe('clit-set controller navigation', () => {
     const a = run(SA, loud, 8)
     const b = run(SB, quiet, 8)
     for (const k of ['cs_navA', 'cs_navB', 'cs_curl']) expect(a[k]).toBeCloseTo(b[k], 6)
-    // loud music runs the drift clock faster, never backwards
+    // loud music spins faster, never backwards
     expect(a.cs_drift).toBeGreaterThan(b.cs_drift)
     expect(b.cs_drift).toBeGreaterThan(0)
     // and the camera sits on the clock-driven path either way (nav takes no audio)
     const k0 = Array(16).fill(0)
     for (const [S, o] of [[SA, a], [SB, b]]) {
       const t = nav(k0, S.voyage, S.drift)
-      expect(Math.abs(o.cs_cx - t.cx) + Math.abs(o.cs_cy - t.cy) + Math.abs(o.cs_lz - t.lz) + Math.abs(o.cs_rot - t.rot)).toBeLessThan(0.1)   // the 1.8 s glide lags the target a little
+      expect(Math.abs(o.cs_cx - t.cx) + Math.abs(o.cs_cy - t.cy) + Math.abs(o.cs_lz - t.lz)).toBeLessThan(0.03)
+      expect(Math.abs(o.cs_rot - t.rot)).toBeLessThan(0.03)
     }
     expect(a.cs_breath).toBeGreaterThan(b.cs_breath)
   })
@@ -47,6 +48,24 @@ describe('clit-set controller navigation', () => {
       expect(moved).toBeGreaterThan(0.004)
       prev = out
     }
+  })
+
+  it('geometry only evolves: at k=0 the spin never reverses and each coordinate turns round at most at a waypoint', () => {
+    const S = fresh()
+    let prev = run(S, quiet, 1)
+    const turns = { cx: 0, cy: 0, lz: 0 }, sign = {}
+    for (let s = 0; s < LEG_SECS * WAYPOINTS.length; s++) {
+      const out = run(S, s % 30 < 15 ? loud : quiet, 1, 1 / 30)
+      expect(out.cs_rot).toBeGreaterThan(prev.cs_rot)
+      for (const k of Object.keys(turns)) {
+        const d = out[`cs_${k}`] - prev[`cs_${k}`]
+        if (Math.abs(d) < 1e-6) continue
+        if (sign[k] && Math.sign(d) !== sign[k]) turns[k]++
+        sign[k] = Math.sign(d)
+      }
+      prev = out
+    }
+    for (const k of Object.keys(turns)) expect(turns[k]).toBeLessThanOrEqual(WAYPOINTS.length)
   })
 
   it('the voyage index stays in 0..WAYPOINTS.length and cs_jump never stands in for it', () => {
@@ -65,7 +84,7 @@ describe('clit-set controller navigation', () => {
     expect(Math.abs(mid.cs_cx - HOME.cx) + Math.abs(mid.cs_cy - HOME.cy) + Math.abs(mid.cs_navA - HOME.A)).toBeGreaterThan(0.1)
     const back = run(S, quiet, LEG_SECS * (WAYPOINTS.length - 2.2) + 10, 0.05)
     expect(S.voyage).toBeLessThan(0.2)
-    expect(Math.abs(back.cs_cx - HOME.cx)).toBeLessThanOrEqual(DRIFT.pan + 0.01)
+    expect(back.cs_cx).toBeCloseTo(HOME.cx, 2)
     expect(back.cs_navA).toBeCloseTo(HOME.A, 1)
   })
 
@@ -75,7 +94,7 @@ describe('clit-set controller navigation', () => {
     const first = step(S, { ...quiet, knob_1: 1 }, 1 / 60)
     expect(first.cs_cy).toBeLessThan(0.05)
     const settled = run(S, { ...quiet, knob_1: 1 }, 8)
-    expect(settled.cs_cy - place(S.voyage).cy - drift(S.drift).cy).toBeCloseTo(PAN_SPAN, 1)
+    expect(settled.cs_cy - place(S.voyage).cy).toBeCloseTo(PAN_SPAN, 2)
   })
 
   it('a small X or Y nudge from 0 moves the camera a small distance from wherever the voyage is', () => {
@@ -98,14 +117,14 @@ describe('clit-set controller navigation', () => {
   it('the settled camera follows a slow X nudge smoothly, with no jump at the bottom of the dial', () => {
     const S = fresh()
     run(S, quiet, 1)
-    const start = step(S, quiet, 1 / 60).cs_cy - drift(S.drift).cy
-    let prev = start + drift(S.drift).cy
+    const start = step(S, quiet, 1 / 60).cs_cy
+    let prev = start
     for (let i = 1; i <= 60; i++) {
       const out = step(S, { ...quiet, knob_1: 0.1 * i / 60 }, 1 / 60)
       expect(Math.abs(out.cs_cy - prev)).toBeLessThan(0.01)
       prev = out.cs_cy
     }
-    expect(Math.abs(run(S, { ...quiet, knob_1: 0.1 }, 8).cs_cy - drift(S.drift).cy - start)).toBeLessThan(0.1)
+    expect(Math.abs(run(S, { ...quiet, knob_1: 0.1 }, 8).cs_cy - start)).toBeLessThan(0.1)
   })
 
   it('VOYAGE blends along the shorter way round the loop', () => {
