@@ -66,3 +66,4 @@ during the show are listed per iteration below.
 - **iter 6** (03:40): every kick surges the coil and undulate waves forward: `WAVE_PHASE += cs_beat·TAU·0.35` (~0.24 rad per full kick, eased 0.12 s, never back). Rhythm in the motion, not the light.
 - **iter 7** (03:43): pearls are back. `PEARL` (spectral crest) was defined but unused. It now drives sparse soft pinpoints on the braid: fractal-space cells that ride the geometry and shimmer as the waves pass, each on its own twinkle phase, at density 5%·PEARL/0.3 and gain 0.55.
 - **iter 8** (03:44): treble (`TREB_ENV`) cools the rim hue toward teal (palette t 0.66, up to 50%), the mirror of a build warming it to red. Colour only.
+- **iter 9** (03:47): a timbre shift (`cs_shift`, spectral flux and entropy change, unused before) turns the lace palette up to 0.6 rad. Colour only.

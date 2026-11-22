@@ -117,7 +117,9 @@ uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 // shrinks with kurtosis / spread reads as a zoom in and out (the show's shiver probe, 2026-11-21)
 #define FOCAL_RADIUS (0.5 + K_GLOW * 0.35)
 #define GRIT (HAS_CTL ? cs_grit : 0.0)                                         // roughness: nebula shimmer
-#define HUE_TURN ((HAS_CTL ? cs_hue : 0.0) * 1.2 + (HAS_CTL ? cs_jump : 0.0) * 0.9 + K_HUE * TAU + SEED_PHASE)
+// vibej iter 9: + a timbre shift (cs_shift: spectral flux and entropy change, 0.3 s attack) turns the palette
+// up to 0.6 rad. Colour only: lace lightness comes from the orbit luma, not the hue.
+#define HUE_TURN ((HAS_CTL ? cs_hue : 0.0) * 1.2 + (HAS_CTL ? cs_jump : 0.0) * 0.9 + K_HUE * TAU + SEED_PHASE + (HAS_CTL ? clamp(cs_shift, 0.0, 1.0) : 0.0) * 0.6)
 // Slow colour only: the 8 s centroid mean leans the palette warm on bright music, cool on dark
 #define TONE_LEAN ((HAS_CTL ? cs_tone : 0.5) - 0.5)
 // Loudness (1.5 s) lifts chroma a little: loud is more vivid, quiet more velvet
