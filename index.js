@@ -151,7 +151,9 @@ const setupMicAudio = async () => {
         // speaker across the room arrives 10-30x quieter and never opens them. The node is exposed so
         // the gain can be trimmed live: window.cranes.inputGain.gain.value = 8
         const inputGain = new GainNode(audioContext, { gain: parseFloat(params.get('audio_gain') ?? '1') });
-        audioContext.createMediaStreamSource(stream).connect(inputGain);
+        // audioSource is kept so scripts/show/audio-swap.js can swap the input device in place
+        window.cranes.audioSource = audioContext.createMediaStreamSource(stream);
+        window.cranes.audioSource.connect(inputGain);
         window.cranes.inputGain = inputGain;
         const sourceNode = inputGain;
         const historySize = parseInt(params.get('history_size') ?? '500');
