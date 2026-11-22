@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { fresh, step, place, nav, WAYPOINTS, ZOOM_MAX, LEG_SECS } from './clit-set.js'
+import { fresh, step, place, nav, loopDelta, WAYPOINTS, ZOOM_MAX, LEG_SECS, PAN_SPAN } from './clit-set.js'
 
 const run = (S, f, secs, dt = 1 / 60) => {
   let out
@@ -43,13 +43,77 @@ describe('clit-set controller navigation', () => {
     const first = step(S, { ...quiet, knob_1: 1 }, 1 / 60)
     expect(first.cs_cy).toBeLessThan(0.05)
     const settled = run(S, { ...quiet, knob_1: 1 }, 8)
-    expect(settled.cs_cy).toBeCloseTo(0.6, 2)
+    expect(settled.cs_cy).toBeCloseTo(PAN_SPAN, 2)
   })
 
-  it('manual X blends in over the first 8% of the dial', () => {
+  it('a small X or Y nudge from 0 moves the camera a small distance from wherever the voyage is', () => {
     const k = Array(16).fill(0)
-    expect(nav([0.04, ...k.slice(1)], 0).cy).toBeCloseTo(nav(k, 0).cy - 0.6 * 0.5, 2)
-    expect(nav([0.54, ...k.slice(1)], 0).cy).toBeCloseTo(0, 6)
+    for (let u = 0; u < WAYPOINTS.length; u += 0.37) {
+      const auto = nav(k, u)
+      for (const i of [0, 1]) {
+        for (const d of [0.01, 0.04, 0.08, 0.1]) {
+          const kn = [...k]
+          kn[i] = d
+          const moved = nav(kn, u)
+          const dist = Math.hypot(moved.cx - auto.cx, moved.cy - auto.cy)
+          expect(dist).toBeLessThanOrEqual(0.1 * PAN_SPAN + 1e-9)
+          expect(dist).toBeGreaterThan(0)
+        }
+      }
+    }
+  })
+
+  it('the settled camera follows a slow X nudge smoothly, with no jump at the bottom of the dial', () => {
+    const S = fresh()
+    run(S, quiet, 1)
+    const start = step(S, quiet, 1 / 60).cs_cy
+    let prev = start
+    for (let i = 1; i <= 60; i++) {
+      const out = step(S, { ...quiet, knob_1: 0.1 * i / 60 }, 1 / 60)
+      expect(Math.abs(out.cs_cy - prev)).toBeLessThan(0.01)
+      prev = out.cs_cy
+    }
+    expect(Math.abs(run(S, { ...quiet, knob_1: 0.1 }, 8).cs_cy - start)).toBeLessThan(0.1)
+  })
+
+  it('VOYAGE blends along the shorter way round the loop', () => {
+    const n = WAYPOINTS.length
+    expect(loopDelta(5.9, 0.1, n)).toBeCloseTo(0.2, 9)
+    expect(loopDelta(0.1, 5.9, n)).toBeCloseTo(-0.2, 9)
+    expect(loopDelta(1, 2.5, n)).toBeCloseTo(1.5, 9)
+    // Autopilot at 5.9 (gliding into home), VOYAGE parked mid-blend toward home (scrub 0):
+    // the blend stays between 5.9 and 6 ≡ home, never sweeping back through waypoints 4, 3, 2, 1.
+    const k = Array(16).fill(0)
+    const auto = nav(k, 5.9)
+    const home = nav(k, 0)
+    for (const k3 of [0.01, 0.02, 0.04, 0.06, 0.08]) {
+      k[2] = k3
+      const p = nav(k, 5.9)
+      for (const key of ['cx', 'cy', 'A', 'B']) {
+        expect(p[key]).toBeGreaterThanOrEqual(Math.min(auto[key], home[key]) - 1e-9)
+        expect(p[key]).toBeLessThanOrEqual(Math.max(auto[key], home[key]) + 1e-9)
+      }
+    }
+  })
+
+  it('VOYAGE past 8% scrubs the loop by hand, 0.08 = home', () => {
+    const k = Array(16).fill(0)
+    k[2] = 0.08
+    expect(nav(k, 3.3).cx).toBeCloseTo(WAYPOINTS[0].cx, 6)
+    expect(nav(k, 3.3).A).toBeCloseTo(WAYPOINTS[0].A, 6)
+  })
+
+  it('crest and kurtosis reach the shader eased, not raw', () => {
+    const S = fresh()
+    run(S, quiet, 1)
+    const live = { energy: 0.3, energyNormalized: 0.5 }
+    run(S, live, 2)
+    const a = step(S, { ...live, spectralCrestNormalized: 1, spectralKurtosisZScore: 1 }, 1 / 60)
+    expect(a.cs_pearl).toBeLessThan(0.2)
+    expect(a.cs_focus).toBeLessThan(0.05)
+    const b = run(S, { ...live, spectralCrestNormalized: 1, spectralKurtosisZScore: 1 }, 4)
+    expect(b.cs_pearl).toBeGreaterThan(0.8)
+    expect(b.cs_focus).toBeGreaterThan(0.8)
   })
 
   it('zoom never passes the cap where the lace turns to speckle', () => {

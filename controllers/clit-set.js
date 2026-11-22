@@ -28,18 +28,30 @@
 //   cs_hue       slow key (turns 0..1), circular 20 s mean of pitchClassMedian
 //   cs_k1..cs_k16 knob_1..knob_16 eased (~0.35 s) so a dial twist glides instead of stepping
 //   cs_breath    0..1 slow loudness (energyNormalized, 1.5 s) — clit-set/2 breathes the lace threshold
+//   cs_pearl     0..1 crest envelope (0.15 s attack, 0.8 s release, gated) — pearl sparkle
+//   cs_focus     -1..1 kurtosis z-score eased over 1.2 s (gated) — focal radius
+//   cs_spread    0..1 spectral spread eased over 2 s (gated) — vignette opening
+//   cs_grit      0..1 roughness envelope (0.3 s attack, 1.5 s release, gated) — nebula shimmer
+//   cs_tone      0..1 spectral centroid, 8 s mean — slow colour lean (bright music warms the palette)
+//   cs_A, cs_B   legacy: audio-eased fractal shape. No clit-set shader reads them any more (audio in the
+//                fractal coordinates strobes, clit/4); kept so older forks still compile and run.
 //
-// NAVIGATION (clit-set/2+). Audio never touches these: audio in fractal coordinates strobes (clit/4).
+// NAVIGATION (clit-set/2+). Audio never moves the camera or the shape: position, zoom, rotation, power,
+// body and curl come from the knobs and the autopilot clock only. The one audio link is the clock's RATE:
+// a confident build (cs_build) speeds the voyage clock up to 1.3x. It never changes direction or position.
 //   cs_cx, cs_cy   camera centre in the fractal plane      cs_lz   log zoom (0 = home, ZOOM_MAX = 3x)
 //   cs_rot         view rotation (rad)                     cs_curl per-iteration rotation (rad)
 //   cs_navA, cs_navB  fractal power / body offset
 // knob_1 X, knob_2 Y, knob_3 VOYAGE at 0 = autopilot: the voyage drifts through WAYPOINTS by itself.
-// Turning one up blends manual control in over its first 8%. knob_4 ZOOM, knob_5 TURN, knob_6 POWER,
+// X and Y push the camera from wherever the voyage has it: the dial value times PAN_SPAN, so a small
+// nudge is a small move (no jump at the bottom of the dial). VOYAGE blends from the autopilot to a hand
+// scrub over its first 8%, along the shorter way round the loop. knob_4 ZOOM, knob_5 TURN, knob_6 POWER,
 // knob_7 BODY, knob_8 CURL add on top of the voyage. Every target glides through a two-pole ease.
 
 const KNOBS = 16
 const TAU = Math.PI * 2
 export const ZOOM_MAX = 1.1      // log zoom cap (3x): the orbit-trap lace turns to speckle past ~3-4x
+export const PAN_SPAN = 0.8      // X/Y: a full dial pans 0.8 in the fractal plane (2/3 of the screen height)
 export const LEG_SECS = 100      // each waypoint: ~40 s dwell, ~60 s glide to the next (loop 600 s)
 const DWELL = 0.4
 const NAV_TAU = 0.9              // two cascaded poles ≈ 1.8 s glide, smooth start and stop
@@ -57,7 +69,8 @@ export const WAYPOINTS = [
 
 const lerp = (a, b, t) => a + (b - a) * t
 const manual = k => smoothstep(0, 0.08, k)
-const bipolar = k => clamp01((k - 0.08) / 0.92) * 2 - 1
+// Shortest signed step from a to b around a loop of length n (so 5.9 → 0.1 is +0.2, not -5.8)
+export const loopDelta = (a, b, n) => ((((b - a) % n) + n * 1.5) % n) - n / 2
 
 // Voyage position u (in waypoints, wraps at WAYPOINTS.length) → a blended place.
 // Mid-glide the camera pulls back a little, so each leg reads as rising, flying, settling.
@@ -75,11 +88,12 @@ export const place = (u) => {
 
 // Knobs + autopilot clock → navigation target. Fallback in shaders/clit-set/2.frag mirrors this with base = HOME.
 export const nav = (k, autoU) => {
-  const scrub = clamp01((k[2] - 0.08) / 0.92) * (WAYPOINTS.length - 0.001)
-  const base = place(lerp(autoU, scrub, manual(k[2])))
+  const n = WAYPOINTS.length
+  const scrub = clamp01((k[2] - 0.08) / 0.92) * (n - 0.001)
+  const base = place(autoU + loopDelta(autoU, scrub, n) * manual(k[2]))
   return {
-    cx: base.cx - manual(k[1]) * bipolar(k[1]) * 0.6,
-    cy: base.cy + manual(k[0]) * bipolar(k[0]) * 0.6,
+    cx: base.cx - k[1] * PAN_SPAN,
+    cy: base.cy + k[0] * PAN_SPAN,
     lz: Math.min(ZOOM_MAX, base.lz + k[3] * ZOOM_MAX),
     rot: base.rot + k[4] * TAU,
     A: base.A + k[5] * 1.4,
@@ -107,6 +121,7 @@ export const fresh = () => ({
   shift: 0, entFast: 0.5, entSlow: 0.5,
   hueX: 1, hueY: 0, knobs: Array(KNOBS).fill(null), breath: 0.5,
   voyage: 0, voyageSeeded: false, nav: null, navMid: null,
+  pearl: 0, focus: 0, spread: 0, grit: 0, tone: 0.5,
 })
 
 export const step = (S, f, dt) => {
@@ -128,7 +143,7 @@ export const step = (S, f, dt) => {
 
   // BANDS: attack fast, release slow
   S.bass = env(S.bass, clamp01(num(f.bassZScore, 0) * 1.2) * live, dt, 0.04, 0.5)
-  S.mids = env(S.mids, clamp01(num(f.midsZScore, 0) * 0.8 + 0.2) * live, dt, 0.08, 0.6)
+  S.mids = env(S.mids, clamp01(num(f.midsZScore, 0) * 0.8 + 0.2) * live, dt, 0.25, 0.8)   // lace light: swells, never flashes
   S.treb = env(S.treb, clamp01(num(f.trebleZScore, 0) * 0.9 + 0.15) * live, dt, 0.05, 0.4)
 
   // KICK: wavelet onset when ?wavelet=true, else a rising edge of the bass z-score
@@ -186,6 +201,13 @@ export const step = (S, f, dt) => {
   // BREATH: slow loudness, thickens the lace on loud passages and thins it to a hairline in quiet ones
   S.breath = toward(S.breath, clamp01(num(f.energyNormalized, 0.5)) * live + 0.3 * (1 - live), dt, 1.5)
 
+  // TEXTURE: the features 2.frag used to read raw (they shimmered), now eased and gated by presence
+  S.pearl = env(S.pearl, clamp01(num(f.spectralCrestNormalized, 0)) * live, dt, 0.15, 0.8)
+  S.focus = toward(S.focus, Math.max(-1, Math.min(1, num(f.spectralKurtosisZScore, 0))) * live, dt, 1.2)
+  S.spread = toward(S.spread, clamp01(num(f.spectralSpreadNormalized, 0)) * live, dt, 2)
+  S.grit = env(S.grit, clamp01(num(f.spectralRoughnessNormalized, 0)) * live, dt, 0.3, 1.5)
+  S.tone = toward(S.tone, live > 0.3 ? clamp01(num(f.spectralCentroidNormalized, 0.5)) : S.tone, dt, 8)
+
   // VOYAGE: the autopilot clock only moves forward; a little faster on loud building music, never backwards.
   // ?voyage0=<u> starts the journey at u (in waypoints, wraps mod WAYPOINTS.length) on the first frame,
   // so each NFC tag can open on its own place. Missing = 0 = home.
@@ -207,7 +229,7 @@ export const step = (S, f, dt) => {
     cs_on: 1, cs_time: S.time, cs_presence: S.presence, cs_flow: S.flow,
     cs_A: S.A, cs_B: S.B, cs_kick: S.kick, cs_bass: S.bass, cs_mids: S.mids, cs_treb: S.treb,
     cs_build: S.build, cs_drop: S.drop, cs_jump: S.jump, cs_shift: S.shift, cs_hue: hue,
-    cs_breath: S.breath,
+    cs_breath: S.breath, cs_pearl: S.pearl, cs_focus: S.focus, cs_spread: S.spread, cs_grit: S.grit, cs_tone: S.tone,
     cs_cx: S.nav.cx, cs_cy: S.nav.cy, cs_lz: S.nav.lz, cs_rot: S.nav.rot,
     cs_navA: S.nav.A, cs_navB: S.nav.B, cs_curl: S.nav.curl,
   }

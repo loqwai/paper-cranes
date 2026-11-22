@@ -9,8 +9,9 @@
 // Renders without the controller: every cs_* reads 0 and the #defines fall back to raw features.
 
 uniform float cs_on, cs_time, cs_presence, cs_flow;
-uniform float cs_A, cs_B, cs_kick, cs_bass, cs_mids, cs_treb;
+uniform float cs_kick, cs_bass, cs_mids, cs_treb;
 uniform float cs_build, cs_drop, cs_jump, cs_shift, cs_hue;
+uniform float cs_pearl, cs_focus, cs_spread;
 uniform float cs_k1, cs_k2, cs_k3, cs_k4, cs_k5, cs_k6, cs_k7, cs_k8;
 
 #define HAS_CTL (cs_on > 0.5)
@@ -46,14 +47,12 @@ uniform float cs_k1, cs_k2, cs_k3, cs_k4, cs_k5, cs_k6, cs_k7, cs_k8;
 #define FLOW (HAS_CTL ? cs_flow : iTime * 0.03)
 // #define FLOW 0.0
 
-// Fractal power from spectral centroid (eased), plus a slow idle drift
-#define A_AUDIO (HAS_CTL ? cs_A : mapValue(spectralCentroidZScore, 0., 1., 1.2, 1.8) + 0.1)
-#define A (A_AUDIO + 0.045 * sin(6.2831853 * FLOW * SEED_SPIN))
+// Fractal power and body offset are pinned (clit/2's home shape) with a slow idle drift on the forward
+// clock. Audio never touches the fractal coordinates: on clit/4 that strobed and blacked out the frame.
+// Music only changes how fast FLOW runs, never where the shape is.
+#define A (1.5 + 0.045 * sin(6.2831853 * FLOW * SEED_SPIN))
 // #define A 1.5
-
-// Body offset from energy (eased), plus a slower idle drift
-#define B_AUDIO (HAS_CTL ? cs_B : 0.55 + energyZScore * 0.15)
-#define B (B_AUDIO + 0.02 * sin(6.2831853 * FLOW * 0.618 + 1.3))
+#define B (0.55 + 0.02 * sin(6.2831853 * FLOW * 0.618 + 1.3))
 // #define B 0.55
 
 // Drop: confirmed drop envelope (controller) or the confident-fall fallback, plus the hand knob
@@ -88,11 +87,11 @@ uniform float cs_k1, cs_k2, cs_k3, cs_k4, cs_k5, cs_k6, cs_k7, cs_k8;
 // #define LACE_BLOOM 0.0
 
 // Crest sparkles the pearly lace intersections
-#define PEARL (0.15 + clamp(spectralCrestNormalized, 0.0, 1.0) * 0.25 * (HAS_CTL ? cs_presence : 1.0))
+#define PEARL (0.15 + (HAS_CTL ? cs_pearl : clamp(spectralCrestNormalized, 0.0, 1.0)) * 0.25)
 // #define PEARL 0.25
 
 // Kurtosis tightens / widens the focal hot spot
-#define FOCAL_RADIUS (0.5 + K_GLOW * 0.35 + clamp(spectralKurtosisZScore, -1.0, 1.0) * 0.05)
+#define FOCAL_RADIUS (0.5 + K_GLOW * 0.35 + (HAS_CTL ? cs_focus : clamp(spectralKurtosisZScore, -1.0, 1.0)) * 0.05)
 // #define FOCAL_RADIUS 0.5
 
 // Slow colour: the key (20 s) plus a step on every drop (never fast features)
@@ -102,7 +101,7 @@ uniform float cs_k1, cs_k2, cs_k3, cs_k4, cs_k5, cs_k6, cs_k7, cs_k8;
 #define FEEDBACK_MIX clamp(0.22 + energyNormalized * 0.08 + K_TRAILS * 0.55, 0.0, 0.85)
 
 // Spread opens the vignette a touch
-#define VIGN_OPEN (clamp(spectralSpreadNormalized, 0.0, 1.0) * 0.06)
+#define VIGN_OPEN ((HAS_CTL ? cs_spread : clamp(spectralSpreadNormalized, 0.0, 1.0)) * 0.06)
 
 // ============================================================================
 // CHROMADEPTH COLOR — red closest, blue farthest
@@ -127,8 +126,8 @@ void mainImage(out vec4 P, vec2 V) {
     float build = BUILD_INTENSITY;
     float kick = KICK;
 
-    // Zoom: the knob, a slow push-in on builds, a tiny punch on each kick
-    float zoom = mix(1.0, 0.55, K_ZOOM) * (1.0 - build * 0.06) * (1.0 - kick * 0.035 * REACT);
+    // Zoom: the knob only (audio stays out of the coordinates; kicks flare the ember instead)
+    float zoom = mix(1.0, 0.55, K_ZOOM);
 
     vec2 Z = iResolution.xy,
          C = 0.6 * zoom * (Z - V - V).yx / Z.y;

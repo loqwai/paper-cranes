@@ -5,15 +5,18 @@
 // preset: https://visuals.beadfamous.com/?shader=clit-set/2&controller=clit-set
 // CLIT-SET/2 — THE VOYAGE. A slow, knob-steered journey through Dom Mandy's complex power fractal,
 // the place clit/2 lives. All knobs at 0 = home: the clit/2 silhouette, the landmark you return to.
-// knob_1 walks a curated loop of beautiful places; the other knobs steer by hand on top of it.
+// With every dial at 0 the autopilot walks a curated loop of beautiful places; knob_3 (VOYAGE) scrubs
+// that loop by hand, and the other knobs steer on top of it.
 // controllers/clit-set.js eases every move (zoom in log-depth) so the drift feels like floating.
 // Audio is texture on the journey (lace light, rim, stars, kicks, drops); it never steers.
+// Colour is built in OKLCH and gamut-mapped: red / amber / teal / blue-violet, never grey, never hot magenta.
 // Renders without the controller: cs_* read 0 and the knobs drive the camera directly (no voyage path).
 
 uniform float cs_on, cs_time, cs_presence, cs_flow;
 uniform float cs_A, cs_B, cs_kick, cs_bass, cs_mids, cs_treb;
 uniform float cs_build, cs_drop, cs_jump, cs_shift, cs_hue;
 uniform float cs_cx, cs_cy, cs_lz, cs_rot, cs_curl, cs_navA, cs_navB, cs_breath;
+uniform float cs_pearl, cs_focus, cs_spread, cs_grit, cs_tone;
 uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 
 #define HAS_CTL (cs_on > 0.5)
@@ -26,7 +29,8 @@ uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 //   row 3  k9 HUE      k10 NEBULA  k11 TRAILS  k12 REACT
 //   row 4  k13 GLASSES k14 EMBER   k15 SPOT    k16 LACE
 // k1/k2/k3 at 0 = AUTOPILOT: the voyage drifts by itself through the waypoint loop and returns home.
-// Turning one up blends manual control in over the first 8% of the dial (sun-1-show K15/K16 pattern).
+// X/Y push the camera from wherever the voyage has it (dial × PAN_SPAN), so a nudge is a small move.
+// VOYAGE blends to a hand scrub over its first 8%, along the shorter way round the loop.
 // ============================================================================
 #define K_HUE     (HAS_CTL ? cs_k9  : knob_9)
 #define K_NEBULA  (HAS_CTL ? cs_k10 : knob_10)
@@ -44,10 +48,9 @@ uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 // ============================================================================
 #define HOME_CX 0.77
 #define ZOOM_MAX 1.1                                   // log-zoom cap (3x): past ~3x the lace turns to speckle
-#define MANUAL(k) smoothstep(0.0, 0.08, k)
-#define BIPOLAR(k) (clamp(((k) - 0.08) / 0.92, 0.0, 1.0) * 2.0 - 1.0)
-#define NAV_CX  (HAS_CTL ? cs_cx  : HOME_CX + MANUAL(knob_2) * BIPOLAR(knob_2) * -0.6)
-#define NAV_CY  (HAS_CTL ? cs_cy  : MANUAL(knob_1) * BIPOLAR(knob_1) * 0.6)
+#define PAN_SPAN 0.8                                   // PAN_SPAN in controllers/clit-set.js
+#define NAV_CX  (HAS_CTL ? cs_cx  : HOME_CX - knob_2 * PAN_SPAN)
+#define NAV_CY  (HAS_CTL ? cs_cy  : knob_1 * PAN_SPAN)
 #define NAV_LZ  (HAS_CTL ? cs_lz  : knob_4 * ZOOM_MAX)
 #define NAV_ROT (HAS_CTL ? cs_rot : knob_5 * TAU)
 #define NAV_A   (HAS_CTL ? cs_navA : 1.5 + knob_6 * 1.4)
@@ -71,31 +74,68 @@ uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 #define DROP_INTENSITY clamp((HAS_CTL ? cs_drop : clamp(-energySlope * energyRSquared * 15.0, 0.0, 1.0)) + K_DROP, 0.0, 1.0)
 #define BUILD_INTENSITY (HAS_CTL ? cs_build : clamp(energySlope * energyRSquared * 10.0, 0.0, 1.0))
 #define KICK (HAS_CTL ? cs_kick : clamp(bassZScore - 0.4, 0.0, 1.0))
-#define PULSE (1.0 + (HAS_CTL ? cs_bass : clamp(bassZScore, 0.0, 1.0)) * 0.05 * REACT)
-#define LACE_GAIN (0.7 + (HAS_CTL ? cs_mids : midsNormalized) * 0.6 * REACT)
-#define RIM_INTENSITY (0.4 + (HAS_CTL ? cs_treb : trebleNormalized) * 0.8 * REACT)
+// Many subtle features, each on its own channel, all slow-released envelopes: alive, never flashing.
+#define BREATH (HAS_CTL ? cs_breath : energyNormalized)                       // energy, 1.5 s
+#define PULSE (1.0 + (HAS_CTL ? cs_bass : clamp(bassZScore, 0.0, 1.0)) * 0.07 * REACT)
+// Lace light: mids (0.25 s attack), loudness (1.5 s) and music presence each lift it a little; silence
+// relaxes to the resting look, a full loud passage roughly doubles it (the tone map keeps it unclipped)
+#define PRESENCE (HAS_CTL ? cs_presence : 1.0)
+#define LACE_GAIN ((0.72 + (HAS_CTL ? cs_mids : midsNormalized) * REACT) * (1.0 + 0.4 * BREATH) * (1.0 + 0.3 * PRESENCE))
+#define RIM_INTENSITY (0.3 + (HAS_CTL ? cs_treb : trebleNormalized) * 1.1 * REACT)
 #define TWINKLE ((HAS_CTL ? cs_treb : trebleNormalized) * REACT)
 #define RIM_WARMTH clamp(0.25 + SEED_WARM + BUILD_INTENSITY * 0.35, 0.0, 1.0)
 #define LACE_BLOOM (HAS_CTL ? cs_shift : 0.0)
 // Loud passages thicken the filigree, quiet ones thin it to a hairline (clit-vj iter 2)
-#define LACE_BREATH ((HAS_CTL ? cs_breath : energyNormalized) - 0.5)
-#define PEARL (0.15 + clamp(spectralCrestNormalized, 0.0, 1.0) * 0.25 * (HAS_CTL ? cs_presence : 1.0))
-#define FOCAL_RADIUS (0.5 + K_GLOW * 0.35 + clamp(spectralKurtosisZScore, -1.0, 1.0) * 0.05)
+#define LACE_BREATH (BREATH - 0.5)
+#define PEARL (0.15 + (HAS_CTL ? cs_pearl : clamp(spectralCrestNormalized, 0.0, 1.0)) * 0.35)
+#define FOCAL_RADIUS (0.5 + K_GLOW * 0.35 + (HAS_CTL ? cs_focus : clamp(spectralKurtosisZScore, -1.0, 1.0)) * 0.05)
+#define GRIT (HAS_CTL ? cs_grit : 0.0)                                         // roughness: nebula shimmer
 #define HUE_TURN ((HAS_CTL ? cs_hue : 0.0) * 1.2 + (HAS_CTL ? cs_jump : 0.0) * 0.9 + K_HUE * TAU + SEED_PHASE)
-#define FEEDBACK_MIX clamp(0.22 + energyNormalized * 0.08 + K_TRAILS * 0.55, 0.0, 0.85)
-#define VIGN_OPEN (clamp(spectralSpreadNormalized, 0.0, 1.0) * 0.06)
+// Slow colour only: the 8 s centroid mean leans the palette warm on bright music, cool on dark
+#define TONE_LEAN ((HAS_CTL ? cs_tone : 0.5) - 0.5)
+// Loudness (1.5 s) lifts chroma a little: loud is more vivid, quiet more velvet
+#define CHROMA_GAIN (0.85 + 0.3 * BREATH)
+#define FEEDBACK_MIX clamp(0.22 + BREATH * 0.08 + K_TRAILS * 0.55, 0.0, 0.85)
+#define VIGN_OPEN ((HAS_CTL ? cs_spread : clamp(spectralSpreadNormalized, 0.0, 1.0)) * 0.06)
 
 // ============================================================================
 // COLOR
 // ============================================================================
+// Strict chromadepth for the glasses: red (29°, near) to violet (293°, far). Starts at true red, not
+// the 0° pink-red, so the focal never reads as hot magenta.
 vec3 chromadepth(float t) {
     t = clamp(t, 0.0, 1.0);
-    float hue = t * 0.82;
+    float hue = 0.08 + t * 0.735;
     float chromaBoost = 1.0 + 0.2 * sin(t * 3.14159 * 2.0);
     float L = 0.7 - t * 0.45;
     float C = 0.25 * chromaBoost * (1.0 - t * 0.3);
     float h = hue * 6.28318;
     return clamp(oklab2rgb(vec3(L, C * cos(h), C * sin(h))), 0.0, 1.0);
+}
+
+// OKLCH → sRGB with the chroma shrunk at constant L and hue until it fits (no clipped channels)
+vec3 lchGamut(float L, float C, float h) {
+    vec3 c = oklch2rgb(vec3(L, C, h));
+    if (min(min(c.r, c.g), c.b) >= 0.0 && max(max(c.r, c.g), c.b) <= 1.0) return c;
+    float lo = 0.0, hi = C;
+    for (int k = 0; k < 5; k++) {
+        float mid = 0.5 * (lo + hi);
+        vec3 m = oklch2rgb(vec3(L, mid, h));
+        if (min(min(m.r, m.g), m.b) < 0.0 || max(max(m.r, m.g), m.b) > 1.0) hi = mid; else lo = mid;
+    }
+    return clamp(oklch2rgb(vec3(L, lo, h)), 0.0, 1.0);
+}
+
+// The clit/2 palette as OKLCH hues: red 29°, amber 66°, teal 195°, blue-violet 285°. t runs 0..1 and
+// callers ping-pong it, so the colour never crosses the magenta arc between violet and red.
+// Smoothstepped legs: the hues hold, the passes through yellow-green are quick.
+float paletteHue(float t) {
+    float s = clamp(t, 0.0, 1.0) * 3.0;
+    float i = min(floor(s), 2.0);
+    float f = smoothstep(0.12, 0.88, s - i);
+    float h0 = i < 0.5 ? 0.506 : (i < 1.5 ? 1.152 : 3.403);
+    float h1 = i < 0.5 ? 1.152 : (i < 1.5 ? 3.403 : 4.974);
+    return mix(h0, h1, f);
 }
 
 float hash21(vec2 p) {
@@ -174,7 +214,7 @@ void mainImage(out vec4 P, vec2 V) {
     z = 1. - smoothstep(1., -6., ly) * smoothstep(1., -6., lx);
 
     // Lace from the orbit traps. Thresholds slide with depth so deep zooms keep a dark floor.
-    float lace_lo = -2.0 + SEED_LACE + K_LACE * 0.9 + LACE_BLOOM * 0.6 + LACE_BREATH * 0.5 * REACT - lz * 0.6;
+    float lace_lo = -2.0 + SEED_LACE + K_LACE * 0.9 + LACE_BLOOM * 0.6 + LACE_BREATH * 0.9 * REACT - lz * 0.6;
     float lace_hi = lace_lo - 3.0;
     float lace_x = smoothstep(lace_lo, lace_hi, lx);
     float lace_y = smoothstep(lace_lo, lace_hi, ly);
@@ -185,8 +225,20 @@ void mainImage(out vec4 P, vec2 V) {
     lace *= 1.0 - coh * smoothstep(1.5, 5.0, fwidth(min(lx, ly)));
     lace_fine *= 1.0 - coh * 0.7;
 
-    vec4 rainbow = sqrt(max(z + (z - z * z * z) * cos(atan(Z.y, Z.x) + HUE_TURN - vec4(0, 2.1, 4.2, 0)), 0.0));
+    float phi = atan(Z.y, Z.x) + HUE_TURN;
+    vec4 rainbow = sqrt(max(z + (z - z * z * z) * cos(phi - vec4(0, 2.1, 4.2, 0)), 0.0));
     float luma = dot(rainbow.rgb, vec3(0.299, 0.587, 0.114));
+    // Palette position: the orbit angle as a triangle wave (0 red … 1 violet … 0 red), so the hue never
+    // crosses the magenta arc. The offset lands the dense lace's bunched orbit angles on amber and teal.
+    // Threads that cross the x trap and the y trap sit half a leg apart, so the filigree braids colours.
+    // Bright music leans warm (8 s centroid mean).
+    float pal_t = abs(fract((phi + 1.07) / TAU + (lace_x - lace_y) * 0.12 + (luma - 0.6) * 0.6 - TONE_LEAN * 0.1) * 2.0 - 1.0);
+    // The darkest lace (the fan petals) goes deep violet, the velvet body: never brown or grey
+    pal_t = mix(pal_t, 0.85 + 0.15 * pal_t, smoothstep(0.3, 0.05, luma));
+    // The pale star (the smooth high-z body, z ~0.8) is the landmark: keep it pale, tinted periwinkle
+    // (far), so the red ember pops in front of it
+    float pale = smoothstep(0.66, 0.78, z);
+    pal_t = mix(pal_t, 0.93, pale);
 
     // FOCAL — one hot spot at home, fading out with depth (at depth every orbit grazes the trap)
     float focal = pow(smoothstep(FOCAL_RADIUS, 0.01, focal_trap), 3.0);
@@ -211,28 +263,30 @@ void mainImage(out vec4 P, vec2 V) {
     vec2 dustP = sky * 2.2 / (1.0 + lz * 0.15) + cam * 1.6 + vec2(FLOW * 0.4, 0.0);
     float dust = vnoise(dustP) * 0.6 + vnoise(dustP * 2.3 + 4.0) * 0.4;
     dust = smoothstep(0.45, 0.95, dust);
-    vec3 dust_col = mix(vec3(0.10, 0.03, 0.22), rainbow.rgb * 0.35 + vec3(0.03, 0.0, 0.06), 0.5);
+    vec3 dust_col = mix(vec3(0.10, 0.03, 0.22), lchGamut(0.32, 0.11, paletteHue(pal_t)), 0.5);
     float s1 = stars(sky * 38.0 / (1.0 + lz * 0.25) + cam * 22.0, 0.10 + 0.25 * K_NEBULA);
     float s2 = stars(sky * 17.0 / (1.0 + lz * 0.45) + cam * 48.0 + 31.0, 0.05 + 0.15 * K_NEBULA);
-    float star = (s1 * 0.6 + s2) * (0.55 + 0.6 * TWINKLE);
-    vec3 bg = vec3(0.04, 0.015, 0.08) + dust_col * dust * neb * 0.45;
+    float star = (s1 * 0.6 + s2) * (0.4 + 0.9 * TWINKLE);
+    vec3 bg = vec3(0.04, 0.015, 0.08) + dust_col * dust * neb * 0.45 * (0.75 + 0.5 * BREATH + 0.3 * GRIT);
 
-    // Chroma lift (OKLab): the raw orbit rainbow reads grey; push chroma up and tint the
-    // near-grey petals toward the velvet violet instead of grey-brown
-    vec3 lab = rgb2oklab(clamp(rainbow.rgb, 0.0, 1.0));
-    float chroma = length(lab.yz);
-    lab.yz *= 1.55;
-    lab.yz += vec2(0.035, -0.075) * (1.0 - smoothstep(0.015, 0.07, chroma));
-    vec3 vivid = clamp(oklab2rgb(lab), 0.0, 1.0);
+    // LACE COLOUR, built in OKLCH: the orbit rainbow's lightness (its structure) with the palette's hue
+    // at full chroma. The raw rainbow went grey wherever z sat near 0 or 1 (the dark fan petals and the
+    // dusty pale star); here every lace pixel carries a hue. Darker lace gets more chroma (deep wine,
+    // deep teal), the pale star stays pale but tinted. Gamut-mapped, never clipped.
+    float lace_L = 0.30 + 0.56 * luma;
+    float lace_C = (0.13 + 0.07 * (1.0 - luma)) * (1.0 - 0.35 * pale) * CHROMA_GAIN;
+    vec3 vivid = lchGamut(lace_L, lace_C, paletteHue(pal_t));
     vec3 lace_col = mix(vivid, chromadepth(mix(0.15, 0.7, 1.0 - luma)), K_DEPTH);
     vec3 col = mix(bg, lace_col * LACE_GAIN, lace);
-    col += vec3(0.7, 0.5, 0.65) * lace_fine * PEARL;
+    col += mix(lace_col, vec3(1.0, 0.88, 0.7), 0.55) * lace_fine * PEARL;
 
     // Rim — body silhouette edges (fades at depth, where every pixel is an edge)
     float rim = smoothstep(0.1, 0.5, edge * 20.0) * (1.0 - smoothstep(0.8, 2.2, lz));
     rim *= smoothstep(0.0, 0.15, abs(C.y));
-    vec3 rim_col = mix(vec3(0.3, 0.15, 0.65), vec3(0.8, 0.3, 0.5), RIM_WARMTH);
-    col += rim_col * rim * RIM_INTENSITY * 0.3;
+    // Rim hue walks its own way round the palette (a quarter turn off the lace); a build warms it to red
+    float rim_t = mix(0.5 - 0.5 * cos(phi + 1.6), 0.0, RIM_WARMTH * 0.6);
+    vec3 rim_col = lchGamut(0.66, 0.16 * CHROMA_GAIN, paletteHue(rim_t));
+    col += rim_col * rim * RIM_INTENSITY * 0.4;
 
     col = mix(col, chromadepth(depth) * 1.2, focal * 0.3);
 
@@ -240,7 +294,7 @@ void mainImage(out vec4 P, vec2 V) {
     col *= spotlight;
 
     vec3 hot_red = vec3(1.0, 0.15, 0.05);
-    float ember = focal * (0.2 + kick * 0.35 * REACT);
+    float ember = focal * (0.2 + kick * 0.5 * REACT);
     float blaze = focal * mix(1.0, 2.5, drop) * 0.5 * drop;
     col += hot_red * (ember + blaze);
     col += vec3(1.0, 0.7, 0.4) * pow(focal, 3.0) * drop * 0.6;
@@ -261,7 +315,14 @@ void mainImage(out vec4 P, vec2 V) {
     // Stars after the darkness pass, only in the dark gaps, dimmed in the drop spotlight
     col += vec3(0.85, 0.8, 1.0) * star * (1.0 - lit) * neb * mix(1.0, 0.3, drop) * max(vign, 0.0);
 
-    col = col / (col + vec3(0.7));
+    // Tone map on luminance, not per channel: per-channel Reinhard pulled every bright hue toward grey
+    // (the dusty look). Same curve for brightness; hue and saturation survive. Anything that still
+    // overshoots is pulled toward its own grey just far enough to fit, so no channel clips.
+    float lum = dot(max(col, vec3(0.0)), vec3(0.2126, 0.7152, 0.0722));
+    col = max(col, vec3(0.0)) / (lum + 0.7);
+    float tl = lum / (lum + 0.7);
+    float hi = max(max(col.r, col.g), col.b);
+    if (hi > 1.0) col = mix(vec3(tl), col, (1.0 - tl) / max(hi - tl, 1e-4));
     col = pow(max(col, vec3(0.0)), vec3(0.88, 0.9, 0.95));
 
     P = vec4(clamp(col, 0.0, 1.0), 1.0);

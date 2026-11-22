@@ -36,10 +36,14 @@ knobs and features). With the controller, the motion glides and the autopilot vo
 | 3 colour | **k9 HUE** palette turn | **k10 NEBULA** dust and stars | **k11 TRAILS** feedback | **k12 REACT** audio size x1 to x2.5 |
 | 4 light | **k13 GLASSES** strict chromadepth | **k14 EMBER** focal size | **k15 SPOT** hold drop spotlight | **k16 LACE** lace density |
 
-- **k1, k2, k3 at 0 = autopilot.** Turning one up blends manual control in over the first 8% of the
-  dial (the sun-1-show K15/K16 pattern). Past 8%, X and Y are bipolar: the dial centre (0.54) is no
-  offset, and the ends are ±0.6 in the fractal plane, on top of wherever the voyage is. k3 past 8%
-  scrubs the voyage loop by hand (0.08 = home, 1.0 = the end of the loop).
+- **k1, k2, k3 at 0 = autopilot.** X and Y push the camera from wherever the voyage has it: the
+  offset is the dial value times `PAN_SPAN` (0.8 in the fractal plane, about two-thirds of the screen
+  height). A nudge from 0 to 0.1 moves 0.08, so a small turn is a small move. The push is one way;
+  TURN (k5) half a turn flips which way it reads on screen. (Before 2026-11-21, X and Y were bipolar
+  around 0.54, so the first 8% of the dial swung the camera to the far edge.)
+- k3 blends from the autopilot to a hand scrub over its first 8%, along the shorter way round the
+  loop (5.9 to home goes forward through 6, never back through 4, 3, 2, 1). Past 8% it scrubs the
+  loop by hand (0.08 = home, 1.0 = the end of the loop).
 - k4 to k8 add on top of the voyage, so they also work while the autopilot runs.
 - Ranges: ZOOM adds up to 1.1 log units (3x, capped). TURN is one full turn. POWER adds up to +1.4
   to A. BODY subtracts up to 0.4 from B. CURL adds up to 0.45 rad of rotation per iteration.
@@ -66,40 +70,66 @@ to the next one. Missing means 0, the original behaviour. NFC variants can use `
 Each leg dwells about 40 s, then glides about 60 s. Mid-glide, the camera pulls back a little, so
 each leg reads as rising, flying and settling.
 
+### Colour (OKLCH, gamut-mapped)
+
+- The lace takes its lightness from the orbit rainbow (the structure) and its hue from a fixed
+  palette: red 29°, amber 66°, teal 195°, blue-violet 285° (OKLCH). The orbit angle drives a triangle
+  wave over that palette, so the hue goes red → amber → teal → violet and back, and never crosses the
+  magenta arc between violet and red. Hot magenta reads to Aaron as a buffer overflow.
+- Threads on the x trap and the y trap sit half a leg apart, and brightness shifts the hue too, so the
+  filigree is several colours, not one.
+- The darkest lace (the fan petals) goes deep violet, the velvet body. Before this they were grey-brown.
+- The pale star (z about 0.8) stays pale, tinted periwinkle, so the red ember pops in front of it.
+- Every colour goes through `lchGamut()`, which shrinks chroma at constant L and hue until it fits.
+- The final tone map works on luminance, not per channel. Per-channel Reinhard pulled every bright hue
+  toward grey, which caused the dusty look.
+- `chromadepth()` (GLASSES, the focal) starts at true red (29°), not the 0° pink-red.
+
+Measured on the six waypoints (480x300, noaudio, seeds 0.5): mean OKLCH chroma 0.038 → 0.058, chroma
+of lit pixels 0.055 → 0.099, and grey pixels among mid-lightness pixels 47% → 8%.
+
 ### Audio mapping
 
 All audio arrives through controller envelopes, which are gated by presence so that silence relaxes
-to the resting look.
+to the resting look. Many features drive small effects, each on its own channel. Colour follows slow
+statistics only.
 
 | Feature | Envelope | Drives |
 |---------|----------|--------|
-| energyNormalized | `cs_breath` (1.5 s) | lace threshold: loud passages thicken the filigree, quiet ones thin it to a hairline |
-| midsZScore | `cs_mids` | lace brightness |
-| trebleZScore | `cs_treb` | rim light and star twinkle |
-| bassZScore | `cs_bass` | whole-body pulse (5%) |
+| energyNormalized | `cs_breath` (1.5 s) | lace threshold: loud passages thicken the filigree, quiet ones thin it to a hairline. Also lace gain (x0.85 to x1.15), lace and rim chroma (x0.85 to x1.15), nebula glow |
+| midsZScore | `cs_mids` | lace brightness (0.75 to 1.35) |
+| trebleZScore | `cs_treb` | rim light (0.3 to 1.4) and star twinkle |
+| bassZScore | `cs_bass` | whole-body pulse (7%) |
 | bass onset (wavelet `bassHit`, else bass-z rising edge) | `cs_kick` | focal ember flare |
 | energy and bass z, or wavelet `confirmedDrop` | `cs_drop` | drop spotlight: the body dims and the focal blazes |
-| energySlope × R² | `cs_build` | rim warms; the autopilot speeds up by as much as 30% |
+| energySlope × R² | `cs_build` | rim warms; the autopilot clock runs up to 30% faster (rate only: never direction or position) |
 | spectral flux and entropy change | `cs_shift` | lace bloom |
 | pitchClassMedian (20 s circular mean) | `cs_hue` | slow palette turn |
 | drops | `cs_jump` | palette step per drop |
-| spectralCrestNormalized | none | pearl sparkle at lace crossings |
-| spectralKurtosisZScore | none | focal radius |
-| spectralSpreadNormalized | none | vignette opening |
+| spectralCrestNormalized | `cs_pearl` (0.15 s / 0.8 s) | pearl sparkle at lace crossings |
+| spectralKurtosisZScore | `cs_focus` (1.2 s) | focal radius |
+| spectralSpreadNormalized | `cs_spread` (2 s) | vignette opening |
+| spectralRoughnessNormalized | `cs_grit` (0.3 s / 1.5 s) | nebula shimmer |
+| spectralCentroidNormalized | `cs_tone` (8 s mean) | palette leans warm on bright music, cool on dark |
 
 ### Controller outputs used by 2.frag
 
 `cs_on, cs_flow, cs_presence, cs_kick, cs_bass, cs_mids, cs_treb, cs_build, cs_drop, cs_jump,
-cs_shift, cs_hue, cs_breath`, plus navigation: `cs_cx, cs_cy, cs_lz, cs_rot, cs_navA, cs_navB, cs_curl`,
+cs_shift, cs_hue, cs_breath, cs_pearl, cs_focus, cs_spread, cs_grit, cs_tone`, plus navigation: `cs_cx, cs_cy, cs_lz, cs_rot, cs_navA, cs_navB, cs_curl`,
 plus eased knobs `cs_k9..cs_k16`. The behaviour test is `controllers/clit-set.test.js`.
 
 ## Iterations
 
 - **1.frag**: clit/2's anatomy moved onto the controller: per-device seeds, eased knobs and envelopes.
-  Its audio still bends A and B (eased), as clit/2 did.
+  2026-11-21: A, B and zoom no longer follow audio (A 1.5, B 0.55, plus the slow idle drift on the
+  forward clock; zoom is the knob only). Crest, kurtosis and spread arrive eased through the controller.
 - **2.frag**: the voyage. Navigation moved into the controller (eased camera, log-depth zoom capped at
   3x, rotation, power, body, curl). Autopilot through six waypoints, with manual blend-in on k1 to k3.
   Audio was removed from every coordinate and moved into lace breath, rim, stars and light. Added the
   galactic background (dust and parallax stars). Lace thresholds and the focal ember scale with
   log(zoom), plus a coherence gate at depth (the lesson from the clit-vj/2 deep-zoom run). An OKLab
   chroma lift fixes the grey look of the raw orbit rainbow.
+- **2.frag, 2026-11-21 polish** (PR after #178): OKLCH lace colour with no grey petals and no hot
+  magenta, and a luminance tone map. Wider audio texture, with every feature still a slow-release
+  envelope. X/Y push from wherever the voyage is (no jump at the bottom of the dial). VOYAGE blends
+  along the shorter way round the loop. PEARL, FOCAL_RADIUS and the vignette read eased envelopes.
