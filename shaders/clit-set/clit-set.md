@@ -133,9 +133,18 @@ rejects any variant whose lit pixels average below 0.075 OKLab chroma).
 | 4 | nebula | Emission nebula: the body glows as lit gas, the lace burns as two filament families in two hues, and the sky is layered multi-colour dust with cross-star sparkle. OKLCH on a curated wheel (no hot magenta, olive rushed through, dark layers kept cool so nothing goes brown). k13 = filament colour split. |
 | 5 | mandala | 4's colour, folded into a slowly turning kaleidoscope. The fractal is mirror-symmetric, so each fold joins seamlessly; the silhouette repeats as petals around a lit hub. Petal count 5 to 8 comes from `seed4`, so each phone differs. |
 
-Own motion: each of 3/4/5 turns, breathes and sways on the `time` uniform (periods 200, 100 and 250 s,
-which divide the 1000 s wrap), so it moves with every knob at 0 even if the controller's nav is still.
-Audio stays on local structure: the bass pulse lights only the lace or body, never the whole frame.
+Motion and audio on 3/4/5 (show rules, docs/vj-preferences.md: geometry only evolves):
+
+- Geometry runs on the `time` uniform, never on audio, and never reverses: a one-way spin about the
+  centre (one turn per 200 s) and a one-way zoom creep (+0.22 log depth per 100 s) that wraps back
+  under a 1.5 s feedback dissolve. Both periods divide the 1000 s time wrap. Nothing sways or breathes.
+- Audio sets only the slow colour (`cs_hue`, a 20 s circular mean of the key). Kick, bass, treble,
+  timbre and loudness no longer touch the lace threshold, rim, ember, focal radius or stars: on the
+  show's probe that light read as shiver. The controller's `cs_flow` is not used either (it surges on
+  every kick); the frags keep their own steady clock.
+- Measured on beat.mp3 in Chrome with `?vj=1` (30 s window after a discarded first 30 s, 2026-11-22):
+  3 flicker 0.04, clip 0, shiver 0.47; 4 flicker 0.04, clip 0, shiver 0.46; 5 flicker 0.07, clip 0,
+  shiver 0.30.
 
 Seeds per frag: `seed` palette or depth phase, `seed2` lace density, `seed3` rim hue or dust hue,
 `seed4` star scatter (and petal count on 5).
@@ -145,10 +154,11 @@ Seeds per frag: `seed` palette or depth phase, `seed2` lace density, `seed3` rim
 - `node scripts/nfc/clit-set-variants.mjs` writes `nfc-variants.json` and `nfc-variants.md`: 200 tags,
   frags 3/4/5 weighted 60/70/70 and interleaved, so tags written back to back alternate. Each tag has a
   mood (3 per frag) plus golden-ratio jitter on the look knobs, clamped to the safe bands, and
-  `voyage0 = frac(n × 0.618) × 6`. Seeds are not baked; k1/k2/k3 stay 0 so the autopilot runs.
+  `voyage0 = frac(n × 0.618) × 6`, parked there with `knob_3` (the autopilot's legs go out and back,
+  which the shiver probe flags; the frags' own motion only goes one way). Seeds are not baked; k1/k2 = 0.
 - `node scripts/nfc/render-gate.mjs shaders/clit-set/nfc-variants.json <dir> <port>` renders every
   variant headless (`noaudio=true&time=20`, 360×740) and rejects dark, white-out, grey, low-chroma,
-  speckle, hot-magenta, flat (one colour field) and static frames (the `time` uniform moves 20 → 22 and
+  speckle, hot-magenta, flat (one colour field), one-hue (a 60° hue slice over 70% of the frame) and static frames (the `time` uniform moves 20 → 22 and
   the frame must change). `node scripts/nfc/gate-loop.mjs <dir> <port>` then gives each failing tag a
   retry in `nfc-nudges.json` (a retry moves its start place and thins the lace; after 4 retries the tag
   moves to the chromadepth frag), regenerates and re-gates until all pass.

@@ -41,12 +41,15 @@ uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 #define NAV_CURL (HAS_CTL ? cs_curl : knob_8 * 0.45)
 
 // OWN MOTION on the `time` uniform (pinned by ?time=, so it is testable), independent of the
-// controller's nav: a slow turn about the centre (one turn per 200 s), a gentle zoom breath (100 s) and
-// a small curl sway (250 s). Every period divides the 1000 s time wrap, so nothing jumps. Visible with
-// every knob at 0 and no music. Audio never touches it.
-#define OWN_ROT  (time * TAU / 200.0)
-#define OWN_LZ   (0.12 * (0.5 - 0.5 * cos(time * TAU / 100.0)))
-#define OWN_CURL (0.04 * sin(time * TAU / 250.0))
+// controller's nav. Geometry only evolves, it never oscillates (docs/vj-preferences.md):
+//   OWN_ROT  one-way spin about the centre, one turn per 200 s
+//   OWN_LZ   one-way zoom creep in log depth, +0.22 (1.25x) per 100 s, then it wraps back under a
+//            1.5 s feedback dissolve (CREEP_COVER), so the reset never cuts
+// Both periods divide the 1000 s time wrap, so the wrap is seamless too. Audio never touches these.
+#define OWN_ROT     (time * TAU / 200.0)
+#define CREEP_U     fract(time / 100.0)
+#define OWN_LZ      (0.22 * CREEP_U)
+#define CREEP_COVER max(smoothstep(0.985, 1.0, CREEP_U), 1.0 - smoothstep(0.0, 0.015, CREEP_U))
 
 #define REACT (1.0 + K_REACT * 1.5)
 
@@ -57,20 +60,24 @@ uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 #define SEED_STARS (seed4 * 97.0)
 #define PETALS (5.0 + floor(seed4 * 3.999))                        // 5..8 petals per phone
 
-// AUDIO TEXTURE (controller envelopes, else raw features). Colour follows slow statistics only.
-#define FLOW (HAS_CTL ? cs_flow : iTime * 0.03)
-#define DROP_INTENSITY clamp((HAS_CTL ? cs_drop : 0.0) + K_DROP, 0.0, 1.0)
+// AUDIO: the music sets only the slow colour (cs_hue, a 20 s circular mean of the key). Motion runs on
+// the `time` uniform: the controller's forward clock surges on every kick, and a spin or drift on it
+// read as zoom jitter on the show's probe. Audio never moves light that changes the structure: kick,
+// bass, treble, timbre and loudness used to pulse the lace threshold, rim, ember and focal radius, and
+// the show's probe (2026-11-22) read that as shiver (zoom in and out). Those are held steady below.. Colour follows slow statistics only.
+#define FLOW (time * 0.03)                              // own steady clock: the controller's flow surges per kick
+#define DROP_INTENSITY K_DROP
 #define BUILD_INTENSITY (HAS_CTL ? cs_build : clamp(energySlope * energyRSquared * 10.0, 0.0, 1.0))
-#define KICK (HAS_CTL ? cs_kick : clamp(bassZScore - 0.4, 0.0, 1.0))
-#define PULSE (1.0 + (HAS_CTL ? cs_bass : clamp(bassZScore, 0.0, 1.0)) * 0.05 * REACT)
-#define LACE_GAIN (0.8 + (HAS_CTL ? cs_mids : midsNormalized) * 0.2 * REACT)
-#define RIM_INTENSITY (0.4 + (HAS_CTL ? cs_treb : trebleNormalized) * 0.7 * REACT)
-#define TWINKLE ((HAS_CTL ? cs_treb : trebleNormalized) * REACT)
-#define LACE_BLOOM (HAS_CTL ? cs_shift : 0.0)
-#define LACE_BREATH ((HAS_CTL ? cs_breath : energyNormalized) - 0.5)
-#define SPARKLE (0.2 + clamp(spectralCrestNormalized, 0.0, 1.0) * 0.3 * (HAS_CTL ? cs_presence : 1.0))
-#define FOCAL_RADIUS (0.5 + K_GLOW * 0.35 + clamp(spectralKurtosisZScore, -1.0, 1.0) * 0.05)
-#define HUE_TURN ((HAS_CTL ? cs_hue : 0.0) * 0.5 + (HAS_CTL ? cs_jump : 0.0) * 0.13 + K_HUE + SEED_PHASE)
+#define KICK 0.0
+#define PULSE 1.0
+#define LACE_GAIN 0.9
+#define RIM_INTENSITY 0.6
+#define TWINKLE 0.3
+#define LACE_BLOOM 0.0
+#define LACE_BREATH 0.0
+#define SPARKLE 0.3
+#define FOCAL_RADIUS (0.5 + K_GLOW * 0.35)
+#define HUE_TURN ((HAS_CTL ? cs_hue : 0.0) * 0.5 + K_HUE + SEED_PHASE)
 #define FEEDBACK_MIX clamp(0.2 + K_TRAILS * 0.55, 0.0, 0.8)
 
 // OKLCH palette over a curated hue wheel. Turns 0..1 walk red → orange → gold (40%), hurry through
@@ -122,7 +129,7 @@ float stars(vec2 p, float density) {
     if (h > density) return 0.0;
     vec2 o = vec2(hash21(cell + 7.1), hash21(cell + 3.7)) - 0.5;
     float d = length(f - o * 0.7);
-    float tw = 0.6 + 0.4 * sin(FLOW * 40.0 * (0.5 + h) + h * 60.0);
+    float tw = 0.8;                                    // steady: a 5-16 s twinkle read as shiver on the probe
     float cross = smoothstep(0.012, 0.0, min(abs(f.x - o.x * 0.7), abs(f.y - o.y * 0.7))) * smoothstep(0.25, 0.0, d);
     return (smoothstep(0.06, 0.0, d) + cross * 0.5) * tw * (0.4 + 0.6 * fract(h * 13.0));
 }
@@ -138,7 +145,7 @@ void mainImage(out vec4 P, vec2 V) {
     // KALEIDOSCOPE: fold the screen into PETALS mirrored sectors around the centre. The sector
     // bisector maps onto the fractal's mirror axis (p.x = 0), so neighbouring petals join seamlessly.
     vec2 s = (iResolution.xy - V - V) / iResolution.y;
-    s = rot2(NAV_ROT + OWN_ROT * 1.5 + FLOW * 0.2) * s;        // slow turn about the centre, never a drift
+    s = rot2(NAV_ROT + OWN_ROT * 1.5) * s;        // slow turn about the centre, never a drift
     float r = length(s) * 1.15;
     float sector = TAU / PETALS;
     float fa = abs(mod(atan(s.y, s.x) + sector * 0.5, sector) - sector * 0.5);
@@ -153,7 +160,7 @@ void mainImage(out vec4 P, vec2 V) {
     float focal_trap = 9.0;
     vec2 focal_center = vec2(0.0, 0.12);
     float a_pow = NAV_A, b_off = NAV_B;
-    mat2 curl = rot2(NAV_CURL + OWN_CURL);
+    mat2 curl = rot2(NAV_CURL);
     for (int k = 0; k < 50; k++) {
         float a = atan(V.y, V.x), d = dot(V, V) * a_pow;
         float c = dot(V, vec2(a, log(d) / 2.));
@@ -249,7 +256,7 @@ void mainImage(out vec4 P, vec2 V) {
     col += pal(HUE_TURN + 0.6, 0.9, 0.05) * (s1 * 0.6 + s2) * (0.6 + 0.5 * TWINKLE) * (1.0 - lit) * neb;
 
     vec3 prev = clamp(getLastFrameColor(gl_FragCoord.xy / iResolution.xy).rgb, 0.0, 1.0);
-    col = mix(col, prev * 0.96, FEEDBACK_MIX);
+    col = mix(col, prev * 0.985, max(FEEDBACK_MIX, 0.96 * CREEP_COVER));   // zoom-creep wrap dissolves
 
     float vign = 1.0 - pow(length(uv) * 0.5, 2.2);
     col *= clamp(vign, 0.6, 1.0);

@@ -13,7 +13,8 @@
 //   - voyage0 = frac(n * 0.618) * 6 starts each tag at its own place on the autopilot loop.
 //   - No seeds in the URL: per-phone seeds keep varying palette phase, lace, rim/dust and stars (and
 //     the petal count on 5), so one tag still looks different on two phones.
-//   - knob_1/2/3 stay at 0 so the autopilot voyage runs.
+//   - knob_3 parks the voyage at the tag's place (geometry only evolves: no out-and-back legs);
+//     knob_1/2 stay at 0.
 //   - shaders/clit-set/nfc-nudges.json holds per-tag retry counts written after a render-gate failure;
 //     each retry moves the tag's start place and thins the lace a little; after 4 retries the tag moves
 //     to the chromadepth frag. Re-run the gate after (scripts/nfc/gate-loop.mjs does both).
@@ -118,6 +119,7 @@ const build = () => {
       else v = base
       if (k === 16) v -= tries * 0.12                       // retry: thinner lace
       if (k === 4) v -= tries * 0.08                        // retry: less zoom
+      if (k === 9) v = frac(v + tries * 0.382)              // retry: turn the palette / depth temperature
       v = r3(clamp(v, BANDS[k]))
       if (v > 0) knobs[k] = v
     }
@@ -125,8 +127,12 @@ const build = () => {
     const wp = WAYPOINTS[Math.floor(voyage0 % 6)]
 
     // Built by hand (not URLSearchParams) so the shader path keeps its literal slash
+    // Park the voyage at this tag's place (knob_3 past 8% scrubs the loop by hand): the autopilot's
+    // legs turn round (cx / cy / rot / lz go out and back), which the show's shiver probe flags, while
+    // the frags' own spin and zoom creep only ever go one way. voyage0 stays as the same place.
+    knobs[3] = r3(0.08 + 0.92 * voyage0 / 5.999)
     const q = [`shader=clit-set/${F.frag}`, 'controller=clit-set', 'fft_size=2048', 'smoothing=0.3', `voyage0=${voyage0}`,
-      ...Object.entries(knobs).map(([k, v]) => `knob_${k}=${v}`)].join('&')
+      ...Object.entries(knobs).sort((a, b) => a[0] - b[0]).map(([k, v]) => `knob_${k}=${v}`)].join('&')
     return {
       n,
       name: `clit-new-${n}`,

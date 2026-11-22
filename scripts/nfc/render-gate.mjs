@@ -7,7 +7,7 @@
 // <outDir>/contact-sheet.png. Headless has no audio worklet, so this checks the resting look only.
 //
 // Rejects: near-black (meanL), white-out (clipped fraction), grey (low OKLab chroma on lit pixels),
-// flat (one colour field), speckle (high-frequency luma energy), hot magenta (a wide area of saturated pink-purple), and static
+// flat (one colour field), one-hue (a 60° hue slice over 70% of the frame), speckle (high-frequency luma energy), hot magenta (a wide area of saturated pink-purple), and static
 // frames: after the still, the `time` uniform is moved from 20 to 22 and the frame must change
 // (`motion`, mean absolute RGB difference; `control` is the same wait with time held, for reference).
 import { createRequire } from 'node:module'
@@ -41,6 +41,7 @@ export const LIMITS = {
   motion: 0.01,            // mean |RGB diff| (0..1) between time=20 and time=22
   flatL: 0.035,            // std of OKLab L below this = one flat field (a solid red screen)
   flatLab: [0.05, 0.05],   // or: L std and a/b std both below these
+  hueDom: 0.7,             // one hue family (a 60° OKLab hue slice, chroma > 0.05) over this share of the frame
 }
 
 const verdict = m => {
@@ -53,6 +54,7 @@ const verdict = m => {
   if (m.speckle > LIMITS.speckle) why.push('speckle')
   if (m.magenta > LIMITS.magenta) why.push('magenta')
   if (m.motion < LIMITS.motion) why.push('static')
+  if (m.hueDom > LIMITS.hueDom) why.push('one-hue')
   if (m.Lsd < LIMITS.flatL || (m.Lsd < LIMITS.flatLab[0] && m.ABsd < LIMITS.flatLab[1])) why.push('flat')
   return why
 }
@@ -91,7 +93,7 @@ const measure = async (b64) => {
     hf += Math.abs(s - nb); n++
   }
   // Structure: std of OKLab L and of a/b on a coarse grid (catches a single flat colour field)
-  const Ls = [], As = [], Bs = []
+  const Ls = [], As = [], Bs = [], bins = new Array(12).fill(0)
   for (let y = 0; y < h; y += 4) for (let xx = 0; xx < w; xx += 4) {
     const i = (y * w + xx) * 4
     const r = lin(d[i]), g = lin(d[i + 1]), b = lin(d[i + 2])
@@ -101,13 +103,16 @@ const measure = async (b64) => {
     Ls.push(0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s)
     As.push(1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s)
     Bs.push(0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s)
+    if (Math.hypot(As.at(-1), Bs.at(-1)) > 0.05) bins[Math.floor(((Math.atan2(Bs.at(-1), As.at(-1)) / (2 * Math.PI) + 1) % 1) * 12) % 12]++
   }
+  let dom = 0
+  for (let i = 0; i < 12; i++) dom = Math.max(dom, bins[i] + bins[(i + 1) % 12])
   const sd = a => { const mu = a.reduce((t, v) => t + v, 0) / a.length; return Math.sqrt(a.reduce((t, v) => t + (v - mu) ** 2, 0) / a.length) }
   const N = w * h
   const r3 = v => +v.toFixed(4)
   return { meanL: r3(sumL / N), white: r3(white / N), chroma: r3(lit ? chromaSum / lit : 0),
     grey: r3(lit ? grey / lit : 1), litFrac: r3(lit / N), speckle: r3(hf / n), magenta: r3(mag / N),
-    Lsd: r3(sd(Ls)), ABsd: r3(Math.hypot(sd(As), sd(Bs))) }
+    Lsd: r3(sd(Ls)), ABsd: r3(Math.hypot(sd(As), sd(Bs))), hueDom: r3(dom / Ls.length) }
 }
 
 // Runs in the page: mean absolute RGB difference of two screenshots (0..1)
