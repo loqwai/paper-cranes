@@ -3,6 +3,8 @@
 (Named after the folder, not `1-cool-moments.md`: "1" is ambiguous across shaders.)
 
 ## Status
+04:11: the phone is on `clit-vibej/2` (the roller coaster). 1.frag is the fallback.
+
 2026-11-22 03:30 MST. New show. Phone moved in place to `claude/wip/clit-vibej/1` (fork of
 clit-set/2). Audio running, fps 90. Subtle moves only.
 
@@ -36,6 +38,7 @@ clit-set/2). Audio running, fps 90. Subtle moves only.
   to the transition band before any fwidth gate on the orbit-trap logs.
 
 ## Forks
+- `clit-vibej/2 ← clit-vibej/1` (04:11, after iter 14): the roller coaster. Aaron: "It's been pretty samey for a while. Give me a 'roller coaster' view going down the fractal tube". A log-polar tube with one-way travel, roll and curve, plus rails and ties. moveStyle → dramatic for this move.
 - `clit-vibej/1 ← clit-set/2` (2026-11-22, 0de6d953): fork for the live /vibej show.
 
 ## Design hypotheses for v(next)

@@ -72,3 +72,31 @@ during the show are listed per iteration below.
 - **iter 12** (03:52): treble brings out stars in the voids. Near and far star density rise by +0.15 and +0.10 × `TREB_ENV`, and star brightness becomes `max(neb, 0.35 + 0.5·TREB_ENV)`. At voyage 3.0 half the frame was an empty black void with ~1 px stars at 0.35.
 - **iter 13** (03:54): fixed an artefact from iters 10 and 11. `lx` and `ly` are logs of trap distance and run to −∞ on the thread cores, so `fwidth` spiked there and the gates dotted the cleanest threads dark (chains of dark dots along ribbons). Both gates now measure `fwidth` on the logs clamped to the lace's transition band `[lace_hi − 0.5, lace_lo + 0.5]`.
 - **iter 14** (04:03): roughness (`cs_grit`) adds a fine grain to the nebula dust that drifts on the flow clock: `dust *= 1 + 0.9·GRIT·(noise − 0.35)`. It is subtle, because the darkness pass holds the voids near black.
+
+## 2.frag: the roller coaster (fork of 1.frag, 04:11)
+
+Aaron: "It's been pretty samey for a while. Give me a 'roller coaster' view going down the fractal
+tube." A dramatic move, so it is a fork. 1.frag stays as the fallback.
+
+```
+?shader=claude/wip/clit-vibej/2&controller=clit-set&wavelet=true
+```
+
+- **The tube.** The screen becomes log-polar around a vanishing point: `u = log r − TRAVEL` and
+  `θ = atan + NAV_ROT + ROLL`. The fractal is sampled at
+  `C = home + (0.23, 0.33) + 0.30·e^{i·u} + 0.15·e^{2iθ}`. That is periodic in both u and θ, so the
+  tube has no seam and never ends. The walls repeat twice around, and the scale is conformal
+  (R1·K = 2·R2), so the wall shows rings and not radial streaks.
+- **Travel** (one-way): `cs_flow·TAU·1.6 + cs_beat·1.2 + cs_jump·0.8`. That is a cruise of about
+  0.2 u/s in silence that runs faster on loud passages, a 0.13 u surge per full kick and a 0.8 u lunge
+  per drop.
+- **Banking**: `ROLL = cs_drift·2.5`, the music-rate spin integral, so the roll's rate swells and eases
+  but never reverses (a corkscrew).
+- **The curve**: the vanishing point circles a small ellipse (0.08 × 0.22), always the same way, at
+  `cs_flow·TAU·0.4`.
+- **Depth**: the far core is dark (`smoothstep(0.02, 0.16, r)`), which hides the singularity, and the
+  light runs 0.12 → 1 from far to near (log r −2.6 → 0.1).
+- **The track**: two amber rails on the tube floor, banked by 0.6·ROLL, and dark-red cross-ties every
+  half e-fold of depth. Equal steps in log r are perspective-correct in a tube.
+- 1.frag's coil, undulate, pearls, magenta guard and speckle gates all carry over.
+- Checked with a local headless render (`noaudio`, 408 × 997) before the phone saw it.
