@@ -63,7 +63,7 @@ operator; `/show` launches jam.html.
 
 | Row | Dial 1 | Dial 2 | Dial 3 | Dial 4 |
 |---|---|---|---|---|
-| 1 navigate | k1 STEER X | k2 STEER Y | k3 VOYAGE | k4 THROTTLE |
+| 1 navigate | k1 X (`coaster=1`: STEER X) | k2 Y (`coaster=1`: STEER Y) | k3 VOYAGE | k4 ZOOM (`coaster=1`: THROTTLE) |
 | 2 shape | k5 TURN | k6 POWER | k7 BODY | k8 CURL |
 | 3 colour | k9 HUE | k10 NEBULA | k11 TRAILS | k12 REACT (audio size x1 to x2.5) |
 | 4 light | k13 GLASSES | k14 EMBER | k15 SPOT | k16 LACE |
@@ -71,6 +71,8 @@ operator; `/show` launches jam.html.
 - Every dial at 0 is the autopilot: a slow voyage through six waypoints that comes home every
   10 minutes. A reload (all dials read 0) still looks right.
 - k3 blends in over the first 8% of the dial.
+- Row 1 has two modes. By default k1/k2/k4 are positions (X, Y, ZOOM). With `&coaster=1` they are
+  rates (STEER X, STEER Y, THROTTLE); see Coaster controls below.
 - Audio never moves the camera on its own. It drives light, lace, rim, stars, the ember and the kick punch.
 
 ### Coaster controls
@@ -87,9 +89,10 @@ With `coaster=1`, k1, k2 and k4 are rates, not positions: you fly the fractal in
   also flies straight, but anything between ~0.05 and 0.46 steers hard one way. Steering stops at the
   track walls (±0.6 from the voyage path) and recentres during each climb.
 - **k5 TURN** is the scratch: it rolls the picture with your hand, 0→1 = two full turns.
-- **Drops surge forward**: a drop adds a lurch on top of the throttle that eases out over ~1.5 s,
-  stronger the higher the throttle. At throttle 0 audio never moves the camera. Kicks nudge the dive
-  forward too, scaled by the throttle.
+- **Drops surge forward**: a drop multiplies the throttle's dive rate (up to 2.2x, easing out over
+  ~1.5 s). Kicks add a short 0.3 s boost the same way. Both only scale the throttle, so at throttle 0
+  audio never moves the camera, even right after a drop.
+- **Switching `coaster=1` off** eases the camera back onto the voyage's path over about a second.
 
 ## 6. Fallbacks and panic
 
@@ -166,7 +169,12 @@ every knob, and the wall's flicker, darkest pixel and frame time. Events print a
 - **Your hand wins.** Turn any dial and the pilot leaves that dial alone until it has been still for
   20 s, then carries on from where you left it.
 - **Coaster mode.** If the wall's URL has `coaster=1`, the pilot flies X/Y as steering held near
-  straight (0.5 ± 0.15) and ZOOM as throttle; breakdowns and a dark wall steer back to straight.
+  straight (0.5 ± 0.15) and ZOOM as throttle; breakdowns and a dark wall steer back to straight, and a
+  dark wall cuts the throttle to 0 within a couple of seconds. Drops surge the throttle in coaster mode
+  only: in position mode a drop never zooms in and back out.
+- **Reloads.** If the page reloads or loses the clit-set features, the pilot retries with backoff
+  (0.5 s up to 8 s) instead of exiting, and re-reads `coaster=1` each tick, so a URL change switches
+  its mode.
   Without it, X/Y/ZOOM stay positions as above.
 - Stop it with Ctrl-C or `kill <pid>`. The knobs stay where they are.
 

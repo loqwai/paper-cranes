@@ -71,8 +71,10 @@ export const PAN_SPAN = 0.8      // X/Y: a full dial pans 0.8 in the fractal pla
 // gate fades it), so the dive cannot run forever: at LZ_CAP it climbs back out under a voyage move.
 export const THROTTLE_RATE = 0.12   // log zoom per second at full throttle (home to the cap in ~11 s)
 export const LZ_CAP = 1.3           // total depth that starts the climb (~3.7x)
-export const KICK_DIVE = 0.012      // lz each full kick pushes the dive forward, times the throttle
-export const SURGE = 1.2            // a drop adds SURGE x throttle (eased out over ~1.5 s); at hover audio never moves the camera
+export const KICK_SURGE = 0.33      // a full kick adds this to the dive rate's multiplier, decaying over KICK_SURGE_SECS (~0.012 lz at full throttle)
+const KICK_SURGE_SECS = 0.3
+export const SURGE = 1.2            // a drop adds SURGE to the dive rate's multiplier, eased out over ~1.5 s
+// Kicks and drops only multiply the throttle's rate: at throttle 0 the camera never dives, whatever the music does.
 export const STEER_RATE = 0.18      // fractal-plane units per second at a full steer (screen-speed at any depth)
 export const STEER_LIMIT = 0.6      // the track's walls: steering stops at ±0.6 from the voyage's path
 export const CLIMB_SECS = 8
@@ -186,7 +188,7 @@ export const fresh = () => ({
   voyage: 0, voyageSeeded: false, nav: null, navMid: null, drift: 0, drive: 0, beat: 0, beatTo: 0, lurch: 0, lurchTo: 0, scratch: null, punch: 0, punchFrom: 0, punchAge: 9,
   bFast: 0, bSlow: 0, eFast: 0, eSlow: 0, localWas: 0, thump: 0,
   pearl: 0, focus: 0, spread: 0, grit: 0, tone: 0.5,
-  throttle: 0, surge: 0, dive: 0, diveTo: 0, panX: 0, panY: 0, steerX: 0, steerY: 0, climb: 0,
+  throttle: 0, surge: 0, kickSurge: 0, dive: 0, diveTo: 0, panX: 0, panY: 0, steerX: 0, steerY: 0, climb: 0,
 })
 
 export const step = (S, f, dt) => {
@@ -241,7 +243,7 @@ export const step = (S, f, dt) => {
     S.punchFrom = S.punch
     S.punchAge = 0
     S.kickRefr = 0.18
-    if (coaster && S.climb === 0) S.diveTo += KICK_DIVE * S.kickAmp * S.throttle
+    if (coaster && S.climb === 0) S.kickSurge += KICK_SURGE * S.kickAmp
   }
   S.kickAge = Math.min(1, S.kickAge + dt / KICK_SECS)
   // BEAT: a colour phase that steps forward on every kick (eased 0.12 s) and never goes back
@@ -269,7 +271,7 @@ export const step = (S, f, dt) => {
     S.dropHold = 0.6
     S.dropRefr = DROP_REFRACTORY
     S.jumpTo += 1
-    if (coaster && S.climb === 0) S.surge += SURGE * S.throttle
+    if (coaster && S.climb === 0) S.surge += SURGE
   }
   S.drop = toward(S.drop, S.dropHold > 0 ? 1 : 0, dt, S.dropHold > 0 ? 0.05 : 1.2)
   S.jump = toward(S.jump, S.jumpTo, dt, 0.5)
@@ -334,14 +336,16 @@ export const step = (S, f, dt) => {
     S.steerX = toward(S.steerX, steer(num(f.knob_1, 0)), dt, 0.2)
     S.steerY = toward(S.steerY, steer(num(f.knob_2, 0)), dt, 0.2)
     S.surge = toward(S.surge, 0, dt, 1.5)
+    S.kickSurge = toward(S.kickSurge, 0, dt, KICK_SURGE_SECS)
     if (S.climb === 0) {
-      S.diveTo += THROTTLE_RATE * (S.throttle + S.surge) * dt
+      S.diveTo += THROTTLE_RATE * S.throttle * (1 + S.surge + S.kickSurge) * dt
       S.panX = Math.max(-STEER_LIMIT, Math.min(STEER_LIMIT, S.panX + S.steerX * STEER_RATE * dt))
       S.panY = Math.max(-STEER_LIMIT, Math.min(STEER_LIMIT, S.panY + S.steerY * STEER_RATE * dt))
       if (S.nav.lz + S.dive >= LZ_CAP) {
         S.climb = CLIMB_SECS
         S.diveTo = 0
         S.surge = 0
+        S.kickSurge = 0
       }
     } else {
       // CLIMB: back out of the dive and onto the track's centre while the voyage carries on to new terrain
@@ -351,6 +355,13 @@ export const step = (S, f, dt) => {
       S.panY = toward(S.panY, 0, dt, CLIMB_SECS / 4)
     }
     S.dive = toward(S.dive, S.diveTo, dt, S.climb > 0 ? CLIMB_SECS / 4 : 0.15)
+  } else {
+    // Coaster switched off at runtime: ease back onto the voyage's path (all already 0 in prod, toward(0, 0) = 0)
+    S.throttle = S.surge = S.kickSurge = S.steerX = S.steerY = S.climb = 0
+    S.dive = toward(S.dive, 0, dt, 1)
+    S.diveTo = S.dive
+    S.panX = toward(S.panX, 0, dt, 1)
+    S.panY = toward(S.panY, 0, dt, 1)
   }
 
   const turn = clamp01(num(f.knob_5, 0)) * SCRATCH

@@ -4,7 +4,7 @@
 // Stop with Ctrl-C or `kill <pid>`: the knobs stay where they are and are printed, so the dials
 // carry on from there. The decisions live in pilot-brain.js; this file is only the CDP loop.
 import { chromium } from 'playwright'
-import { init, step, meter, takeNotes, FEATURES, NAMES } from './pilot-brain.js'
+import { init, step, meter, takeNotes, setCoaster, FEATURES, NAMES } from './pilot-brain.js'
 
 const CDP_URL = `http://127.0.0.1:${process.env.SHOW_CDP_PORT || '9333'}`
 const HZ = 15
@@ -76,6 +76,16 @@ const main = async () => {
   let lastLog = t0
   let writes = {}
   let live = first.live
+  let retryMs = 0
+  const resync = async (why) => {
+    // The show page reloaded (a hot reload or an input swap): wait for it, then resync from whatever it
+    // now shows rather than reading the change as a hand on every dial.
+    retryMs = Math.min(8000, retryMs ? retryMs * 2 : 500)
+    console.log(`pilot: ${why}, retrying in ${retryMs} ms`)
+    await new Promise(res => setTimeout(res, retryMs))
+    for (const k of Object.values(s.knobs)) k.written = null
+    writes = {}
+  }
   while (!stopping) {
     const now = Date.now()
     if (now - t0 > minutes * 60000) {
@@ -87,15 +97,15 @@ const main = async () => {
     try {
       r = await page.evaluate(TICK, { writes, features: FEATURES, wantMeter })
     } catch (err) {
-      // The show page reloaded (a hot reload or an input swap): its knobs reset to the URL, so
-      // resync from whatever it now shows rather than reading the change as a hand on every dial.
-      console.log(`pilot: page eval failed (${err.message.split('\n')[0]}), resyncing in 1 s`)
-      await new Promise(res => setTimeout(res, 1000))
-      for (const k of Object.values(s.knobs)) k.written = null
-      writes = {}
+      await resync(`page eval failed (${err.message.split('\n')[0]})`)
       continue
     }
-    if (r.missing.length) throw new Error(`page lost ${r.missing.join(', ')} (${r.href})`)
+    if (r.missing.length) {
+      await resync(`page lost ${r.missing.join(', ')} (${r.href})`)
+      continue
+    }
+    retryMs = 0
+    setCoaster(s, r.coaster)
     live = r.live
     const dt = Math.min(0.5, (now - last) / 1000)
     last = now

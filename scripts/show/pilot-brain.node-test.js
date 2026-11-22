@@ -1,7 +1,7 @@
 // node --test scripts/show/pilot-brain.node-test.js   (npm run test:pilot)
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { init, step, meter, takeNotes, ZOOM_CAP, PAN_MAX, YIELD_SECS, GEOMETRY, ENGAGE_GAP, STEER_SPAN } from './pilot-brain.js'
+import { init, step, meter, takeNotes, setCoaster, ZOOM_CAP, PAN_MAX, YIELD_SECS, GEOMETRY, ENGAGE_GAP, STEER_SPAN } from './pilot-brain.js'
 
 const DT = 1 / 15
 const calm = {
@@ -163,4 +163,42 @@ test('coaster mode flies k1/k2 as steering near straight and k4 as throttle; pos
   }
   const breakdown = trace.filter(r => r.t > 68 && r.t < 70)
   assert.ok(breakdown.every(r => Math.abs(r[1] - 0.5) < 0.1), 'a breakdown steers back toward straight')
+})
+
+test('position mode: a drop never plunges ZOOM in and back out; coaster mode surges the throttle instead', () => {
+  const drop = t => ({ ...calm, energyZScore: 1, cs_drop: t > 12 && t < 13 ? 1 : 0.2 })
+  const live = zeros()
+  const s = init(live, 29, null, { stagger: false })
+  fly(s, live, 11, calm)
+  const zoomBefore = live[4]
+  takeNotes(s)
+  const trace = fly(s, live, 8, drop)
+  assert.doesNotMatch(takeNotes(s).join('\n'), /plunge|surge/)
+  assert.ok(monotonicBetween(trace, 4, 0, Infinity), `zoom only glides one way (${zoomBefore} -> ${live[4]})`)
+
+  const cl = { ...zeros(), 1: 0.5, 2: 0.5 }
+  const c = init(cl, 29, null, { stagger: false, coaster: true })
+  fly(c, cl, 11, calm)
+  takeNotes(c)
+  fly(c, cl, 8, drop)
+  assert.match(takeNotes(c).join('\n'), /drop #1/)
+})
+
+test('coaster dark-wall guard cuts the throttle to 0', () => {
+  const live = { ...zeros(), 1: 0.5, 2: 0.5, 4: 0.5 }
+  const s = init(live, 31, null, { stagger: false, coaster: true })
+  meter(s, { flicker: 0.2, lumMin: 0.03, jankMed: 16.7 })
+  fly(s, live, 10, calm)
+  assert.ok(live[4] < 0.02, `throttle ${live[4]}`)
+})
+
+test('setCoaster switches mode once, re-picks a place in the new range and says so', () => {
+  const live = zeros()
+  const s = init(live, 37, null, { stagger: false })
+  takeNotes(s)
+  setCoaster(s, false)
+  assert.equal(takeNotes(s).length, 0)
+  setCoaster(s, true)
+  assert.match(takeNotes(s).join('\n'), /coaster/)
+  assert.ok(Math.abs(s.place[1] - 0.5) <= STEER_SPAN + 1e-9 && Math.abs(s.place[2] - 0.5) <= STEER_SPAN + 1e-9)
 })
