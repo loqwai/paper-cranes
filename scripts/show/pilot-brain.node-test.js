@@ -1,7 +1,7 @@
 // node --test scripts/show/pilot-brain.node-test.js   (npm run test:pilot)
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { init, step, meter, takeNotes, ZOOM_CAP, PAN_MAX, YIELD_SECS, GEOMETRY } from './pilot-brain.js'
+import { init, step, meter, takeNotes, ZOOM_CAP, PAN_MAX, YIELD_SECS, GEOMETRY, ENGAGE_GAP } from './pilot-brain.js'
 
 const DT = 1 / 15
 const calm = {
@@ -33,7 +33,7 @@ const monotonicBetween = (trace, key, from, to) => {
 
 test('build then drop: curl and power rise through the build, the drop fires one one-way flourish, guardrails hold', () => {
   const live = { ...zeros(), 5: 0.4 }
-  const s = init(live, 7)
+  const s = init(live, 7, null, { stagger: false })
   fly(s, live, 10, calm)
   const curlBefore = live[8]
   const powerBefore = live[6]
@@ -58,7 +58,7 @@ test('build then drop: curl and power rise through the build, the drop fires one
 
 test('geometry glides one way between events, never wobbling with the music', () => {
   const live = zeros()
-  const s = init(live, 3)
+  const s = init(live, 3, null, { stagger: false })
   const jittery = t => ({ ...calm, bassNormalized: 0.5 + 0.5 * Math.sin(t * 13), energyZScore: 0.3 * Math.sin(t * 7), cs_kick: (t * 2) % 1 < 0.1 ? 1 : 0 })
   const trace = fly(s, live, 30, jittery)
   for (const n of GEOMETRY) assert.ok(monotonicBetween(trace, n, 0.5, 30), `K${n} is monotonic with no event`)
@@ -66,7 +66,7 @@ test('geometry glides one way between events, never wobbling with the music', ()
 
 test('quiet breakdown opens up: zoom out, body low', () => {
   const live = { ...zeros(), 4: 0.5, 7: 0.4 }
-  const s = init(live, 5)
+  const s = init(live, 5, null, { stagger: false })
   fly(s, live, 40, { ...calm, energyZScore: -0.9, energy: 0.02 })
   assert.match(takeNotes(s).join('\n'), /breakdown/)
   assert.ok(live[4] < 0.2, `zoom out to ${live[4]}`)
@@ -75,7 +75,7 @@ test('quiet breakdown opens up: zoom out, body low', () => {
 
 test('a hand on a knob makes the pilot yield it for YIELD_SECS after the last movement, then glide on from there', () => {
   const live = zeros()
-  const s = init(live, 9)
+  const s = init(live, 9, null, { stagger: false })
   fly(s, live, 5, calm)
   const handUntil = s.t + 3
   const hand = t => (t < handUntil ? { 8: 0.8 + 0.01 * Math.floor(t * 4 % 2) } : {})
@@ -91,7 +91,7 @@ test('a hand on a knob makes the pilot yield it for YIELD_SECS after the last mo
 
 test('meter guard: a dark wall recentres and zooms out; slow frames lower trails', () => {
   const live = { ...zeros(), 1: 0.45, 2: 0.45, 4: 0.5, 11: 0.6 }
-  const s = init(live, 11)
+  const s = init(live, 11, null, { stagger: false })
   meter(s, { flicker: 0.2, lumMin: 0.03, jankMed: 33 })
   fly(s, live, 30, { ...calm, spectralFluxNormalized: 1 })
   assert.ok(live[1] < 0.3 && live[2] < 0.3, `recentred X${live[1]} Y${live[2]}`)
@@ -101,12 +101,48 @@ test('meter guard: a dark wall recentres and zooms out; slow frames lower trails
 
 test('VOYAGE at 0 stays the controller autopilot; a parked VOYAGE only ever flies forward', () => {
   const auto = zeros()
-  const s1 = init(auto, 1)
+  const s1 = init(auto, 1, null, { stagger: false })
   const t1 = fly(s1, auto, 20, { ...calm, cs_drop: 1 })
   assert.ok(t1.every(r => r[3] === 0), 'never writes k3 at 0')
   const parked = { ...zeros(), 3: 0.35 }
-  const s2 = init(parked, 1)
+  const s2 = init(parked, 1, null, { stagger: false })
   const t2 = fly(s2, parked, 60, t => ({ ...calm, cs_drop: t > 20 && t < 21 ? 1 : 0 }))
   assert.ok(monotonicBetween(t2, 3, 0, Infinity), 'forward only')
   assert.ok(parked[3] > 0.35, `advanced to ${parked[3]}`)
+})
+
+test('opening is staggered: knobs join one at a time, never more than 2 moving fast at once', () => {
+  const live = { 1: 0.9, 2: 0.9, 3: 0, 4: 0.9, 5: 0.5, 6: 0.9, 7: 0.9, 8: 0.9, 9: 0.5, 10: 1, 11: 1, 12: 1, 13: 0.9, 14: 0.9, 15: 0.9, 16: 0.9 }
+  const s = init(live, 13, calm)
+  const trace = fly(s, live, 60, calm)
+  let worst = 0
+  for (let i = 1; i < trace.length; i++) {
+    const fast = Object.keys(live).filter(n => Math.abs(trace[i][n] - trace[i - 1][n]) / DT > 0.05).length
+    worst = Math.max(worst, fast)
+  }
+  assert.ok(worst <= 2, `${worst} knobs moving > 0.05/s at once`)
+  assert.equal(trace[Math.round(ENGAGE_GAP * 2 / DT)][4], 0.9, 'ZOOM still untouched early in the opening')
+})
+
+test('a drop envelope already high at start is not a drop, and drops are at least 30 s apart', () => {
+  const live = zeros()
+  const s = init(live, 17, { ...calm, cs_drop: 1 }, { stagger: false })
+  fly(s, live, 3, { ...calm, cs_drop: 1 })
+  assert.doesNotMatch(takeNotes(s).join('\n'), /drop #/)
+  fly(s, live, 40, t => ({ ...calm, cs_drop: (t % 10) < 1 ? 1 : 0 }))
+  const drops = takeNotes(s).join('\n').match(/drop #\d+ ->/g) ?? []
+  const n = new Set(drops).size
+  assert.ok(n >= 1 && n <= 2, `${n} drops in 40 s`)
+})
+
+test('flicker caused by a hand does not calm the pilot; flicker with no hand does', () => {
+  const live = zeros()
+  const s = init(live, 19, null, { stagger: false })
+  fly(s, live, 5, calm)
+  fly(s, live, 1, calm, () => ({ 6: 0.9 }))
+  meter(s, { flicker: 1.2, lumMin: 0.2, jankMed: 16 })
+  assert.match(takeNotes(s).join('\n'), /a hand moved/)
+  fly(s, live, 15, calm)
+  meter(s, { flicker: 1.2, lumMin: 0.2, jankMed: 16 })
+  assert.match(takeNotes(s).join('\n'), /3x slower/)
 })

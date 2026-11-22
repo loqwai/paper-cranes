@@ -18,11 +18,19 @@ export const YIELD_SECS = 20
 export const TOUCH = 0.02
 export const ZOOM_CAP = 0.55
 export const PAN_MAX = 0.45
-export const DROP_REFRACTORY = 8
+export const DROP_REFRACTORY = 30
 export const SHIFT_REFRACTORY = 25
 export const FLOURISH = 0.06
 export const FLOURISH_MAX = 0.85
 export const BLEND_TOP = 0.08
+// Opening: knobs join one every ENGAGE_GAP seconds (ENGAGE_ORDER), each gliding no faster than
+// ENGAGE_TAU for its first ENGAGE_SECS, so at most ~2 knobs are moving fast at once.
+export const ENGAGE_GAP = 3
+export const ENGAGE_TAU = 4
+export const ENGAGE_SECS = 12
+export const ENGAGE_ORDER = [10, 16, 12, 11, 14, 13, 15, 9, 8, 6, 7, 4, 1, 2, 5, 3]
+// A hand move within this many seconds explains the meter's flicker: it is the user, not the pilot.
+export const HAND_EXPLAINS = 10
 const VOYAGE_PER_WAYPOINT = (1 - BLEND_TOP) / 6
 const LEG_SECS = 80
 
@@ -60,9 +68,9 @@ const placeFor = (rand) => ({
   8: 0.1 + rand() * 0.45,
 })
 
-export const init = (live, seed = 1) => {
+export const init = (live, seed = 1, f = null, { stagger = true } = {}) => {
   const knobs = {}
-  for (let n = 1; n <= 16; n++) knobs[n] = { value: live[n], written: null, seen: live[n], yieldUntil: -Infinity }
+  for (let n = 1; n <= 16; n++) knobs[n] = { value: live[n], written: null, seen: live[n], yieldUntil: -Infinity, engageAt: stagger ? ENGAGE_GAP * ENGAGE_ORDER.indexOf(n) : 0 }
   const rand = rng(seed)
   return {
     t: 0,
@@ -73,7 +81,7 @@ export const init = (live, seed = 1) => {
     voyage: live[3] > BLEND_TOP ? 'fly' : live[3] < 0.005 ? 'auto' : 'parked',
     hueDir: 1,
     sm: { flux: 0.3, bass: 0.3, crest: 0.3, treble: 0.3, kurt: 0.3, lace: 0.3, entropy: 0.5, quiet: 0, pitch: null, tonal: 0 },
-    ev: { prevDrop: 0, prevShift: 0, lastDrop: -Infinity, lastShift: -Infinity, drops: 0, shifts: 0, plungeUntil: -Infinity, spotUntil: -Infinity, breakdown: false },
+    ev: { prevDrop: f ? f.cs_drop : 0, prevShift: f ? f.cs_shift : 0, lastHand: -Infinity, lastDrop: -Infinity, lastShift: -Infinity, drops: 0, shifts: 0, plungeUntil: -Infinity, spotUntil: -Infinity, breakdown: false },
     guard: { calmUntil: -Infinity, gpuUntil: -Infinity, darkUntil: -Infinity },
     flourish: null,
     rand,
@@ -91,12 +99,16 @@ const observe = (s, live) => {
     const v = live[n]
     if (k.written != null && Math.abs(v - k.written) > TOUCH && s.t >= k.yieldUntil) note(s, `yield K${n} ${NAMES[n]} (hand ${k.written.toFixed(2)}→${v.toFixed(2)})`)
     if (k.written != null && Math.abs(v - k.written) > TOUCH) {
+      s.ev.lastHand = s.t
       k.yieldUntil = s.t + YIELD_SECS
       k.written = null
     }
-    if (Math.abs(v - k.seen) > 0.002 && s.t < k.yieldUntil) k.yieldUntil = s.t + YIELD_SECS
+    if (Math.abs(v - k.seen) > 0.002 && s.t < k.yieldUntil) {
+      k.yieldUntil = s.t + YIELD_SECS
+      s.ev.lastHand = s.t
+    }
     k.seen = v
-    if (s.t < k.yieldUntil) {
+    if (s.t < k.yieldUntil || s.t < k.engageAt) {
       k.value = v
       continue
     }
@@ -190,7 +202,6 @@ const lightTargets = (s, f) => {
     15: 0.05 + 0.25 * sm.kurt + (s.t < s.ev.spotUntil ? 0.3 : 0),
     16: 0.25 + 0.45 * sm.lace,
   }
-  if (s.t < s.guard.calmUntil) for (const n of Object.keys(l)) l[n] = 0.4 * l[n] + 0.6 * 0.4
   return l
 }
 
@@ -203,9 +214,10 @@ const trailsCap = (s) => {
 
 // Meter guard, fed every ~10 s. Returns nothing; sets guard windows.
 export const meter = (s, m) => {
-  if (m.flicker > 0.7) {
+  if (m.flicker > 0.7 && s.t - s.ev.lastHand < HAND_EXPLAINS) note(s, `meter flicker ${m.flicker}: a hand moved, not the pilot`)
+  if (m.flicker > 0.7 && s.t - s.ev.lastHand >= HAND_EXPLAINS) {
     s.guard.calmUntil = s.t + 30
-    note(s, `meter flicker ${m.flicker} > 0.7 -> calming light, slowing geometry`)
+    note(s, `meter flicker ${m.flicker} > 0.7 -> holding light, geometry 3x slower for 30 s`)
   }
   if (m.lumMin < 0.06) {
     s.guard.darkUntil = s.t + 30
@@ -225,11 +237,13 @@ export const step = (s, f, live, dt) => {
   smooth(s, f, dt)
   events(s, f, owned)
 
-  const slow = s.t < s.guard.calmUntil ? 2 : 1
+  const calm = s.t < s.guard.calmUntil
+  const slow = calm ? 3 : 1
+  const opening = n => Math.max(1, s.t < s.knobs[n].engageAt + ENGAGE_SECS ? ENGAGE_TAU : 1)
   const geo = geometryTargets(s, f)
   const plunging = s.t < s.ev.plungeUntil
   for (const n of GEOMETRY) {
-    const tau = (n === 4 && plunging ? 1.5 : s.geoTau) * slow
+    const tau = Math.max((n === 4 && plunging ? 1.5 : s.geoTau) * slow, opening(n))
     s.knobs[n].value = ease(s.knobs[n].value, geo[n], dt, tau)
   }
   s.geoTau = ease(s.geoTau, 14, dt, 30)
@@ -251,7 +265,10 @@ export const step = (s, f, live, dt) => {
 
   const light = lightTargets(s, f)
   light[11] = Math.min(light[11], trailsCap(s))
-  for (const n of Object.keys(light)) s.knobs[n].value = ease(s.knobs[n].value, light[n], dt, n === '14' ? 1 : 2)
+  // Calm holds the light where it is: easing every light knob toward a new value at once is itself a flicker.
+  if (!calm) for (const n of Object.keys(light)) s.knobs[n].value = ease(s.knobs[n].value, light[n], dt, Math.max(n === '14' ? 1 : 2, opening(n)))
+  // The GPU cap holds even while calm: a slow wall is worse than a held one.
+  if (calm && s.knobs[11].value > light[11]) s.knobs[11].value = ease(s.knobs[11].value, light[11], dt, ENGAGE_TAU)
 
   // HUE: a slow one-way creep that speeds up with tonal motion and section changes; it bounces
   // at the ends of the dial because a wrap 1→0 would sweep the whole wheel through the knob ease.

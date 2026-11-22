@@ -58,7 +58,7 @@ const main = async () => {
   let first = await page.evaluate(TICK, { writes: {}, features: FEATURES, wantMeter: true })
   if (first.missing.length) throw new Error(`page lacks ${first.missing.join(', ')}: needs ?controller=clit-set&wavelet=true on the clit-set shader (${first.href})`)
   if (!first.meter) throw new Error(`no window.__vjMeter: the show URL needs ?vj=1 (${first.href})`)
-  const s = init(first.live, seed)
+  const s = init(first.live, seed, first.f)
   console.log(`pilot: seed ${seed}, ${minutes} min, voyage ${s.voyage}${first.pinned.length ? `, pinned by remote: ${first.pinned.join(' ')}` : ''}`)
   console.log(`start knobs: ${fmt(first.live, [1, 2, 3, 4, 5, 6, 7, 8])} | ${fmt(first.live, [9, 10, 11, 12, 13, 14, 15, 16])}`)
 

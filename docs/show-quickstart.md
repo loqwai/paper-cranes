@@ -143,10 +143,17 @@ every knob, and the wall's flicker, darkest pixel and frame time. Events print a
 - **Guardrails.** ZOOM stays at or below 0.55 and X/Y at or below 0.45, because past those the lace
   turns to speckle or the shape leaves the frame and the wall goes dark. TRAILS drops when ZOOM is
   high, because the two together halved the frame rate. If the wall flickers or goes dark, the pilot
-  recentres and calms down for 30 s.
+  recentres and holds the light still with geometry 3x slower for 30 s. Flicker within 10 s of a hand on a dial is read as the hand, not the pilot. Drops are at least 30 s apart.
+- **Opening.** Dials join one every 3 s and glide no faster than a 4 s ease at first, so the wall never sees many dials move at once.
 - **Your hand wins.** Turn any dial and the pilot leaves that dial alone until it has been still for
   20 s, then carries on from where you left it.
 - Stop it with Ctrl-C or `kill <pid>`. The knobs stay where they are.
 
 `npm run test:pilot` runs the decision logic (`scripts/show/pilot-brain.js`) against synthetic music:
 build then drop, breakdown, a hand on a dial, a dark wall, and the voyage rules.
+
+**30 fps on the wall? Check the battery first.** On 2026-11-22 the wall sat at exactly 33.3 ms per
+frame whatever the knobs did. The projector ran at 60 Hz and the canvas had already downscaled to
+960x540. The show Mac was on battery at 5%, and Chrome's Energy Saver caps pages at 30 fps on low
+battery. The clit-set fractal runs a fixed 50 iterations, so no knob changes its cost. Plug the show
+Mac in. `pmset -g batt` shows the state.
