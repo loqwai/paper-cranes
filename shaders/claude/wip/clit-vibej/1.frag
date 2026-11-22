@@ -287,6 +287,8 @@ void mainImage(out vec4 P, vec2 V) {
     float dust = vnoise(dustP) * 0.6 + vnoise(dustP * 2.3 + 4.0) * 0.4;
     dust = smoothstep(0.45, 0.95, dust);
     vec3 dust_col = mix(vec3(0.10, 0.03, 0.22), lchGamut(0.32, 0.11, paletteHue(pal_t)), 0.5);
+    // vibej iter 2: bass thump leans the nebula toward deep ember red (same lightness: hue, not light)
+    dust_col = mix(dust_col, lchGamut(0.30, 0.12, 0.506), clamp(0.45 * BASS_ENV * REACT, 0.0, 0.6));
     float s1 = stars(sky * 38.0 / (1.0 + lz * 0.25) + cam * 22.0, 0.10 + 0.25 * K_NEBULA);
     float s2 = stars(sky * 17.0 / (1.0 + lz * 0.45) + cam * 48.0 + 31.0, 0.05 + 0.15 * K_NEBULA);
     float star = (s1 * 0.6 + s2) * (0.4 + 0.9 * TWINKLE);

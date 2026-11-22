@@ -41,3 +41,5 @@ during the show are listed per iteration below.
 - **1.frag, iter 1** (03:28): `cs_mids` (mids z-score envelope, unused in clit-set/2) lifts lace and
   rim chroma: `CHROMA_GAIN = 0.85 + 0.3·BREATH + 0.25·MIDS_ENV·REACT`. Colour only. Audio:
   mid-dominant quiet mic (energy 0.015, mids 0.67).
+- **iter 2** (03:30): bass thump (`BASS_ENV`) leans the nebula dust toward deep ember red at the
+  same lightness (`lchGamut(0.30, 0.12, 29°)`, up to 60%). Audio: bass 0.78, centroid 0.12.
