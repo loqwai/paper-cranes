@@ -147,6 +147,9 @@ every knob, and the wall's flicker, darkest pixel and frame time. Events print a
 - **Opening.** Dials join one every 3 s and glide no faster than a 4 s ease at first, so the wall never sees many dials move at once.
 - **Your hand wins.** Turn any dial and the pilot leaves that dial alone until it has been still for
   20 s, then carries on from where you left it.
+- **Coaster mode.** If the wall's URL has `coaster=1`, the pilot flies X/Y as steering held near
+  straight (0.5 ± 0.15) and ZOOM as throttle; breakdowns and a dark wall steer back to straight.
+  Without it, X/Y/ZOOM stay positions as above.
 - Stop it with Ctrl-C or `kill <pid>`. The knobs stay where they are.
 
 `npm run test:pilot` runs the decision logic (`scripts/show/pilot-brain.js`) against synthetic music:

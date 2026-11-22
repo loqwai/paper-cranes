@@ -1,7 +1,7 @@
 // node --test scripts/show/pilot-brain.node-test.js   (npm run test:pilot)
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { init, step, meter, takeNotes, ZOOM_CAP, PAN_MAX, YIELD_SECS, GEOMETRY, ENGAGE_GAP } from './pilot-brain.js'
+import { init, step, meter, takeNotes, ZOOM_CAP, PAN_MAX, YIELD_SECS, GEOMETRY, ENGAGE_GAP, STEER_SPAN } from './pilot-brain.js'
 
 const DT = 1 / 15
 const calm = {
@@ -145,4 +145,22 @@ test('flicker caused by a hand does not calm the pilot; flicker with no hand doe
   fly(s, live, 15, calm)
   meter(s, { flicker: 1.2, lumMin: 0.2, jankMed: 16 })
   assert.match(takeNotes(s).join('\n'), /3x slower/)
+})
+
+test('coaster mode flies k1/k2 as steering near straight and k4 as throttle; position mode is unchanged', () => {
+  const pos = zeros()
+  const sp = init(pos, 23, null, { stagger: false })
+  const posTrace = fly(sp, pos, 60, calm)
+  assert.ok(posTrace.every(r => r[1] <= PAN_MAX + 1e-9 && r[2] <= PAN_MAX + 1e-9))
+
+  const live = { ...zeros(), 1: 0.5, 2: 0.5 }
+  const s = init(live, 23, null, { stagger: false, coaster: true })
+  const trace = fly(s, live, 120, t => (t > 60 && t < 70 ? { ...calm, energyZScore: -0.8 } : calm))
+  for (const r of trace) {
+    assert.ok(Math.abs(r[1] - 0.5) <= STEER_SPAN + 1e-9, `steer X ${r[1]} strays from straight`)
+    assert.ok(Math.abs(r[2] - 0.5) <= STEER_SPAN + 1e-9, `steer Y ${r[2]} strays from straight`)
+    assert.ok(r[4] <= ZOOM_CAP + 1e-9)
+  }
+  const breakdown = trace.filter(r => r.t > 68 && r.t < 70)
+  assert.ok(breakdown.every(r => Math.abs(r[1] - 0.5) < 0.1), 'a breakdown steers back toward straight')
 })

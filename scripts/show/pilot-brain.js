@@ -13,6 +13,8 @@
 //   light     k9..k16: continuous, smoothed over 1-3 s, each from its own subtle feature.
 // The user's hand always wins: a knob whose live value moved away from what the pilot last wrote
 // is left alone until it has been still for YIELD_SECS.
+// Coaster mode (the wall's ?coaster=1, controllers/clit-set.js): k4 is THROTTLE and k1/k2 STEER are
+// turn rates centred on 0.5, so the same musical events drive speed and heading instead of a place.
 
 export const YIELD_SECS = 20
 export const TOUCH = 0.02
@@ -23,6 +25,8 @@ export const SHIFT_REFRACTORY = 25
 export const FLOURISH = 0.06
 export const FLOURISH_MAX = 0.85
 export const BLEND_TOP = 0.08
+// Coaster: steering stays near straight (0.5 ± STEER_SPAN) so the ride carves instead of pinning a wall.
+export const STEER_SPAN = 0.15
 // Opening: knobs join one every ENGAGE_GAP seconds (ENGAGE_ORDER), each gliding no faster than
 // ENGAGE_TAU for its first ENGAGE_SECS, so at most ~2 knobs are moving fast at once.
 export const ENGAGE_GAP = 3
@@ -59,24 +63,25 @@ const rng = seed => () => {
 
 // A "place" is where the geometry glides to between events. Bounded so the shape stays in frame
 // and the lace stays lace: pan off-frame and zoom past ~0.55 both turned the wall dark on 2026-11-22.
-const placeFor = (rand) => ({
-  1: 0.05 + rand() * 0.35,
-  2: 0.05 + rand() * 0.35,
+const placeFor = (rand, coaster) => ({
+  1: coaster ? 0.5 + (rand() * 2 - 1) * STEER_SPAN : 0.05 + rand() * 0.35,
+  2: coaster ? 0.5 + (rand() * 2 - 1) * STEER_SPAN : 0.05 + rand() * 0.35,
   4: 0.1 + rand() * 0.3,
   6: 0.1 + rand() * 0.5,
   7: 0.05 + rand() * 0.4,
   8: 0.1 + rand() * 0.45,
 })
 
-export const init = (live, seed = 1, f = null, { stagger = true } = {}) => {
+export const init = (live, seed = 1, f = null, { stagger = true, coaster = false } = {}) => {
   const knobs = {}
   for (let n = 1; n <= 16; n++) knobs[n] = { value: live[n], written: null, seen: live[n], yieldUntil: -Infinity, engageAt: stagger ? ENGAGE_GAP * ENGAGE_ORDER.indexOf(n) : 0 }
   const rand = rng(seed)
   return {
     t: 0,
     seed,
+    coaster,
     knobs,
-    place: placeFor(rand),
+    place: placeFor(rand, coaster),
     geoTau: 14,
     voyage: live[3] > BLEND_TOP ? 'fly' : live[3] < 0.005 ? 'auto' : 'parked',
     hueDir: 1,
@@ -128,7 +133,7 @@ const events = (s, f, owned) => {
   if (shiftEdge) {
     ev.lastShift = s.t
     ev.shifts += 1
-    s.place = placeFor(s.rand)
+    s.place = placeFor(s.rand, s.coaster)
     s.geoTau = 16
     s.hueKick = 0.08
     note(s, `section change (flux/entropy shift ${f.cs_shift.toFixed(2)}) -> new place X${s.place[1].toFixed(2)} Y${s.place[2].toFixed(2)} zoom${s.place[4].toFixed(2)} power${s.place[6].toFixed(2)} curl${s.place[8].toFixed(2)}`)
@@ -181,13 +186,15 @@ const geometryTargets = (s, f) => {
   const g = { ...s.place }
   g[8] = clamp(g[8] + 0.35 * f.cs_build, 0, 0.9)
   g[6] = clamp(g[6] + 0.3 * f.cs_build, 0, 0.9)
-  if (s.ev.breakdown) Object.assign(g, { 4: 0.08, 7: 0.05, 1: Math.min(g[1], 0.2), 2: Math.min(g[2], 0.2) })
+  const straight = s.coaster ? 0.5 : null
+  if (s.ev.breakdown) Object.assign(g, { 4: 0.08, 7: 0.05, 1: straight ?? Math.min(g[1], 0.2), 2: straight ?? Math.min(g[2], 0.2) })
   if (s.t < s.ev.plungeUntil) g[4] = g[4] + 0.2
-  if (s.t < s.guard.darkUntil) Object.assign(g, { 1: 0.15, 2: 0.15, 4: Math.min(g[4], 0.2) })
+  if (s.t < s.guard.darkUntil) Object.assign(g, { 1: straight ?? 0.15, 2: straight ?? 0.15, 4: Math.min(g[4], 0.2) })
   const zoomCap = s.t < s.guard.gpuUntil ? 0.4 : ZOOM_CAP
   g[4] = clamp(g[4], 0, zoomCap)
-  g[1] = clamp(g[1], 0, PAN_MAX)
-  g[2] = clamp(g[2], 0, PAN_MAX)
+  const [lo, hi] = s.coaster ? [0.5 - STEER_SPAN, 0.5 + STEER_SPAN] : [0, PAN_MAX]
+  g[1] = clamp(g[1], lo, hi)
+  g[2] = clamp(g[2], lo, hi)
   return g
 }
 

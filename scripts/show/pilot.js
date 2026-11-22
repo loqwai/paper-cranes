@@ -40,7 +40,7 @@ const TICK = ({ writes, features, wantMeter }) => {
   for (let n = 1; n <= 16; n++) live[n] = +(all['knob_' + n] ?? 0)
   const pinned = Object.keys(window.cranes.messageParams || {}).filter(k => k.startsWith('knob_'))
   const m = wantMeter ? window.__vjMeter?.summary(10) : null
-  return { f, live, missing, pinned, meter: m ? { flicker: m.flicker, lumMin: m.lumMin, lum: m.lum } : null, jankMed: wantMeter ? window.__vjJank?.summary?.()?.med ?? null : null, href: location.href }
+  return { f, live, missing, pinned, coaster: all.coaster > 0.5, meter: m ? { flicker: m.flicker, lumMin: m.lumMin, lum: m.lum } : null, jankMed: wantMeter ? window.__vjJank?.summary?.()?.med ?? null : null, href: location.href }
 }
 
 const connect = async () => {
@@ -58,8 +58,8 @@ const main = async () => {
   let first = await page.evaluate(TICK, { writes: {}, features: FEATURES, wantMeter: true })
   if (first.missing.length) throw new Error(`page lacks ${first.missing.join(', ')}: needs ?controller=clit-set&wavelet=true on the clit-set shader (${first.href})`)
   if (!first.meter) throw new Error(`no window.__vjMeter: the show URL needs ?vj=1 (${first.href})`)
-  const s = init(first.live, seed, first.f)
-  console.log(`pilot: seed ${seed}, ${minutes} min, voyage ${s.voyage}${first.pinned.length ? `, pinned by remote: ${first.pinned.join(' ')}` : ''}`)
+  const s = init(first.live, seed, first.f, { coaster: first.coaster })
+  console.log(`pilot: seed ${seed}, ${minutes} min, ${s.coaster ? 'coaster (k4 throttle, k1/k2 steer)' : 'position'} mode, voyage ${s.voyage}${first.pinned.length ? `, pinned by remote: ${first.pinned.join(' ')}` : ''}`)
   console.log(`start knobs: ${fmt(first.live, [1, 2, 3, 4, 5, 6, 7, 8])} | ${fmt(first.live, [9, 10, 11, 12, 13, 14, 15, 16])}`)
 
   let stopping = false
