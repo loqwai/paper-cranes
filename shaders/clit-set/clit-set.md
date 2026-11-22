@@ -155,3 +155,15 @@ plus eased knobs `cs_k9..cs_k16`. The behaviour test is `controllers/clit-set.te
   (k15 SPOT still works) and the hue turn's effect on lace lightness. Audio now drives the spin rate and
   the slow colour. Remaining shiver source: the voyage legs' shape morph (A, curl), measured alone at
   voyage 1.15 to 1.6 with no audio: shiverScore 0.96, zoomAbs 0.097.
+- **2.frag, 2026-11-22 techno build** (Aaron live at a hard techno venue on a phone mic: "almost still
+  except for time"). Root causes: the presence gate was line-level (`smoothstep(0.002, 0.02, energy)`,
+  0.25 s both ways), so a phone mic sat half-shut and the gaps between kicks closed it every beat; and
+  kicks and bands came from 500-frame z-scores, which flatten on a constant four-on-the-floor. Now:
+  presence opens at 0.0008..0.006 and closes over 3 s; kicks also fire on bass against its own last
+  0.45 s (`cs_thump`), so every kick lands. Each kick: `cs_punch` (30 ms up, 0.2 s down) lifts lace,
+  rim, braid and ember light and chroma; `cs_lurch` jumps the view forward 0.05 rad (never back); the
+  voyage steps forward. Bass (thump) thickens the lace; treble sparkles the braid and stars. Spin rate
+  0.5x silent to 4x loud, voyage pace 0.5x to 2.5x, from energy z-score plus local loudness. Legs are
+  paced by travel (shape + camera), loop ~24 min at 1x. A colour beat (hue step + chroma lift, scaled
+  back to each pixel's luminance) and a beat-stepped colour wave along the filaments (`cs_beat`).
+  `?time=<s>` now also stops the controller's time-driven clocks; the audio-driven jumps keep going.
