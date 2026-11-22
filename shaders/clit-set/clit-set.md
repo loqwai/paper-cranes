@@ -133,18 +133,29 @@ rejects any variant whose lit pixels average below 0.075 OKLab chroma).
 | 4 | nebula | Emission nebula: the body glows as lit gas, the lace burns as two filament families in two hues, and the sky is layered multi-colour dust with cross-star sparkle. OKLCH on a curated wheel (no hot magenta, olive rushed through, dark layers kept cool so nothing goes brown). k13 = filament colour split. |
 | 5 | mandala | 4's colour, folded into a slowly turning kaleidoscope. The fractal is mirror-symmetric, so each fold joins seamlessly; the silhouette repeats as petals around a lit hub. Petal count 5 to 8 comes from `seed4`, so each phone differs. |
 
-Motion and audio on 3/4/5 (show rules, docs/vj-preferences.md: geometry only evolves):
+Motion and audio on 3/4/5 (geometry only goes forward, docs/vj-preferences.md; every kick lands):
 
-- Geometry runs on the `time` uniform, never on audio, and never reverses: a one-way spin about the
-  centre (one turn per 200 s) and a one-way zoom creep (+0.22 log depth per 100 s) that wraps back
-  under a 1.5 s feedback dissolve. Both periods divide the 1000 s time wrap. Nothing sways or breathes.
-- Audio sets only the slow colour (`cs_hue`, a 20 s circular mean of the key). Kick, bass, treble,
-  timbre and loudness no longer touch the lace threshold, rim, ember, focal radius or stars: on the
-  show's probe that light read as shiver. The controller's `cs_flow` is not used either (it surges on
-  every kick); the frags keep their own steady clock.
-- Measured on beat.mp3 in Chrome with `?vj=1` (30 s window after a discarded first 30 s, 2026-11-22):
-  3 flicker 0.04, clip 0, shiver 0.47; 4 flicker 0.04, clip 0, shiver 0.46; 5 flicker 0.07, clip 0,
-  shiver 0.30.
+- Their own motion runs on the `time` uniform and never reverses: a one-way spin about the centre
+  (one turn per 200 s) and a one-way zoom creep (+0.22 log depth per 100 s) that wraps under a 1.5 s
+  feedback dissolve at t = 50, 150, ... (never at `?time=0`, where a held dissolve smeared the frame).
+- The techno controller (55fec755) drives the rest, and it still moves with time held: loudness speeds
+  the spin inside `cs_rot`, and every kick (found against the bass's own last 0.45 s, so a constant
+  four-on-the-floor fires) gives `cs_lurch` (the view jumps forward, doubled in the frag; the dust
+  pushes on), `cs_punch` (30 ms up, 0.2 s down: lit lace, filaments, rim and ember jump in lightness
+  and chroma; on 3 the body and sky lift and lean red too, since the lace sits at the 0.55 cap) and
+  `cs_beat` (the filament colour, or 3's lace depth, steps forward a notch). `cs_thump` thickens the lace.
+- Aaron's phone test, 2026-11-22: `wavelet=true&time=0`, beat.mp3 at mic level (energy 0.024-0.028),
+  30 s window after a discarded 30 s; on/off = mean frame luminance with `cs_punch` > 0.35 vs < 0.02:
+
+  | frag | motion (time held) | flicker | clip | on-kick / off-kick lum | on vs off pixel diff |
+  |---|---|---|---|---|---|
+  | 3 | 0.066 | 0.56 | 0 | 0.374 / 0.331 | 0.071 |
+  | 4 | 0.066 | 0.63 | 0 | 0.342 / 0.208 | 0.162 |
+  | 5 | 0.068 | 0.37 | 0 | 0.225 / 0.152 | 0.100 |
+
+  The shiver score is about 1 on all three: the probe reads a lace that lights up on each kick as the
+  radial profile breathing. That is the cost of the punch; the earlier colour-only build scored
+  0.30-0.47 and sat still on a phone mic.
 
 Seeds per frag: `seed` palette or depth phase, `seed2` lace density, `seed3` rim hue or dust hue,
 `seed4` star scatter (and petal count on 5).
@@ -156,6 +167,7 @@ Seeds per frag: `seed` palette or depth phase, `seed2` lace density, `seed3` rim
   mood (3 per frag) plus golden-ratio jitter on the look knobs, clamped to the safe bands, and
   `voyage0 = frac(n × 0.618) × 6`, parked there with `knob_3` (the autopilot's legs go out and back,
   which the shiver probe flags; the frags' own motion only goes one way). Seeds are not baked; k1/k2 = 0.
+  Every URL carries `controller=clit-set&wavelet=true` (wavelet kicks; the stickers run on phone mics).
 - `node scripts/nfc/render-gate.mjs shaders/clit-set/nfc-variants.json <dir> <port>` renders every
   variant headless (`noaudio=true&time=20`, 360×740) and rejects dark, white-out, grey, low-chroma,
   speckle, hot-magenta, flat (one colour field), one-hue (a 60° hue slice over 70% of the frame) and static frames (the `time` uniform moves 20 → 22 and

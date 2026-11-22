@@ -131,7 +131,7 @@ const build = () => {
     // legs turn round (cx / cy / rot / lz go out and back), which the show's shiver probe flags, while
     // the frags' own spin and zoom creep only ever go one way. voyage0 stays as the same place.
     knobs[3] = r3(0.08 + 0.92 * voyage0 / 5.999)
-    const q = [`shader=clit-set/${F.frag}`, 'controller=clit-set', 'fft_size=2048', 'smoothing=0.3', `voyage0=${voyage0}`,
+    const q = [`shader=clit-set/${F.frag}`, 'controller=clit-set', 'wavelet=true', 'fft_size=2048', 'smoothing=0.3', `voyage0=${voyage0}`,
       ...Object.entries(knobs).sort((a, b) => a[0] - b[0]).map(([k, v]) => `knob_${k}=${v}`)].join('&')
     return {
       n,

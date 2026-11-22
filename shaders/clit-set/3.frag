@@ -13,6 +13,7 @@
 uniform float cs_on, cs_time, cs_presence, cs_flow;
 uniform float cs_kick, cs_bass, cs_mids, cs_treb;
 uniform float cs_build, cs_drop, cs_jump, cs_shift, cs_hue;
+uniform float cs_punch, cs_thump, cs_beat, cs_lurch;
 uniform float cs_cx, cs_cy, cs_lz, cs_rot, cs_curl, cs_navA, cs_navB, cs_breath;
 uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 
@@ -47,9 +48,9 @@ uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 //   OWN_ROT  one-way spin about the centre, one turn per 200 s
 //   OWN_LZ   one-way zoom creep in log depth, +0.22 (1.25x) per 100 s, then it wraps back under a
 //            1.5 s feedback dissolve (CREEP_COVER), so the reset never cuts
-// Both periods divide the 1000 s time wrap, so the wrap is seamless too. Audio never touches these.
-#define OWN_ROT     (time * TAU / 200.0)
-#define CREEP_U     fract(time / 100.0)
+// Both periods divide the 1000 s time wrap, so the wrap is seamless too. OWN_ROT adds the kick lurch.
+#define OWN_ROT     (time * TAU / 200.0 + LURCH)
+#define CREEP_U     fract(time / 100.0 + 0.5)                // wraps at t = 50, 150 ...: never at ?time=0
 #define OWN_LZ      (0.22 * CREEP_U)
 #define CREEP_COVER max(smoothstep(0.985, 1.0, CREEP_U), 1.0 - smoothstep(0.0, 0.015, CREEP_U))
 
@@ -61,15 +62,22 @@ uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 #define SEED_RIM   (seed3 * 0.06)
 #define SEED_STARS (seed4 * 97.0)
 
-// AUDIO: the music sets only the slow colour (cs_hue, a 20 s circular mean of the key). Motion runs on
-// the `time` uniform: the controller's forward clock surges on every kick, and a spin or drift on it
-// read as zoom jitter on the show's probe. Audio never moves light that changes the structure: kick,
-// bass, treble, timbre and loudness used to pulse the lace threshold, rim, ember and focal radius, and
-// the show's probe (2026-11-22) read that as shiver (zoom in and out). Those are held steady below.
+// AUDIO (techno build, phone mic): every kick lands. The controller finds kicks against the bass's own
+// last 0.45 s, so a constant four-on-the-floor still fires. Per kick:
+//   PUNCH  (cs_punch, 30 ms up, 0.2 s down) lifts the lit lace, rim and ember: brightness and chroma
+//   BEAT   (cs_beat) steps the filament colour forward a notch, eased, never back
+//   LURCH  (cs_lurch, inside cs_rot) jumps the view forward; the frag doubles it. The dust pushes on.
+//   THUMP  (cs_thump) thickens the lace a little on the bass
+// Loudness quickens the controller's spin (in cs_rot). Geometry never reverses. The `time` uniform runs
+// the frag's own spin and zoom creep; ?time=0 freezes those, and the audio alone still moves the frame.
+#define PUNCH (HAS_CTL ? cs_punch : clamp(bassZScore - 0.3, 0.0, 1.0))
+#define THUMP (HAS_CTL ? cs_thump : 0.0)
+#define BEAT  (HAS_CTL ? cs_beat : 0.0)
+#define LURCH (HAS_CTL ? cs_lurch : 0.0)
 #define FLOW (time * 0.03)                              // own steady clock: the controller's flow surges per kick
 #define DROP_INTENSITY K_DROP
 #define BUILD_INTENSITY (HAS_CTL ? cs_build : clamp(energySlope * energyRSquared * 10.0, 0.0, 1.0))
-#define KICK 0.0
+#define KICK PUNCH
 #define PULSE 1.0
 #define LACE_GAIN 0.95
 #define RIM_INTENSITY 0.6
@@ -141,7 +149,7 @@ void mainImage(out vec4 P, vec2 V) {
     float lx = log(max(x, 1e-12)), ly = log(max(y, 1e-12));
     float body = smoothstep(1., -6., ly) * smoothstep(1., -6., lx);     // 1 inside the pale body
 
-    float lace_lo = -2.0 + SEED_LACE + K_LACE * 0.9 + LACE_BLOOM * 0.6 + LACE_BREATH * 0.5 * REACT - lz * 0.6;
+    float lace_lo = -2.0 + SEED_LACE + K_LACE * 0.9 + LACE_BLOOM * 0.6 + LACE_BREATH * 0.5 * REACT + THUMP * 0.3 - lz * 0.6;
     float lace_hi = lace_lo - 3.0;
     float lace_x = smoothstep(lace_lo, lace_hi, lx);
     float lace_y = smoothstep(lace_lo, lace_hi, ly);
@@ -157,19 +165,19 @@ void mainImage(out vec4 P, vec2 V) {
     // DEPTH per layer (0 near … 1 far). K_DEPTH squeezes the mid band for a stronger 3D pop.
     float ang = atan(Z.y, Z.x);
     float t_body = 0.46 + 0.1 * sin(ang + BODY_RIPPLE) * (1.0 - K_DEPTH * 0.6) - body * 0.08;
-    float t_lace = 0.02 + 0.24 * (0.5 + 0.5 * cos(ang + BODY_RIPPLE)) * (1.0 - tight * 0.5) - kick * 0.05 * REACT;
+    float t_lace = 0.02 + 0.24 * (0.5 + 0.5 * cos(ang + BODY_RIPPLE + BEAT * 3.1416)) * (1.0 - tight * 0.5) - kick * 0.06 * REACT;
     float t_far  = 0.96 + 0.04 * sin(FLOW * 3.0 + uv.y * 2.0);
 
     // Lightness per layer: lace bright, body glassy, galaxy dim floor (never a black void)
     vec2 cam = vec2(NAV_CY, NAV_CX - HOME_CX);
     vec2 sky = rot2(NAV_ROT * 0.5) * uv;
     float neb = 0.4 + 0.6 * K_NEBULA;
-    vec2 dustP = sky * 2.2 / (1.0 + lz * 0.15) + cam * 1.6 + vec2(FLOW * 0.4, 0.0);
+    vec2 dustP = sky * 2.2 / (1.0 + lz * 0.15) + cam * 1.6 + vec2(FLOW * 0.4 + LURCH * 2.0, 0.0);
     float dust = smoothstep(0.35, 0.95, vnoise(dustP) * 0.6 + vnoise(dustP * 2.3 + 4.0) * 0.4);
     float L_far = 0.07 + 0.16 * dust * neb;
     float bodyMask = smoothstep(0.02, 0.6, body) * 0.85 + 0.15 * (1.0 - smoothstep(-1.0, 0.5, min(lx, ly)));
     float L_body = mix(0.16, 0.36, bodyMask) * (0.85 + 0.15 * sin(ang * 2.0 + FLOW * 6.0));
-    float L_lace = 0.5 * LACE_GAIN;
+    float L_lace = 0.5 * LACE_GAIN * (1.0 + 0.45 * PUNCH);              // kick punch, pops forward too
 
     // Compose by depth: far → body → lace → focal. Depth values blend, so hue order stays spectral.
     float t = t_far, L = L_far;
@@ -183,7 +191,7 @@ void mainImage(out vec4 P, vec2 V) {
     float rim = smoothstep(0.05, 0.4, edge * 20.0) * (1.0 - smoothstep(0.8, 2.2, lz)) * smoothstep(0.0, 0.15, abs(C.y));
     rim *= RIM_INTENSITY;
     t = mix(t, 0.08 + SEED_RIM, clamp(rim * 0.7, 0.0, 1.0));
-    L = mix(L, 0.5, clamp(rim * 0.5, 0.0, 1.0));
+    L = mix(L, 0.5 + 0.05 * PUNCH, clamp(rim * (0.5 + 0.3 * PUNCH), 0.0, 1.0));
 
     // Focal ember: nearest of all. Drop: body recedes, focal blazes forward.
     t = mix(t, 0.0, focal);
@@ -191,6 +199,10 @@ void mainImage(out vec4 P, vec2 V) {
     t = mix(t, min(t + 0.25, 1.0), drop * (1.0 - focal) * (1.0 - lace));
     L *= mix(1.0, 0.8, drop * (1.0 - focal));
     t -= build * 0.06;                                                       // builds lean forward
+    // KICK PUNCH beyond the lace (whose lightness tops out at the 0.55 cap): the body and sky lift too
+    // and lean toward red, so the whole lit field jumps forward on every kick
+    L *= 1.0 + 0.4 * PUNCH * (1.0 - lace);
+    t -= 0.06 * PUNCH * bodyMask * (1.0 - focal);
 
     // Seed shift + the HUE knob's depth temperature: 0 neutral, 0.25 hot (more lifts forward),
     // 0.5 neutral, 0.75 cool (more recedes), 1 neutral again. Hue order stays spectral.

@@ -12,6 +12,7 @@
 uniform float cs_on, cs_time, cs_presence, cs_flow;
 uniform float cs_kick, cs_bass, cs_mids, cs_treb;
 uniform float cs_build, cs_drop, cs_jump, cs_shift, cs_hue;
+uniform float cs_punch, cs_thump, cs_beat, cs_lurch;
 uniform float cs_cx, cs_cy, cs_lz, cs_rot, cs_curl, cs_navA, cs_navB, cs_breath;
 uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 
@@ -46,9 +47,9 @@ uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 //   OWN_ROT  one-way spin about the centre, one turn per 200 s
 //   OWN_LZ   one-way zoom creep in log depth, +0.22 (1.25x) per 100 s, then it wraps back under a
 //            1.5 s feedback dissolve (CREEP_COVER), so the reset never cuts
-// Both periods divide the 1000 s time wrap, so the wrap is seamless too. Audio never touches these.
-#define OWN_ROT     (time * TAU / 200.0)
-#define CREEP_U     fract(time / 100.0)
+// Both periods divide the 1000 s time wrap, so the wrap is seamless too. OWN_ROT adds the kick lurch.
+#define OWN_ROT     (time * TAU / 200.0 + LURCH)
+#define CREEP_U     fract(time / 100.0 + 0.5)                // wraps at t = 50, 150 ...: never at ?time=0
 #define OWN_LZ      (0.22 * CREEP_U)
 #define CREEP_COVER max(smoothstep(0.985, 1.0, CREEP_U), 1.0 - smoothstep(0.0, 0.015, CREEP_U))
 
@@ -60,15 +61,22 @@ uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 #define SEED_DUST  (seed3 * 0.3)
 #define SEED_STARS (seed4 * 97.0)
 
-// AUDIO: the music sets only the slow colour (cs_hue, a 20 s circular mean of the key). Motion runs on
-// the `time` uniform: the controller's forward clock surges on every kick, and a spin or drift on it
-// read as zoom jitter on the show's probe. Audio never moves light that changes the structure: kick,
-// bass, treble, timbre and loudness used to pulse the lace threshold, rim, ember and focal radius, and
-// the show's probe (2026-11-22) read that as shiver (zoom in and out). Those are held steady below.. Colour follows slow statistics only.
+// AUDIO (techno build, phone mic): every kick lands. The controller finds kicks against the bass's own
+// last 0.45 s, so a constant four-on-the-floor still fires. Per kick:
+//   PUNCH  (cs_punch, 30 ms up, 0.2 s down) lifts the lit lace, rim and ember: brightness and chroma
+//   BEAT   (cs_beat) steps the filament colour forward a notch, eased, never back
+//   LURCH  (cs_lurch, inside cs_rot) jumps the view forward; the frag doubles it. The dust pushes on.
+//   THUMP  (cs_thump) thickens the lace a little on the bass
+// Loudness quickens the controller's spin (in cs_rot). Geometry never reverses. The `time` uniform runs
+// the frag's own spin and zoom creep; ?time=0 freezes those, and the audio alone still moves the frame.
+#define PUNCH (HAS_CTL ? cs_punch : clamp(bassZScore - 0.3, 0.0, 1.0))
+#define THUMP (HAS_CTL ? cs_thump : 0.0)
+#define BEAT  (HAS_CTL ? cs_beat : 0.0)
+#define LURCH (HAS_CTL ? cs_lurch : 0.0)
 #define FLOW (time * 0.03)                              // own steady clock: the controller's flow surges per kick
 #define DROP_INTENSITY K_DROP
 #define BUILD_INTENSITY (HAS_CTL ? cs_build : clamp(energySlope * energyRSquared * 10.0, 0.0, 1.0))
-#define KICK 0.0
+#define KICK PUNCH
 #define PULSE 1.0
 #define LACE_GAIN 0.9
 #define RIM_INTENSITY 0.6
@@ -170,7 +178,7 @@ void mainImage(out vec4 P, vec2 V) {
     float lx = log(max(x, 1e-12)), ly = log(max(y, 1e-12));
     float zf = 1. - smoothstep(1., -6., ly) * smoothstep(1., -6., lx);
 
-    float lace_lo = -2.0 + SEED_LACE + K_LACE * 0.9 + LACE_BLOOM * 0.6 + LACE_BREATH * 0.5 * REACT - lz * 0.6;
+    float lace_lo = -2.0 + SEED_LACE + K_LACE * 0.9 + LACE_BLOOM * 0.6 + LACE_BREATH * 0.5 * REACT + THUMP * 0.3 - lz * 0.6;
     float lace_hi = lace_lo - 3.0;
     float lace_x = smoothstep(lace_lo, lace_hi, lx);
     float lace_y = smoothstep(lace_lo, lace_hi, ly);
@@ -202,7 +210,7 @@ void mainImage(out vec4 P, vec2 V) {
     vec2 cam = vec2(NAV_CY, NAV_CX - HOME_CX);
     vec2 sky = rot2(NAV_ROT * 0.5) * uv;
     float neb = 0.7 + 0.3 * K_NEBULA;
-    vec2 dp = sky * 1.8 / (1.0 + lz * 0.15) + cam * 1.4 + vec2(FLOW * 0.3, FLOW * -0.12);
+    vec2 dp = sky * 1.8 / (1.0 + lz * 0.15) + cam * 1.4 + vec2(FLOW * 0.3 + LURCH * 2.0, FLOW * -0.12);
     float d1 = fbm(dp), d2 = fbm(dp * 1.7 + 11.0 + FLOW * 0.1);
     // Dark layers stay on the cool half of the wheel (dark warm hues read as brown)
     vec3 dustA = pal(COOL(HUE_TURN + 0.3 + SEED_DUST), 0.42, 0.14);
@@ -217,8 +225,9 @@ void mainImage(out vec4 P, vec2 V) {
     vec3 col = bg + pal(COOL(HUE_TURN + 0.2), 0.45, 0.15) * max(halo_x, halo_y) * 0.22;   // cool gas glow
     col = mix(col, gas * mix(0.85, 1.0, LACE_GAIN - 0.8), body);
     // Filaments: x-family and y-family in split hues, brighter than the gas
-    col = mix(col, pal(hb + split, 0.72, 0.17) * LACE_GAIN, fil_x * 0.85);
-    col = mix(col, pal(hb - split, 0.68, 0.18) * LACE_GAIN, fil_y * 0.85);
+    float hf = hb + BEAT * 0.5;                                          // filament colour steps per kick
+    col = mix(col, pal(hf + split, 0.72, 0.17) * LACE_GAIN, fil_x * 0.85);
+    col = mix(col, pal(hf - split, 0.68, 0.18) * LACE_GAIN, fil_y * 0.85);
     col += pal(hb, 0.9, 0.12) * fil_x * fil_y * SPARKLE;                         // same-hue glints, never grey
 
     // Dense lace: pixel-scale alternation between gas, filaments and sky averages to grey-lavender on
@@ -237,10 +246,15 @@ void mainImage(out vec4 P, vec2 V) {
     col = mix(col, core, focal * (0.35 + kick * 0.25 * REACT + drop * 0.3));
     col *= mix(1.0, mix(0.8, 1.0, focal), drop);
 
-    col *= mix(1.0, PULSE, body);                                         // bass pulse on the lit body only
+    // KICK PUNCH: lit lace, filaments and rim jump in lightness and chroma; the sky lifts a little
+    float lit = max(body, max(fil_x, fil_y));
+    float pk = PUNCH * (0.3 + 0.7 * max(lit, rim));
+    vec3 lab = rgb2oklab(max(col, 0.0));
+    lab.x *= 1.0 + 0.4 * pk;
+    lab.yz *= 1.0 + 0.6 * pk;
+    col = max(oklab2rgb(lab), 0.0);
 
     // Stars in the gaps
-    float lit = max(body, max(fil_x, fil_y));
     float s1 = stars(sky * 34.0 / (1.0 + lz * 0.25) + cam * 22.0, 0.10 + 0.25 * K_NEBULA);
     float s2 = stars(sky * 15.0 / (1.0 + lz * 0.45) + cam * 48.0 + 31.0, 0.05 + 0.15 * K_NEBULA);
     col += pal(HUE_TURN + 0.6, 0.9, 0.05) * (s1 * 0.6 + s2) * (0.6 + 0.5 * TWINKLE) * (1.0 - lit) * neb;
