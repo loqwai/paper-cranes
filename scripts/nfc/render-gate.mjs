@@ -41,7 +41,7 @@ export const LIMITS = {
   motion: 0.01,            // mean |RGB diff| (0..1) between time=20 and time=22
   flatL: 0.035,            // std of OKLab L below this = one flat field (a solid red screen)
   flatLab: [0.05, 0.05],   // or: L std and a/b std both below these
-  hueDom: 0.7,             // one hue family (a 60° OKLab hue slice, chroma > 0.05) over this share of the frame
+  hueDom: 0.65,            // one hue family (a 60° OKLab hue slice, chroma > 0.05) over this share of the frame
 }
 
 const verdict = m => {

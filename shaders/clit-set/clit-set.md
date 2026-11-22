@@ -170,7 +170,7 @@ Seeds per frag: `seed` palette or depth phase, `seed2` lace density, `seed3` rim
   Every URL carries `controller=clit-set&wavelet=true` (wavelet kicks; the stickers run on phone mics).
 - `node scripts/nfc/render-gate.mjs shaders/clit-set/nfc-variants.json <dir> <port>` renders every
   variant headless (`noaudio=true&time=20`, 360×740) and rejects dark, white-out, grey, low-chroma,
-  speckle, hot-magenta, flat (one colour field), one-hue (a 60° hue slice over 70% of the frame) and static frames (the `time` uniform moves 20 → 22 and
+  speckle, hot-magenta, flat (one colour field), one-hue (a 60° hue slice over 65% of the frame) and static frames (the `time` uniform moves 20 → 22 and
   the frame must change). `node scripts/nfc/gate-loop.mjs <dir> <port>` then gives each failing tag a
   retry in `nfc-nudges.json` (a retry moves its start place and thins the lace; after 4 retries the tag
   moves to the chromadepth frag), regenerates and re-gates until all pass.
