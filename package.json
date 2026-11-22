@@ -15,7 +15,9 @@
     "shader-dates": "node scripts/shader-dates.js",
     "audio": "node scripts/show/audio-swap.js",
     "delete": "node scripts/delete-shader.js",
-    "delete:interactive": "node scripts/delete-shader.js --interactive"
+    "delete:interactive": "node scripts/delete-shader.js --interactive",
+    "pilot": "node scripts/show/pilot.js",
+    "test:pilot": "node --test scripts/show/pilot-brain.node-test.js"
   },
   "author": "hypnodroid",
   "license": "UNLICENSED",
