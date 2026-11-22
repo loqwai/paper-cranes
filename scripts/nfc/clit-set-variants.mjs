@@ -15,7 +15,8 @@
 //     the petal count on 5), so one tag still looks different on two phones.
 //   - knob_1/2/3 stay at 0 so the autopilot voyage runs.
 //   - shaders/clit-set/nfc-nudges.json holds per-tag retry counts written after a render-gate failure;
-//     each retry moves the tag's start place and thins the lace a little. Re-run the gate after.
+//     each retry moves the tag's start place and thins the lace a little; after 4 retries the tag moves
+//     to the chromadepth frag. Re-run the gate after (scripts/nfc/gate-loop.mjs does both).
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 
@@ -99,8 +100,10 @@ if (gateIdx > 0) {
 const build = () => {
   const order = schedule(COUNT)
   const perFrag = new Map()
-  return order.map((F, i) => {
+  return order.map((F0, i) => {
     const n = FIRST + i
+    // A tag that still fails after 4 retries moves to the chromadepth frag (high chroma by construction)
+    const F = (nudges[n] ?? 0) >= 4 && F0.frag !== 3 ? FRAGS[0] : F0
     const idx = perFrag.get(F.frag) ?? 0
     perFrag.set(F.frag, idx + 1)
     const mood = F.moods[idx % F.moods.length]

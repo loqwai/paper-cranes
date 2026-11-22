@@ -133,6 +133,10 @@ rejects any variant whose lit pixels average below 0.075 OKLab chroma).
 | 4 | nebula | Emission nebula: the body glows as lit gas, the lace burns as two filament families in two hues, and the sky is layered multi-colour dust with cross-star sparkle. OKLCH on a curated wheel (no hot magenta, olive rushed through, dark layers kept cool so nothing goes brown). k13 = filament colour split. |
 | 5 | mandala | 4's colour, folded into a slowly turning kaleidoscope. The fractal is mirror-symmetric, so each fold joins seamlessly; the silhouette repeats as petals around a lit hub. Petal count 5 to 8 comes from `seed4`, so each phone differs. |
 
+Own motion: each of 3/4/5 turns, breathes and sways on the `time` uniform (periods 200, 100 and 250 s,
+which divide the 1000 s wrap), so it moves with every knob at 0 even if the controller's nav is still.
+Audio stays on local structure: the bass pulse lights only the lace or body, never the whole frame.
+
 Seeds per frag: `seed` palette or depth phase, `seed2` lace density, `seed3` rim hue or dust hue,
 `seed4` star scatter (and petal count on 5).
 
@@ -144,8 +148,10 @@ Seeds per frag: `seed` palette or depth phase, `seed2` lace density, `seed3` rim
   `voyage0 = frac(n × 0.618) × 6`. Seeds are not baked; k1/k2/k3 stay 0 so the autopilot runs.
 - `node scripts/nfc/render-gate.mjs shaders/clit-set/nfc-variants.json <dir> <port>` renders every
   variant headless (`noaudio=true&time=20`, 360×740) and rejects dark, white-out, grey, low-chroma,
-  speckle and hot-magenta frames. A failing tag gets a retry count in `nfc-nudges.json`; regenerate
-  (a retry moves its start place and thins the lace) and gate again.
+  speckle, hot-magenta, flat (one colour field) and static frames (the `time` uniform moves 20 → 22 and
+  the frame must change). `node scripts/nfc/gate-loop.mjs <dir> <port>` then gives each failing tag a
+  retry in `nfc-nudges.json` (a retry moves its start place and thins the lace; after 4 retries the tag
+  moves to the chromadepth frag), regenerates and re-gates until all pass.
 - `node scripts/nfc/short-links.mjs shaders/clit-set/nfc-variants.json` puts the slugs into the 2cb.pw
   KV (never overwriting a slug that points outside clit-set) and verifies each one answers 301 to its
   `full`. `--verify-only` re-checks.
