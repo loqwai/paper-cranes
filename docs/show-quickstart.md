@@ -98,3 +98,19 @@ does not serve those frags until PR #180 is merged and deployed, so those links 
   Audio changes rates and light, never direction. Back-and-forth sway reads as shiver on the wall.
 - Never weaken Cloudflare Access or bind the live dev server to `0.0.0.0`.
 - Never put a test or diagnostic shader on the wall.
+
+## Swap the input: live mic ↔ BlackHole
+
+```
+npm run audio -- mic         # MacBook Pro Microphone
+npm run audio -- blackhole   # BlackHole 2ch (line feed from this Mac)
+npm run audio -- toggle      # whichever one is not live now
+```
+
+`scripts/show/audio-swap.js` drives the show browser over CDP (`scripts/vj/show.js`). On a page
+that exposes `window.cranes.audioSource` (index.js after this change) it swaps the device in
+place: no reload, feature history and voyage clocks survive. On an older page it reloads the show
+page with `audio_device=` swapped, which resets feature history but keeps the kiosk window. Either
+way it prints the live input label and exits non-zero unless energy > 0 within 3 s. Asking for the
+input that is already live changes nothing and just prints the status. The OS default input on the
+show Mac is BlackHole, so a page with no `audio_device` listens to BlackHole, not the mic.
