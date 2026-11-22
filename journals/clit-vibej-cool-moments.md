@@ -3,6 +3,8 @@
 (Named after the folder, not `1-cool-moments.md`: "1" is ambiguous across shaders.)
 
 ## Status
+04:37, end of the 2 h VJ window: the phone is on `clit-vibej/2` (the roller coaster), fullscreen, audio running. 1.frag got 14 moves and 2.frag 5 moves. The phone page reloads itself whenever it goes hidden (cs_time and cs_beat reset); Aaron re-taps.
+
 04:11: the phone is on `clit-vibej/2` (the roller coaster). 1.frag is the fallback.
 
 2026-11-22 03:30 MST. New show. Phone moved in place to `claude/wip/clit-vibej/1` (fork of
