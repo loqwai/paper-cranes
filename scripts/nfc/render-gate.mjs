@@ -7,7 +7,9 @@
 // <outDir>/contact-sheet.png. Headless has no audio worklet, so this checks the resting look only.
 //
 // Rejects: near-black (meanL), white-out (clipped fraction), grey (low OKLab chroma on lit pixels),
-// speckle (high-frequency luma energy), hot magenta (a wide area of saturated pink-purple).
+// speckle (high-frequency luma energy), hot magenta (a wide area of saturated pink-purple), and static
+// frames: after the still, the `time` uniform is moved from 20 to 22 and the frame must change
+// (`motion`, mean absolute RGB difference; `control` is the same wait with time held, for reference).
 import { createRequire } from 'node:module'
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -27,6 +29,7 @@ const variants = pick ? all.filter(v => pick.has(v.n)) : all
 const W = 360, H = 740
 const SETTLE_MS = Number(process.env.SETTLE_MS ?? 3500)
 const WORKERS = Number(process.env.WORKERS ?? 3)
+const MOTION_MS = Number(process.env.MOTION_MS ?? 1200)
 
 export const LIMITS = {
   meanL: [0.035, 0.6],     // mean relative luminance
@@ -35,6 +38,7 @@ export const LIMITS = {
   grey: 0.45,              // fraction of lit pixels with chroma < 0.04
   speckle: 0.085,          // mean |luma - 4-neighbour mean| at full resolution
   magenta: 0.12,           // fraction of pixels in the hot-magenta box
+  motion: 0.01,            // mean |RGB diff| (0..1) between time=20 and time=22
 }
 
 const verdict = m => {
@@ -46,6 +50,7 @@ const verdict = m => {
   if (m.grey > LIMITS.grey) why.push('grey')
   if (m.speckle > LIMITS.speckle) why.push('speckle')
   if (m.magenta > LIMITS.magenta) why.push('magenta')
+  if (m.motion < LIMITS.motion) why.push('static')
   return why
 }
 
@@ -88,6 +93,20 @@ const measure = async (b64) => {
     grey: r3(lit ? grey / lit : 1), litFrac: r3(lit / N), speckle: r3(hf / n), magenta: r3(mag / N) }
 }
 
+// Runs in the page: mean absolute RGB difference of two screenshots (0..1)
+const frameDiff = async ([a, b]) => {
+  const load = async b64 => {
+    const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode()
+    const c = document.createElement('canvas'); c.width = img.width; c.height = img.height
+    const x = c.getContext('2d'); x.drawImage(img, 0, 0)
+    return x.getImageData(0, 0, c.width, c.height).data
+  }
+  const [da, db] = await Promise.all([load(a), load(b)])
+  let sum = 0
+  for (let i = 0; i < da.length; i += 4) sum += Math.abs(da[i] - db[i]) + Math.abs(da[i + 1] - db[i + 1]) + Math.abs(da[i + 2] - db[i + 2])
+  return +(sum / (da.length / 4) / 3 / 255).toFixed(4)
+}
+
 const localUrl = (full) => {
   const u = new URL(full)
   const l = new URL(u.pathname + u.search, `http://127.0.0.1:${port}`)
@@ -114,6 +133,13 @@ const worker = async () => {
     const png = await page.screenshot({ type: 'png' })
     writeFileSync(`${outDir}/${v.n}.png`, png)
     const m = await page.evaluate(measure, png.toString('base64'))
+    await page.waitForTimeout(MOTION_MS)
+    const held = await page.screenshot({ type: 'png' })
+    await page.evaluate(() => { window.cranes.manualFeatures.time = 22 })
+    await page.waitForTimeout(MOTION_MS)
+    const moved = await page.screenshot({ type: 'png' })
+    m.control = await page.evaluate(frameDiff, [png.toString('base64'), held.toString('base64')])
+    m.motion = await page.evaluate(frameDiff, [held.toString('base64'), moved.toString('base64')])
     const why = verdict(m)
     const r = { n: v.n, shader: v.shader, ...m, pass: why.length === 0, why, errors: [...new Set(errors)].slice(0, 3) }
     results.push(r)

@@ -40,6 +40,14 @@ uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 #define NAV_B   (HAS_CTL ? cs_navB : 0.55 - knob_7 * 0.4)
 #define NAV_CURL (HAS_CTL ? cs_curl : knob_8 * 0.45)
 
+// OWN MOTION on the `time` uniform (pinned by ?time=, so it is testable), independent of the
+// controller's nav: a slow turn about the centre (one turn per 200 s), a gentle zoom breath (100 s) and
+// a small curl sway (250 s). Every period divides the 1000 s time wrap, so nothing jumps. Visible with
+// every knob at 0 and no music. Audio never touches it.
+#define OWN_ROT  (time * TAU / 200.0)
+#define OWN_LZ   (0.12 * (0.5 - 0.5 * cos(time * TAU / 100.0)))
+#define OWN_CURL (0.04 * sin(time * TAU / 250.0))
+
 #define REACT (1.0 + K_REACT * 1.5)
 
 // PER-DEVICE SEEDS — palette phase, lace density, dust hue, star scatter. ?seed= pins it.
@@ -55,7 +63,7 @@ uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 #define BUILD_INTENSITY (HAS_CTL ? cs_build : clamp(energySlope * energyRSquared * 10.0, 0.0, 1.0))
 #define KICK (HAS_CTL ? cs_kick : clamp(bassZScore - 0.4, 0.0, 1.0))
 #define PULSE (1.0 + (HAS_CTL ? cs_bass : clamp(bassZScore, 0.0, 1.0)) * 0.05 * REACT)
-#define LACE_GAIN (0.8 + (HAS_CTL ? cs_mids : midsNormalized) * 0.35 * REACT)
+#define LACE_GAIN (0.8 + (HAS_CTL ? cs_mids : midsNormalized) * 0.2 * REACT)
 #define RIM_INTENSITY (0.4 + (HAS_CTL ? cs_treb : trebleNormalized) * 0.7 * REACT)
 #define TWINKLE ((HAS_CTL ? cs_treb : trebleNormalized) * REACT)
 #define LACE_BLOOM (HAS_CTL ? cs_shift : 0.0)
@@ -124,13 +132,13 @@ void mainImage(out vec4 P, vec2 V) {
     float drop = DROP_INTENSITY;
     float build = BUILD_INTENSITY;
     float kick = KICK;
-    float lz = NAV_LZ;
+    float lz = min(NAV_LZ + OWN_LZ, ZOOM_MAX);
     float zoom = exp(lz);
 
     // KALEIDOSCOPE: fold the screen into PETALS mirrored sectors around the centre. The sector
     // bisector maps onto the fractal's mirror axis (p.x = 0), so neighbouring petals join seamlessly.
     vec2 s = (iResolution.xy - V - V) / iResolution.y;
-    s = rot2(NAV_ROT + FLOW * 0.35) * s;                       // slow turn about the centre, never a drift
+    s = rot2(NAV_ROT + OWN_ROT * 1.5 + FLOW * 0.2) * s;        // slow turn about the centre, never a drift
     float r = length(s) * 1.15;
     float sector = TAU / PETALS;
     float fa = abs(mod(atan(s.y, s.x) + sector * 0.5, sector) - sector * 0.5);
@@ -145,7 +153,7 @@ void mainImage(out vec4 P, vec2 V) {
     float focal_trap = 9.0;
     vec2 focal_center = vec2(0.0, 0.12);
     float a_pow = NAV_A, b_off = NAV_B;
-    mat2 curl = rot2(NAV_CURL);
+    mat2 curl = rot2(NAV_CURL + OWN_CURL);
     for (int k = 0; k < 50; k++) {
         float a = atan(V.y, V.x), d = dot(V, V) * a_pow;
         float c = dot(V, vec2(a, log(d) / 2.));
@@ -230,9 +238,9 @@ void mainImage(out vec4 P, vec2 V) {
     // Hub: the mandala centre is always lit (never a black void core)
     float hub = smoothstep(0.3, 0.0, r);
     col = mix(col, max(col, pal(hb + 0.08, 0.72, 0.16)), hub * 0.7);
-    col *= mix(1.0, mix(0.45, 1.0, focal), drop);
+    col *= mix(1.0, mix(0.8, 1.0, focal), drop);
 
-    col *= PULSE;
+    col *= mix(1.0, PULSE, body);                                         // bass pulse on the lit body only
 
     // Stars in the gaps
     float lit = max(body, max(fil_x, fil_y));
