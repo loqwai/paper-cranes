@@ -38,8 +38,8 @@ on port 6977, and the soul cloudflared container. Start commands: vault note
 | `wavelet=true` | **Required.** Kick detection (`wavelet_bassHit`) comes from the wavelet features. Without it the visual barely reacts. |
 | `fft_size=2048&smoothing=0.3` | The tuning the build was measured with. |
 | `vj=1` (optional) | Installs the meters (`window.__vjMeter`: flicker, clip, motion). Agents use it; the audience sees no difference. |
-| `audio_device=<label>` (optional) | Picks an input by name, for example `audio_device=BlackHole` for a line feed on the show Mac. Without it the OS default input is used. |
-| `audio_gain=<x>` (optional) | Scales the input. A phone or laptop mic hearing the room is 10 to 30 times quieter than a line feed; the techno build is tuned for mic level, so start without it and add `audio_gain=3` only if the picture looks dim and still while music plays. |
+| `audio_device=<label>` (optional) | Picks an input by name, for example `audio_device=BlackHole` for a line feed on the show Mac. Without it the OS default input is used, and **on the show Mac the OS default input is BlackHole**, so the live mic always needs `audio_device=MacBook`. |
+| `audio_gain=<x>` (optional) | Scales the input. A laptop mic hearing the room is 10 to 30 times quieter than a line feed. On the show Mac the live mic needs `audio_device=MacBook&audio_gain=8` (measured with the Mac in a car trunk, far from the speakers); BlackHole runs at gain 1. |
 | `midi=true` (optional) | Uses a MIDI controller (the Twister). Chrome asks for MIDI permission once. |
 
 **`index.html` vs `jam.html`:** `/?…` (index.html) is the plain fullscreen visual: use it on a
@@ -102,9 +102,10 @@ does not serve those frags until PR #180 is merged and deployed, so those links 
 ## Swap the input: live mic ↔ BlackHole
 
 ```
-npm run audio -- mic         # MacBook Pro Microphone
-npm run audio -- blackhole   # BlackHole 2ch (line feed from this Mac)
-npm run audio -- toggle      # whichever one is not live now
+npm run audio -- mic             # MacBook Pro Microphone at gain 8
+npm run audio -- mic --gain 6    # same, different gain
+npm run audio -- blackhole       # BlackHole 2ch (line feed from this Mac) at gain 1
+npm run audio -- toggle          # whichever one is not live now
 ```
 
 `scripts/show/audio-swap.js` drives the show browser over CDP (`scripts/vj/show.js`). On a page
@@ -112,5 +113,9 @@ that exposes `window.cranes.audioSource` (index.js after this change) it swaps t
 place: no reload, feature history and voyage clocks survive. On an older page it reloads the show
 page with `audio_device=` swapped, which resets feature history but keeps the kiosk window. Either
 way it prints the live input label and exits non-zero unless energy > 0 within 3 s. Asking for the
-input that is already live changes nothing and just prints the status. The OS default input on the
-show Mac is BlackHole, so a page with no `audio_device` listens to BlackHole, not the mic.
+input that is already live only re-applies the gain and prints the status. `mic` defaults to
+`audio_gain=8` and `blackhole` to 1; `--gain N` overrides either, applied live and written into the
+page URL so a reload keeps it. `toggle` exits 1 if the live input is neither, rather than guessing.
+A bad argument prints the usage line and exits 2. The OS default input on the show Mac is
+BlackHole, so a page with no `audio_device` listens to BlackHole, not the mic: the live mic URL is
+`…&audio_device=MacBook&audio_gain=8`.
