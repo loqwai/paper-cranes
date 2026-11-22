@@ -120,6 +120,38 @@ statistics only.
 cs_shift, cs_hue, cs_breath, cs_pearl, cs_focus, cs_spread, cs_grit, cs_tone`, plus navigation: `cs_cx, cs_cy, cs_lz, cs_rot, cs_navA, cs_navB, cs_curl`,
 plus eased knobs `cs_k9..cs_k16`. The behaviour test is `controllers/clit-set.test.js`.
 
+## Variant frags: 3, 4, 5
+
+Three structural forks of 2.frag, made for the NFC giveaway. Each one keeps the clit motif (the same
+fractal, the same voyage, the same knob map and controller outputs) and changes how it is drawn. Every
+dial at 0 is a good look on all three, and all three are high-chroma by construction (the render gate
+rejects any variant whose lit pixels average below 0.075 OKLab chroma).
+
+| Frag | Name | What is different |
+|------|------|-------------------|
+| 3 | chromadepth | Strict ChromaDepth: HSL hue is depth (red near, violet far), saturation 0.95, lightness ≤ 0.55, no white. Lace and focal near (red to gold by orbit angle), body mid, galaxy far. k9 = depth temperature (0.25 hot, 0.75 cool, 0/0.5/1 neutral). k13 = depth contrast. |
+| 4 | nebula | Emission nebula: the body glows as lit gas, the lace burns as two filament families in two hues, and the sky is layered multi-colour dust with cross-star sparkle. OKLCH on a curated wheel (no hot magenta, olive rushed through, dark layers kept cool so nothing goes brown). k13 = filament colour split. |
+| 5 | mandala | 4's colour, folded into a slowly turning kaleidoscope. The fractal is mirror-symmetric, so each fold joins seamlessly; the silhouette repeats as petals around a lit hub. Petal count 5 to 8 comes from `seed4`, so each phone differs. |
+
+Seeds per frag: `seed` palette or depth phase, `seed2` lace density, `seed3` rim hue or dust hue,
+`seed4` star scatter (and petal count on 5).
+
+## NFC variants (clit-new/2 .. clit-new/201)
+
+- `node scripts/nfc/clit-set-variants.mjs` writes `nfc-variants.json` and `nfc-variants.md`: 200 tags,
+  frags 3/4/5 weighted 60/70/70 and interleaved, so tags written back to back alternate. Each tag has a
+  mood (3 per frag) plus golden-ratio jitter on the look knobs, clamped to the safe bands, and
+  `voyage0 = frac(n × 0.618) × 6`. Seeds are not baked; k1/k2/k3 stay 0 so the autopilot runs.
+- `node scripts/nfc/render-gate.mjs shaders/clit-set/nfc-variants.json <dir> <port>` renders every
+  variant headless (`noaudio=true&time=20`, 360×740) and rejects dark, white-out, grey, low-chroma,
+  speckle and hot-magenta frames. A failing tag gets a retry count in `nfc-nudges.json`; regenerate
+  (a retry moves its start place and thins the lace) and gate again.
+- `node scripts/nfc/short-links.mjs shaders/clit-set/nfc-variants.json` puts the slugs into the 2cb.pw
+  KV (never overwriting a slug that points outside clit-set) and verifies each one answers 301 to its
+  `full`. `--verify-only` re-checks.
+- Write tags at `https://visuals.beadfamous.com/nfc-writer.html` (clit-set is the default queue;
+  `#iris`, `#taco`, `#coat` still work). Tags hold only `https://2cb.pw/clit-new/<n>`.
+
 ## Iterations
 
 - **1.frag**: clit/2's anatomy moved onto the controller: per-device seeds, eased knobs and envelopes.
@@ -167,3 +199,6 @@ plus eased knobs `cs_k9..cs_k16`. The behaviour test is `controllers/clit-set.te
   paced by travel (shape + camera), loop ~24 min at 1x. A colour beat (hue step + chroma lift, scaled
   back to each pixel's luminance) and a beat-stepped colour wave along the filaments (`cs_beat`).
   `?time=<s>` now also stops the controller's time-driven clocks; the audio-driven jumps keep going.
+- **3.frag**: chromadepth twin (see Variant frags).
+- **4.frag**: nebula, high-chroma OKLCH on a curated hue wheel.
+- **5.frag**: mandala, 4's colour folded into 5 to 8 petals by `seed4`.
