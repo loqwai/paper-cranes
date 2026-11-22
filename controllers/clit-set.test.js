@@ -189,14 +189,37 @@ describe('clit-set controller navigation', () => {
     expect(a.cs_cy).toBeCloseTo(nav(Array(16).fill(0), idle.voyage).cy, 1)
   })
 
-  it('a drop surges the dive forward, more at a higher throttle', () => {
+  it('a drop surges the dive forward at throttle, and never moves the camera at hover', () => {
     const drop = { energy: 0.3, energyNormalized: 0.9, energyZScore: 0.9, bassZScore: 0.9 }
-    const hover = fresh(), full = fresh()
-    for (const S of [hover, full]) run(S, C, 7)
+    const hover = fresh(), full = fresh(), calm = fresh()
+    for (const S of [hover, full, calm]) run(S, C, 7)
     run(hover, { ...drop, coaster: 1, knob_4: 0 }, 0.5)
     run(full, { ...drop, coaster: 1, knob_4: 1 }, 0.5)
-    expect(hover.surge).toBe(0)
-    expect(full.surge).toBeGreaterThan(hover.surge)
+    run(calm, { ...C, knob_4: 1 }, 0.5)
+    expect(hover.dive).toBe(0)
+    expect(full.surge).toBeGreaterThan(0)
+    expect(full.diveTo).toBeGreaterThan(calm.diveTo)
+  })
+
+  it('after a full-throttle drop, throttle 0 stops the dive within one ease time', () => {
+    const drop = { energy: 0.3, energyNormalized: 0.9, energyZScore: 0.9, bassZScore: 0.9 }
+    const S = fresh()
+    run(S, C, 7)
+    run(S, { ...drop, coaster: 1, knob_4: 1 }, 0.5)
+    expect(S.surge).toBeGreaterThan(0)
+    run(S, { ...C, knob_4: 0 }, 1)
+    const before = S.diveTo
+    run(S, { ...C, knob_4: 0 }, 3)
+    expect(S.diveTo - before).toBeLessThan(0.005)
+  })
+
+  it('switching coaster off mid-dive eases back onto the voyage path, inside the zoom cap', () => {
+    const S = fresh()
+    run(S, { ...C, knob_4: 1, knob_1: 1 }, 8)
+    expect(S.dive).toBeGreaterThan(0.3)
+    const out = run(S, { ...quiet, knob_4: 0 }, 8)
+    expect(out.cs_lz).toBeLessThanOrEqual(ZOOM_MAX + 1e-9)
+    expect(Math.abs(S.dive) + Math.abs(S.panX) + Math.abs(S.panY)).toBeLessThan(0.01)
   })
 
   it('VOYAGE blends along the shorter way round the loop', () => {

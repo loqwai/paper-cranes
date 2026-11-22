@@ -153,9 +153,11 @@ const events = (s, f, owned) => {
     s.flourish = { to: s.knobs[5].value + FLOURISH }
     note(s, `drop #${ev.drops} -> scratch flourish K5 +${FLOURISH} (one way)`)
   }
-  if (move !== 1) {
+  // Coaster only: a throttle surge is a rate, so the dive stays one-way. In position mode a plunge would
+  // zoom in and glide back out, a back-and-forth on geometry, so position mode has none.
+  if (move !== 1 && s.coaster) {
     ev.plungeUntil = s.t + 6
-    note(s, `drop #${ev.drops} -> zoom plunge`)
+    note(s, `drop #${ev.drops} -> throttle surge`)
   }
   if (s.voyage === 'fly') {
     s.voyageKick = VOYAGE_PER_WAYPOINT * 0.5
@@ -189,7 +191,7 @@ const geometryTargets = (s, f) => {
   const straight = s.coaster ? 0.5 : null
   if (s.ev.breakdown) Object.assign(g, { 4: 0.08, 7: 0.05, 1: straight ?? Math.min(g[1], 0.2), 2: straight ?? Math.min(g[2], 0.2) })
   if (s.t < s.ev.plungeUntil) g[4] = g[4] + 0.2
-  if (s.t < s.guard.darkUntil) Object.assign(g, { 1: straight ?? 0.15, 2: straight ?? 0.15, 4: Math.min(g[4], 0.2) })
+  if (s.t < s.guard.darkUntil) Object.assign(g, { 1: straight ?? 0.15, 2: straight ?? 0.15, 4: Math.min(g[4], s.coaster ? 0 : 0.2) })
   const zoomCap = s.t < s.guard.gpuUntil ? 0.4 : ZOOM_CAP
   g[4] = clamp(g[4], 0, zoomCap)
   const [lo, hi] = s.coaster ? [0.5 - STEER_SPAN, 0.5 + STEER_SPAN] : [0, PAN_MAX]
@@ -220,6 +222,15 @@ const trailsCap = (s) => {
 }
 
 // Meter guard, fed every ~10 s. Returns nothing; sets guard windows.
+// The wall's URL can gain or lose ?coaster=1 across a reload; k1/k2/k4 change meaning, so pick a new place.
+export const setCoaster = (s, coaster) => {
+  if (s.coaster === coaster) return
+  s.coaster = coaster
+  s.place = placeFor(s.rand, coaster)
+  s.ev.plungeUntil = -Infinity
+  note(s, `wall is now in ${coaster ? 'coaster (k4 throttle, k1/k2 steer)' : 'position'} mode`)
+}
+
 export const meter = (s, m) => {
   if (m.flicker > 0.7 && s.t - s.ev.lastHand < HAND_EXPLAINS) note(s, `meter flicker ${m.flicker}: a hand moved, not the pilot`)
   if (m.flicker > 0.7 && s.t - s.ev.lastHand >= HAND_EXPLAINS) {
@@ -250,7 +261,9 @@ export const step = (s, f, live, dt) => {
   const geo = geometryTargets(s, f)
   const plunging = s.t < s.ev.plungeUntil
   for (const n of GEOMETRY) {
-    const tau = Math.max((n === 4 && plunging ? 1.5 : s.geoTau) * slow, opening(n))
+    // Coaster THROTTLE is a rate, not a place: on a dark wall cut it fast instead of gliding at the calm pace.
+    const cut = n === 4 && s.coaster && s.t < s.guard.darkUntil
+    const tau = cut ? 2 : Math.max((n === 4 && plunging ? 1.5 : s.geoTau) * slow, opening(n))
     s.knobs[n].value = ease(s.knobs[n].value, geo[n], dt, tau)
   }
   s.geoTau = ease(s.geoTau, 14, dt, 30)
