@@ -108,3 +108,15 @@ replies and `inspect-hello`) to pick one.
 - **What is not protected.** Replies (features, screenshots, logs) and `midi-event` messages are
   broadcast to every `/ws` client, so anything that can reach `/ws` can read them. The older
   `update-params` remote-control messages stay unauthenticated, as they were before.
+
+## Fresh machine / moving to Linux
+
+[cranes-local-setup.md](cranes-local-setup.md) lists everything outside git that this channel
+depends on: the tunnel, Access, the token, the dev server, Node and wrangler. It also lists
+the secrets and how to recover each one. It documents `scripts/remote/setup-cranes-local.sh`,
+which rebuilds the setup idempotently:
+
+```bash
+scripts/remote/setup-cranes-local.sh --check   # report what is missing, change nothing
+scripts/remote/setup-cranes-local.sh           # converge; never restarts a running server or tunnel
+```
