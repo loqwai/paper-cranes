@@ -367,8 +367,13 @@ void mainImage(out vec4 P, vec2 V) {
     float ang = (PUNCH * 0.5 + kick * 0.2 + 0.35 * wave) * REACT * lit * beatOn;
     float cgain = 1.0 + 1.0 * PUNCH * REACT * lit * beatOn;
     vec3 lab = rgb2oklab(col);
-    float ca = cos(ang), sa = sin(ang);
-    lab.yz = mat2(ca, sa, -sa, ca) * lab.yz * cgain;
+    // vibej iter 3: the rotation never carries a pixel into the hot-magenta arc. In OKLab atan range that
+    // arc is (-1.25, 0.45) rad: between blue-violet (288°) and red (26°). Violet turned + and red turned -
+    // (the signed wave) used to land there; now they stop at the arc's edge.
+    float h0 = atan(lab.z, lab.y);
+    float h1 = h0 + ang;
+    if (!(h0 > -1.25 && h0 < 0.45) && h1 > -1.25 && h1 < 0.45) h1 = h0 < -0.4 ? -1.25 : 0.45;
+    lab.yz = length(lab.yz) * cgain * vec2(cos(h1), sin(h1));
     vec3 bc = max(oklab2rgb(lab), vec3(0.0));
     bc *= L0 / max(dot(bc, vec3(0.2126, 0.7152, 0.0722)), 1e-4);
     float bhi = max(max(bc.r, bc.g), bc.b);

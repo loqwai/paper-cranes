@@ -43,3 +43,7 @@ during the show are listed per iteration below.
   mid-dominant quiet mic (energy 0.015, mids 0.67).
 - **iter 2** (03:30): bass thump (`BASS_ENV`) leans the nebula dust toward deep ember red at the
   same lightness (`lchGamut(0.30, 0.12, 29°)`, up to 60%). Audio: bass 0.78, centroid 0.12.
+- **iter 3** (03:31): magenta guard. The luminance-neutral beat rotation (`0.5·punch + 0.2·kick +
+  0.35·wave`) could turn violet forward, or red backward on the signed wave, into the hot-magenta arc.
+  Now the rotated hue is clamped to the arc's edge (OKLab atan -1.25..0.45 rad, 288° to 26°). Seen at
+  bass 0.77 / bZ 0.9 / thump 0.99 with mids lifting chroma (iter 1): hot-pink specks in the dense lace.

@@ -16,6 +16,9 @@ clit-set/2). Audio running, fps 90. Subtle moves only.
 ## Todo
 
 ## History of changes
+- iter 3 (03:31): hot-pink specks in the dense lace at `bass 0.77, bZ 0.9, cs_thump 0.99, mids 0.72,
+  centroid 0.32`. Cause: the beat hue rotation crossing into the magenta arc, amplified by iter 1's
+  mids chroma lift. Fix: clamp the rotated OKLab hue at the arc edge. Don't remove that guard.
 
 ## Forks
 - `clit-vibej/1 ← clit-set/2` (2026-11-22, 0de6d953): fork for the live /vibej show.
