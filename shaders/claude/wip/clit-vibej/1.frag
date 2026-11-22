@@ -267,6 +267,9 @@ void mainImage(out vec4 P, vec2 V) {
     float coh = smoothstep(0.6, 1.6, lz);
     lace *= 1.0 - coh * smoothstep(1.5, 5.0, fwidth(min(lx, ly)));
     lace_fine *= 1.0 - coh * 0.7;
+    // vibej iter 10: at any depth, the braid fades where it changes faster than a pixel. Its sparkle, punch and
+    // pearls stay on clean filaments instead of churning the dense lace mass into chalky speckle (phone 408 px).
+    lace_fine *= 1.0 - 0.8 * smoothstep(1.5, 4.0, fwidth(lx + ly));
 
     float phi = atan(Z.y, Z.x) + HUE_TURN;
     // The rainbow's luma is the lace's LIGHTNESS structure, so it takes only the fixed per-device phase.

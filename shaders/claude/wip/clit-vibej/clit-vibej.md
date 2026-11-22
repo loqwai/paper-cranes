@@ -67,3 +67,4 @@ during the show are listed per iteration below.
 - **iter 7** (03:43): pearls are back. `PEARL` (spectral crest) was defined but unused. It now drives sparse soft pinpoints on the braid: fractal-space cells that ride the geometry and shimmer as the waves pass, each on its own twinkle phase, at density 5%·PEARL/0.3 and gain 0.55.
 - **iter 8** (03:44): treble (`TREB_ENV`) cools the rim hue toward teal (palette t 0.66, up to 50%), the mirror of a build warming it to red. Colour only.
 - **iter 9** (03:47): a timbre shift (`cs_shift`, spectral flux and entropy change, unused before) turns the lace palette up to 0.6 rad. Colour only.
+- **iter 10** (03:48): the braid (`lace_fine`, which carries the treble sparkle, punch and pearls) now fades where it changes faster than a pixel (`fwidth(lx+ly)` 1.5 to 4) at any depth, not only past 3x. The dense lace at home was churning into chalky speckle on the 408 px phone canvas. Grey 8.6% → 2.8%.
