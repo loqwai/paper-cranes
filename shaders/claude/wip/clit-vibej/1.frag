@@ -318,6 +318,9 @@ void mainImage(out vec4 P, vec2 V) {
     vec2 dustP = sky * 2.2 / (1.0 + lz * 0.15) + cam * 1.6 + vec2(FLOW * 0.4, 0.0);
     float dust = vnoise(dustP) * 0.6 + vnoise(dustP * 2.3 + 4.0) * 0.4;
     dust = smoothstep(0.45, 0.95, dust);
+    // vibej iter 14: rough, gritty sound (cs_grit, roughness 0.3 s / 1.5 s) gives the dust a fine shimmering
+    // grain that drifts on the flow clock. Dim background texture only.
+    dust *= 1.0 + GRIT * 0.9 * (vnoise(dustP * 7.0 + vec2(0.0, FLOW * 9.0)) - 0.35);
     vec3 dust_col = mix(vec3(0.10, 0.03, 0.22), lchGamut(0.32, 0.11, paletteHue(pal_t)), 0.5);
     // vibej iter 2: bass thump leans the nebula toward deep ember red (same lightness: hue, not light)
     dust_col = mix(dust_col, lchGamut(0.30, 0.12, 0.506), clamp(0.45 * BASS_ENV * REACT, 0.0, 0.6));
