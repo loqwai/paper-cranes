@@ -28,6 +28,8 @@ clit-set/2). Audio running, fps 90. Subtle moves only.
   What worked: clean filaments after iter 13, and the coil reading as the loops winding inward.
 
 ## Todo
+- `[ ] 2.frag tube walls speckle on the phone with live audio (grey 6-12%, hot pink up to 0.18 from red/violet speckle blending), though the same scale is clean without audio (grey 1-4%). Suspects: the coil churn and treble braid sparkle at the tube's compressed scale. Try a per-pixel supersample of the wall, or drop COIL_AMP on 2.frag.`
+- `[ ] 2.frag rails corkscrew around the tube with the unbounded ROLL (one-way by rule). If Aaron wants them on the floor more often, bank the rails by a fraction of ROLL that wraps slowly.`
 
 ## History of changes
 - iter 3 (03:31): hot-pink specks in the dense lace at `bass 0.77, bZ 0.9, cs_thump 0.99, mids 0.72,

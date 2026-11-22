@@ -282,7 +282,7 @@ void mainImage(out vec4 P, vec2 V) {
     // The lace threshold is geometry: audio does not move it. Timbre shifts (cs_shift, 0.3 s attack) and
     // loudness used to slide it, which grew and shrank the whole lace area (the show's shiver probe).
     // Bass thickens the filigree (cs_bass: 40 ms attack, 0.5 s release); the threshold returns, never drifts
-    float lace_lo = -2.0 + SEED_LACE + K_LACE * 0.9 + BASS_ENV * 0.9 * REACT - lz * 0.6;
+    float lace_lo = -2.0 + SEED_LACE + K_LACE * 0.9 + BASS_ENV * 0.45 * REACT - lz * 0.6;   // 2.frag: halved; bass-thick lace speckled the tube walls (kicks also surge travel + rail glow)
     float lace_hi = lace_lo - 3.0;
     float lace_x = smoothstep(lace_lo, lace_hi, lx);
     float lace_y = smoothstep(lace_lo, lace_hi, ly);
