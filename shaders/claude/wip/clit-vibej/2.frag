@@ -84,9 +84,9 @@ uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 #define TRAVEL (HAS_CTL ? (cs_flow * TAU * 1.6 + cs_beat * 1.2 + cs_jump * 0.8) : iTime * 0.3)
 #define ROLL (HAS_CTL ? cs_drift * 2.5 : iTime * 0.05)
 #define VP_TURN (HAS_CTL ? cs_flow * TAU * 0.4 : iTime * 0.12)
-#define TUBE_K 1.0      // rad of the R1 loop per e-fold of depth
-#define TUBE_R1 0.30    // depth loop radius in the fractal plane (R1·K = 2·R2: conformal walls)
-#define TUBE_R2 0.15    // wall ring radius; the wall repeats twice around the tube
+#define TUBE_K 2.5      // rad of the R1 loop per e-fold of depth
+#define TUBE_R1 0.12    // depth loop radius: small, so the tube stays in the lace-dense region (swept: worst-waypoint vivid 0.09 -> 0.24)
+#define TUBE_R2 0.15    // wall ring radius; the wall repeats twice around the tube (R1·K = 2·R2: conformal)
 
 // ============================================================================
 // PER-DEVICE SEEDS — palette phase, lace density, rim warmth, star scatter. ?seed= pins it.
