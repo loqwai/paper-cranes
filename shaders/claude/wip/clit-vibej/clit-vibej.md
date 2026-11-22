@@ -57,3 +57,9 @@ during the show are listed per iteration below.
     Directional, not radial, so there are no zoom rings.
   - Fades in over the first 10 s after page load. No controller change, so prod clit-set/2 is untouched.
   - Census after it: hot pink 0.18 to 0.28 of vivid pixels (baseline 0.15), grey 5 to 6%, white 0.
+- **iter 5** (03:38): a final hot-magenta guard. A census split by lightness showed the excess was
+  orchid lace at 300–330° (OKLab), mid lightness. Three things fed it: the trails blending red over
+  violet once the filaments moved (iter 4), the mids chroma lift (iter 1), and the per-channel output
+  gamma (R 0.88, B 0.95) leaning violet toward pink. At the output, hues inside the arc between 288°
+  and 26° are now squeezed toward the arc's two edges with a cubic curve, and the arc's middle loses up
+  to 45% chroma. L is kept. Result: hot-pink share 0.18–0.28 → 0.06–0.13, white 0, grey ≤ 4%.

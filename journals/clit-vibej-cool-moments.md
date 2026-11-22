@@ -11,7 +11,10 @@ clit-set/2). Audio running, fps 90. Subtle moves only.
 `treble 0.07`, `centroid 0.24`, `entropy 0.65`. Mid-dominant, dark, quiet phone mic.
 
 ## Cool moments
-(capturing live)
+- **03:38, iter 5 after coil + undulate**: periwinkle-violet lace mass under a coral/orange ribbon arc
+  with teal edges, on deep black. The filaments visibly coil and ripple one way. Audio `energy 0.045,
+  mids high (0.95 norm), centroid very low (0.02)`. What worked: the traveling waves on a one-way phase
+  (1.8 rad/s) plus the output magenta guard, which kept the violet and red clean.
 
 ## Todo
 
@@ -24,3 +27,7 @@ clit-set/2). Audio running, fps 90. Subtle moves only.
 - `clit-vibej/1 ← clit-set/2` (2026-11-22, 0de6d953): fork for the live /vibej show.
 
 ## Design hypotheses for v(next)
+- Hard colour rules belong at the output, not per term. Any motion plus trails blends neighbouring
+  hues, so a palette that avoids magenta per term still makes magenta once things move.
+- "Undulate and coil" without sway means traveling waves on a one-way phase: a barber-pole twist in the
+  iteration plus crossed domain waves. Audio sets only the phase rate.

@@ -400,5 +400,21 @@ void mainImage(out vec4 P, vec2 V) {
     if (bhi > 0.94) bc = mix(vec3(L0), bc, max(0.94 - L0, 0.0) / max(bhi - L0, 1e-4));
     col = mix(col, bc, step(1e-3, L0));
 
+    // NEVER HOT MAGENTA (vibej iter 5). Measured on the phone: the excess was purple-orchid lace at
+    // 300-330° (OKLab), mid lightness: red blended over violet by the trails once the filaments moved
+    // (iter 4), mids lifting chroma (iter 1), and the per-channel gamma above leaning violet pinkward.
+    // Whatever made it, hues inside the arc between blue-violet (288°) and red (26°) are squeezed toward
+    // the two edges, and only the arc's middle loses some chroma. L is kept: no light change.
+    vec3 gl = rgb2oklab(col);
+    float gh = atan(gl.z, gl.y);
+    if (gh > -1.25 && gh < 0.45) {
+        float gt = (gh + 1.25) / 1.70;
+        float gq = gt < 0.5 ? 0.5 * pow(2.0 * gt, 3.0) : 1.0 - 0.5 * pow(2.0 - 2.0 * gt, 3.0);
+        float gc = length(gl.yz) * (1.0 - 0.45 * smoothstep(0.25, 0.0, abs(gt - 0.5)));
+        float g2 = -1.25 + gq * 1.70;
+        gl.yz = gc * vec2(cos(g2), sin(g2));
+        col = oklab2rgb(gl);
+    }
+
     P = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
