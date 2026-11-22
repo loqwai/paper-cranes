@@ -20,6 +20,10 @@ clit-set/2). Audio running, fps 90. Subtle moves only.
   ripple like a jellyfish. Audio `energy 0.021, bass 0.48, mids 0.80, centroid 0.32, entropy 0.53`.
   Hot pink 0.065. What worked: domain waves are most legible on long isolated filaments over black;
   in the dense lace mass they read as churn.
+- **03:56, iter 13, the vortex (voyage 5.37)**: periwinkle loops spiral into a black-striped tunnel,
+  with lace chains (orange/teal beads) running along each loop and coral flares on the left rim. Audio
+  `energy 0.026, bass 0.40, mids 0.53, treble 0.48, centroid 0.51, entropy 0.73`. Hot pink 0.02, grey 4%.
+  What worked: clean filaments after iter 13, and the coil reading as the loops winding inward.
 
 ## Todo
 
