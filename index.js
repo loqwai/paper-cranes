@@ -36,6 +36,11 @@ let ranMain = false
 let startTime = 0
 const params = new URLSearchParams(window.location.search)
 
+// Remote inspect (dev only): an agent on the dev machine can sample features, screenshot and
+// change this page over /ws. Self-enables on the cranes-local tunnel host or ?inspect=1, and
+// self-accepts HMR so later tooling changes never reload a live show. docs/remote-inspect.md
+if (import.meta.env.DEV) import('./src/remote/inspectClient.js').catch(e => console.warn('[inspect] failed', e))
+
 // ?vj=1 — load the VJ runtime (validator + aesthetic meter + cursor-hide + /__vj-signal
 // watchdog) at page boot, so reloads can never strip the /vibej loop's tooling and the page
 // itself can wake the loop. Dev-only in practice (/__vj-signal exists only on the dev server).

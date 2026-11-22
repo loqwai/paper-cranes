@@ -1,4 +1,12 @@
 import { WebSocketServer, WebSocket } from 'ws'
+import { readInspectToken } from '../scripts/remote/token.js'
+
+// Loopback only. cloudflared (the Access-protected hostname) and this machine's own tabs and CLI
+// connect from loopback; anything else reached a dev server bound to 0.0.0.0 over the LAN and
+// must not learn the token that authorises eval on the display. See docs/remote-inspect.md.
+const isLoopback = (addr = '') => addr === '::1' || addr.startsWith('127.') || addr.startsWith('::ffff:127.')
+
+const QUIET = new Set(['audio-features', 'inspect', 'inspect-reply', 'inspect-hello', 'midi-event'])
 
 export function remoteWsPlugin() {
   const clients = new Set()
@@ -19,6 +27,17 @@ export function remoteWsPlugin() {
     name: 'vite-plugin-remote-ws',
 
     configureServer(server) {
+      // Per-session token for the remote-inspect channel (src/remote/inspectClient.js).
+      server.middlewares.use('/__remote-inspect/token', (req, res) => {
+        if (!isLoopback(req.socket.remoteAddress)) {
+          res.statusCode = 403
+          return res.end('loopback only')
+        }
+        res.setHeader('Content-Type', 'text/plain')
+        res.setHeader('Cache-Control', 'no-store')
+        res.end(readInspectToken())
+      })
+
       // Create WebSocket server attached to Vite's HTTP server
       const wss = new WebSocketServer({ noServer: true })
 
@@ -47,7 +66,7 @@ export function remoteWsPlugin() {
         ws.on('message', (msg) => {
           try {
             const message = JSON.parse(msg.toString())
-            if (message.type !== 'audio-features') console.log(
+            if (!QUIET.has(message.type)) console.log(
               `[WS] Received: ${message.type}`,
               message.data ? JSON.stringify(message.data).slice(0, 100) : ''
             )
