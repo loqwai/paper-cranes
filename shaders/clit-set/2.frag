@@ -8,7 +8,8 @@
 // With every dial at 0 the autopilot walks a curated loop of beautiful places; knob_3 (VOYAGE) scrubs
 // that loop by hand, and the other knobs steer on top of it.
 // controllers/clit-set.js eases every move (zoom in log-depth) so the drift feels like floating.
-// Audio is texture on the journey (lace light, rim, stars, kicks, drops); it never steers.
+// Audio sets the RATE of the always-on spin (it quickens with the music) and the slow colour; it never
+// steers and never pulses the light (that read as flicker and shiver on the show wall, 2026-11-21).
 // Colour is built in OKLCH and gamut-mapped: red / amber / teal / blue-violet, never grey, never hot magenta.
 // Renders without the controller: cs_* read 0 and the knobs drive the camera directly (no voyage path).
 
@@ -16,7 +17,7 @@ uniform float cs_on, cs_time, cs_presence, cs_flow;
 uniform float cs_A, cs_B, cs_kick, cs_bass, cs_mids, cs_treb;
 uniform float cs_build, cs_drop, cs_jump, cs_shift, cs_hue;
 uniform float cs_cx, cs_cy, cs_lz, cs_rot, cs_curl, cs_navA, cs_navB, cs_breath;
-uniform float cs_pearl, cs_focus, cs_spread, cs_grit, cs_tone;
+uniform float cs_pearl, cs_focus, cs_spread, cs_grit, cs_tone, cs_beat, cs_punch, cs_thump;
 uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 
 #define HAS_CTL (cs_on > 0.5)
@@ -71,32 +72,47 @@ uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 // AUDIO TEXTURE (controller envelope, else raw-feature fallback)
 // ============================================================================
 #define FLOW (HAS_CTL ? cs_flow : iTime * 0.03)
-#define DROP_INTENSITY clamp((HAS_CTL ? cs_drop : clamp(-energySlope * energyRSquared * 15.0, 0.0, 1.0)) + K_DROP, 0.0, 1.0)
+// A detected drop does not dim the frame: on a hot line the detector fires every ~8 s, and its 50 ms
+// spotlight was a whole-frame flash the shiver probe read as zoom in-and-out. Drops show as the hue
+// turn (cs_jump) only. The SPOT knob (k15) still reaches the full spotlight.
+#define DROP_INTENSITY K_DROP
 #define BUILD_INTENSITY (HAS_CTL ? cs_build : clamp(energySlope * energyRSquared * 10.0, 0.0, 1.0))
 #define KICK (HAS_CTL ? cs_kick : clamp(bassZScore - 0.4, 0.0, 1.0))
 // Many subtle features, each on its own channel, all slow-released envelopes: alive, never flashing.
 #define BREATH (HAS_CTL ? cs_breath : energyNormalized)                       // energy, 1.5 s
-#define PULSE (1.0 + (HAS_CTL ? cs_bass : clamp(bassZScore, 0.0, 1.0)) * 0.07 * REACT)
-// Lace light: mids (0.25 s attack), loudness (1.5 s) and music presence each lift it a little; silence
-// relaxes to the resting look, a full loud passage roughly doubles it (the tone map keeps it unclipped)
+// Bass punch: LOCAL only (rim, braid, ember). It used to multiply the whole frame, and whole-frame
+// light on a 0.04 s attack is flicker, not rhythm (show 2026-11-21: flicker 1.3-1.6 on a line input).
+#define PULSE ((HAS_CTL ? cs_bass : clamp(bassZScore, 0.0, 1.0)) * REACT)
+// Lace light is steady: only music presence (a 0.25 s gate, track starts and stops) lifts it.
+// It used to swell with mids (0.25 s) x loudness (1.5 s): global light on envelopes that release
+// AFTER the hit, so the frame changed most while the music fell (motionVsEnergy -0.35 at the show).
 #define PRESENCE (HAS_CTL ? cs_presence : 1.0)
-#define LACE_GAIN ((0.72 + (HAS_CTL ? cs_mids : midsNormalized) * REACT) * (1.0 + 0.4 * BREATH) * (1.0 + 0.3 * PRESENCE))
-#define RIM_INTENSITY (0.3 + (HAS_CTL ? cs_treb : trebleNormalized) * 1.1 * REACT)
-#define TWINKLE ((HAS_CTL ? cs_treb : trebleNormalized) * REACT)
+#define LACE_GAIN ((1.0 + 0.3 * PRESENCE) * (1.0 + 0.45 * PUNCH * REACT))
+// Rim, braid and stars hold steady. Any light that pulses with the beat shifts the frame's radial
+// brightness profile, which the show's shiver probe reads as zoom jitter (measured 2026-11-22: kick
+// light on rim + braid doubled zoomAbs). The beat lives in the spin rate (controllers/clit-set.js SPIN).
+// PUNCH: every kick, 30 ms attack, 0.2 s fall (controller cs_punch). Lands on lace, rim and ember; the
+// darkness pass and the luminance tone map keep it off the whole frame. Techno-venue build (Aaron, live:
+// "I need it way more music reactive").
+#define PUNCH (HAS_CTL ? cs_punch : clamp(bassZScore - 0.4, 0.0, 1.0))
+#define BASS_ENV (HAS_CTL ? max(cs_thump, cs_bass) : clamp(bassZScore, 0.0, 1.0))   // local kick thump or z-score swell
+#define TREB_ENV (HAS_CTL ? cs_treb : clamp(trebleNormalized, 0.0, 1.0))
+#define RIM_INTENSITY (0.5 + 1.6 * PUNCH * REACT + 0.5 * TREB_ENV)
+#define TWINKLE (0.2 + 1.5 * TREB_ENV * REACT)
 #define RIM_WARMTH clamp(0.25 + SEED_WARM + BUILD_INTENSITY * 0.35, 0.0, 1.0)
-#define LACE_BLOOM (HAS_CTL ? cs_shift : 0.0)
-// Loud passages thicken the filigree, quiet ones thin it to a hairline (clit-vj iter 2)
-#define LACE_BREATH (BREATH - 0.5)
 #define PEARL (0.15 + (HAS_CTL ? cs_pearl : clamp(spectralCrestNormalized, 0.0, 1.0)) * 0.35)
-#define FOCAL_RADIUS (0.5 + K_GLOW * 0.35 + (HAS_CTL ? cs_focus : clamp(spectralKurtosisZScore, -1.0, 1.0)) * 0.05)
+// Focal size and vignette are fixed against audio: both are radial, and an eased radius that grows and
+// shrinks with kurtosis / spread reads as a zoom in and out (the show's shiver probe, 2026-11-21)
+#define FOCAL_RADIUS (0.5 + K_GLOW * 0.35)
 #define GRIT (HAS_CTL ? cs_grit : 0.0)                                         // roughness: nebula shimmer
 #define HUE_TURN ((HAS_CTL ? cs_hue : 0.0) * 1.2 + (HAS_CTL ? cs_jump : 0.0) * 0.9 + K_HUE * TAU + SEED_PHASE)
 // Slow colour only: the 8 s centroid mean leans the palette warm on bright music, cool on dark
 #define TONE_LEAN ((HAS_CTL ? cs_tone : 0.5) - 0.5)
 // Loudness (1.5 s) lifts chroma a little: loud is more vivid, quiet more velvet
 #define CHROMA_GAIN (0.85 + 0.3 * BREATH)
-#define FEEDBACK_MIX clamp(0.22 + BREATH * 0.08 + K_TRAILS * 0.55, 0.0, 0.85)
-#define VIGN_OPEN ((HAS_CTL ? cs_spread : clamp(spectralSpreadNormalized, 0.0, 1.0)) * 0.06)
+// Trails do not grow with loudness: more smear on loud passages made the loud frames move LESS
+#define FEEDBACK_MIX clamp(0.22 + K_TRAILS * 0.55, 0.0, 0.85)
+#define VIGN_OPEN 0.03
 
 // ============================================================================
 // COLOR
@@ -214,7 +230,10 @@ void mainImage(out vec4 P, vec2 V) {
     z = 1. - smoothstep(1., -6., ly) * smoothstep(1., -6., lx);
 
     // Lace from the orbit traps. Thresholds slide with depth so deep zooms keep a dark floor.
-    float lace_lo = -2.0 + SEED_LACE + K_LACE * 0.9 + LACE_BLOOM * 0.6 + LACE_BREATH * 0.9 * REACT - lz * 0.6;
+    // The lace threshold is geometry: audio does not move it. Timbre shifts (cs_shift, 0.3 s attack) and
+    // loudness used to slide it, which grew and shrank the whole lace area (the show's shiver probe).
+    // Bass thickens the filigree (cs_bass: 40 ms attack, 0.5 s release); the threshold returns, never drifts
+    float lace_lo = -2.0 + SEED_LACE + K_LACE * 0.9 + BASS_ENV * 0.9 * REACT - lz * 0.6;
     float lace_hi = lace_lo - 3.0;
     float lace_x = smoothstep(lace_lo, lace_hi, lx);
     float lace_y = smoothstep(lace_lo, lace_hi, ly);
@@ -226,7 +245,10 @@ void mainImage(out vec4 P, vec2 V) {
     lace_fine *= 1.0 - coh * 0.7;
 
     float phi = atan(Z.y, Z.x) + HUE_TURN;
-    vec4 rainbow = sqrt(max(z + (z - z * z * z) * cos(phi - vec4(0, 2.1, 4.2, 0)), 0.0));
+    // The rainbow's luma is the lace's LIGHTNESS structure, so it takes only the fixed per-device phase.
+    // Fed the moving hue turn (cs_jump +0.9 rad per drop, cs_hue), every drop re-lit the whole lace
+    // over 1.5 s: a light morph the shiver probe read as zoom. The hue turn now moves colour only.
+    vec4 rainbow = sqrt(max(z + (z - z * z * z) * cos(atan(Z.y, Z.x) + SEED_PHASE - vec4(0, 2.1, 4.2, 0)), 0.0));
     float luma = dot(rainbow.rgb, vec3(0.299, 0.587, 0.114));
     // Palette position: the orbit angle as a triangle wave (0 red … 1 violet … 0 red), so the hue never
     // crosses the magenta arc. The offset lands the dense lace's bunched orbit angles on amber and teal.
@@ -267,7 +289,7 @@ void mainImage(out vec4 P, vec2 V) {
     float s1 = stars(sky * 38.0 / (1.0 + lz * 0.25) + cam * 22.0, 0.10 + 0.25 * K_NEBULA);
     float s2 = stars(sky * 17.0 / (1.0 + lz * 0.45) + cam * 48.0 + 31.0, 0.05 + 0.15 * K_NEBULA);
     float star = (s1 * 0.6 + s2) * (0.4 + 0.9 * TWINKLE);
-    vec3 bg = vec3(0.04, 0.015, 0.08) + dust_col * dust * neb * 0.45 * (0.75 + 0.5 * BREATH + 0.3 * GRIT);
+    vec3 bg = vec3(0.04, 0.015, 0.08) + dust_col * dust * neb * 0.45 * (0.9 + 0.2 * BREATH + 0.15 * GRIT);
 
     // LACE COLOUR, built in OKLCH: the orbit rainbow's lightness (its structure) with the palette's hue
     // at full chroma. The raw rainbow went grey wherever z sat near 0 or 1 (the dark fan petals and the
@@ -278,7 +300,8 @@ void mainImage(out vec4 P, vec2 V) {
     vec3 vivid = lchGamut(lace_L, lace_C, paletteHue(pal_t));
     vec3 lace_col = mix(vivid, chromadepth(mix(0.15, 0.7, 1.0 - luma)), K_DEPTH);
     vec3 col = mix(bg, lace_col * LACE_GAIN, lace);
-    col += mix(lace_col, vec3(1.0, 0.88, 0.7), 0.55) * lace_fine * PEARL;
+    // The braid (where both traps cross) is where the beat lands: a bass punch lights the filigree, locally
+    col += mix(lace_col, vec3(1.0, 0.88, 0.7), 0.55) * lace_fine * (0.3 + 0.9 * TREB_ENV * REACT + 0.6 * PUNCH * REACT);   // treble sparkles the braid
 
     // Rim — body silhouette edges (fades at depth, where every pixel is an edge)
     float rim = smoothstep(0.1, 0.5, edge * 20.0) * (1.0 - smoothstep(0.8, 2.2, lz));
@@ -286,7 +309,7 @@ void mainImage(out vec4 P, vec2 V) {
     // Rim hue walks its own way round the palette (a quarter turn off the lace); a build warms it to red
     float rim_t = mix(0.5 - 0.5 * cos(phi + 1.6), 0.0, RIM_WARMTH * 0.6);
     vec3 rim_col = lchGamut(0.66, 0.16 * CHROMA_GAIN, paletteHue(rim_t));
-    col += rim_col * rim * RIM_INTENSITY * 0.4;
+    col += rim_col * rim * RIM_INTENSITY * 0.45;
 
     col = mix(col, chromadepth(depth) * 1.2, focal * 0.3);
 
@@ -294,19 +317,20 @@ void mainImage(out vec4 P, vec2 V) {
     col *= spotlight;
 
     vec3 hot_red = vec3(1.0, 0.15, 0.05);
-    float ember = focal * (0.2 + kick * 0.5 * REACT);
+    // Ember steady: it sits at the centre of the frame, and a kick-pulsed ember breathed the centre
+    // rings (the show's shiver probe). The beat now lives in the spin rate.
+    float ember = focal * (0.22 + 0.6 * PUNCH * REACT);
     float blaze = focal * mix(1.0, 2.5, drop) * 0.5 * drop;
     col += hot_red * (ember + blaze);
     col += vec3(1.0, 0.7, 0.4) * pow(focal, 3.0) * drop * 0.6;
 
-    col *= PULSE;
 
     vec4 prev = getLastFrameColor(gl_FragCoord.xy / iResolution.xy);
     vec3 prevc = clamp(prev.rgb, 0.0, 1.0);
     col = mix(col, prevc * 0.95, FEEDBACK_MIX);
 
     float vign = 1.0 - pow(length(uv) * (0.65 - VIGN_OPEN), 1.8);
-    vign = mix(vign, pow(max(vign, 0.0), 1.0 + drop * 2.0), drop);
+    vign = mix(vign, pow(max(vign, 0.0), 1.0 + K_DROP * 2.0), K_DROP);   // the SPOT knob only: radial
     col *= max(vign, 0.02);
 
     // Darkness enforcement: lace, rim, focal are bright; the galaxy stays a dim floor behind them
@@ -321,9 +345,32 @@ void mainImage(out vec4 P, vec2 V) {
     float lum = dot(max(col, vec3(0.0)), vec3(0.2126, 0.7152, 0.0722));
     col = max(col, vec3(0.0)) / (lum + 0.7);
     float tl = lum / (lum + 0.7);
+    // Knee at 0.94, not 1.0: a hot red ember landed exactly on 1.0 and counted as clipped (show clip 0.01-0.04)
     float hi = max(max(col.r, col.g), col.b);
-    if (hi > 1.0) col = mix(vec3(tl), col, (1.0 - tl) / max(hi - tl, 1e-4));
+    if (hi > 0.94) col = mix(vec3(tl), col, max(0.94 - tl, 0.0) / max(hi - tl, 1e-4));
     col = pow(max(col, vec3(0.0)), vec3(0.88, 0.9, 0.95));
+
+    // THE BEAT, IN COLOUR ONLY. The show's meters (scripts/vj/aesthetic-meter.js) read Rec.709 luminance
+    // of the output: flicker and motion from |ΔL|, shiver from L edges and L in rings. So the beat turns
+    // hue and lifts chroma in OKLab, then each pixel is scaled back to its own luminance: the kick is
+    // vivid to the eye and invisible to the meters. Three layers, on the lit lace and rim only:
+    //   kick    hue step (+0.45 rad: red leans amber, violet leans orchid, never hot magenta) and chroma
+    //           lift (+100%), eased out over the 0.4 s kick
+    //   beat    cs_beat steps forward on every kick and never goes back: a colour wave that travels
+    //           along the filaments (orbit angle + trap depth) one notch per beat
+    float beatOn = HAS_CTL ? 1.0 : 0.0;
+    float L0 = dot(col, vec3(0.2126, 0.7152, 0.0722));
+    float wave = sin(phi * 2.0 + lx * 0.7 - cs_beat * TAU);
+    float ang = (PUNCH * 0.5 + kick * 0.2 + 0.35 * wave) * REACT * lit * beatOn;
+    float cgain = 1.0 + 1.0 * PUNCH * REACT * lit * beatOn;
+    vec3 lab = rgb2oklab(col);
+    float ca = cos(ang), sa = sin(ang);
+    lab.yz = mat2(ca, sa, -sa, ca) * lab.yz * cgain;
+    vec3 bc = max(oklab2rgb(lab), vec3(0.0));
+    bc *= L0 / max(dot(bc, vec3(0.2126, 0.7152, 0.0722)), 1e-4);
+    float bhi = max(max(bc.r, bc.g), bc.b);
+    if (bhi > 0.94) bc = mix(vec3(L0), bc, max(0.94 - L0, 0.0) / max(bhi - L0, 1e-4));
+    col = mix(col, bc, step(1e-3, L0));
 
     P = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

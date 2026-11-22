@@ -52,9 +52,9 @@ knobs and features). With the controller, the motion glides and the autopilot vo
 
 `?voyage0=<u>` sets the autopilot's start position on the first frame. Units are waypoints:
 `0` = home, `1` = ribbon cathedral, `2` = vortex eye, and so on. Values wrap modulo 6 (the
-number of waypoints), so any number works. One unit is 100 s of journey, and a full loop is 600 s.
-Fractions land between places: in each unit, 0 to 0.4 dwells at the waypoint, and 0.4 to 1 glides
-to the next one. Missing means 0, the original behaviour. NFC variants can use `n * 0.618 mod 6`.
+number of waypoints), so any number works. One unit is 80 s of journey, and a full loop is 480 s.
+Fractions land between places: each unit is one glide to the next waypoint, never parked (the
+glide speed stays above 40% of linear even at the waypoint). Missing means 0, the original behaviour. NFC variants can use `n * 0.618 mod 6`.
 
 ### Waypoints (`WAYPOINTS` in `controllers/clit-set.js`)
 
@@ -67,8 +67,10 @@ to the next one. Missing means 0, the original behaviour. NFC variants can use `
 | 4 | fern galaxy | A 1.99, B 0.43, curl 0.22: dense fern lace with teal pockets |
 | 5 | rose carpet | A 2.45, B 0.3: a full-field rose and teal carpet, the farthest region from home |
 
-Each leg dwells about 40 s, then glides about 60 s. Mid-glide, the camera pulls back a little, so
-each leg reads as rising, flying and settling.
+Each leg glides for its whole 80 s. Mid-glide, the camera pulls back a little, so each leg reads as
+rising, flying and settling. On top of the voyage, an always-on **spin** turns the view one way only
+(0.02 rad/s in silence, 0.02 to 0.06 rad/s following the energy z-score). The music changes the spin's
+rate, never its direction. Nothing on the geometry oscillates: no sine on zoom, pan or rotation.
 
 ### Colour (OKLCH, gamut-mapped)
 
@@ -133,3 +135,35 @@ plus eased knobs `cs_k9..cs_k16`. The behaviour test is `controllers/clit-set.te
   magenta, and a luminance tone map. Wider audio texture, with every feature still a slow-release
   envelope. X/Y push from wherever the voyage is (no jump at the bottom of the dial). VOYAGE blends
   along the shorter way round the loop. PEARL, FOCAL_RADIUS and the vignette read eased envelopes.
+- **2.frag, 2026-11-21 show fix**: the show wall read it as static and flashing (beat.mp3 at gain 12,
+  energy ~0.1, all knobs 0). Root causes: the voyage dwelt 40 s per leg and the first leg barely moves
+  (only cy 0.08 and a zoom the mid-glide pull-back cancels), so nav changed ~0.002 per 2 s; the light
+  rode global envelopes (LACE_GAIN on mids x breath, PULSE on the whole frame, FEEDBACK_MIX growing
+  with loudness) that release after the hit, so the frame changed most while the music fell; and the
+  tone map's overshoot branch landed the hot ember on exactly 1.0. Fix: no dwell plus the drift clock;
+  steady lace gain; bass/kick light only the rim, the braid and the ember; constant trails; lace breath
+  0.9 → 0.3 (2026-11-22: 0); tone-map knee at 0.94. Meters (`scripts/vj/probe.js`, 30 s window): flicker 1.27 → 0.36,
+  clip 0.023 → 0, motionVsEnergy -0.54 → +0.17, rResid -0.20 → +0.17, structure change per 2 s
+  0.14 → 0.49. `cs_jump` was never a waypoint index (it counts drops and turns the hue); the voyage
+  index is now exported as `cs_voyage` (0..6).
+- **2.frag, 2026-11-22 shiver fix**: 12dd8ca9's sine sway (zoom breath, rotation and pan) read as
+  shiver on the show's probe (shiverScore 0.92). Geometry now only evolves: a one-way spin replaces the
+  sway, the mid-glide zoom pull-back is gone, and the spin is applied after the 1.8 s glide so its
+  beat-scale quickening is not a beat late. Light that changed the radial brightness profile was also
+  read as zoom jitter, so it no longer follows audio: kick and treble on rim, braid and ember, the lace
+  threshold (cs_shift, breath), focal radius (cs_focus), vignette (cs_spread), the drop spotlight
+  (k15 SPOT still works) and the hue turn's effect on lace lightness. Audio now drives the spin rate and
+  the slow colour. Remaining shiver source: the voyage legs' shape morph (A, curl), measured alone at
+  voyage 1.15 to 1.6 with no audio: shiverScore 0.96, zoomAbs 0.097.
+- **2.frag, 2026-11-22 techno build** (Aaron live at a hard techno venue on a phone mic: "almost still
+  except for time"). Root causes: the presence gate was line-level (`smoothstep(0.002, 0.02, energy)`,
+  0.25 s both ways), so a phone mic sat half-shut and the gaps between kicks closed it every beat; and
+  kicks and bands came from 500-frame z-scores, which flatten on a constant four-on-the-floor. Now:
+  presence opens at 0.0008..0.006 and closes over 3 s; kicks also fire on bass against its own last
+  0.45 s (`cs_thump`), so every kick lands. Each kick: `cs_punch` (30 ms up, 0.2 s down) lifts lace,
+  rim, braid and ember light and chroma; `cs_lurch` jumps the view forward 0.05 rad (never back); the
+  voyage steps forward. Bass (thump) thickens the lace; treble sparkles the braid and stars. Spin rate
+  0.5x silent to 4x loud, voyage pace 0.5x to 2.5x, from energy z-score plus local loudness. Legs are
+  paced by travel (shape + camera), loop ~24 min at 1x. A colour beat (hue step + chroma lift, scaled
+  back to each pixel's luminance) and a beat-stepped colour wave along the filaments (`cs_beat`).
+  `?time=<s>` now also stops the controller's time-driven clocks; the audio-driven jumps keep going.

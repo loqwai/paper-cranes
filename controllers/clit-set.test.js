@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { fresh, step, place, nav, loopDelta, WAYPOINTS, ZOOM_MAX, LEG_SECS, PAN_SPAN } from './clit-set.js'
+import { fresh, step, place, nav, loopDelta, WAYPOINTS, ZOOM_MAX, LEG_SECS, LOOP_SECS, legSecs, PAN_SPAN } from './clit-set.js'
 
 const run = (S, f, secs, dt = 1 / 60) => {
   let out
@@ -21,20 +21,73 @@ describe('clit-set controller navigation', () => {
     expect(out.cs_navB).toBeCloseTo(HOME.B)
   })
 
-  it('audio never moves the camera or the fractal shape', () => {
-    const a = run(fresh(), loud, 8)
-    const b = run(fresh(), quiet, 8)
-    for (const k of ['cs_cx', 'cs_cy', 'cs_lz', 'cs_rot', 'cs_navA', 'cs_navB', 'cs_curl']) expect(a[k]).toBeCloseTo(b[k], 6)
+  it('audio never moves the camera or the fractal shape, it only changes the clock rates', () => {
+    const SA = fresh(), SB = fresh()
+    const a = run(SA, loud, 8)
+    const b = run(SB, quiet, 8)
+    // the shape sits on the clock-driven path (loud only moves along it faster)
+    for (const [S, o] of [[SA, a], [SB, b]]) for (const k of ['A', 'B', 'curl']) expect(Math.abs(o[`cs_nav${k === 'curl' ? '' : k}`.replace('cs_nav', k === 'curl' ? 'cs_curl' : 'cs_nav')] - place(S.voyage)[k])).toBeLessThan(0.02)
+    // loud music spins faster, never backwards
+    expect(a.cs_drift).toBeGreaterThan(b.cs_drift)
+    expect(b.cs_drift).toBeGreaterThan(0)
+    // and the camera sits on the clock-driven path either way (nav takes no audio)
+    const k0 = Array(16).fill(0)
+    for (const [S, o] of [[SA, a], [SB, b]]) {
+      const t = nav(k0, S.voyage, S.drift)
+      expect(Math.abs(o.cs_cx - t.cx) + Math.abs(o.cs_cy - t.cy) + Math.abs(o.cs_lz - t.lz)).toBeLessThan(0.03)
+      expect(Math.abs(o.cs_rot - t.rot)).toBeLessThan(0.03)
+    }
     expect(a.cs_breath).toBeGreaterThan(b.cs_breath)
+  })
+
+  it('at k=0 the camera visibly moves every second for a whole loop (never parked)', () => {
+    const S = fresh()
+    let prev = run(S, quiet, 2)
+    for (let s = 0; s < LOOP_SECS + 20; s++) {
+      const out = run(S, quiet, 1, 1 / 30)
+      const moved = Math.abs(out.cs_cx - prev.cs_cx) + Math.abs(out.cs_cy - prev.cs_cy) + Math.abs(out.cs_lz - prev.cs_lz) + Math.abs(out.cs_rot - prev.cs_rot)
+      expect(moved).toBeGreaterThan(0.004)
+      prev = out
+    }
+  })
+
+  it('geometry only evolves: at k=0 the spin never reverses and each coordinate turns round at most at a waypoint', () => {
+    const S = fresh()
+    let prev = run(S, quiet, 1)
+    const turns = { cx: 0, cy: 0, lz: 0 }, sign = {}
+    for (let s = 0; s < LOOP_SECS; s++) {
+      const out = run(S, s % 30 < 15 ? loud : quiet, 1, 1 / 30)
+      expect(out.cs_rot).toBeGreaterThan(prev.cs_rot)
+      for (const k of Object.keys(turns)) {
+        const d = out[`cs_${k}`] - prev[`cs_${k}`]
+        if (Math.abs(d) < 1e-6) continue
+        if (sign[k] && Math.sign(d) !== sign[k]) turns[k]++
+        sign[k] = Math.sign(d)
+      }
+      prev = out
+    }
+    for (const k of Object.keys(turns)) expect(turns[k]).toBeLessThanOrEqual(WAYPOINTS.length)
+  })
+
+  it('the voyage index stays in 0..WAYPOINTS.length and cs_jump never stands in for it', () => {
+    const S = fresh()
+    for (let s = 0; s < LOOP_SECS * 2.5; s += 5) {
+      const out = run(S, s % 40 < 20 ? loud : quiet, 5, 0.05)
+      expect(out.cs_voyage).toBeGreaterThanOrEqual(0)
+      expect(out.cs_voyage).toBeLessThan(WAYPOINTS.length)
+    }
+    for (const u of [-0.001, 0, 5.999, 6, 6.001, 11.5, -7.2]) for (const v of Object.values(place(u))) expect(Number.isFinite(v)).toBe(true)
   })
 
   it('autopilot leaves home and comes back after one full loop', () => {
     const S = fresh()
-    const mid = run(S, quiet, LEG_SECS * 2.2, 0.05)
+    const QUIET_PACE = 0.5   // silence flies the voyage at half speed
+    const mid = run(S, quiet, (legSecs(0) + legSecs(1) + legSecs(2) * 0.2) / QUIET_PACE, 0.05)
     expect(Math.abs(mid.cs_cx - HOME.cx) + Math.abs(mid.cs_cy - HOME.cy) + Math.abs(mid.cs_navA - HOME.A)).toBeGreaterThan(0.1)
-    const back = run(S, quiet, LEG_SECS * (WAYPOINTS.length - 2.2) + 10, 0.05)
+    const back = run(S, quiet, (LOOP_SECS - (legSecs(0) + legSecs(1) + legSecs(2) * 0.2)) / QUIET_PACE + 10, 0.05)
+    expect(S.voyage).toBeLessThan(0.2)
     expect(back.cs_cx).toBeCloseTo(HOME.cx, 2)
-    expect(back.cs_navA).toBeCloseTo(HOME.A, 2)
+    expect(back.cs_navA).toBeCloseTo(HOME.A, 1)
   })
 
   it('a knob twist glides instead of snapping', () => {
@@ -43,7 +96,7 @@ describe('clit-set controller navigation', () => {
     const first = step(S, { ...quiet, knob_1: 1 }, 1 / 60)
     expect(first.cs_cy).toBeLessThan(0.05)
     const settled = run(S, { ...quiet, knob_1: 1 }, 8)
-    expect(settled.cs_cy).toBeCloseTo(PAN_SPAN, 2)
+    expect(settled.cs_cy - place(S.voyage).cy).toBeCloseTo(PAN_SPAN, 2)
   })
 
   it('a small X or Y nudge from 0 moves the camera a small distance from wherever the voyage is', () => {
@@ -130,5 +183,34 @@ describe('clit-set controller navigation', () => {
 
   it('every place along the loop is finite', () => {
     for (let u = -1; u < WAYPOINTS.length + 1; u += 0.1) for (const v of Object.values(place(u))) expect(Number.isFinite(v)).toBe(true)
+  })
+})
+
+describe('clit-set shape pacing and beat', () => {
+  it('a leg lasts longer the further the shape travels, never shorter than LEG_SECS', () => {
+    for (let i = 0; i < WAYPOINTS.length; i++) expect(legSecs(i)).toBeGreaterThanOrEqual(LEG_SECS)
+    expect(legSecs(5)).toBeGreaterThan(legSecs(0) * 2)   // rose carpet → home: power 2.45 → 1.5
+  })
+
+  it('the shape never morphs faster than 0.004 power per second along the loop', () => {
+    const S = fresh()
+    let prev = run(S, quiet, 2)
+    for (let t = 0; t < LOOP_SECS; t += 1) {
+      const out = run(S, quiet, 1, 1 / 20)
+      expect(Math.abs(out.cs_navA - prev.cs_navA)).toBeLessThan(0.004)
+      prev = out
+    }
+  })
+
+  it('cs_beat steps forward on kicks and never goes back', () => {
+    const S = fresh()
+    run(S, quiet, 1)
+    let prev = 0
+    for (let i = 0; i < 40; i++) {
+      const out = run(S, i % 2 ? { ...loud, bassZScore: 0 } : loud, 0.25)
+      expect(out.cs_beat).toBeGreaterThanOrEqual(prev)
+      prev = out.cs_beat
+    }
+    expect(prev).toBeGreaterThan(0.5)
   })
 })
