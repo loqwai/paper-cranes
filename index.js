@@ -198,12 +198,17 @@ const setupAudio = async () => {
             window.cranes.audioBuffer = audioBuffer
             window.cranes.startSource = startSource
 
-            const audioProcessor = new AudioProcessor(audioContext, sourceNode, fileConfig.historySize, fileConfig.fftSize)
+            // ?audio_gain=<x> works here too, so a file can stand in for a hot line input (the analysis
+            // hears the gained signal; the speakers still get the file at its own level)
+            const inputGain = new GainNode(audioContext, { gain: parseFloat(params.get('audio_gain') ?? '1') })
+            sourceNode.connect(inputGain)
+            window.cranes.inputGain = inputGain
+            const audioProcessor = new AudioProcessor(audioContext, inputGain, fileConfig.historySize, fileConfig.fftSize)
             audioProcessor.smoothingFactor = fileConfig.smoothing
             await audioProcessor.start()
             // Route through speakers (unlike mic input, file playback has no feedback risk)
-            audioProcessor.fftAnalyzer.connect(audioContext.destination)
-            await maybeStartWavelet(params, audioContext, sourceNode)
+            sourceNode.connect(audioContext.destination)
+            await maybeStartWavelet(params, audioContext, inputGain)
             return audioProcessor
         } catch (err) {
             console.error('Audio file initialization failed:', err)

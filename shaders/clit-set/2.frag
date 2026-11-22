@@ -76,13 +76,16 @@ uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 #define KICK (HAS_CTL ? cs_kick : clamp(bassZScore - 0.4, 0.0, 1.0))
 // Many subtle features, each on its own channel, all slow-released envelopes: alive, never flashing.
 #define BREATH (HAS_CTL ? cs_breath : energyNormalized)                       // energy, 1.5 s
-#define PULSE (1.0 + (HAS_CTL ? cs_bass : clamp(bassZScore, 0.0, 1.0)) * 0.07 * REACT)
-// Lace light: mids (0.25 s attack), loudness (1.5 s) and music presence each lift it a little; silence
-// relaxes to the resting look, a full loud passage roughly doubles it (the tone map keeps it unclipped)
+// Bass punch: LOCAL only (rim, braid, ember). It used to multiply the whole frame, and whole-frame
+// light on a 0.04 s attack is flicker, not rhythm (show 2026-11-21: flicker 1.3-1.6 on a line input).
+#define PULSE ((HAS_CTL ? cs_bass : clamp(bassZScore, 0.0, 1.0)) * REACT)
+// Lace light is steady: only music presence (a 0.25 s gate, track starts and stops) lifts it.
+// It used to swell with mids (0.25 s) x loudness (1.5 s): global light on envelopes that release
+// AFTER the hit, so the frame changed most while the music fell (motionVsEnergy -0.35 at the show).
 #define PRESENCE (HAS_CTL ? cs_presence : 1.0)
-#define LACE_GAIN ((0.72 + (HAS_CTL ? cs_mids : midsNormalized) * REACT) * (1.0 + 0.4 * BREATH) * (1.0 + 0.3 * PRESENCE))
-#define RIM_INTENSITY (0.3 + (HAS_CTL ? cs_treb : trebleNormalized) * 1.1 * REACT)
-#define TWINKLE ((HAS_CTL ? cs_treb : trebleNormalized) * REACT)
+#define LACE_GAIN (1.0 + 0.3 * PRESENCE)
+#define RIM_INTENSITY (0.35 + ((HAS_CTL ? cs_treb : trebleNormalized) * 0.5 + KICK * 0.9) * REACT)
+#define TWINKLE ((HAS_CTL ? cs_treb : trebleNormalized) * 0.5 * REACT)
 #define RIM_WARMTH clamp(0.25 + SEED_WARM + BUILD_INTENSITY * 0.35, 0.0, 1.0)
 #define LACE_BLOOM (HAS_CTL ? cs_shift : 0.0)
 // Loud passages thicken the filigree, quiet ones thin it to a hairline (clit-vj iter 2)
@@ -95,7 +98,8 @@ uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 #define TONE_LEAN ((HAS_CTL ? cs_tone : 0.5) - 0.5)
 // Loudness (1.5 s) lifts chroma a little: loud is more vivid, quiet more velvet
 #define CHROMA_GAIN (0.85 + 0.3 * BREATH)
-#define FEEDBACK_MIX clamp(0.22 + BREATH * 0.08 + K_TRAILS * 0.55, 0.0, 0.85)
+// Trails do not grow with loudness: more smear on loud passages made the loud frames move LESS
+#define FEEDBACK_MIX clamp(0.22 + K_TRAILS * 0.55, 0.0, 0.85)
 #define VIGN_OPEN ((HAS_CTL ? cs_spread : clamp(spectralSpreadNormalized, 0.0, 1.0)) * 0.06)
 
 // ============================================================================
@@ -214,7 +218,9 @@ void mainImage(out vec4 P, vec2 V) {
     z = 1. - smoothstep(1., -6., ly) * smoothstep(1., -6., lx);
 
     // Lace from the orbit traps. Thresholds slide with depth so deep zooms keep a dark floor.
-    float lace_lo = -2.0 + SEED_LACE + K_LACE * 0.9 + LACE_BLOOM * 0.6 + LACE_BREATH * 0.9 * REACT - lz * 0.6;
+    // LACE_BREATH moves the threshold gently (0.3, was 0.9): a big swing breathed the whole lace area in
+    // and out, which the show's shiver probe read as breathOsc 0.3-0.6
+    float lace_lo = -2.0 + SEED_LACE + K_LACE * 0.9 + LACE_BLOOM * 0.6 + LACE_BREATH * 0.3 * REACT - lz * 0.6;
     float lace_hi = lace_lo - 3.0;
     float lace_x = smoothstep(lace_lo, lace_hi, lx);
     float lace_y = smoothstep(lace_lo, lace_hi, ly);
@@ -267,7 +273,7 @@ void mainImage(out vec4 P, vec2 V) {
     float s1 = stars(sky * 38.0 / (1.0 + lz * 0.25) + cam * 22.0, 0.10 + 0.25 * K_NEBULA);
     float s2 = stars(sky * 17.0 / (1.0 + lz * 0.45) + cam * 48.0 + 31.0, 0.05 + 0.15 * K_NEBULA);
     float star = (s1 * 0.6 + s2) * (0.4 + 0.9 * TWINKLE);
-    vec3 bg = vec3(0.04, 0.015, 0.08) + dust_col * dust * neb * 0.45 * (0.75 + 0.5 * BREATH + 0.3 * GRIT);
+    vec3 bg = vec3(0.04, 0.015, 0.08) + dust_col * dust * neb * 0.45 * (0.9 + 0.2 * BREATH + 0.15 * GRIT);
 
     // LACE COLOUR, built in OKLCH: the orbit rainbow's lightness (its structure) with the palette's hue
     // at full chroma. The raw rainbow went grey wherever z sat near 0 or 1 (the dark fan petals and the
@@ -278,7 +284,8 @@ void mainImage(out vec4 P, vec2 V) {
     vec3 vivid = lchGamut(lace_L, lace_C, paletteHue(pal_t));
     vec3 lace_col = mix(vivid, chromadepth(mix(0.15, 0.7, 1.0 - luma)), K_DEPTH);
     vec3 col = mix(bg, lace_col * LACE_GAIN, lace);
-    col += mix(lace_col, vec3(1.0, 0.88, 0.7), 0.55) * lace_fine * PEARL;
+    // The braid (where both traps cross) is where the beat lands: a bass punch lights the filigree, locally
+    col += mix(lace_col, vec3(1.0, 0.88, 0.7), 0.55) * lace_fine * (PEARL + 0.45 * PULSE + 0.35 * kick * REACT);
 
     // Rim — body silhouette edges (fades at depth, where every pixel is an edge)
     float rim = smoothstep(0.1, 0.5, edge * 20.0) * (1.0 - smoothstep(0.8, 2.2, lz));
@@ -286,7 +293,7 @@ void mainImage(out vec4 P, vec2 V) {
     // Rim hue walks its own way round the palette (a quarter turn off the lace); a build warms it to red
     float rim_t = mix(0.5 - 0.5 * cos(phi + 1.6), 0.0, RIM_WARMTH * 0.6);
     vec3 rim_col = lchGamut(0.66, 0.16 * CHROMA_GAIN, paletteHue(rim_t));
-    col += rim_col * rim * RIM_INTENSITY * 0.4;
+    col += rim_col * rim * RIM_INTENSITY * 0.45;
 
     col = mix(col, chromadepth(depth) * 1.2, focal * 0.3);
 
@@ -294,12 +301,11 @@ void mainImage(out vec4 P, vec2 V) {
     col *= spotlight;
 
     vec3 hot_red = vec3(1.0, 0.15, 0.05);
-    float ember = focal * (0.2 + kick * 0.5 * REACT);
+    float ember = focal * (0.2 + kick * 0.35 * REACT) * (1.0 + 0.3 * PULSE);
     float blaze = focal * mix(1.0, 2.5, drop) * 0.5 * drop;
     col += hot_red * (ember + blaze);
     col += vec3(1.0, 0.7, 0.4) * pow(focal, 3.0) * drop * 0.6;
 
-    col *= PULSE;
 
     vec4 prev = getLastFrameColor(gl_FragCoord.xy / iResolution.xy);
     vec3 prevc = clamp(prev.rgb, 0.0, 1.0);
@@ -321,8 +327,9 @@ void mainImage(out vec4 P, vec2 V) {
     float lum = dot(max(col, vec3(0.0)), vec3(0.2126, 0.7152, 0.0722));
     col = max(col, vec3(0.0)) / (lum + 0.7);
     float tl = lum / (lum + 0.7);
+    // Knee at 0.94, not 1.0: a hot red ember landed exactly on 1.0 and counted as clipped (show clip 0.01-0.04)
     float hi = max(max(col.r, col.g), col.b);
-    if (hi > 1.0) col = mix(vec3(tl), col, (1.0 - tl) / max(hi - tl, 1e-4));
+    if (hi > 0.94) col = mix(vec3(tl), col, max(0.94 - tl, 0.0) / max(hi - tl, 1e-4));
     col = pow(max(col, vec3(0.0)), vec3(0.88, 0.9, 0.95));
 
     P = vec4(clamp(col, 0.0, 1.0), 1.0);

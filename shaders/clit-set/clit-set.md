@@ -52,9 +52,9 @@ knobs and features). With the controller, the motion glides and the autopilot vo
 
 `?voyage0=<u>` sets the autopilot's start position on the first frame. Units are waypoints:
 `0` = home, `1` = ribbon cathedral, `2` = vortex eye, and so on. Values wrap modulo 6 (the
-number of waypoints), so any number works. One unit is 100 s of journey, and a full loop is 600 s.
-Fractions land between places: in each unit, 0 to 0.4 dwells at the waypoint, and 0.4 to 1 glides
-to the next one. Missing means 0, the original behaviour. NFC variants can use `n * 0.618 mod 6`.
+number of waypoints), so any number works. One unit is 80 s of journey, and a full loop is 480 s.
+Fractions land between places: each unit is one glide to the next waypoint, never parked (the
+glide speed stays above 40% of linear even at the waypoint). Missing means 0, the original behaviour. NFC variants can use `n * 0.618 mod 6`.
 
 ### Waypoints (`WAYPOINTS` in `controllers/clit-set.js`)
 
@@ -67,8 +67,10 @@ to the next one. Missing means 0, the original behaviour. NFC variants can use `
 | 4 | fern galaxy | A 1.99, B 0.43, curl 0.22: dense fern lace with teal pockets |
 | 5 | rose carpet | A 2.45, B 0.3: a full-field rose and teal carpet, the farthest region from home |
 
-Each leg dwells about 40 s, then glides about 60 s. Mid-glide, the camera pulls back a little, so
-each leg reads as rising, flying and settling.
+Each leg glides for its whole 80 s. Mid-glide, the camera pulls back a little, so each leg reads as
+rising, flying and settling. On top of the voyage, an always-on **drift** sways the view (rotation
+±0.3 rad over 47 s, zoom breath 0..0.24 over 31 s, pan ±0.05 over 37 s and 53 s). It runs on its own
+clock, which loudness speeds from 0.7x to 2x: the music changes the drift's rate, never its path.
 
 ### Colour (OKLCH, gamut-mapped)
 
@@ -133,3 +135,14 @@ plus eased knobs `cs_k9..cs_k16`. The behaviour test is `controllers/clit-set.te
   magenta, and a luminance tone map. Wider audio texture, with every feature still a slow-release
   envelope. X/Y push from wherever the voyage is (no jump at the bottom of the dial). VOYAGE blends
   along the shorter way round the loop. PEARL, FOCAL_RADIUS and the vignette read eased envelopes.
+- **2.frag, 2026-11-21 show fix**: the show wall read it as static and flashing (beat.mp3 at gain 12,
+  energy ~0.1, all knobs 0). Root causes: the voyage dwelt 40 s per leg and the first leg barely moves
+  (only cy 0.08 and a zoom the mid-glide pull-back cancels), so nav changed ~0.002 per 2 s; the light
+  rode global envelopes (LACE_GAIN on mids x breath, PULSE on the whole frame, FEEDBACK_MIX growing
+  with loudness) that release after the hit, so the frame changed most while the music fell; and the
+  tone map's overshoot branch landed the hot ember on exactly 1.0. Fix: no dwell plus the drift clock;
+  steady lace gain; bass/kick light only the rim, the braid and the ember; constant trails; lace breath
+  0.9 → 0.3; tone-map knee at 0.94. Meters (`scripts/vj/probe.js`, 30 s window): flicker 1.27 → 0.36,
+  clip 0.023 → 0, motionVsEnergy -0.54 → +0.17, rResid -0.20 → +0.17, structure change per 2 s
+  0.14 → 0.49. `cs_jump` was never a waypoint index (it counts drops and turns the hue); the voyage
+  index is now exported as `cs_voyage` (0..6).
