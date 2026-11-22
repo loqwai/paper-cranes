@@ -10,9 +10,11 @@ import path from 'node:path'
 const SHOW = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'vj', 'show.js')
 // The mic hears the room from the show Mac (often a car trunk), far quieter than a line feed.
 const INPUTS = {
-    mic: { label: 'MacBook Pro Microphone', param: 'MacBook', gain: 8 },
+    mic: { label: 'MacBook Pro Microphone', param: 'MacBook', gain: 4 },
     blackhole: { label: 'BlackHole', param: 'BlackHole', gain: 1 },
 }
+// Below this the bus is effectively silent (BlackHole read 0.0012 with nothing routed to it).
+const MIN_ENERGY = 0.005
 const USAGE = 'usage: audio-swap.js mic|blackhole|toggle [--gain N]'
 
 const usage = () => {
@@ -70,7 +72,7 @@ const swapByReload = (target, gain) => {
     show('goto', u.toString())
 }
 
-const verify = (waitForBootMs) => evalPage(`async (bootMs) => {
+const verify = (waitForBootMs) => evalPage(`async (bootMs, minEnergy) => {
     const t0 = performance.now()
     while (!window.cranes?.audioInputLabel || !window.cranes?.flattenFeatures) {
         if (performance.now() - t0 > bootMs) return { label: null, energy: 0 }
@@ -78,12 +80,12 @@ const verify = (waitForBootMs) => evalPage(`async (bootMs) => {
     }
     const t1 = performance.now()
     let f = window.cranes.flattenFeatures()
-    while (!(f.energy > 0) && performance.now() - t1 < 3000) {
+    while (!(f.energy > minEnergy) && performance.now() - t1 < 3000) {
         await new Promise(r => setTimeout(r, 100))
         f = window.cranes.flattenFeatures()
     }
     return { label: window.cranes.audioInputLabel, energy: f.energy, cs_presence: f.cs_presence ?? null, gain: window.cranes.inputGain?.gain.value ?? null }
-}`, [waitForBootMs])
+}`, [waitForBootMs, MIN_ENERGY])
 
 const fail = message => {
     console.error(message)
@@ -104,7 +106,7 @@ const main = () => {
         setGain(gain)
         const status = verify(0)
         report(`already on ${wanted}:`, status)
-        if (!(status.energy > 0)) return fail(`no signal on ${status.label}`)
+        if (!(status.energy > MIN_ENERGY)) return fail(`no signal on ${status.label}: energy ${status.energy} <= ${MIN_ENERGY}`)
         return
     }
     const result = swapInPlace(target)
@@ -117,7 +119,7 @@ const main = () => {
     const status = verify(result.inPlace ? 0 : 15000)
     report(result.inPlace ? 'swapped in place ->' : 'reloaded ->', status)
     if (!status.label?.includes(target.label)) return fail(`live input is ${status.label}, wanted ${target.label}`)
-    if (!(status.energy > 0)) return fail(`no signal on ${status.label} within 3 s`)
+    if (!(status.energy > MIN_ENERGY)) return fail(`no signal on ${status.label} within 3 s: energy ${status.energy} <= ${MIN_ENERGY}`)
 }
 
 main()
