@@ -411,12 +411,15 @@ void mainImage(out vec4 P, vec2 V) {
     // depth (equal steps in log r are perspective-correct in a tube, so they rush at you as TRAVEL runs).
     float rel = atan(tq.y, tq.x) + ROLL * 0.6 - 1.5708;           // 0 = straight down (screen p is flipped: +y is the bottom), banked by the roll
     rel = mod(rel + 3.14159, TAU) - 3.14159;
-    float rail_w = 0.004 + 0.008 * tr;
-    float rails = smoothstep(rail_w, 0.0, abs(tr * (abs(rel) - 0.32)));
+    float rail_w = 0.006 + 0.012 * tr;
+    float rail_d = abs(tr * (abs(rel) - 0.32));
+    float rails = smoothstep(rail_w, 0.0, rail_d);
+    float rail_glow = smoothstep(rail_w * 5.0, 0.0, rail_d);
     float ties = step(abs(rel), 0.32) * smoothstep(0.11, 0.05, abs(fract(tu * 2.0) - 0.5));
     float track_fade = tube_near * tube_core;
-    col = mix(col, lchGamut(0.30, 0.10, 0.506), ties * 0.7 * track_fade);                 // dark red ties
-    col = mix(col, lchGamut(0.78, 0.14, 1.152), rails * 0.85 * track_fade);               // amber rails
+    col = mix(col, lchGamut(0.48, 0.13, 0.506), ties * 0.6 * track_fade);                 // ember-red ties
+    col += lchGamut(0.55, 0.12, 1.152) * rail_glow * 0.25 * (1.0 + PUNCH * REACT) * track_fade;   // rail glow, lifts on the kick
+    col = mix(col, lchGamut(0.80, 0.14, 1.152), rails * 0.9 * track_fade);                // amber rails
 
     // Darkness enforcement: lace, rim, focal are bright; the galaxy stays a dim floor behind them
     float lit = max(max(lace, rim * 0.5), focal);
