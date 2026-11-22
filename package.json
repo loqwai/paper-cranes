@@ -13,6 +13,7 @@
     "preview": "vite preview",
     "format": "eslint --fix .",
     "shader-dates": "node scripts/shader-dates.js",
+    "audio": "node scripts/show/audio-swap.js",
     "delete": "node scripts/delete-shader.js",
     "delete:interactive": "node scripts/delete-shader.js --interactive"
   },
