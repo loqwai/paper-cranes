@@ -27,7 +27,7 @@ fixes for every failure seen in rehearsal. For taste and rules, see
 
 ```bash
 node scripts/vj/show.js stop     # always first: clears a leftover page-less show browser ("not running" is fine)
-node scripts/vj/show.js launch "http://localhost:6969/jam.html?shader=claude/wip/black-sun/sun-1&controller=black-sun&wavelet=true&vj=1&remote=display"
+node scripts/vj/show.js launch "http://localhost:6969/jam.html?shader=clit-set/2&controller=clit-set&wavelet=true&vj=1&remote=display"
 node scripts/vj/show.js eval '() => ({ input: window.cranes.audioInputLabel ?? null, energy: window.cranes.flattenFeatures().energy })'
 ```
 
@@ -35,7 +35,9 @@ node scripts/vj/show.js eval '() => ({ input: window.cranes.audioInputLabel ?? n
   wrong, **don't start**: fix the OS default input. Add `&audio_device=<label>` only to
   deliberately override the default.
 - **What to open:**
-  - **Live line (recommended):** `black-sun/sun-1` + `controller=black-sun`. It has every fix, the
+  - **Default (2026-11-21):** `clit-set/2` + `controller=clit-set`, the knob-steered fractal voyage.
+    Knob map: `shaders/clit-set/clit-set.md`.
+  - **Sun live line:** `black-sun/sun-1` + `controller=black-sun`. It has every fix, the
     story engine, the companion and K7 KISS.
   - **Frozen fork:** `sun/N` + `controller=sun-N` (see section 6). Use a fork when you want a known
     look that won't change.

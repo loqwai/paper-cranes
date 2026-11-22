@@ -13,10 +13,12 @@ Read it once, and use it for anything this skill doesn't cover. Brief every agen
 
 ## Arguments
 
-- **No args:** the live line, `shader=claude/wip/black-sun/sun-1` + `controller=black-sun`.
-- **`<shader-path>`:** for a fork, `sun/N` pairs with `controller=sun-N`, and
-  `sun/1` pairs with `controller=sun`. For any other shader, add `&controller=` only if
-  a matching `controllers/*.js` exists.
+- **No args:** the clit-set voyage, `shader=clit-set/2` + `controller=clit-set`. Knob map in
+  [clit-set](#clit-set-the-default-series) below.
+- **`<shader-path>`:** every `clit-set/N` pairs with `controller=clit-set`. The sun line is still one
+  argument away: `/show claude/wip/black-sun/sun-1` pairs with `controller=black-sun`. For a sun
+  fork, `sun/N` pairs with `controller=sun-N`, and `sun/1` pairs with `controller=sun`. For any
+  other shader, add `&controller=` only if a matching `controllers/*.js` exists.
 - **`audio=<label>`:** appends `&audio_device=<label>`. Without it, the page uses the OS default
   input: the line feed (BlackHole 2ch on macOS; Voicemeeter or VB-Cable on Windows) or a mic.
   Don't pass `audio_device` otherwise, unless step 3 shows Chrome opened something else: with the
@@ -67,7 +69,7 @@ front**: Windows stops painting a covered window. Any `show.js` timeout there: `
 node scripts/vj/show.js stop
 node scripts/vj/show.js launch "http://localhost:$P/jam.html?shader=<shader>&controller=<controller>&wavelet=true&vj=1&remote=display"
 node scripts/vj/show.js eval 'async () => { await new Promise(r => setTimeout(r, 2000)); return { input: window.cranes.audioInputLabel ?? null, energy: window.cranes.flattenFeatures().energy, meter: typeof window.__vjMeter, validate: typeof window.__vjValidate } }'
-node scripts/vj/show.js eval 'async () => { const a = window.cranes.controllerFeatures?.bs_time; await new Promise(r => setTimeout(r, 1000)); return { before: a, after: window.cranes.controllerFeatures?.bs_time, keys: Object.keys(window.cranes.controllerFeatures || {}).length } }'
+node scripts/vj/show.js eval 'async () => { const t = () => { const c = window.cranes.controllerFeatures || {}; return c.cs_time ?? c.bs_time }; const a = t(); await new Promise(r => setTimeout(r, 1000)); return { before: a, after: t(), keys: Object.keys(window.cranes.controllerFeatures || {}).length } }'
 ```
 
 | Check | ✅ when |
@@ -75,7 +77,7 @@ node scripts/vj/show.js eval 'async () => { const a = window.cranes.controllerFe
 | Input | `input` is the expected device and `energy > 0`. If not, stop and fix the OS input. On a mic, calibrate `gain` (/vibej2 setup step 3). |
 | Runtime | `meter` = `object` and `validate` = `function` |
 | Controller | `after > before`, with keys present. If the time doesn't advance, the controller is throwing; see playbook section 7, "Picture frozen". |
-| Shader gate | With music playing, the shader's own quiet gate (`smoothstep` on `energyMean` × `bs_presence`, or `quietGate`) sits near 1. If it sits low, the input is quieter than the line feed the gates were tuned for, and the scene reads as silence: dim and nearly frozen. `energy > 0` alone doesn't prove this. Fix the **level**, not the shader, in this order: (1) raise the OS input volume (macOS mic at 27% barely registered, 80% worked, 2026-11-14); (2) `audio_gain`, live via `window.cranes.inputGain` (/vibej2 setup step 3); (3) only if neither reaches it, rescale the gate thresholds in the `-wip` copy, and note it in the shader doc, since a line feed then holds the gates open. The meter's `gate` is `quietGate` when the controller provides it, else the same energy formula, so it also reads low at a low input level. |
+| Shader gate | With music playing, the shader's own quiet gate (`cs_presence` on clit-set; `smoothstep` on `energyMean` × `bs_presence`, or `quietGate`, on the sun line) sits near 1. If it sits low, the input is quieter than the line feed the gates were tuned for, and the scene reads as silence: dim and nearly frozen. `energy > 0` alone doesn't prove this. Fix the **level**, not the shader, in this order: (1) raise the OS input volume (macOS mic at 27% barely registered, 80% worked, 2026-11-14); (2) `audio_gain`, live via `window.cranes.inputGain` (/vibej2 setup step 3); (3) only if neither reaches it, rescale the gate thresholds in the `-wip` copy, and note it in the shader doc, since a line feed then holds the gates open. The meter's `gate` is `quietGate` when the controller provides it, else the same energy formula, so it also reads low at a low input level. |
 
 Then take one look with `node scripts/vj/show.js shot .claude/vj-shots/show-start.png`, and Read it.
 A black frame while `energy` moves is a poisoned feedback buffer: `node scripts/vj/show.js unstick`.
@@ -146,7 +148,7 @@ Then invoke `/vibej2` with the shader path. This is required: the show always ru
 which listens for dial releases and steers the visual from them. (`/show check` is the
 preflight-only path.)
 
-**Scratch copy:** edits go to a `-wip` copy of the boot shader (for example `sun-1-wip`),
+**Scratch copy:** edits go to a `-wip` copy of the boot shader (for example `clit-set/2-wip` or `sun-1-wip`),
 hot-swapped in. The boot shader itself stays untouched as the panic fallback. Check `git status`
 first: if the `-wip` file is already tracked, it holds an earlier set's live state, so don't copy
 over it. Start the session from it, or make a fresh copy under a new name. At wind-down, save the
@@ -155,7 +157,9 @@ session's result as the next numbered fork rather than leaving it in the `-wip` 
 ## Panic: `/show panic <fork>`
 
 This gets a known-good look on the wall without a reload. **Never use `goto` mid-set.** Pick a
-fork from the playbook's fork library; `sun/7` is the healthy default.
+fork that reads the controller already running: on clit-set, `clit-set/2` (or `clit-set/1`); on
+the sun line, a fork from the playbook's fork library, `sun/7` being the healthy default. A sun
+fork under the clit-set controller reads no `bs_*` uniforms and falls back to raw audio.
 
 ```bash
 node scripts/vj/show.js eval 'async (path) => {
@@ -167,9 +171,28 @@ node scripts/vj/show.js eval 'async (path) => {
 }' '["<fork-path>"]'
 ```
 
-- **The controller stays:** the live controller keeps running, and the fork reads its `bs_*`
-  uniforms.
+- **The controller stays:** the live controller keeps running, and the fork reads its `cs_*` (clit-set)
+  or `bs_*` (sun) uniforms.
 - **Wait first if needed:** if an editing agent holds the page token, stop it before swapping.
 - **Confirm:** take a shot afterwards.
 - **If the picture is frozen** (the controller is throwing), fix the state first. See the
   playbook's failure runbook.
+
+## clit-set: the default series
+
+`clit-set/2` is a slow, knob-steered voyage through the clit/2 fractal. Every dial at 0 is the
+autopilot: it drifts through six waypoints and comes home every 10 minutes, so a reload (all dials
+read 0) still looks right. Full doc: `shaders/clit-set/clit-set.md`.
+
+| Row | Dial 1 | Dial 2 | Dial 3 | Dial 4 |
+|-----|--------|--------|--------|--------|
+| 1 navigate | k1 X | k2 Y | k3 VOYAGE | k4 ZOOM |
+| 2 shape | k5 TURN | k6 POWER | k7 BODY | k8 CURL |
+| 3 colour | k9 HUE | k10 NEBULA | k11 TRAILS | k12 REACT |
+| 4 light | k13 GLASSES | k14 EMBER | k15 SPOT | k16 LACE |
+
+- **k1, k2 and k3 at 0 = autopilot.** Manual control blends in over the first 8% of the dial. Past
+  that, X and Y are centred at 0.54, and k3 scrubs the voyage loop by hand.
+- k4 to k8 add on top of the voyage. Zoom stops at 3x, because past that the lace turns to speckle.
+- Audio never moves the camera. It drives lace breath, rim, stars, the ember and the drop spotlight.
+- `&voyage0=<0..6>` starts the autopilot at a different waypoint (used by the NFC variants).
