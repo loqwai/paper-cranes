@@ -60,14 +60,23 @@ window.cranes.midiMapper = mapper
 const attachInput = (input) => {
   input.addEventListener('midimessage', (message) => {
     const [command, control, value] = message.data
-
-    // Check if it's a Control Change message (0xB0 to 0xBF)
-    const isCC = (command & 0xf0) === 0xb0
-    if (!isCC) return
-
+    const kind = command & 0xf0
     // Extract channel (1-16) from the command byte
     const channel = (command & 0x0f) + 1
     const deviceName = input.name || 'Unknown MIDI Device'
+
+    // Announce every CC / note for listeners such as the remote-inspect forwarder
+    // (src/remote/inspect.js -> `cranes-remote watch midi`). Additive: mapping below is unchanged.
+    if (kind === 0xb0 || kind === 0x90 || kind === 0x80) {
+      const type = kind === 0xb0 ? 'cc' : kind === 0x90 && value > 0 ? 'noteon' : 'noteoff'
+      window.dispatchEvent(new CustomEvent('cranes-midi', {
+        detail: { device: deviceName, type, channel, number: control, value, t: Date.now() },
+      }))
+    }
+
+    // Check if it's a Control Change message (0xB0 to 0xBF)
+    const isCC = kind === 0xb0
+    if (!isCC) return
 
     // If mapper is in learn mode, capture this CC
     if (mapper.isLearning()) {
