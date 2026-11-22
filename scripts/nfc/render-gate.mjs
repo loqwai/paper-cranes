@@ -158,7 +158,7 @@ const worker = async () => {
     m.control = await page.evaluate(frameDiff, [png.toString('base64'), held.toString('base64')])
     m.motion = await page.evaluate(frameDiff, [held.toString('base64'), moved.toString('base64')])
     const why = verdict(m)
-    const r = { n: v.n, shader: v.shader, ...m, pass: why.length === 0, why, errors: [...new Set(errors)].slice(0, 3) }
+    const r = { n: v.n, shader: v.shader, full: v.full, ...m, pass: why.length === 0, why, errors: [...new Set(errors)].slice(0, 3) }
     results.push(r)
     console.log(JSON.stringify(r))
   }

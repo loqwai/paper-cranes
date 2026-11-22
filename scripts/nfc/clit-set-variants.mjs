@@ -104,8 +104,8 @@ const build = () => {
     const n = FIRST + i
     // A tag that still fails after 4 retries moves to the chromadepth frag (high chroma by construction)
     const F = (nudges[n] ?? 0) >= 4 && F0.frag !== 3 ? FRAGS[0] : F0
-    const idx = perFrag.get(F.frag) ?? 0
-    perFrag.set(F.frag, idx + 1)
+    const idx = perFrag.get(F0.frag) ?? 0              // count by the scheduled frag, so a fallback never reshuffles other tags
+    perFrag.set(F0.frag, idx + 1)
     const mood = F.moods[idx % F.moods.length]
     const tries = nudges[n] ?? 0
 
