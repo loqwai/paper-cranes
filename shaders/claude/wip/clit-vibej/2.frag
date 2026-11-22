@@ -296,7 +296,7 @@ void mainImage(out vec4 P, vec2 V) {
     // iter 13: measured on the trap logs clamped to the lace's transition band. Unclamped, log(trap) runs
     // to -inf on the thread cores, so fwidth spiked there and the gate dotted the cleanest threads dark.
     float lxc = clamp(lx, lace_hi - 0.5, lace_lo + 0.5), lyc = clamp(ly, lace_hi - 0.5, lace_lo + 0.5);
-    lace *= 1.0 - 0.5 * smoothstep(2.0, 6.0, fwidth(min(lxc, lyc)));
+    lace *= 1.0 - 0.7 * smoothstep(1.5, 5.0, fwidth(min(lxc, lyc)));   // 2.frag: stronger, the tube walls compress lace toward the core
     lace_fine *= 1.0 - 0.8 * smoothstep(1.5, 4.0, fwidth(lxc + lyc));
     lace_fine *= 1.0 - coh * 0.7;
     // vibej iter 10: at any depth, the braid fades where it changes faster than a pixel. Its sparkle, punch and

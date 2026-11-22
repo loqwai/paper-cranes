@@ -101,3 +101,4 @@ tube." A dramatic move, so it is a fork. 1.frag stays as the fallback.
 - 1.frag's coil, undulate, pearls, magenta guard and speckle gates all carry over.
 - Checked with a local headless render (`noaudio`, 408 × 997) before the phone saw it.
 - **2.frag iter 2** (04:18): the tube kept running through empty fractal (phone frames at meanL 0.17). A local headless sweep over all six waypoints (`?voyage0=0..5`) compared four tube variants. Shrinking the depth loop (R1 0.30 → 0.12, K 1.0 → 2.5, still conformal), centred on the lace-dense dive point, raised the worst-waypoint vivid share from 0.09 to 0.24.
+- **2.frag iter 3** (04:20): the sub-pixel lace dim is stronger in the tube (0.5 → 0.7, starting at fwidth 1.5), because the walls compress the lace toward the core. Grey 7–8% → 2.5–5.5%.
