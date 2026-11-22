@@ -51,11 +51,15 @@
 // knob_1 X, knob_2 Y, knob_3 VOYAGE at 0 = autopilot: the voyage drifts through WAYPOINTS by itself.
 // X and Y push the camera from wherever the voyage has it: the dial value times PAN_SPAN, so a small
 // nudge is a small move (no jump at the bottom of the dial). VOYAGE blends from the autopilot to a hand
-// scrub over its first 8%, along the shorter way round the loop. knob_4 ZOOM, knob_5 TURN, knob_6 POWER,
-// knob_7 BODY, knob_8 CURL add on top of the voyage. Every target glides through a two-pole ease.
+// scrub over its first 8%, along the shorter way round the loop. knob_4 ZOOM, knob_6 POWER, knob_7 BODY,
+// knob_8 CURL add on top of the voyage. Every target glides through a two-pole ease.
+// knob_5 TURN is the exception: a scratch. It skips both glides and turns the picture with the hand,
+// 0→1 = two full turns, on top of the voyage and the spin.
 
 const KNOBS = 16
 const TAU = Math.PI * 2
+export const SCRATCH = 2 * TAU     // TURN (knob_5) full travel, rad
+const SCRATCH_TAU = 0.05          // short enough to follow a hand, long enough to hide MIDI's 128 steps
 export const ZOOM_MAX = 1.1      // log zoom cap (3x): the orbit-trap lace turns to speckle past ~3-4x
 export const PAN_SPAN = 0.8      // X/Y: a full dial pans 0.8 in the fractal plane (2/3 of the screen height)
 export const LEG_SECS = 80       // each leg glides the whole 80 s, no dwell (loop 480 s): never parked
@@ -130,7 +134,7 @@ export const nav = (k, autoU, spin = 0) => {
     cx: base.cx - k[1] * PAN_SPAN,
     cy: base.cy + k[0] * PAN_SPAN,
     lz: Math.min(ZOOM_MAX, base.lz + k[3] * ZOOM_MAX),
-    rot: base.rot + spin + k[4] * TAU,
+    rot: base.rot + spin,
     A: base.A + k[5] * 1.4,
     B: base.B - k[6] * 0.4,
     curl: base.curl + k[7] * 0.45,
@@ -156,7 +160,7 @@ export const fresh = () => ({
   build: 0, drop: 0, dropHold: 0, dropRefr: 0, jump: 0, jumpTo: 0,
   shift: 0, entFast: 0.5, entSlow: 0.5,
   hueX: 1, hueY: 0, knobs: Array(KNOBS).fill(null), breath: 0.5,
-  voyage: 0, voyageSeeded: false, nav: null, navMid: null, drift: 0, drive: 0, beat: 0, beatTo: 0, lurch: 0, lurchTo: 0, punch: 0, punchFrom: 0, punchAge: 9,
+  voyage: 0, voyageSeeded: false, nav: null, navMid: null, drift: 0, drive: 0, beat: 0, beatTo: 0, lurch: 0, lurchTo: 0, scratch: null, punch: 0, punchFrom: 0, punchAge: 9,
   bFast: 0, bSlow: 0, eFast: 0, eSlow: 0, localWas: 0, thump: 0,
   pearl: 0, focus: 0, spread: 0, grit: 0, tone: 0.5,
 })
@@ -297,6 +301,8 @@ export const step = (S, f, dt) => {
     S.navMid[key] = toward(S.navMid[key], target[key], dt, NAV_TAU)
     S.nav[key] = toward(S.nav[key], S.navMid[key], dt, NAV_TAU)
   }
+  const turn = clamp01(num(f.knob_5, 0)) * SCRATCH
+  S.scratch = S.scratch === null ? turn : toward(S.scratch, turn, dt, SCRATCH_TAU)
 
   const out = {
     cs_on: 1, cs_time: S.time, cs_presence: S.presence, cs_flow: S.flow,
@@ -305,9 +311,9 @@ export const step = (S, f, dt) => {
     cs_breath: S.breath, cs_pearl: S.pearl, cs_focus: S.focus, cs_spread: S.spread, cs_grit: S.grit, cs_tone: S.tone,
     // The spin goes on after the glide: it is already smooth (an integral of an eased rate), and through
     // the 1.8 s glide its beat-scale quickening landed a beat late (rResid went negative)
-    cs_cx: S.nav.cx, cs_cy: S.nav.cy, cs_lz: S.nav.lz, cs_rot: S.nav.rot + S.drift + S.lurch,
+    cs_cx: S.nav.cx, cs_cy: S.nav.cy, cs_lz: S.nav.lz, cs_rot: S.nav.rot + S.drift + S.lurch + S.scratch,
     cs_navA: S.nav.A, cs_navB: S.nav.B, cs_curl: S.nav.curl,
-    cs_voyage: S.voyage, cs_drift: S.drift, cs_drive: S.drive, cs_beat: S.beat, cs_punch: S.punch, cs_lurch: S.lurch, cs_thump: S.thump,
+    cs_voyage: S.voyage, cs_drift: S.drift, cs_drive: S.drive, cs_beat: S.beat, cs_punch: S.punch, cs_lurch: S.lurch, cs_scratch: S.scratch, cs_thump: S.thump,
   }
   S.knobs.forEach((v, i) => { out[`cs_k${i + 1}`] = v })
   return out
