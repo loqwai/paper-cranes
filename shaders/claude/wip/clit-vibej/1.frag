@@ -17,6 +17,7 @@ uniform float cs_A, cs_B, cs_kick, cs_bass, cs_mids, cs_treb;
 uniform float cs_build, cs_drop, cs_jump, cs_shift, cs_hue;
 uniform float cs_cx, cs_cy, cs_lz, cs_rot, cs_curl, cs_navA, cs_navB, cs_breath;
 uniform float cs_pearl, cs_focus, cs_spread, cs_grit, cs_tone, cs_beat, cs_punch, cs_thump;
+uniform float cs_drift;
 uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 
 #define HAS_CTL (cs_on > 0.5)
@@ -58,6 +59,17 @@ uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 #define NAV_CURL (HAS_CTL ? cs_curl : knob_8 * 0.45)
 
 #define REACT (1.0 + K_REACT * 1.5)
+
+// ============================================================================
+// COIL + UNDULATE (vibej iter 4, Aaron: "We need it to undulate and coil much more").
+// Both are TRAVELING waves on a one-way phase: the pattern moves one way forever, never sways back.
+// Audio sets only the RATE (cs_flow quickens with energy and kicks, cs_drift is the music-rate spin
+// integral); amplitudes are constant. Fades in over the first 10 s after page load.
+// ============================================================================
+#define WAVE_PHASE (HAS_CTL ? (cs_flow * TAU * 3.0 + cs_drift * 20.0) : iTime * 0.8)   // ~0.6 rad/s silent, ~3 loud
+#define WAVE_RAMP (HAS_CTL ? smoothstep(0.0, 10.0, cs_time) : 1.0)   // 10 s fade-in from page load
+#define COIL_AMP (0.22 * WAVE_RAMP)     // rad of barber-pole twist per iteration (iterations 2+)
+#define UND_AMP  (0.045 * WAVE_RAMP)    // screen units of traveling ripple on the input domain
 
 // ============================================================================
 // PER-DEVICE SEEDS — palette phase, lace density, rim warmth, star scatter. ?seed= pins it.
@@ -195,6 +207,10 @@ void mainImage(out vec4 P, vec2 V) {
     // Screen → fractal plane. Screen x maps to C.y (the mirror axis), screen y to C.x, as clit/2.
     vec2 p = (iResolution.xy - V - V) / iResolution.y;
     p = rot2(NAV_ROT) * p;
+    // UNDULATE: two crossed traveling waves ripple the domain, so the filaments ripple along their length
+    // like jellyfish tendrils. Directional, not radial (radial rings read as zoom to the shiver probe).
+    float wph = WAVE_PHASE;
+    p += UND_AMP * vec2(sin(5.5 * p.y - wph), sin(4.7 * p.x - wph * 0.83 + 1.7));
     // Zoom dives toward a lace-dense point on the right wing (a zoom into the pale core is empty).
     vec2 home = vec2(NAV_CX, NAV_CY);
     vec2 dive = home + vec2(0.23, 0.33);
@@ -219,6 +235,10 @@ void mainImage(out vec4 P, vec2 V) {
         V = vec2(V.x * V.x - V.y * V.y, dot(V, V.yx));
         V -= C * b_off;
         V = curl * V;
+        // COIL: a barber-pole twist that travels outward along log|V| as the phase runs one way. Skipped on
+        // the first iterations so the silhouette holds while the filaments coil.
+        float cw = COIL_AMP * smoothstep(1.0, 6.0, float(k));
+        if (cw > 0.0) V = rot2(cw * sin(1.3 * log(dot(V, V) + 1e-4) - wph * 1.1)) * V;
 
         x = min(x, abs(V.x));
         y = min(y, abs(V.y));

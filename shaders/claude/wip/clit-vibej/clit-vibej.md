@@ -47,3 +47,13 @@ during the show are listed per iteration below.
   0.35·wave`) could turn violet forward, or red backward on the signed wave, into the hot-magenta arc.
   Now the rotated hue is clamped to the arc's edge (OKLab atan -1.25..0.45 rad, 288° to 26°). Seen at
   bass 0.77 / bZ 0.9 / thump 0.99 with mids lifting chroma (iter 1): hot-pink specks in the dense lace.
+- **iter 4** (03:35, Aaron: "We need it to undulate and coil much more"). Two traveling waves on one
+  one-way phase, `WAVE_PHASE = cs_flow·TAU·3 + cs_drift·20` (measured 1.82 rad/s at energy 0.04; about
+  0.6 rad/s silent and 3 loud). Audio sets only the rate; the amplitudes are constant.
+  - **COIL**: a barber-pole twist inside the iteration, `rot(0.22·w_k·sin(1.3·log|V|² − 1.1·phase))`,
+    with `w_k` ramping in over iterations 1 to 6, so the silhouette holds and the filaments coil. Bounded,
+    and the pattern only travels one way.
+  - **UNDULATE**: crossed traveling waves on the input domain, `p += 0.045·(sin(5.5y − φ), sin(4.7x − 0.83φ + 1.7))`.
+    Directional, not radial, so there are no zoom rings.
+  - Fades in over the first 10 s after page load. No controller change, so prod clit-set/2 is untouched.
+  - Census after it: hot pink 0.18 to 0.28 of vivid pixels (baseline 0.15), grey 5 to 6%, white 0.
