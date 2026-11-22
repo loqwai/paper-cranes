@@ -179,7 +179,8 @@ void mainImage(out vec4 P, vec2 V) {
     float hb = HUE_TURN + ang * 0.12 + zf * 0.1 + 0.2 * sin(min(lx, ly) * 0.5 + FLOW * 2.0) + 0.45 * fbm(C * 1.6);
     // Where the lace changes faster than a pixel, the two filament hues would average to grey:
     // collapse them onto one hue there
-    float busy = smoothstep(0.4, 2.5, fwidth(min(lx, ly)));
+    float busy = max(smoothstep(0.4, 2.5, fwidth(min(lx, ly))),
+                     smoothstep(0.15, 0.6, fwidth(body) + 0.5 * fwidth(max(lace_x, lace_y))));
     float split = mix(0.18, 0.45, K_SPREAD) * (1.0 - busy);
 
     // SKY: layered dust in three hues, parallax stars
@@ -204,6 +205,12 @@ void mainImage(out vec4 P, vec2 V) {
     col = mix(col, pal(hb + split, 0.72, 0.17) * LACE_GAIN, fil_x * 0.85);
     col = mix(col, pal(hb - split, 0.68, 0.18) * LACE_GAIN, fil_y * 0.85);
     col += pal(hb, 0.9, 0.12) * fil_x * fil_y * SPARKLE;                         // same-hue glints, never grey
+
+    // Dense lace: pixel-scale alternation between gas, filaments and sky averages to grey-lavender on
+    // screen. Where it is busy, paint one coherent hue family instead (sky darker, lace brighter).
+    vec3 dense = pal(hb, 0.6, 0.19);
+    vec3 denseSky = pal(hb, 0.32, 0.12);
+    col = mix(col, mix(denseSky, dense, smoothstep(0.0, 0.6, max(body, max(lace_x, lace_y) * 0.7))), busy * 0.9);
 
     // Rim light on silhouette edges
     float edge = abs(dFdx(zf)) + abs(dFdy(zf));
