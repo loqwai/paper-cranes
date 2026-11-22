@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { fresh, step, place, nav, loopDelta, WAYPOINTS, ZOOM_MAX, LEG_SECS, LOOP_SECS, legSecs, PAN_SPAN } from './clit-set.js'
+import { fresh, step, place, nav, loopDelta, steer, WAYPOINTS, ZOOM_MAX, LEG_SECS, LOOP_SECS, legSecs, PAN_SPAN, LZ_CAP, STEER_LIMIT } from './clit-set.js'
 
 const run = (S, f, secs, dt = 1 / 60) => {
   let out
@@ -10,6 +10,7 @@ const run = (S, f, secs, dt = 1 / 60) => {
 const HOME = WAYPOINTS[0]
 const loud = { energy: 0.3, energyNormalized: 0.9, energyZScore: 0.8, bassZScore: 0.9, spectralCentroidZScore: 1.2 }
 const quiet = { energy: 0, energyNormalized: 0.1 }
+const C = { ...quiet, coaster: 1 }
 
 describe('clit-set controller navigation', () => {
   it('opens at home with every knob at 0', () => {
@@ -127,6 +128,75 @@ describe('clit-set controller navigation', () => {
       prev = out.cs_cy
     }
     expect(Math.abs(run(S, { ...quiet, knob_1: 0.1 }, 8).cs_cy - start)).toBeLessThan(0.1)
+  })
+
+  it('without ?coaster, ZOOM is a position: a baked knob_4 settles at a fixed depth and never dives on', () => {
+    const S = fresh()
+    for (let i = 0; i < 6; i++) {
+      const out = run(S, { ...quiet, knob_4: 0.3 }, 10)
+      expect(out.cs_lz).toBeCloseTo(Math.min(ZOOM_MAX, place(S.voyage).lz + 0.3 * ZOOM_MAX), 1)
+      expect(out.cs_lz).toBeLessThanOrEqual(ZOOM_MAX + 1e-9)
+    }
+    expect(S.dive).toBe(0)
+    const drop = { energy: 0.3, energyNormalized: 0.9, energyZScore: 0.9, bassZScore: 0.9 }
+    run(S, { ...drop, knob_4: 1 }, 1)
+    expect(S.surge).toBe(0)
+    expect(S.dive).toBe(0)
+  })
+
+  it('THROTTLE dives forward one way, faster the further the dial is up', () => {
+    const slow = fresh(), fast = fresh()
+    run(slow, { ...C, knob_4: 0.3 }, 3)
+    run(fast, { ...C, knob_4: 1 }, 3)
+    expect(fast.dive).toBeGreaterThan(slow.dive * 2)
+    let prev = 0
+    const S = fresh()
+    for (let i = 0; i < 300; i++) {
+      const out = step(S, { ...C, knob_4: 0.5 }, 1 / 60)
+      expect(out.cs_dive).toBeGreaterThanOrEqual(prev - 1e-9)
+      prev = out.cs_dive
+    }
+  })
+
+  it('at the depth cap the coaster climbs back out while the voyage moves on to new terrain', () => {
+    const S = fresh()
+    let maxLz = 0, climbed = false, v0 = null
+    for (let t = 0; t < 30; t += 1 / 60) {
+      const out = step(S, { ...C, knob_4: 1 }, 1 / 60)
+      maxLz = Math.max(maxLz, out.cs_lz)
+      if (out.cs_climb > 0 && v0 === null) { v0 = S.voyage; climbed = true }
+    }
+    expect(climbed).toBe(true)
+    expect(maxLz).toBeLessThan(LZ_CAP + 0.05)
+    expect(loopDelta(v0, S.voyage, WAYPOINTS.length)).toBeGreaterThan(0)
+  })
+
+  it('STEER is a turn rate: 0.5 and an untouched 0 go straight, off-centre keeps carving to the wall', () => {
+    expect(steer(0)).toBe(0)
+    expect(steer(0.5)).toBe(0)
+    expect(steer(0.53)).toBe(0)
+    expect(steer(1)).toBeCloseTo(1, 6)
+    expect(steer(0.1)).toBeLessThan(-0.5)
+    const idle = fresh()
+    const a = run(idle, C, 4)
+    expect(Math.abs(idle.panX) + Math.abs(idle.panY)).toBe(0)
+    const S = fresh()
+    const p1 = run(S, { ...C, knob_1: 1 }, 2).cs_cy - place(S.voyage).cy
+    const p2 = run(S, { ...C, knob_1: 1 }, 2).cs_cy - place(S.voyage).cy
+    expect(p2).toBeGreaterThan(p1)
+    run(S, { ...C, knob_1: 1 }, 20)
+    expect(S.panX).toBeCloseTo(STEER_LIMIT, 6)
+    expect(a.cs_cy).toBeCloseTo(nav(Array(16).fill(0), idle.voyage).cy, 1)
+  })
+
+  it('a drop surges the dive forward, more at a higher throttle', () => {
+    const drop = { energy: 0.3, energyNormalized: 0.9, energyZScore: 0.9, bassZScore: 0.9 }
+    const hover = fresh(), full = fresh()
+    for (const S of [hover, full]) run(S, C, 7)
+    run(hover, { ...drop, coaster: 1, knob_4: 0 }, 0.5)
+    run(full, { ...drop, coaster: 1, knob_4: 1 }, 0.5)
+    expect(hover.surge).toBe(0)
+    expect(full.surge).toBeGreaterThan(hover.surge)
   })
 
   it('VOYAGE blends along the shorter way round the loop', () => {

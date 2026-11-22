@@ -63,15 +63,33 @@ operator; `/show` launches jam.html.
 
 | Row | Dial 1 | Dial 2 | Dial 3 | Dial 4 |
 |---|---|---|---|---|
-| 1 navigate | k1 X | k2 Y | k3 VOYAGE | k4 ZOOM |
+| 1 navigate | k1 STEER X | k2 STEER Y | k3 VOYAGE | k4 THROTTLE |
 | 2 shape | k5 TURN | k6 POWER | k7 BODY | k8 CURL |
 | 3 colour | k9 HUE | k10 NEBULA | k11 TRAILS | k12 REACT (audio size x1 to x2.5) |
 | 4 light | k13 GLASSES | k14 EMBER | k15 SPOT | k16 LACE |
 
 - Every dial at 0 is the autopilot: a slow voyage through six waypoints that comes home every
   10 minutes. A reload (all dials read 0) still looks right.
-- k1, k2, k3 blend in over the first 8% of the dial. Zoom stops at 3x.
-- Audio never moves the camera. It drives light, lace, rim, stars, the ember and the kick punch.
+- k3 blends in over the first 8% of the dial.
+- Audio never moves the camera on its own. It drives light, lace, rim, stars, the ember and the kick punch.
+
+### Coaster controls
+
+Opt-in: add `&coaster=1` to the show URL. Without it, k1/k2/k4 are the usual X, Y and ZOOM positions,
+so links and NFC tags that bake those knobs look the same as before.
+
+With `coaster=1`, k1, k2 and k4 are rates, not positions: you fly the fractal instead of placing the camera.
+
+- **k4 THROTTLE** dives forward into the lace. 0 hovers on the voyage; the higher the dial, the faster the
+  dive. It only goes forward. At about 3.7x the coaster climbs: the dive eases back out over 8 s while
+  the voyage moves on half a waypoint, so the next dive starts on new terrain.
+- **k1 / k2 STEER** turn left/right and up/down. **Centre them at 0.5 to fly straight.** An untouched 0
+  also flies straight, but anything between ~0.05 and 0.46 steers hard one way. Steering stops at the
+  track walls (±0.6 from the voyage path) and recentres during each climb.
+- **k5 TURN** is the scratch: it rolls the picture with your hand, 0→1 = two full turns.
+- **Drops surge forward**: a drop adds a lurch on top of the throttle that eases out over ~1.5 s,
+  stronger the higher the throttle. At throttle 0 audio never moves the camera. Kicks nudge the dive
+  forward too, scaled by the throttle.
 
 ## 6. Fallbacks and panic
 

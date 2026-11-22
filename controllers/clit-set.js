@@ -55,6 +55,11 @@
 // knob_8 CURL add on top of the voyage. Every target glides through a two-pole ease.
 // knob_5 TURN is the exception: a scratch. It skips both glides and turns the picture with the hand,
 // 0→1 = two full turns, on top of the voyage and the spin.
+// ?coaster=1 turns X, Y and ZOOM into rate controls applied after the glide: knob_4 THROTTLE dives
+// forward (log zoom, one way) at a speed set by the dial; knob_1 / knob_2 STEER (0.5 = straight, the
+// rest is a turn rate; untouched 0 = straight). A drop surges the throttle. At LZ_CAP the coaster
+// climbs: the dive eases back out while the voyage moves on half a waypoint, so the next drop starts on
+// new terrain. Opt-in because the NFC variants bake knob_4 as a ZOOM position.
 
 const KNOBS = 16
 const TAU = Math.PI * 2
@@ -62,6 +67,24 @@ export const SCRATCH = 2 * TAU     // TURN (knob_5) full travel, rad
 const SCRATCH_TAU = 0.05          // short enough to follow a hand, long enough to hide MIDI's 128 steps
 export const ZOOM_MAX = 1.1      // log zoom cap (3x): the orbit-trap lace turns to speckle past ~3-4x
 export const PAN_SPAN = 0.8      // X/Y: a full dial pans 0.8 in the fractal plane (2/3 of the screen height)
+// COASTER. 2.frag is not self-similar under zoom (the lace turns to speckle past ~3.5x, its coherence
+// gate fades it), so the dive cannot run forever: at LZ_CAP it climbs back out under a voyage move.
+export const THROTTLE_RATE = 0.12   // log zoom per second at full throttle (home to the cap in ~11 s)
+export const LZ_CAP = 1.3           // total depth that starts the climb (~3.7x)
+export const KICK_DIVE = 0.012      // lz each full kick pushes the dive forward, times the throttle
+export const SURGE = 1.2            // a drop adds SURGE x throttle (eased out over ~1.5 s); at hover audio never moves the camera
+export const STEER_RATE = 0.18      // fractal-plane units per second at a full steer (screen-speed at any depth)
+export const STEER_LIMIT = 0.6      // the track's walls: steering stops at ±0.6 from the voyage's path
+export const CLIMB_SECS = 8
+export const CLIMB_VOYAGE = 0.5     // waypoints the voyage moves on during a climb
+const STEER_DEAD = 0.04
+// Dial → steer -1..1. 0.5 ± 0.04 is straight; an untouched 0 (or the very bottom) is straight too,
+// so all-zero knobs never mean hard-left forever.
+export const steer = (v) => {
+  if (!(v > 0.03)) return 0
+  const d = v - 0.5
+  return Math.sign(d) * smoothstep(STEER_DEAD, 0.5, Math.abs(d))
+}
 export const LEG_SECS = 80       // each leg glides the whole 80 s, no dwell (loop 480 s): never parked
 // SPIN: an always-on, one-way view rotation on top of the voyage, so the picture never holds still
 // (Aaron: "We should always be moving forward in the animation"). Geometry only evolves: no sine on
@@ -126,14 +149,14 @@ export const place = (u) => {
 
 // Knobs + autopilot clock + spin → navigation target. Pure in the clocks: no audio argument.
 // Fallback in shaders/clit-set/2.frag mirrors this with base = HOME and no spin.
-export const nav = (k, autoU, spin = 0) => {
+export const nav = (k, autoU, spin = 0, coaster = false) => {
   const n = WAYPOINTS.length
   const scrub = clamp01((k[2] - 0.08) / 0.92) * (n - 0.001)
   const base = place(autoU + loopDelta(autoU, scrub, n) * manual(k[2]))
   return {
-    cx: base.cx - k[1] * PAN_SPAN,
-    cy: base.cy + k[0] * PAN_SPAN,
-    lz: Math.min(ZOOM_MAX, base.lz + k[3] * ZOOM_MAX),
+    cx: coaster ? base.cx : base.cx - k[1] * PAN_SPAN,
+    cy: coaster ? base.cy : base.cy + k[0] * PAN_SPAN,
+    lz: Math.min(ZOOM_MAX, base.lz + (coaster ? 0 : k[3] * ZOOM_MAX)),
     rot: base.rot + spin,
     A: base.A + k[5] * 1.4,
     B: base.B - k[6] * 0.4,
@@ -163,9 +186,11 @@ export const fresh = () => ({
   voyage: 0, voyageSeeded: false, nav: null, navMid: null, drift: 0, drive: 0, beat: 0, beatTo: 0, lurch: 0, lurchTo: 0, scratch: null, punch: 0, punchFrom: 0, punchAge: 9,
   bFast: 0, bSlow: 0, eFast: 0, eSlow: 0, localWas: 0, thump: 0,
   pearl: 0, focus: 0, spread: 0, grit: 0, tone: 0.5,
+  throttle: 0, surge: 0, dive: 0, diveTo: 0, panX: 0, panY: 0, steerX: 0, steerY: 0, climb: 0,
 })
 
 export const step = (S, f, dt) => {
+  const coaster = num(f.coaster, 0) > 0.5
   S.time += dt
 
   // PRESENCE: everything that adds light is multiplied by this, so silence relaxes to the resting look
@@ -216,6 +241,7 @@ export const step = (S, f, dt) => {
     S.punchFrom = S.punch
     S.punchAge = 0
     S.kickRefr = 0.18
+    if (coaster && S.climb === 0) S.diveTo += KICK_DIVE * S.kickAmp * S.throttle
   }
   S.kickAge = Math.min(1, S.kickAge + dt / KICK_SECS)
   // BEAT: a colour phase that steps forward on every kick (eased 0.12 s) and never goes back
@@ -243,6 +269,7 @@ export const step = (S, f, dt) => {
     S.dropHold = 0.6
     S.dropRefr = DROP_REFRACTORY
     S.jumpTo += 1
+    if (coaster && S.climb === 0) S.surge += SURGE * S.throttle
   }
   S.drop = toward(S.drop, S.dropHold > 0 ? 1 : 0, dt, S.dropHold > 0 ? 0.05 : 1.2)
   S.jump = toward(S.jump, S.jumpTo, dt, 0.5)
@@ -294,13 +321,38 @@ export const step = (S, f, dt) => {
   // quickens with the music; it never reverses and never stops. Never wrapped: the glide would unwind it.
   S.drive = env(S.drive, clamp01(0.5 + 0.5 * num(f.energyZScore, 0) + 1.5 * eLocal) * live, dt, 0.08, 0.35)
   S.drift += dt * SPIN.base * (SPIN.lo * clock + (SPIN.hi - SPIN.lo) * S.drive)
-  const target = nav(S.knobs.map(v => v ?? 0), S.voyage)
+  const target = nav(S.knobs.map(v => v ?? 0), S.voyage, 0, coaster)
   S.navMid ??= { ...target }
   S.nav ??= { ...target }
   for (const key in target) {
     S.navMid[key] = toward(S.navMid[key], target[key], dt, NAV_TAU)
     S.nav[key] = toward(S.nav[key], S.navMid[key], dt, NAV_TAU)
   }
+  // COASTER: throttle and steer are rates on top of the glided voyage, eased 0.2 s so a hand reads at once
+  if (coaster) {
+    S.throttle = toward(S.throttle, clamp01(num(f.knob_4, 0)), dt, 0.2)
+    S.steerX = toward(S.steerX, steer(num(f.knob_1, 0)), dt, 0.2)
+    S.steerY = toward(S.steerY, steer(num(f.knob_2, 0)), dt, 0.2)
+    S.surge = toward(S.surge, 0, dt, 1.5)
+    if (S.climb === 0) {
+      S.diveTo += THROTTLE_RATE * (S.throttle + S.surge) * dt
+      S.panX = Math.max(-STEER_LIMIT, Math.min(STEER_LIMIT, S.panX + S.steerX * STEER_RATE * dt))
+      S.panY = Math.max(-STEER_LIMIT, Math.min(STEER_LIMIT, S.panY + S.steerY * STEER_RATE * dt))
+      if (S.nav.lz + S.dive >= LZ_CAP) {
+        S.climb = CLIMB_SECS
+        S.diveTo = 0
+        S.surge = 0
+      }
+    } else {
+      // CLIMB: back out of the dive and onto the track's centre while the voyage carries on to new terrain
+      S.climb = Math.max(0, S.climb - dt)
+      S.voyage = (S.voyage + CLIMB_VOYAGE * dt / CLIMB_SECS) % WAYPOINTS.length
+      S.panX = toward(S.panX, 0, dt, CLIMB_SECS / 4)
+      S.panY = toward(S.panY, 0, dt, CLIMB_SECS / 4)
+    }
+    S.dive = toward(S.dive, S.diveTo, dt, S.climb > 0 ? CLIMB_SECS / 4 : 0.15)
+  }
+
   const turn = clamp01(num(f.knob_5, 0)) * SCRATCH
   S.scratch = S.scratch === null ? turn : toward(S.scratch, turn, dt, SCRATCH_TAU)
 
@@ -311,7 +363,9 @@ export const step = (S, f, dt) => {
     cs_breath: S.breath, cs_pearl: S.pearl, cs_focus: S.focus, cs_spread: S.spread, cs_grit: S.grit, cs_tone: S.tone,
     // The spin goes on after the glide: it is already smooth (an integral of an eased rate), and through
     // the 1.8 s glide its beat-scale quickening landed a beat late (rResid went negative)
-    cs_cx: S.nav.cx, cs_cy: S.nav.cy, cs_lz: S.nav.lz, cs_rot: S.nav.rot + S.drift + S.lurch + S.scratch,
+    cs_cx: S.nav.cx - S.panY, cs_cy: S.nav.cy + S.panX, cs_lz: S.nav.lz + S.dive,
+    cs_rot: S.nav.rot + S.drift + S.lurch + S.scratch,
+    cs_throttle: S.throttle, cs_dive: S.dive, cs_climb: S.climb,
     cs_navA: S.nav.A, cs_navB: S.nav.B, cs_curl: S.nav.curl,
     cs_voyage: S.voyage, cs_drift: S.drift, cs_drive: S.drive, cs_beat: S.beat, cs_punch: S.punch, cs_lurch: S.lurch, cs_scratch: S.scratch, cs_thump: S.thump,
   }
