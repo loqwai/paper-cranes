@@ -341,6 +341,7 @@ void mainImage(out vec4 P, vec2 V) {
     rim *= smoothstep(0.0, 0.15, abs(C.y));
     // Rim hue walks its own way round the palette (a quarter turn off the lace); a build warms it to red
     float rim_t = mix(0.5 - 0.5 * cos(phi + 1.6), 0.0, RIM_WARMTH * 0.6);
+    rim_t = mix(rim_t, 0.66, clamp(0.4 * TREB_ENV * REACT, 0.0, 0.5));   // vibej iter 8: hi-hats cool the rim toward teal
     vec3 rim_col = lchGamut(0.66, 0.16 * CHROMA_GAIN, paletteHue(rim_t));
     col += rim_col * rim * RIM_INTENSITY * 0.45;
 
