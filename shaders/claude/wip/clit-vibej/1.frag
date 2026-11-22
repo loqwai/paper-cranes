@@ -318,8 +318,9 @@ void mainImage(out vec4 P, vec2 V) {
     vec3 dust_col = mix(vec3(0.10, 0.03, 0.22), lchGamut(0.32, 0.11, paletteHue(pal_t)), 0.5);
     // vibej iter 2: bass thump leans the nebula toward deep ember red (same lightness: hue, not light)
     dust_col = mix(dust_col, lchGamut(0.30, 0.12, 0.506), clamp(0.45 * BASS_ENV * REACT, 0.0, 0.6));
-    float s1 = stars(sky * 38.0 / (1.0 + lz * 0.25) + cam * 22.0, 0.10 + 0.25 * K_NEBULA);
-    float s2 = stars(sky * 17.0 / (1.0 + lz * 0.45) + cam * 48.0 + 31.0, 0.05 + 0.15 * K_NEBULA);
+    // vibej iter 12: hi-hats bring the voids alive: more stars come out with treble (TREB_ENV), brighter
+    float s1 = stars(sky * 38.0 / (1.0 + lz * 0.25) + cam * 22.0, 0.10 + 0.25 * K_NEBULA + 0.15 * TREB_ENV);
+    float s2 = stars(sky * 17.0 / (1.0 + lz * 0.45) + cam * 48.0 + 31.0, 0.05 + 0.15 * K_NEBULA + 0.10 * TREB_ENV);
     float star = (s1 * 0.6 + s2) * (0.4 + 0.9 * TWINKLE);
     vec3 bg = vec3(0.04, 0.015, 0.08) + dust_col * dust * neb * 0.45 * (0.9 + 0.2 * BREATH + 0.15 * GRIT);
 
@@ -379,7 +380,7 @@ void mainImage(out vec4 P, vec2 V) {
     float lit = max(max(lace, rim * 0.5), focal);
     col *= mix(0.15 + 0.35 * dust * neb, 1.0, lit);
     // Stars after the darkness pass, only in the dark gaps, dimmed in the drop spotlight
-    col += vec3(0.85, 0.8, 1.0) * star * (1.0 - lit) * neb * mix(1.0, 0.3, drop) * max(vign, 0.0);
+    col += vec3(0.85, 0.8, 1.0) * star * (1.0 - lit) * max(neb, 0.35 + 0.5 * TREB_ENV) * mix(1.0, 0.3, drop) * max(vign, 0.0);
 
     // Tone map on luminance, not per channel: per-channel Reinhard pulled every bright hue toward grey
     // (the dusty look). Same curve for brightness; hue and saturation survive. Anything that still
