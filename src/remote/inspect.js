@@ -350,7 +350,8 @@ export const createInspector = (client, token) => {
     try { id = JSON.parse(data?.payload ?? 'null')?.id ?? null } catch {}
     if (!verdict.ok) return reply(id, { ok: false, error: verdict.error, skewMs: verdict.skewMs, now: verdict.skewMs !== undefined ? Date.now() : undefined })
 
-    const { cmd, args } = verdict.request
+    const { cmd, args, to } = verdict.request
+    if (to && to !== displayId) return // addressed to another display: stay silent
     const fn = Object.hasOwn(commands, cmd) ? commands[cmd] : null
     if (!fn) return reply(id, { ok: false, error: `unknown cmd ${cmd}` })
     try {

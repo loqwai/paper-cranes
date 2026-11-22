@@ -73,8 +73,26 @@ R token / R token rotate          # show / rotate the token
 `audio*`, `fft_size`, `image`, `vj` or a different path, needs a real navigation. The reply then
 says `reloading` and gives the reason.
 
-With several displays connected, the first reply wins. Use `--display <id>` (shown in `status`
-replies and `inspect-hello`) to pick one.
+`R displays` lists the connected display ids. With one display connected, every command targets
+it. With several, every command except `watch midi` refuses until you pass `--display <id>`. A
+targeted request carries `to: <id>` inside the signed payload, and pages ignore requests addressed
+to another display (pages older than this change execute every request; only the reply is
+filtered).
+
+`reload` and `navigate --reload` refuse unless the page's frame counter is frozen (two `status`
+samples a second apart, tab visible). Pass `--force` only when Aaron asked for a reload.
+
+## The guarded VJ loop
+
+`scripts/remote/vj-tick.js` wraps this CLI for agents that should follow rules instead of
+improvising (the `remote-vj` skill). One tick observes the page, saves a screenshot, and prints a
+JSON verdict from a fixed menu (`none`, `nudge`, `gain`, `release_time`, `swap`, `reload`,
+`tell_aaron`) with the exact command to run. `vj-tick.js act …` applies a change through the
+guardrails in `scripts/remote/vj-rules.js`: one change a minute, reload only when frozen, no geometry
+knobs, knob steps of at most 0.1, no back-and-forth within 5 minutes, nothing during a drop, and
+swaps only to the known-good list in `scripts/remote/vj-config.js`. State and the before/after
+change log live per display under `.claude/vj/<display>/`. A chat line can be passed with
+`vj-tick.js request "<words>"`; it maps onto the same menu.
 
 ## Reload caveats
 

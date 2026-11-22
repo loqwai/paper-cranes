@@ -13,17 +13,19 @@
 //   code <file.frag>                             hot swap raw GLSL from a local file
 //   controller [name ...]                        replace the controller chain (none = clear)
 //   navigate '<url or ?query>' [--reload]        in place when only shader/controller/knobs change
-//   reload                                       full page reload (loses fullscreen, see docs)
+//   reload [--force]                             full page reload; refused unless the frame counter is frozen
+//   displays                                     list connected display ids
 //   eval '<js expression or fn>'                 dev server only, signed
 //   watch features [1s] [--keys ...]             stream samples (one JSON line each)
 //   watch midi                                   stream MIDI events from the display
 //   token [show|rotate]
 //
 // PORT: --port, else $CRANES_PORT, else $PORT, else 6969. The live show server is usually 6977.
+// --display <id>: target one display. Default: the only one connected; refused if several are.
 
 import { writeFileSync, readFileSync } from 'node:fs'
-import { randomUUID } from 'node:crypto'
-import { signPayload } from '../../src/remote/inspectAuth.js'
+import { createRemote, resolveDisplay } from './client.js'
+import { isFrozen } from './vj-rules.js'
 import { readInspectToken, writeInspectToken, TOKEN_FILE } from './token.js'
 
 const argv = process.argv.slice(2)
@@ -31,53 +33,25 @@ const flags = {}
 const pos = []
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i]
-  if (a === '--all' || a === '--reload' || a === '--json') flags[a.slice(2)] = true
+  if (a === '--all' || a === '--reload' || a === '--json' || a === '--force') flags[a.slice(2)] = true
   else if (a.startsWith('--')) flags[a.slice(2)] = argv[++i]
   else pos.push(a)
 }
 const port = flags.port ?? process.env.CRANES_PORT ?? process.env.PORT ?? '6969'
-const wsUrl = flags.url ?? `ws://127.0.0.1:${port}/ws`
 const timeoutMs = Number(flags.timeout ?? 10_000)
 const die = (msg) => { console.error(msg); process.exit(1) }
 
-const connect = () => new Promise((resolve, reject) => {
-  const ws = new WebSocket(wsUrl)
-  ws.addEventListener('open', () => resolve(ws), { once: true })
-  ws.addEventListener('error', () => reject(new Error(`cannot connect to ${wsUrl}`)), { once: true })
-})
-
-const onMessage = (ws, fn) => ws.addEventListener('message', (ev) => {
-  let m
-  try { m = JSON.parse(ev.data) } catch { return }
-  fn(m)
-})
-
-let clockOffset = 0 // display clock minus ours, learned from a `stale` reply
-
-// Send one signed request and resolve with the first reply (or the one from --display).
-const request = async (ws, cmd, args = {}, { retried = false } = {}) => {
-  const token = readInspectToken()
-  const id = randomUUID()
-  const payload = JSON.stringify({ id, ts: Date.now() + clockOffset, cmd, args })
-  const sig = await signPayload(token, payload)
-  const reply = await new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`no reply to ${cmd} within ${timeoutMs} ms (is a display connected on port ${port}?)`)), timeoutMs)
-    onMessage(ws, (m) => {
-      if (m.type !== 'inspect-reply' || m.data?.id !== id) return
-      if (flags.display && m.data.display !== flags.display) return
-      clearTimeout(timer)
-      resolve(m.data)
-    })
-    ws.send(JSON.stringify({ type: 'inspect', data: { payload, sig } }))
-  })
-  if (!reply.ok && reply.error === 'stale' && !retried && reply.now) {
-    clockOffset = reply.now - Date.now()
-    console.error(`[cranes-remote] clock skew ${clockOffset} ms vs display; retrying`)
-    return request(ws, cmd, args, { retried: true })
-  }
-  if (!reply.ok) throw new Error(`display ${reply.display}: ${reply.error}`)
-  return reply
+// Reload only a frozen page: a reload drops fullscreen and can suspend audio on the show phone.
+const guardReload = async () => {
+  if (flags.force) return
+  const a = (await request(ws, 'status')).result
+  await new Promise((r) => setTimeout(r, 1000))
+  const b = (await request(ws, 'status')).result
+  if (!isFrozen(a, b)) die(`[cranes-remote] refusing to reload: frameCount ${a.frameCount} -> ${b.frameCount}, the page is not frozen. Add --force only if Aaron asked for a reload.`)
 }
+
+let ws // the createRemote() handle; request(ws, ...) keeps the old call shape
+const request = (_ws, cmd, args = {}) => ws.request(cmd, args)
 
 const print = (v) => console.log(JSON.stringify(v, null, flags.json ? 0 : 2))
 const parseValue = (v) => (v === 'null' ? null : Number.isNaN(Number(v)) ? v : Number(v))
@@ -129,8 +103,10 @@ const run = async (ws, cmd, rest) => {
       return print((await request(ws, 'controller', { names: rest })).result)
     case 'navigate':
       if (!rest[0]) die('usage: navigate <url or ?query>')
+      if (flags.reload) await guardReload()
       return print((await request(ws, 'navigate', { url: rest[0], reload: flags.reload })).result)
     case 'reload':
+      await guardReload()
       return print((await request(ws, 'reload')).result)
     case 'eval':
       if (!rest[0]) die("usage: eval '<js>'")
@@ -145,7 +121,7 @@ const run = async (ws, cmd, rest) => {
 const watch = async (ws, [what, every]) => {
   if (what === 'midi') {
     console.error('[cranes-remote] streaming MIDI (ctrl-c to stop)')
-    onMessage(ws, (m) => {
+    ws.onMessage((m) => {
       if (m.type === 'midi-event') console.log(JSON.stringify(m.data))
       if (m.type === 'inspect-hello') console.error(`[cranes-remote] display ${m.data.display} connected`)
     })
@@ -172,7 +148,14 @@ const main = async () => {
     if (rest[0] === 'rotate') return console.log(`${TOKEN_FILE}: rotated (reload-free; the page re-fetches on its next HMR swap or reload)`, writeInspectToken() && '')
     return console.log(`${TOKEN_FILE}\n${readInspectToken()}`)
   }
-  const ws = await connect()
+  ws = await createRemote({ port, url: flags.url, timeoutMs, onSkew: (ms) => console.error(`[cranes-remote] clock skew ${ms} ms vs display; retrying`) })
+  if (cmd === 'displays') { print({ displays: await ws.listDisplays() }); return ws.close() }
+  // Pick one display (refuse to guess between several) for everything except streaming MIDI.
+  if (!(cmd === 'watch' && rest[0] === 'midi')) {
+    const pick = resolveDisplay(flags.display, await ws.listDisplays())
+    if (pick.error) die(`[cranes-remote] ${pick.error}`)
+    ws.display = pick.display
+  }
   await run(ws, cmd, rest)
   ws.close()
 }

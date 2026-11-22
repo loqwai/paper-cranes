@@ -498,6 +498,12 @@ npm install
 npm run dev  # Serves on localhost:6969
 ```
 
+**Worktrees may symlink `node_modules` to another checkout** (often the primary one), and other
+worktrees and their running dev servers may share it. Never run `npm ci` or `npm install` in a
+worktree whose `node_modules` is a symlink: npm empties the symlink's target for every checkout that
+shares it (2026-11-22). Check with `test -L node_modules`. If it is a symlink, replace it with a
+real directory first: `rm node_modules && npm ci` (`rm` without `-r` removes only the link).
+
 ### Creating Visualizations
 1. Create new `.frag` file in `shaders/`
 2. Access via `?shader=filename` (without .frag)
