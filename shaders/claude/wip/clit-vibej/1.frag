@@ -108,7 +108,9 @@ uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 // Slow colour only: the 8 s centroid mean leans the palette warm on bright music, cool on dark
 #define TONE_LEAN ((HAS_CTL ? cs_tone : 0.5) - 0.5)
 // Loudness (1.5 s) lifts chroma a little: loud is more vivid, quiet more velvet
-#define CHROMA_GAIN (0.85 + 0.3 * BREATH)
+// vibej iter 1: mids (cs_mids, z-score envelope) lift chroma too: vocal/lead passages go more vivid, colour only
+#define MIDS_ENV (HAS_CTL ? clamp(cs_mids, 0.0, 1.0) : clamp(midsZScore, 0.0, 1.0))
+#define CHROMA_GAIN (0.85 + 0.3 * BREATH + 0.25 * MIDS_ENV * REACT)
 // Trails do not grow with loudness: more smear on loud passages made the loud frames move LESS
 #define FEEDBACK_MIX clamp(0.22 + K_TRAILS * 0.55, 0.0, 0.85)
 #define VIGN_OPEN 0.03
