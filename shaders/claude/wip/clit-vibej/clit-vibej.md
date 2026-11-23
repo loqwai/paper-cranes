@@ -116,19 +116,27 @@ The lace sparkled (show journal: "Tube walls speckle with live audio"). Measured
 - **Cause: aliasing of a chaotic function.** In the dense lace the orbit is chaotic, so one pixel step in C
   moves the trap logs across the whole lace band. One sample per pixel is noise, and any motion (the spin,
   the voyage, a kick's lurch, the tube's travel) reshuffles it every frame. Audio makes it worse only by
-  speeding the motion up. 16 samples per pixel cut the flicker 55%; rendering at 1/4 resolution did nothing.
+  speeding the motion up. 16 samples per pixel cut the flicker 30% to 65% depending on the shader;
+  rendering at 1/4 resolution did nothing.
 - **Ruled out:** float precision of the clocks (controller state two hours in: no worse), the coil, the
   undulate, bass on the lace threshold, the treble braid light, each within 1% when removed.
-- **Fix.** `D = dV/dC` is carried through the iteration (the map is holomorphic: `d(V log V) = (log V + 1)dV`,
-  then squared, minus `C·b`, rotated). Where a trap is lowered, `|D|` is kept, and
-  `|D|·(pixel size in C) / max(trap, e^(lace_hi−1))` is that pixel's footprint in log-trap units. Over 0.3 to
-  2 it is unresolved (`unres`). There, at the end of the shader, the output is averaged with last frame's
-  (`LACE_AA_HOLD` 0.9, about ten frames): the motion that reshuffled the noise now supersamples it. The
-  averaged hue gets back the chroma one sample has, so the dense lace becomes a vivid wash, not a grey one.
-  The floor under the band keeps thread cores (log trap → −∞) out, which drew ghost lines in a first try.
-- **Removed:** iters 10, 11 and 13 `fwidth` gates. They only dimmed the speckle, and with LACE AA on, removing
-  them changed the score by under 1%.
-- **Numbers** (25 s live-music trace, 408 × 816): flipMean 1.frag 9.69 → 1.92, 2.frag 16.81 → 3.69;
-  sparkleFrac 13.0% → 1.2% and 23.5% → 3.4%; saturation 0.66 → 0.68 and 0.65 → 0.69; grey 3.3% → 1.9% and
-  3.0% → 1.2%; mean luma −1% and −9% (the tube's walls flow out of the dark core, so last frame is darker).
-- **Cost:** GPU time +18% (2.frag, RTX 4090 timer query at 2560 × 1305: 0.158 → 0.187 ms).
+- **First fix, rejected in review:** carry `dV/dC` through the loop, call a pixel unresolved when
+  `|dV/dC| * pixel / trap` is large, and blend 90% of last frame there. The footprint runs to infinity at
+  every clean thread's core (the trap passes through 0), so it drew dark seams down clean threads and red
+  ghost lines behind moving ones, and it lowered flicker by blurring real motion: `motion` 16.5 to 9.1
+  (reference 13.6), distance to the `--ss 4` reference 6.87 to 11.20, worse than no fix.
+- **Fix: spatial supersampling.** The orbit loop is now `orbit()`, and the lace fields one orbit gives
+  (coverage, braid, rainbow lightness, palette position, colour) are `laceSample()`. `unres` is how much
+  those change across the pixel's 2x2 quad (`fwidth`): 0 inside a clean thread, high in the chaotic lace.
+  There the pixel runs `orbit()` `LACE_AA_SAMPLES` (2) more times on a ring inside its own footprint
+  (`C + o.x * dFdx(C) + o.y * dFdy(C)`) and averages coverage, lightness and palette position, with the
+  colour weighted by coverage so dark samples do not grey it. No frame history: nothing trails or ghosts.
+  The rim edge is taken from the averaged `z`.
+- **Removed:** iters 10, 11 and 13 `fwidth` gates. They dimmed the noisy lace instead of resolving it.
+- **Numbers** (synth trace, 90 frames, 408 x 816; `ref` = unfixed shader at `--ss 4`):
+  1.frag flipMean 9.05 / 6.86 / 4.05 (before / fix / ref), motion 14.05 / 11.93 / 9.36, distance to ref
+  8.12 / 6.33. 2.frag flipMean 10.57 / 9.15 / 7.39, motion 16.50 / 15.19 / 13.58, distance 6.87 / 5.50.
+  Live split-screen recording (same frames, sides swapped halfway): 2.frag 9.0 to 7.3, 1.frag 7.7 to 5.7.
+- **Cost:** SwiftShader (CPU, a stand-in for a phone), median of 3 runs: 1.frag 112 to 198 ms per
+  frame (+76%), 2.frag 106 to 190 (+79%). Nothing measured on a real phone yet. `LACE_AA_SAMPLES` is the dial: 1 is cheaper and
+  weaker, 3 is better and dearer; see the table in docs/sparkle-score.md.
