@@ -156,7 +156,10 @@ vec3 srgb2lin(vec3 c) {
 }
 vec3 lin2srgb(vec3 c) {
     c = clamp(c, 0.0, 1.0);
-    return mix(c * 12.92, 1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, c));
+    // 1.055 c^(1/2.4) - 0.055 as three square roots (within 0.4/255 of the pow everywhere): this runs in
+    // every gamut fit, and three pows per fit were a measurable share of the frame on a phone-class GPU.
+    vec3 s1 = sqrt(c), s2 = sqrt(s1), s3 = sqrt(s2);
+    return mix(c * 12.92, 0.585122381 * s1 + 0.783140355 * s2 - 0.368262736 * s3, step(0.0031308, c));
 }
 
 float hwrap(float d) { return d - floor(d + 0.5); }
@@ -165,12 +168,11 @@ vec3 lchT(float L, float C, float h) { return vec3(L, C * cos(TAU * h), C * sin(
 // GAMUT: pull toward the same-L grey just far enough to fit, then once more after shrinking
 // chroma in OKLab, so L and hue stay put. Continuous in the input: no clipped flats, no bands.
 float gamutT(vec3 c, float g) {
-    float t = 1.0;
-    for (int i = 0; i < 3; i++) {
-        if (c[i] > 1.0) t = min(t, (1.0 - g) / (c[i] - g));
-        if (c[i] < 0.0) t = min(t, g / (g - c[i]));
-    }
-    return max(t, 0.0);
+    // per channel: past 1 -> (1-g)/(c-g), below 0 -> g/(g-c), else 1; the tightest wins. Vector selects, not
+    // the kit's loop over c[i]: same result, and on SwiftShader the loop cost a clit shader 10..20% of its frame.
+    vec3 t = mix(vec3(1.0), (1.0 - g) / max(c - g, vec3(1e-6)), greaterThan(c, vec3(1.0)));
+    t = min(t, mix(vec3(1.0), g / max(g - c, vec3(1e-6)), lessThan(c, vec3(0.0))));
+    return max(min(min(t.x, t.y), t.z), 0.0);
 }
 vec3 okFit(vec3 lab) {
     lab.x = clamp(lab.x, 0.0, 0.999);
@@ -257,14 +259,15 @@ vec3 desatTowardScheme(vec3 rgb, float baseH, float amt) {
 // Knobs and audio (HUE_TURN, cs_hue, cs_jump, cs_shift, TONE_LEAN) move the position ALONG the
 // palette (pal_t), never the hues themselves: no dial can take the series off-theme.
 // Lightness band: the series is velvet on black, darker than the kit's 0.45..0.85 band, so it keeps
-// its own (lace L 0.13..0.70, the true OKLab lightness the old palette displayed). Chroma is
+// its own (lace L 0.16..0.70, the true OKLab lightness the old palette displayed). Chroma is
 // requested past the kit's 0.13 and okFit maps it to the sRGB edge at constant L and hue: the series
 // rule is never grey, and the edge is where every lace pixel was before.
 // ============================================================================
 #define THEME_H (0.095 + 0.02 * (2.0 * fract(seed * 7.31 + 0.13) - 1.0))
 #define KEY_AMBER  0.04            // burnt amber, analogous to the ember (kept short of yellow: the kick turns it +45 deg)
 #define KEY_TEAL   (5.0 / 12.0)    // the kit's split complement
-#define KEY_INDIGO 0.64            // the velvet (lands 257..272 deg: the tone map and the trails lean it ~20 deg pinkward on screen)
+#define KEY_INDIGO 0.64            // the velvet (lands 257..272 deg: the tone map and the trails lean it ~20 deg pinkward on screen;
+                                   // at +0.68 the sparkle gate failed: flipMean +0.3)
 
 // The theme ramp in OKLab at lightness L and chroma C. t: 0 ember, 1/3 amber, 2/3 teal, 1 indigo.
 // Callers ping-pong t, so it never wraps indigo -> ember across magenta. ramp4 glides between keys in
@@ -276,12 +279,26 @@ float themeHold(float t) {
     float i = min(floor(x), 2.0);
     return (i + smoothstep(0.25, 0.75, x - i)) / 3.0;
 }
-vec3 themeLab(float t, float L, float C) {
-    float h = THEME_H;
-    return ramp4(lchT(L, C, h), lchT(L, 0.85 * C, h + KEY_AMBER),
-                 lchT(L, 0.75 * C, h + KEY_TEAL), lchT(L, C, h + KEY_INDIGO), themeHold(t));
+// The four keys as OKLab directions (a, b per unit of requested chroma), set once per pixel by themeInit()
+// at the top of mainImage: one sincos instead of eight per palette lookup (a lookup runs per lace sample,
+// dust, braid and rim). All keys share L, so ramp4 on the full OKLab keys is L plus C times this ramp.
+vec2 gKey0, gKey1, gKey2, gKey3;
+vec2 turnDir(vec2 d, float turns) { float c = cos(TAU * turns), s = sin(TAU * turns); return vec2(c * d.x - s * d.y, s * d.x + c * d.y); }
+void themeInit() {
+    gKey0 = vec2(cos(TAU * THEME_H), sin(TAU * THEME_H));
+    gKey1 = 0.85 * turnDir(gKey0, KEY_AMBER);
+    gKey2 = 0.75 * turnDir(gKey0, KEY_TEAL);
+    gKey3 = turnDir(gKey0, KEY_INDIGO);
 }
+vec2 themeDir(float t) {
+    float x = themeHold(t) * 3.0;
+    return mix(mix(mix(gKey0, gKey1, smoothstep(0.0, 1.0, x)), gKey2, smoothstep(1.0, 2.0, x)), gKey3, smoothstep(2.0, 3.0, x));
+}
+vec3 themeLab(float t, float L, float C) { return vec3(L, C * themeDir(t)); }
 vec3 themeCol(float t, float L, float C) { return okOut(themeLab(t, L, C)); }
+// The same colour with its brightest channel at m: a uniform scale keeps hue and saturation in linear and
+// gamma-encoded RGB alike, so a second shade of an already-fitted colour costs no second gamut fit.
+vec3 shadeTo(vec3 c, float m) { return c * min(m / max(max(c.r, c.g), max(c.b, 1e-3)), 12.0); }
 
 // OKLab hue angle (radians) of an a,b pair, 0 for a grey: atan(0, 0) is NaN on some mobile GPUs, and a
 // NaN hue in the beat rotation or the magenta guard would poison every black pixel.
@@ -289,11 +306,12 @@ float okHue(vec2 ab) { return dot(ab, ab) > 1e-24 ? atan(ab.y, ab.x) : 0.0; }
 
 // Strict chromadepth for the glasses: red (29 deg, near) to violet (293 deg, far), on the kit's
 // gamut fit. Physics, not theme: the seed does not turn it.
-vec3 chromadepth(float t) {
+vec3 chromadepthLab(float t) {
     t = clamp(t, 0.0, 1.0);
     float boost = 1.0 + 0.2 * sin(t * TAU);
-    return oklch2rgb(0.60 - 0.36 * t, 0.26 * boost * (1.0 - t * 0.3), 0.08 + t * 0.735);
+    return lchT(0.60 - 0.36 * t, 0.26 * boost * (1.0 - t * 0.3), 0.08 + t * 0.735);
 }
+vec3 chromadepth(float t) { return okOut(chromadepthLab(t)); }
 
 float hash21(vec2 p) {
     p = fract(p * vec2(123.34, 456.21));
@@ -327,7 +345,7 @@ mat2 rot2(float a) { float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 // Unit direction, or +x where the vector is 0: atan(0, 0) is NaN on some mobile GPUs
 vec2 unitDir(vec2 v) { return dot(v, v) > 1e-24 ? normalize(v) : vec2(1.0, 0.0); }
 
-struct LaceSample { float lace, fine, z, luma, pal_t; vec3 col; };
+struct LaceSample { float lace, fine, z, luma, pal_t; vec3 lab; };
 
 // The lace one orbit sample paints: coverage (lace, and the braid where both traps cross), the rainbow's
 // lightness, the palette position and the lace colour. A function so LACE AA can average several.
@@ -364,10 +382,15 @@ LaceSample laceSample(float x, float y, vec2 Z, float lace_lo, float lace_hi) {
     // at full chroma. The raw rainbow went grey wherever z sat near 0 or 1 (the dark fan petals and the
     // dusty pale star); here every lace pixel carries a hue. Darker lace gets more chroma (deep wine,
     // deep teal), the pale star stays pale but tinted. Gamut-mapped, never clipped.
-    float lace_L = 0.13 + 0.57 * luma;
+    // Lightness floor 0.16. At 0.13 the fan petals went near-black, and the braid's cream over them read khaki
+    // (review of #215; 11% of lit pixels grey on the opening view). 0.20 fixed them too but lit the fine lace's
+    // shimmer: sparkle gate flipMean +0.3, refMAE above main's.
+    float lace_L = 0.16 + 0.54 * luma;
     float lace_C = (0.20 + 0.08 * (1.0 - luma)) * (1.0 - 0.1 * pale) * CHROMA_GAIN;
-    vec3 vivid = themeCol(pal_t, lace_L, lace_C);
-    r.col = mix(vivid, chromadepth(mix(0.15, 0.7, 1.0 - luma)), K_DEPTH);
+    // Kept in OKLab (unfitted) until the pixel needs it. GLASSES (K_DEPTH) mixes toward chromadepth only when
+    // it is up: a uniform branch, free when it is down.
+    r.lab = themeLab(pal_t, lace_L, lace_C);
+    if (K_DEPTH > 0.0) r.lab = mix(r.lab, chromadepthLab(mix(0.15, 0.7, 1.0 - luma)), K_DEPTH);
     return r;
 }
 
@@ -400,6 +423,7 @@ void orbit(vec2 C, float a_pow, float b_off, mat2 curl, float wph, out float x, 
 }
 
 void mainImage(out vec4 P, vec2 V) {
+    themeInit();
     float drop = DROP_INTENSITY;
     float build = BUILD_INTENSITY;
     float kick = KICK;
@@ -449,11 +473,11 @@ void mainImage(out vec4 P, vec2 V) {
     float unres = smoothstep(0.05, 0.25, fwidth(ls.lace) + fwidth(ls.fine) + ls.lace * fwidth(ls.luma));
     vec2 dCx = dFdx(C), dCy = dFdy(C);
     float lace = ls.lace, lace_fine = ls.fine, z = ls.z, luma = ls.luma, pal_t = ls.pal_t;
-    vec3 lace_col = ls.col;
+    vec3 lace_col = okOut(ls.lab);
     vec2 zdir = unitDir(Z);
     if (unres > 0.0) {
         float s_lace = ls.lace, s_fine = ls.fine, s_z = ls.z, s_luma = ls.luma, s_pal = ls.pal_t;
-        vec3 s_col = ls.col * (ls.lace + ls.fine);
+        vec3 s_col = lace_col * (ls.lace + ls.fine);
         vec2 s_dir = zdir;
         for (int s = 0; s < LACE_AA_SAMPLES; s++) {
             float ang = 0.7 + TAU * float(s) / float(LACE_AA_SAMPLES);
@@ -463,7 +487,7 @@ void mainImage(out vec4 P, vec2 V) {
             orbit(C + o.x * dCx + o.y * dCy, a_pow, b_off, curl, wph, sx, sy, sZ, sft);
             LaceSample t = laceSample(sx, sy, sZ, lace_lo, lace_hi);
             s_lace += t.lace; s_fine += t.fine; s_z += t.z; s_luma += t.luma; s_pal += t.pal_t;
-            s_col += t.col * (t.lace + t.fine);
+            s_col += okOut(t.lab) * (t.lace + t.fine);
             s_dir += unitDir(sZ);
         }
         float inv = 1.0 / float(LACE_AA_SAMPLES + 1);
@@ -509,9 +533,11 @@ void mainImage(out vec4 P, vec2 V) {
     // vibej iter 14: rough, gritty sound (cs_grit, roughness 0.3 s / 1.5 s) gives the dust a fine shimmering
     // grain that drifts on the flow clock. Dim background texture only.
     dust *= 1.0 + GRIT * 0.9 * (vnoise(dustP * 7.0 + vec2(0.0, FLOW * 9.0)) - 0.35);
-    vec3 dust_col = mix(vec3(0.10, 0.03, 0.22), themeCol(pal_t, 0.18, 0.20), 0.5);
+    vec3 dust_col = vec3(0.10, 0.03, 0.22);
+    dust_col = mix(dust_col, shadeTo(lace_col, 0.13), 0.5);   // the lace's hue, dimmed (the theme at L 0.18)
     // vibej iter 2: bass thump leans the nebula toward deep ember red (same lightness: hue, not light)
-    dust_col = mix(dust_col, oklch2rgb(0.20, 0.11, THEME_H), clamp(0.45 * BASS_ENV * REACT, 0.0, 0.6));
+    // (L 0.20 C 0.11 ember sits a hair outside sRGB, under 0.004 linear: a clip, not a fit)
+    dust_col = mix(dust_col, lin2srgb(max(oklab2rgb(themeLab(0.0, 0.20, 0.11)), 0.0)), clamp(0.45 * BASS_ENV * REACT, 0.0, 0.6));
     // vibej iter 12: hi-hats bring the voids alive: more stars come out with treble (TREB_ENV), brighter
     float s1 = stars(sky * 38.0 / (1.0 + lz * 0.25) + cam * 22.0, 0.10 + 0.25 * K_NEBULA + 0.15 * TREB_ENV);
     float s2 = stars(sky * 17.0 / (1.0 + lz * 0.45) + cam * 48.0 + 31.0, 0.05 + 0.15 * K_NEBULA + 0.10 * TREB_ENV);
@@ -520,7 +546,13 @@ void mainImage(out vec4 P, vec2 V) {
 
     vec3 col = mix(bg, lace_col * LACE_GAIN, lace);
     // The braid (where both traps cross) is where the beat lands: a bass punch lights the filigree, locally
-    col += mix(lace_col, vec3(1.0, 0.88, 0.7), 0.55) * lace_fine * (0.3 + 0.9 * TREB_ENV * REACT + 0.6 * PUNCH * REACT);   // treble sparkles the braid
+    // Over the darkest lace (the fan petals) the braid's cream turns violet: cream over near-black read as
+    // khaki-grey (review of #215). A fixed tint, not the lace's own hue lifted: that shimmered in the fine braid
+    // (sparkle gate flipMean +0.7).
+    if (lace_fine > 0.0) {
+        vec3 braid = mix(lace_col, mix(vec3(1.0, 0.88, 0.7), vec3(0.56, 0.48, 1.0), smoothstep(0.35, 0.10, luma)), 0.55);
+        col += braid * lace_fine * (0.3 + 0.9 * TREB_ENV * REACT + 0.6 * PUNCH * REACT);   // treble sparkles the braid
+    }
     // PEARLS (vibej iter 7): sparse soft pinpoints on the braid. Cells live in fractal space, so they ride
     // the geometry and shimmer as the coil/undulate waves pass; each twinkles on its own phase. Spectral
     // crest (peaky, tonal sound: cs_pearl) brings more of them out. Local light only.
@@ -537,10 +569,9 @@ void mainImage(out vec4 P, vec2 V) {
     // Rim hue walks its own way round the palette (a quarter turn off the lace); a build warms it to red
     float rim_t = mix(0.5 - 0.5 * cos(phi + 1.6), 0.0, RIM_WARMTH * 0.6);
     rim_t = mix(rim_t, 0.66, clamp(0.4 * TREB_ENV * REACT, 0.0, 0.5));   // vibej iter 8: hi-hats cool the rim toward teal
-    vec3 rim_col = themeCol(rim_t, 0.50, 0.26 * CHROMA_GAIN);
-    col += rim_col * rim * RIM_INTENSITY * 0.45;
+    if (rim > 0.0) col += themeCol(rim_t, 0.50, 0.26 * CHROMA_GAIN) * rim * RIM_INTENSITY * 0.45;
 
-    col = mix(col, chromadepth(depth) * 1.2, focal * 0.3);
+    if (focal > 0.0) col = mix(col, chromadepth(depth) * 1.2, focal * 0.3);
 
     float spotlight = mix(mix(1.0, 0.2, drop), 1.0, focal);
     col *= spotlight;
@@ -592,30 +623,39 @@ void mainImage(out vec4 P, vec2 V) {
     float wave = sin(phi * 2.0 + lx * 0.7 - cs_beat * TAU);
     float ang = (PUNCH * 0.5 + kick * 0.2 + 0.35 * wave) * REACT * lit * beatOn;
     float cgain = 1.0 + 1.0 * PUNCH * REACT * lit * beatOn;
-    vec3 lab = rgb2oklab(col);
-    // vibej iter 3: the rotation never carries a pixel into the hot-magenta arc. In OKLab atan range that
-    // arc is (-1.25, 0.45) rad: between blue-violet (288°) and red (26°). Violet turned + and red turned -
-    // (the signed wave) used to land there; now they stop at the arc's edge.
-    float h0 = okHue(lab.yz);
-    float h1 = h0 + ang;
-    if (!(h0 > -1.25 && h0 < 0.45) && h1 > -1.25 && h1 < 0.45) h1 = h0 < -0.4 ? -1.25 : 0.45;
-    // THEME: nor into the green gap between burnt amber and teal (90..160 deg = 1.57..2.79 rad)
-    if (!(h0 > 1.57 && h0 < 2.79) && h1 > 1.57 && h1 < 2.79) h1 = h0 < 2.18 ? 1.57 : 2.79;
-    lab.yz = length(lab.yz) * cgain * vec2(cos(h1), sin(h1));
-    vec3 bc = max(oklab2rgb(lab), vec3(0.0));
-    bc *= L0 / max(dot(bc, vec3(0.2126, 0.7152, 0.0722)), 1e-4);
-    float bhi = max(max(bc.r, bc.g), bc.b);
-    if (bhi > 0.94) bc = mix(vec3(L0), bc, max(0.94 - L0, 0.0) / max(bhi - L0, 1e-4));
-    col = mix(col, bc, step(1e-3, L0));
+    if (ang != 0.0 || cgain != 1.0) {
+        // The turn works on the output values as they are (as on main). Decoding them first put the turn in the
+        // hue the eye sees, but cost the sparkle gate (flipMean +0.25). The guard below reads the decoded hue.
+        vec3 lab = rgb2oklab(col);
+        // vibej iter 3: the rotation never carries a pixel into the hot-magenta arc. In OKLab atan range that
+        // arc is (-1.25, 0.45) rad: between blue-violet (288 deg) and red (26 deg). Violet turned + and red
+        // turned - (the signed wave) used to land there; now they stop at the arc's edge.
+        float h0 = okHue(lab.yz);
+        float h1 = h0 + ang;
+        h1 -= TAU * floor((h1 + PI) / TAU);   // back into [-pi, pi): a turn past the seam is still a turn
+        if (!(h0 > -1.25 && h0 < 0.45) && h1 > -1.25 && h1 < 0.45) h1 = h0 < -0.4 ? -1.25 : 0.45;
+        // nor deeper into it: a pixel already inside may only turn back toward its own edge (review of #215)
+        if (h0 > -1.25 && h0 < 0.45) h1 = h0 < -0.4 ? min(h1, h0) : max(h1, h0);
+        // THEME: nor into the green gap between burnt amber and teal (90..160 deg = 1.57..2.79 rad)
+        if (!(h0 > 1.57 && h0 < 2.79) && h1 > 1.57 && h1 < 2.79) h1 = h0 < 2.18 ? 1.57 : 2.79;
+        lab.yz = length(lab.yz) * cgain * vec2(cos(h1), sin(h1));
+        vec3 bc = max(oklab2rgb(lab), vec3(0.0));
+        bc *= L0 / max(dot(bc, vec3(0.2126, 0.7152, 0.0722)), 1e-4);
+        float bhi = max(max(bc.r, bc.g), bc.b);
+        if (bhi > 0.94) bc = mix(vec3(L0), bc, max(0.94 - L0, 0.0) / max(bhi - L0, 1e-4));
+        col = mix(col, bc, step(1e-3, L0));
+    }
 
-    // NEVER HOT MAGENTA (vibej iter 5). Measured on the phone: the excess was purple-orchid lace at
-    // 300-330° (OKLab), mid lightness: red blended over violet by the trails once the filaments moved
-    // (iter 4), mids lifting chroma (iter 1), and the per-channel gamma above leaning violet pinkward.
-    // Whatever made it, hues inside the arc between blue-violet (288°) and red (26°) are squeezed toward
-    // the two edges, and only the arc's middle loses some chroma. L is kept: no light change.
-    // On the DISPLAYED colour: decoded to linear first, so the arc is the hue the eye sees (2026-11-22)
-    vec3 gl = rgb2oklab(srgb2lin(max(col, 0.0)));
-    float gh = okHue(gl.yz);
+    // NEVER HOT MAGENTA (vibej iter 5): whatever made it (trails blending red over violet, mids lifting chroma,
+    // the per-channel gamma leaning violet pinkward), hues inside the arc are squeezed toward its two edges,
+    // and only the arc's middle loses some chroma. L is kept. It reads the DISPLAYED hue: decoded to linear
+    // first (rgb2oklab takes linear sRGB). Only colours near the arc pay for that: every displayed colour whose
+    // OKLab hue is in 288..26 deg has min(r, b) above g - 0.032 (checked over the whole sRGB cube), so the
+    // cheap test below is safe with its 0.05 margin.
+    col = max(col, 0.0);
+    vec3 gl = vec3(0.0);
+    float gh = 1.0;
+    if (min(col.r, col.b) > col.g - 0.05) { gl = rgb2oklab(srgb2lin(col)); gh = okHue(gl.yz); }
     if (gh > -1.25 && gh < 0.45) {
         float gt = (gh + 1.25) / 1.70;
         float gq = gt < 0.5 ? 0.5 * pow(2.0 * gt, 3.0) : 1.0 - 0.5 * pow(2.0 - 2.0 * gt, 3.0);

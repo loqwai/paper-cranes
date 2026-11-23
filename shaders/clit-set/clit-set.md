@@ -99,21 +99,29 @@ verbatim, and the series palette is one theme on top of it.
   across magenta. `themeCol(pal_t, L, C)` glides between the keys in OKLab (`ramp4`) and holds each key
   for the outer quarters of each leg (`themeHold`), so the far amber → teal step has little olive in it.
 - **Lightness** comes from the orbit rainbow's luma (the lace structure), never from `pal_t`. The band is
-  OKLab L 0.13..0.70, darker than the kit's 0.45..0.85: the series is velvet on black. The old palette wrote the
-  wrapper's linear-sRGB OKLab output straight to the screen, so this is the lightness it displayed.
+  OKLab L 0.16..0.70, darker than the kit's 0.45..0.85: the series is velvet on black. At a 0.13 floor the
+  darkest lace (the fan petals) went near-black and read grey; at 0.20 the fine lace shimmered (below).
 - **Chroma** is requested past the kit's 0.13 and `okFit` maps it to the sRGB edge at constant L and hue: the
   series rule is never grey.
 - **Guards after the palette.** The beat's hue rotation (2.frag) turns already-coloured pixels, so it can still
-  reach magenta or green. It may not carry a pixel into the hot-magenta arc (-1.25..0.45 rad, vibej iter 3)
-  or the green gap (90..160°). The vibej iter 5 output squeeze ("NEVER HOT MAGENTA") now runs in all four
-  shaders, and it reads the hue of the DISPLAYED colour: it used to put the gamma-encoded output through the
-  wrapper's `rgb2oklab`, which takes linear sRGB, so its 288..26° arc was not where the eye sees it. It decodes
-  with `srgb2lin` first now and writes back through `okOut`. Every hue angle goes through `okHue()`, which
-  returns 0 for a grey: `atan(0, 0)` is NaN on some mobile GPUs.
+  reach magenta or green. It may not carry a pixel into the hot-magenta arc (-1.25..0.45 rad, vibej iter 3),
+  nor deeper into it, nor into the green gap (90..160°); the turned hue is wrapped back into (-π, π] first.
+  The vibej iter 5 output squeeze ("NEVER HOT MAGENTA") runs in all four shaders and reads the hue of the
+  DISPLAYED colour: it decodes with `srgb2lin` before `rgb2oklab` (which takes linear sRGB) and writes back
+  through `okOut`. Only colours near the arc pay for the decode: every displayed colour whose OKLab hue is in
+  288..26° has min(r, b) > g - 0.032, so `min(r, b) > g - 0.05` gates it. The beat turn itself still works on
+  the output values as main did: decoding them first cost the sparkle gate (below). Every hue angle goes
+  through `okHue()`, which returns 0 for a grey: `atan(0, 0)` is NaN on some mobile GPUs.
 - **ChromaDepth** (GLASSES, the focal) is rebuilt on the kit's `oklch2rgb` with display-correct lightness: true
   red (29°, near) to violet (293°, far). Physics, not theme: the seed does not turn it.
-- **LACE AA** composes unchanged: each orbit sample computes its theme colour in `laceSample()`, and the
-  pixel averages the samples' colours weighted by coverage.
+- **LACE AA** composes unchanged: each orbit sample computes its theme colour in `laceSample()` (in OKLab), and
+  the pixel averages the samples' gamut-fitted colours weighted by coverage.
+- **The braid** (where both traps cross) mixes the lace colour 45/55 with cream, as on main, and over the
+  darkest lace the cream turns violet `(0.56, 0.48, 1.0)`. Cream over near-black petals read khaki.
+- **Cost.** `gamutT` uses vector selects instead of the kit's loop over `c[i]` (same result; on SwiftShader the
+  loop cost 10..20% of the frame), `lin2srgb` encodes with three square roots (within 0.4/255 of the `pow`),
+  the rim, focal, dust bass lean, ties and rails take their colour only where they show, and dust reuses the
+  fitted lace colour (`shadeTo`) instead of a second fit.
 - **clit-set/1** was the raw sexy/1 rainbow (58% of lit pixels grey on a phone, 14% hot magenta). It is
   hand-ported: the rainbow keeps only its luma (lightness), the hue turn moves `pal_t`, pearls are pale gold
   (were lilac-pink), the rim walks the theme (was a violet → pink mix through the magenta arc), and the tone
@@ -123,27 +131,44 @@ verbatim, and the series palette is one theme on top of it.
 ![Phone stills, top row main, bottom row OKLCH: clit-vibej/1, clit-vibej/2, clit-set/1, clit-set/2](oklch-before-after.jpg)
 
 Measured on the real files, before (main at fd177884, LACE AA) and after, `scripts/sparkle-score.mjs` render
-mode (synth trace, controller, warmup 240 frames, seeds 0.5, SwiftShader). Lit = max channel > 60; grey = lit
-and HSV saturation < 0.25; hot magenta = lit, OKLab C > 0.06, displayed hue 310..15°; green = 90..150°.
+mode (synth trace, controller, warmup 240 frames, seeds 0.5, SwiftShader). Lit = max channel > 60. Grey is
+perceptual: a lit pixel with OKLab chroma below 0.04 (the first tables, by HSV saturation, missed the khaki
+petals). Hot magenta = lit, OKLab C > 0.06, displayed hue 310..15°; green = 90..150°.
 
-| shader, size | saturation | grey | hot magenta | green | mean luma |
+| shader, size | saturation | grey (OKLab C < 0.04) | hot magenta | green | mean luma |
 |---|---|---|---|---|---|
-| clit-set/1, phone 408x816 | .264 → .596 | 58% → 2.3% | 14.2% → 0.6% | 2% → 1% | 50.6 → 43.2 |
-| clit-set/2, phone | .628 → .630 | 0.6% → 1.1% | 21.2% → 0.7% | 9% → 3% | 92.2 → 94.7 |
-| clit-vibej/1, phone | .618 → .634 | 0.8% → 0.6% | 1.5% → 0.5% | 7% → 2% | 99.5 → 101.8 |
-| clit-vibej/2, phone | .647 → .663 | 0.9% → 0.6% | 1.2% → 0.7% | 9% → 3% | 87.7 → 89.4 |
-| clit-set/1, desktop 1280x720 | .342 → .674 | 40% → 1.5% | 12.5% → 0.3% | 2% → 1% | 38.8 → 33.5 |
-| clit-set/2, desktop | .688 → .698 | 1.5% → 2.0% | 13.4% → 0.7% | 15% → 5% | 69.3 → 71.8 |
-| clit-vibej/1, desktop | .686 → .700 | 1.6% → 1.5% | 1.5% → 0.6% | 13% → 4% | 71.6 → 74.0 |
-| clit-vibej/2, desktop | .707 → .739 | 0.7% → 0.6% | 0.5% → 0.3% | 10% → 3% | 73.1 → 74.4 |
+| clit-set/1, phone 408x816 | .264 → .593 | 50.8% → 2.7% | 14.2% → 0.6% | 0.4% → 1.1% | 50.6 → 43.5 |
+| clit-set/2, phone | .628 → .637 | 0.6% → 0.5% | 21.2% → 0.6% | 8.3% → 2.3% | 92.2 → 94.6 |
+| clit-vibej/1, phone | .618 → .638 | 0.9% → 0.6% | 1.5% → 0.4% | 6.3% → 1.8% | 99.5 → 101.6 |
+| clit-vibej/2, phone | .647 → .659 | 2.2% → 1.6% | 1.2% → 0.4% | 8.3% → 2.9% | 87.7 → 89.7 |
+| clit-set/1, desktop 1280x720 | .342 → .672 | 40.6% → 2.9% | 12.5% → 0.3% | 0.7% → 0.7% | 38.8 → 33.8 |
+| clit-set/2, desktop | .688 → .705 | 1.8% → 1.2% | 13.4% → 0.4% | 14.7% → 5.0% | 69.3 → 71.8 |
+| clit-vibej/1, desktop | .686 → .707 | 1.9% → 1.3% | 1.5% → 0.4% | 12.0% → 4.2% | 71.6 → 74.0 |
+| clit-vibej/2, desktop | .707 → .738 | 1.5% → 1.2% | 0.5% → 0.1% | 9.9% → 2.3% | 73.1 → 74.8 |
+
+The opening view (no controller, `noaudio`, seeds 0 and 1, seed 0.5 with the hue knob at .25; mean of the
+three, phone): grey clit-set/1 50.2% → 3.2%, clit-set/2 3.4% → 3.4%, clit-vibej/1 3.6% → 3.7%,
+clit-vibej/2 10.9% → 13.2%. The fan petals read violet, as on main. clit-vibej/2's extra grey is in the dense
+filigree, where LACE AA averages an ember thread with an indigo one. Averaging in OKLab and restoring the
+samples' chroma brought it to 9.5% but failed the sparkle gate (flipMean 10.20 against main's 9.74), so it is
+not used.
 
 The palette does not bring the sparkle back. `sparkle-score.mjs --before` (90 frames, 408x816; each run
-scored against an `--ss 4` reference of its own palette), gate passes on both:
+scored against an `--ss 4` reference of its own palette; the scores are deterministic, a rerun of the same
+file reproduces them to the last digit), gate passes on both:
 
 | shader | flipMean before / after | motion before / after (ref) | refMAE before / after |
 |---|---|---|---|
-| clit-set/2 | 6.71 / 6.54 | 11.13 / 11.02 (7.03) | 7.14 / 7.05 |
-| clit-vibej/2 | 9.74 / 9.28 | 15.74 / 15.34 (13.25) | 6.00 / 5.75 |
+| clit-set/2 | 6.711 / 6.610 | 11.130 / 11.135 (7.058) | 7.138 / 7.135 |
+| clit-vibej/2 | 9.739 / 9.365 | 15.744 / 15.458 (13.318) | 5.999 / 5.759 |
+
+What the review fixes cost the gate on clit-set/2 before they were reworked (flipMean; main 6.711): the
+braid as the lace's own hue lifted to a lit level +0.7, lightness floor 0.20 with indigo +0.68 +0.3, the beat
+turning decoded colour +0.25, LACE AA averaging in OKLab +0.4, restoring the averaged chroma +0.4.
+
+Frame time (SwiftShader 408x816, synth, controller, 60 timed frames, median of 3 interleaved runs against
+main's files on the same server): clit-set/1 75.0 → 82.9 ms (+11%), clit-set/2 99.3 → 105.4 (+6%),
+clit-vibej/1 139.6 → 138.9 (-1%), clit-vibej/2 131.9 → 140.4 (+6%).
 
 ### Audio mapping
 

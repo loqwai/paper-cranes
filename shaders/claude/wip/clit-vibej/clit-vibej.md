@@ -157,15 +157,19 @@ write-up, the rules kept and the numbers for all four shaders are in
 
 What changed here, colour only (lace geometry, LACE AA, beat and tone map untouched):
 
-- `lchGamut()` / `paletteHue()` are gone: the lace, rim, nebula dust, ties and rails take `themeCol()` or the
-  kit's `oklch2rgb(L, C, h)`, gamut-fitted by `okFit`. The lace lightness band is OKLab L 0.13..0.70, the
-  lightness the old palette displayed.
+- `lchGamut()` / `paletteHue()` are gone: the lace, rim, nebula dust, ties and rails take the theme, gamut-fitted
+  by `okFit`. The lace lightness band is OKLab L 0.16..0.70.
 - The iter 3 beat-rotation clamp also keeps the burnt amber out of the green gap (90..160°). Green, phone:
   1.frag 7% to 2%, 2.frag 9% to 3%.
+- The iter 3 clamp also wraps the turned hue into (-π, π] and stops a pixel already inside the magenta arc from
+  turning deeper into it.
 - The iter 5 output squeeze ("NEVER HOT MAGENTA") reads the DISPLAYED hue now: it decodes with `srgb2lin`
   before `rgb2oklab`, which takes linear sRGB, and writes back through `okOut`. On the gamma-encoded output
-  its 288..26° arc had been somewhere else than the eye sees it. Hot magenta, phone: 1.frag 1.5% to 0.5%,
-  2.frag 1.2% to 0.7%.
+  its 288..26° arc had been somewhere else than the eye sees it. Hot magenta, phone: 1.frag 1.5% to 0.4%,
+  2.frag 1.2% to 0.4%.
 - Every hue angle goes through `okHue()` (0 for a grey): `atan(0, 0)` is NaN on some mobile GPUs.
-- Sparkle gate (`sparkle-score.mjs --before`), 2.frag: flipMean 9.74 to 9.28, motion 15.74 to 15.34
-  (reference 13.25), refMAE 6.00 to 5.75. Pass.
+- Sparkle gate (`sparkle-score.mjs --before`), 2.frag: flipMean 9.739 to 9.365, motion 15.744 to 15.458
+  (reference 13.318), refMAE 5.999 to 5.759. Pass.
+- Frame time (SwiftShader 408x816, median of 3 against main): 1.frag 139.6 to 138.9 ms, 2.frag 131.9 to 140.4 ms.
+- Opening view (no controller), 2.frag: 13.2% of lit pixels perceptually grey against main's 10.9%, in the
+  dense filigree; the OKLab-average fix for it failed the sparkle gate. See clit-set.md.
