@@ -167,3 +167,12 @@ plus eased knobs `cs_k9..cs_k16`. The behaviour test is `controllers/clit-set.te
   paced by travel (shape + camera), loop ~24 min at 1x. A colour beat (hue step + chroma lift, scaled
   back to each pixel's luminance) and a beat-stepped colour wave along the filaments (`cs_beat`).
   `?time=<s>` now also stops the controller's time-driven clocks; the audio-driven jumps keep going.
+
+## LACE AA (2026-11-22, 1.frag and 2.frag)
+
+The dense lace sparkled whenever the picture moved. It is aliasing of the chaotic orbit traps, not float
+precision: see the LACE AA notes in [clit-vibej.md](../claude/wip/clit-vibej/clit-vibej.md) and
+[docs/sparkle-score.md](../../docs/sparkle-score.md). Both files now carry `dV/dC` through the iteration, mark
+pixels whose lace is narrower than a pixel (`unres`), and average the output there with last frame's
+(`LACE_AA_HOLD` 0.9), giving back the chroma one sample has. 2.frag's depth coherence gate stays. Live-music trace: 2.frag flipMean 8.03 → 1.26, sparkleFrac
+10.9% → 0.6%; 1.frag barely moves on its own (0.88 → 0.08).

@@ -107,3 +107,28 @@ tube." A dramatic move, so it is a fork. 1.frag stays as the fallback.
 - **2.frag iter 3** (04:20): the sub-pixel lace dim is stronger in the tube (0.5 → 0.7, starting at fwidth 1.5), because the walls compress the lace toward the core. Grey 7–8% → 2.5–5.5%.
 - **2.frag iter 4** (04:21): the rails are thicker (0.006 + 0.012·r) and have a soft amber glow that lifts on the kick (`PUNCH`, rails only). The ties are ember-red (L 0.48) instead of dark shadows.
 - **2.frag iter 5** (04:25): bass thickening of the lace is halved on the tube (0.9 → 0.45). A wall-scale sweep (R1 and R2 × 1.0 / 0.6 / 0.4, no audio, six waypoints) found the current scale cleanest, so it stays. On the phone the walls are still speckly (grey 6–12%, hot pink up to 0.18 where red and violet speckle blend).
+
+## LACE AA (2026-11-22, all of clit-vibej/1, clit-vibej/2, clit-set/1, clit-set/2)
+
+The lace sparkled (show journal: "Tube walls speckle with live audio"). Measured with
+`scripts/sparkle-score.mjs` and the diagnostic fork `lace-lab/1` (see [docs/sparkle-score.md](../../../../docs/sparkle-score.md)):
+
+- **Cause: aliasing of a chaotic function.** In the dense lace the orbit is chaotic, so one pixel step in C
+  moves the trap logs across the whole lace band. One sample per pixel is noise, and any motion (the spin,
+  the voyage, a kick's lurch, the tube's travel) reshuffles it every frame. Audio makes it worse only by
+  speeding the motion up. 16 samples per pixel cut the flicker 55%; rendering at 1/4 resolution did nothing.
+- **Ruled out:** float precision of the clocks (controller state two hours in: no worse), the coil, the
+  undulate, bass on the lace threshold, the treble braid light, each within 1% when removed.
+- **Fix.** `D = dV/dC` is carried through the iteration (the map is holomorphic: `d(V log V) = (log V + 1)dV`,
+  then squared, minus `C·b`, rotated). Where a trap is lowered, `|D|` is kept, and
+  `|D|·(pixel size in C) / max(trap, e^(lace_hi−1))` is that pixel's footprint in log-trap units. Over 0.3 to
+  2 it is unresolved (`unres`). There, at the end of the shader, the output is averaged with last frame's
+  (`LACE_AA_HOLD` 0.9, about ten frames): the motion that reshuffled the noise now supersamples it. The
+  averaged hue gets back the chroma one sample has, so the dense lace becomes a vivid wash, not a grey one.
+  The floor under the band keeps thread cores (log trap → −∞) out, which drew ghost lines in a first try.
+- **Removed:** iters 10, 11 and 13 `fwidth` gates. They only dimmed the speckle, and with LACE AA on, removing
+  them changed the score by under 1%.
+- **Numbers** (25 s live-music trace, 408 × 816): flipMean 1.frag 9.69 → 1.92, 2.frag 16.81 → 3.69;
+  sparkleFrac 13.0% → 1.2% and 23.5% → 3.4%; saturation 0.66 → 0.68 and 0.65 → 0.69; grey 3.3% → 1.9% and
+  3.0% → 1.2%; mean luma −1% and −9% (the tube's walls flow out of the dark core, so last frame is darker).
+- **Cost:** GPU time +18% (2.frag, RTX 4090 timer query at 2560 × 1305: 0.158 → 0.187 ms).

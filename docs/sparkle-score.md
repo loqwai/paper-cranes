@@ -93,3 +93,13 @@ Diagnosis on `shaders/claude/wip/lace-lab/1` (clit-vibej/1 with `lab_*` switches
 
 More samples per pixel remove the sparkle; lower resolution does not; float precision and the audio terms do
 not cause it. That is aliasing of a chaotic function: the orbit traps are noise at every scale.
+
+The fix, replaying a 25 s trace recorded from live music:
+
+| Shader | flipMean before → after | sparkleFrac before → after |
+|---|---|---|
+| clit-vibej/1 | 9.69 → 1.92 | 13.0% → 1.2% |
+| clit-vibej/2 | 16.81 → 3.69 | 23.5% → 3.4% |
+| clit-set/2 | 8.03 → 1.26 | 10.9% → 0.6% |
+
+The fix is described in `shaders/claude/wip/clit-vibej/clit-vibej.md` (LACE AA).

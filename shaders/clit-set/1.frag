@@ -98,6 +98,7 @@ uniform float cs_k1, cs_k2, cs_k3, cs_k4, cs_k5, cs_k6, cs_k7, cs_k8;
 #define HUE_TURN ((HAS_CTL ? cs_hue : 0.0) * 1.2 + (HAS_CTL ? cs_jump : 0.0) * 0.9 + K_HUE * 6.2831853 + SEED_PHASE)
 
 // Feedback trails
+#define LACE_AA_HOLD 0.9   // where the lace is unresolved, the share of last frame's output kept (see unres)
 #define FEEDBACK_MIX clamp(0.22 + energyNormalized * 0.08 + K_TRAILS * 0.55, 0.0, 0.85)
 
 // Spread opens the vignette a touch
@@ -121,6 +122,8 @@ vec3 chromadepth(float t) {
 // MAIN
 // ============================================================================
 
+vec2 cmul(vec2 a, vec2 b) { return vec2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x); }
+
 void mainImage(out vec4 P, vec2 V) {
     float drop = DROP_INTENSITY;
     float build = BUILD_INTENSITY;
@@ -142,16 +145,25 @@ void mainImage(out vec4 P, vec2 V) {
     float a_pow = A;
     float b_off = B;
 
+    // LACE AA: D = dV/dC rides along the orbit (the map is holomorphic), so
+    // each trap knows how fast it changes across one pixel. See unres below.
+    vec2 D = vec2(1.0, 0.0);
+    float dx = 0.0, dy = 0.0;                      // |D|^2 where each trap was last lowered
+    float pixC = max(length(dFdx(C)), length(dFdy(C)));
     for (int k = 0; k < 50; k++) {
         float a = atan(V.y, V.x),
         d = dot(V, V) * a_pow;
         float c = dot(V, vec2(a, log(d) / 2.));
+        vec2 Lg = vec2(log(d) / 2. + 1.0, a);           // d/dV of V log V, with the power's constant folded in
         V = exp(-a * V.y) * pow(d, V.x / 2.) * vec2(cos(c), sin(c));
         V = vec2(V.x * V.x - V.y * V.y, dot(V, V.yx));
+        D = 2.0 * cmul(V, cmul(Lg, D));
         V -= C * b_off;
+        D -= vec2(b_off, 0.0);
 
-        x = min(x, abs(V.x));
-        y = min(y, abs(V.y));
+        D *= dot(D, D) > 1e20 ? 1e-10 : 1.0;            // chaos grows D without bound; past this it is unresolved anyway
+        if (abs(V.x) < x) { x = abs(V.x); dx = dot(D, D); }
+        if (abs(V.y) < y) { y = abs(V.y); dy = dot(D, D); }
         z > (v = dot(V, V)) ? z = v, Z = V : Z;
 
         focal_trap = min(focal_trap, length(V - focal_center));
@@ -161,6 +173,15 @@ void mainImage(out vec4 P, vec2 V) {
 
     // Lace / filigree from the orbit traps. Knob, seed and timbral shift move the threshold.
     float lace_lo = -2.0 + SEED_LACE + K_LACE * 0.9 + LACE_BLOOM * 0.6;
+    // LACE AA. In the dense lace the orbit is chaotic: one pixel step in C moves the traps across the whole lace band,
+    // so one sample per pixel is noise, and any motion (spin, pan, zoom, shape morph) reshuffles it every frame. That is
+    // the sparkle: scripts/sparkle-score.mjs measured 1/4 resolution sparkling just as much, a 16x supersample cutting
+    // it by 55%, and float precision of the clocks and every audio term ruled out. unres = this pixel's footprint in
+    // log-trap units, from the tracked derivative (floored a unit under the band, so thread cores, where log(trap)
+    // runs to -inf, do not count). There the output averages frames: LACE AA at the end.
+    float tfloor = exp(-5.0 - 1.0);
+    float fpx = max(sqrt(dx) * pixC / max(x, tfloor), sqrt(dy) * pixC / max(y, tfloor));
+    float unres = smoothstep(0.3, 2.0, fpx < 1e30 ? fpx : 1e30);
     float lace_x = smoothstep(lace_lo, -5.0, log(x));
     float lace_y = smoothstep(lace_lo, -5.0, log(y));
     float lace = pow(max(lace_x, lace_y), 3.0);
@@ -228,6 +249,19 @@ void mainImage(out vec4 P, vec2 V) {
 
     col = col / (col + vec3(0.7));
     col = pow(max(col, vec3(0.0)), vec3(0.88, 0.9, 0.95));
+
+    // LACE AA, the other half: where the lace is unresolved (unres), this frame's output averages with the last one's,
+    // an EMA over ~1/(1-LACE_AA_HOLD) frames: the motion that reshuffled the noise now supersamples it. On the final
+    // colour, so the vignette and tone map are not compounded. Averaging random orbit hues loses chroma (red + teal
+    // reads grey), so the averaged hue gets back the chroma one sample has: a vivid wash, not a grey one.
+    if (unres > 0.0) {
+        const vec3 REC709 = vec3(0.2126, 0.7152, 0.0722);
+        float c_now = length(col - dot(col, REC709));
+        col = mix(col, prevc, LACE_AA_HOLD * unres);
+        float l_avg = dot(col, REC709);
+        vec3 ch = col - l_avg;                          // chroma about the luminance axis: scaling it keeps L
+        col = max(l_avg + ch * mix(1.0, clamp(c_now / max(length(ch), 1e-4), 1.0, 1.6), unres), vec3(0.0));
+    }
 
     P = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

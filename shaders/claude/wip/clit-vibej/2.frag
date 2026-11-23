@@ -143,6 +143,7 @@ uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 #define MIDS_ENV (HAS_CTL ? clamp(cs_mids, 0.0, 1.0) : clamp(midsZScore, 0.0, 1.0))
 #define CHROMA_GAIN (0.85 + 0.3 * BREATH + 0.25 * MIDS_ENV * REACT)
 // Trails do not grow with loudness: more smear on loud passages made the loud frames move LESS
+#define LACE_AA_HOLD 0.9   // where the lace is unresolved, the share of last frame's output kept (see unres)
 #define FEEDBACK_MIX clamp(0.22 + K_TRAILS * 0.55, 0.0, 0.85)
 #define VIGN_OPEN 0.03
 
@@ -210,6 +211,7 @@ float stars(vec2 p, float density) {
     return smoothstep(0.06, 0.0, d) * tw * (0.4 + 0.6 * fract(h * 13.0));
 }
 
+vec2 cmul(vec2 a, vec2 b) { return vec2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x); }
 mat2 rot2(float a) { float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 
 // ============================================================================
@@ -255,21 +257,31 @@ void mainImage(out vec4 P, vec2 V) {
     float b_off = NAV_B;
     mat2 curl = rot2(NAV_CURL);
 
+    // LACE AA: D = dV/dC rides along the orbit (the map is holomorphic, but for the coil's small twist), so
+    // each trap knows how fast it changes across one pixel. See unres below.
+    vec2 D = vec2(1.0, 0.0);
+    float dx = 0.0, dy = 0.0;                      // |D|^2 where each trap was last lowered
+    float pixC = max(length(dFdx(C)), length(dFdy(C)));
     for (int k = 0; k < 50; k++) {
         float a = atan(V.y, V.x),
         d = dot(V, V) * a_pow;
         float c = dot(V, vec2(a, log(d) / 2.));
+        vec2 Lg = vec2(log(d) / 2. + 1.0, a);           // d/dV of V log V, with the power's constant folded in
         V = exp(-a * V.y) * pow(d, V.x / 2.) * vec2(cos(c), sin(c));
         V = vec2(V.x * V.x - V.y * V.y, dot(V, V.yx));
+        D = 2.0 * cmul(V, cmul(Lg, D));
         V -= C * b_off;
+        D -= vec2(b_off, 0.0);
         V = curl * V;
+        D = curl * D;
         // COIL: a barber-pole twist that travels outward along log|V| as the phase runs one way. Skipped on
         // the first iterations so the silhouette holds while the filaments coil.
         float cw = COIL_AMP * smoothstep(1.0, 6.0, float(k));
-        if (cw > 0.0) V = rot2(cw * sin(1.3 * log(dot(V, V) + 1e-4) - wph * 1.1)) * V;
+        if (cw > 0.0) { mat2 cr = rot2(cw * sin(1.3 * log(dot(V, V) + 1e-4) - wph * 1.1)); V = cr * V; D = cr * D; }
 
-        x = min(x, abs(V.x));
-        y = min(y, abs(V.y));
+        D *= dot(D, D) > 1e20 ? 1e-10 : 1.0;            // chaos grows D without bound; past this it is unresolved anyway
+        if (abs(V.x) < x) { x = abs(V.x); dx = dot(D, D); }
+        if (abs(V.y) < y) { y = abs(V.y); dy = dot(D, D); }
         z > (v = dot(V, V)) ? z = v, Z = V : Z;
 
         focal_trap = min(focal_trap, length(V - focal_center));
@@ -284,6 +296,15 @@ void mainImage(out vec4 P, vec2 V) {
     // Bass thickens the filigree (cs_bass: 40 ms attack, 0.5 s release); the threshold returns, never drifts
     float lace_lo = -2.0 + SEED_LACE + K_LACE * 0.9 + BASS_ENV * 0.45 * REACT - lz * 0.6;   // 2.frag: halved; bass-thick lace speckled the tube walls (kicks also surge travel + rail glow)
     float lace_hi = lace_lo - 3.0;
+    // LACE AA. In the dense lace the orbit is chaotic: one pixel step in C moves the traps across the whole lace band,
+    // so one sample per pixel is noise, and any motion (spin, voyage, kick lurch) reshuffles it every frame. That is
+    // the sparkle: scripts/sparkle-score.mjs measured 1/4 resolution sparkling just as much, a 16x supersample cutting
+    // it by 55%, and float precision of the clocks and every audio term ruled out. unres = this pixel's footprint in
+    // log-trap units, from the tracked derivative (floored a unit under the band, so thread cores, where log(trap)
+    // runs to -inf, do not count). There the output averages frames: LACE AA at the end.
+    float tfloor = exp(lace_hi - 1.0);
+    float fpx = max(sqrt(dx) * pixC / max(x, tfloor), sqrt(dy) * pixC / max(y, tfloor));
+    float unres = smoothstep(0.3, 2.0, fpx < 1e30 ? fpx : 1e30);
     float lace_x = smoothstep(lace_lo, lace_hi, lx);
     float lace_y = smoothstep(lace_lo, lace_hi, ly);
     float lace = pow(max(lace_x, lace_y), 3.0);
@@ -291,16 +312,7 @@ void mainImage(out vec4 P, vec2 V) {
     // Coherence gate, depth only: past ~3x, drop lace that changes faster than a pixel (speckle)
     float coh = smoothstep(0.6, 1.6, lz);
     lace *= 1.0 - coh * smoothstep(1.5, 5.0, fwidth(min(lx, ly)));
-    // vibej iter 11: at any depth, sub-pixel lace dims by up to half toward the velvet floor, so the dense
-    // mass (thickened by bass, churned by the coil) reads as velvet with clean filaments, not chalky speckle
-    // iter 13: measured on the trap logs clamped to the lace's transition band. Unclamped, log(trap) runs
-    // to -inf on the thread cores, so fwidth spiked there and the gate dotted the cleanest threads dark.
-    float lxc = clamp(lx, lace_hi - 0.5, lace_lo + 0.5), lyc = clamp(ly, lace_hi - 0.5, lace_lo + 0.5);
-    lace *= 1.0 - 0.7 * smoothstep(1.5, 5.0, fwidth(min(lxc, lyc)));   // 2.frag: stronger, the tube walls compress lace toward the core
-    lace_fine *= 1.0 - 0.8 * smoothstep(1.5, 4.0, fwidth(lxc + lyc));
     lace_fine *= 1.0 - coh * 0.7;
-    // vibej iter 10: at any depth, the braid fades where it changes faster than a pixel. Its sparkle, punch and
-    // pearls stay on clean filaments instead of churning the dense lace mass into chalky speckle (phone 408 px).
 
     float phi = atan(Z.y, Z.x) + HUE_TURN;
     // The rainbow's luma is the lace's LIGHTNESS structure, so it takes only the fixed per-device phase.
@@ -464,6 +476,19 @@ void mainImage(out vec4 P, vec2 V) {
     float bhi = max(max(bc.r, bc.g), bc.b);
     if (bhi > 0.94) bc = mix(vec3(L0), bc, max(0.94 - L0, 0.0) / max(bhi - L0, 1e-4));
     col = mix(col, bc, step(1e-3, L0));
+
+    // LACE AA, the other half: where the lace is unresolved (unres), this frame's output averages with the last one's,
+    // an EMA over ~1/(1-LACE_AA_HOLD) frames: the motion that reshuffled the noise now supersamples it. On the final
+    // colour, so the vignette and tone map are not compounded. Averaging random orbit hues loses chroma (red + teal
+    // reads grey), so the averaged hue gets back the chroma one sample has: a vivid wash, not a grey one.
+    if (unres > 0.0) {
+        const vec3 REC709 = vec3(0.2126, 0.7152, 0.0722);
+        float c_now = length(col - dot(col, REC709));
+        col = mix(col, prevc, LACE_AA_HOLD * unres);
+        float l_avg = dot(col, REC709);
+        vec3 ch = col - l_avg;                          // chroma about the luminance axis: scaling it keeps L
+        col = max(l_avg + ch * mix(1.0, clamp(c_now / max(length(ch), 1e-4), 1.0, 1.6), unres), vec3(0.0));
+    }
 
     // NEVER HOT MAGENTA (vibej iter 5). Measured on the phone: the excess was purple-orchid lace at
     // 300-330° (OKLab), mid lightness: red blended over violet by the trails once the filaments moved
