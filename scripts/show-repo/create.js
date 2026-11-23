@@ -85,8 +85,8 @@ const ensureClone = (dir, config, mergeRefs) => {
 // ---- step 2: the strip -------------------------------------------------------------------------
 
 const assertCleanExceptGenerated = (dir) => {
-    const dirty = git(dir, 'status', '--porcelain').split('\n').filter(Boolean)
-        .map((line) => line.slice(3)).filter((path) => path !== 'shader-dates.json')
+    const changed = [...git(dir, 'diff', '--name-only', 'HEAD').split('\n'), ...git(dir, 'ls-files', '--others', '--exclude-standard').split('\n')]
+    const dirty = changed.filter(Boolean).filter((path) => path !== 'shader-dates.json')
     if (dirty.length) throw new Error(`uncommitted changes in ${dir}: ${dirty.join(', ')}. Commit or discard them first.`)
 }
 
@@ -127,6 +127,10 @@ const strip = (dir, config, { midiProfiles, previousShowHtml } = {}) => {
     if (!read(SHOW_FILES.wrangler)) writeIfChanged(dir, SHOW_FILES.wrangler, wranglerConfig(config, new Date().toISOString().slice(0, 10)))
     writeIfChanged(dir, SHOW_FILES.workflow, deployWorkflow())
     if (!(read(SHOW_FILES.readme) ?? '').includes(README_MARK)) writeIfChanged(dir, SHOW_FILES.readme, `${README_MARK}\n${showReadme(config)}`)
+
+    // The build regenerates shader-dates.json from this clone's history; do it now so the strip
+    // commit already holds what every later build writes, and reruns stay clean.
+    try { execFileSync('node', ['scripts/shader-dates.js'], { cwd: dir, stdio: 'ignore' }) } catch { /* keep the baked file */ }
 
     git(dir, 'add', '-A')
     if (gitOk(dir, 'diff', '--cached', '--quiet')) return log('strip: nothing to change')

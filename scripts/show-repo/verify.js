@@ -4,10 +4,12 @@
 //   MIDI started, a knob move reaches the URL, nothing but the canvas is visible, and the
 //   console stayed clean.
 //
-//   node scripts/show-repo/verify.js <url> [--shot <png>] [--expect-shader <path>]
+//   node scripts/show-repo/verify.js <url> [--shot <png>] [--expect-shader <path>] [--real-midi]
 //
-// Exits 1 when any check fails. Prints one JSON report. Fake mic + granted MIDI permission, so the
-// audio pipeline and MIDI really start; no MIDI device is needed (no inputs is still "started").
+// Exits 1 when any check fails. Prints one JSON report. A fake mic feeds the real audio pipeline.
+// MIDI: by default a fake input ("verify-midi") replaces navigator.requestMIDIAccess and sends one CC,
+// so the whole path runs (src/midi.js -> MidiMapper auto-assign -> knob -> URL) on machines with no
+// MIDI backend (WSL, CI). --real-midi uses the browser's own Web MIDI instead.
 import { chromium } from 'playwright'
 import { resolve } from 'path'
 import { pathToFileURL } from 'url'
@@ -20,6 +22,22 @@ const LAUNCH_ARGS = [
     '--use-angle=swiftshader',
     '--ignore-gpu-blocklist',
 ]
+
+// Runs in the page before any script: a MIDIAccess with one input the test can play.
+const installFakeMidi = () => {
+    class FakeInput extends EventTarget {
+        constructor() { super(); this.name = 'verify-midi'; this.type = 'input'; this.state = 'connected' }
+        open() { return Promise.resolve(this) }
+    }
+    const input = new FakeInput()
+    const access = Object.assign(new EventTarget(), { inputs: new Map([['verify-midi', input]]), outputs: new Map(), sysexEnabled: false })
+    navigator.requestMIDIAccess = () => Promise.resolve(access)
+    window.__verifyMidiCC = (cc, value, channel = 1) => {
+        const event = new Event('midimessage')
+        event.data = new Uint8Array([0xb0 + channel - 1, cc, value])
+        input.dispatchEvent(event)
+    }
+}
 
 // Fraction of sampled screenshot pixels brighter than near-black, measured in the page itself.
 const brightFraction = async (browser, png) => {
@@ -46,10 +64,11 @@ const brightFraction = async (browser, png) => {
     return value
 }
 
-export const verifyShow = async (url, { shot, expectShader, settleMs = 4000 } = {}) => {
+export const verifyShow = async (url, { shot, expectShader, realMidi = false, settleMs = 4000 } = {}) => {
     const browser = await chromium.launch({ headless: true, args: LAUNCH_ARGS })
     const context = await browser.newContext({ viewport: { width: 1280, height: 720 } })
     await context.grantPermissions(['midi', 'microphone'], { origin: new URL(url).origin })
+    if (!realMidi) await context.addInitScript(installFakeMidi)
     const page = await context.newPage()
     const consoleErrors = []
     page.on('console', (msg) => { if (msg.type() === 'error') consoleErrors.push(msg.text()) })
@@ -82,10 +101,17 @@ export const verifyShow = async (url, { shot, expectShader, settleMs = 4000 } = 
             }
         })
 
-        // A knob move from MIDI goes cranes.updateFeature -> paramsManager -> URL (debounced).
-        await page.evaluate(() => window.cranes.updateFeature('knob_3', 0.5))
-        await page.waitForTimeout(1500)
-        const knobInUrl = await page.evaluate(() => new URLSearchParams(window.location.search).get('knob_3'))
+        // One CC through the real MIDI handler: an unmapped CC auto-assigns to the next free knob,
+        // value 64 reads as an absolute encoder (64/127), and paramsManager mirrors it into the URL.
+        let knobInUrl = null
+        if (!realMidi) {
+            await page.evaluate(() => window.__verifyMidiCC(7, 64))
+            await page.waitForTimeout(1500)
+            knobInUrl = await page.evaluate(() => {
+                const mapped = window.cranes.midiMapper.mapCCToKnob('verify-midi', 7, 1)
+                return mapped && { knob: mapped, url: new URLSearchParams(window.location.search).get(mapped) }
+            })
+        }
         const framesLater = await page.evaluate(() => window.cranes.frameCount)
 
         const png = await page.screenshot({ path: shot })
@@ -98,7 +124,7 @@ export const verifyShow = async (url, { shot, expectShader, settleMs = 4000 } = 
             shader: expectShader ? shader === expectShader : Boolean(shader),
             controller: state.controllerKeys > 0,
             midi: state.midiStarted && state.midiMapper,
-            knobReachesUrl: knobInUrl === '0.5',
+            midiCcReachesUrl: realMidi || Math.abs(parseFloat(knobInUrl?.url) - 64 / 127) < 0.001,
             noUi: state.visibleUi.length === 0,
             cleanConsole: consoleErrors.length === 0,
         }
@@ -110,6 +136,8 @@ export const verifyShow = async (url, { shot, expectShader, settleMs = 4000 } = 
             frames: framesLater,
             brightFraction: Number(bright.toFixed(3)),
             controllerKeys: state.controllerKeys,
+            midiSource: realMidi ? 'browser Web MIDI' : 'fake input verify-midi',
+            midiCc: knobInUrl,
             audioInput: state.audioInput,
             visibleUi: state.visibleUi,
             consoleErrorCount: consoleErrors.length,
@@ -131,7 +159,7 @@ if (isMain) {
         console.error('usage: verify.js <url> [--shot <png>] [--expect-shader <path>]')
         process.exit(2)
     }
-    const report = await verifyShow(url, { shot: opt('--shot'), expectShader: opt('--expect-shader') })
+    const report = await verifyShow(url, { shot: opt('--shot'), expectShader: opt('--expect-shader'), realMidi: args.includes('--real-midi') })
     console.log(JSON.stringify(report, null, 2))
     process.exit(report.ok ? 0 : 1)
 }
