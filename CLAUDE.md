@@ -854,6 +854,8 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 [docs/show-playbook.md](docs/show-playbook.md) for the runbook, knob map, story, fork library and
 failure fixes.
 
+**Getting a set into "explore it for hours" depth:** [docs/vj-deep-voyage-recipe.md](docs/vj-deep-voyage-recipe.md), from the [2026-11-22 clit coaster show](journals/2026-11-22-clit-coaster-show.md).
+
 During any **live session** — a VJ set (`/vibej2`), a jam, a `/live-session`, anything where the
 user has a hand on a controller — the main Claude session is a **dispatcher, not a worker**. It
 triages what the user says, reads the meter, makes the ONE decision, and hands execution to a

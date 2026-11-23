@@ -6,6 +6,10 @@ fixes for every failure seen in rehearsal. For taste and rules, see
 [vj-preferences.md](vj-preferences.md). For how the story engine works, see
 [storylines.md](storylines.md).
 
+For a fractal-voyage set (clit-set and the coaster), use [show-quickstart.md](show-quickstart.md)
+for the setup and [vj-deep-voyage-recipe.md](vj-deep-voyage-recipe.md) for how to keep a set deep
+for hours. The night it comes from: [2026-11-22 clit coaster show](../journals/2026-11-22-clit-coaster-show.md).
+
 ## 1. The day before: setup
 
 - [ ] `git checkout peter-show && git pull --ff-only`, then run `npm install` if `package.json`
