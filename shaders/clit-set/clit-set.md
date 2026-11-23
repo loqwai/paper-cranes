@@ -120,6 +120,8 @@ verbatim, and the series palette is one theme on top of it.
   map works on luminance as in 2.frag (per-channel Reinhard greyed the pale body: 12% of lit pixels grey with
   the theme alone, 2% with the luminance tone map).
 
+![Phone stills, top row main, bottom row OKLCH: clit-vibej/1, clit-vibej/2, clit-set/1, clit-set/2](oklch-before-after.jpg)
+
 Measured on the real files, before (main at fd177884, LACE AA) and after, `scripts/sparkle-score.mjs` render
 mode (synth trace, controller, warmup 240 frames, seeds 0.5, SwiftShader). Lit = max channel > 60; grey = lit
 and HSV saturation < 0.25; hot magenta = lit, OKLab C > 0.06, displayed hue 310..15°; green = 90..150°.
