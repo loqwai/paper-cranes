@@ -98,7 +98,8 @@ uniform float cs_k1, cs_k2, cs_k3, cs_k4, cs_k5, cs_k6, cs_k7, cs_k8;
 #define HUE_TURN ((HAS_CTL ? cs_hue : 0.0) * 1.2 + (HAS_CTL ? cs_jump : 0.0) * 0.9 + K_HUE * 6.2831853 + SEED_PHASE)
 
 // Feedback trails
-#define LACE_AA_SAMPLES 2   // extra orbit samples per pixel where the lace is unresolved (see LACE AA)
+#define LACE_AA_SAMPLES 1   // extra orbit samples per pixel where the lace is unresolved (see LACE AA). 1 for phones;
+                            // the desktop show machine can raise it (2: flicker -6% more, 3: -9%, at +20% / +38% frame time)
 #define FEEDBACK_MIX clamp(0.22 + energyNormalized * 0.08 + K_TRAILS * 0.55, 0.0, 0.85)
 
 // Spread opens the vignette a touch
@@ -123,12 +124,16 @@ vec3 chromadepth(float t) {
 // ============================================================================
 
 
+// Unit direction, or +x where the vector is 0: atan(0, 0) is NaN on some mobile GPUs
+vec2 unitDir(vec2 v) { return dot(v, v) > 1e-24 ? normalize(v) : vec2(1.0, 0.0); }
+
 struct LaceSample { float lace, fine, z, luma; vec3 col; };
 
 // The lace one orbit sample paints: coverage (lace, and the braid where both traps cross), the rainbow's
 // lightness and the lace colour. A function so LACE AA can average several.
 LaceSample laceSample(float x, float y, vec2 Z, float lace_lo) {
     LaceSample r;
+    vec2 zu = unitDir(Z);                  // atan(0, 0) is NaN on some mobile GPUs
     float z = 1. - smoothstep(1., -6., log(y)) * smoothstep(1., -6., log(x));
     float lace_x = smoothstep(lace_lo, -5.0, log(x));
     float lace_y = smoothstep(lace_lo, -5.0, log(y));
@@ -136,7 +141,7 @@ LaceSample laceSample(float x, float y, vec2 Z, float lace_lo) {
     r.fine = lace_x * lace_y;
     r.z = z;
     // sexy/1 rainbow, phase rotated by seed, knob, slow key and drops
-    vec4 rainbow = sqrt(max(z + (z - z * z * z) * cos(atan(Z.y, Z.x) + HUE_TURN - vec4(0, 2.1, 4.2, 0)), 0.0));
+    vec4 rainbow = sqrt(max(z + (z - z * z * z) * cos(atan(zu.y, zu.x) + HUE_TURN - vec4(0, 2.1, 4.2, 0)), 0.0));
     r.luma = dot(rainbow.rgb, vec3(0.299, 0.587, 0.114));
     r.col = mix(rainbow.rgb, chromadepth(mix(0.15, 0.7, 1.0 - r.luma)), K_DEPTH);
     return r;

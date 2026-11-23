@@ -173,9 +173,11 @@ plus eased knobs `cs_k9..cs_k16`. The behaviour test is `controllers/clit-set.te
 The dense lace sparkled whenever the picture moved. It is aliasing of the chaotic orbit traps, not float
 precision: see the LACE AA notes in [clit-vibej.md](../claude/wip/clit-vibej/clit-vibej.md) and
 [docs/sparkle-score.md](../../docs/sparkle-score.md). Where the lace value changes across the pixel's 2x2 quad
-(`unres`), both files run the orbit `LACE_AA_SAMPLES` (2) more times inside the pixel and average the lace's
+(`unres`), both files run the orbit `LACE_AA_SAMPLES` (1; the desktop show machine can raise it) more times inside the pixel and average the lace's
 coverage, light and colour: spatial supersampling, no frame history. (A first version blended last frame
 there; it ghosted and blurred real motion, and review rejected it.) 2.frag's depth coherence gate stays.
-Synth trace, before / fix / `--ss 4` reference: 2.frag flipMean 8.05 / 5.99 / 2.77, motion 12.56 / 10.36 /
-7.35, distance to reference 8.38 / 6.54; 1.frag flipMean 0.82 / 0.69 / 0.29, distance 2.99 / 2.27.
-Cost on SwiftShader, median of 3 runs: 2.frag 75 to 135 ms per frame (+79%), 1.frag 66 to 102 (+54%).
+Synth trace, before / fix / `--ss 4` reference, shipped 1 sample: 2.frag flipMean 8.05 / 6.71 / 2.77, motion
+12.56 / 11.13 / 7.35, distance to reference 8.38 / 7.32. With 2 samples: 2.frag 5.99 flipMean, distance 6.54;
+1.frag flipMean 0.82 / 0.69 / 0.29, distance 2.99 / 2.27. Cost on SwiftShader at 2 samples, median of 3 runs:
+2.frag 75 to 135 ms per frame (+79%), 1.frag 66 to 102 (+54%); 1 sample costs less (not re-measured here).
+`atan(0, 0)` is guarded (NaN on some mobile GPUs): the orbit direction goes through `unitDir()`.

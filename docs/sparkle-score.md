@@ -152,22 +152,26 @@ Supersampling every pixel instead of the masked ones scores within 1% of the mas
 
 Synth trace, 90 frames, 408 x 816, SwiftShader. `ref` is the unfixed shader at `--ss 4`:
 
+Shipped with `LACE_AA_SAMPLES 1` (for phones). Rows marked "2 samples" were measured before that change.
+
 | Shader | flipMean before / fix / ref | motion before / fix / ref | refMAE before / fix | gate |
 |---|---|---|---|---|
-| clit-vibej/2 | 10.57 / 9.15 / 7.39 | 16.50 / 15.19 / 13.58 | 6.87 / 5.50 | pass |
-| clit-vibej/1 | 9.05 / 6.86 / 4.05 | 14.05 / 11.93 / 9.36 | 8.12 / 6.33 | pass |
-| clit-set/2 | 8.05 / 5.99 / 2.77 | 12.56 / 10.36 / 7.35 | 8.38 / 6.54 | pass |
-| clit-set/1 | 0.82 / 0.69 / 0.29 | 1.70 / 1.41 / 0.75 | 2.99 / 2.27 | pass |
+| clit-vibej/2, 1 sample | 10.57 / 9.74 / 7.39 | 16.50 / 15.74 / 13.58 | 6.87 / 6.12 | pass |
+| clit-set/2, 1 sample | 8.05 / 6.71 / 2.77 | 12.56 / 11.13 / 7.35 | 8.38 / 7.32 | pass |
+| clit-vibej/2, 2 samples | 10.57 / 9.15 / 7.39 | 16.50 / 15.19 / 13.58 | 6.87 / 5.50 | pass |
+| clit-vibej/1, 2 samples | 9.05 / 6.86 / 4.05 | 14.05 / 11.93 / 9.36 | 8.12 / 6.33 | pass |
+| clit-set/2, 2 samples | 8.05 / 5.99 / 2.77 | 12.56 / 10.36 / 7.35 | 8.38 / 6.54 | pass |
+| clit-set/1, 2 samples | 0.82 / 0.69 / 0.29 | 1.70 / 1.41 / 0.75 | 2.99 / 2.27 | pass |
 | clit-vibej/2, first fix (frame blending) | 10.57 / 3.18 / 7.39 | 16.50 / 9.12 / 13.58 | 6.87 / 11.20 | fail |
 
-The fix closes 40% to 55% of the gap to the 16-sample reference. More samples close more, at a cost
+With 2 samples the fix closes 40% to 55% of the gap to the 16-sample reference; 1 sample keeps about 60% of that. More samples close more, at a cost
 (clit-vibej/2, masked, SwiftShader ms per frame, median of 3 interleaved runs):
 
 | Extra samples | flipMean | refMAE | ms/frame |
 |---|---|---|---|
 | 0 (before) | 10.57 | 6.87 | 106 |
-| 1 | 9.74 | 6.12 | 157 |
-| 2 (shipped) | 9.15 | 5.50 | 190 |
+| 1 (shipped, phones) | 9.74 | 6.12 | 157 |
+| 2 | 9.15 | 5.50 | 190 |
 | 3 | 8.84 | 5.26 | 217 |
 | 7 | 8.52 | 5.00 | not measured |
 

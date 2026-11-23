@@ -128,15 +128,20 @@ The lace sparkled (show journal: "Tube walls speckle with live audio"). Measured
 - **Fix: spatial supersampling.** The orbit loop is now `orbit()`, and the lace fields one orbit gives
   (coverage, braid, rainbow lightness, palette position, colour) are `laceSample()`. `unres` is how much
   those change across the pixel's 2x2 quad (`fwidth`): 0 inside a clean thread, high in the chaotic lace.
-  There the pixel runs `orbit()` `LACE_AA_SAMPLES` (2) more times on a ring inside its own footprint
+  There the pixel runs `orbit()` `LACE_AA_SAMPLES` (1) more times on a ring inside its own footprint
   (`C + o.x * dFdx(C) + o.y * dFdy(C)`) and averages coverage, lightness and palette position, with the
   colour weighted by coverage so dark samples do not grey it. No frame history: nothing trails or ghosts.
   The rim edge is taken from the averaged `z`.
 - **Removed:** iters 10, 11 and 13 `fwidth` gates. They dimmed the noisy lace instead of resolving it.
-- **Numbers** (synth trace, 90 frames, 408 x 816; `ref` = unfixed shader at `--ss 4`):
-  1.frag flipMean 9.05 / 6.86 / 4.05 (before / fix / ref), motion 14.05 / 11.93 / 9.36, distance to ref
+- **Numbers** (synth trace, 90 frames, 408 x 816; `ref` = unfixed shader at `--ss 4`). Shipped, 1 sample:
+  2.frag flipMean 10.57 / 9.74 / 7.39 (before / fix / ref), motion 16.50 / 15.74 / 13.58, distance to ref
+  6.87 / 6.12. With 2 samples: 1.frag flipMean 9.05 / 6.86 / 4.05 (before / fix / ref), motion 14.05 / 11.93 / 9.36, distance to ref
   8.12 / 6.33. 2.frag flipMean 10.57 / 9.15 / 7.39, motion 16.50 / 15.19 / 13.58, distance 6.87 / 5.50.
   Live split-screen recording (same frames, sides swapped halfway): 2.frag 9.0 to 7.3, 1.frag 7.7 to 5.7.
-- **Cost:** SwiftShader (CPU, a stand-in for a phone), median of 3 runs: 1.frag 112 to 198 ms per
-  frame (+76%), 2.frag 106 to 190 (+79%). Nothing measured on a real phone yet. `LACE_AA_SAMPLES` is the dial: 1 is cheaper and
-  weaker, 3 is better and dearer; see the table in docs/sparkle-score.md.
+  The recording ran 2 samples.
+- **Cost:** SwiftShader (CPU, a stand-in for a phone), median of 3 runs: 2.frag 106 to 157 ms per frame
+  at 1 sample (+48%), 190 at 2; 1.frag 112 to 198 at 2. Nothing measured on a real phone yet.
+- **`LACE_AA_SAMPLES` is 1 for phones.** Keep the define: the desktop show machine can raise it to 2
+  (flicker about 6% lower again, +20% frame time) or 3 (about 9%, +38%). Table in docs/sparkle-score.md.
+- **NaN guard:** `atan(0, 0)` is NaN on some mobile GPUs. The orbit direction goes through `unitDir()` (+x for
+  a zero vector), and the averaged direction falls back to the centre sample's if the samples cancel.

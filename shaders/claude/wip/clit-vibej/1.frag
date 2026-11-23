@@ -127,7 +127,8 @@ uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 #define MIDS_ENV (HAS_CTL ? clamp(cs_mids, 0.0, 1.0) : clamp(midsZScore, 0.0, 1.0))
 #define CHROMA_GAIN (0.85 + 0.3 * BREATH + 0.25 * MIDS_ENV * REACT)
 // Trails do not grow with loudness: more smear on loud passages made the loud frames move LESS
-#define LACE_AA_SAMPLES 2   // extra orbit samples per pixel where the lace is unresolved (see LACE AA)
+#define LACE_AA_SAMPLES 1   // extra orbit samples per pixel where the lace is unresolved (see LACE AA). 1 for phones;
+                            // the desktop show machine can raise it (2: flicker -6% more, 3: -9%, at +20% / +38% frame time)
 #define FEEDBACK_MIX clamp(0.22 + K_TRAILS * 0.55, 0.0, 0.85)
 #define VIGN_OPEN 0.03
 
@@ -200,12 +201,16 @@ mat2 rot2(float a) { float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 // ============================================================================
 // MAIN
 // ============================================================================
+// Unit direction, or +x where the vector is 0: atan(0, 0) is NaN on some mobile GPUs
+vec2 unitDir(vec2 v) { return dot(v, v) > 1e-24 ? normalize(v) : vec2(1.0, 0.0); }
+
 struct LaceSample { float lace, fine, z, luma, pal_t; vec3 col; };
 
 // The lace one orbit sample paints: coverage (lace, and the braid where both traps cross), the rainbow's
 // lightness, the palette position and the lace colour. A function so LACE AA can average several.
 LaceSample laceSample(float x, float y, vec2 Z, float lace_lo, float lace_hi) {
     LaceSample r;
+    vec2 zu = unitDir(Z);                  // atan(0, 0) is NaN on some mobile GPUs
     float lx = log(max(x, 1e-12)), ly = log(max(y, 1e-12));
     float z = 1. - smoothstep(1., -6., ly) * smoothstep(1., -6., lx);
     float lace_x = smoothstep(lace_lo, lace_hi, lx);
@@ -213,11 +218,11 @@ LaceSample laceSample(float x, float y, vec2 Z, float lace_lo, float lace_hi) {
     r.lace = pow(max(lace_x, lace_y), 3.0);
     r.fine = lace_x * lace_y;
     r.z = z;
-    float phi = atan(Z.y, Z.x) + HUE_TURN;
+    float phi = atan(zu.y, zu.x) + HUE_TURN;
     // The rainbow's luma is the lace's LIGHTNESS structure, so it takes only the fixed per-device phase.
     // Fed the moving hue turn (cs_jump +0.9 rad per drop, cs_hue), every drop re-lit the whole lace
     // over 1.5 s: a light morph the shiver probe read as zoom. The hue turn now moves colour only.
-    vec4 rainbow = sqrt(max(z + (z - z * z * z) * cos(atan(Z.y, Z.x) + SEED_PHASE - vec4(0, 2.1, 4.2, 0)), 0.0));
+    vec4 rainbow = sqrt(max(z + (z - z * z * z) * cos(atan(zu.y, zu.x) + SEED_PHASE - vec4(0, 2.1, 4.2, 0)), 0.0));
     float luma = dot(rainbow.rgb, vec3(0.299, 0.587, 0.114));
     r.luma = luma;
     // Palette position: the orbit angle as a triangle wave (0 red … 1 violet … 0 red), so the hue never
@@ -322,7 +327,7 @@ void mainImage(out vec4 P, vec2 V) {
     vec2 dCx = dFdx(C), dCy = dFdy(C);
     float lace = ls.lace, lace_fine = ls.fine, z = ls.z, luma = ls.luma, pal_t = ls.pal_t;
     vec3 lace_col = ls.col;
-    vec2 zdir = normalize(Z + 1e-9);
+    vec2 zdir = unitDir(Z);
     if (unres > 0.0) {
         float s_lace = ls.lace, s_fine = ls.fine, s_z = ls.z, s_luma = ls.luma, s_pal = ls.pal_t;
         vec3 s_col = ls.col * (ls.lace + ls.fine);
@@ -336,7 +341,7 @@ void mainImage(out vec4 P, vec2 V) {
             LaceSample t = laceSample(sx, sy, sZ, lace_lo, lace_hi);
             s_lace += t.lace; s_fine += t.fine; s_z += t.z; s_luma += t.luma; s_pal += t.pal_t;
             s_col += t.col * (t.lace + t.fine);
-            s_dir += normalize(sZ + 1e-9);
+            s_dir += unitDir(sZ);
         }
         float inv = 1.0 / float(LACE_AA_SAMPLES + 1);
         // the colour is weighted by how much lace each sample has, so dark samples do not grey it
@@ -351,6 +356,7 @@ void mainImage(out vec4 P, vec2 V) {
     }
     lace *= coh_gate;
     lace_fine *= 1.0 - coh * 0.7;
+    zdir = dot(zdir, zdir) > 1e-12 ? zdir : unitDir(Z);  // the averaged directions can cancel to 0
     float phi = atan(zdir.y, zdir.x) + HUE_TURN;
     float pale = smoothstep(0.66, 0.78, z);
 
