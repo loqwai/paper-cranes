@@ -4,9 +4,20 @@ import { shaderPlugin } from './vite-plugins/shader-plugin.js'
 import { remoteWsPlugin } from './vite-plugins/remote-ws-plugin.js'
 import { editorSyncPlugin } from './vite-plugins/editor-sync-plugin.js'
 import { vjSignalPlugin } from './vite-plugins/vj-signal-plugin.js'
+import { showConfigPlugin } from './vite-plugins/show-config-plugin.js'
 import { getPort } from './scripts/dev-port.js'
+import { existsSync } from 'fs'
 
 const port = getPort()
+
+// Every page the site can build. Only the ones present are built, so a show repo
+// (scripts/show-repo/create.js deletes edit.html, list.html, ...) builds without editing this file.
+const PAGES = ['index', 'show', 'edit', 'jam', 'list', 'analyze', 'playlist', 'nfc-writer', 'midi', 'vj', 'vjpad']
+const pageInputs = () => Object.fromEntries(
+  PAGES
+    .map((page) => [page === 'index' ? 'main' : page, resolve(import.meta.dirname, `${page}.html`)])
+    .filter(([, path]) => existsSync(path)),
+)
 
 export default defineConfig({
   server: {
@@ -24,18 +35,7 @@ export default defineConfig({
     target: 'esnext',
     outDir: 'dist',
     rollupOptions: {
-      input: {
-        main: resolve(import.meta.dirname, 'index.html'),
-        edit: resolve(import.meta.dirname, 'edit.html'),
-        jam: resolve(import.meta.dirname, 'jam.html'),
-        list: resolve(import.meta.dirname, 'list.html'),
-        analyze: resolve(import.meta.dirname, 'analyze.html'),
-        playlist: resolve(import.meta.dirname, 'playlist.html'),
-        'nfc-writer': resolve(import.meta.dirname, 'nfc-writer.html'),
-        midi: resolve(import.meta.dirname, 'midi.html'),
-        vj: resolve(import.meta.dirname, 'vj.html'),
-        vjpad: resolve(import.meta.dirname, 'vjpad.html'),
-      },
+      input: pageInputs(),
       output: {
         entryFileNames: 'assets/[name].js',
         chunkFileNames: 'assets/[name].js',
@@ -55,5 +55,5 @@ export default defineConfig({
       external: (id) => id.startsWith('https://'),
     },
   },
-  plugins: [shaderPlugin(), remoteWsPlugin(), editorSyncPlugin(), vjSignalPlugin()],
+  plugins: [shaderPlugin(), remoteWsPlugin(), editorSyncPlugin(), vjSignalPlugin(), showConfigPlugin()],
 })

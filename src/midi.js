@@ -92,6 +92,8 @@ const attachInput = (input) => {
 navigator
   .requestMIDIAccess()
   .then((midiAccess) => {
+    // Exposed so a page check (scripts/show-repo/verify.js) can tell MIDI actually started
+    window.cranes.midiAccess = midiAccess
     midiAccess.inputs.forEach((input) => attachInput(input))
 
     // Hot-plug support

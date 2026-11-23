@@ -31,6 +31,9 @@ const processServiceWorkerMessage = (event) => {
       // when the service worker detects a .frag file changed on disk.
       if (window.location.pathname.includes('edit')) return
       if (window.location.pathname.includes('jam')) return
+      // Show mode (show.html, or a show repo's index.html): a deploy must never blank the wall
+      // mid-set. The new build is picked up on the next manual refresh.
+      if (document.getElementById('show-config')) return
       if (reloadTimeout) return
       const lastReload = parseInt(sessionStorage.getItem('sw-last-reload') || '0')
       if (Date.now() - lastReload < RELOAD_GRACE) return
