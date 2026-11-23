@@ -139,6 +139,15 @@ describe('vj mcp', () => {
     expect(await readFile(resolve(SHADER_DIR, '1.frag'), 'utf-8')).toBe(KNOB_SHADER)
   })
 
+  it('refuses shader names that climb out of shaders/ instead of rewriting them', async () => {
+    for (const shader of ['../../vj-mcp-evil', '/tmp/vj-mcp-evil', 'a/../../vj-mcp-evil', 'x\u0000y']) {
+      const { res } = await call('write_shader', { shader, code: GREEN_SHADER, validate: false })
+      expect(res.isError, shader).toBe(true)
+    }
+    await expect(readFile(resolve(ROOT, 'shaders/vj-mcp-evil.frag'))).rejects.toThrow()
+    await expect(readFile(resolve(ROOT, 'vj-mcp-evil.frag'))).rejects.toThrow()
+  })
+
   it('writes a shader to disk and the display hot-swaps to it', async () => {
     const { json } = await call('write_shader', { shader: SHADER, code: GREEN_SHADER })
     expect(json.validatedOn).toMatch(/^[0-9a-f]{6}$/)
@@ -178,5 +187,57 @@ describe('vj mcp', () => {
     const { res, text } = await call('screenshot')
     expect(res.isError).toBe(true)
     expect(text).toMatch(/no display connected/)
+  })
+
+  // A raw /ws client saying display-hello, with the Origin header a browser page would send.
+  const fakeDisplay = async (origin) => {
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws`, { origin })
+    await new Promise((r) => ws.once('open', r))
+    const hello = (key) => ws.send(JSON.stringify({ type: 'display-hello', data: { key, shader: 'fake', href: origin } }))
+    return { ws, hello }
+  }
+  const ids = async () => (await call('list_displays')).json.displays.map((d) => d.id).sort()
+
+  it('refuses display-hello from a page on another origin', async () => {
+    const foreign = await fakeDisplay('http://evil.example')
+    foreign.hello('feed0000-0000-4000-8000-000000000000')
+    const same = await fakeDisplay(`http://127.0.0.1:${port}`)
+    same.hello('cafe0000-0000-4000-8000-000000000000')
+    await until(async () => (await ids()).length === 1)
+    await new Promise((r) => setTimeout(r, 300))
+    expect(await ids()).toEqual(['cafe00'])
+    foreign.ws.close()
+    same.ws.close()
+    await until(async () => (await ids()).length === 0)
+  })
+
+  it('drops a socket’s old entry when it says hello again under a new key', async () => {
+    const d = await fakeDisplay(`http://127.0.0.1:${port}`)
+    d.hello('aaaa1111-0000-4000-8000-000000000000')
+    await until(async () => (await ids()).join() === 'aaaa11')
+    d.hello('bbbb2222-0000-4000-8000-000000000000')
+    await until(async () => (await ids()).join() === 'bbbb22')
+    d.ws.close()
+    await until(async () => (await ids()).length === 0)
+  })
+
+  it('keeps both tabs when a duplicated tab arrives with the same key', async () => {
+    const url = `http://127.0.0.1:${port}/?shader=${SHADER}&remote=display&noaudio=true`
+    const a = await browser.newPage({ viewport: { width: 160, height: 120 } })
+    await a.goto(url)
+    const [idA] = await until(async () => { const l = await ids(); return l.length === 1 ? l : null })
+    const keyA = await a.evaluate(() => sessionStorage.getItem('cranes-display-key'))
+    // What Chrome's Duplicate tab does: the new tab starts with a copy of sessionStorage.
+    const b = await browser.newPage({ viewport: { width: 160, height: 120 } })
+    await b.addInitScript((k) => sessionStorage.setItem('cranes-display-key', k), keyA)
+    await b.goto(url)
+    const both = await until(async () => { const l = await ids(); return l.length === 2 ? l : null })
+    expect(both).toContain(idA)
+    expect(await b.evaluate(() => sessionStorage.getItem('cranes-display-key'))).not.toBe(keyA)
+    await b.close()
+    await until(async () => (await ids()).length === 1)
+    expect(await ids()).toEqual([idA])
+    await a.close()
+    await until(async () => (await ids()).length === 0)
   })
 })

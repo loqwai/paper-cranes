@@ -3,7 +3,20 @@ import { WebSocketServer, WebSocket } from 'ws'
 // Message types between one display and the VJ MCP hub (vite-plugins/vj-mcp/hub.js). They are
 // point-to-point: never broadcast, and `inspect` from a client is dropped, because only the hub
 // may ask a display for anything (docs/vj-mcp.md).
-const HUB_ONLY = new Set(['display-hello', 'inspect-reply', 'inspect'])
+const HUB_ONLY = new Set(['display-hello', 'inspect-reply', 'inspect', 'display-rekey'])
+
+// May this socket register as a display? Only a page this dev server served: its Origin's host
+// equals the Host it connected to (the tunnel too, where both are the tunnel hostname). Any other
+// web page open in the browser can reach /ws, but must not pose as a display and feed an agent
+// text of its choosing. Ordinary /ws traffic (update-params, audio-features) is unaffected.
+const sameOrigin = (req) => {
+  try {
+    const origin = new URL(req.headers.origin).host
+    return [req.headers.host, req.headers['x-forwarded-host']].includes(origin)
+  } catch {
+    return false
+  }
+}
 
 export function remoteWsPlugin({ hub } = {}) {
   const clients = new Set()
@@ -44,6 +57,7 @@ export function remoteWsPlugin({ hub } = {}) {
 
       wss.on('connection', (ws, req) => {
         const clientIp = req.socket.remoteAddress
+        const mayDisplay = sameOrigin(req)
         clients.add(ws)
         console.log(`[WS] Client connected from ${clientIp} (${clients.size} total)`)
 
@@ -53,7 +67,10 @@ export function remoteWsPlugin({ hub } = {}) {
           try {
             const message = JSON.parse(msg.toString())
             if (HUB_ONLY.has(message.type)) {
-              if (message.type === 'display-hello') hub?.onHello(ws, message.data)
+              if (message.type === 'display-hello') {
+                if (mayDisplay) hub?.onHello(ws, message.data)
+                else console.warn(`[WS] display-hello refused: Origin ${req.headers.origin ?? '(none)'} is not this server`)
+              }
               if (message.type === 'inspect-reply') hub?.onReply(ws, message.data)
               return
             }

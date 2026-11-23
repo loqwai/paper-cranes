@@ -56,16 +56,20 @@ refuses it. Making that work means changing the tunnel's auth, which is not done
 | `list_displays` | Connected displays: `id`, shader, user agent, canvas, audio state, plus the event `seq`. |
 | `list_shaders {query?, include_wip?, limit?}` | Shaders from `shaders.json`, newest first, with the knobs each reads and their names. |
 | `get_state {display?, features?, screenshot?}` | Shader and its source hash, compile error, fps, audio state, knob values with names, pinned params, controller outputs, core audio features, the `?vj=1` meter and jank summaries, recent console errors. `screenshot: true` adds a JPEG. |
-| `screenshot {display?, width?}` | JPEG of the canvas, captured on the page. |
+| `screenshot {display?, width?}` | JPEG of the canvas, captured on the page. Width is at most 960 px, because the encode runs on the render thread. |
 | `set_params {display?, params}` | Sends `update-params` down that display's socket (the vjpad / `remote-send.js` path), then reads the values back from the page. A value is pinned above MIDI and controllers; `null` releases it. |
-| `set_shader {display?, shader, params?}` | Switches in place (no reload, audio history kept), waits until the page runs that exact source, and reports whether it compiles. |
+| `set_shader {display?, shader, params?}` | Switches in place (no reload, audio history kept), waits until the page runs that exact source, and reports whether it compiles. If the page never picks the source up, `loaded` is false and `compiles` is null. |
 | `read_shader {shader}` | Source, knobs and hash of `shaders/<shader>.frag`. |
 | `write_shader {shader, code, display?, validate?}` | Compiles on a display first and refuses to write on an error. Then writes the file (the same helper as `/__save-shader`), lets HMR hot-swap it, and reports which displays picked it up. |
 | `wait_for_event {since?, types?, timeout_s?}` | Blocks up to 55 s until `display-joined`, `display-left` or a `vj-signal` (`boot`, `clip`, `flicker`, `too-dark`, `shiver`, `gate-drop`, `pulse`, `confirm-learn`) arrives after `since`. |
 
 `display` is optional when one display is connected, and otherwise any unique prefix of an
 id. An id is the first 6 hex characters of a key kept in the tab's `sessionStorage`, so it
-survives reloads of that tab.
+survives reloads of that tab. A duplicated tab (Chrome's Duplicate tab, `window.open`) starts
+with a copy of that key. When a second live socket says hello with an id already in use, the hub
+pings the first one. If the first answers, the newcomer gets `display-rekey`, mints its own key
+and says hello again, so both tabs are listed. If it does not answer (a phone that dropped off
+wifi), the newcomer takes over the id.
 
 A typical loop: `list_displays`, then `get_state {screenshot:true}`, then `set_params`, then
 `get_state` again to see the change. Between moves, `wait_for_event` waits for the page to
@@ -91,8 +95,8 @@ MCP client ──POST /mcp──► vj-mcp-plugin ──► tools.js ──► h
   commands are read-only (`state`, `shot`, `logs`) plus `validate`, a scratch compile that
   changes nothing on screen. It has no `eval`.
 - `remote-ws-plugin.js` routes `display-hello` and `inspect-reply` to the hub and never
-  broadcasts them. It drops any `inspect` a client sends, so only the hub can question a display.
-  `e2e/vj-mcp.test.js` asserts this.
+  broadcasts them. It drops any `inspect` or `display-rekey` a client sends, so only the hub can
+  question a display. `e2e/vj-mcp.test.js` asserts this.
 
 ## Security
 
@@ -104,8 +108,19 @@ MCP client ──POST /mcp──► vj-mcp-plugin ──► tools.js ──► h
 - The dev server binds `0.0.0.0` with `allowedHosts: true`. Anyone on the LAN can reach `/mcp`,
   as they already can reach `/__save-shader`. On untrusted wifi, bind to localhost and use the
   tunnel. Changing that default is a recommendation, not done here.
-- Any `/ws` client can claim to be a display. A fake display only receives requests and
-  `update-params`, and it can lie in its answers. It cannot reach another display.
+- **Only this server's own pages can register as displays.** The broker accepts
+  `display-hello` only on a `/ws` socket whose upgrade request carries an `Origin` whose host
+  equals the `Host` it connected to (or `X-Forwarded-Host`). Real display pages are served by
+  this dev server, so they pass, on the tunnel too, where both are the tunnel hostname. Another
+  web page open in the same browser can still open `/ws`, but it cannot pose as a display and
+  feed text such as `recentErrors` to an agent that may hold a shell. Ordinary `/ws` traffic
+  (`update-params`, `audio-features`) is authorized exactly as before. A non-browser client can
+  forge `Origin`, but such a client already has the LAN or tunnel access that would let it do
+  more.
+- **Shader names from an agent are refused, not repaired.** `read_shader`, `set_shader` and
+  `write_shader` reject names with `..`, a leading `/`, a drive letter, a backslash or NUL. The
+  editor's `/__save-shader` keeps its old sanitising, plus the shared check that the result stays
+  inside `shaders/`.
 
 ## Relation to the one-Claude-per-socket design (PR #188)
 
@@ -136,4 +151,9 @@ headless Chromium display, then calls every tool through an MCP client. It check
 decoding the tool's own screenshot (blue at `knob_1=0`, red at `knob_1=1`) and by reading the
 uniform in the page. It also checks that a compile error leaves the file untouched, that a write
 hot-swaps the display to green, that a shader switch happens in place, and that join, leave and
-point-to-point routing behave as described above.
+point-to-point routing behave as described above. It also checks the hardening:
+- a `display-hello` from a foreign `Origin` is not listed;
+- a socket that says hello again under a new key leaves no stale entry;
+- a duplicated tab carrying the same key is listed alongside the original, and closing it leaves
+  the original in place;
+- shader names that climb out of `shaders/` are refused.

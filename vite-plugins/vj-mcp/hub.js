@@ -57,22 +57,51 @@ export const createHub = () => {
     }
   }
 
-  const onHello = (ws, info = {}) => {
+  // Is this socket really alive? A phone that drops off wifi can leave a socket the server still
+  // thinks is OPEN; a ping it cannot answer tells the two cases apart.
+  const alive = (ws, ms = 1500) =>
+    new Promise((resolveP) => {
+      if (ws.readyState !== WebSocket.OPEN) return resolveP(false)
+      const onPong = () => { clearTimeout(timer); resolveP(true) }
+      const timer = setTimeout(() => { ws.off('pong', onPong); resolveP(false) }, ms)
+      ws.once('pong', onPong)
+      try { ws.ping() } catch { clearTimeout(timer); ws.off('pong', onPong); resolveP(false) }
+    })
+
+  const forget = (d, why) => {
+    bySocket.delete(d.ws)
+    if (displays.get(d.id) === d) displays.delete(d.id)
+    failPending(d, why)
+    pushEvent('display-left', { display: d.id, shader: d.info.shader ?? null })
+  }
+
+  const onHello = async (ws, info = {}) => {
     const key = String(info.key ?? '')
     if (!/^[0-9a-f-]{8,64}$/i.test(key)) return
     const id = key.replace(/-/g, '').slice(0, 6).toLowerCase()
     const now = new Date().toISOString()
-    const existing = displays.get(id)
-    if (existing && existing.ws === ws) {
-      existing.info = info
-      existing.lastSeenAt = now
+    const mine = bySocket.get(ws)
+    if (mine && mine.id === id) {
+      mine.info = info
+      mine.lastSeenAt = now
       return
     }
-    // Same tab on a new socket (reload, reconnect): the new socket wins.
+    // This socket said hello before under another key (a rekeyed tab): drop that entry, or it
+    // would sit in the list forever and break every "only one display" default.
+    if (mine) forget(mine, `display ${mine.id} re-announced as ${id}`)
+    const existing = displays.get(id)
     if (existing) {
-      bySocket.delete(existing.ws)
-      failPending(existing, `display ${id} reconnected; retry`)
+      // Two live tabs with one key: Chrome's Duplicate tab and window.open copy sessionStorage.
+      // The first keeps the id; the newcomer is told to mint its own key and hello again.
+      if (await alive(existing.ws)) {
+        if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'display-rekey', data: { id } }))
+        return
+      }
+      // Same tab on a new socket (a reload, or a reconnect after a dead socket): the new one wins.
+      existing.ws.terminate()
+      forget(existing, `display ${id} reconnected; retry`)
     }
+    if (ws.readyState !== WebSocket.OPEN) return
     const d = { id, key, ws, info, connectedAt: now, lastSeenAt: now }
     displays.set(id, d)
     bySocket.set(ws, d)
@@ -91,11 +120,7 @@ export const createHub = () => {
 
   const onClose = (ws) => {
     const d = bySocket.get(ws)
-    if (!d) return
-    bySocket.delete(ws)
-    if (displays.get(d.id) === d) displays.delete(d.id)
-    failPending(d, `display ${d.id} disconnected mid-request`)
-    pushEvent('display-left', { display: d.id, shader: d.info.shader ?? null })
+    if (d) forget(d, `display ${d.id} disconnected mid-request`)
   }
 
   const list = () => [...displays.values()].map(summary)
@@ -143,6 +168,7 @@ export const createHub = () => {
       const done = () => {
         waiters.delete(check)
         clearTimeout(timer)
+        signal?.removeEventListener('abort', done)
         resolveP({ seq, events: match() })
       }
       const check = () => { if (match().length) done() }

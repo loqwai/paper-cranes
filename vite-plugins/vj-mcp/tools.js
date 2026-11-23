@@ -36,6 +36,17 @@ const guard = (fn) => async (args, extra) => {
   }
 }
 
+// A shader name from an agent is refused, not repaired: `../../evil` must fail, not quietly
+// become shaders/evil.frag (which the shared /__save-shader sanitiser would make of it).
+const strictShader = (shader) => {
+  const s = String(shader ?? '')
+  if (!s.trim()) throw new ToolError('shader name required')
+  if (s.includes('\0') || s.includes('\\')) throw new ToolError(`bad shader name ${JSON.stringify(s)}`)
+  if (s.startsWith('/') || /^[A-Za-z]:/.test(s)) throw new ToolError(`shader name must be relative to shaders/, got ${s}`)
+  if (s.split('/').some((part) => part === '..' || part === '.' || part === '') || s.includes('..')) throw new ToolError(`shader name may not contain .. or empty segments: ${s}`)
+  return s.replace(/\.frag$/, '')
+}
+
 const RESERVED = new Set(['shader', 'shaderCode', 'fullscreen', 'remote', 'room'])
 const PARAM_KEY = /^[A-Za-z_][A-Za-z0-9_]{0,63}$/
 
@@ -130,7 +141,7 @@ export const createVjMcpServer = ({ hub, root, port }) => {
 
   server.registerTool('screenshot', {
     description: 'JPEG of the display canvas as the audience sees it (captured on the page, so it works for a phone over the tunnel).',
-    inputSchema: { display: displayArg, width: z.number().int().min(64).max(1920).optional().describe('px, default 480') },
+    inputSchema: { display: displayArg, width: z.number().int().min(64).max(960).optional().describe('px, default 480, max 960 (the encode runs on the render thread)') },
     annotations: { readOnlyHint: true },
   }, guard(async ({ display, width = 480 }) => {
     const d = hub.resolve(display)
@@ -169,12 +180,13 @@ export const createVjMcpServer = ({ hub, root, port }) => {
     },
   }, guard(async ({ display, shader, params = {} }) => {
     const d = hub.resolve(display)
-    const { name, code } = await readShader(root, shader).catch(() => { throw new ToolError(`no shader ${shader} on disk (list_shaders)`) })
+    const { name, code } = await readShader(root, strictShader(shader)).catch((e) => { throw e instanceof ToolError ? e : new ToolError(`no shader ${shader} on disk (list_shaders)`) })
     for (const k of Object.keys(params)) if (RESERVED.has(k) || !PARAM_KEY.test(k)) throw new ToolError(`bad param name ${k}`)
     hub.send(d, 'update-params', { shader: name, ...params })
     const { pickedUp, state } = await awaitSource(d, hashSource(code), 6000)
-    const verdict = await hub.request(d, 'validate', {})
-    return text({ display: d.id, shader: name, loaded: pickedUp, compiles: verdict.ok, error: verdict.info ?? undefined, fps: state?.fps })
+    // Only judge the compile once the page runs the new source; otherwise it would be the old one's.
+    const verdict = pickedUp ? await hub.request(d, 'validate', {}) : null
+    return text({ display: d.id, shader: name, loaded: pickedUp, compiles: verdict ? verdict.ok : null, error: verdict?.info ?? undefined, fps: state?.fps })
   }))
 
   server.registerTool('read_shader', {
@@ -182,7 +194,7 @@ export const createVjMcpServer = ({ hub, root, port }) => {
     inputSchema: { shader: z.string().describe('path under shaders/ without .frag') },
     annotations: { readOnlyHint: true },
   }, guard(async ({ shader }) => {
-    const { name, relative, code } = await readShader(root, shader).catch(() => { throw new ToolError(`no shader ${shader} on disk`) })
+    const { name, relative, code } = await readShader(root, strictShader(shader)).catch((e) => { throw e instanceof ToolError ? e : new ToolError(`no shader ${shader} on disk`) })
     return text({ shader: name, path: relative, hash: hashSource(code), bytes: code.length, knobs: extractKnobs(code), code })
   }))
 
@@ -195,7 +207,7 @@ export const createVjMcpServer = ({ hub, root, port }) => {
       validate: z.boolean().optional().describe('compile on a display before writing (default true; false skips, e.g. with no display)'),
     },
   }, guard(async ({ shader, code, display, validate = true }) => {
-    const target = shader.replace(/^\/+/, '').replace(/\.frag$/, '')
+    const target = strictShader(shader)
     const showing = hub.list().filter((d) => d.shader === target).map((d) => hub.resolve(d.id))
     let validated = false
     if (validate) {
@@ -204,7 +216,7 @@ export const createVjMcpServer = ({ hub, root, port }) => {
       if (!v.ok) return fail(`not written: compile failed on display ${d.id}:\n${v.info}`)
       validated = d.id
     }
-    const saved = await saveShader(root, shader, code)
+    const saved = await saveShader(root, target, code)
     const hash = hashSource(code)
     const displays = await Promise.all(showing.map(async (d) => {
       try {

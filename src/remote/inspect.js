@@ -14,15 +14,20 @@ const S = (window.__cranesInspect ??= { logRing: [], consoleWrapped: false })
 
 // One id per tab that survives a reload, so an agent holding `display: "a1b2c3"` keeps working
 // after the page reloads (the per-load ids in #187 broke this).
-const displayKey = (() => {
+// A duplicated tab (Chrome's Duplicate tab, window.open) inherits a copy of sessionStorage and so
+// this key; the hub answers its hello with `display-rekey`, and `fresh` mints a key of its own.
+const KEY = 'cranes-display-key'
+const loadKey = (fresh = false) => {
   try {
-    const k = sessionStorage.getItem('cranes-display-key') || crypto.randomUUID()
-    sessionStorage.setItem('cranes-display-key', k)
+    const k = (!fresh && sessionStorage.getItem(KEY)) || crypto.randomUUID()
+    sessionStorage.setItem(KEY, k)
     return k
   } catch {
-    return (S.key ??= crypto.randomUUID())
+    if (fresh || !S.key) S.key = crypto.randomUUID()
+    return S.key
   }
-})()
+}
+let displayKey = loadKey()
 
 const LOG_MAX = 100
 const safeJson = (v) => { try { return JSON.stringify(v) } catch { return String(v) } }
@@ -132,11 +137,13 @@ const commands = {
     return out
   },
 
+  // Capped at 960 px: the JPEG encode runs on the render thread, and a 1920 px one can drop a
+  // frame mid-show.
   shot: async ({ width = 480, quality = 0.7 } = {}) => {
     const src = canvasEl()
     if (!src) throw new Error('no canvas on the page')
     await nextFrameOr(100)
-    const w = Math.max(16, Math.min(width, src.width))
+    const w = Math.max(16, Math.min(width, 960, src.width))
     const h = Math.round((src.height / src.width) * w)
     const c = document.createElement('canvas'); c.width = w; c.height = h
     c.getContext('2d').drawImage(src, 0, 0, w, h)
@@ -162,5 +169,10 @@ export const createInspector = (send) => {
       send('inspect-reply', { id, ok: false, error: String(e?.message ?? e) })
     }
   }
-  return { handle, hello: () => send('display-hello', hello()) }
+  const sayHello = () => send('display-hello', hello())
+  const rekey = () => {
+    displayKey = loadKey(true)
+    sayHello()
+  }
+  return { handle, hello: sayHello, rekey }
 }

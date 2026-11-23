@@ -28,6 +28,10 @@ export const initRemoteDisplay = () => {
         inspector?.handle(message.data)
         break
 
+      case 'display-rekey':
+        inspector?.rekey()
+        break
+
       case 'status':
         // Connection status updates
         console.log('[Remote Display] Connected clients:', message.data?.connectedClients)
