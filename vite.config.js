@@ -4,9 +4,13 @@ import { shaderPlugin } from './vite-plugins/shader-plugin.js'
 import { remoteWsPlugin } from './vite-plugins/remote-ws-plugin.js'
 import { editorSyncPlugin } from './vite-plugins/editor-sync-plugin.js'
 import { vjSignalPlugin } from './vite-plugins/vj-signal-plugin.js'
+import { vjMcpPlugin } from './vite-plugins/vj-mcp-plugin.js'
+import { createHub } from './vite-plugins/vj-mcp/hub.js'
 import { getPort } from './scripts/dev-port.js'
 
 const port = getPort()
+// Displays known to the /ws broker, shared with the VJ MCP at /mcp (docs/vj-mcp.md).
+const hub = createHub()
 
 export default defineConfig({
   server: {
@@ -55,5 +59,11 @@ export default defineConfig({
       external: (id) => id.startsWith('https://'),
     },
   },
-  plugins: [shaderPlugin(), remoteWsPlugin(), editorSyncPlugin(), vjSignalPlugin()],
+  plugins: [
+    shaderPlugin(),
+    remoteWsPlugin({ hub }),
+    editorSyncPlugin(),
+    vjSignalPlugin({ onSignal: (sig) => hub.pushEvent('vj-signal', { signal: sig.type, data: sig }) }),
+    vjMcpPlugin({ hub }),
+  ],
 })
