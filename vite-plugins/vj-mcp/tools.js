@@ -49,9 +49,10 @@ export const createVjMcpServer = ({ hub, root, port }) => {
       return []
     }
   }
-  const knobNames = async (shader) => {
+  // The knobs a shader reads, from shaders.json: { knob_12: "TWIST STEP" | null }.
+  const shaderKnobs = async (shader) => {
     const entry = (await shaderIndex()).find((s) => s.name === shader)
-    return Object.fromEntries(parseKnobs(entry?.knobs).filter((k) => k.label).map((k) => [`knob_${k.n}`, k.label]))
+    return Object.fromEntries(parseKnobs(entry?.knobs).map((k) => [`knob_${k.n}`, k.label ?? null]))
   }
   const shot = async (d, width) => {
     const r = await hub.request(d, 'shot', { width }, 8000)
@@ -113,8 +114,15 @@ export const createVjMcpServer = ({ hub, root, port }) => {
   }, guard(async ({ display, features = 'core', screenshot = false }) => {
     const d = hub.resolve(display)
     const st = await hub.request(d, 'state', { features })
-    const names = st.shader ? await knobNames(st.shader) : {}
-    st.knobs = Object.fromEntries(Object.entries(st.knobs ?? {}).map(([k, v]) => [k, names[k] ? { value: v, name: names[k] } : v]))
+    // Every knob the shader reads, plus any other knob that is set. value null = never set on
+    // this page (the uniform reads 0 unless a controller supplies its own default).
+    const declared = st.shader ? await shaderKnobs(st.shader) : {}
+    const set = st.knobs ?? {}
+    st.knobs = Object.fromEntries(
+      [...new Set([...Object.keys(declared), ...Object.keys(set)])]
+        .sort((a, b) => a.slice(5) - b.slice(5))
+        .map((k) => [k, { value: set[k] ?? null, ...(declared[k] ? { name: declared[k] } : {}), ...(k in declared ? {} : { unused: true }) }]),
+    )
     const res = text({ display: d.id, ...st })
     if (screenshot) res.content.push((await shot(d, 480)).image)
     return res
