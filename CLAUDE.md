@@ -859,6 +859,7 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 | `/solo` | Toggle a shader between knob mode and audio mode. Auto-detects current mode and switches. Use `/solo knobs` or `/solo audio` to force a mode. Defaults to the modified `.frag` in the worktree. |
 | `/changelog` | Update docs/CHANGELOG.md and README with recent features. |
 | `/pr` | Create a PR, request review, and open in browser. |
+| `/show-repo` | One show, one repo: strip to one shader + controller (shared git history), build, verify headless, then publish to `<show>.beadfamous.com` on Aaron's go-ahead. Its front page is `show.html`: canvas only, MIDI, `?room=` remote jamming, snapshots. See [docs/show-repos.md](docs/show-repos.md). |
 
 ## Live Sessions: the Parent Stays Responsive
 

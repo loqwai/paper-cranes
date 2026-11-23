@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <!-- Show mode. In a show repo, index.html is a byte-for-byte copy of this file
+         (scripts/show-repo/create.js keeps it so). See docs/show-repos.md. -->
+    <link rel="stylesheet" href="jam.css" />
+    <title>Paper Cranes</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <!-- vite-plugins/show-config-plugin.js fills this from show.json; empty on main. -->
+    <script type="application/json" id="show-config">{}</script>
+    <script type="module" src="./src/worker-communication.js"></script>
+</head>
+
+<body class="ready">
+    <canvas id="visualizer" width="2160" height="1920"></canvas>
+    <!-- Order matters: boot.js fills in the show's URL params before index.js reads them. -->
+    <script type="module" src="./src/show/boot.js"></script>
+    <script type="module" src="./index.js"></script>
+    <script type="module" src="./show.js"></script>
+</body>
+
+</html>
