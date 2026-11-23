@@ -98,7 +98,8 @@ uniform float cs_k1, cs_k2, cs_k3, cs_k4, cs_k5, cs_k6, cs_k7, cs_k8;
 #define HUE_TURN ((HAS_CTL ? cs_hue : 0.0) * 1.2 + (HAS_CTL ? cs_jump : 0.0) * 0.9 + K_HUE * 6.2831853 + SEED_PHASE)
 
 // Feedback trails
-#define LACE_AA_HOLD 0.9   // where the lace is unresolved, the share of last frame's output kept (see unres)
+#define LACE_AA_SAMPLES 1   // extra orbit samples per pixel where the lace is unresolved (see LACE AA). 1 for phones;
+                            // the desktop show machine can raise it (2: flicker -6% more, 3: -9%, at +20% / +38% frame time)
 #define FEEDBACK_MIX clamp(0.22 + energyNormalized * 0.08 + K_TRAILS * 0.55, 0.0, 0.85)
 
 // Spread opens the vignette a touch
@@ -122,7 +123,52 @@ vec3 chromadepth(float t) {
 // MAIN
 // ============================================================================
 
-vec2 cmul(vec2 a, vec2 b) { return vec2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x); }
+
+// Unit direction, or +x where the vector is 0: atan(0, 0) is NaN on some mobile GPUs
+vec2 unitDir(vec2 v) { return dot(v, v) > 1e-24 ? normalize(v) : vec2(1.0, 0.0); }
+
+struct LaceSample { float lace, fine, z, luma; vec3 col; };
+
+// The lace one orbit sample paints: coverage (lace, and the braid where both traps cross), the rainbow's
+// lightness and the lace colour. A function so LACE AA can average several.
+LaceSample laceSample(float x, float y, vec2 Z, float lace_lo) {
+    LaceSample r;
+    vec2 zu = unitDir(Z);                  // atan(0, 0) is NaN on some mobile GPUs
+    float z = 1. - smoothstep(1., -6., log(y)) * smoothstep(1., -6., log(x));
+    float lace_x = smoothstep(lace_lo, -5.0, log(x));
+    float lace_y = smoothstep(lace_lo, -5.0, log(y));
+    r.lace = pow(max(lace_x, lace_y), 3.0);
+    r.fine = lace_x * lace_y;
+    r.z = z;
+    // sexy/1 rainbow, phase rotated by seed, knob, slow key and drops
+    vec4 rainbow = sqrt(max(z + (z - z * z * z) * cos(atan(zu.y, zu.x) + HUE_TURN - vec4(0, 2.1, 4.2, 0)), 0.0));
+    r.luma = dot(rainbow.rgb, vec3(0.299, 0.587, 0.114));
+    r.col = mix(rainbow.rgb, chromadepth(mix(0.15, 0.7, 1.0 - r.luma)), K_DEPTH);
+    return r;
+}
+
+// One orbit of the lace map from C: the two axis traps (x, y), the closest approach Z, and the focal trap.
+// A function so LACE AA can run it again at other points inside the pixel.
+void orbit(vec2 C, float a_pow, float b_off, mat2 curl, float wph, out float x, out float y, out vec2 Z, out float focal_trap) {
+    vec2 V = C;
+    float v, z = 9.;
+    x = y = 9.;
+    Z = vec2(0.0);
+    focal_trap = 9.0;
+    vec2 focal_center = vec2(0.0, 0.12);
+    for (int k = 0; k < 50; k++) {
+        float a = atan(V.y, V.x),
+        d = dot(V, V) * a_pow;
+        float c = dot(V, vec2(a, log(d) / 2.));
+        V = exp(-a * V.y) * pow(d, V.x / 2.) * vec2(cos(c), sin(c));
+        V = vec2(V.x * V.x - V.y * V.y, dot(V, V.yx));
+        V -= C * b_off;
+        x = min(x, abs(V.x));
+        y = min(y, abs(V.y));
+        z > (v = dot(V, V)) ? z = v, Z = V : Z;
+        focal_trap = min(focal_trap, length(V - focal_center));
+    }
+}
 
 void mainImage(out vec4 P, vec2 V) {
     float drop = DROP_INTENSITY;
@@ -137,59 +183,46 @@ void mainImage(out vec4 P, vec2 V) {
     C.x += 0.77;
     V = C;
 
-    float v, x, y,
-          z = y = x = 9.;
-
-    float focal_trap = 9.0;
-    vec2 focal_center = vec2(0.0, 0.12);
     float a_pow = A;
     float b_off = B;
-
-    // LACE AA: D = dV/dC rides along the orbit (the map is holomorphic), so
-    // each trap knows how fast it changes across one pixel. See unres below.
-    vec2 D = vec2(1.0, 0.0);
-    float dx = 0.0, dy = 0.0;                      // |D|^2 where each trap was last lowered
-    float pixC = max(length(dFdx(C)), length(dFdy(C)));
-    for (int k = 0; k < 50; k++) {
-        float a = atan(V.y, V.x),
-        d = dot(V, V) * a_pow;
-        float c = dot(V, vec2(a, log(d) / 2.));
-        vec2 Lg = vec2(log(d) / 2. + 1.0, a);           // d/dV of V log V, with the power's constant folded in
-        V = exp(-a * V.y) * pow(d, V.x / 2.) * vec2(cos(c), sin(c));
-        V = vec2(V.x * V.x - V.y * V.y, dot(V, V.yx));
-        D = 2.0 * cmul(V, cmul(Lg, D));
-        V -= C * b_off;
-        D -= vec2(b_off, 0.0);
-
-        D *= dot(D, D) > 1e20 ? 1e-10 : 1.0;            // chaos grows D without bound; past this it is unresolved anyway
-        if (abs(V.x) < x) { x = abs(V.x); dx = dot(D, D); }
-        if (abs(V.y) < y) { y = abs(V.y); dy = dot(D, D); }
-        z > (v = dot(V, V)) ? z = v, Z = V : Z;
-
-        focal_trap = min(focal_trap, length(V - focal_center));
-    }
-
-    z = 1. - smoothstep(1., -6., log(y)) * smoothstep(1., -6., log(x));
-
+    float x, y, focal_trap;
+    orbit(C, a_pow, b_off, mat2(1.0), 0.0, x, y, Z, focal_trap);
     // Lace / filigree from the orbit traps. Knob, seed and timbral shift move the threshold.
     float lace_lo = -2.0 + SEED_LACE + K_LACE * 0.9 + LACE_BLOOM * 0.6;
-    // LACE AA. In the dense lace the orbit is chaotic: one pixel step in C moves the traps across the whole lace band,
-    // so one sample per pixel is noise, and any motion (spin, pan, zoom, shape morph) reshuffles it every frame. That is
-    // the sparkle: scripts/sparkle-score.mjs measured 1/4 resolution sparkling just as much, a 16x supersample cutting
-    // it by 55%, and float precision of the clocks and every audio term ruled out. unres = this pixel's footprint in
-    // log-trap units, from the tracked derivative (floored a unit under the band, so thread cores, where log(trap)
-    // runs to -inf, do not count). There the output averages frames: LACE AA at the end.
-    float tfloor = exp(-5.0 - 1.0);
-    float fpx = max(sqrt(dx) * pixC / max(x, tfloor), sqrt(dy) * pixC / max(y, tfloor));
-    float unres = smoothstep(0.3, 2.0, fpx < 1e30 ? fpx : 1e30);
-    float lace_x = smoothstep(lace_lo, -5.0, log(x));
-    float lace_y = smoothstep(lace_lo, -5.0, log(y));
-    float lace = pow(max(lace_x, lace_y), 3.0);
-    float lace_fine = lace_x * lace_y;
 
-    // sexy/1 rainbow, phase rotated by seed, knob, slow key and drops
-    vec4 rainbow = sqrt(max(z + (z - z * z * z) * cos(atan(Z.y, Z.x) + HUE_TURN - vec4(0, 2.1, 4.2, 0)), 0.0));
-    float luma = dot(rainbow.rgb, vec3(0.299, 0.587, 0.114));
+    // LACE AA. In the dense lace the orbit is chaotic: one pixel step in C moves the traps across the whole lace
+    // band, so one sample per pixel is noise, and any motion (spin, pan, zoom, shape morph) reshuffles it every
+    // frame. That is the sparkle (scripts/sparkle-score.mjs: 1/4 resolution sparkles as much, a 16x supersample is
+    // the clean reference; clock precision and every audio term ruled out). unres = how much the lace VALUE
+    // changes across this pixel's 2x2 quad: 0 inside a clean thread, up in the noise. There the pixel runs the
+    // orbit LACE_AA_SAMPLES more times inside its own footprint and averages the lace's light and colour:
+    // spatial supersampling, no frame history, so nothing trails or ghosts.
+    LaceSample ls = laceSample(x, y, Z, lace_lo);
+    float unres = smoothstep(0.05, 0.25, fwidth(ls.lace) + fwidth(ls.fine) + ls.lace * fwidth(ls.luma));
+    vec2 dCx = dFdx(C), dCy = dFdy(C);
+    float lace = ls.lace, lace_fine = ls.fine, z = ls.z, luma = ls.luma;
+    vec3 lace_col = ls.col;
+    if (unres > 0.0) {
+        float s_lace = ls.lace, s_fine = ls.fine, s_z = ls.z, s_luma = ls.luma;
+        vec3 s_col = ls.col * (ls.lace + ls.fine);
+        for (int s = 0; s < LACE_AA_SAMPLES; s++) {
+            float ang = 0.7 + 6.2831853 * float(s) / float(LACE_AA_SAMPLES);
+            vec2 o = 0.42 * vec2(cos(ang), sin(ang));      // a ring inside the pixel, the centre sample above
+            float sx, sy, sft;
+            vec2 sZ;
+            orbit(C + o.x * dCx + o.y * dCy, a_pow, b_off, mat2(1.0), 0.0, sx, sy, sZ, sft);
+            LaceSample t = laceSample(sx, sy, sZ, lace_lo);
+            s_lace += t.lace; s_fine += t.fine; s_z += t.z; s_luma += t.luma;
+            s_col += t.col * (t.lace + t.fine);
+        }
+        float inv = 1.0 / float(LACE_AA_SAMPLES + 1);
+        // the colour is weighted by how much lace each sample has, so dark samples do not grey it
+        lace = mix(lace, s_lace * inv, unres);
+        lace_fine = mix(lace_fine, s_fine * inv, unres);
+        z = mix(z, s_z * inv, unres);
+        luma = mix(luma, s_luma * inv, unres);
+        lace_col = mix(lace_col, s_col / max(s_lace + s_fine, 1e-4), unres);
+    }
 
     // FOCAL
     float focal = pow(smoothstep(FOCAL_RADIUS, 0.01, focal_trap), 3.0);
@@ -208,7 +241,6 @@ void mainImage(out vec4 P, vec2 V) {
 
     // Lace is the only lit content; everything else is deep velvet violet
     vec3 bg_purple = vec3(0.04, 0.015, 0.08);
-    vec3 lace_col = mix(rainbow.rgb, chromadepth(mix(0.15, 0.7, 1.0 - luma)), K_DEPTH);
     vec3 col = mix(bg_purple, lace_col * LACE_GAIN, lace);
 
     col += vec3(0.7, 0.5, 0.65) * lace_fine * PEARL;
@@ -249,19 +281,6 @@ void mainImage(out vec4 P, vec2 V) {
 
     col = col / (col + vec3(0.7));
     col = pow(max(col, vec3(0.0)), vec3(0.88, 0.9, 0.95));
-
-    // LACE AA, the other half: where the lace is unresolved (unres), this frame's output averages with the last one's,
-    // an EMA over ~1/(1-LACE_AA_HOLD) frames: the motion that reshuffled the noise now supersamples it. On the final
-    // colour, so the vignette and tone map are not compounded. Averaging random orbit hues loses chroma (red + teal
-    // reads grey), so the averaged hue gets back the chroma one sample has: a vivid wash, not a grey one.
-    if (unres > 0.0) {
-        const vec3 REC709 = vec3(0.2126, 0.7152, 0.0722);
-        float c_now = length(col - dot(col, REC709));
-        col = mix(col, prevc, LACE_AA_HOLD * unres);
-        float l_avg = dot(col, REC709);
-        vec3 ch = col - l_avg;                          // chroma about the luminance axis: scaling it keeps L
-        col = max(l_avg + ch * mix(1.0, clamp(c_now / max(length(ch), 1e-4), 1.0, 1.6), unres), vec3(0.0));
-    }
 
     P = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

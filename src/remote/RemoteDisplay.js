@@ -1,6 +1,11 @@
 import { WebSocketClient } from './WebSocketClient.js'
 import { loadShader } from '../shaderLoader.js'
 
+// The VJ MCP (docs/vj-mcp.md) reaches this display through the dev-server broker. Never on the
+// public relay (`?room=`): there no broker filters who may send `inspect`.
+const inspectable = import.meta.env.DEV && !new URLSearchParams(window.location.search).get('room')
+let inspector = null
+
 /**
  * Initialize remote display mode
  * Receives commands from controller and applies them to the visualizer
@@ -19,6 +24,14 @@ export const initRemoteDisplay = () => {
       case 'audio-features':
         break
 
+      case 'inspect':
+        inspector?.handle(message.data)
+        break
+
+      case 'display-rekey':
+        inspector?.rekey()
+        break
+
       case 'status':
         // Connection status updates
         console.log('[Remote Display] Connected clients:', message.data?.connectedClients)
@@ -32,6 +45,7 @@ export const initRemoteDisplay = () => {
 
   const handleStatusChange = (status) => {
     console.log('[Remote Display] Status:', status)
+    if (status === 'connected') inspector?.hello()
     // Only show indicator for connection problems
     if (status !== 'connected') {
       updateStatusIndicator(status)
@@ -39,6 +53,14 @@ export const initRemoteDisplay = () => {
   }
 
   const client = new WebSocketClient(handleMessage, handleStatusChange)
+  if (inspectable) {
+    import('./inspect.js')
+      .then(({ createInspector }) => {
+        inspector = createInspector((type, data) => client.send(type, data))
+        if (client.isConnected) inspector.hello()
+      })
+      .catch((e) => console.warn('[Remote Display] inspect unavailable:', e))
+  }
   client.connect()
 
   // Expose client for debugging
@@ -83,6 +105,7 @@ const applyParams = async (data) => {
     console.log('[Remote Display] Switching shader to:', data.shader)
     try {
       await loadShader(data.shader, { updateUrl: true })
+      inspector?.hello() // the broker's display list shows the shader on screen
     } catch (e) {
       console.error('[Remote Display] Failed to load shader:', e)
     }

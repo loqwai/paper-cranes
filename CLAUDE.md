@@ -417,6 +417,14 @@ full frame (~16ms) of lag whenever the renderer's rAF is queued first. The genui
 per-message work has been moved out instead: the URL mirror is debounced to 750ms (it only exists
 so a refresh preserves state) and per-message DOM work was removed outright.
 
+### VJ MCP (any agent harness)
+The dev server serves an MCP server at **`/mcp`** (streamable HTTP, stateless, never SSE) whose tools
+read and drive every `?remote=display` page: `list_displays`, `list_shaders`, `get_state`,
+`screenshot`, `set_params`, `set_shader`, `read_shader`, `write_shader`, `wait_for_event`.
+Register: `claude mcp add --transport http paper-cranes-vj http://localhost:6969/mcp`. Knobs go out as
+`update-params` on the display's own socket; reads come back over a point-to-point `inspect` channel
+the broker never broadcasts. Dev only. See [docs/vj-mcp.md](docs/vj-mcp.md).
+
 ### ParamsManager
 The `ParamsManager` (`src/params/ParamsManager.js`) is the unified system for handling all shader parameters:
 - Single source of truth for knobs, settings, and shader code
@@ -457,6 +465,7 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   ├── remote/
 │   │   ├── RemoteController.js # Sends commands to displays
 │   │   ├── RemoteDisplay.js    # Receives commands from controllers
+│   │   ├── inspect.js          # Display side of the VJ MCP (state, shot, logs, validate)
 │   │   └── WebSocketClient.js  # WebSocket client wrapper
 │   ├── vj/
 │   │   └── runtime.js          # ?vj=1 page runtime (validator, meter, jank probe, signals)
@@ -476,6 +485,7 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │       ├── show.js             #   the show browser: fullscreen Chrome driven over CDP (launch/eval/shot)
 │       ├── aesthetic-meter.js  #   FETCHED BY URL at runtime; do not move
 │       ├── remote-send.js      #   push update-params to the display from a shell
+│       ├── mcp-call.js         #   call one VJ MCP tool from a shell
 │       ├── watch-release.js    #   emit a line when a fader is released
 │       └── knob-correlate.js   #   which audio feature was that gesture imitating?
 ├── jam.js                       # Jam page: canvas only, MIDI + spacebar snapshots, no on-screen UI
@@ -487,6 +497,8 @@ paramsManager.setShader(code)      // Syncs shader to remote
     ├── remote-ws-plugin.js      # WebSocket server for remote control
     ├── editor-sync-plugin.js    # Bidirectional editor↔disk sync (dev only)
     ├── vj-signal-plugin.js      # /__vj-signal endpoint; writes .claude/vj-signals.jsonl (dev only)
+    ├── vj-mcp-plugin.js         # /mcp: VJ MCP server, streamable HTTP (dev only) — docs/vj-mcp.md
+    ├── vj-mcp/hub.js, tools.js  #   display registry shared with the /ws broker; the tool set
     └── shader-plugin.js         # Shader discovery, metadata, and manifest generation
 ```
 
@@ -847,6 +859,7 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 | `/solo` | Toggle a shader between knob mode and audio mode. Auto-detects current mode and switches. Use `/solo knobs` or `/solo audio` to force a mode. Defaults to the modified `.frag` in the worktree. |
 | `/changelog` | Update docs/CHANGELOG.md and README with recent features. |
 | `/pr` | Create a PR, request review, and open in browser. |
+| `/show-repo` | One show, one repo: strip to one shader + controller (shared git history), build, verify headless, then publish to `<show>.beadfamous.com` on Aaron's go-ahead. Its front page is `show.html`: canvas only, MIDI, `?room=` remote jamming, snapshots. See [docs/show-repos.md](docs/show-repos.md). |
 
 ## Live Sessions: the Parent Stays Responsive
 
