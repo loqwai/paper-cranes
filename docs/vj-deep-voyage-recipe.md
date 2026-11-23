@@ -45,7 +45,7 @@ Read with: [show-quickstart.md](show-quickstart.md) (links, knob map, pilot),
 | Property | Why | Where it lives |
 |---|---|---|
 | **Several shape axes**, not one zoom | "Lost in the fractal" comes from pan, power and curl. Zoom alone runs out | `cs_navA`, `cs_navB`, `cs_curl`, `cs_cx/cy`, `cs_rot` in [clit-set.js](../controllers/clit-set.js) |
-| **Waypoints + a voyage clock** | All dials at 0 still travels: six waypoints, home every ~10 min | `WAYPOINTS`, `cs_voyage`; `?voyage0=<u>` starts anywhere |
+| **Waypoints + a voyage clock** | All dials at 0 still travels: six waypoints, home every ~12-24 min | `WAYPOINTS`, `cs_voyage`; `?voyage0=<u>` starts anywhere |
 | **Know the legible depth** | Orbit-trap lace reads 1x to ~3.5-4.5x, then turns to speckle | `ZOOM_MAX = 1.1` (3x), [clit-set.js:68](../controllers/clit-set.js#L68) |
 | **Depth without a wall** | Either a capped dive that **climbs out** onto new terrain (coaster mode), or a **periodic tube** that never zooms at all | coaster: `THROTTLE_RATE`, `CLIMB_SECS` ([clit-set.js:72-81](../controllers/clit-set.js#L72)); tube: [2.frag:77-89](../shaders/claude/wip/clit-vibej/2.frag#L77) |
 | **Every knob at 0 looks good** | A reload zeroes every dial | quickstart §5 |
@@ -160,8 +160,8 @@ Result: 14 moves on 1.frag and a fork plus 4 moves on 2.frag, with no failed sav
 - **"Other shades are fine it's this series"** means the bug is ours, not his audio.
 - **"samey"** means change the camera model or fork. More colour moves won't fix it.
 - **Short praise ("Looks great!", "Very very good")** means hold the look and keep the moves small.
-- **He reports a test he wants run** ("freeze time to 0"). Make it the gate for every later build.
-- **"Be prepared... off and on over the next 2h"**: phone drops are normal. Pause on hidden, resume on
+- **He reports a test he wants run** ("freezing time to 0"). Make it the gate for every later build.
+- **"It'll be off and on over the next 2h. Be prepared."**: phone drops are normal. Pause on hidden, resume on
   connect, never treat silence as failure.
 
 ## 9. Anti-patterns (each one happened)
