@@ -72,23 +72,103 @@ rising, flying and settling. On top of the voyage, an always-on **spin** turns t
 (0.02 rad/s in silence, 0.02 to 0.06 rad/s following the energy z-score). The music changes the spin's
 rate, never its direction. Nothing on the geometry oscillates: no sine on zoom, pan or rotation.
 
-### Colour (OKLCH, gamut-mapped)
+### Colour: OKLCH kit, theme EMBER & NEBULA (2026-11-22)
 
-- The lace takes its lightness from the orbit rainbow (the structure) and its hue from a fixed
-  palette: red 29°, amber 66°, teal 195°, blue-violet 285° (OKLCH). The orbit angle drives a triangle
-  wave over that palette, so the hue goes red → amber → teal → violet and back, and never crosses the
-  magenta arc between violet and red. Hot magenta reads to Aaron as a buffer overflow.
-- Threads on the x trap and the y trap sit half a leg apart, and brightness shifts the hue too, so the
-  filigree is several colours, not one.
-- The darkest lace (the fan petals) goes deep violet, the velvet body. Before this they were grey-brown.
-- The pale star (z about 0.8) stays pale, tinted periwinkle, so the red ember pops in front of it.
-- Every colour goes through `lchGamut()`, which shrinks chroma at constant L and hue until it fits.
-- The final tone map works on luminance, not per channel. Per-channel Reinhard pulled every bright hue
-  toward grey, which caused the dusty look.
-- `chromadepth()` (GLASSES, the focal) starts at true red (29°), not the 0° pink-red.
+Aaron: "We also need to reinplement using oklh like this repo currently recommends with a thematic color palette".
+All four clit lace shaders (clit-set/1, clit-set/2, clit-vibej/1, clit-vibej/2) now build their colour on the
+repo's OKLCH harmony kit ([docs/oklch-palettes.md](../../docs/oklch-palettes.md)): the kit block is pasted in
+verbatim, and the series palette is one theme on top of it.
 
-Measured on the six waypoints (480x300, noaudio, seeds 0.5): mean OKLCH chroma 0.038 → 0.058, chroma
-of lit pixels 0.055 → 0.099, and grey pixels among mid-lightness pixels 47% → 8%.
+- **The theme.** A warm body adrift in a cold galaxy. The lace is the body: ember red and burnt amber. The
+  galaxy is cool: teal (the kit's split complement of the ember) and indigo velvet (the darkest lace, the pale
+  star's tint). Warm = near and cool = far, so the theme agrees with ChromaDepth glasses even at GLASSES 0.
+
+  | key | hue (turns) | at `THEME_H` 0.095 | role |
+  |---|---|---|---|
+  | ember | `THEME_H` | 34° | lace, ties, rails' base |
+  | amber | `+0.04` | 49° | lace, rails, pearls |
+  | teal | `+5/12` | 184° | braid, rim, nebula |
+  | indigo | `+0.64` | 265° | darkest lace, pale star |
+
+- **One base hue.** The seed turns `THEME_H` within 27..41° only, so indigo stays at 257..272°. It sits that far
+  below the magenta arc (288°) because the tone map's per-channel gamma and the trails lean violet about 20°
+  pinkward on screen: at `+0.68` (272..286°) a pale indigo displayed at 310..330°, orchid.
+- **Dials move the position, not the hues.** `HUE_TURN`, `cs_hue`, `cs_jump`, `cs_shift` and the tone lean move
+  `pal_t` along the palette. No dial can take the series off-theme.
+- **The palette position** is the orbit angle as a triangle wave (ember … indigo … ember), so it never wraps
+  across magenta. `themeCol(pal_t, L, C)` glides between the keys in OKLab (`ramp4`) and holds each key
+  for the outer quarters of each leg (`themeHold`), so the far amber → teal step has little olive in it.
+- **Lightness** comes from the orbit rainbow's luma (the lace structure), never from `pal_t`. The band is
+  OKLab L 0.16..0.70, darker than the kit's 0.45..0.85: the series is velvet on black. At a 0.13 floor the
+  darkest lace (the fan petals) went near-black and read grey; at 0.20 the fine lace shimmered (below).
+- **Chroma** is requested past the kit's 0.13 and `okFit` maps it to the sRGB edge at constant L and hue: the
+  series rule is never grey.
+- **Guards after the palette.** The beat's hue rotation (2.frag) turns already-coloured pixels, so it can still
+  reach magenta or green. It may not carry a pixel into the hot-magenta arc (-1.25..0.45 rad, vibej iter 3),
+  nor deeper into it, nor into the green gap (90..160°); the turned hue is wrapped back into (-π, π] first.
+  The vibej iter 5 output squeeze ("NEVER HOT MAGENTA") runs in all four shaders and reads the hue of the
+  DISPLAYED colour: it decodes with `srgb2lin` before `rgb2oklab` (which takes linear sRGB) and writes back
+  through `okOut`. Only colours near the arc pay for the decode: every displayed colour whose OKLab hue is in
+  288..26° has min(r, b) > g - 0.032, so `min(r, b) > g - 0.05` gates it. The beat turn itself still works on
+  the output values as main did: decoding them first cost the sparkle gate (below). Every hue angle goes
+  through `okHue()`, which returns 0 for a grey: `atan(0, 0)` is NaN on some mobile GPUs.
+- **ChromaDepth** (GLASSES, the focal) is rebuilt on the kit's `oklch2rgb` with display-correct lightness: true
+  red (29°, near) to violet (293°, far). Physics, not theme: the seed does not turn it.
+- **LACE AA** composes unchanged: each orbit sample computes its theme colour in `laceSample()` (in OKLab), and
+  the pixel averages the samples' gamut-fitted colours weighted by coverage.
+- **The braid** (where both traps cross) mixes the lace colour 45/55 with cream, as on main, and over the
+  darkest lace the cream turns violet `(0.56, 0.48, 1.0)`. Cream over near-black petals read khaki.
+- **Cost.** `gamutT` uses vector selects instead of the kit's loop over `c[i]` (same result; on SwiftShader the
+  loop cost 10..20% of the frame), `lin2srgb` encodes with three square roots (within 0.4/255 of the `pow`),
+  the rim, focal, dust bass lean, ties and rails take their colour only where they show, and dust reuses the
+  fitted lace colour (`shadeTo`) instead of a second fit.
+- **clit-set/1** was the raw sexy/1 rainbow (58% of lit pixels grey on a phone, 14% hot magenta). It is
+  hand-ported: the rainbow keeps only its luma (lightness), the hue turn moves `pal_t`, pearls are pale gold
+  (were lilac-pink), the rim walks the theme (was a violet → pink mix through the magenta arc), and the tone
+  map works on luminance as in 2.frag (per-channel Reinhard greyed the pale body: 12% of lit pixels grey with
+  the theme alone, 2% with the luminance tone map).
+
+![Phone stills, top row main, bottom row OKLCH: clit-vibej/1, clit-vibej/2, clit-set/1, clit-set/2](oklch-before-after.jpg)
+
+Measured on the real files, before (main at fd177884, LACE AA) and after, `scripts/sparkle-score.mjs` render
+mode (synth trace, controller, warmup 240 frames, seeds 0.5, SwiftShader). Lit = max channel > 60. Grey is
+perceptual: a lit pixel with OKLab chroma below 0.04 (the first tables, by HSV saturation, missed the khaki
+petals). Hot magenta = lit, OKLab C > 0.06, displayed hue 310..15°; green = 90..150°.
+
+| shader, size | saturation | grey (OKLab C < 0.04) | hot magenta | green | mean luma |
+|---|---|---|---|---|---|
+| clit-set/1, phone 408x816 | .264 → .593 | 50.8% → 2.7% | 14.2% → 0.6% | 0.4% → 1.1% | 50.6 → 43.5 |
+| clit-set/2, phone | .628 → .637 | 0.6% → 0.5% | 21.2% → 0.6% | 8.3% → 2.3% | 92.2 → 94.6 |
+| clit-vibej/1, phone | .618 → .638 | 0.9% → 0.6% | 1.5% → 0.4% | 6.3% → 1.8% | 99.5 → 101.6 |
+| clit-vibej/2, phone | .647 → .659 | 2.2% → 1.6% | 1.2% → 0.4% | 8.3% → 2.9% | 87.7 → 89.7 |
+| clit-set/1, desktop 1280x720 | .342 → .672 | 40.6% → 2.9% | 12.5% → 0.3% | 0.7% → 0.7% | 38.8 → 33.8 |
+| clit-set/2, desktop | .688 → .705 | 1.8% → 1.2% | 13.4% → 0.4% | 14.7% → 5.0% | 69.3 → 71.8 |
+| clit-vibej/1, desktop | .686 → .707 | 1.9% → 1.3% | 1.5% → 0.4% | 12.0% → 4.2% | 71.6 → 74.0 |
+| clit-vibej/2, desktop | .707 → .738 | 1.5% → 1.2% | 0.5% → 0.1% | 9.9% → 2.3% | 73.1 → 74.8 |
+
+The opening view (no controller, `noaudio`, seeds 0 and 1, seed 0.5 with the hue knob at .25; mean of the
+three, phone): grey clit-set/1 50.2% → 3.2%, clit-set/2 3.4% → 3.4%, clit-vibej/1 3.6% → 3.7%,
+clit-vibej/2 10.9% → 13.2%. The fan petals read violet, as on main. clit-vibej/2's extra grey is in the dense
+filigree, where LACE AA averages an ember thread with an indigo one. Averaging in OKLab and restoring the
+samples' chroma brought it to 9.5% but failed the sparkle gate (flipMean 10.20 against main's 9.74), so it is
+not used.
+
+The palette does not bring the sparkle back. `sparkle-score.mjs --before` (90 frames, 408x816; each run
+scored against an `--ss 4` reference of its own palette; the scores are deterministic, a rerun of the same
+file reproduces them to the last digit), gate passes on both:
+
+| shader | flipMean before / after | motion before / after (ref) | refMAE before / after |
+|---|---|---|---|
+| clit-set/2 | 6.711 / 6.610 | 11.130 / 11.135 (7.058) | 7.138 / 7.135 |
+| clit-vibej/2 | 9.739 / 9.365 | 15.744 / 15.458 (13.318) | 5.999 / 5.759 |
+
+What the review fixes cost the gate on clit-set/2 before they were reworked (flipMean; main 6.711): the
+braid as the lace's own hue lifted to a lit level +0.7, lightness floor 0.20 with indigo +0.68 +0.3, the beat
+turning decoded colour +0.25, LACE AA averaging in OKLab +0.4, restoring the averaged chroma +0.4.
+
+Frame time (SwiftShader 408x816, synth, controller, 60 timed frames, median of 3 interleaved runs against
+main's files on the same server): clit-set/1 75.0 → 82.9 ms (+11%), clit-set/2 99.3 → 105.4 (+6%),
+clit-vibej/1 139.6 → 138.9 (-1%), clit-vibej/2 131.9 → 140.4 (+6%).
 
 ### Audio mapping
 

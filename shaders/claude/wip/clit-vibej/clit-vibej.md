@@ -145,3 +145,31 @@ The lace sparkled (show journal: "Tube walls speckle with live audio"). Measured
   (flicker about 6% lower again, +20% frame time) or 3 (about 9%, +38%). Table in docs/sparkle-score.md.
 - **NaN guard:** `atan(0, 0)` is NaN on some mobile GPUs. The orbit direction goes through `unitDir()` (+x for
   a zero vector), and the averaged direction falls back to the centre sample's if the samples cancel.
+
+## Colour: OKLCH kit, theme EMBER & NEBULA (2026-11-22, 1.frag and 2.frag)
+
+Aaron: "We also need to reinplement using oklh like this repo currently recommends with a thematic color palette".
+Both files now build colour on the repo's OKLCH harmony kit ([docs/oklch-palettes.md](../../../../docs/oklch-palettes.md)),
+the same theme as clit-set: an ember and burnt-amber body in a teal and indigo galaxy, one base hue (`THEME_H`,
+turned by the seed within 27..41°), dials and audio moving only the position along the palette. The full
+write-up, the rules kept and the numbers for all four shaders are in
+[clit-set.md](../../../clit-set/clit-set.md#colour-oklch-kit-theme-ember--nebula-2026-11-22).
+
+What changed here, colour only (lace geometry, LACE AA, beat and tone map untouched):
+
+- `lchGamut()` / `paletteHue()` are gone: the lace, rim, nebula dust, ties and rails take the theme, gamut-fitted
+  by `okFit`. The lace lightness band is OKLab L 0.16..0.70.
+- The iter 3 beat-rotation clamp also keeps the burnt amber out of the green gap (90..160°). Green, phone:
+  1.frag 7% to 2%, 2.frag 9% to 3%.
+- The iter 3 clamp also wraps the turned hue into (-π, π] and stops a pixel already inside the magenta arc from
+  turning deeper into it.
+- The iter 5 output squeeze ("NEVER HOT MAGENTA") reads the DISPLAYED hue now: it decodes with `srgb2lin`
+  before `rgb2oklab`, which takes linear sRGB, and writes back through `okOut`. On the gamma-encoded output
+  its 288..26° arc had been somewhere else than the eye sees it. Hot magenta, phone: 1.frag 1.5% to 0.4%,
+  2.frag 1.2% to 0.4%.
+- Every hue angle goes through `okHue()` (0 for a grey): `atan(0, 0)` is NaN on some mobile GPUs.
+- Sparkle gate (`sparkle-score.mjs --before`), 2.frag: flipMean 9.739 to 9.365, motion 15.744 to 15.458
+  (reference 13.318), refMAE 5.999 to 5.759. Pass.
+- Frame time (SwiftShader 408x816, median of 3 against main): 1.frag 139.6 to 138.9 ms, 2.frag 131.9 to 140.4 ms.
+- Opening view (no controller), 2.frag: 13.2% of lit pixels perceptually grey against main's 10.9%, in the
+  dense filigree; the OKLab-average fix for it failed the sparkle gate. See clit-set.md.
