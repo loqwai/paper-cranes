@@ -6,6 +6,8 @@
 // CLIT-SET/1 — clit/2's chromadepth anatomy, modernized with the sun-set lessons:
 // controller envelopes (controllers/clit-set.js), per-device seeds, eased knobs, no dead zones.
 // Red = closest (focal pops out), blue/violet = farthest. Based on Dom Mandy's complex power fractal.
+// Colour: the repo OKLCH harmony kit (docs/oklch-palettes.md), theme EMBER & NEBULA: ember / amber body,
+// teal / indigo galaxy, one base hue, okFit gamut mapping. Never grey, never hot magenta.
 // Renders without the controller: every cs_* reads 0 and the #defines fall back to raw features.
 
 uniform float cs_on, cs_time, cs_presence, cs_flow;
@@ -36,7 +38,7 @@ uniform float cs_k1, cs_k2, cs_k3, cs_k4, cs_k5, cs_k6, cs_k7, cs_k8;
 // ============================================================================
 #define SEED_PHASE ((seed - 0.5) * 2.4)              // lace rainbow phase, ±70°
 #define SEED_LACE  ((seed2 - 0.5) * 0.6)             // lace threshold shift
-#define SEED_WARM  (seed3 * 0.5)                     // rim violet → pink bias
+#define SEED_WARM  (seed3 * 0.5)                     // rim warmth bias (toward ember)
 #define SEED_SPIN  (seed4 < 0.5 ? -1.0 : 1.0)        // idle drift direction
 
 // ============================================================================
@@ -106,17 +108,165 @@ uniform float cs_k1, cs_k2, cs_k3, cs_k4, cs_k5, cs_k6, cs_k7, cs_k8;
 #define VIGN_OPEN ((HAS_CTL ? cs_spread : clamp(spectralSpreadNormalized, 0.0, 1.0)) * 0.06)
 
 // ============================================================================
-// CHROMADEPTH COLOR — red closest, blue farthest
+// COLOR
 // ============================================================================
+// ============================================================================
+// OKLCH HARMONY KIT — hue is in TURNS (0..1) everywhere in this kit.
+// Builds on the wrapper's rgb2oklab/oklab2rgb (Ottosson matrices, LINEAR sRGB in/out).
+// Public functions take and return DISPLAY sRGB (gamma-encoded), like fragColor.
+// ============================================================================
+#ifndef TAU
+#define TAU 6.28318530718
+#endif
+#ifndef PI
+#define PI 3.14159265359
+#endif
+#define KIT_CMAX 0.14
+#define HARM_W   0.09
 
+vec3 srgb2lin(vec3 c) {
+    c = max(c, 0.0);
+    return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
+}
+vec3 lin2srgb(vec3 c) {
+    c = clamp(c, 0.0, 1.0);
+    return mix(c * 12.92, 1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, c));
+}
+
+float hwrap(float d) { return d - floor(d + 0.5); }
+vec3 lchT(float L, float C, float h) { return vec3(L, C * cos(TAU * h), C * sin(TAU * h)); }
+
+// GAMUT: pull toward the same-L grey just far enough to fit, then once more after shrinking
+// chroma in OKLab, so L and hue stay put. Continuous in the input: no clipped flats, no bands.
+float gamutT(vec3 c, float g) {
+    float t = 1.0;
+    for (int i = 0; i < 3; i++) {
+        if (c[i] > 1.0) t = min(t, (1.0 - g) / (c[i] - g));
+        if (c[i] < 0.0) t = min(t, g / (g - c[i]));
+    }
+    return max(t, 0.0);
+}
+vec3 okFit(vec3 lab) {
+    lab.x = clamp(lab.x, 0.0, 0.999);
+    float g = lab.x * lab.x * lab.x;
+    lab.yz *= gamutT(oklab2rgb(lab), g);
+    vec3 c = oklab2rgb(lab);
+    return clamp(vec3(g) + (c - vec3(g)) * gamutT(c, g), 0.0, 1.0);
+}
+vec3 okOut(vec3 lab) { return lin2srgb(okFit(lab)); }
+
+vec3 oklch2rgb(float L, float C, float h) { return okOut(lchT(L, C, h)); }
+vec3 srgb2oklch(vec3 rgb) {
+    vec3 lab = rgb2oklab(srgb2lin(rgb));
+    return vec3(lab.x, length(lab.yz), fract(atan(lab.z, lab.y + 1e-7) / TAU));
+}
+
+// 4 keys, smoothstep-held: lingers on each key, glides between (C1, no bands). Mixed in OKLab,
+// so a far hue jump passes through soft low chroma instead of a rainbow.
+vec3 ramp4(vec3 a, vec3 b, vec3 c, vec3 d, float t) {
+    float x = clamp(t, 0.0, 1.0) * 3.0;
+    return mix(mix(mix(a, b, smoothstep(0.0, 1.0, x)), c, smoothstep(1.0, 2.0, x)), d, smoothstep(2.0, 3.0, x));
+}
+float palCycle(float t) { return 0.5 - 0.5 * cos(TAU * t); }   // any t → seamless 0..1..0 for non-cyclic palettes
+
+vec3 palAnalogousLab(float t, float baseH, float spread) {
+    float s = smoothstep(0.0, 1.0, t);
+    return lchT(mix(0.52, 0.80, s), 0.13 - 0.03 * abs(2.0 * s - 1.0), baseH + spread * (s - 0.5));
+}
+vec3 palSplitCompLab(float t, float baseH) {   // cyclic: t=0 and t=1 are the same colour
+    vec3 dom = lchT(0.70, 0.13, baseH);
+    return ramp4(dom, lchT(0.80, 0.085, baseH + 5.0 / 12.0), lchT(0.58, 0.08, baseH + 7.0 / 12.0), dom, t);
+}
+vec3 palTriadSoftLab(float t, float baseH) {   // cyclic
+    vec3 dom = lchT(0.72, 0.11, baseH);
+    return ramp4(dom, lchT(0.60, 0.07, baseH + 1.0 / 3.0), lchT(0.80, 0.06, baseH + 2.0 / 3.0), dom, t);
+}
+vec3 palMonoRampLab(float t, float baseH) {
+    float s = clamp(t, 0.0, 1.0);
+    return lchT(mix(0.45, 0.85, s), 0.04 + 0.09 * sin(PI * s), baseH + 0.03 * (s - 0.5));
+}
+
+vec3 palAnalogous(float t, float baseH, float spread) { return okOut(palAnalogousLab(t, baseH, spread)); }
+vec3 palSplitComp(float t, float baseH) { return okOut(palSplitCompLab(t, baseH)); }
+vec3 palTriadSoft(float t, float baseH) { return okOut(palTriadSoftLab(t, baseH)); }
+vec3 palMonoRamp(float t, float baseH) { return okOut(palMonoRampLab(t, baseH)); }
+
+// warmth 0..1 pulls the base hue toward saffron (~68°) the short way; chroma 0..1 walks
+// mono → analogous → split-complement and scales chroma 0.55..1.
+vec3 palMood(float t, float baseH, float warmth, float chroma) {
+    float h = baseH + 0.6 * clamp(warmth, 0.0, 1.0) * hwrap(0.19 - baseH);
+    float c = clamp(chroma, 0.0, 1.0);
+    vec3 lab = mix(palMonoRampLab(t, h), palAnalogousLab(t, h, 0.14), smoothstep(0.0, 0.5, c));
+    lab = mix(lab, palSplitCompLab(t, h), smoothstep(0.5, 1.0, c));
+    lab.yz *= 0.55 + 0.45 * c;
+    return okOut(lab);
+}
+
+// Squeeze any colour's hue into the ±HARM_W window around baseH; the far side of the wheel also
+// loses chroma (hides the wrap seam), and chroma soft-saturates at KIT_CMAX.
+vec3 harmonize(vec3 rgb, float baseH, float amt) {
+    vec3 lab = rgb2oklab(srgb2lin(rgb));
+    float a = clamp(amt, 0.0, 1.0);
+    float C = length(lab.yz);
+    float d = hwrap(atan(lab.z, lab.y + 1e-7) / TAU - baseH);
+    float h = baseH + mix(d, clamp(d, -HARM_W, HARM_W), a);
+    C *= 1.0 - 0.6 * a * smoothstep(0.25, 0.5, abs(d));
+    C = mix(C, C * inversesqrt(1.0 + C * C / (KIT_CMAX * KIT_CMAX)), a);
+    return okOut(lchT(lab.x, C, h));
+}
+// Keep hue and L; drain chroma from colours that sit off-scheme.
+vec3 desatTowardScheme(vec3 rgb, float baseH, float amt) {
+    vec3 lab = rgb2oklab(srgb2lin(rgb));
+    float d = hwrap(atan(lab.z, lab.y + 1e-7) / TAU - baseH);
+    lab.yz *= 1.0 - clamp(amt, 0.0, 1.0) * smoothstep(0.06, 0.30, abs(d));
+    return okOut(lab);
+}
+// ============================================================================
+// THEME: EMBER & NEBULA. A warm body adrift in a cold galaxy. The lace is the body: ember red and
+// burnt amber, lit from inside. The galaxy behind and around it is cool: teal (the kit's split
+// complement of the ember, +150 deg) and indigo velvet (the darkest lace, the pale star's tint).
+// Warm = near and cool = far, so the theme agrees with ChromaDepth glasses even with K_DEPTH at 0.
+// One base hue (THEME_H, in turns) sets all four keys. The per-device seed turns it within the
+// ember window only (27..41 deg), so no phone ever lands in hot magenta (indigo stays under 272 deg).
+// Knobs and audio (HUE_TURN, cs_hue, cs_jump, cs_shift, TONE_LEAN) move the position ALONG the
+// palette (pal_t), never the hues themselves: no dial can take the series off-theme.
+// Lightness band: the series is velvet on black, darker than the kit's 0.45..0.85 band, so it keeps
+// its own (lace L 0.13..0.70, the true OKLab lightness the old palette displayed). Chroma is
+// requested past the kit's 0.13 and okFit maps it to the sRGB edge at constant L and hue: the series
+// rule is never grey, and the edge is where every lace pixel was before.
+// ============================================================================
+#define THEME_H (0.095 + 0.02 * (2.0 * fract(seed * 7.31 + 0.13) - 1.0))
+#define KEY_AMBER  0.04            // burnt amber, analogous to the ember (kept short of yellow: the kick turns it +45 deg)
+#define KEY_TEAL   (5.0 / 12.0)    // the kit's split complement
+#define KEY_INDIGO 0.64            // the velvet (lands 257..272 deg: the tone map and the trails lean it ~20 deg pinkward on screen)
+
+// The theme ramp in OKLab at lightness L and chroma C. t: 0 ember, 1/3 amber, 2/3 teal, 1 indigo.
+// Callers ping-pong t, so it never wraps indigo -> ember across magenta. ramp4 glides between keys in
+// OKLab, so the far amber -> teal step passes through soft chroma instead of a green band. themeHold
+// holds each key longer first (the glide takes the middle half of each leg): the olive-green midpoint
+// of that step drops from ~9% of a uniform t sweep to ~3%.
+float themeHold(float t) {
+    float x = clamp(t, 0.0, 1.0) * 3.0;
+    float i = min(floor(x), 2.0);
+    return (i + smoothstep(0.25, 0.75, x - i)) / 3.0;
+}
+vec3 themeLab(float t, float L, float C) {
+    float h = THEME_H;
+    return ramp4(lchT(L, C, h), lchT(L, 0.85 * C, h + KEY_AMBER),
+                 lchT(L, 0.75 * C, h + KEY_TEAL), lchT(L, C, h + KEY_INDIGO), themeHold(t));
+}
+vec3 themeCol(float t, float L, float C) { return okOut(themeLab(t, L, C)); }
+
+// OKLab hue angle (radians) of an a,b pair, 0 for a grey: atan(0, 0) is NaN on some mobile GPUs, and a
+// NaN hue in the beat rotation or the magenta guard would poison every black pixel.
+float okHue(vec2 ab) { return dot(ab, ab) > 1e-24 ? atan(ab.y, ab.x) : 0.0; }
+
+// Strict chromadepth for the glasses: red (29 deg, near) to violet (293 deg, far), on the kit's
+// gamut fit. Physics, not theme: the seed does not turn it.
 vec3 chromadepth(float t) {
     t = clamp(t, 0.0, 1.0);
-    float hue = t * 0.82;
-    float chromaBoost = 1.0 + 0.2 * sin(t * 3.14159 * 2.0);
-    float L = 0.7 - t * 0.45;
-    float C = 0.25 * chromaBoost * (1.0 - t * 0.3);
-    float h = hue * 6.28318;
-    return clamp(oklab2rgb(vec3(L, C * cos(h), C * sin(h))), 0.0, 1.0);
+    float boost = 1.0 + 0.2 * sin(t * TAU);
+    return oklch2rgb(0.60 - 0.36 * t, 0.26 * boost * (1.0 - t * 0.3), 0.08 + t * 0.735);
 }
 
 // ============================================================================
@@ -140,10 +290,21 @@ LaceSample laceSample(float x, float y, vec2 Z, float lace_lo) {
     r.lace = pow(max(lace_x, lace_y), 3.0);
     r.fine = lace_x * lace_y;
     r.z = z;
-    // sexy/1 rainbow, phase rotated by seed, knob, slow key and drops
-    vec4 rainbow = sqrt(max(z + (z - z * z * z) * cos(atan(zu.y, zu.x) + HUE_TURN - vec4(0, 2.1, 4.2, 0)), 0.0));
-    r.luma = dot(rainbow.rgb, vec3(0.299, 0.587, 0.114));
-    r.col = mix(rainbow.rgb, chromadepth(mix(0.15, 0.7, 1.0 - r.luma)), K_DEPTH);
+    // The sexy/1 rainbow's luma is the lace's LIGHTNESS structure, so it takes only the fixed per-device phase.
+    // The moving hue turn (knob, slow key, drops) moves the palette position instead: colour, never light.
+    float ang = atan(zu.y, zu.x);
+    vec4 rainbow = sqrt(max(z + (z - z * z * z) * cos(ang + SEED_PHASE - vec4(0, 2.1, 4.2, 0)), 0.0));
+    float luma = dot(rainbow.rgb, vec3(0.299, 0.587, 0.114));
+    r.luma = luma;
+    // Palette position: the orbit angle as a triangle wave (0 ember … 1 indigo … 0 ember), so the hue never
+    // crosses magenta. Threads that cross the x trap and the y trap sit half a leg apart (the braid).
+    float pal_t = abs(fract((ang + HUE_TURN + 1.07) / 6.2831853 + (lace_x - lace_y) * 0.12 + (luma - 0.6) * 0.6) * 2.0 - 1.0);
+    pal_t = mix(pal_t, 0.85 + 0.15 * pal_t, smoothstep(0.3, 0.05, luma));   // the darkest lace: indigo velvet
+    float pale = smoothstep(0.66, 0.78, z);
+    pal_t = mix(pal_t, 0.93, pale);                                         // the pale body: periwinkle (far)
+    float lace_L = 0.13 + 0.57 * luma;
+    float lace_C = (0.20 + 0.08 * (1.0 - luma)) * (1.0 - 0.1 * pale);
+    r.col = mix(themeCol(pal_t, lace_L, lace_C), chromadepth(mix(0.15, 0.7, 1.0 - luma)), K_DEPTH);
     return r;
 }
 
@@ -243,12 +404,14 @@ void mainImage(out vec4 P, vec2 V) {
     vec3 bg_purple = vec3(0.04, 0.015, 0.08);
     vec3 col = mix(bg_purple, lace_col * LACE_GAIN, lace);
 
-    col += vec3(0.7, 0.5, 0.65) * lace_fine * PEARL;
+    col += oklch2rgb(0.80, 0.07, THEME_H + KEY_AMBER) * lace_fine * PEARL;   // pale gold pearls
 
     // Rim — body silhouette edges
     float rim = smoothstep(0.1, 0.5, edge * 20.0);
     rim *= smoothstep(0.0, 0.15, abs(C.y));
-    vec3 rim_col = mix(vec3(0.3, 0.15, 0.65), vec3(0.8, 0.3, 0.5), RIM_WARMTH);
+    vec2 zu0 = unitDir(Z);                                  // atan(0, 0) is NaN on some mobile GPUs
+    float rim_t = mix(0.5 - 0.5 * cos(atan(zu0.y, zu0.x) + HUE_TURN + 1.6), 0.0, RIM_WARMTH * 0.6);
+    vec3 rim_col = themeCol(rim_t, 0.46, 0.22);
     col += rim_col * rim * RIM_INTENSITY * 0.3;
 
     // Focal → chromadepth red
@@ -279,8 +442,28 @@ void mainImage(out vec4 P, vec2 V) {
     // Darkness enforcement: only lace, rim, focal get to be bright
     col *= mix(0.15, 1.0, max(max(lace, rim * 0.5), focal));
 
-    col = col / (col + vec3(0.7));
+    // Tone map on luminance, not per channel (as clit-set/2): per-channel Reinhard pulled the pale body toward
+    // grey. Anything that still overshoots is pulled toward its own grey just far enough to fit.
+    float lum = dot(max(col, vec3(0.0)), vec3(0.2126, 0.7152, 0.0722));
+    col = max(col, vec3(0.0)) / (lum + 0.7);
+    float tl = lum / (lum + 0.7);
+    float hi = max(max(col.r, col.g), col.b);
+    if (hi > 0.94) col = mix(vec3(tl), col, max(0.94 - tl, 0.0) / max(hi - tl, 1e-4));
     col = pow(max(col, vec3(0.0)), vec3(0.88, 0.9, 0.95));
+
+    // NEVER HOT MAGENTA (clit-vibej iter 5): hues inside the arc between blue-violet (288 deg) and red
+    // (26 deg) are squeezed toward the two edges, and only the arc's middle loses some chroma. L is kept.
+    // On the DISPLAYED colour: decoded to linear first, so the arc is the hue the eye sees (2026-11-22)
+    vec3 gl = rgb2oklab(srgb2lin(max(col, 0.0)));
+    float gh = okHue(gl.yz);
+    if (gh > -1.25 && gh < 0.45) {
+        float gt = (gh + 1.25) / 1.70;
+        float gq = gt < 0.5 ? 0.5 * pow(2.0 * gt, 3.0) : 1.0 - 0.5 * pow(2.0 - 2.0 * gt, 3.0);
+        float gc = length(gl.yz) * (1.0 - 0.45 * smoothstep(0.25, 0.0, abs(gt - 0.5)));
+        float g2 = -1.25 + gq * 1.70;
+        gl.yz = gc * vec2(cos(g2), sin(g2));
+        col = okOut(gl);
+    }
 
     P = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
