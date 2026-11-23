@@ -7,10 +7,8 @@ A live /vibej show fork of `clit-set/2` (the voyage), made 2026-11-22 for a show
 ?shader=claude/wip/clit-vibej/2&controller=clit-set&wavelet=true
 ```
 
-Only `2.frag` (the roller coaster) is on main. `1.frag`, the voyage fork it grew from, was the
-show's fallback and was left on the `show/clit-vibej` branch (commit abfce3d6). Its iteration notes
-stay below because 2.frag inherits every one of them (coil, undulate, pearls, magenta guard,
-speckle gates).
+`1.frag` is the voyage fork the roller coaster grew from, and was the show's fallback. Its iteration
+notes below apply to 2.frag too (coil, undulate, pearls, magenta guard, speckle gates).
 
 Runs with the `clit-set` controller. Without it, every `cs_*` reads 0 and the knobs drive the camera
 directly, as in clit-set/2.
@@ -81,7 +79,7 @@ during the show are listed per iteration below.
 ## 2.frag: the roller coaster (fork of 1.frag, 04:11)
 
 Aaron: "It's been pretty samey for a while. Give me a 'roller coaster' view going down the fractal
-tube." A dramatic move, so it is a fork. 1.frag was the fallback (show branch only).
+tube." A dramatic move, so it is a fork. 1.frag stays as the fallback.
 
 ```
 ?shader=claude/wip/clit-vibej/2&controller=clit-set&wavelet=true
