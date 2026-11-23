@@ -118,7 +118,7 @@ export const planStrip = (files, config, read) => {
 
 /** wrangler.jsonc: a static-assets Worker on the show's own subdomain. */
 export const wranglerConfig = (config, date) => `{
-  // Show "${config.name}": static assets only, no Worker script. Deployed by .github/workflows/deploy.yml.
+  // Show "${config.name}": static assets only, no Worker script. Deployed by ${SHOW_OWNED[0]}.
   "name": "${config.worker}",
   "compatibility_date": "${date}",
   "assets": { "directory": "./dist" },
@@ -166,14 +166,23 @@ deploys. Pull fixes from main with \`node scripts/show-repo/create.js --sync\`.
 See docs/show-repos.md.
 `
 
-/** The outward-facing steps, in order. create.js prints them; only --publish runs them. */
-export const publishPlan = (config, dir, { visibility = 'private' } = {}) => [
-    { what: 'create the GitHub repo', cmd: ['gh', 'repo', 'create', `${config.owner}/${config.repo}`, `--${visibility}`, '--description', `Paper Cranes show: ${config.name}`] },
-    { what: 'point origin at it', cmd: ['git', '-C', dir, 'remote', 'add', 'origin', `https://github.com/${config.owner}/${config.repo}.git`] },
-    { what: 'set the deploy secrets (prompts for each value)', cmd: ['gh', 'secret', 'set', 'CLOUDFLARE_API_TOKEN', '-R', `${config.owner}/${config.repo}`] },
-    { what: '', cmd: ['gh', 'secret', 'set', 'CLOUDFLARE_ACCOUNT_ID', '-R', `${config.owner}/${config.repo}`] },
-    { what: 'push the show branch as main (triggers the deploy workflow)', cmd: ['git', '-C', dir, 'push', '-u', 'origin', `${config.branch}:main`] },
-    { what: 'record the branch on paper-cranes too', cmd: ['git', '-C', dir, 'push', 'upstream', config.branch] },
-    { what: 'watch the first deploy', cmd: ['gh', 'run', 'watch', '-R', `${config.owner}/${config.repo}`] },
-    { what: 'verify the live URL', cmd: ['node', 'scripts/show-repo/verify.js', `https://${config.domain}/`] },
-]
+/**
+ * The outward-facing steps, in order. create.js prints them; only --publish runs them. A step with
+ * `done` is skipped when that read-only check shows an earlier --publish already did it (the command
+ * succeeds, and its output lists `includes` when given), so --publish can be rerun after a failure.
+ * The pushes need no check: pushing what is already there is a no-op.
+ */
+export const publishPlan = (config, dir, { visibility = 'private' } = {}) => {
+    const slug = `${config.owner}/${config.repo}`
+    const secret = (name) => ({ cmd: ['gh', 'secret', 'set', name, '-R', slug], done: { cmd: ['gh', 'secret', 'list', '-R', slug], includes: name } })
+    return [
+        { what: 'create the GitHub repo', cmd: ['gh', 'repo', 'create', slug, `--${visibility}`, '--description', `Paper Cranes show: ${config.name}`], done: { cmd: ['gh', 'repo', 'view', slug] } },
+        { what: 'point origin at it', cmd: ['git', '-C', dir, 'remote', 'add', 'origin', `https://github.com/${slug}.git`], done: { cmd: ['git', '-C', dir, 'remote', 'get-url', 'origin'] } },
+        { what: 'set the deploy secrets (prompts for each value)', ...secret('CLOUDFLARE_API_TOKEN') },
+        { what: '', ...secret('CLOUDFLARE_ACCOUNT_ID') },
+        { what: 'push the show branch as main (triggers the deploy workflow)', cmd: ['git', '-C', dir, 'push', '-u', 'origin', `${config.branch}:main`] },
+        { what: 'record the branch on paper-cranes too', cmd: ['git', '-C', dir, 'push', 'upstream', config.branch] },
+        { what: 'watch the first deploy', cmd: ['gh', 'run', 'watch', '-R', slug] },
+        { what: 'verify the live URL', cmd: ['node', 'scripts/show-repo/verify.js', `https://${config.domain}/`] },
+    ]
+}

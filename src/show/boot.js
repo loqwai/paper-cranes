@@ -6,7 +6,7 @@
 // (https://<show>.beadfamous.com/) boots the show with no query string. Anything already in the
 // URL wins, so `?knob_3=0.4` or a different `?shader=` still works for rehearsal.
 
-import { SHOW_CONFIG_ID, MIDI_PROFILES_KEY, mergeShowParams, seedMidiProfiles } from './params.js'
+import { SHOW_CONFIG_ID, MIDI_PROFILES_KEY, mergeShowParams, seedMidiProfiles, toSearch } from './params.js'
 
 const readConfig = () => {
     const text = document.getElementById(SHOW_CONFIG_ID)?.textContent?.trim()
@@ -34,7 +34,7 @@ export const bootShow = () => {
     window.showConfig = config
     if (config.title) document.title = config.title
     const params = mergeShowParams(window.location.search, config)
-    const search = params.toString()
+    const search = toSearch(params)
     if (search !== window.location.search.replace(/^\?/, '')) {
         window.history.replaceState(window.history.state, '', `${window.location.pathname}?${search}${window.location.hash}`)
     }

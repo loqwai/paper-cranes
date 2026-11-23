@@ -1,5 +1,17 @@
 import { describe, it, expect } from 'vitest'
-import { mergeShowParams, seedMidiProfiles } from './params.js'
+import { mergeShowParams, seedMidiProfiles, toSearch } from './params.js'
+
+describe('toSearch', () => {
+    const clit = { shader: 'claude/wip/clit-vibej/2', controllers: ['clit-set'], params: { wavelet: 'true', coaster: 1 } }
+
+    it('keeps shader path slashes readable in the address bar', () => {
+        expect(toSearch(mergeShowParams('', clit))).toBe('shader=claude/wip/clit-vibej/2&controller=clit-set&wavelet=true&coaster=1')
+    })
+
+    it('still encodes what must be encoded', () => {
+        expect(toSearch(new URLSearchParams({ note: 'a&b c' }))).toBe('note=a%26b+c')
+    })
+})
 
 const clit = {
     shader: 'claude/wip/clit-vibej/2',

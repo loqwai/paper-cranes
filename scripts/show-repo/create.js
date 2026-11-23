@@ -141,9 +141,12 @@ const strip = (dir, config, { midiProfiles, previousShowHtml } = {}) => {
 // ---- sync: pull main into an existing show repo ------------------------------------------------
 
 const sync = (dir, from) => {
+    if (!existsSync(join(dir, 'show.json'))) throw new Error(`${dir} has no show.json: --sync runs in a show repo (pass --dir .show-repos/<name>)`)
     const saved = JSON.parse(readFileSync(join(dir, 'show.json'), 'utf-8'))
     const [owner, repo] = (saved.repo ?? '').split('/')
     const config = makeConfig({ ...saved, owner: owner || undefined, repo: repo || undefined })
+    const branch = git(dir, 'rev-parse', '--abbrev-ref', 'HEAD')
+    if (branch !== config.branch) throw new Error(`${dir} is on ${branch}, expected ${config.branch}`)
     assertCleanExceptGenerated(dir)
     if (!from) { git(dir, 'fetch', '-q', 'upstream', 'main'); from = 'upstream/main' }
     const previousShowHtml = readIn(dir)('show.html')
@@ -178,7 +181,7 @@ const freePort = () => new Promise((res, rej) => {
     srv.on('error', rej)
 })
 
-const waitForHttp = async (url, ms = 30000) => {
+const waitForHttp = async (url, ms = 90000) => {
     const end = Date.now() + ms
     while (Date.now() < end) {
         try { if ((await fetch(url)).ok) return } catch { /* not up yet */ }
@@ -205,9 +208,26 @@ const verifyBuild = async (dir, config) => {
 
 // ---- step 4: outward-facing --------------------------------------------------------------------
 
+const shell = (cmd) => cmd.map((c) => (/[\s"']/.test(c) ? JSON.stringify(c) : c)).join(' ')
+
 const printPlan = (steps) => {
     log('outward-facing steps (run only with --publish):')
-    for (const { what, cmd } of steps) console.log(`${what ? `  # ${what}\n` : ''}  ${cmd.map((c) => (/[\s"']/.test(c) ? JSON.stringify(c) : c)).join(' ')}`)
+    for (const { what, cmd, done } of steps) {
+        if (what) console.log(`  # ${what}`)
+        const skip = done ? `    # skipped when \`${shell(done.cmd)}\` ${done.includes ? `lists ${done.includes}` : 'succeeds'}` : ''
+        console.log(`  ${shell(cmd)}${skip}`)
+    }
+}
+
+// A publish step's `done` check: true when an earlier --publish already did it, so reruns converge.
+const alreadyDone = (dir, done) => {
+    if (!done) return false
+    try {
+        const out = execFileSync(done.cmd[0], done.cmd.slice(1), { cwd: dir, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] })
+        return done.includes ? out.split(/\s+/).includes(done.includes) : true
+    } catch {
+        return false
+    }
 }
 
 const main = async () => {
@@ -237,7 +257,8 @@ const main = async () => {
         : publishPlan(config, dir, { visibility: args.visibility })
     printPlan(steps)
     if (args['dry-run'] || !args.publish) return log(args['dry-run'] ? 'dry run: stopped before outward-facing steps' : 'pass --publish to run them')
-    for (const { what, cmd } of steps) {
+    for (const { what, cmd, done } of steps) {
+        if (alreadyDone(dir, done)) { log(`already done, skipping: ${shell(cmd)}`); continue }
         if (what) log(what)
         run(dir, cmd[0], cmd.slice(1))
     }
