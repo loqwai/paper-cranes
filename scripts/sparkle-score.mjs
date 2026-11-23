@@ -30,23 +30,41 @@
 //   --state '{"time":36000}'  JSON merged into window.__clitSetState before load (controller state: e.g.
 //                          start the clocks an hour in, to test float precision of long-running uniforms)
 //   --bench N              after scoring, time N more frames (each waits for the GPU) -> msPerFrame
-//   --keep                 also write every scored frame as PNG
+//   --keep                 also write every scored frame as PNG (needed for a run used as --ref)
+//   --ref <dir>            an --ss 4 --keep run of the same shader, trace and size: report refMAE, the mean
+//                          |this - reference| per pixel channel (0..255), and refMAEBlur, the same after a 3x3 box
+//                          blur of both. Aliasing is the part of the picture the reference does not have, so a
+//                          real anti-aliasing fix moves refMAE DOWN. Blur, smear and frame blending do not.
+//   --before <dir>         the unfixed shader's run (scored with the same --ref): print a gate verdict, below.
 // Outputs in --out: score.json, heat.png (sparkle map over the middle frame), heat-only.png, mid.png,
-// and with --keep frames/NNNN.png. Prints one JSON line: { flipMean, sparkleFrac, ... }.
+// and with --keep frames/NNNN.png. Prints one JSON line: { flipMean, motion, refMAE, ... }.
+//
+// READ flipMean WITH motion AND refMAE. Any temporal filter (blending in last frame, a slower clock,
+// smearing) lowers flipMean, because it lowers every frame-to-frame change, real motion included. So
+// flipMean alone cannot tell anti-aliasing from blur. The gate (--before) passes a fix only when:
+//   refMAE goes down vs before                        (closer to the aliasing-free picture)
+//   flipMean goes down vs before                      (less flicker)
+//   motion >= 85% of the reference's motion           (real motion kept, not crushed)
+// Sparkle inflates motion too (clit-set/2: 12.6 before, 7.3 in the reference), so a real fix moves motion DOWN
+// toward the reference; what it must not do is go well below it, which is what blur and frame blending do.
+// and then you still look at a frame strip through a camera lurch for seams and ghost lines.
 
 import { spawn, spawnSync } from 'child_process'
 import { mkdir, writeFile, readFile } from 'fs/promises'
 import { existsSync } from 'fs'
+import { pathToFileURL } from 'url'
 
 const args = process.argv.slice(2)
+// A flag given twice: the last one wins (--controller is the repeatable one; see all())
 const opt = (name, d) => {
-  const i = args.indexOf(`--${name}`)
+  const i = args.lastIndexOf(`--${name}`)
   return i < 0 ? d : args[i + 1]
 }
 const flag = name => args.includes(`--${name}`)
 const all = name => args.flatMap((a, i) => (a === `--${name}` ? [args[i + 1]] : []))
 
 const OUT = opt('out', 'tmp/sparkle')
+const isCli = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href
 const FLIP_HOT = 24   // a flip over ~10% of full scale counts as a sparkle
 
 // ---------- analysis (shared by both modes) ----------
@@ -146,13 +164,60 @@ const writeImages = async (frames, w, h, res) => {
   }
 }
 
+// Distance to a reference run (frames/NNNN.png from --keep). Same size and frame count expected.
+export const refDistance = (frames, w, h, refDir) => {
+  const r = spawnSync('ffmpeg', ['-loglevel', 'error', '-i', `${refDir}/frames/%04d.png`, '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], { maxBuffer: 2 ** 31 })
+  if (r.status !== 0) throw new Error(`--ref: cannot read ${refDir}/frames: ${r.stderr}`)
+  const F = w * h * 3
+  const n = Math.min(frames.length, Math.floor(r.stdout.length / F))
+  if (n < 1 || r.stdout.length % F) throw new Error(`--ref: ${refDir} frames are not ${w}x${h}`)
+  const blur = buf => {
+    const o = new Float32Array(F)
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) for (let k = 0; k < 3; k++) {
+      let s = 0, c = 0
+      for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+        const yy = y + j, xx = x + i
+        if (yy < 0 || yy >= h || xx < 0 || xx >= w) continue
+        s += buf[(yy * w + xx) * 3 + k]; c++
+      }
+      o[(y * w + x) * 3 + k] = s / c
+    }
+    return o
+  }
+  let e = 0, eb = 0
+  for (let t = 0; t < n; t++) {
+    const A = frames[t], R = r.stdout.subarray(t * F, (t + 1) * F)
+    for (let j = 0; j < F; j++) e += Math.abs(A[j] - R[j])
+    if (t % 3) continue                                   // the blurred distance on every third frame: it is slow
+    const ab = blur(A), rb = blur(R)
+    for (let j = 0; j < F; j++) eb += Math.abs(ab[j] - rb[j])
+  }
+  return { refMAE: +(e / (n * F)).toFixed(3), refMAEBlur: +(eb / (Math.ceil(n / 3) * F)).toFixed(3) }
+}
+
+const readScore = async dir => JSON.parse(await readFile(`${dir}/score.json`, 'utf8'))
+
 const finish = async (frames, w, h, meta) => {
   const res = analyse(frames, w, h)
   await writeImages(frames, w, h, res)
   const { heat, ...num } = res
   const out = { ...meta, w, h, frames: frames.length, ...num }
+  if (opt('ref')) {
+    Object.assign(out, refDistance(frames, w, h, opt('ref')))
+    out.refMotion = (await readScore(opt('ref'))).motion
+  }
+  if (opt('before')) {
+    const b = await readScore(opt('before'))
+    if (b.refMAE == null || out.refMAE == null) throw new Error('--before needs both runs scored with --ref')
+    const checks = {
+      refMAEDown: out.refMAE < b.refMAE,
+      flipDown: out.flipMean < b.flipMean,
+      motionNotCrushed: out.motion >= 0.85 * out.refMotion,
+    }
+    out.gate = { pass: Object.values(checks).every(Boolean), ...checks, before: { flipMean: b.flipMean, motion: b.motion, refMAE: b.refMAE } }
+  }
   await writeFile(`${OUT}/score.json`, JSON.stringify(out, null, 1))
-  const { perFrame, ...short } = out
+  const { perFrame, controllerSample, url, ...short } = out
   console.log(JSON.stringify(short))
 }
 
@@ -288,7 +353,7 @@ const fromRender = async () => {
   await page.goto(url, { waitUntil: 'load' })
   // step until the shader has compiled and frames are flowing
   for (let tries = 0; tries < 400; tries++) {
-    const fc = await page.evaluate(() => window.__step ? window.__step(1) : 0)
+    await page.evaluate(() => window.__step ? window.__step(1) : 0)
     const ok = await page.evaluate(() => !!(window.cranes && window.cranes.frameCount > 3 && !window.cranes.error))
     if (ok) break
     await page.waitForTimeout(50)
@@ -328,15 +393,18 @@ const fromRender = async () => {
   const err = await page.evaluate(() => window.cranes.error ?? null)
   await browser.close()
   if (err) throw new Error(`shader error: ${err}`)
+  if (flag('gpu') && /swiftshader/i.test(renderer)) throw new Error(`--gpu asked for the host GPU, but Chrome fell back to ${renderer}`)
   if (ss > 1) { w = Math.floor(w / ss); h = Math.floor(h / ss) }
   return { frames, w, h, meta: { url, renderer, msPerFrame, ss, trace: traceArg, dt, warmup: WARM, warmMsPerFrame: +(warmMs / Math.max(1, WARM)).toFixed(1), controllerSample: ctl } }
 }
 
-await mkdir(OUT, { recursive: true })
-if (opt('video')) {
-  const { frames, w, h } = await fromVideo(opt('video'))
-  await finish(frames, w, h, { video: opt('video') })
-} else {
-  const { frames, w, h, meta } = await fromRender()
-  await finish(frames, w, h, meta)
+if (isCli) {
+  await mkdir(OUT, { recursive: true })
+  if (opt('video')) {
+    const { frames, w, h } = await fromVideo(opt('video'))
+    await finish(frames, w, h, { video: opt('video') })
+  } else {
+    const { frames, w, h, meta } = await fromRender()
+    await finish(frames, w, h, meta)
+  }
 }
