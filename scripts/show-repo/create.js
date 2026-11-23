@@ -231,7 +231,10 @@ const main = async () => {
         if (!report.ok) { log('verify FAILED; not publishing'); process.exit(1) }
         log(`verify ok: ${report.frames} frames, ${report.consoleErrorCount} console errors, screenshot ${report.screenshot}`)
     }
-    const steps = publishPlan(config, dir, { visibility: args.visibility })
+    // An existing show repo only needs the push; its repo, secrets and domain already exist.
+    const steps = args.sync
+        ? [{ what: 'push the merged show (the deploy workflow ships it)', cmd: ['git', '-C', dir, 'push', 'origin', `${config.branch}:main`] }]
+        : publishPlan(config, dir, { visibility: args.visibility })
     printPlan(steps)
     if (args['dry-run'] || !args.publish) return log(args['dry-run'] ? 'dry run: stopped before outward-facing steps' : 'pass --publish to run them')
     for (const { what, cmd } of steps) {
