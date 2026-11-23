@@ -35,7 +35,7 @@ clit-set/2). Audio running, fps 90. Subtle moves only.
   near the floor.
 
 ## Todo
-- `[ ] 2.frag tube walls speckle on the phone with live audio (grey 6-12%, hot pink up to 0.18 from red/violet speckle blending), though the same scale is clean without audio (grey 1-4%). Suspects: the coil churn and treble braid sparkle at the tube's compressed scale. Try a per-pixel supersample of the wall, or drop COIL_AMP on 2.frag.`
+- `[x] (fixed 2026-11-22, LACE AA: aliasing of the chaotic orbit traps, see docs/sparkle-score.md) 2.frag tube walls speckle on the phone with live audio (grey 6-12%, hot pink up to 0.18 from red/violet speckle blending), though the same scale is clean without audio (grey 1-4%). Suspects: the coil churn and treble braid sparkle at the tube's compressed scale. Try a per-pixel supersample of the wall, or drop COIL_AMP on 2.frag.`
 - `[ ] 2.frag rails corkscrew around the tube with the unbounded ROLL (one-way by rule). If Aaron wants them on the floor more often, bank the rails by a fraction of ROLL that wraps slowly.`
 
 ## History of changes

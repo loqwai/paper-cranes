@@ -111,6 +111,8 @@ uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 // Loudness (1.5 s) lifts chroma a little: loud is more vivid, quiet more velvet
 #define CHROMA_GAIN (0.85 + 0.3 * BREATH)
 // Trails do not grow with loudness: more smear on loud passages made the loud frames move LESS
+#define LACE_AA_SAMPLES 1   // extra orbit samples per pixel where the lace is unresolved (see LACE AA). 1 for phones;
+                            // the desktop show machine can raise it (2: flicker -6% more, 3: -9%, at +20% / +38% frame time)
 #define FEEDBACK_MIX clamp(0.22 + K_TRAILS * 0.55, 0.0, 0.85)
 #define VIGN_OPEN 0.03
 
@@ -183,6 +185,77 @@ mat2 rot2(float a) { float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 // ============================================================================
 // MAIN
 // ============================================================================
+// Unit direction, or +x where the vector is 0: atan(0, 0) is NaN on some mobile GPUs
+vec2 unitDir(vec2 v) { return dot(v, v) > 1e-24 ? normalize(v) : vec2(1.0, 0.0); }
+
+struct LaceSample { float lace, fine, z, luma, pal_t; vec3 col; };
+
+// The lace one orbit sample paints: coverage (lace, and the braid where both traps cross), the rainbow's
+// lightness, the palette position and the lace colour. A function so LACE AA can average several.
+LaceSample laceSample(float x, float y, vec2 Z, float lace_lo, float lace_hi) {
+    LaceSample r;
+    vec2 zu = unitDir(Z);                  // atan(0, 0) is NaN on some mobile GPUs
+    float lx = log(max(x, 1e-12)), ly = log(max(y, 1e-12));
+    float z = 1. - smoothstep(1., -6., ly) * smoothstep(1., -6., lx);
+    float lace_x = smoothstep(lace_lo, lace_hi, lx);
+    float lace_y = smoothstep(lace_lo, lace_hi, ly);
+    r.lace = pow(max(lace_x, lace_y), 3.0);
+    r.fine = lace_x * lace_y;
+    r.z = z;
+    float phi = atan(zu.y, zu.x) + HUE_TURN;
+    // The rainbow's luma is the lace's LIGHTNESS structure, so it takes only the fixed per-device phase.
+    // Fed the moving hue turn (cs_jump +0.9 rad per drop, cs_hue), every drop re-lit the whole lace
+    // over 1.5 s: a light morph the shiver probe read as zoom. The hue turn now moves colour only.
+    vec4 rainbow = sqrt(max(z + (z - z * z * z) * cos(atan(zu.y, zu.x) + SEED_PHASE - vec4(0, 2.1, 4.2, 0)), 0.0));
+    float luma = dot(rainbow.rgb, vec3(0.299, 0.587, 0.114));
+    r.luma = luma;
+    // Palette position: the orbit angle as a triangle wave (0 red … 1 violet … 0 red), so the hue never
+    // crosses the magenta arc. The offset lands the dense lace's bunched orbit angles on amber and teal.
+    // Threads that cross the x trap and the y trap sit half a leg apart, so the filigree braids colours.
+    // Bright music leans warm (8 s centroid mean).
+    float pal_t = abs(fract((phi + 1.07) / TAU + (lace_x - lace_y) * 0.12 + (luma - 0.6) * 0.6 - TONE_LEAN * 0.1) * 2.0 - 1.0);
+    // The darkest lace (the fan petals) goes deep violet, the velvet body: never brown or grey
+    pal_t = mix(pal_t, 0.85 + 0.15 * pal_t, smoothstep(0.3, 0.05, luma));
+    // The pale star (the smooth high-z body, z ~0.8) is the landmark: keep it pale, tinted periwinkle
+    // (far), so the red ember pops in front of it
+    float pale = smoothstep(0.66, 0.78, z);
+    pal_t = mix(pal_t, 0.93, pale);
+    r.pal_t = pal_t;
+    // LACE COLOUR, built in OKLCH: the orbit rainbow's lightness (its structure) with the palette's hue
+    // at full chroma. The raw rainbow went grey wherever z sat near 0 or 1 (the dark fan petals and the
+    // dusty pale star); here every lace pixel carries a hue. Darker lace gets more chroma (deep wine,
+    // deep teal), the pale star stays pale but tinted. Gamut-mapped, never clipped.
+    float lace_L = 0.30 + 0.56 * luma;
+    float lace_C = (0.13 + 0.07 * (1.0 - luma)) * (1.0 - 0.35 * pale) * CHROMA_GAIN;
+    vec3 vivid = lchGamut(lace_L, lace_C, paletteHue(pal_t));
+    r.col = mix(vivid, chromadepth(mix(0.15, 0.7, 1.0 - luma)), K_DEPTH);
+    return r;
+}
+
+// One orbit of the lace map from C: the two axis traps (x, y), the closest approach Z, and the focal trap.
+// A function so LACE AA can run it again at other points inside the pixel.
+void orbit(vec2 C, float a_pow, float b_off, mat2 curl, float wph, out float x, out float y, out vec2 Z, out float focal_trap) {
+    vec2 V = C;
+    float v, z = 9.;
+    x = y = 9.;
+    Z = vec2(0.0);
+    focal_trap = 9.0;
+    vec2 focal_center = vec2(0.0, 0.12);
+    for (int k = 0; k < 50; k++) {
+        float a = atan(V.y, V.x),
+        d = dot(V, V) * a_pow;
+        float c = dot(V, vec2(a, log(d) / 2.));
+        V = exp(-a * V.y) * pow(d, V.x / 2.) * vec2(cos(c), sin(c));
+        V = vec2(V.x * V.x - V.y * V.y, dot(V, V.yx));
+        V -= C * b_off;
+        V = curl * V;
+        x = min(x, abs(V.x));
+        y = min(y, abs(V.y));
+        z > (v = dot(V, V)) ? z = v, Z = V : Z;
+        focal_trap = min(focal_trap, length(V - focal_center));
+    }
+}
+
 void mainImage(out vec4 P, vec2 V) {
     float drop = DROP_INTENSITY;
     float build = BUILD_INTENSITY;
@@ -200,34 +273,13 @@ void mainImage(out vec4 P, vec2 V) {
     vec2 C = dive + (home + 0.6 * p.yx - dive) / zoom;
     V = C;
 
-    float v, x, y,
-          z = y = x = 9.;
-    vec2 Z = vec2(0.0);
-
-    float focal_trap = 9.0;
-    vec2 focal_center = vec2(0.0, 0.12);
     float a_pow = NAV_A;
     float b_off = NAV_B;
     mat2 curl = rot2(NAV_CURL);
-
-    for (int k = 0; k < 50; k++) {
-        float a = atan(V.y, V.x),
-        d = dot(V, V) * a_pow;
-        float c = dot(V, vec2(a, log(d) / 2.));
-        V = exp(-a * V.y) * pow(d, V.x / 2.) * vec2(cos(c), sin(c));
-        V = vec2(V.x * V.x - V.y * V.y, dot(V, V.yx));
-        V -= C * b_off;
-        V = curl * V;
-
-        x = min(x, abs(V.x));
-        y = min(y, abs(V.y));
-        z > (v = dot(V, V)) ? z = v, Z = V : Z;
-
-        focal_trap = min(focal_trap, length(V - focal_center));
-    }
-
+    float x, y, focal_trap;
+    vec2 Z;
+    orbit(C, a_pow, b_off, curl, 0.0, x, y, Z, focal_trap);
     float lx = log(max(x, 1e-12)), ly = log(max(y, 1e-12));
-    z = 1. - smoothstep(1., -6., ly) * smoothstep(1., -6., lx);
 
     // Lace from the orbit traps. Thresholds slide with depth so deep zooms keep a dark floor.
     // The lace threshold is geometry: audio does not move it. Timbre shifts (cs_shift, 0.3 s attack) and
@@ -235,32 +287,54 @@ void mainImage(out vec4 P, vec2 V) {
     // Bass thickens the filigree (cs_bass: 40 ms attack, 0.5 s release); the threshold returns, never drifts
     float lace_lo = -2.0 + SEED_LACE + K_LACE * 0.9 + BASS_ENV * 0.9 * REACT - lz * 0.6;
     float lace_hi = lace_lo - 3.0;
-    float lace_x = smoothstep(lace_lo, lace_hi, lx);
-    float lace_y = smoothstep(lace_lo, lace_hi, ly);
-    float lace = pow(max(lace_x, lace_y), 3.0);
-    float lace_fine = lace_x * lace_y;
     // Coherence gate, depth only: past ~3x, drop lace that changes faster than a pixel (speckle)
     float coh = smoothstep(0.6, 1.6, lz);
-    lace *= 1.0 - coh * smoothstep(1.5, 5.0, fwidth(min(lx, ly)));
-    lace_fine *= 1.0 - coh * 0.7;
+    float coh_gate = 1.0 - coh * smoothstep(1.5, 5.0, fwidth(min(lx, ly)));
 
-    float phi = atan(Z.y, Z.x) + HUE_TURN;
-    // The rainbow's luma is the lace's LIGHTNESS structure, so it takes only the fixed per-device phase.
-    // Fed the moving hue turn (cs_jump +0.9 rad per drop, cs_hue), every drop re-lit the whole lace
-    // over 1.5 s: a light morph the shiver probe read as zoom. The hue turn now moves colour only.
-    vec4 rainbow = sqrt(max(z + (z - z * z * z) * cos(atan(Z.y, Z.x) + SEED_PHASE - vec4(0, 2.1, 4.2, 0)), 0.0));
-    float luma = dot(rainbow.rgb, vec3(0.299, 0.587, 0.114));
-    // Palette position: the orbit angle as a triangle wave (0 red … 1 violet … 0 red), so the hue never
-    // crosses the magenta arc. The offset lands the dense lace's bunched orbit angles on amber and teal.
-    // Threads that cross the x trap and the y trap sit half a leg apart, so the filigree braids colours.
-    // Bright music leans warm (8 s centroid mean).
-    float pal_t = abs(fract((phi + 1.07) / TAU + (lace_x - lace_y) * 0.12 + (luma - 0.6) * 0.6 - TONE_LEAN * 0.1) * 2.0 - 1.0);
-    // The darkest lace (the fan petals) goes deep violet, the velvet body: never brown or grey
-    pal_t = mix(pal_t, 0.85 + 0.15 * pal_t, smoothstep(0.3, 0.05, luma));
-    // The pale star (the smooth high-z body, z ~0.8) is the landmark: keep it pale, tinted periwinkle
-    // (far), so the red ember pops in front of it
+    // LACE AA. In the dense lace the orbit is chaotic: one pixel step in C moves the traps across the whole lace
+    // band, so one sample per pixel is noise, and any motion (spin, voyage, kick lurch) reshuffles it every frame.
+    // That is the sparkle (scripts/sparkle-score.mjs: 1/4 resolution sparkles as much, a 16x supersample is the
+    // clean reference; clock precision and every audio term ruled out). unres = how much the lace VALUE changes
+    // across this pixel's 2x2 quad: 0 inside a clean thread (its core is lace on both sides), up in the noise.
+    // There the pixel runs the orbit LACE_AA_SAMPLES more times inside its own footprint and averages the lace's
+    // light and colour: spatial supersampling, no frame history, so nothing trails or ghosts.
+    LaceSample ls = laceSample(x, y, Z, lace_lo, lace_hi);
+    float unres = smoothstep(0.05, 0.25, fwidth(ls.lace) + fwidth(ls.fine) + ls.lace * fwidth(ls.luma));
+    vec2 dCx = dFdx(C), dCy = dFdy(C);
+    float lace = ls.lace, lace_fine = ls.fine, z = ls.z, luma = ls.luma, pal_t = ls.pal_t;
+    vec3 lace_col = ls.col;
+    vec2 zdir = unitDir(Z);
+    if (unres > 0.0) {
+        float s_lace = ls.lace, s_fine = ls.fine, s_z = ls.z, s_luma = ls.luma, s_pal = ls.pal_t;
+        vec3 s_col = ls.col * (ls.lace + ls.fine);
+        vec2 s_dir = zdir;
+        for (int s = 0; s < LACE_AA_SAMPLES; s++) {
+            float ang = 0.7 + TAU * float(s) / float(LACE_AA_SAMPLES);
+            vec2 o = 0.42 * vec2(cos(ang), sin(ang));      // a ring inside the pixel, the centre sample above
+            float sx, sy, sft;
+            vec2 sZ;
+            orbit(C + o.x * dCx + o.y * dCy, a_pow, b_off, curl, 0.0, sx, sy, sZ, sft);
+            LaceSample t = laceSample(sx, sy, sZ, lace_lo, lace_hi);
+            s_lace += t.lace; s_fine += t.fine; s_z += t.z; s_luma += t.luma; s_pal += t.pal_t;
+            s_col += t.col * (t.lace + t.fine);
+            s_dir += unitDir(sZ);
+        }
+        float inv = 1.0 / float(LACE_AA_SAMPLES + 1);
+        // the colour is weighted by how much lace each sample has, so dark samples do not grey it
+        vec3 avg_col = s_col / max(s_lace + s_fine, 1e-4);
+        lace = mix(lace, s_lace * inv, unres);
+        lace_fine = mix(lace_fine, s_fine * inv, unres);
+        z = mix(z, s_z * inv, unres);
+        luma = mix(luma, s_luma * inv, unres);
+        pal_t = mix(pal_t, s_pal * inv, unres);
+        lace_col = mix(lace_col, avg_col, unres);
+        zdir = mix(zdir, s_dir, unres);
+    }
+    lace *= coh_gate;
+    lace_fine *= 1.0 - coh * 0.7;
+    zdir = dot(zdir, zdir) > 1e-12 ? zdir : unitDir(Z);  // the averaged directions can cancel to 0
+    float phi = atan(zdir.y, zdir.x) + HUE_TURN;
     float pale = smoothstep(0.66, 0.78, z);
-    pal_t = mix(pal_t, 0.93, pale);
 
     // FOCAL — one hot spot at home, fading out with depth (at depth every orbit grazes the trap)
     float focal = pow(smoothstep(FOCAL_RADIUS, 0.01, focal_trap), 3.0);
@@ -291,14 +365,6 @@ void mainImage(out vec4 P, vec2 V) {
     float star = (s1 * 0.6 + s2) * (0.4 + 0.9 * TWINKLE);
     vec3 bg = vec3(0.04, 0.015, 0.08) + dust_col * dust * neb * 0.45 * (0.9 + 0.2 * BREATH + 0.15 * GRIT);
 
-    // LACE COLOUR, built in OKLCH: the orbit rainbow's lightness (its structure) with the palette's hue
-    // at full chroma. The raw rainbow went grey wherever z sat near 0 or 1 (the dark fan petals and the
-    // dusty pale star); here every lace pixel carries a hue. Darker lace gets more chroma (deep wine,
-    // deep teal), the pale star stays pale but tinted. Gamut-mapped, never clipped.
-    float lace_L = 0.30 + 0.56 * luma;
-    float lace_C = (0.13 + 0.07 * (1.0 - luma)) * (1.0 - 0.35 * pale) * CHROMA_GAIN;
-    vec3 vivid = lchGamut(lace_L, lace_C, paletteHue(pal_t));
-    vec3 lace_col = mix(vivid, chromadepth(mix(0.15, 0.7, 1.0 - luma)), K_DEPTH);
     vec3 col = mix(bg, lace_col * LACE_GAIN, lace);
     // The braid (where both traps cross) is where the beat lands: a bass punch lights the filigree, locally
     col += mix(lace_col, vec3(1.0, 0.88, 0.7), 0.55) * lace_fine * (0.3 + 0.9 * TREB_ENV * REACT + 0.6 * PUNCH * REACT);   // treble sparkles the braid

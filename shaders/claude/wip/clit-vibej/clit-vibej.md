@@ -7,10 +7,8 @@ A live /vibej show fork of `clit-set/2` (the voyage), made 2026-11-22 for a show
 ?shader=claude/wip/clit-vibej/2&controller=clit-set&wavelet=true
 ```
 
-Only `2.frag` (the roller coaster) is on main. `1.frag`, the voyage fork it grew from, was the
-show's fallback and was left on the `show/clit-vibej` branch (commit abfce3d6). Its iteration notes
-stay below because 2.frag inherits every one of them (coil, undulate, pearls, magenta guard,
-speckle gates).
+`1.frag` is the voyage fork the roller coaster grew from, and was the show's fallback. Its iteration
+notes below apply to 2.frag too (coil, undulate, pearls, magenta guard, speckle gates).
 
 Runs with the `clit-set` controller. Without it, every `cs_*` reads 0 and the knobs drive the camera
 directly, as in clit-set/2.
@@ -81,7 +79,7 @@ during the show are listed per iteration below.
 ## 2.frag: the roller coaster (fork of 1.frag, 04:11)
 
 Aaron: "It's been pretty samey for a while. Give me a 'roller coaster' view going down the fractal
-tube." A dramatic move, so it is a fork. 1.frag was the fallback (show branch only).
+tube." A dramatic move, so it is a fork. 1.frag stays as the fallback.
 
 ```
 ?shader=claude/wip/clit-vibej/2&controller=clit-set&wavelet=true
@@ -109,3 +107,41 @@ tube." A dramatic move, so it is a fork. 1.frag was the fallback (show branch on
 - **2.frag iter 3** (04:20): the sub-pixel lace dim is stronger in the tube (0.5 → 0.7, starting at fwidth 1.5), because the walls compress the lace toward the core. Grey 7–8% → 2.5–5.5%.
 - **2.frag iter 4** (04:21): the rails are thicker (0.006 + 0.012·r) and have a soft amber glow that lifts on the kick (`PUNCH`, rails only). The ties are ember-red (L 0.48) instead of dark shadows.
 - **2.frag iter 5** (04:25): bass thickening of the lace is halved on the tube (0.9 → 0.45). A wall-scale sweep (R1 and R2 × 1.0 / 0.6 / 0.4, no audio, six waypoints) found the current scale cleanest, so it stays. On the phone the walls are still speckly (grey 6–12%, hot pink up to 0.18 where red and violet speckle blend).
+
+## LACE AA (2026-11-22, all of clit-vibej/1, clit-vibej/2, clit-set/1, clit-set/2)
+
+The lace sparkled (show journal: "Tube walls speckle with live audio"). Measured with
+`scripts/sparkle-score.mjs` and the diagnostic fork `lace-lab/1` (see [docs/sparkle-score.md](../../../../docs/sparkle-score.md)):
+
+- **Cause: aliasing of a chaotic function.** In the dense lace the orbit is chaotic, so one pixel step in C
+  moves the trap logs across the whole lace band. One sample per pixel is noise, and any motion (the spin,
+  the voyage, a kick's lurch, the tube's travel) reshuffles it every frame. Audio makes it worse only by
+  speeding the motion up. 16 samples per pixel cut the flicker 30% to 65% depending on the shader;
+  rendering at 1/4 resolution did nothing.
+- **Ruled out:** float precision of the clocks (controller state two hours in: no worse), the coil, the
+  undulate, bass on the lace threshold, the treble braid light, each within 1% when removed.
+- **First fix, rejected in review:** carry `dV/dC` through the loop, call a pixel unresolved when
+  `|dV/dC| * pixel / trap` is large, and blend 90% of last frame there. The footprint runs to infinity at
+  every clean thread's core (the trap passes through 0), so it drew dark seams down clean threads and red
+  ghost lines behind moving ones, and it lowered flicker by blurring real motion: `motion` 16.5 to 9.1
+  (reference 13.6), distance to the `--ss 4` reference 6.87 to 11.20, worse than no fix.
+- **Fix: spatial supersampling.** The orbit loop is now `orbit()`, and the lace fields one orbit gives
+  (coverage, braid, rainbow lightness, palette position, colour) are `laceSample()`. `unres` is how much
+  those change across the pixel's 2x2 quad (`fwidth`): 0 inside a clean thread, high in the chaotic lace.
+  There the pixel runs `orbit()` `LACE_AA_SAMPLES` (1) more times on a ring inside its own footprint
+  (`C + o.x * dFdx(C) + o.y * dFdy(C)`) and averages coverage, lightness and palette position, with the
+  colour weighted by coverage so dark samples do not grey it. No frame history: nothing trails or ghosts.
+  The rim edge is taken from the averaged `z`.
+- **Removed:** iters 10, 11 and 13 `fwidth` gates. They dimmed the noisy lace instead of resolving it.
+- **Numbers** (synth trace, 90 frames, 408 x 816; `ref` = unfixed shader at `--ss 4`). Shipped, 1 sample:
+  2.frag flipMean 10.57 / 9.74 / 7.39 (before / fix / ref), motion 16.50 / 15.74 / 13.58, distance to ref
+  6.87 / 6.12. With 2 samples: 1.frag flipMean 9.05 / 6.86 / 4.05 (before / fix / ref), motion 14.05 / 11.93 / 9.36, distance to ref
+  8.12 / 6.33. 2.frag flipMean 10.57 / 9.15 / 7.39, motion 16.50 / 15.19 / 13.58, distance 6.87 / 5.50.
+  Live split-screen recording (same frames, sides swapped halfway): 2.frag 9.0 to 7.3, 1.frag 7.7 to 5.7.
+  The recording ran 2 samples.
+- **Cost:** SwiftShader (CPU, a stand-in for a phone), median of 3 runs: 2.frag 106 to 157 ms per frame
+  at 1 sample (+48%), 190 at 2; 1.frag 112 to 198 at 2. Nothing measured on a real phone yet.
+- **`LACE_AA_SAMPLES` is 1 for phones.** Keep the define: the desktop show machine can raise it to 2
+  (flicker about 6% lower again, +20% frame time) or 3 (about 9%, +38%). Table in docs/sparkle-score.md.
+- **NaN guard:** `atan(0, 0)` is NaN on some mobile GPUs. The orbit direction goes through `unitDir()` (+x for
+  a zero vector), and the averaged direction falls back to the centre sample's if the samples cancel.

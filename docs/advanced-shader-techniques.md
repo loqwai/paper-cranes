@@ -149,5 +149,10 @@ them (pin a specific look for presets/NFC tags). `wooli/chromadepth-*` use `seed
   reading back `window.cranes.manualFeatures` / `window.cranes.controllerFeatures`.
 - **Deterministic stills:** `?time=<seconds>` holds `iTime` (pair with `?noaudio=true`). Note that
   controller phases still advance in real time even when `time=` is held.
+- **Measure flicker, don't eyeball it:** `node scripts/sparkle-score.mjs` renders a deterministic frame
+  sequence (stepped clock, replayed audio features) and scores one-frame flips, with a heat map of where they
+  are. `--ss 4` is the aliasing-free reference; `--video` scores a recording. Any temporal filter lowers the
+  flicker score, blur included, so judge a fix with `--ref` (distance to the `--ss 4` run) and `--before`
+  (the gate), and look at a frame strip. See [sparkle-score.md](sparkle-score.md).
 - **Validate before committing:** `node scripts/validate-shader.js <path>` (GLSL compile + warnings).
   Watch for reserved-word collisions (e.g. `patch` is reserved) and duplicate-uniform redefinitions.
