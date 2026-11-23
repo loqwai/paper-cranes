@@ -6,7 +6,8 @@
 import { appendFileSync, mkdirSync, readFileSync, existsSync, renameSync } from 'fs'
 import { resolve } from 'path'
 
-export const vjSignalPlugin = () => ({
+// onSignal: the VJ MCP hub's event feed (wait_for_event), called with each parsed signal.
+export const vjSignalPlugin = ({ onSignal } = {}) => ({
   name: 'vj-signal',
   apply: 'serve',
   configureServer(server) {
@@ -26,6 +27,7 @@ export const vjSignalPlugin = () => ({
             sig.t = new Date().toISOString()
             mkdirSync(resolve(server.config.root, '.claude'), { recursive: true })
             appendFileSync(file, JSON.stringify(sig) + '\n')
+            onSignal?.(sig)
             res.statusCode = 204; res.end()
           } catch (e) { res.statusCode = 400; res.end(String(e)) }
         })
