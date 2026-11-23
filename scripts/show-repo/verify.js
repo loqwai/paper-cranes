@@ -148,6 +148,7 @@ export const verifyShow = async (url, { shot, expectShader, realMidi = false, se
             url,
             checks,
             shader,
+            addressBar: state.search,
             frames: framesLater,
             brightFraction: Number(bright.toFixed(3)),
             controllerKeys: state.controllerKeys,
