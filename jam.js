@@ -2,6 +2,7 @@
 // no drawer, no toasts, no indicators. Feedback goes to the console.
 import { createParamsManager } from './src/params/ParamsManager.js'
 import { loadControllers, composeControllers } from './src/controllerChain.js'
+import { buildSnapshot, postSnapshot, undoSnapshot } from './src/snapshot.js'
 
 const searchParams = new URLSearchParams(window.location.search)
 
@@ -14,50 +15,13 @@ const paramsManager = createParamsManager({
 })
 window.paramsManager = paramsManager
 
-const AUDIO_FEATURES = [
-    'bass', 'energy', 'mids', 'treble',
-    'spectralCentroid', 'spectralFlux', 'spectralEntropy',
-    'spectralRoughness', 'spectralKurtosis', 'spectralSpread',
-    'spectralCrest', 'spectralRolloff', 'spectralSkew', 'pitchClass',
-]
-
-const round = (n, places) => Math.round((n || 0) * 10 ** places) / 10 ** places
-
-// Spacebar snapshot — captures everything /preset needs so Claude can process offline
 const snapshotPreset = async () => {
-    const shader = searchParams.get('shader')
-    if (!shader) throw new Error('No shader in URL — cannot snapshot')
-
-    const knobs = Object.fromEntries(Object.entries(window.cranes.manualFeatures).filter(([k]) => k.startsWith('knob_')))
-    const flat = window.cranes.flattenFeatures()
-    const audio = Object.fromEntries(AUDIO_FEATURES.map(name => [name, {
-        normalized: round(flat[name + 'Normalized'], 3),
-        zScore: round(flat[name + 'ZScore'], 3),
-        slope: round(flat[name + 'Slope'], 4),
-        rSquared: round(flat[name + 'RSquared'], 3),
-    }]))
-
-    const res = await fetch('/__snapshot-preset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shader, knobs, audio, name: null, musicTab: window.cranes.tabAudioLabel || null, userNote: null }),
-    })
-    const data = await res.json()
-    if (!data.ok) throw new Error(`Snapshot failed: ${data.error}`)
+    const data = await postSnapshot(buildSnapshot(window.cranes, searchParams.get('shader')))
     console.log('[jam] snapshot saved', data)
 }
 
 const undoLastSnapshot = async () => {
-    const shader = searchParams.get('shader')
-    if (!shader) throw new Error('No shader in URL')
-
-    const res = await fetch('/__snapshot-preset', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shader }),
-    })
-    const data = await res.json()
-    if (!data.ok) throw new Error(data.error || 'Nothing to undo')
+    const data = await undoSnapshot(searchParams.get('shader'))
     console.log(`[jam] deleted ${data.deleted} (${data.remaining} left)`)
 }
 
