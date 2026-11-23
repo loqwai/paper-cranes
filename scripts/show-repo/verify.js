@@ -23,6 +23,11 @@ const LAUNCH_ARGS = [
     '--ignore-gpu-blocklist',
 ]
 
+// Generous on purpose: these bound a wait for progress, they are not how long a check takes.
+const BOOT_TIMEOUT_MS = 90000
+const PROGRESS_TIMEOUT_MS = 20000
+const SCREENSHOT_TIMEOUT_MS = 60000
+
 // Runs in the page before any script: a MIDIAccess with one input the test can play.
 const installFakeMidi = () => {
     class FakeInput extends EventTarget {
@@ -75,8 +80,8 @@ export const verifyShow = async (url, { shot, expectShader, realMidi = false, se
     page.on('pageerror', (err) => consoleErrors.push(`pageerror: ${err.message}`))
 
     try {
-        await page.goto(url, { waitUntil: 'load' })
-        await page.waitForFunction(() => window.cranes?.frameCount > 30, null, { timeout: 30000 })
+        await page.goto(url, { waitUntil: 'load', timeout: BOOT_TIMEOUT_MS })
+        await page.waitForFunction(() => window.cranes?.frameCount > 30, null, { timeout: BOOT_TIMEOUT_MS })
         await page.waitForFunction(() => window.cranes?.midiAccess, null, { timeout: 10000 }).catch(() => {})
         await page.waitForTimeout(settleMs)
 
@@ -101,25 +106,35 @@ export const verifyShow = async (url, { shot, expectShader, realMidi = false, se
             }
         })
 
+        // Each wait below is for progress, not a fixed window: on a loaded machine (CI, or a box
+        // running a fleet of agents) SwiftShader can drop to a few frames a second, and a good show
+        // must not fail verify for being slow.
+        const advanced = (fn, arg) => page.waitForFunction(fn, arg, { timeout: PROGRESS_TIMEOUT_MS }).then(() => true, () => false)
+
         // One CC through the real MIDI handler: an unmapped CC auto-assigns to the next free knob,
-        // value 64 reads as an absolute encoder (64/127), and paramsManager mirrors it into the URL.
+        // value 64 reads as an absolute encoder (64/127), and paramsManager mirrors it into the URL
+        // (debounced).
         let knobInUrl = null
         if (!realMidi) {
             await page.evaluate(() => window.__verifyMidiCC(7, 64))
-            await page.waitForTimeout(1500)
+            await advanced(() => {
+                const knob = window.cranes.midiMapper.mapCCToKnob('verify-midi', 7, 1)
+                return knob && new URLSearchParams(window.location.search).has(knob)
+            })
             knobInUrl = await page.evaluate(() => {
                 const mapped = window.cranes.midiMapper.mapCCToKnob('verify-midi', 7, 1)
                 return mapped && { knob: mapped, url: new URLSearchParams(window.location.search).get(mapped) }
             })
         }
+        const rendering = await advanced((before) => window.cranes.frameCount > before, state.frameCount)
         const framesLater = await page.evaluate(() => window.cranes.frameCount)
 
-        const png = await page.screenshot({ path: shot })
+        const png = await page.screenshot({ path: shot, timeout: SCREENSHOT_TIMEOUT_MS })
         const bright = await brightFraction(browser, png)
         const shader = new URLSearchParams(state.search).get('shader')
 
         const checks = {
-            rendering: framesLater > state.frameCount,
+            rendering,
             notBlack: bright > 0.05,
             shader: expectShader ? shader === expectShader : Boolean(shader),
             controller: state.controllerKeys > 0,

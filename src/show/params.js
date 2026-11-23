@@ -18,6 +18,12 @@ export const mergeShowParams = (search, config = {}) => {
 }
 
 /**
+ * A query string for the address bar. URLSearchParams encodes `/` as %2F; a `/` is legal in a query
+ * (RFC 3986), and `?shader=claude/wip/x/2` is what people read, type and paste.
+ */
+export const toSearch = (params) => params.toString().replace(/%2F/gi, '/')
+
+/**
  * The stored MIDI profiles with the show's profiles added for devices this browser has never
  * mapped. A device the browser already knows keeps its mapping: hands-on remapping wins.
  * Returns null when there is nothing to add.

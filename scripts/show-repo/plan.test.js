@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { makeConfig, planStrip, controllerClosure, publishPlan } from './plan.js'
+import { makeConfig, planStrip, controllerClosure, publishPlan, wranglerConfig } from './plan.js'
 import { injectShowConfig } from '../../vite-plugins/show-config-plugin.js'
 
 const tree = {
@@ -79,6 +79,29 @@ describe('publishPlan', () => {
         expect(cmds[0]).toBe('gh repo create loqwai/show-clit --private --description Paper Cranes show: clit')
         expect(cmds.findIndex((c) => c.includes('push -u origin show/clit:main'))).toBeGreaterThan(0)
         expect(cmds.at(-1)).toBe('node scripts/show-repo/verify.js https://clit.beadfamous.com/')
+    })
+})
+
+describe('publish reruns', () => {
+    const steps = publishPlan(clit, '/tmp/clit')
+    const doneFor = (needle) => steps.find((s) => s.cmd.join(' ').includes(needle)).done
+
+    it('skips creating a repo that already exists', () => {
+        expect(doneFor('repo create').cmd.join(' ')).toBe('gh repo view loqwai/show-clit')
+    })
+
+    it('skips adding an origin that is already set', () => {
+        expect(doneFor('remote add').cmd.join(' ')).toBe('git -C /tmp/clit remote get-url origin')
+    })
+
+    it('skips a secret that is already set', () => {
+        expect(doneFor('CLOUDFLARE_API_TOKEN')).toEqual({ cmd: ['gh', 'secret', 'list', '-R', 'loqwai/show-clit'], includes: 'CLOUDFLARE_API_TOKEN' })
+    })
+})
+
+describe('wranglerConfig', () => {
+    it('names the workflow that actually deploys it', () => {
+        expect(wranglerConfig(clit, '2026-11-22')).toContain('.github/workflows/show-deploy.yml')
     })
 })
 

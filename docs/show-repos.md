@@ -24,8 +24,11 @@ jamming, snapshots, and nothing drawn on top.
    secrets, and push `show/<name>` as `main`. The workflow then deploys the Worker and its custom
    domain. [The exact commands](#publishing-the-outward-facing-steps) are below.
 
-Every step converges. A rerun reuses the clone, skips merged refs, and commits only real changes
-(`strip: nothing to change`).
+The local steps (1-3) converge. A rerun reuses the clone, skips merged refs, and commits only real
+changes (`strip: nothing to change`). The publish steps are not one transaction. Each step that
+would fail or prompt again on a rerun has a read-only check that skips it once done:
+`gh repo view`, `git remote get-url origin`, and `gh secret list` for each secret. The pushes are
+no-ops when there is nothing new. So `--publish` can be rerun after a failure halfway through.
 
 ## The strip recipe
 
@@ -56,7 +59,9 @@ cd .show-repos/<name>          # or the show repo's own checkout
 node scripts/show-repo/create.js --sync          # git fetch upstream main && merge, then re-strip
 ```
 
-`--sync` resolves the expected conflicts itself and stops for a human on anything else:
+`--sync` runs in the current directory unless `--dir` names the show repo. It refuses a directory
+without a `show.json`, or one not on that show's `show/<name>` branch. It then resolves the expected
+conflicts itself and stops for a human on anything else:
 
 - **modify/delete** (main edited a file the show dropped): the file stays deleted.
 - **show-owned files** (`index.html`, `README.md`, `show.json`, `wrangler.jsonc`,
@@ -152,7 +157,8 @@ scripted with `gh`. Workers Builds needs a dashboard click to connect each repo.
 
 ## Publishing: the outward-facing steps
 
-`create.js` prints these and runs them only with `--publish`. For the clit show:
+`create.js` prints these and runs them only with `--publish`, skipping any step its check shows is
+already done. For the clit show:
 
 ```bash
 gh repo create loqwai/show-clit --private --description "Paper Cranes show: clit"
@@ -179,6 +185,10 @@ the page in headless Chromium with a fake mic. It passes only when all of these 
 - MIDI starts, and a CC sent through a fake MIDI input reaches the URL as a knob value;
 - no element besides the canvas is visible;
 - the console has zero errors.
+
+Each check waits for progress rather than sampling a fixed window. The timeouts are generous:
+90 s to boot, 20 s for frames to advance or a knob to reach the URL, 60 s for the screenshot. A
+heavily loaded machine therefore makes verify slower, not red.
 
 The fake MIDI input exists because Chromium on WSL and CI has no MIDI backend
 (`InvalidStateError: Platform dependent initialization failed`). Pass `--real-midi` on a machine
