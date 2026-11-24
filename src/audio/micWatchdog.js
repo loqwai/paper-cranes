@@ -26,13 +26,21 @@ export const watchMic = ({ audioContext, inputGain, getStream, debug = false }) 
 
     const track = () => window.cranes.audioSource?.mediaStream.getAudioTracks()[0]
 
-    // A live mic never repeats its samples exactly; a suspended context, an ended track and a
-    // muted track all do.
-    const readSignature = () => {
+    // A live mic never repeats a non-zero window exactly; a stuck graph does. Exact zeros on a
+    // live, unmuted track are real silence (BlackHole between tracks), not a fault.
+    const readInput = () => {
         probe.getFloatTimeDomainData(samples)
-        let sum = 0
-        for (let i = 0; i < samples.length; i++) sum += samples[i] * (i + 1)
-        return sum
+        let signature = 0
+        let silent = true
+        for (let i = 0; i < samples.length; i++) {
+            signature += samples[i] * (i + 1)
+            if (samples[i] !== 0) silent = false
+        }
+        return { signature, silent }
+    }
+
+    const listen = (t) => {
+        for (const event of ['ended', 'mute', 'unmute']) t?.addEventListener(event, check)
     }
 
     const reacquire = async (why) => {
@@ -41,14 +49,15 @@ export const watchMic = ({ audioContext, inputGain, getStream, debug = false }) 
         reason = why
         console.warn(`mic watchdog: ${why}, re-acquiring the mic`)
         try {
-            const stream = await getStream()
             const old = window.cranes.audioSource
+            // The device in use, which scripts/show/audio-swap.js may have changed since load
+            const stream = await getStream(track()?.getSettings().deviceId)
             const source = audioContext.createMediaStreamSource(stream)
             source.connect(inputGain)
             old?.disconnect()
             old?.mediaStream.getTracks().forEach(t => t.stop())
             window.cranes.audioSource = source
-            track()?.addEventListener('ended', check)
+            listen(track())
         } catch (err) {
             console.warn('mic watchdog: re-acquire failed', err)
         }
@@ -74,8 +83,8 @@ export const watchMic = ({ audioContext, inputGain, getStream, debug = false }) 
             if (now >= nextAttempt) reacquire('track ended')
             return
         }
-        const next = readSignature()
-        if (next !== signature) {
+        const { signature: next, silent } = readInput()
+        if (next !== signature || (silent && !track()?.muted)) {
             signature = next
             lastChange = now
             failures = 0
@@ -84,7 +93,7 @@ export const watchMic = ({ audioContext, inputGain, getStream, debug = false }) 
         if (now - lastChange > STALE_MS && now >= nextAttempt) reacquire('input frozen')
     }
 
-    track()?.addEventListener('ended', check)
+    listen(track())
     audioContext.addEventListener('statechange', check)
     for (const event of ['visibilitychange', 'pageshow', 'focus', 'pointerdown']) {
         window.addEventListener(event, check, { passive: true })
