@@ -1,5 +1,5 @@
 // The Worker's own check of the Access JWT, and who /mcp lets through.
-import { describe, it, expect, beforeAll } from 'vitest'
+import { describe, it, expect, beforeAll, vi } from 'vitest'
 import { verifyAccessJwt, accessConfig, authorize } from './access.js'
 
 const TEAM = 'team.cloudflareaccess.com'
@@ -115,6 +115,33 @@ describe('the certs URL is not an amplifier', () => {
     expect(await verifyAccessJwt(await tokenWithKid(team, 'k1'), config, { fetchImpl: impl, now: t0 })).not.toBeNull()
     served = 'k2' // Access rotated its signing key
     expect(await verifyAccessJwt(await tokenWithKid(team, 'k2'), config, { fetchImpl: impl, now: t0 + 60_000 })).not.toBeNull()
+    expect(calls.n).toBe(2)
+  })
+
+  // Workers cancels a request's subrequests when its client disconnects, so a fetch another request
+  // started can never settle (reproduced on wrangler dev: every later request hung).
+  it('does not hang on a shared fetch that never settles', async () => {
+    const team = 'amp-orphan.cloudflareaccess.com'
+    const { calls, impl, config } = certsServer(team)
+    let orphan = true
+    const fetchImpl = (url) => {
+      if (!orphan) return impl(url)
+      orphan = false
+      calls.n++
+      return new Promise(() => {})
+    }
+    const [a, b, c] = await Promise.all([1, 2, 3].map(() => tokenWithKid(team, 'k1')))
+    const t0 = Date.now()
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      verifyAccessJwt(a, config, { fetchImpl, now: t0 }) // its request was canceled; nobody awaits it
+      const joiner = verifyAccessJwt(b, config, { fetchImpl, now: t0 + 100 })
+      await vi.advanceTimersByTimeAsync(5000)
+      expect(await joiner).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+    expect(await verifyAccessJwt(c, config, { fetchImpl, now: t0 + 6000 })).not.toBeNull()
     expect(calls.n).toBe(2)
   })
 })
