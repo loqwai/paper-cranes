@@ -161,17 +161,6 @@ export class AudioProcessor {
 
         this.updateCurrentFeatures()
         this.updateFftData()
-        if(navigator.userAgent.toLowerCase().includes('firefox')) this.enableMicDisconnectionMitigations()
-
-    }
-
-    enableMicDisconnectionMitigations = () => {
-        setInterval(async () => {
-            const newStream = await navigator.mediaDevices.getUserMedia({ audio: true })
-            this.sourceNode = this.audioContext.createMediaStreamSource(newStream)
-            this.sourceNode.connect(this.fftAnalyzer)
-
-        }, 5000)
     }
 
     updateFftData = () => {

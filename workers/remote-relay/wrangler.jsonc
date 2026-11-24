@@ -3,9 +3,25 @@
   "main": "src/index.js",
   "compatibility_date": "2026-08-01",
   "workers_dev": true,
+  // The VJ MCP at /mcp/<room> (docs/vj-mcp.md). Access answers unauthenticated clients; the Worker
+  // checks the JWT again against these. ACCESS_AUD is the "paper-cranes VJ MCP (relay /mcp, managed
+  // OAuth)" Access application (eb818752-c50f-4183-a769-97a4152c2ff4); it is public, not a secret.
+  "vars": {
+    "ACCESS_TEAM_DOMAIN": "loqwai.cloudflareaccess.com",
+    "ACCESS_AUD": "c0c0b6d401cb8f81c6a2d23d9fdb148fc59469cc02a4920ca353eec2008fb663",
+    "SITE_ORIGIN": "https://visuals.beadfamous.com"
+  },
   "durable_objects": {
     "bindings": [{ "name": "ROOM", "class_name": "RelayRoom" }]
   },
+  // Records what the account already has, so wrangler stops warning: the deployed script's
+  // migration_tag is "v1" and its RelayRoom namespace has use_sqlite: true (Cloudflare API,
+  // 2026-11-24). Wrangler skips a tag already applied, so this sends no migration. Do not change
+  // it to the `new_classes` wrangler's warning suggests: that names a KV-backed class, which the
+  // live namespace is not. A later change to the class gets a NEW tag (v2) appended below.
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["RelayRoom"] }
+  ],
   "routes": [
     { "pattern": "relay.beadfamous.com", "custom_domain": true }
   ]

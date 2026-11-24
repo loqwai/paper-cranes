@@ -2,7 +2,8 @@
 // The display joins ws://<host>/ws when it has no ?room, and remote-ws-plugin broadcasts
 // every message to the other clients. This is the vibej loop's lever on a display tab it
 // cannot drive directly (a tab opened outside the session's Chrome tab group is unscriptable).
-//   node scripts/vj/remote-send.js '{"noaudio":null}'      → deletes noaudio from the display URL
+//   node scripts/vj/remote-send.js '{"knob_141":null}'     → releases knob_141 and deletes it from the display URL
+//     (boot-time keys like noaudio, controller, image are pinned: src/remote/relay.js ignores them)
 //   node scripts/vj/remote-send.js '{"knob_141":0.62}'     → pins a knob (null releases it)
 import { WebSocket } from 'ws'
 

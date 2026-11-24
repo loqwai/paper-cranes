@@ -1,3 +1,5 @@
+import { looksLikeWebPage } from './utils.js'
+
 // Service worker registration
 // In dev mode (Vite HMR available), skip the SW entirely — it detects file
 // changes and force-reloads all clients, which conflicts with HMR.
@@ -56,7 +58,12 @@ export const receive = async (event) => {
   // fetching the named .frag just to discard it costs a request per frame.
   const { shader, shaderCode } = data
   if (shaderCode) window.cranes.shader = shaderCode
-  else if (shader) window.cranes.shader = await fetch(`/shaders/${shader}.frag`, {mode: 'no-cors'}).then(res => res.text())
+  else if (shader) {
+    const code = await fetch(`/shaders/${shader}.frag`, {mode: 'no-cors'}).then(res => res.text())
+    // A missing .frag comes back as the site's index.html (#233): keep the shader on screen.
+    if (looksLikeWebPage(code)) console.error(`[cranes] shader ${shader} not found; keeping the current one`)
+    else window.cranes.shader = code
+  }
 
   // Store all params
   Object.entries(data).forEach(([key, value]) => {

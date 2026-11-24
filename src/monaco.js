@@ -1,3 +1,5 @@
+import { getRelativeOrAbsoluteShaderUrl } from './utils.js'
+
 async function init() {
     const res = await fetch('https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/base/worker/workerMain.js')
     const blob = await res.blob()
@@ -572,10 +574,10 @@ async function init() {
         // If ?shader= is set, load from the filesystem
         const shaderParam = searchParams.get('shader')
         if (shaderParam) {
+            // The shared loader refuses the index.html a host serves for a missing .frag, which
+            // used to land in the editor (and, on Ctrl+S in dev, in the new .frag file).
             try {
-                const path = shaderParam.endsWith('.frag') ? shaderParam : `${shaderParam}.frag`
-                const res = await fetch(`/shaders/${path}`)
-                if (res.ok) shader = await res.text()
+                shader = await getRelativeOrAbsoluteShaderUrl(shaderParam)
             } catch (e) {
                 console.warn('[monaco] Failed to load shader from filesystem:', e)
             }

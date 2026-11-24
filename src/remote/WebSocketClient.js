@@ -1,28 +1,4 @@
-// The worker is deployed from workers/remote-relay. It ALSO answers on
-// paper-cranes-remote.loqwai.workers.dev, but do not point clients there: a
-// wildcard Cloudflare Access app guards that subdomain (and *.hypnodroid.com)
-// and 302s the websocket upgrade to a login page. beadfamous.com carries no
-// such app, which is the only reason this host is the default.
-const DEFAULT_RELAY_HOST = 'relay.beadfamous.com'
-
-/**
- * Get the WebSocket URL for remote control.
- * Uses the Cloudflare relay when a `room` param is present,
- * otherwise falls back to the local dev server.
- */
-const getWsUrl = () => {
-  const params = new URLSearchParams(window.location.search)
-  const room = params.get('room')
-
-  if (room) {
-    const relayHost = params.get('relay') || DEFAULT_RELAY_HOST
-    return `wss://${relayHost}/ws/${encodeURIComponent(room)}`
-  }
-
-  // Fallback: local dev server (existing behavior)
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  return `${protocol}//${window.location.host}/ws`
-}
+import { wsUrlFor } from './relay.js'
 
 /**
  * Robust WebSocket client with auto-reconnect
@@ -35,14 +11,21 @@ export class WebSocketClient {
     this.maxReconnectDelay = 30000
     this.socket = null
     this.isIntentionallyClosed = false
+    // The socket URL (the relay for a `room`, else the dev server; relay.js) is read once, here,
+    // and every reconnect reuses it. Reading location on each connect let a room peer move the
+    // page: update-params {relay} reached the URL mirror, and the next reconnect followed it.
+    this.url = wsUrlFor(window.location)
   }
 
   connect() {
-    if (this.socket?.readyState === WebSocket.OPEN) return
+    // CONNECTING counts too: a second socket here gets every broadcast twice, and on close each
+    // one schedules its own reconnect, so the duplicates multiply.
+    if (this.socket?.readyState === WebSocket.OPEN || this.socket?.readyState === WebSocket.CONNECTING) return
 
     this.isIntentionallyClosed = false
+    clearTimeout(this.reconnectTimer)
 
-    const wsUrl = getWsUrl()
+    const wsUrl = this.url
     console.log('[Remote] Connecting to', wsUrl)
 
     try {
@@ -53,13 +36,20 @@ export class WebSocketClient {
       return
     }
 
+    // Events from a socket this client has already replaced (disconnect then connect: the old
+    // close lands after the new connect) must not reconnect or report status.
+    const socket = this.socket
+    const current = () => this.socket === socket
+
     this.socket.onopen = () => {
+      if (!current()) return
       console.log('[Remote] Connected')
       this.reconnectDelay = 1000 // Reset reconnect delay on success
       this.onStatusChange?.('connected')
     }
 
     this.socket.onmessage = (e) => {
+      if (!current()) return
       try {
         const data = JSON.parse(e.data)
         this.onMessage?.(data)
@@ -69,6 +59,7 @@ export class WebSocketClient {
     }
 
     this.socket.onclose = (e) => {
+      if (!current()) return
       console.log('[Remote] Disconnected', e.code, e.reason)
       this.onStatusChange?.('disconnected')
 
@@ -78,6 +69,7 @@ export class WebSocketClient {
     }
 
     this.socket.onerror = (err) => {
+      if (!current()) return
       console.error('[Remote] Error:', err)
       this.onStatusChange?.('error')
     }
@@ -89,7 +81,8 @@ export class WebSocketClient {
     this.onStatusChange?.('reconnecting')
     console.log(`[Remote] Reconnecting in ${this.reconnectDelay}ms...`)
 
-    setTimeout(() => {
+    clearTimeout(this.reconnectTimer)
+    this.reconnectTimer = setTimeout(() => {
       if (!this.isIntentionallyClosed) {
         this.connect()
       }
@@ -116,6 +109,7 @@ export class WebSocketClient {
 
   disconnect() {
     this.isIntentionallyClosed = true
+    clearTimeout(this.reconnectTimer)
     if (this.socket) {
       this.socket.close()
       this.socket = null
