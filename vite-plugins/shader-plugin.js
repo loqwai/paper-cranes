@@ -7,6 +7,7 @@ import {
   gitDirtyFiles,
   distinctDateCount,
   writeBakedDates,
+  shouldAutoRefreshBake,
   DATES_FILE,
 } from '../scripts/shader-dates.js'
 
@@ -56,8 +57,12 @@ async function generateShadersJson(outputDir = null) {
   ])
 
   // Keep the committed fallback current, but ONLY from real history — never let a
-  // shallow CI clone overwrite it with 346 copies of the build timestamp.
-  if (usable) await writeBakedDates(live)
+  // shallow CI clone overwrite it with 346 copies of the build timestamp — and only
+  // while this tree is already changing shaders, so a clean checkout stays clean.
+  if (shouldAutoRefreshBake({ usable, dirtyShaderCount: dirtyFiles.size })) {
+    const existing = new Set(shaderFiles.map((file) => file.replace(/\\/g, '/')))
+    await writeBakedDates(live, { existing })
+  }
 
   const shaders = await Promise.all(
     shaderFiles.sort().map(async (file) => {
