@@ -103,6 +103,24 @@ describe('phone wall over the local link', () => {
     expect(await pad.evaluate(() => window.vjpad.client.socket?.readyState === 1)).toBe(false)
   })
 
+  it('the hop from pad to wall is well under a frame or two', async () => {
+    const hops = []
+    for (let i = 1; i <= 10; i++) {
+      const v = i / 100
+      await wall.evaluate((x) => {
+        window.__seenAt = 0
+        clearInterval(window.__watch)
+        window.__watch = setInterval(() => { if (!window.__seenAt && window.cranes.messageParams?.knob_9 === x) window.__seenAt = Date.now() }, 1)
+      }, v)
+      const sentAt = await pad.evaluate((x) => { const t = Date.now(); window.vjpad.send({ knob_9: x }); return t }, v)
+      const seenAt = await onWall(wall, () => window.__seenAt)
+      hops.push(seenAt - sentAt)
+    }
+    hops.sort((a, b) => a - b)
+    console.log(`[phone-wall] pad -> wall over the link (incl. the pad's per-frame coalescing): median ${hops[5]} ms, max ${hops.at(-1)} ms`)
+    expect(hops[5]).toBeLessThan(50)
+  })
+
   it('his pad move turns HANDS on in the wall, and it ends after the lock', async () => {
     await pad.evaluate(() => window.vjpad.send({ knob_2: 0.5 }))
     await onWall(wall, () => window.cranes.live.handsOn)
