@@ -22,7 +22,7 @@ Microphone → MediaStream → AudioContext → WindowNode (Hanning) → FFT Ana
 - **Smoothing**: 0.15 exponential smoothing factor
 - **Analyzer Smoothing**: 0.2 time constant
 - Uses Web Workers for parallel feature extraction
-- Extracts 15 audio features from hypnosound library
+- Extracts 16 audio features from hypnosound 2.1.0. The browser loads it from esm.sh, pinned in `src/audio/analyzer.js` (workers) and the `vite.config.js` `hypnosound` alias (main thread). Bump both pins and `package.json` together; a mismatch once left the main thread on 1.10.2 while the workers ran 1.14.0
 
 #### 2. WorkerRPC (`src/audio/WorkerRPC.js`)
 - One worker per feature, fire-and-forget: each frame posts the FFT, and `getResult()` returns the latest reply
@@ -59,7 +59,7 @@ Each feature has 11 statistical variations:
 
 ## Audio Features Reference (Hypnosound)
 
-### The 14 Core Features
+### The Core Features (16)
 
 | Feature | Range | Measures | Musical Meaning | Independence |
 |---------|-------|----------|-----------------|--------------|
@@ -67,6 +67,8 @@ Each feature has 11 statistical variations:
 | **mids** | 0-1 | Mid-range energy | Body/warmth | Semi-independent |
 | **treble** | 0-1 | High freq energy | Brightness/air | Independent from bass |
 | **energy** | 0-1 | Total amplitude | Loudness | Correlates with bass |
+| **rms** | 0-1 | Root mean square of the spectrum | Loudness | Correlates with energy |
+| **dbfs** | 0-1 | rms in dB, -100..0 dB mapped to 0..1 | Perceived loudness | Correlates with energy |
 | **pitchClass** | 0-1 | Note (0-11)/12 | Which note playing | Independent from timbre |
 | **spectralCentroid** | 0-1+ | Center of mass | Brightness/pitch center | Semi-correlates with pitchClass |
 | **spectralSpread** | 0-1+ | Frequency variance | Harmonic width | Independent from centroid |
@@ -85,7 +87,7 @@ Each audio feature provides 11 statistical variations calculated over a rolling 
 1. **value** - Raw current value from the analyzer
 2. **normalized** - Min-max normalized to 0-1 range (relative to history)
 3. **mean** - Historical average (baseline character)
-4. **median** - Historical median (robust center)
+4. **median** - Historical median (robust center). Exact from hypnosound 2.1.0; before that it was wrong on most frames once the window filled
 5. **min** - Historical minimum (lower bound)
 6. **max** - Historical maximum (upper bound)
 7. **standardDeviation** - Variability measure
@@ -244,6 +246,7 @@ vec3 position = vec3(CIRCLE_RADIUS, 0.1, 0.1);
 - `iFrame` - Frame number
 - `iChannel0-3` - Texture samplers
 - `beat` - Boolean beat detection
+- `onsetKick`, `onsetSnare`, `onsetHat`, `onsetFull` (plus `…Trigger`, `…Strength`, `…Age`) - onset envelopes from hypnosound's `makeOnsetDetector`/`makeOnsetEnvelope`. See [docs/onset-detection.md](docs/onset-detection.md)
 
 ### Utility Functions
 - `rgb2hsl(vec3)` / `hsl2rgb(vec3)` - Color space conversion
@@ -354,7 +357,7 @@ uniform float another;   // = 1.2
 - `fullscreen` - Start in fullscreen
 - `remote` - Remote mode: `display` (receive commands) or `control` (send commands)
 - `audio=tab` - Capture audio from a browser tab instead of mic. Chrome/Edge only. See [docs/tab-audio.md](docs/tab-audio.md)
-- `audio_file=<url>` - Play a deterministic audio file through the analyzer. See [docs/audio-file-playback.md](docs/audio-file-playback.md)
+- `audio_file=<url>` - Play a deterministic audio file through the analyzer. Smoothing defaults to 0.15, the same as the mic. See [docs/audio-file-playback.md](docs/audio-file-playback.md)
 - `wavelet=true` - Enable opt-in wavelet (DWT) analysis alongside FFT. Adds `wavelet*` uniforms (octave bands, centroid/spread, bassHit trigger, FFT×wavelet combos). See [docs/wavelet-analysis.md](docs/wavelet-analysis.md)
 - `audio_device=<label substring>` - Open the mic input whose label contains this (e.g. `USB Audio CODEC`); no match means no audio, never a different device. Omitted → the OS default input
 - `audio_time=<seconds>` - Start audio file playback at this offset (default: 0)
