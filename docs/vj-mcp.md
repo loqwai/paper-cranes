@@ -77,8 +77,11 @@ Claude Code ──POST /mcp/<room>──► Cloudflare Access (OAuth; 401 + chal
 
 **The page side.** A production page loads `src/remote/inspect.js` only when it has `?room=`.
 It answers `inspect` only after its broker has answered its hello with `display-welcome`. A relay
-that predates the broker never welcomes, so on it the inspector stays silent even if a peer forges
-`inspect`. Deploy the Worker before (or with) the site build that carries this page code.
+that predates the broker never welcomes, so on it the inspector stays silent to a forged `inspect`
+(checked 2026-11-24 against the live relay: 0 replies). That old relay does relay the hello itself,
+so a peer already in the room could read the display id and forge a welcome too. **Deploy the
+Worker before the site build that carries this page code**; after that, the room drops client
+welcomes and the gap is closed.
 
 **write_shader without a disk.** On the relay, `write_shader` compiles the code on the target
 display (the one named, else the ones showing that shader, else the only one) and refuses on an

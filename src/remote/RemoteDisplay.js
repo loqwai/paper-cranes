@@ -5,7 +5,7 @@ import { loadShader } from '../shaderLoader.js'
 // `?room=` the relay Worker's room, which drops any `inspect` a client sends. A production page
 // with no room has no broker at all, so it never loads the inspector. Even where it does, the
 // inspector answers nothing until the broker itself has welcomed it (inspect.js), so a page on a
-// relay that predates the broker never answers a peer.
+// relay that predates the broker does not answer a forged inspect (deploy the relay first).
 const inspectable = import.meta.env.DEV || Boolean(new URLSearchParams(window.location.search).get('room'))
 let inspector = null
 

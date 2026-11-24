@@ -6,7 +6,8 @@
 // `display-welcome` or `display-rekey` a client sends and never broadcast `inspect-reply`, so
 // another client can neither ask a display for anything nor read its answers. And the page answers
 // nothing until the broker has answered its hello with `display-welcome`: a relay that predates the
-// broker relays a hello to its peers but never welcomes, so there the inspector stays silent.
+// broker never welcomes, so there the inspector stays silent. (That old relay does pass the hello to
+// peers, so a peer already in the room could forge a welcome; deploy the relay first. docs/vj-mcp.md)
 //
 // Read-only plus `validate` (a scratch compile): knob and shader changes go through the existing
 // `update-params` path, not through here. Handlers are adapted from PR #182/#187's inspect.js.
