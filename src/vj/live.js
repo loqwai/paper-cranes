@@ -9,6 +9,13 @@
 // stamps times (and starts a timer when none runs). Holding never touches his path.
 
 const KNOB = /^knob_\d+$/
+// A PANIC fork named over the room must be a shader under shaders/ (the VJ MCP's strictShader
+// rule): PANIC is the safety button, so no peer can point it at another host or a path escape.
+// ?panic= in the page's own link is the operator's choice and is not checked here.
+export const roomFork = (fork) =>
+  typeof fork === 'string' && /^[A-Za-z0-9_-][A-Za-z0-9_.\/-]*$/.test(fork) && !fork.includes('..') && !fork.includes('//')
+    ? fork.replace(/\.frag$/, '')
+    : undefined
 const SHADER_KEYS = ['shader', 'shaderCode']
 
 /**
@@ -52,7 +59,9 @@ export const createLiveShow = ({
       return
     }
     handsOn = false
-    post({ type: 'hands', on: false, knob: null })
+    // idleMs: how long his hands were really still. handsMs when the timer was on time; more when
+    // the main thread was blocked (a slow software-GL frame delays every timer by up to a frame).
+    post({ type: 'hands', on: false, knob: null, idleMs: Math.round(now() - lastMove) })
     const release = held
     held = {}
     if (Object.keys(release).length) apply(release)
@@ -221,7 +230,7 @@ export const createLiveShow = ({
     const data = message?.data ?? {}
     switch (message?.type) {
       case 'vj-keep': keep(); return true
-      case 'vj-panic': panic(data); return true
+      case 'vj-panic': panic({ fork: roomFork(data.fork) }); return true
       case 'vj-propose': propose(data); return true
       case 'proposal-answer': answer(data); return true
       case 'pad-hello': padHello(data); return true

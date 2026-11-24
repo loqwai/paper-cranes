@@ -3,7 +3,7 @@
 //   - his pad turns HANDS on; an agent's set_params is held, then lands once the lock ends
 //   - propose -> KEEP on the pad's card -> the param is applied and proposal-taken is signalled
 //   - PANIC on the pad swaps the display to its boot fork with no reload
-// Port 7142 (6969/6977/6978/6991 belong to live sessions on this machine).
+// Port 0: the OS picks a free one, so parallel lanes and live sessions on this machine never collide.
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { chromium } from 'playwright'
 import { createServer } from 'vite'
@@ -13,7 +13,11 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 
 const ROOT = new URL('..', import.meta.url).pathname
-const PORT = 7142
+let PORT
+// The display's HANDS lock. 1 s, not 300 ms: under a full parallel e2e run the pad's rAF-coalesced
+// sends can gap by a few hundred ms, and a 300 ms lock could end mid-gesture (the likeliest cause of the
+// one hold-test failure seen in a full run; it never failed alone in 10 runs).
+const HANDS_MS = 1000
 const DIR = 'claude/wip/live-show-e2e'
 const BOOT = `${DIR}/boot`
 const OTHER = `${DIR}/other`
@@ -57,10 +61,11 @@ beforeAll(async () => {
   await writeFile(resolve(SHADER_DIR, 'other.frag'), solid(1, 0, 0))
   server = await createServer({
     configFile: resolve(ROOT, 'vite.config.js'),
-    server: { port: PORT, host: '127.0.0.1', strictPort: true },
+    server: { port: 0, host: '127.0.0.1', strictPort: false },
     logLevel: 'silent',
   })
   await server.listen()
+  PORT = server.httpServer.address().port
   browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] })
   client = new Client({ name: 'live-show-e2e', version: '0.0.0' })
   await client.connect(new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${PORT}/mcp`)))
@@ -70,7 +75,7 @@ beforeAll(async () => {
   // A reload fires load; replaceState (the URL mirror, PANIC's own ?shader=) is a same-document
   // navigation that Playwright also reports as framenavigated, so count loads, not loads.
   display.on('load', () => { loads++ })
-  await display.goto(`http://127.0.0.1:${PORT}/?shader=${BOOT}&remote=display&noaudio=true&vj=1&hands_ms=300`)
+  await display.goto(`http://127.0.0.1:${PORT}/?shader=${BOOT}&remote=display&noaudio=true&vj=1&hands_ms=${HANDS_MS}`)
   await call('wait_for_event', { since, types: ['display-joined'], timeout_s: 30 })
   await until(() => display.evaluate(() => (window.cranes?.shader ?? '').includes('vec4(0.0, 1.0, 0.0')))
 
@@ -107,8 +112,13 @@ describe('live show: the page half', () => {
     const lifted = Date.now()
     await pad.evaluate(() => clearInterval(window.__finger))
     await until(async () => (await pinned('knob_2')) === 0.7, 5000)
-    expect(Date.now() - lifted).toBeGreaterThanOrEqual(250) // not before the 300 ms lock ran out
+    expect(Date.now() - lifted).toBeGreaterThanOrEqual(HANDS_MS - 50) // not before the lock ran out
     expect(await nextSignal(since, 'release')).toMatchObject({ knob: 'knob_1' })
+    // The lock is measured from his last move, not stacked on the release debounce or the held write.
+    const { json: ev } = await call('wait_for_event', { since, types: ['hands'], timeout_s: 5 })
+    const off = ev.events.find((e) => e.data?.on === false)?.data
+    expect(off.idleMs).toBeGreaterThanOrEqual(HANDS_MS)
+    expect(off.idleMs).toBeLessThan(HANDS_MS + 1000)
   })
 
   it('an agent write with his hands off lands at once', async () => {

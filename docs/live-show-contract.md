@@ -35,7 +35,7 @@ Emitted as vj-signals (`{type, ...}`) when the page has `?vj=1`. They reach agen
 
 | signal | payload | when |
 |---|---|---|
-| `hands` | `{on: boolean, knob: "knob_N"\|null}` | `on:true` at the first dial/pad/MIDI/board move; `on:false` 8 s after the last move (`?hands_ms=` overrides). `knob` is the knob that started it (null on off). |
+| `hands` | `{on: boolean, knob: "knob_N"\|null, idleMs?}` | `on:true` at the first dial/pad/MIDI/board move; `on:false` 8 s after the last move (`?hands_ms=` overrides). `knob` is the knob that started it (null on off). `idleMs` (on `off` only) is how long his hands were really still: 8000 when the timer fired on time, more when the page's main thread was blocked. A display rendering a heavy shader in software GL (headless swiftshader at 1280x720: ~300 ms frames) fires every timer up to a frame late, so a lock there measured 8.9 s; on a real GPU at 60 fps it is within ~16 ms of 8 s. |
 | `release` | `{knob, value}` | a dial or pad went still for ~50 ms (`?release_ms=` overrides) |
 | `keep` | `{shader, params, t}` | Aaron pressed KEEP. `params` = every knob and pinned param now on screen. The page also saves a snapshot through the page's own snapshot path (jam: `/__snapshot-preset`; show: dev server or localStorage). |
 | `panic` | `{fork}` | PANIC was pressed; the page has already swapped to `fork` |
@@ -50,11 +50,20 @@ Emitted as vj-signals (`{type, ...}`) when the page has `?vj=1`. They reach agen
 While `hands` is on, `source:"agent"` writes are HELD in the page:
 
 - `set_params` values: held, newest-wins per key, applied in one message when the lock ends.
+  His own write is newer than any held value: when he moves (or releases, or picks a shader for)
+  a key an agent write is held for, that held value is dropped, so the lock's end never moves a
+  dial back from where he left it.
 - `set_shader` / `write_shader` (shader name or code): held, newest wins, applied when the lock ends.
   A shader write is never applied mid-lock.
 - Aaron's own writes (no source, or `"board"`) apply synchronously on arrival, exactly as before
   (CLAUDE.md "Hot-path rule"). The gate adds nothing to that path but a timestamp.
 - PANIC clears everything held.
+- Held writes and open proposals live only in the page's memory. A display reload drops both
+  without a `proposal-dropped`; the page's `boot` signal is the agent's cue to re-check
+  (`get_state` `live.held`, `live.proposals`) and re-send what still matters. A pad keeps showing
+  a card from before the reload until its own countdown ends, and KEEP on it does nothing.
+- Timers run on the display's clock (`Date.now`), and a backgrounded or frozen tab only delays
+  them: when one fires late, the lock ends at once and the held writes land then, never twice.
 
 An MCP write that was held answers `{held: true}` (set_params/set_shader) instead of a read-back,
 since the page has not applied it yet.

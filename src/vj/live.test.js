@@ -43,7 +43,7 @@ describe('HANDS lock', () => {
     vi.advanceTimersByTime(1)
     expect(live.handsOn).toBe(false)
     expect(applied).toEqual([{ knob_3: 0.9, knob_4: 0.4 }])
-    expect(signals.at(-1)).toEqual({ type: 'hands', on: false, knob: null })
+    expect(signals.at(-1)).toEqual({ type: 'hands', on: false, knob: null, idleMs: 8000 })
   })
 
   it('never applies a shader write mid-lock, and a newer shader write replaces a held one', () => {
@@ -55,6 +55,18 @@ describe('HANDS lock', () => {
     expect(applied).toEqual([])
     vi.advanceTimersByTime(1)
     expect(applied).toEqual([{ shader: 'sun/7' }])
+  })
+
+  it('measures the lock from his last move, and says so when a blocked main thread fires it late', () => {
+    let clock = 0
+    let fire
+    const live = make({ now: () => clock, setTimer: (fn, ms) => { if (ms >= 1000) fire = fn; return 1 } }) // the HANDS timer only
+    live.fromHands({ knob_1: 0.2 })
+    clock = 3000; live.fromHands({ knob_1: 0.3 }) // the last move
+    clock = 8000; fire() // the first timer: only 5 s since the last move, so it re-arms
+    expect(live.handsOn).toBe(true)
+    clock = 11200; fire() // fired late: a 3.2 s frame was in the way
+    expect(signals.at(-1)).toEqual({ type: 'hands', on: false, knob: null, idleMs: 8200 })
   })
 
   it('applies held writes exactly once: a second lock that holds nothing applies nothing', () => {
@@ -161,6 +173,14 @@ describe('KEEP and PANIC', () => {
     expect(signals).toContainEqual({ type: 'proposal-dropped', id: 'p', why: 'panic' })
     vi.advanceTimersByTime(8000)
     expect(applied).toEqual([])
+  })
+
+  it('a PANIC fork from the room must be a shader name; anything else falls back to the boot fork', async () => {
+    const live = make()
+    for (const fork of ['https://evil.example/x', '../../etc/passwd', '//evil.example/x', 42]) live.onMessage({ type: 'vj-panic', data: { fork } })
+    live.onMessage({ type: 'vj-panic', data: { fork: 'sun/7.frag' } })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(swaps).toEqual(['clit-set/2', 'clit-set/2', 'clit-set/2', 'clit-set/2', 'sun/7'])
   })
 
   it('PANIC to a named fork overrides the boot fork', async () => {

@@ -229,7 +229,7 @@ A page opened with `?vj=1` reports its health. They arrive as `vj-signal` events
 | `shiver` | watchdog | the image rocks back and forth without going anywhere (score above 0.45) |
 | `gate-drop` / `gate-clean` | watchdog | the audio gate closed / opened again: usually a track boundary |
 | `confirm-learn` | LEARN pressed on the vjpad | the page froze the last 90 s of knob moves and audio features (`n` samples) |
-| `hands` | his first dial/pad/MIDI/board move; 8 s after his last | `{on, knob}`: while on, your writes are held |
+| `hands` | his first dial/pad/MIDI/board move; 8 s after his last | `{on, knob, idleMs?}`: while on, your writes are held |
 | `release` | a dial still for ~50 ms | `{knob, value}` |
 | `keep` / `panic` | KEEP / PANIC pressed | `{shader, params, t}` / `{fork}` (already swapped) |
 | `pad-alive` | first vjpad joins; last one silent 5 s | `{alive, pads}` |
