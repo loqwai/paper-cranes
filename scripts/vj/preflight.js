@@ -88,16 +88,8 @@ const before = async () => {
 }
 
 const afterLaunch = async () => {
-  const { Client } = await import('@modelcontextprotocol/sdk/client/index.js')
-  const { StreamableHTTPClientTransport } = await import('@modelcontextprotocol/sdk/client/streamableHttp.js')
-  const client = new Client({ name: 'preflight', version: '0.1.0' })
-  await client.connect(new StreamableHTTPClientTransport(new URL(process.env.MCP_URL || `http://localhost:${port}/mcp`)))
-  const call = async (name, a = {}) => {
-    const res = await client.callTool({ name, arguments: a })
-    const t = res.content.find((c) => c.type === 'text')?.text ?? '{}'
-    if (res.isError) throw new Error(t)
-    return JSON.parse(t)
-  }
+  const { connectVj } = await import('./mcp-client.js')
+  const { call, close } = await connectVj({ name: 'preflight' })
   try {
     const { displays } = await call('list_displays')
     if (!displays.length) return check('display', false, 'no ?remote=display page')
@@ -106,7 +98,7 @@ const afterLaunch = async () => {
     const b = await call('get_state', { features: 'none' })
     for (const r of judgeAfter(displays, a, b)) check(r.key, r.ok, r.detail)
   } finally {
-    await client.close()
+    await close()
   }
 }
 

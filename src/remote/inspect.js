@@ -112,7 +112,9 @@ export const hello = () => {
 
 const commands = {
   // Everything an agent needs to decide its next move, in one round trip.
-  state: async ({ features = 'core', meterSecs = 10 } = {}) => {
+  // source: true adds the GLSL on screen (a script's need, e.g. setlists/sun-set/swap.mjs re-anchoring
+  // against the live code; it is KBs, so a model should not ask for it).
+  state: async ({ features = 'core', meterSecs = 10, source = false } = {}) => {
     const flat = window.cranes.flattenFeatures()
     const out = {
       href: withoutSecret(location.href).slice(0, 600),
@@ -132,6 +134,7 @@ const commands = {
       // The live show (src/vj/live.js): HANDS lock, held agent writes, open proposals, pads.
       live: window.cranes.live?.status?.() ?? null,
     }
+    if (source) out.source = code()
     if (features !== 'none') {
       out.features = numeric(window.cranes.measuredAudioFeatures, features === 'all' ? () => true : (k) => CORE.test(k) || k === 'beat')
       if (features === 'all') out.wavelet = numeric(window.cranes.waveletFeatures)
