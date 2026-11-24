@@ -62,4 +62,17 @@ to load a web page as shader source, so the suite keeps it.
 - Assert what the user would see: pixels, the note text, the editor's content, the URL.
 - Helpers live in `e2e/smoke-env.js`.
 
+### Known errors and traps
+
+- Pre-existing, not asserted away silently: a missing shader's page throws `Unexpected token '<' ...
+  is not valid JSON` from `/manifests/<name>.json` (the missing-shader check allows exactly that one
+  error and names it); `/edit.html` and `/vjpad.html` log a failed `/ws` handshake on a static host
+  (console errors, which the suite does not assert on those pages).
+- Plain headless Chromium never starts `audio_file` playback: `window.cranes.audio` stays the
+  no-audio stub with no error. The smoke suite has no audio checks for that reason. Audio-file
+  checks need a real Chrome (`e2e/audio-file.test.js` launches `channel: 'chrome'`) or a headed
+  browser lane, and a CORS-enabled audio URL.
+- `page.route('**/name.wav')` also matches the page URL when its query string ends in that name,
+  so the page itself gets served audio. Match on `new URL(req.url()).pathname` instead.
+
 The suite runs WebGL in SwiftShader (`--use-angle=swiftshader`), so it needs no GPU.

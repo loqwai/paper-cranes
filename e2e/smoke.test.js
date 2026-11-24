@@ -28,7 +28,7 @@ describe.skipIf(!hasTarget())('smoke', () => {
   })
 
   it('a missing shader shows the default shader plus a note naming it', async () => {
-    const { page, close } = await env.newPage({ viewport: PHONE, name: 'missing-shader' })
+    const { page, pageErrors, close } = await env.newPage({ viewport: PHONE, name: 'missing-shader' })
     await page.goto(`${env.base}/?shader=${MISSING}&noaudio=true&time=5`)
     const note = page.getByRole('status').filter({ hasText: 'shader not found' })
     await note.waitFor({ timeout: 20_000 })
@@ -39,6 +39,9 @@ describe.skipIf(!hasTarget())('smoke', () => {
     expect(noteText).toBe(`shader not found: ${MISSING}`)
     expect(stats.litFraction).toBeGreaterThan(0.2)
     expect(shader).not.toMatch(/<!doctype html|<html/i)
+    // KNOWN BUG, not fixed here: /manifests/<missing>.json answers index.html, and parsing it throws
+    // "Unexpected token '<' ... is not valid JSON". Named so it stays visible; any other error fails.
+    expect(pageErrors.filter(e => !/Unexpected token '<'.*is not valid JSON/.test(e))).toEqual([])
   })
 
   it('the list page fills with shaders on a phone', async () => {
