@@ -1,47 +1,30 @@
-# /show check: the preflight
+# /show check: what each ❌ means and how to fix it
 
-Before launch:
+Read this for `/show check`, or when a `scripts/vj/preflight.js` line is ❌. The script runs every
+check; this file is only the fixes.
 
 ```bash
-node scripts/vj/context.js                       # platform, port, dev server, show browser
 P=$(./scripts/dev-port)
-curl -s "http://localhost:$P/shaders/<shader>.frag" | cmp -s - shaders/<shader>.frag && echo "serving this checkout" || echo "SERVING ANOTHER CHECKOUT"
-git branch --show-current; git fetch -q origin && git status -sb | head -1
-node scripts/vj/show.js displays
+node scripts/vj/preflight.js --shader <shader>            # before launch
+node scripts/vj/preflight.js --after --shader <shader>    # after launch (VJ MCP: list_displays, get_state twice)
 ```
 
-After launch, through the VJ MCP:
-
-```bash
-PORT=$P node scripts/vj/mcp-call.js list_displays
-PORT=$P node scripts/vj/mcp-call.js get_state '{"features":"core"}'      # twice, 2 s apart
-```
-
-| Check | ✅ when |
+| ❌ | Fix |
 |---|---|
-| Dev server | HTTP 200. Else `npm run dev` in a background Bash, then recheck. |
-| Server checkout | `serving this checkout`. Edits in another checkout never reach the wall (2026-10-09). |
-| Branch | the show branch, not behind. Ask before `git pull --ff-only`. |
-| Projector | `displays` lists more than the built-in panel; `launch` uses the last one. |
-| Display | `list_displays` shows the page; `get_state.shaderError` is null. |
-| Audio | `audio.state` `running`; `audio.energy` reaches 0.02+ on loud music. Low: raise the OS input level first (a macOS mic at 27% barely registered, 80% worked, 2026-11-14), then `gain=` (a mic is 10-30x quieter than a line feed). |
-| Runtime | `get_state.meter` is present (`?vj=1` booted). |
-| Controller | its clock (`controller.cs_time` on clit-set, `bs_time` on the sun line) rises between the two reads. Else it is throwing: playbook section 7. |
-| Gate | with music playing, the shader's quiet gate (`cs_presence`, `quietGate`) sits near 1. Low: fix the level, not the shader. |
-| Pad | `get_state.live.pads` is 1 or more. (`pad-alive` fires only when the count changes, so a pad opened before the watcher never prints it.) |
-| Board | the bridge printed `{"bridge":"up",…}` and `st-wall` shows a number. |
+| server | `npm run dev` in a background Bash, then rerun. |
+| checkout | The server runs from another checkout; edits here never reach the wall (2026-10-09). Restart it from this one. |
+| branch | Behind the show branch. Ask Aaron before `git pull --ff-only`. |
+| projector | Only the built-in panel. Plug it in as an extended display; `launch` uses the last display. On Linux, install `xrandr`. |
+| display | No `?remote=display` page, or `shaderError` set: relaunch, or `panic` to the boot fork. |
+| audio | `state` not `running`: the page needs a click or the mic permission. `energy` low: raise the OS input level first (a macOS mic at 27% barely registered, 80% worked, 2026-11-14), then `gain=` (a mic is 10-30x quieter than a line feed). Wrong `input`: fix the OS default input; never launch on it. |
+| runtime | `?vj=1` is missing from the URL. |
+| controller | Its clock (`cs_time`, `bs_time`) stands still: it is throwing. Playbook section 7, frozen picture. |
+| gate | With music playing, the quiet gate (`cs_presence`, `quietGate`) sits low: fix the level, not the shader. |
+| pad | No vjpad connected (`get_state.live.pads` 0). Open `/vjpad.html` on his phone. |
+| board | The bridge never printed `{"bridge":"up",…}` or `st-wall` shows no number: see controls.md. |
 
-`get_state` does not report the input device's label. Read it on the wall's machine (the OS
-input setting), and say it to Aaron in the launch line.
+**On the board.** One card per line in frame `check` (controls.md). Look at the frame, then
+`viewport` him there with a note ("2 red: projector, audio"). When he selects a red card and sends
+it, rerun that check, fix it if you can, repaint the card.
 
-**On the board.** One rectangle per check in frame `check`: id `chk-<key>`, `role: "healthy"` and
-text `✅ <key>`, or `role: "error"` and `❌ <key>`; `expires: "30m"`, `source` = the command. Look
-at the frame, then `viewport` him there with a note ("2 red: projector, audio"). When he selects a
-red card and sends it, re-run that check, fix it if you can, repaint the card.
-
-**Say in one line** what nothing can check: Do Not Disturb on; overlay, break-reminder and
-dimming apps quit (Windows: Game Bar, Discord, Steam, GeForce overlays too); the OS input on the
-line feed or mic; on Windows the show window kept in front (a covered window stops painting;
-`show.js focus`).
-
-Any ❌: fix it or tell him before launch. Never launch past a wrong-input ❌.
+Any ❌: fix it or tell him before launch.

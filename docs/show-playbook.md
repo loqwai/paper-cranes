@@ -30,9 +30,10 @@ for hours. The night it comes from: [2026-11-22 clit coaster show](../journals/2
 ## 2. Launch sequence
 
 ```bash
+node scripts/vj/preflight.js     # one ✅/❌ line per check; fixes: .claude/skills/show/check.md
 node scripts/vj/show.js stop     # always first: clears a leftover page-less show browser ("not running" is fine)
 node scripts/vj/show.js launch "http://localhost:6969/jam.html?shader=clit-set/2&controller=clit-set&wavelet=true&vj=1&remote=display"
-PORT=6969 node scripts/vj/mcp-call.js get_state '{"features":"none"}'   # read audio.input and audio.energy
+node scripts/vj/preflight.js --after --shader clit-set/2   # display, audio.input + energy, controller clock, pad
 ```
 
 After `launch`, only the VJ MCP touches the page (`scripts/vj/mcp-call.js` or the registered
