@@ -10,7 +10,13 @@ const fakeSocket = (name, { mayDisplay = true } = {}) => {
     sent: [],
     att: null,
     send(t) { this.sent.push(t) },
-    serializeAttachment(a) { this.att = JSON.parse(JSON.stringify(a)) },
+    // workerd refuses an attachment over 16 KiB. Count two bytes per UTF-16 unit: the worst case
+    // for the structured-clone size of a string that is not Latin-1.
+    serializeAttachment(a) {
+      const s = JSON.stringify(a)
+      if (s.length * 2 > ATTACHMENT_LIMIT_BYTES) throw new RangeError('attachment over the size limit')
+      this.att = JSON.parse(s)
+    },
     deserializeAttachment() { return this.att },
     close() { this.readyState = 3 },
   }
@@ -18,6 +24,9 @@ const fakeSocket = (name, { mayDisplay = true } = {}) => {
   return ws
 }
 const types = (ws) => ws.sent.map((t) => JSON.parse(t).type)
+// The serialized-size limit of WebSocket.serializeAttachment (Cloudflare docs, "Durable Objects >
+// WebSockets": 16,384 bytes). It was never 2 KiB.
+const ATTACHMENT_LIMIT_BYTES = 16 * 1024
 const KEY_A = 'a1b2c3d4-0000-4000-8000-000000000000'
 const KEY_B = 'b2c3d4e5-0000-4000-8000-000000000000'
 
@@ -184,10 +193,21 @@ describe('relay room: display registry', () => {
     expect(hub.list().map((d) => d.id)).toEqual(['b2c3d4'])
   })
 
-  it('keeps every attachment under the 2 KiB limit even for a huge hello', async () => {
+  it('keeps every attachment under the 16 KiB limit even for a huge hello', async () => {
     const tv = join('tv')
     await hello(tv, KEY_A, { href: 'x'.repeat(5000), ua: 'y'.repeat(5000), shader: 'z'.repeat(5000) })
-    expect(JSON.stringify(tv.att).length).toBeLessThan(2048)
+    expect(JSON.stringify(tv.att).length * 2).toBeLessThan(ATTACHMENT_LIMIT_BYTES)
+    expect(attachmentRegistry(ctx).all()).toHaveLength(1)
+  })
+
+  it('still registers a huge non-ASCII hello, which packs to more than 2 KiB', async () => {
+    const tv = join('tv')
+    const wide = '光'.repeat(5000)
+    await hello(tv, KEY_A, { href: wide, ua: wide, shader: wide, path: wide, audio: { state: wide, energy: 0.5 } })
+    const bytes = JSON.stringify(tv.att).length * 2
+    expect(bytes).toBeGreaterThan(2048)
+    expect(bytes).toBeLessThan(ATTACHMENT_LIMIT_BYTES)
+    expect(hub.list().map((d) => d.id)).toHaveLength(1)
     expect(attachmentRegistry(ctx).all()).toHaveLength(1)
   })
 

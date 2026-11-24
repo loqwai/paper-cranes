@@ -280,7 +280,7 @@ rewritten:
 
 - `npx vitest run workers/remote-relay`: the room broker with fake sockets (relay verbatim, a
   forged `inspect` dropped, point-to-point routing, the registry surviving hibernation, rekey and
-  takeover, the 2 KiB attachment cap, display origins, shader fetches) and the Access JWT check
+  takeover, every attachment under the 16 KiB limit even for a non-ASCII hello, display origins, shader fetches) and the Access JWT check
   (valid, wrong AUD, wrong issuer, expired, forged, the loopback-only local bypass, 503 when
   unconfigured).
 - `npx vitest run --config vitest.e2e.config.js e2e/vj-mcp-relay.test.js`: `wrangler dev` running
