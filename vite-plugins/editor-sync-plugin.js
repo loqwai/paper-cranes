@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir, readdir, unlink } from 'fs/promises'
 import { join, dirname, resolve } from 'path'
 import chokidar from 'chokidar'
 import { saveShader } from './shader-files.js'
+import { refuseOtherSites } from './same-origin.js'
 
 const SHADER_DIR = 'shaders'
 
@@ -16,6 +17,8 @@ export function editorSyncPlugin() {
     },
 
     configureServer(server) {
+      server.middlewares.use(refuseOtherSites(['/__save-shader', '/__snapshot-preset', '/__capture']))
+
       server.middlewares.use(async (req, res, next) => {
         if (req.method !== 'POST' || req.url !== '/__save-shader') return next()
 

@@ -35,12 +35,18 @@ export const createMidiMapper = () => {
   let learnTargetKnobIndex = null
 
   const persist = () => saveProfiles(data)
+  // Another tab (/midi.html beside the show page) writes the same key. Every write starts from
+  // what is stored now, or this tab's stale copy overwrites that tab's mappings; and a storage
+  // event keeps reads current, so a remap there reaches the playing page without a reload.
+  const refresh = () => { data = loadProfiles() }
+  globalThis.addEventListener?.('storage', (e) => { if (e.key === STORAGE_KEY || e.key === null) refresh() })
 
   const getProfile = (deviceName) => data.profiles[deviceName] ?? null
 
   const getAllProfiles = () => ({ ...data.profiles })
 
   const deleteProfile = (deviceName) => {
+    refresh()
     delete data.profiles[deviceName]
     persist()
   }
@@ -73,6 +79,7 @@ export const createMidiMapper = () => {
   }
 
   const autoAssign = (deviceName, ccNumber, channel) => {
+    refresh()
     const profile = ensureProfile(deviceName)
     const key = makeCCKey(ccNumber, channel)
 
@@ -110,6 +117,7 @@ export const createMidiMapper = () => {
   const handleLearnCC = (deviceName, ccNumber, channel) => {
     if (!isLearning()) return false
 
+    refresh()
     const profile = ensureProfile(deviceName)
     const key = makeCCKey(ccNumber, channel)
 

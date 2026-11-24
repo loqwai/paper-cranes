@@ -1,9 +1,10 @@
 import { WebSocketServer, WebSocket } from 'ws'
+import { HUB_TYPES } from './vj-mcp/hub-core.js'
 
-// Message types between one display and the VJ MCP hub (vite-plugins/vj-mcp/hub.js). They are
-// point-to-point: never broadcast, and `inspect` from a client is dropped, because only the hub
-// may ask a display for anything (docs/vj-mcp.md).
-const HUB_ONLY = new Set(['display-hello', 'inspect-reply', 'inspect', 'display-rekey'])
+// Message types between one display and the VJ MCP hub (vite-plugins/vj-mcp/hub-core.js). They are
+// point-to-point: never broadcast, and `inspect` (or a welcome/rekey) from a client is dropped,
+// because only the hub may address a display (docs/vj-mcp.md). The relay Worker does the same.
+const HUB_ONLY = HUB_TYPES
 
 // May this socket register as a display? Only a page this dev server served: its Origin's host
 // equals the Host it connected to (the tunnel too, where both are the tunnel hostname). Any other
