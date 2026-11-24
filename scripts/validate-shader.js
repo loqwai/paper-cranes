@@ -88,7 +88,8 @@ const compileShader = async (shaderContent) => {
         const message = match[2]
 
         // Adjust line number to original file (subtract wrapper header lines)
-        const originalLineNum = markerLineIndex > 0 ? wrappedLineNum - markerLineIndex - 1 : wrappedLineNum
+        // A #version shader has no marker; the wrapper adds one line (#define PAPER_CRANES) to it.
+        const originalLineNum = markerLineIndex > 0 ? wrappedLineNum - markerLineIndex - 1 : wrappedLineNum - 1
         if (originalLineNum > 0) {
           errors.push(`Line ${originalLineNum}: ${message}`)
         } else {
