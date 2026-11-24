@@ -29,7 +29,7 @@ export function make(cranes) {
     // this controller, and the shader always came up at zoom 1 no matter what the preset said.
     // (Symptom that found it: a shader looked "blurrier than yesterday" because the preset's
     // navZoom=0.432 never applied and it was sitting 2.3x more zoomed in than the tuned state.)
-    const _q = new URLSearchParams(location.search)
+    const _q = cranes.urlParams
     const _num = (k, d) => { const v = parseFloat(_q.get(k)); return Number.isFinite(v) ? v : d }
     let navX = _num('navX', 0), navY = _num('navY', 0)   // accumulated world position — never resets (no snap-back)
     let velX = 0, velY = 0          // momentum, for a glide after release

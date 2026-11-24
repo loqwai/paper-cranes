@@ -1,5 +1,6 @@
+import { readUrlParams, withUrlParams } from './params/url.js'
 export const addWebsocketListener = (port = 6970) => {
-  const params = new URLSearchParams(window.location.search)
+  const params = readUrlParams()
   const wsHost = params.get('remote')
 
   const fullUrl = `ws://${wsHost}`
@@ -24,10 +25,7 @@ export const addWebsocketListener = (port = 6970) => {
         // if the json has an image, just put all the variables as query params and reload the page
         const { data } = json
         if (data.image) {
-          const url = new URL(window.location)
-          url.searchParams.set('shader', data.shader)
-          url.searchParams.set('image', data.image)
-          window.location.href = url.toString()
+          window.location.href = withUrlParams(window.location.href, { shader: data.shader, image: data.image }).toString()
           return
         }
         window.postMessage(json, '*')
@@ -49,7 +47,7 @@ export const addWebsocketListener = (port = 6970) => {
 }
 
 export const addWebsocketController = () => {
-  const params = new URLSearchParams(window.location.search)
+  const params = readUrlParams()
   const wsHost = params.get('remote')
 
   let socket

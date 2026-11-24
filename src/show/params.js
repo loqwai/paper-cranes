@@ -1,5 +1,7 @@
 // Pure helpers for show mode (see boot.js). No DOM, so vitest can import them.
 
+import { mergeUrlParams } from '../params/url.js'
+
 export const SHOW_CONFIG_ID = 'show-config'
 export const MIDI_PROFILES_KEY = 'cranes-midi-profiles'
 
@@ -22,6 +24,21 @@ export const mergeShowParams = (search, config = {}) => {
  * (RFC 3986), and `?shader=claude/wip/x/2` is what people read, type and paste.
  */
 export const toSearch = (params) => params.toString().replace(/%2F/gi, '/')
+
+/**
+ * The query string a show URL should have: the show's defaults appended for every key the URL (query or
+ * hash) does not set yet. They join the query, which can hold the repeated `controller` defaults.
+ */
+export const withShowDefaults = (url, config = {}) => {
+    const current = mergeUrlParams(url)
+    const filled = mergeShowParams(current, config)
+    const query = new URLSearchParams(url.search)
+    for (const key of new Set(filled.keys())) {
+        if (current.has(key)) continue
+        for (const value of filled.getAll(key)) query.append(key, value)
+    }
+    return toSearch(query)
+}
 
 /**
  * The stored MIDI profiles with the show's profiles added for devices this browser has never

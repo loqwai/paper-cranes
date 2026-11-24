@@ -1,11 +1,12 @@
 import { getRelativeOrAbsoluteShaderUrl } from './utils.js'
+import { readUrlParams, writeUrlParams } from './params/url.js'
 
 /**
  * The shader on screen now, by path. Read it at the moment you need it, never once at boot: a
  * remote set_shader (loadShader with updateUrl) switches the page in place and rewrites ?shader=.
  * @returns {string|null}
  */
-export const shaderOnScreen = () => new URLSearchParams(window.location.search).get('shader')
+export const shaderOnScreen = () => readUrlParams().get('shader')
 
 /**
  * Load a shader and apply all associated side effects
@@ -32,11 +33,7 @@ export const loadShader = async (shaderPath, { updateUrl = false } = {}) => {
   }
 
   // Update URL without reload if requested
-  if (updateUrl) {
-    const url = new URL(window.location)
-    url.searchParams.set('shader', shaderPath)
-    window.history.replaceState({}, '', url)
-  }
+  if (updateUrl) writeUrlParams({ shader: shaderPath })
 
   return { code, fullscreen }
 }
@@ -46,7 +43,7 @@ export const loadShader = async (shaderPath, { updateUrl = false } = {}) => {
  * @returns {Promise<{code: string, fullscreen: boolean}>}
  */
 export const getInitialShader = async () => {
-  const params = new URLSearchParams(window.location.search)
+  const params = readUrlParams()
 
   // Check for inline shader code first
   if (params.get('shaderCode')) {

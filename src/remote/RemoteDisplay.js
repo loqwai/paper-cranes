@@ -1,5 +1,6 @@
 import { WebSocketClient } from './WebSocketClient.js'
 import { loadShader } from '../shaderLoader.js'
+import { writeUrlParams } from '../params/url.js'
 import { inspectorAllowedOn, withoutPinned } from './relay.js'
 
 // The VJ MCP (docs/vj-mcp.md) reaches this display through a broker: the dev server's /ws, or on
@@ -174,16 +175,8 @@ const flushParamsToUrl = () => {
   urlPending = null
   if (!data) return
   try {
-    const url = new URL(window.location.href)
-    for (const [key, value] of Object.entries(data)) {
-      if (key === 'shaderCode') continue
-      if (value === null || value === undefined) {
-        url.searchParams.delete(key)
-      } else {
-        url.searchParams.set(key, value)
-      }
-    }
-    window.history.replaceState({}, '', url.toString())
+    const { shaderCode, ...params } = data
+    writeUrlParams(params)
   } catch (e) {
     console.warn('[Remote Display] URL sync failed:', e)
   }

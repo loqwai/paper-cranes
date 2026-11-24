@@ -11,10 +11,11 @@
 import { createParamsManager } from './src/params/ParamsManager.js'
 import { loadControllers, composeControllers } from './src/controllerChain.js'
 import { buildSnapshot, postSnapshot, undoSnapshot } from './src/snapshot.js'
+import { readUrlParams } from './src/params/url.js'
 import { shaderOnScreen } from './src/shaderLoader.js'
 
 const SNAPSHOTS_KEY = 'cranes-show-snapshots'
-const searchParams = new URLSearchParams(window.location.search)
+const searchParams = readUrlParams()
 
 const paramsManager = createParamsManager({
     syncToUrl: true,

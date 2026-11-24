@@ -2,6 +2,7 @@
 // tooling into the display page": validator, aesthetic meter and cursor-hide now survive every
 // reload because the PAGE installs them at boot, and the page WAKES the vibej loop by POSTing
 // signals to /__vj-signal (picked up by a Monitor on .claude/vj-signals.jsonl).
+import { readUrlParams } from '../params/url.js'
 const post = sig => fetch('/__vj-signal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sig) }).catch(() => {})
 
 export const startVjRuntime = async () => {
@@ -64,7 +65,7 @@ export const startVjRuntime = async () => {
   // knobs in its URL, so any truncation limit that fits a log line hides the flags that actually
   // matter (wavelet, audio, noaudio, controller) behind the knob list.
   {
-    const sp = new URLSearchParams(location.search), flags = {}
+    const sp = readUrlParams(), flags = {}
     for (const [k, v] of sp) if (!k.startsWith('knob_')) flags[k] = v
     post({ type: 'boot', url: location.href.slice(0, 600), flags })
   }
@@ -160,7 +161,7 @@ export const startVjRuntime = async () => {
   // knobtrack is ANALYSIS instrumentation, not show instrumentation: 10 Hz x ~184 channels is a
   // ~17 KB log line and a JSON.stringify + fetch on the render thread every 2 s. That is a real
   // cost to pay while performing. Off unless ?vjtrack=1 is asked for explicitly.
-  if (new URLSearchParams(location.search).get('vjtrack') !== '1') return
+  if (readUrlParams().get('vjtrack') !== '1') return
   let lastK = null, moves = []
   setInterval(() => {
     const k = knobVec()

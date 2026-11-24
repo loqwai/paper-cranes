@@ -7,6 +7,9 @@ import { wsUrlFor, inspectorAllowed, inspectorAllowedOn, withoutPinned, DEFAULT_
 const at = (search, { protocol = 'https:', host = 'visuals.beadfamous.com' } = {}) => ({ search, protocol, host })
 
 describe('wsUrlFor', () => {
+  it('joins a room given in the hash', () => {
+    expect(wsUrlFor({ ...at(''), hash: '#room=abc' })).toBe(`wss://${DEFAULT_RELAY_HOST}/ws/abc`)
+  })
   it('uses the default relay for a room, the dev server without one', () => {
     expect(wsUrlFor(at('?room=abc'))).toBe(`wss://${DEFAULT_RELAY_HOST}/ws/abc`)
     expect(wsUrlFor(at('', { protocol: 'http:', host: 'localhost:6969' }))).toBe('ws://localhost:6969/ws')

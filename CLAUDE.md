@@ -344,6 +344,8 @@ uniform float another;   // = 1.2
 
 ## Query Parameters
 
+Every param below also works after `#`, for example `/?shader=star#knob_1=0.5` or `/#shader=star`. `src/params/url.js` owns the rule. `readUrlParams()` merges the two, and a key in the hash wins over the same key in the query. `writeUrlParams()` writes each key back where it already lives. On `index.html` a hash edit applies live without a reload for params that are already uniforms (knobs, audio features). `edit.html` copies URL params into its sliders at load, and the sliders outrank the URL, so a hash edit there needs a reload. Boot settings such as `shader` and `fft_size` always need a reload.
+
 ### Core Parameters
 - `shader` - Shader file to load (e.g., `?shader=star`)
 - `fft_size` - FFT window size (default: 4096)

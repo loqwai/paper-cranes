@@ -5,6 +5,7 @@
 // wildcard Cloudflare Access app guards that subdomain (and *.hypnodroid.com)
 // and 302s the websocket upgrade to a login page. beadfamous.com carries no
 // such app, which is the only reason this host is the default.
+import { mergeUrlParams } from '../params/url.js'
 export const DEFAULT_RELAY_HOST = 'relay.beadfamous.com'
 
 // A relay on this machine (`wrangler dev` in workers/remote-relay) speaks plain ws.
@@ -12,9 +13,9 @@ const LOOPBACK_HOST = /^(localhost|127\.0\.0\.1)(:\d+)?$/
 
 const relayHostOf = (params) => params.get('relay') || DEFAULT_RELAY_HOST
 
-/** The socket URL for a page at `loc` ({search, protocol, host}): the relay for a room, else the dev server. */
+/** The socket URL for a page at `loc` ({search, hash, protocol, host}): the relay for a room, else the dev server. */
 export const wsUrlFor = (loc) => {
-  const params = new URLSearchParams(loc.search)
+  const params = mergeUrlParams(loc)
   const room = params.get('room')
   if (room) {
     const relayHost = relayHostOf(params)

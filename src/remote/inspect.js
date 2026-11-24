@@ -12,6 +12,7 @@
 // Read-only plus `validate` (a scratch compile): knob and shader changes go through the existing
 // `update-params` path, not through here. Handlers are adapted from PR #182/#187's inspect.js.
 import { hashSource } from './hash.js'
+import { readUrlParams } from '../params/url.js'
 import { shaderOnScreen as currentShader } from '../shaderLoader.js'
 
 const S = (window.__cranesInspect ??= { logRing: [], consoleWrapped: false })
@@ -117,7 +118,7 @@ const commands = {
       shader: currentShader(),
       shaderHash: hashSource(code()),
       shaderError: window.cranes.error ?? null,
-      controllers: new URLSearchParams(location.search).getAll('controller'),
+      controllers: readUrlParams().getAll('controller'),
       frameCount: window.cranes.frameCount,
       fps: await measureFps(),
       visibility: document.visibilityState,

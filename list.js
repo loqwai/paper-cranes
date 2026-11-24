@@ -1,9 +1,10 @@
 import { render } from 'preact'
 import { useState, useEffect, useRef, useMemo } from 'preact/hooks'
 import { html } from 'htm/preact'
+import { readUrlParams, writeUrlParams } from './src/params/url.js'
 
 // Check if we're in remote control mode
-const params = new URLSearchParams(window.location.search)
+const params = readUrlParams()
 const isRemoteControlMode = params.get('remote') === 'control'
 
 // Remote controller instance (initialized in List component)
@@ -23,7 +24,7 @@ const LIST_UI_PARAMS = new Set([
 ])
 
 const carryPassthroughParams = (url) => {
-  const current = new URLSearchParams(window.location.search)
+  const current = readUrlParams()
   for (const [key, value] of current) {
     // Never let the current page clobber the preset's CONTROLLER CHAIN.
     if (LIST_UI_PARAMS.has(key) || key === 'controller') continue
@@ -635,20 +636,20 @@ const DEFAULT_SORT = HAS_REAL_DATES ? 'modified' : 'name'
 const validSort = (mode) => (SORT_MODES.some((entry) => entry.id === mode) ? mode : DEFAULT_SORT)
 
 const List = () => {
-  const url = new URL(window.location)
+  const url = readUrlParams()
   const prefs = readStore('prefs', {})
 
-  const [filterText, setFilterText] = useState(url.searchParams.get('filter') || '')
-  const [sortMode, setSortMode] = useState(validSort(url.searchParams.get('sort') || prefs.sort || DEFAULT_SORT))
+  const [filterText, setFilterText] = useState(url.get('filter') || '')
+  const [sortMode, setSortMode] = useState(validSort(url.get('sort') || prefs.sort || DEFAULT_SORT))
   const [shuffleSeed, setShuffleSeed] = useState(1)
-  const [favoritesOnly, setFavoritesOnly] = useState(url.searchParams.get('favoritesOnly') === 'true')
-  const [mobileOnly, setMobileOnly] = useState(url.searchParams.get('mobileOnly') === 'true')
-  const [showWip, setShowWip] = useState(url.searchParams.get('wip') === 'true')
+  const [favoritesOnly, setFavoritesOnly] = useState(url.get('favoritesOnly') === 'true')
+  const [mobileOnly, setMobileOnly] = useState(url.get('mobileOnly') === 'true')
+  const [showWip, setShowWip] = useState(url.get('wip') === 'true')
   const [includeTags, setIncludeTags] = useState(
-    () => new Set((url.searchParams.get('tags') || '').split(',').filter(Boolean))
+    () => new Set((url.get('tags') || '').split(',').filter(Boolean))
   )
   const [excludeTags, setExcludeTags] = useState(
-    () => new Set((url.searchParams.get('notags') || '').split(',').filter(Boolean))
+    () => new Set((url.get('notags') || '').split(',').filter(Boolean))
   )
 
   const [stars, setStars] = useState(() => readStore('stars', []))
@@ -741,16 +742,15 @@ const List = () => {
 
   // Keep the URL shareable/reloadable
   useEffect(() => {
-    const next = new URL(window.location)
-    const apply = (key, value) => (value ? next.searchParams.set(key, value) : next.searchParams.delete(key))
-    apply('filter', filterText)
-    apply('sort', sortMode === DEFAULT_SORT ? '' : sortMode)
-    apply('favoritesOnly', favoritesOnly ? 'true' : '')
-    apply('mobileOnly', mobileOnly ? 'true' : '')
-    apply('wip', showWip ? 'true' : '')
-    apply('tags', [...includeTags].join(','))
-    apply('notags', [...excludeTags].join(','))
-    window.history.replaceState({}, '', next)
+    writeUrlParams({
+      filter: filterText || null,
+      sort: sortMode === DEFAULT_SORT ? null : sortMode,
+      favoritesOnly: favoritesOnly ? 'true' : null,
+      mobileOnly: mobileOnly ? 'true' : null,
+      wip: showWip ? 'true' : null,
+      tags: [...includeTags].join(',') || null,
+      notags: [...excludeTags].join(',') || null,
+    })
   }, [filterText, sortMode, favoritesOnly, mobileOnly, showWip, includeTags, excludeTags])
 
   useEffect(() => {
