@@ -10,6 +10,10 @@ For a fractal-voyage set (clit-set and the coaster), use [show-quickstart.md](sh
 for the setup and [vj-deep-voyage-recipe.md](vj-deep-voyage-recipe.md) for how to keep a set deep
 for hours. The night it comes from: [2026-11-22 clit coaster show](../journals/2026-11-22-clit-coaster-show.md).
 
+No laptop, just the phone on a USB-C cable to the projector? Use [phone-wall.md](phone-wall.md):
+PROJECT on the vjpad puts the visuals on the projector and keeps the phone as the pad, with no
+network needed.
+
 ## 1. The day before: setup
 
 - [ ] `git checkout peter-show && git pull --ff-only`, then run `npm install` if `package.json`
