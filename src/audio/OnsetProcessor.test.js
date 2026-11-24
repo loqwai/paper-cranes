@@ -154,10 +154,9 @@ describe('degradation when hypnosound predates the detector', () => {
     })
 })
 
-// The published hypnosound (1.14.0 installed here, 2.0.0 the latest on npm) has
-// no makeOnsetDetector, so with no injected deps the processor came up with
-// available=false and every onset uniform sat at rest forever.
-// Reported by mcp-0e lanes.
+// hypnosound before 2.1.0 had no makeOnsetDetector, so with no injected deps the
+// processor came up with available=false and every onset uniform sat at rest
+// forever. Reported by mcp-0e lanes. This runs against the installed release.
 describe('with the real detector (no injected deps)', () => {
     it('is available and fires on a kick after a quiet lead-in', () => {
         const processor = new OnsetProcessor(SAMPLE_RATE, BINS)

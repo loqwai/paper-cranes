@@ -2,8 +2,9 @@ import { StatTypes, AudioFeatures } from 'hypnosound'
 import { WorkerRPC } from './WorkerRPC.js'
 import { OnsetProcessor } from './OnsetProcessor.js'
 
-// Workers compute these but hypnosound's StatTypes doesn't include them
-const AllStatTypes = [...StatTypes, 'slope', 'intercept', 'rSquared']
+// Workers compute the regression stats. hypnosound's StatTypes lists them from
+// 1.10 on; the Set keeps one copy whichever version is loaded.
+const AllStatTypes = [...new Set([...StatTypes, 'slope', 'intercept', 'rSquared'])]
 
 // Neutral values for each stat type during warm-up (what the shader sees when audio hasn't "arrived" yet)
 const neutralValues = {
