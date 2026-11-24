@@ -363,11 +363,12 @@ uniform float another;   // = 1.2
 - `vjtrack=1` - With `vj=1`, also log every knob move at 10Hz with the full audio-feature vector, for working out which feature a fader is imitating. **Off by default and not for use during a show** — it is a ~17KB JSON serialise + fetch every 2s on the render thread
 
 ### Dynamic Override
-All parameters can be overridden at runtime via:
+Two audio parameters can be changed at runtime:
 ```javascript
-window.cranes.manualFeatures.smoothing = 0.2
-window.cranes.manualFeatures.fft_size = 8192
+window.cranes.manualFeatures.smoothing = 0.2      // next frame
+window.cranes.manualFeatures.history_size = 1000  // restarts every feature's stats history
 ```
+`fft_size` is read once at startup; changing it needs a reload with `?fft_size=`.
 
 ## Remote Control Mode
 
