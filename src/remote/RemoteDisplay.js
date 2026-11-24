@@ -32,7 +32,6 @@ export const initRemoteDisplay = () => {
 
   const handleMessage = (message) => {
     if (message.type !== 'audio-features') console.log('[Remote Display] Received:', message.type, message.data)
-    nfcFlash(message)
 
     switch (message.type) {
       case 'update-params':
@@ -67,6 +66,8 @@ export const initRemoteDisplay = () => {
         // Forward unknown messages via postMessage for extensibility
         window.postMessage(message, '*')
     }
+    // After the apply, never before it (CLAUDE.md hot-path rule): a sticker's own params land first.
+    nfcFlash(message)
   }
 
   const handleStatusChange = (status) => {

@@ -55,6 +55,9 @@ export const idFromRecords = (records = []) => {
 /**
  * The show the phone is running: the base sticker map with that show's overrides on top, and its
  * beats (setlists/<show>.json when that file exists in the build, else the config's own beats).
+ * PANIC's fork is not here on purpose: the display's own boot fork (?panic=, else the shader it
+ * booted with) is the one that is known to be on the wall, so a sticker sends what the vjpad's
+ * PANIC button sends unless the sticker itself names a fork.
  */
 export const resolveShow = (config, name, setlists = {}) => {
   const show = name && config.shows?.[name] ? name : config.default
@@ -64,7 +67,6 @@ export const resolveShow = (config, name, setlists = {}) => {
     name: show,
     stickers: { ...config.stickers, ...own.stickers },
     beats: setlist?.beats ?? own.beats ?? [],
-    panic: own.panic ?? setlist?.panic ?? null,
   }
 }
 
@@ -83,7 +85,7 @@ export const planAction = (show, id, { proposal = null, beat = -1 } = {}) => {
     case 'keep':
       return { kind: 'keep', messages: [msg('vj-keep', {})], beat }
     case 'panic':
-      return { kind: 'panic', messages: [msg('vj-panic', sticker.fork || show.panic ? { fork: sticker.fork || show.panic } : {})], beat }
+      return { kind: 'panic', messages: [msg('vj-panic', sticker.fork ? { fork: sticker.fork } : {})], beat }
     case 'take':
     case 'drop':
       if (!proposal) return { kind: 'empty', messages: [], beat }
@@ -92,8 +94,11 @@ export const planAction = (show, id, { proposal = null, beat = -1 } = {}) => {
     case 'prev': {
       const to = beat + (sticker.do === 'next' ? 1 : -1)
       const b = show.beats[to]
-      if (!b) return { kind: 'empty', messages: [], beat }
-      return { kind: sticker.do, messages: [msg('update-params', { ...b.params, shader: b.shader })], beat: to }
+      // A setlist beat names its shader as `shader` or `path` (setlists/sun-set.json), as the board
+      // bridge reads it. A beat with neither would send nothing yet still move the cursor.
+      const shader = b?.shader ?? b?.path
+      if (!shader) return { kind: 'empty', messages: [], beat }
+      return { kind: sticker.do, messages: [msg('update-params', { ...b.params, shader })], beat: to }
     }
     case 'set':
       if (!sticker.set || typeof sticker.set !== 'object') return { kind: 'unknown', messages: [], beat }

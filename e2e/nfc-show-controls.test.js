@@ -3,7 +3,8 @@
 // (relay every message verbatim to the room's other sockets). A simulated tag read on the vjpad
 // must land on the display, exactly as the sticker on Aaron's arm will.
 //
-// Needs a build: `npm run build`. Ports: the static site on E2E_PORT (7168 here), the relay on 7170.
+// Needs a build: `npm run build`. Ports: the static site on E2E_PORT (7168 by default), the relay on
+// E2E_NFC_RELAY_PORT (7170 by default).
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import http from 'node:http'
 import { WebSocketServer, WebSocket } from 'ws'
@@ -119,14 +120,34 @@ describe.skipIf(!hasTarget() || process.env.E2E_BASE_URL)('NFC smiley stickers d
     expect(await pad.page.locator('#nfc').textContent()).toBe('?')
 
     // The fallback: the tag's URL opened by Android in a new tab with no room. It goes to the room
-    // this phone's vjpad last used and fires the sticker once.
+    // this phone's vjpad last used, and fires the sticker once, only after one tap on the page:
+    // a link from any web page or message opens exactly this URL, and must not fire on its own.
+    const panics = () => inbound.filter((m) => m.type === 'vj-panic')
     const tab = await pad.ctx.newPage()
-    const n = inbound.filter((m) => m.type === 'vj-panic').length
+    const n = panics().length
     await tab.goto(`${env.base}/vjpad#nfc=s2`)
-    const panic = await until(() => inbound.filter((m) => m.type === 'vj-panic')[n], { what: 'the fallback tab to send PANIC' })
-    expect(panic).toEqual({ via: 'nfc', type: 'vj-panic', data: { fork: 'clit-set/2' } })
+    await tab.locator('#nfc-confirm-yes').waitFor()
     expect(new URL(tab.url()).searchParams.get('room')).toBe(room)
     expect(new URL(tab.url()).hash).toBe('')
+    expect(await tab.locator('#nfc-confirm').textContent()).not.toContain(room)
+    await until(() => tab.evaluate(() => window.vjpad?.client?.isConnected ?? /connected/.test(document.getElementById('status')?.textContent ?? '')), { what: 'the fallback tab to connect' })
+    await new Promise((r) => setTimeout(r, 600))
+    expect(panics().length).toBe(n)
+    await tab.click('#nfc-confirm-yes')
+    const panic = await until(() => panics()[n], { what: 'the fallback tab to send PANIC after the tap' })
+    // The vjpad PANIC button's own message: the display picks its boot fork.
+    expect(panic).toEqual({ via: 'nfc', type: 'vj-panic', data: {} })
+    await new Promise((r) => setTimeout(r, 300))
+    expect(panics().length).toBe(n + 1)
+
+    // Cancel, and a reload of the tab: neither fires anything.
+    const tab2 = await pad.ctx.newPage()
+    await tab2.goto(`${env.base}/vjpad#nfc=s2`)
+    await tab2.click('#nfc-confirm-no')
+    await tab2.reload()
+    await new Promise((r) => setTimeout(r, 800))
+    expect(await tab2.locator('#nfc-confirm').count()).toBe(0)
+    expect(panics().length).toBe(n + 1)
 
     peer.close()
     await pad.close()
@@ -141,6 +162,7 @@ describe.skipIf(!hasTarget() || process.env.E2E_BASE_URL)('NFC smiley stickers d
     await stranger.page.goto(`${env.base}/vjpad#nfc=s2`)
     await new Promise((r) => setTimeout(r, 1500))
     expect(new URL(stranger.page.url()).searchParams.has('room')).toBe(false)
+    expect(await stranger.page.locator('#nfc-confirm').count()).toBe(0)
     expect(inbound.filter((m) => m.type === 'vj-panic')).toEqual([])
     peer.close()
     await stranger.close()

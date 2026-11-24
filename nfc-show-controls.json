@@ -1,5 +1,5 @@
 {
-  "about": "What each smiley sticker on Aaron's arm does (docs/nfc-show-controls.md). A tag holds only its id (s1..s8); this file maps ids to actions, so re-assigning a sticker is an edit here, never a rewrite of the tag. `do`: keep | panic | next | prev | take | drop | set. `set` sends its object as update-params (a shader and/or knobs). A show's `stickers` override the base map; its beats come from setlists/<show>.json when that file exists, else `beats` here.",
+  "about": "What each smiley sticker on Aaron's arm does (docs/nfc-show-controls.md). A tag holds only its id (s1..s8); this file maps ids to actions, so re-assigning a sticker is an edit here, never a rewrite of the tag. `do`: keep | panic | next | prev | take | drop | set. `set` sends its object as update-params (a shader and/or knobs). A show's `stickers` override the base map; its beats come from setlists/<show>.json when that file exists, else `beats` here. PANIC sends no fork (the display uses its own boot fork) unless a panic sticker names `fork`.",
   "default": "clit-set",
   "stickers": {
     "s1": { "do": "keep", "label": "KEEP" },
@@ -13,7 +13,6 @@
   },
   "shows": {
     "clit-set": {
-      "panic": "clit-set/2",
       "beats": [
         { "n": 1, "name": "voyage", "shader": "clit-set/2", "params": { "knob_4": null, "knob_5": null } },
         { "n": 2, "name": "first-light", "shader": "clit-set/1" },

@@ -40,10 +40,9 @@ describe('reading a sticker id', () => {
 
 describe('the sticker map', () => {
   it('a show overrides the base map and brings its own beats and panic fork', () => {
-    const s = resolveShow({ default: 'a', stickers: { s1: { do: 'keep' }, s2: { do: 'panic' } }, shows: { a: { panic: 'p/1', stickers: { s2: { do: 'next' } }, beats: [{ shader: 'x' }] } } }, 'a')
+    const s = resolveShow({ default: 'a', stickers: { s1: { do: 'keep' }, s2: { do: 'panic' } }, shows: { a: { stickers: { s2: { do: 'next' } }, beats: [{ shader: 'x' }] } } }, 'a')
     expect(s.stickers).toEqual({ s1: { do: 'keep' }, s2: { do: 'next' } })
     expect(s.beats).toEqual([{ shader: 'x' }])
-    expect(s.panic).toBe('p/1')
   })
 
   it('beats come from setlists/<show>.json when the build has it', () => {
@@ -59,7 +58,12 @@ describe('the sticker map', () => {
 describe('what a tap sends (docs/live-show-contract.md wire messages)', () => {
   it('KEEP and PANIC are the vjpad buttons\' messages, marked via nfc', () => {
     expect(planAction(show, 's1').messages).toEqual([{ type: 'vj-keep', data: {}, via: 'nfc' }])
-    expect(planAction(show, 's2').messages).toEqual([{ type: 'vj-panic', data: { fork: 'clit-set/2' }, via: 'nfc' }])
+    expect(planAction(show, 's2').messages).toEqual([{ type: 'vj-panic', data: {}, via: 'nfc' }])
+  })
+
+  it('PANIC names a fork only when the sticker does, never the show config\'s guess', () => {
+    const s = { ...show, stickers: { p: { do: 'panic', fork: 'safe/1' } } }
+    expect(planAction(s, 'p').messages[0].data).toEqual({ fork: 'safe/1' })
   })
 
   it('TAKE answers the newest open proposal, and does nothing when none is open', () => {
@@ -72,6 +76,12 @@ describe('what a tap sends (docs/live-show-contract.md wire messages)', () => {
     expect(first.beat).toBe(0)
     expect(first.messages[0].data).toEqual({ shader: 'clit-set/2', knob_4: null, knob_5: null })
     expect(planAction(show, 's3', { beat: show.beats.length - 1 })).toMatchObject({ kind: 'empty', messages: [] })
+  })
+
+  it('NEXT reads a setlist beat that names its shader as `path` (sun-set), and skips none', () => {
+    const s = { ...show, beats: [{ path: 'sun/10', params: { knob_1: 0.2 } }, { name: 'no shader' }] }
+    expect(planAction(s, 's3').messages[0].data).toEqual({ knob_1: 0.2, shader: 'sun/10' })
+    expect(planAction(s, 's3', { beat: 0 })).toMatchObject({ kind: 'empty', messages: [], beat: 0 })
   })
 
   it('a tag that is not on the map sends nothing', () => {
