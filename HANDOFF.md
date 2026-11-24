@@ -9,7 +9,7 @@ The rehearsal is over. Everything below is merged to `main` unless it says other
 2. Make sure the macOS input is **BlackHole 2ch** with the music routed into it.
 3. Turn on Do Not Disturb, and quit any break-reminder or screen-dimming app.
 4. In Claude Code, from this worktree, run **`/show`**. It runs the preflight, launches the wall,
-   checks audio, arms the watchers, and always starts `/vibej2`, which listens to your dials.
+   checks audio, arms the watchers, and always starts `/partner`, which listens to your dials and proposes.
 5. Ask Claude to **resend the Twister ring colours**. They reset whenever the Twister is replugged.
 6. Keep the cheat sheet open: `glow -p docs/twister-cheatsheet.md`.
 
