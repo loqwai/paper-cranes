@@ -10,6 +10,7 @@
 // frame rate, and how far behind the wall it runs.
 //
 //   node scripts/vj/mirror-bench.js [--profile phone|desktop] [--only mirror,webrtc] [--seconds 10]
+//   node scripts/vj/mirror-bench.js --serve 300    (wall only; prints a mirror link for another browser)
 //
 // phone: Pixel 7 emulation, CPU throttled 4x, and site isolation off, as on Android, where a
 // cross-site iframe shares the page's renderer process. GPU is whatever this machine's headless
@@ -28,6 +29,8 @@ const PROFILE = arg('profile', 'phone')
 const ONLY = arg('only', 'none,mirror,webrtc,snap').split(',')
 const SECONDS = Number(arg('seconds', 10))
 const SHADER = arg('shader', 'clit-set/2')
+// Extra mirror settings to try, such as `&fps=15&scale=0.35`.
+const MIRROR_QUERY = arg('mirror-query', '')
 const RELAY_PORT = 7171, VITE_PORT = 7172
 const RELAY = `127.0.0.1:${RELAY_PORT}`
 const ROOM = `bench-${Math.random().toString(36).slice(2)}`
@@ -127,12 +130,21 @@ const main = async () => {
     await until(() => wallPage.evaluate(() => window.cranes?.frameCount > 30))
     await wallPage.evaluate(FAKE_AUDIO)
 
+    // --serve N: keep the wall up for N seconds and print a mirror link, for a browser on another
+    // machine (a real GPU, a real phone on the LAN) to open and read window.mirror from.
+    const SERVE = Number(arg('serve', 0))
+    if (SERVE) {
+      console.log(`mirror: http://localhost:${VITE_PORT}/mirror.html?view=${view}&relay=localhost:${RELAY_PORT}`)
+      await sleep(SERVE * 1000)
+      await wall.context.close()
+      return
+    }
     const phone = PROFILE === 'phone'
     for (const kind of ONLY) {
       const board = await launch(phone ? ['--disable-site-isolation-trials'] : [], phone ? { ...devices['Pixel 7'] } : { viewport: { width: 1280, height: 800 } })
       const page = board.context.pages()[0] ?? await board.context.newPage()
       if (phone) await (await board.context.newCDPSession(page)).send('Emulation.setCPUThrottlingRate', { rate: 4 })
-      await page.setContent(BOARD(kind, `http://127.0.0.1:${VITE_PORT}/mirror.html?view=${view}&relay=${RELAY}`))
+      await page.setContent(BOARD(kind, `http://127.0.0.1:${VITE_PORT}/mirror.html?view=${view}&relay=${RELAY}${MIRROR_QUERY}`))
       let snapTimer = null, snapBytes = 0, snapCount = 0
       if (kind === 'mirror') {
         await until(async () => page.frames().find((f) => f.url().includes('mirror.html'))?.evaluate(() => window.mirror?.drawn > 10))
@@ -239,4 +251,4 @@ const main = async () => {
   console.log(JSON.stringify(results, null, 1))
 }
 
-main().catch((e) => { console.error(e); process.exit(1) })
+main().then(() => process.exit(0), (e) => { console.error(e); process.exit(1) })

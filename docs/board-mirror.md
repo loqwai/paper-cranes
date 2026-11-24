@@ -88,7 +88,47 @@ feedback shader builds its own history from the same inputs, so it looks alike b
 stand-in page: a grid panned every frame, a 480x270 picture, and a button tapped 20 times. The wall runs
 `clit-set/2` with every audio feature moving, in its own browser.
 
-MEASURED_TABLE
+Measured 2026-11-24 on WSL2 with headless Chromium. WSL has no GPU in headless mode, so every page,
+the wall's included, draws on SwiftShader (a software GPU on the CPU). **phone** is Pixel 7 emulation
+with the CPU throttled 4x, and with site isolation off, as on Android, where a cross-site iframe shares
+the board's renderer. **desktop** is 1280x800. CPU is the sum over each browser's process tree (100% is
+one core). Each core here also draws the wall and the other pages, so read CPU as a relative figure only.
+
+| profile | picture | board fps | board p95 | janky frames | tap to next frame p95 | picture fps | KB/s per viewer | behind the wall (p50) |
+|---|---|---|---|---|---|---|---|---|
+| phone | none | 59.5 | 16.8 ms | 0.2% | 100 ms | | | |
+| phone | **(a) mirror** | 58.7 | 16.7 ms | 0.3% | 57 ms | **30.1** | **5.1** | **7 ms** |
+| phone | (b) WebRTC 480x270 | 59.6 | 16.7 ms | 0.2% | 52 ms | 15.5 | 139 | 49 ms |
+| phone | (c) JPEG every 1 s | 48.5 | 16.7 ms | 0.8% | 1277 ms | 1.1 | 17 | 500 ms |
+| desktop | none | 60 | 16.7 ms | 0% | 16 ms | | | |
+| desktop | **(a) mirror** | 30.6 | 66.6 ms | 24.3% | 43 ms | 24.1 | 6.8 | 10 ms |
+| desktop | (b) WebRTC 480x270 | 60 | 16.7 ms | 0% | 20 ms | 12.6 | 145 | 76 ms |
+| desktop | (c) JPEG every 1 s | 60 | 16.7 ms | 0% | 16 ms | 1 | 16 | 500 ms |
+
+With the weak-phone settings `&fps=15&scale=0.35`, the software GPU keeps up:
+
+| profile | picture | board fps | board p95 | janky frames | tap to next frame p95 | picture fps | KB/s per viewer | behind the wall (p50) |
+|---|---|---|---|---|---|---|---|---|
+| phone | (a) mirror, `fps=15&scale=0.35` | 59.1 | 16.7 ms | 0.3% | 54 ms | 15.1 | 6.7 | 9 ms |
+| desktop | (a) mirror, `fps=15&scale=0.35` | **60** | 16.7 ms | **0%** | 14 ms | 15.2 | 7.0 | 6 ms |
+
+Rerun with `node scripts/vj/mirror-bench.js --profile phone|desktop [--only mirror] [--mirror-query '&fps=15&scale=0.35']`.
+`--serve 300` keeps only the wall up and prints a mirror link for a browser on another machine.
+
+On a real GPU (an RTX 4090 through ANGLE/D3D11, a headless Chrome on the Windows host), a page that
+pans a grid around a 480x270 mirror iframe holds **144 fps, p95 7.1 ms, 0% janky frames**. That is the
+same as with no iframe, at the default settings and at `scale=1&fps=60`. The mirror drew 45 fps at
+1258x802 against a feed of 20 frames a second, 18.6 KB/s at that size with 15 uniforms, and was 1 ms behind.
+A raw viewer socket counts **20 frames a second, 736 bytes each (about 14.4 KB/s)** for `clit-set/2`.
+
+**Winner: (a) the mirror.** It shows full frame rate at about a tenth of WebRTC's bandwidth and is
+the closest to the wall. It needs no encoder on the wall and no TURN, and it adds nothing to the
+board's own writes or tokens. Its one cost is GPU: the mirror draws the shader itself. On a
+software GPU, that halves the board's frame rate on the desktop profile. On a real GPU it costs
+nothing measurable. A weak phone should lower `fps` and `scale`. A real phone has not been measured.
+
+The phone profile's board did not slow down because the phone's emulated screen is small, so the
+board stand-in has less to draw. That shows the board stand-in, not a real phone's GPU.
 
 ## Approaches not taken
 
