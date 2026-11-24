@@ -189,7 +189,9 @@ const main = async () => {
 
     const shouldShuffle = params.get('shuffle') !== 'false'
     const playlist = shouldShuffle ? shuffle(favorites) : favorites
-    const duration = parseInt(params.get('duration') ?? '30') * 1000
+    // A missing, zero or unparseable ?duration= falls back to 30s: setInterval(fn, NaN) fires every few ms.
+    const seconds = Number(params.get('duration') ?? '30')
+    const duration = (Number.isFinite(seconds) && seconds > 0 ? seconds : 30) * 1000
     let currentIndex = 0
 
     // Load first shader
