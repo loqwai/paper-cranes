@@ -32,7 +32,8 @@ pad." Storyboard: board [live-show-skills](https://draw.hypnodroid.com/b/live-sh
    the wall asks for one when it boots.
 
 If the cable comes out mid-set, the pad shows **NO WALL** in red and keeps working. Plug it back:
-the wall links again (WALL ✓) and gets the pad's shader and every value the pad holds. **✕** on the
+the wall links again (WALL ✓) and gets the pad's shader and every value the pad holds, except the
+knobs RELEASE handed back to the music (until he moves them again). **✕** on the
 banner stops waiting.
 
 ## How it works
@@ -83,7 +84,8 @@ stickers (including the roomless fallback tab, which now fires over a linked wal
 
 **A fresh wall gets the pad's state.** The wall's hello carries a boot id and `fresh`, true until
 a pad has moved it. On a fresh wall the pad has not fed, it sends one `update-params` with every
-value it holds, plus its shader when the wall was opened without one. Like any of his moves, that
+value it holds, plus its shader when the wall was opened without one. Keys RELEASE sent as null
+stay out of it until a move sends them again, so a replug never pins a released knob. Like any of his moves, that
 turns the HANDS lock on. A wall a pad already moved is left alone: a second pad page linking mid-set
 (the NFC fallback tab, a reloaded pad, a tab Android discarded and restored) must not reset every
 knob on the wall to that page's defaults.

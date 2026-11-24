@@ -174,6 +174,17 @@ describe('phone wall over the local link', () => {
 
   it('pulling the cable shows NO WALL; the pad keeps working; replugging links back with its values', async () => {
     const url = wall.url()
+    // A pad knob he moved, then RELEASEd back to the music: a replug must not pin it again.
+    const released = await pad.evaluate(() => {
+      const key = window.vjpad.banks[window.vjpad.bank].pads[0].x.key
+      window.vjpad.state[key] = 0.6
+      window.vjpad.send({ [key]: 0.6 })
+      return key
+    })
+    await onWall(wall, (k) => window.cranes.messageParams?.[k] === 0.6, released)
+    await pad.locator('#release').click()
+    await onWall(wall, (k) => !(k in (window.cranes.messageParams ?? {})), released)
+    expect(released).not.toBe('knob_7')
     await pad.evaluate(() => { window.vjpad.state.knob_7 = 0.33 })
     await wall.close()
     await pad.locator('.wallbar.lost').waitFor({ timeout: 6000 })
@@ -185,6 +196,7 @@ describe('phone wall over the local link', () => {
     await wall.goto(url)
     await until(() => pad.evaluate(() => window.vjpad.phoneWall.state.state === 'presenting'))
     await until(async () => (await pinned(wall, 'knob_7')) === 0.33)
+    expect(await pinned(wall, released)).toBeUndefined()
     expect(await pad.locator('.wallchip').textContent()).toBe('WALL ✓')
   })
 })
