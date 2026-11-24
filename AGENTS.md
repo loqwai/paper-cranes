@@ -273,6 +273,7 @@ Controllers are JavaScript modules (`controllers/*.js`) that run once per frame 
 - Set via URL query params (e.g., `?knob_1=0.5`), MIDI controllers, or the ParamsManager API
 - MIDI controllers auto-map CCs to knobs with per-device profiles persisted in localStorage. Manage mappings visually at `/midi.html`. See [docs/midi-mapping.md](docs/midi-mapping.md)
 - The phone touch surface at `/vjpad.html` builds its pads from `vjpad-layouts.json` plus whatever knobs the shader declares. See [docs/vjpad.md](docs/vjpad.md)
+- NFC smiley stickers on the arm are show controls: the vjpad reads them with Web NFC (Android Chrome) and sends KEEP, PANIC, NEXT, TAKE or a favourite look down its room socket, with no model in the path. Tags hold only an id; `nfc-show-controls.json` says what each does; write them at `/nfc-writer.html#show`. See [docs/nfc-show-controls.md](docs/nfc-show-controls.md)
 
 ### Naming a knob in the shader (convention)
 
@@ -366,6 +367,11 @@ uniform float another;   // = 1.2
 - `audio_time=<seconds>` - Start audio file playback at this offset (default: 0)
 - `time=<seconds>` - Hold time constant (useful for deterministic screenshots/testing)
 - `vj=1` - Install the VJ runtime on the display: cursor-hide, GL validator, aesthetic meter, frame-time probe, and health signals (POSTed to `/__vj-signal` on the dev server; on a `?remote=display&room=` page, production included, also sent down the room socket to the relay MCP's `wait_for_event`). This is how the auto-VJ loop sees a page it cannot screenshot. See [docs/vj-telemetry.md](docs/vj-telemetry.md)
+- `hands_ms=<ms>` - The live show's HANDS lock: how long after Aaron's last dial/pad/MIDI move agent writes stay held (default 8000). See [docs/live-show-contract.md](docs/live-show-contract.md)
+- `release_ms=<ms>` - How long a dial must be still before the `release` signal (default 50)
+- `panic=<shader>` - The fork PANIC swaps to (default: the shader the page loaded with)
+- `show_proposals=1` - With `vj=1`, show a small chip on the display naming open proposals (they live on the vjpad otherwise)
+- `midi_panic=cc:N|note:N[:ch]`, `midi_keep=…` - Bind a MIDI control to PANIC / KEEP (persisted). See [docs/midi-mapping.md](docs/midi-mapping.md)
 - `vjtrack=1` - With `vj=1`, also log every knob move at 10Hz with the full audio-feature vector, for working out which feature a fader is imitating. **Off by default and not for use during a show** — it is a ~17KB JSON serialise + fetch every 2s on the render thread
 
 ### Dynamic Override
@@ -425,7 +431,8 @@ so a refresh preserves state) and per-message DOM work was removed outright.
 ### VJ MCP (any agent harness)
 An MCP server (streamable HTTP, stateless, never SSE) whose tools read and drive every display:
 `list_displays`, `list_shaders`, `get_state`, `screenshot`, `set_params`, `set_shader`,
-`read_shader`, `write_shader`, `wait_for_event`, `guide`, plus `display_secret` on the relay only. It runs in two places with
+`read_shader`, `write_shader`, `wait_for_event`, `guide`, the live show's `propose`, `answer_proposal`, `keep`, `panic`
+(docs/live-show-contract.md), plus `display_secret` on the relay only. It runs in two places with
 the same code (`vite-plugins/vj-mcp/server.js` + `hub-core.js`):
 - **Ask the server how to use it:** `guide` (no args: contents; `{topic}`: one section;
   `{question: "how do I ..."}`: the best matching section plus close-match ids, keyword-ranked, no model). Its
@@ -450,6 +457,16 @@ the same code (`vite-plugins/vj-mcp/server.js` + `hub-core.js`):
 
 Knobs go out as `update-params` on the display's own socket; reads come back over a point-to-point
 `inspect` channel the broker never broadcasts, answered only after the broker welcomed the page.
+
+**Live show ([docs/live-show-contract.md](docs/live-show-contract.md)):** the page owns everything
+that must be instant (`src/vj/live.js`, wired in `RemoteDisplay.js`). While Aaron's hands are on a
+dial, pad, MIDI or board control (`hands` signal), agent writes (`update-params` marked
+`source: "agent"`, which every MCP write is) are HELD and land 8 s after his last move; his own
+writes are never held and still apply synchronously (hot-path rule). Agents change his look with
+`propose` (a card on the vjpad; he presses KEEP), never by setting his dials. PANIC (vjpad, MIDI,
+Escape twice on jam/show, `panic` tool) hot-swaps to the boot fork with no reload; KEEP (vjpad, MIDI,
+`k` on jam/show, `keep` tool) saves a snapshot and signals `keep`. The draw board bridge
+(`scripts/vj/board-bridge.js`) maps board taps to these calls with `source: "board"`.
 See [docs/vj-mcp.md](docs/vj-mcp.md).
 
 ### Board mirror (watch-only viewer)
@@ -519,6 +536,7 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   ├── wip/Codex/             # Codex-created shaders go here
 │   ├── plasma.frag
 │   └── melted-satin/2.frag
+├── setlists/                    # /show setlist <name>: beats as hot-swaps (sun-set.json, clit-set.json)
 ├── controllers/                 # JS companions to shaders (frame-persistent state)
 │   ├── example.js              # Documented example
 │   └── the-coat.js             # Drop sustain with exponential decay
@@ -532,6 +550,8 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │       ├── remote-send.js      #   push update-params to the display from a shell
 │       ├── mcp-call.js         #   call one VJ MCP tool from a shell
 │       ├── watch-release.js    #   emit a line when a fader is released
+│       ├── watch-events.js     #   one line per page signal (keep, panic, release, …): a Monitor's feed
+│       ├── stray-guard.mjs     #   closes any page in the show Chrome that isn't the wall
 │       ├── knob-correlate.js   #   which audio feature was that gesture imitating?
 │       └── mirror-bench.js     #   board mirror vs WebRTC vs snapshots, measured (docs/board-mirror.md)
 ├── public/
@@ -930,31 +950,36 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 
 | Skill | Purpose |
 |-------|---------|
-| `/jam` | Launch a jam session — open the jam page with shader + controller + music source. Lighter than `/live-session`: no editor, just knobs + snapshots. |
-| `/live-session` | Launch a live creative session — open Chrome with shader editor + audio source, connect Codex-in-Chrome, and jam. Optionally pass a shader path or SoundCloud/Spotify URL. See [docs/live-session-insights.md](docs/live-session-insights.md). |
-| `/fork` | Save the current shader + knob state as a new numbered iteration. Reads knobs from the browser, copies the `.frag`, writes a companion doc. |
-| `/record` | Record a music video from the current shader canvas. Uses MediaRecorder API, restarts the music track, auto-stops after duration. |
-| `/preset` | Save knob state as a named preset (live) or batch-process the snapshot queue (`/preset process`). |
+| `/show` | The one door for a live show: `check` (preflight as ✅/❌ cards on the show's draw board), launch (the wall, the board as status board and phone control surface, the no-model board bridge, then the `/partner` lane), `lite` (a jam: what `/jam` was), `panic [fork]`, `setlist <name>` (e.g. the sun set), `end` (story on the board, journal). See [docs/show-playbook.md](docs/show-playbook.md). |
+| `/partner` | Aaron's VJ partner while he plays the dials: its own background lane, one step per event, PROPOSES changes he takes or dismisses (KEEP on the pad or board), applies only health fixes, never while his hands are on. The art critic runs between tracks. Was `/vibej2`. |
+| `/keep` | KEEP lives in the page (vjpad, MIDI, `k`, the board); `/keep process` turns kept moments into numbered forks and named presets with docs. Was `/fork` + `/preset`. |
+| `/jam` | Alias: use `/show lite`. |
+| `/record` | Record a music video from the shader canvas (MediaRecorder). Studio and post-show only: it drives Chrome through claude-in-chrome. |
 | `/solo` | Toggle a shader between knob mode and audio mode. Auto-detects current mode and switches. Use `/solo knobs` or `/solo audio` to force a mode. Defaults to the modified `.frag` in the worktree. |
 | `/changelog` | Update docs/CHANGELOG.md and README with recent features. |
 | `/pr` | Create a PR, request review, and open in browser. |
 | `/show-repo` | One show, one repo: strip to one shader + controller (shared git history), build, verify headless, then publish to `<show>.beadfamous.com` on Aaron's go-ahead. Its front page is `show.html`: canvas only, MIDI, `?room=` remote jamming, snapshots. See [docs/show-repos.md](docs/show-repos.md). |
-| `/show` | Show day: preflight checklist, launch the show browser on the show shader + controller, verify audio and runtime, arm the health monitors, hand off to `/vibej2`. `/show check` is preflight only; `/show panic <fork>` hot-swaps to a known-good fork. See [docs/show-playbook.md](docs/show-playbook.md). |
-| `/vibej2` | Live auto-VJ as a responsive in-session loop: burst iterations, the page as sensor (`?vj=1` + `/__vj-signal`), an atomic edit macro. `/vibej2 stop\|pause\|tick`. |
-| `/vibej` (alias `/vj`) | v1 auto-VJ: mutates the shader once a minute to match the track, via `/__save-shader` and HMR. `/vibej stop`, `/vibej tick`. |
-| `/sun-set` | Replay the 2026-10-09/10 sun set beat by beat (`/sun-set next`, `/sun-set <n>`, `/sun-set auto`), each advance a hot-swap. Run after `/show` has the wall up. |
-| `/remap` | Reset the MIDI mapping: clears `localStorage['cranes-midi-profiles']` (all, or one device) and reloads, so the next CC twist auto-assigns. |
 | `/verify-paper-cranes` | Prove a change in the real app: launch an instance on a free port (never 6969/6977/6978/6991), doctor it, drive a mapped feature with Playwright, keep screenshots, pixel stats, logs and a headful video in `~/paper-cranes-proof/`, then clean up. Feature map in `.claude/skills/verify-paper-cranes/features/`. |
+
+Retired 2026-11-24 (board [live-show-skills](https://draw.hypnodroid.com/b/live-show-skills), Aaron: "Yes to all"): `/vibej`, `/vj`, `/live-session` (deleted), `/vibej2` (now `/partner`), `/fork` and `/preset` (now `/keep`), `/sun-set` (now the setlist `setlists/sun-set.json`, played by `/show setlist sun-set`), `/remap` (now the "Forget all mappings" button on `/midi.html`).
+
+The same skills live in `.agents/skills/`, generated from `.claude/skills/` by `node scripts/sync-agents-skills.js` (a test fails when they drift).
 
 ## Live Sessions: the Parent Stays Responsive
 
-**Show day:** run `/show`. It does the preflight, launch, watchers and hand-off. Follow
-[docs/show-playbook.md](docs/show-playbook.md) for the runbook, knob map, story, fork library and
-failure fixes.
+**Show day:** run `/show`. It does the preflight, launch, board, watchers and hand-off to the
+`/partner` lane. Follow [docs/show-playbook.md](docs/show-playbook.md) for the runbook, knob map,
+story, fork library and failure fixes.
+
+**The show's phone surface is a [draw](https://draw.hypnodroid.com) board** (`show-<date>`): the
+wall's status, the preflight, `/partner`'s proposal cards, kept moments, and big PANIC / KEEP /
+beat / knob buttons whose taps reach the page through `scripts/vj/board-bridge.js` with no model
+in the path. The page owns the instant parts (HANDS lock, KEEP, PANIC, proposal cards):
+[docs/live-show-contract.md](docs/live-show-contract.md).
 
 **Getting a set into "explore it for hours" depth:** [docs/vj-deep-voyage-recipe.md](docs/vj-deep-voyage-recipe.md), from the [2026-11-22 clit coaster show](journals/2026-11-22-clit-coaster-show.md).
 
-During any **live session** — a VJ set (`/vibej2`), a jam, a `/live-session`, anything where the
+During any **live session** — a show (`/show`), a jam (`/show lite`), anything where the
 user has a hand on a controller — the main Codex session is a **dispatcher, not a worker**. It
 triages what the user says, reads the meter, makes the ONE decision, and hands execution to a
 subagent (`Agent` tool, `subagent_type: "fork"` — a fork inherits the full session context). Then

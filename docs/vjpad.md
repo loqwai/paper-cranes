@@ -10,6 +10,20 @@ read the header comment in `vjpad.js`. This document is about **where the layout
 comes from**, i.e. how you point the pad at a shader that is not the one it was
 built for.
 
+## Live show: KEEP, PANIC and proposal cards
+
+Above the footer ([contract](live-show-contract.md)):
+
+- **KEEP** (green): saves the look on the display (snapshot plus a `keep` signal for the agents).
+- **PANIC** (big, red): the display swaps to its boot fork in place, with no reload and no agent.
+- **Proposal cards**: an agent's `propose` shows one line with a countdown, **KEEP** and **✕**.
+  KEEP applies it on the display as his own move; ✕ drops it; after 30 s it goes by itself.
+
+Each press is one message to the room (`vj-keep`, `vj-panic`, `proposal-answer`); the display does
+the work in-page. The pad also says `pad-hello` every 2 s, so the display can tell the agents
+whether a pad is in a hand (`pad-alive`). Any pad move turns the display's HANDS lock on, which
+holds agent writes until 8 s after the last move.
+
 ## Three layers, and you never have to touch any of them
 
 | Layer | Lives in | Good for |
@@ -131,9 +145,15 @@ profiles in `cranes-midi-profiles`.
 | `vjpad-shader` | the shader the pad is pointed at |
 | `cranes-vjpad-knobs` | cached knob index from `shaders.json`, so a dead wifi moment does not cost you your pads |
 | `cranes-vjpad-layout` | this phone's layout overrides |
+| `cranes-nfc-home` | the last vjpad query with a `room` (never a `display_secret`), where a tag-opened tab goes after one confirm tap ([nfc-show-controls.md](nfc-show-controls.md)) |
+| `cranes-nfc-show`, `cranes-nfc-beat:<show>` | which sticker map the NFC chip uses, and its NEXT/PREV cursor |
 
 `?shader=<path>` on the vjpad URL preselects the shader, overriding the
 remembered one.
+
+The **NFC** chip in the header arms Web NFC (Android Chrome) so the smiley
+stickers on Aaron's arm work as KEEP, PANIC, NEXT and favourites. See
+[nfc-show-controls.md](nfc-show-controls.md).
 
 ## Rejected alternatives
 

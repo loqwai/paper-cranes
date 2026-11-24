@@ -38,7 +38,7 @@ let startTime = 0
 const params = new URLSearchParams(window.location.search)
 
 // ?vj=1 — load the VJ runtime (validator + aesthetic meter + cursor-hide + /__vj-signal
-// watchdog) at page boot, so reloads can never strip the /vibej loop's tooling and the page
+// watchdog) at page boot, so reloads can never strip the /partner loop's tooling and the page
 // itself can wake the loop. /__vj-signal exists only on the dev server; a ?remote=display&room=
 // page (production too) also sends its signals down the room socket (src/vj/signals.js).
 if (params.get('vj') === '1') import('./src/vj/runtime.js').then(m => m.startVjRuntime()).catch(e => console.warn('[vj] runtime failed', e))
@@ -440,6 +440,8 @@ if (import.meta.hot) {
             .replace(/\.frag$/, '')
         const showing = shaderOnScreen()
         if (!changed || !showing || changed !== showing) return
+        // An agent's write_shader mid HANDS lock waits for his hands to come off (RemoteDisplay).
+        if (window.cranes?.holdHmr?.({ shader: showing })) return
 
         // Same shader: swap the source in place. window.cranes.shader is what
         // animateShader reads every frame, so assigning it recompiles without

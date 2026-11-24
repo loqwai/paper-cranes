@@ -128,6 +128,8 @@ const commands = {
       manual: numeric(window.cranes.manualFeatures),
       controller: numeric(window.cranes.controllerFeatures),
       recentErrors: S.logRing.slice(-5),
+      // The live show (src/vj/live.js): HANDS lock, held agent writes, open proposals, pads.
+      live: window.cranes.live?.status?.() ?? null,
     }
     if (features !== 'none') {
       out.features = numeric(window.cranes.measuredAudioFeatures, features === 'all' ? () => true : (k) => CORE.test(k) || k === 'beat')

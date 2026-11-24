@@ -30,7 +30,7 @@ const SHADERS = [
     { path: 'redaphid/chromadepth-lattice/4', label: 'L4', sub: 'PATHS', ctrl: 'lattice-nav' },
     { path: 'redaphid/lattice-interactive/3', label: 'HZN', sub: 'HORIZONS', ctrl: 'lattice-nav,lattice-controls' },
     { path: 'redaphid/chromadepth-lattice/3', label: 'L3', sub: 'COLOUR', ctrl: 'lattice-nav' },
-    // The /vibej scratch copy. Deliberately NOT chromadepth-lattice/2: that one declares neither
+    // The old /vibej scratch copy. Deliberately NOT chromadepth-lattice/2: that one declares neither
     // paletteShift nor warpGrow, so COLOUR and WARP would be dead knobs on it — and a dial that
     // does nothing on stage is worse than no dial.
     { path: 'redaphid/wip/lattice-vj/1', label: 'VJ', sub: 'MUTATE', ctrl: 'lattice-nav' },

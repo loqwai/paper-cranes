@@ -55,27 +55,28 @@ node scripts/vj/show.js eval '() => ({ input: window.cranes.audioInputLabel ?? n
 
 | Who | Does | Never |
 |---|---|---|
-| **Parent Claude** (`/vibej2`) | Triages your words first, reads the meter, makes one decision, dispatches the work and stays responsive | Long edits or waits inline |
-| **Editing agent** (one at a time) | Holds the page and `.frag` token. Edits by hot-swap, verifies with a shot and the meter, forks good moments | Reloads, server restarts, a second page-touching agent |
-| **Art critic** | Loops: a pair of shots plus the meter every ~2.5 min, appending verdicts to `.claude/vj-critic.md` | Edits anything. **Your words outrank it.** |
-| **You** | Knobs, `/fork`, plain-language feedback | — |
+| **Your session** (`/show`) | The door: launch, the board, watchers, PANIC on request, the story at the end. Stays free for your words | Shader edits, long waits inline |
+| **`/partner`** (its own background lane) | Holds the page and `-wip` token. One step per event: proposes a change you take or dismiss (TAKE on the vjpad or the board); applies only health fixes (white-out, black, NaN, fps) | Acts while your hands are on (8 s after your last move); reloads |
+| **Art critic** | Between tracks only (`gate-drop` then `gate-clean`): one verdict, which becomes at most one proposal | Edits anything. **Your words outrank it.** |
+| **You** | Dials, KEEP, PANIC, TAKE / dismiss, plain-language feedback | — |
 
-Monitors to arm. Each expires after 30 min, so re-arm them.
+The page does the instant parts with no model in the path: the HANDS lock, KEEP, PANIC and the
+proposal cards ([live-show-contract.md](live-show-contract.md)).
 
-```bash
-# health alerts from the page
-tail -n 0 -F .claude/vj-signals.jsonl | grep -E --line-buffered '"type":"(clip|too-dark|shiver|boot)"|"type":"flicker","flicker":(1\.[2-9]|[2-9])'
-# critic verdicts
-tail -n 0 -F .claude/vj-critic.md | grep -E --line-buffered '^### critic|^\*\*Fix next|^1\.|WALL DOWN'
-```
+**The board.** Every show gets a [draw](https://draw.hypnodroid.com) board, `show-<yyyy-mm-dd>`:
+the preflight as ✅/❌ cards, the wall's live status, `/partner`'s proposal cards, every KEEP with
+its screenshot, and big PANIC / KEEP / ◀ ▶ / knob-preset buttons. Select one and press Send: the
+board bridge (`scripts/vj/board-bridge.js`) makes the VJ MCP call, measured at a median 0.8 s
+from tap to the page confirming. Fine for beats, KEEP and PANIC; the dials stay the instrument.
+At the end the set's story goes on the board with a Present path. We build draw too, so a surface
+that falls short here becomes draw work.
 
 Your commands:
 
-- `/vibej2 …`: start or resume the loop.
-- `/fork`: save the current look as `sun/N.frag` with the controller copied to
-  `controllers/sun-N.js`.
-- `/vibej2 pause`: stop the heartbeat and keep everything else.
-- `/vibej2 stop`: end the loop. The show browser stays up.
+- `/show`, `/show check`, `/show lite`, `/show panic [fork]`, `/show setlist <name> next`, `/show end`.
+- KEEP (vjpad, its MIDI pad, `k`, the board): save the moment. `/keep process` afterwards writes
+  the forks (`sun/N.frag`, controller frozen as `controllers/sun-N.js`) and presets.
+- `/partner pause`: no proposals, health fixes continue. `/partner stop`: end it. The wall stays up.
 
 ## 4. Knob map (live line)
 
