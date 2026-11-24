@@ -365,6 +365,11 @@ uniform float another;   // = 1.2
 - `audio_time=<seconds>` - Start audio file playback at this offset (default: 0)
 - `time=<seconds>` - Hold time constant (useful for deterministic screenshots/testing)
 - `vj=1` - Install the VJ runtime on the display: cursor-hide, GL validator, aesthetic meter, frame-time probe, and health signals (POSTed to `/__vj-signal` on the dev server; on a `?remote=display&room=` page, production included, also sent down the room socket to the relay MCP's `wait_for_event`). This is how the auto-VJ loop sees a page it cannot screenshot. See [docs/vj-telemetry.md](docs/vj-telemetry.md)
+- `hands_ms=<ms>` - The live show's HANDS lock: how long after Aaron's last dial/pad/MIDI move agent writes stay held (default 8000). See [docs/live-show-contract.md](docs/live-show-contract.md)
+- `release_ms=<ms>` - How long a dial must be still before the `release` signal (default 50)
+- `panic=<shader>` - The fork PANIC swaps to (default: the shader the page loaded with)
+- `show_proposals=1` - With `vj=1`, show a small chip on the display naming open proposals (they live on the vjpad otherwise)
+- `midi_panic=cc:N|note:N[:ch]`, `midi_keep=…` - Bind a MIDI control to PANIC / KEEP (persisted). See [docs/midi-mapping.md](docs/midi-mapping.md)
 - `vjtrack=1` - With `vj=1`, also log every knob move at 10Hz with the full audio-feature vector, for working out which feature a fader is imitating. **Off by default and not for use during a show** — it is a ~17KB JSON serialise + fetch every 2s on the render thread
 
 ### Dynamic Override
@@ -424,7 +429,7 @@ so a refresh preserves state) and per-message DOM work was removed outright.
 ### VJ MCP (any agent harness)
 An MCP server (streamable HTTP, stateless, never SSE) whose tools read and drive every display:
 `list_displays`, `list_shaders`, `get_state`, `screenshot`, `set_params`, `set_shader`,
-`read_shader`, `write_shader`, `wait_for_event`, plus `display_secret` on the relay only. It runs in two places with the same code
+`read_shader`, `write_shader`, `wait_for_event`, the live show's `propose`, `answer_proposal`, `keep`, `panic`, plus `display_secret` on the relay only. It runs in two places with the same code
 (`vite-plugins/vj-mcp/server.js` + `hub-core.js`):
 - **Live:** `https://relay.beadfamous.com/mcp/<room>` on the relay Worker. Displays are any
   `?remote=display&room=<room>` page; the room's Durable Object is the broker. Cloudflare Access
@@ -443,6 +448,16 @@ An MCP server (streamable HTTP, stateless, never SSE) whose tools read and drive
 
 Knobs go out as `update-params` on the display's own socket; reads come back over a point-to-point
 `inspect` channel the broker never broadcasts, answered only after the broker welcomed the page.
+
+**Live show ([docs/live-show-contract.md](docs/live-show-contract.md)):** the page owns everything
+that must be instant (`src/vj/live.js`, wired in `RemoteDisplay.js`). While Aaron's hands are on a
+dial, pad, MIDI or board control (`hands` signal), agent writes (`update-params` marked
+`source: "agent"`, which every MCP write is) are HELD and land 8 s after his last move; his own
+writes are never held and still apply synchronously (hot-path rule). Agents change his look with
+`propose` (a card on the vjpad; he presses KEEP), never by setting his dials. PANIC (vjpad, MIDI,
+Escape twice on jam/show, `panic` tool) hot-swaps to the boot fork with no reload; KEEP (vjpad, MIDI,
+`k` on jam/show, `keep` tool) saves a snapshot and signals `keep`. The draw board bridge
+(`scripts/vj/board-bridge.js`) maps board taps to these calls with `source: "board"`.
 See [docs/vj-mcp.md](docs/vj-mcp.md).
 
 ### ParamsManager
