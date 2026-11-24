@@ -601,9 +601,10 @@ Metadata is extracted at build time and included in `dist/shaders.json`.
   and no visible symptom because every shader still *has* a date. So real history is
   baked into a committed **`shader-dates.json`** (`scripts/shader-dates.js`), and the
   build prefers it whenever live history is shallow or degenerate. Live git still wins
-  when it is genuinely usable (local dev), and the baked file is refreshed
-  automatically on any local dev-server start or build — regenerate manually with
-  `npm run shader-dates`. The build refuses to overwrite the baked file from a shallow
+  when it is genuinely usable (local dev). A dev-server start or build refreshes the
+  baked file only while the tree has uncommitted `.frag` changes (so the refresh rides
+  with that commit, and a clean checkout stays clean), and only writes when the text
+  changes; regenerate on purpose with `npm run shader-dates`. The build refuses to overwrite the baked file from a shallow
   clone, and logs a loud warning if the result has fewer than 2 distinct dates.
   If dates are genuinely unavailable, `modified` is `null` and the list page hides ages
   and removes the "newest" sort rather than showing a fabricated order.
