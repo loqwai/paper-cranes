@@ -13,7 +13,8 @@
     // PWA manifest injection (same as index.html)
     (function() {
       // Same rule as src/params/url.js, which this classic script cannot import: a hash value wins.
-      var shader = new URLSearchParams(window.location.hash.slice(1)).get('shader') || new URLSearchParams(window.location.search).get('shader')
+      var hash = new URLSearchParams(window.location.hash.slice(1))
+      var shader = hash.has('shader') ? hash.get('shader') : new URLSearchParams(window.location.search).get('shader')
       var safe = shader ? shader.replace(/\//g, '--') : 'default'
       var link = document.createElement('link')
       link.rel = 'manifest'
