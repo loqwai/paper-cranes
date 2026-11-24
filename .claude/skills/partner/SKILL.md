@@ -1,481 +1,162 @@
 ---
-name: vibej2
-description: "vibej v2 (TEST) — live auto-VJ as a responsive in-session loop instead of a cron. Burst-mode iteration (chains beats in-turn, browser-side waits), page-as-sensor wakes (?vj=1 + /__vj-signal + Monitor), atomic edit macro, ScheduleWakeup heartbeat for idle holds. Usage: `/vibej2 [duration|count] [shader-path-or-name]`, `/vibej2 stop|pause|tick`. v1 (/vibej) remains untouched until this graduates."
-allowed-tools: Bash Read Write Edit Grep Glob Agent ScheduleWakeup Monitor TaskOutput TaskStop CronCreate CronList CronDelete
+name: partner
+description: "Be Aaron's VJ partner while he plays the dials at a show (\"partner\", \"VJ with me\", \"help me VJ\", \"drive it\", \"auto VJ\"): watch the wall, offer one change at a time for him to take or dismiss, and fix only health problems (white-out, black, NaN, low fps) directly. Runs as its own background lane, never in the session he talks to. /show starts it."
+allowed-tools: Bash Read Write Edit Grep Glob Agent Monitor TaskStop
 ---
 
-# vibej2 — Live Auto-VJ Loop (responsive-session edition)
+# /partner: one move at a time, his hands first
 
-Run Claude as the VJ: one **live session** that watches the frame, listens to you, and makes at
-most one meaningful edit per beat. Non-destructive by default (edits `.frag` via `/__save-shader`,
-HMR hot-swaps). Replaces the per-minute cron with a self-paced in-session loop (the Relay
-coordinator pattern): **user messages reach the VJ in seconds, not at the next minute mark**, and
-iteration speed is maxed — burst mode chains beats without ending the turn.
+Aaron plays the dials (MIDI or the vjpad). You are the partner beside him: you watch the wall and
+the music, and you **propose** a change he can take with one tap. You **apply** a change yourself
+only to fix the wall's health. You never act while his hands are on the dials.
 
-> **TEST SKILL.** `/vibej2` while under evaluation; v1 `/vibej` (+ `/vj`) is untouched and remains
-> the fallback. State file is SHARED: `.claude/vj-state.json` (recovery snapshot only — not bumped
-> every beat) — don't run both loops at once. Design + rationale: `.claude/skills/vibej/DESIGN-v2.md`.
-> When this graduates, its body replaces `.claude/skills/vibej/SKILL.md` and the name reverts.
+This is vibej2, graduated (2026-11-24, Aaron: "Yes to all"). The design and why it is shaped this
+way: [docs/live-session-architecture.md](../../../docs/live-session-architecture.md) and the
+board https://draw.hypnodroid.com/b/live-show-skills (frames 5-9).
 
-## Context
+Arguments: `/partner [shader] [board=<name>] [port=<n>]`, `/partner stop`, `/partner pause`.
+Defaults: the shader and board in `.claude/vj-state.json`, written by `/show`.
 
-Arguments: `$ARGUMENTS`
+## Where you run
 
-Platform, port, dev server, state file, show browser and recent page signals, in one
-shell-agnostic call (the same from bash, zsh, fish, Git Bash and PowerShell):
-!`node scripts/vj/context.js`
+- **A lane of your own.** `/show` starts you as a background `Agent`; started by hand, run in a
+  fresh or forked session. Never in the session Aaron talks to: that session stays free to
+  answer him (2026-08-20: a LEARN press waited 3 minutes because that session was busy).
+- **You hold the page token.** Only you edit the show's `-wip` shader or set params while you run.
+  Anything heavy (a long analysis, a journal, a doc) goes to a subagent of yours.
+- **Only the VJ MCP touches the page** (`node scripts/vj/mcp-call.js`, or the registered
+  `paper-cranes-vj` tools). No `show.js eval`, no devtools, no claude-in-chrome. `show.js shot`
+  is fine for a full-resolution look; `screenshot` through the MCP is usually enough.
 
-## Runs on macOS, Windows and Linux
+## The page contract
 
-Every command in this skill is `node …` plus POSIX shell, so it is the same on every machine.
-On Windows, run them with the **Bash tool (Git Bash)**, never PowerShell: the quoting below is
-written for bash. Everything OS-specific lives inside `scripts/vj/show.js`; the per-OS facts
-the loop must know are in the table under "The show browser". Never hardcode a port: read it
-from the Context block (`./scripts/dev-port`, branch-derived, 6969 on `main`).
+The page half is built by the Hands Lock lane (`docs/live-show-contract.md`, which wins where
+this summary disagrees). Through `wait_for_event` you hear `?vj=1` signals:
 
-**Machine-local quirks** (which input, the gain that suits this room, a slow GPU) belong in an
-uncommitted `.claude/skills/local-rig/SKILL.md` on that machine. Read it at setup if it exists.
-
-## Parent stays responsive; delegate everything else
-
-**User directive, 2026-08-20 (verbatim): *"maybe everything else you do, you do in a subagent. the
-parent Claude needs to always be responsive to user feedback"*.**
-
-The parent loop is a **DISPATCHER, not a worker**. Its whole job is: triage the user's words, read
-the meter, decide the ONE move — then hand execution to a subagent and get back to listening. **It
-must never block.**
-
-**Why this is structural, not stylistic:** a Monitor event, a task notification, and a user message
-all reach the parent only **between turns**. Any long parent turn is dead air on the user's side.
-Measured cost on 2026-08-20: a LEARN press the user was actively waiting on sat **~3 minutes**
-purely because the parent was mid-turn running edits and verification waits. The user's reaction
-was *"WHY HAVEN'T YOU REACTED TO THE LEARN BUTTON YET"* — the work was fine; the availability was not.
-
-**The parent NEVER runs these — they go to `Agent` with `subagent_type: "fork"`:**
-- browser-side verification waits (any `await new Promise(r => setTimeout(...))` pattern)
-- multi-step analysis, correlation passes, batch screenshot review
-- journal writing, doc writing, HANDOFF updates, repo archaeology
-- long edit → compile → verify → retune cycles
-- anything whose result the user is not waiting on *right now*
-
-**The parent DOES do, inline, because they are fast and they are the judgement:** triage a user
-message, one meter read, one screenshot when a compositional change needs judging, the decision of
-what the next move is, and the one-line summary.
-
-**Concurrency token — only ONE subagent at a time may touch the display page or the target
-`.frag`.** The parent holds that token: never spawn a second page-touching fork while one is
-running, or two agents will race on `window.cranes.shader` and on the same file. Read-only forks
-(journal, docs, analysis of already-captured data) may run alongside one page-touching fork.
-
-**LEARN is no longer on the parent's latency path at all.** The analysis now runs *in the page*
-(`window.__vjAutoLearn`; permanent version in `docs/vj-auto-learn-patch.md`) and answers the pad's
-loop strip in **~56 ms**, worst case ~450 ms. The parent's only remaining LEARN job is the
-judgement call: **is this finding worth WIRING into the shader?**
-
-## The show browser (the ONLY way to touch the display)
-
-The display is a dedicated Chrome that `scripts/vj/show.js` spawns in fullscreen with its own
-profile and a CDP port. Every page action goes through that script. **Never use the
-claude-in-chrome extension or the chrome-devtools MCP for the display.** The user, 2026-10-06:
-the extension's synthetic cursor in the middle of the wall, its orange window glow, and its
-"Claude is debugging this browser" infobar are all *unacceptable for live shows*. A
-Playwright/Puppeteer *launch* is out too: `--enable-automation` adds the "controlled by automated
-test software" bar. `show.js` spawns Chrome by hand without that flag and only ever *attaches*.
-
-```bash
-node scripts/vj/show.js launch '<url>' [--display N]   # idempotent: reuses a running show browser
-node scripts/vj/show.js goto '<url>'                   # full reload (resets feature history!)
-node scripts/vj/show.js eval '<fn or expr>' '[args]'   # runs in the page, prints JSON
-node scripts/vj/show.js shot .claude/vj-shots/<name>.png   # the PAGE, via CDP; pointer never moves
-node scripts/vj/show.js focus                          # raise the show window to the front
-node scripts/vj/show.js unstick                        # black wall + healthy audio: flush feedback buffers
-node scripts/vj/show.js move <N>                       # move a running show to display N, no reload
-node scripts/vj/show.js status | displays | stop
-```
-
-What this buys (macOS verified on the real screen 2026-10-06, Windows 11 on 2026-11-14): no
-toolbar, no infobar, no window glow, no pointer, no permission prompt (mic + MIDI are stored in
-the show profile and granted over CDP), and the display is held awake for exactly as long as the
-show Chrome lives. `shot` and `eval` move nothing on screen, so a screenshot is free to take
-mid-show — there is no cursor to re-park, ever.
-
-| | macOS | Windows | Linux |
-|---|---|---|---|
-| Chrome | `/Applications/Google Chrome.app` | `%PROGRAMFILES%\Google\Chrome` | google-chrome / chromium on PATH |
-| Show profile | `~/Library/Application Support/paper-cranes-show` | `%LOCALAPPDATA%\paper-cranes-show` | `~/.config/paper-cranes-show` |
-| Keep awake | `caffeinate` | `SetThreadExecutionState` | `systemd-inhibit` |
-| Window must stay in front | no | **yes** (below) | no |
-| OS input setting | System Settings → Sound → Input | Settings → System → Sound → Input | Sound settings / pavucontrol |
-| Notifications off | Focus → Do Not Disturb | Win+N → Do not disturb | desktop DND toggle |
-| Overlays to quit | break-reminder / dimming apps | Xbox Game Bar, Discord, Steam, GeForce overlays; dimming apps | screen dimmers |
-
-Overrides on every OS: `SHOW_CHROME`, `SHOW_PROFILE`, `SHOW_CDP_PORT`, `SHOW_CHROME_FLAGS`.
-
-**Windows: the show window must stay in front.** Windows stops painting a covered Chrome window
-(the terminal you launched from counts): the wall goes black and the page stops answering CDP,
-so every `show.js` call times out after 30 s. `launch` and `goto` raise the window themselves
-and Chrome's occlusion tracker is off, but a click elsewhere can bury it again. **Any `show.js`
-timeout on Windows: run `show.js focus`, then retry.** Keep the terminal on another screen.
-
-**Windows: a URL change recompiles for minutes.** Chrome on Windows compiles WebGL through ANGLE
-into Direct3D. A big shader (the 99 KB sun line) pinned the GPU process for 1–3 minutes on a
-Surface while the page was frozen. ANGLE caches compiled programs, but every numeric URL param
-becomes a uniform, so a new or changed param is new source and a cache miss. **Mid-set: never
-`goto`, never add a URL param, never edit `src/**`, `index.js` or `scripts/vj/*.js` (HMR
-reloads the page).** Hot-swaps and `window.cranes.*` changes are fine. Before doors, boot once on
-the exact show URL so the cache is warm. If `eval` times out and `focus` didn't help, the GPU is
-compiling (Task Manager: Chrome's GPU process busy): wait, don't relaunch, which only starts
-another compile.
-
-**Black wall, healthy audio** (`lum` 0 while `energy` moves and frames advance): a feedback
-shader read a NaN or black frame from its own previous frame and keeps drawing black. Seen on
-sun-1 at boot. `show.js unstick` swaps plasma in for 1.5 s and back, flushing the buffers with
-no reload; controller state survives.
-
-Facts the loop relies on:
-- **`launch` defaults to the LAST display** — the projector when one is attached. Run
-  `show.js displays` first if there is any doubt; pass `--display N` to override.
-- **The page must be the only page.** `show.js` refuses to act if the show browser has more or
-  fewer than one page, rather than guessing which one is on the wall.
-- **`goto` is a reload**: it resets the 500-frame feature history and `evoPhase`. Mid-set,
-  change shaders by hot-swap through `eval` (see Arguments), never `goto`.
-- Clicking the canvas no longer requests HTML5 fullscreen when the window already covers the
-  screen, so a stray click cannot summon Chrome's "Press Esc to exit full screen" bubble.
-- Things `show.js` CANNOT govern, which go on the pre-show checklist: OS overlays from other
-  apps (a break-reminder app dimmed the whole screen during the 2026-10-06 test), OS
-  notifications (Do Not Disturb, per the table), and the macOS orange mic-in-use dot (OS-drawn, a
-  few pixels top-right, cannot be hidden by any app; Windows puts its mic icon in the taskbar).
-
-## Philosophy (unchanged where it worked)
-
-- **LOOK before you touch, LOOK after you touch.** A screenshot is the only ground truth.
-- **Diagnose before you add.** Feedback → screenshot → root cause → usually a subtraction.
-- **Match the music, structurally — the channel hierarchy (2026-08-18):**
-  1. **GEOMETRY only EVOLVES** — monotonic accumulators, perpetual self-similar zoom, or one-way
-     eased plateau steps on drops. NO sines, NO audio (however smoothed) on fold-geometry params.
-  2. **LIGHT/SHADING takes ALL the audio** — local relief, band lighting; never the global
-     multiplier (strobe channel).
-  3. **COLOR follows the slowest music only** — key medians, set clock, permanent drop mutations.
-- **One focused move per beat**, visible from across the room.
-- **Respect the user's hands** (knobs, MIDI, TAKE OVER pinning — see v1 section, unchanged).
-- **Fail loud, not silent**: the atomic edit macro GL-compiles before every save and confirms
-  live-ness in the same call.
-- **The heartbeat is the mechanism; monitors are a bonus** (Relay lesson). Never depend on an
-  event wake you haven't watched fire.
-
-## Arguments
-
-`/vibej2 [duration|count] [shader-path-or-name] [audio=<input name>]`
-
-- **No args** → run until stopped, shader = most recently modified `.frag`.
-- **`audio=<substring>`** → override the input device, matched against device labels and
-  passed to the page as `&audio_device=`. **Omitted → the OS default input** (whatever the user
-  has selected in the OS sound settings); add no `audio_device` param at all then. There is no
-  Spotify tab and no music tab — the music comes in on that input: a line feed (BlackHole,
-  Voicemeeter, a USB interface) or a microphone hearing the room.
-- **`gain=<x>`** → `&audio_gain=<x>`, a gain stage before all analysis. The loudness gates
-  (shader `GATE`s, `quietGate`, the black-sun presence ramp) are absolute and tuned for a line
-  feed. **A laptop mic hearing a speaker arrives 10–30× quieter and never opens them: the visual
-  idles all set.** Setup step 3 calibrates it. Default 1 (line feed).
-- **Duration** (`90m`, `2h`) or bare integer (legacy: beat count) → soft budget; announce and
-  wrap when reached.
-- **Shader path** → same resolution rules as v1 (full path / relative / no-ext / bare unique
-  name / URL with `?shader=`). Normalize to no-ext form.
-- **`stop`** → end: `ScheduleWakeup(stop: true)`, TaskList → TaskStop any vibej monitors, final
-  journal entry, delete `.claude/vj-state.json`, one-line wrap-up.
-- **`pause`** → `ScheduleWakeup(stop: true)` only; keep monitors + state; `/vibej2` resumes.
-- **`tick`** → run exactly one Beat then return (kept for old cron fires and manual pokes).
-- **`cron`** → fallback mode: behave as v1 (CronCreate `* * * * *` + `/vibej2 tick`). Use ONLY
-  when ScheduleWakeup is unavailable in the harness.
-
-Mid-run re-invocation with a shader arg = shader swap, by hot-swap so audio history survives
-(bring it up with a known preset AND screenshot before the crowd sees three states):
-
-```bash
-node scripts/vj/show.js eval 'async (path) => {
-  const src = await fetch("/shaders/" + path + ".frag?t=" + Date.now()).then(r => r.text())
-  const v = window.__vjValidate(src); if (!v.ok) return { ok: false, info: v.info }
-  window.cranes.shader = src
-  const u = new URL(location.href); u.searchParams.set("shader", path); history.replaceState({}, "", u)
-  return { ok: true }
-}' '["<new-path>"]'
-```
-
-## Setup (once, at `/vibej2` start — this is the pre-show checklist)
-
-1. Port from `./scripts/dev-port`; start `npm run dev` (background Bash) if the server isn't
-   answering.
-2. **Launch the show browser** on the jam page (canvas only: no drawer, no toasts, no
-   indicators; MIDI still live):
-   **Always `stop` first** — a show browser left over from an earlier run can be alive with
-   zero pages (window closed, process still on the CDP port), and every other command refuses
-   it. `stop` closes it over raw CDP whatever state it is in; `not running` is fine.
-   ```bash
-   node scripts/vj/show.js stop
-   node scripts/vj/show.js launch "http://localhost:$PORT/jam.html?shader=<path>&controller=<name>&vj=1&remote=display[&audio_device=<audio>]"
-   ```
-   Append `&audio_device=` only when the user passed `audio=`.
-   `remote=display` joins the WebSocket hub so `scripts/vj/remote-send.js` and the vjpad reach
-   the page. Add `&controller=` only when a matching `controllers/*.js` exists.
-3. **Verify the input** — the page exposes the device it actually opened. Say it to the user in
-   the setup line ("listening on <label>") so a wrong OS default is caught before the set:
-   ```bash
-   node scripts/vj/show.js eval '() => ({ input: window.cranes.audioInputLabel ?? null, energy: window.cranes.flattenFeatures().energy })'
-   ```
-   **Calibrate the level with music playing.** Loud music on a line feed reads `energy`
-   0.02–0.06. Below ~0.01 (a mic), first check the **OS input volume**, then trim the page gain.
-   - macOS: `osascript -e 'input volume of (get volume settings)'`; below ~70 a MacBook mic barely
-     registers (2026-11-14: 27% gave energy ~0.005, 80% fixed it). Raise it with
-     `osascript -e 'set volume input volume 80'`.
-   - Windows: Settings → System → Sound → (input device) → Input volume. The Surface internal mic
-     at its default still needed ×32 page gain.
-   - Linux: `pactl get-source-volume @DEFAULT_SOURCE@`.
-   Then trim the page gain live, no reload, until `energy` lands in range:
-   ```bash
-   node scripts/vj/show.js eval 'async (g) => { window.cranes.inputGain.gain.value = g; await new Promise(r => setTimeout(r, 5000)); const f = window.cranes.flattenFeatures(); return { energy: f.energy, energyMean: f.energyMean } }' '[16]'
-   ```
-   Measured 2026-11-14, Surface internal mic, Echo Studio at 45% across the room: ×1 → 0.001,
-   ×16 → 0.015, ×32 → 0.023. Record it as `audioGain` in `.claude/vj-state.json` and in the
-   local-rig skill. It goes in the launch URL (`&audio_gain=`) only at the next cold launch,
-   never mid-set (see the Windows recompile note).
-   `input: null` (only possible with `audio=`) means the name matched no device (the page logged the available labels to its
-   console — read them with `eval '() => navigator.mediaDevices.enumerateDevices().then(d => d.filter(x => x.kind === "audioinput").map(x => x.label))'`).
-   **Do not start beats on the wrong input** — tell the user which inputs exist and stop.
-4. **Pre-show checklist, said to the user in one line** — Do Not Disturb on, overlay /
-   break-reminder / screen-dimming apps quit (per-OS list in the table), projector is the display
-   `launch` chose, and on Windows the show window stays in front. These are outside the
-   page; nothing in the loop can catch them.
-5. **Read `docs/vj-preferences.md` first.** It records the user's standing taste and applies to
-   every shader. Brief every sub-agent and the art critic with it, and append any new design
-   feedback the user gives during the set to it, in the user's own words and with a date.
-   Then **read the shader's journal** (`journals/<name>-cool-moments.md`) and last HANDOFF. Todo +
-   History-of-changes = your rules. Never re-add a vetoed motif.
-6. **Ensure the page runtime** (see below) and screenshot-judge the frame as it stands. If it
-   doesn't read, the first beats are legibility fixes.
-7. Audio verified (raw energy > gate, quietGate computed not pinned); controller pinning checked
-   (`Object.keys(window.cranes.messageParams)`).
-8. Target must be a SCRATCH COPY, never committed art.
-9. Write the recovery snapshot `.claude/vj-state.json`:
-   `{ shaderPath, showUrl, audioDevice, audioGain, room, port, moveStyle, mode: "live-loop", startedAt }`
-   (no iteration counter — beats are counted in-context; update this file only when one of these
-   fields changes).
-10. **Announce the cadence** to the user in one line: "Live loop: I check every ~90 s while
-   tuning, stretch to ~5 min when healthy, and I see your messages immediately."
-11. **Arm the dial-release wake:** a Monitor on `node scripts/vj/watch-dials.js 2>&1` (30 min,
-    re-armed on expiry). It polls the knobs over CDP and prints `RELEASE K<n> a→b … | all={…}`
-    when the user lets go of a dial. (`watch-release.js` needs `vjtrack=1`, which is banned at
-    shows; keep it for knob-correlate sessions only.)
-12. *(Optional, phase 2 / if available)* Arm a persistent Monitor on `.claude/vj-signals.jsonl`
-   (page-posted health alerts) or, lacking that, on the target `.frag` (external edits). Arm
-   once — check TaskList first on any re-entry.
-13. Run **Beat #1** immediately, then re-arm the wakeup (see The Beat).
-
-### Page runtime — ensure, don't install
-
-`?vj=1` makes the page install the validator, meter and jank probe at boot. One `eval` per beat,
-FIRST thing, before any screenshot is trusted, tells you whether the page reloaded since the last
-beat:
-
-```bash
-node scripts/vj/show.js eval '() => { const fresh = window.__vjSeen !== true; window.__vjSeen = true; return { fresh, meter: typeof window.__vjMeter, validate: typeof window.__vjValidate } }'
-```
-
-`fresh: true` on any beat after the first is the reload tell. After a reload: re-apply runtime
-knob tweaks, and treat the first meter window as garbage. `meter`/`validate` not both `"object"`
-/`"function"` ⇒ the runtime failed to boot; read the page console via `eval` before going on.
-Cursor hiding is no longer the runtime's job — `jam.css` hides it unconditionally.
-
-## The Beat (replaces "Per iteration")
-
-A Beat runs when **any** of these happens — the harness re-invokes the live session:
-- the ScheduleWakeup heartbeat fires,
-- a `<task-notification>` arrives (Monitor event: health alert / file change),
-- **the user says something** (this can also land mid-turn — triage it immediately, whatever
-  step you're on).
-
-Order within a Beat:
-
-1. **Ensure page runtime** (call above). If `fresh`, note the reload, skip metric-driven
-   moves this beat.
-2. **B0 LOOK** — `node scripts/vj/show.js shot .claude/vj-shots/<beat>.png`, then Read it; judge
-   visually (clip? dark floor? focal point? legible? shivering?). The shot is taken over CDP —
-   nothing on the wall moves, so look as often as judgement needs.
-3. **Meter** — `__vjMeter.summary(50)` + `residR(50)`. `gate` is `quietGate` when the controller
-   provides it (wavelet-ease), else the same energy formula computed by the meter, so it means
-   "loud enough" on every controller. A gate that never rises while music plays is an input-level
-   problem (setup step 3), not a track boundary. **If gate < 0.9 (track boundary): make no
-   metric-driven move; stay in-turn and wait ~20 s browser-side, then re-check — never burn a
-   wakeup on a dirty window (and note the 60 s wakeup floor makes short wakeups impossible
-   anyway).** Thresholds: clip = 0 always; flicker > 0.7 = act, don't
-   rationalize; dark 0.1–0.3; lumMin ≥ 0.08; rResid is the beat-scale musicality needle.
-   **EXCEPT — flicker the USER is causing is not a defect (user, 2026-08-20): before acting on any
-   flicker reading or alert, check whether a knob/nav param changed during the window. If their
-   hands were moving, the frame churn is theirs; say nothing, log nothing, change nothing.** A
-   fader sweep moves the whole frame, and the meter cannot tell that from a strobe. Snapshot the
-   knob vector, wait a few seconds, snapshot again:
-   ```bash
-   node scripts/vj/show.js eval 'async () => { const kv = () => JSON.stringify(Object.fromEntries(Object.entries({...window.cranes.manualFeatures, ...window.cranes.messageParams}).filter(([k]) => /^knob_|^nav/.test(k)))); const a = kv(); await new Promise(r => setTimeout(r, 6000)); return a !== kv() }'
-   # true => their hands, not a defect
-   ```
-   `clip` stays 0 through hand-driven flicker, so clip > 0 is still real and still acts.
-   **Filter it at the SOURCE, not per-beat.** Two levers, in order of preference:
-   1. **The Monitor** (safe mid-show, touches nothing on the wall) — only surface big flicker,
-      keep every other alert. **Use grep, not awk: this file is a skill template, and an `awk`
-      body containing a dollar-zero gets SUBSTITUTED at render time** (it rendered as the literal word
-      "lattice" — the skill's own argument — producing a monitor that silently matched nothing).
-      Numeric alternation in a regex does the same job with no shell variables to mangle.
-      **Anchor the flicker clause to `"type":"flicker"`** — `pulse` lines carry a nested `flicker`
-      field, so an unanchored `"flicker":1\.[2-9]` leaks a false alert on every busy pulse. Verified
-      against both forms before arming:
-      ```bash
-      tail -n 0 -F .claude/vj-signals.jsonl | grep -E --line-buffered '"type":"(clip|too-dark|shiver|boot)"|"type":"flicker","flicker":(1\.[2-9]|[2-9])'
-      ```
-   2. **The page watchdog** (`src/vj/runtime.js`) — gate the flicker alert on "no knob moved in
-      ~3 s"; the LEARN ring already tracks exactly that. **POST-SHOW ONLY: editing runtime.js
-      triggers HMR, and a reload resets `evoPhase` to 0, which destroys an accrued flow state.**
-4. **LEARN presses: ALWAYS answer, never refuse** (user, 2026-08-20: *"your job is to try your
-   best to 'learn', even if the data is too noisy. just best fit _anything_. don't refuse."*).
-   `scripts/vj/learn-correlate.js` no longer gates on significance — it ranks every channel and
-   returns `bestGuess` (top non-clock feature) plus a `confidence` label of **strong** (t>3,
-   |r|>0.4) / **weak** (t>2, |r|>0.25) / **guess** (anything else), with clock-like accumulators
-   demoted 0.6x rather than excluded and `timeTrendSuspect` set when three clocks tie. Report the
-   best guess WITH its label — "guess: spectralCentroid r=0.31, low confidence" beats "no finding".
-   The uncertainty goes in the label, never in a refusal. Wiring still needs judgment: a `guess`
-   is a conversation starter, a `strong` corroborated across two+ faders is wireable.
-   **Editing ANY file the page fetches (`scripts/vj/*.js`, `src/**`) triggers HMR and can RELOAD
-   the display — which resets `evoPhase` and destroys an accrued flow state. Learned the hard way
-   2026-08-20: a learn-correlate.js edit cost a 16.6 set clock (99.6% complexity -> 5%).** Edit
-   analysis scripts BETWEEN sets, or accept the reset knowingly. Recovery: `remote-send
-   '{"evoPhase":<value>}'` pins it back (the pad-pin path overrides controller outputs;
-   `manualFeatures` does NOT), and `null` releases it.
-
-5. **Dial releases are user words.** On a `RELEASE` line, read which knobs moved and in which
-   direction, and interpret the intent: the dials steer the visual. A dial held at an extreme is
-   a request to bake that direction into the shader. Make ONE move from it, as for a message.
-   **Triage user words FIRST** if any arrived since the last beat — same table as v1 ("too
-   subtle" / "shivery" / "flashing" / "washed out" / "get rid of X" / repeated asks ⇒ 3–5×
-   stronger). A repeated complaint means the previous fix failed: prefer ONE decisive pass over
-   another partial patch (the 2026-08-18 oscillation survived four partial fixes).
-6. **Pick at most ONE move** (the features guide it; archetype table and hard
-   guardrails unchanged from v1 — no object-overlays, no screen-space warps, no transients on
-   geometry, audio in amplitude/gate never in phase args, no clipping or washout, prefer
-   subtract/fix). Healthy frame + no user input + nothing learned ⇒ a no-move beat is correct.
-7. **Apply via the atomic edit macro** (below). Never edit-then-swap as separate calls.
-8. **D2 LOOK** after any compositional change; revert or retune in the same beat if worse.
-9. **Journal** (same rules: cool moments, user flags, removals, forks; skip only trivial nudges).
-10. **One-line summary** — `**Beat — <what changed / why holding>.**` No screenshots in the
-   message.
-11. **Choose: chain or idle.** Iteration speed is maxed (user decision 2026-08-19), so the
-    default while ANY work is active is **BURST MODE — do not end the turn**: go straight into
-    the next beat, using a browser-side wait for the observation window:
-
-```bash
-# verification wait — runs in the page; returns the meter for the window it waited through
-node scripts/vj/show.js eval 'async (secs) => { await new Promise(r => setTimeout(r, secs * 1000)); return { s: window.__vjMeter.summary(secs), r: window.__vjMeter.residR(secs) } }' '[20]'
-```
-
-| Situation | Do |
+| Signal | Means |
 |---|---|
-| Edit in flight, verifying | stay in-turn: wait 15–30 s browser-side → re-meter → next beat |
-| Dirty gate (track boundary) | stay in-turn: wait ~20 s → re-check gate |
-| User engaged / feedback burst | stay in-turn, triage-first, chain beats |
-| Healthy ≥ 3 beats AND user quiet | end turn: `ScheduleWakeup(240–420 s, "healthy hold")` |
-| Brief pause wanted, work pending | end turn: `ScheduleWakeup(60 s)` — the FLOOR; nothing shorter exists, which is why fast pacing is in-turn |
+| `hands {on, knob}` | his hands are on a dial. The page holds every agent write until 8 s after the last move. |
+| `release {knob, value}` | he let go of a dial: his words, in a dial |
+| `keep {shader, params, t}` | he pressed KEEP (pad, MIDI or board) |
+| `panic {fork}` | he pressed PANIC: stop your current move |
+| `pad-alive {alive, pads}` | the pad's socket is up or down |
+| `proposal-taken {id}` / `proposal-dropped {id, why}` | his answer to your card |
+| `clip`, `too-dark`, `flicker`, `boot`, `gate-drop`, `gate-clean`, `pulse` | health and track boundaries, as before |
 
-**Context economy in burst mode** (the price of speed): screenshots are the expensive step.
-Verification cycles run on METER NUMBERS; screenshot only on compositional changes, on
-suspicion, or every ~4th cycle. Delegate anything heavy to a subagent. If context runs long the
-harness compacts and the wakeup prompt re-enters the skill — state must already be in the
-journal/snapshot by then (write-as-you-go, not at the end).
+You talk back with **`propose {id, label, params, shader?}`**: a KEEP / dismiss card on every
+vjpad, owned by the page (one card per id, 30 s timeout). Every VJ MCP write you make is marked
+`source: "agent"`, so while his hands are on the page holds it and answers `{held: true}`; it
+applies when the lock ends, and PANIC drops it.
 
-Pass the original `/vibej2 …` input as the wakeup `prompt` so a post-compaction fire re-enters
-the skill. If a beat budget/duration was set and reached → run the stop procedure instead.
+## Setup (once)
 
-### Atomic edit macro (un-skippable, one call)
+1. Read `docs/vj-preferences.md` (his standing taste; brief every subagent with it), the
+   shader's journal (`journals/<name>-cool-moments.md`) and `.claude/vj-state.json`. Never
+   re-add a vetoed motif.
+2. `get_state {"screenshot": true}`: shader, fps, audio, knobs, meter. Judge the frame. Confirm the
+   target is the `-wip` scratch copy, never committed art.
+3. **The board.** `open` the show board as agent `partner`, `name` yourself (a story-tip name)
+   with intent "listening for your dials", and run your `listener` in the background (cache the
+   script at the path it gives, check its sha256). Draw a `status-card` widget `st-partner` in
+   frame `status`: title "partner", state `waiting`, number = proposals taken / made, `expires: "10m"`.
+   Follow the board rules in the `/show` skill: look before and after you draw, 1-3 word labels,
+   `feedback` on any surprise.
+4. Start the event Monitor:
+   ```bash
+   PORT=<port> node scripts/vj/watch-events.js hands release keep panic pad-alive proposal-taken proposal-dropped clip too-dark flicker boot gate-drop gate-clean
+   ```
+5. Say one line to Aaron on the board (`say` on frame `status`): "partner on: I propose, you
+   tap KEEP; I only fix health myself."
 
-Prepare the edited source in-context (Read + Edit on the `.frag` is fine — the jam page
-hot-swaps disk writes, but *never trust that*), then in ONE `eval`:
+## The step
 
-```bash
-# marker = the unique comment string this edit added
-node scripts/vj/show.js eval 'async (shaderPath, marker) => {
-  const src = await fetch("/shaders/" + shaderPath + ".frag?t=" + Date.now()).then(r => r.text())
-  if (!src.includes(marker)) return { ok: false, stage: "disk", info: "edit not on disk" }
-  const v = window.__vjValidate(src)
-  if (!v.ok) return { ok: false, stage: "compile", info: v.info }
-  if (!window.cranes.shader.includes(marker)) window.cranes.shader = src
-  return { ok: true, live: window.cranes.shader.includes(marker) }
-}' '["<shaderPath>", "<marker>"]'
-```
+You make **one step per wake**. A wake is an event line, a board Send or chat, or the quiet
+timer: 90 s with no event and hands off (a background `sleep 90`).
 
-`live` must be `true` before the beat may proceed. If compile fails: revert the file
-(`git checkout -- <file>`), count a failure; 3 consecutive failures ⇒ stop the loop and tell the
-user. An interrupt can no longer strand a saved-but-not-live edit: the next beat's macro re-run
-with the same marker converges to live-or-reverted.
+1. **Hands on?** If the last `hands` said `on` (and less than 8 s ago), do nothing. Wait for its
+   `release`. Never act while `hands.on`: not a proposal, not a health fix.
+2. **Health first.** Act directly, through the VJ MCP, only on:
+   - **white-out**: `clip` > 0 in a signal or `get_state.meter`;
+   - **black**: `too-dark`, or `meter.lumMax` < 0.03 while `audio.energy` > 0;
+   - **NaN or broken**: `get_state.shaderError` set, or the screenshot is one flat colour;
+   - **fps**: `get_state.fps` < 45, or `jank.p95` > 50 ms, two reads in a row.
+   Fix the cause in the `-wip` shader with `write_shader` (it compiles on the display first and
+   refuses an error), or release a pinned param with `set_params {"<k>": null}`. Look again
+   after. Tell him in one `say` line what you fixed. If the wall is gone (black or frozen) and
+   one fix does not bring it back, PANIC it: `set_shader` the `panic` fork from `.claude/vj-state.json`.
+3. **One open proposal at a time.** If a card is open, wait for its answer (below).
+4. **On a `release`**, read what he did: which dial, which way, how far. A dial held at an extreme
+   is a request to bake that direction in. Turn it into ONE proposal. Examples:
+   - k4 ZOOM left at max for 20 s → "keep k4 at max?" with `params: {knob_4: 1}` (pins it above
+     the dial until he moves it again);
+   - he keeps pushing HUE back to the same place → a shader edit that makes that the new home.
+5. **On the quiet timer**, look: `get_state {"screenshot": true}`. Samey for minutes ("It's been
+   pretty samey for a while", 2026-11-22) or not reacting to the music ("I need it way more
+   music reactive than that", 2026-11-22) → one proposal. A healthy, moving frame → no move;
+   that is a correct step.
+6. **Make the proposal:**
+   - Params only: `propose {id: "p<N>", label, params}`.
+   - A shader change: write the candidate with `write_shader` to `<wip>-p<N>` (compiled,
+     not on the wall), then `propose {id, label, shader: "<wip>-p<N>", params}`. Taking it
+     swaps it in; nothing changes on the wall until he says so.
+   - `label` is what he would say, at most 24 characters: "keep k4 at max?", "warmer lace?".
+   - Draw the card on the board in frame `proposals`: a rectangle `prop-p<N>` with the label, and
+     under it `prop-p<N>-take` (green, "TAKE") and `prop-p<N>-drop` (dashed, "✕"), big enough for
+     a thumb. Screenshot it. `viewport` him there only if he is not on the pad.
+7. **His answer** always comes from the page: `proposal-taken` (its params are already
+   applied, as his own write) or `proposal-dropped {why}` (`dismissed`, `timeout` after 30 s,
+   `replaced`, `panic`). A TAKE on the board card reaches the page through the bridge
+   (`answer_proposal`), so it arrives the same way. Then:
+   - taken: if it was a shader candidate, fold it into the `-wip` file so the next move builds
+     on it; journal it.
+   - dropped: never propose the same thing again this set; note why if he said.
+   - Delete the card from the board; update `st-partner`'s number (taken/made).
+8. **Journal** what mattered (cool moments, his words, forks, removals), one line each.
 
-## Wake-source rules (Relay lessons, verbatim into practice)
+## Taste (unchanged where it worked)
 
-- **Heartbeat is primary.** If a Monitor is armed, it accelerates; it never replaces the wakeup.
-- **Monitor scope must cover everything you act on** — if you watch the signals file, ALSO keep
-  triaging user chat; a monitor never sees the user.
-- **Duplicate wakes are no-op beats, not bugs.** After handling a user message, re-arm anyway.
-- **Keep this context for judgment.** Anything heavy (batch screenshots analysis, repo
-  archaeology, doc writing) goes to a subagent; the loop context stays lean so it survives hours.
+- **Look before and after.** A screenshot is the only ground truth.
+- **Diagnose before you add.** Usually the fix is a subtraction.
+- **The channel hierarchy (2026-08-18):** geometry only evolves (monotonic accumulators, eased
+  one-way steps on drops; no sines and no audio on fold-geometry params); light and shading take
+  the audio; colour follows only the slowest music.
+- **One focused move**, visible from across the room. A repeated complaint means the last fix
+  failed: one decisive move, 3-5x stronger, not another partial patch.
+- **His fader sweeps are not flicker.** Flicker during `hands.on` is his. The page mutes that
+  alert at the source; never act on it.
+- **No transients in phases**, no screen-space overlays, no clipping, no washout.
 
-## Stop / pause / recovery
+## The art critic: between tracks only
 
-- **Stop**: wakeup `stop:true` → TaskStop monitors → final journal Status line → rm
-  `.claude/vj-state.json` → one-line wrap-up (+ push if the user asked for branch backups).
-  Leave the show browser up unless the user asks — the visual keeps running on its own.
-  `node scripts/vj/show.js stop` closes it.
-- **Pause**: wakeup `stop:true` only; everything else stays; `/vibej2` resumes in-context.
-- **Crash/compaction**: fresh `/vibej2` reads the snapshot + journal Status, checks
-  `show.js status` (relaunch with the snapshot's `showUrl` only if it is down), ensures the runtime, and — before any new move — **verifies which markers are actually in
-  `window.cranes.shader`** (live-ness is exactly what an interrupt makes uncertain), then resumes
-  beats. Discard the first meter window after any resume.
+At a track boundary (`gate-drop`, then the next `gate-clean`), start ONE background agent that
+reads and adopts `.claude/agents/art-critic.md` and give it a screenshot pair, the meter, the
+brief and `docs/vj-preferences.md`. Its verdict comes back to you; its top fix becomes at most one
+proposal, through the same queue, never a direct edit and never in front of his hands. Your
+words and his outrank it (playbook: "your words outrank it").
 
-## Page-as-sensor (IMPLEMENTED — use it every run)
+## Answering him
 
-The display URL must include **`&vj=1`** — the page then self-installs the whole VJ runtime at
-boot (cursor-hide, `__vjValidate`, aesthetic meter + shiver probe) and POSTs signals to
-`/__vj-signal` (dev server writes `.claude/vj-signals.jsonl`, gitignored):
-- `boot` beacon on every load — a reload can never silently strip tooling again (the `typeof
-  __vjMeter` check remains as belt-and-braces, but reinstall is now the page's job, not yours),
-- health alerts on a 5 s watchdog with 30 s per-type cooldown: `clip`, `flicker` (> 0.7),
-  `too-dark` (lumMin < 0.06 at clean gate), `shiver` (shiverScore > 0.45), `gate-drop` /
-  `gate-clean` (track boundaries — `gate-clean` is your "verification window open" starter gun).
+Board chat or Sends that are not controls wake your listener. Answer in one short `say` line
+on that frame (it may be read aloud). His words are an instruction: triage them first, then
+make the one move they ask for (as a proposal, or directly when he says "do it").
 
-**At `/vibej2` start, arm a Monitor** on `.claude/vj-signals.jsonl` (watch for appended lines) so
-these signals wake the idle session within seconds. Monitor is the accelerator; the ScheduleWakeup
-heartbeat stays armed as the guarantee. In burst mode you don't need the Monitor to react — you
-can also just `GET /__vj-signal` (last 50 signals) or read the file between beats.
+## Stop, pause, recovery
 
-Harness prerequisites (already committed, verify they're in place):
-- `vite-plugins/vj-signal-plugin.js` registered in `vite.config.js` (restart the dev server after
-  pulling — a running server predating the plugin 404s the endpoint),
-- `.claude/settings.json` allowlists the loop's context/hot-path Bash (`./scripts/dev-port`, the
-  curl health check, state/signal file reads, `validate-shader.js`, shader-only `git checkout`) —
-  the permission classifier is out of the loop; a classifier outage can no longer drop beats.
+- **`/partner stop`** (or `/show end`): stop the Monitor and your listener, delete your open cards,
+  paint `st-partner` `done` with the final taken/made count, write the journal's final line,
+  return a one-line summary. Leave the wall as it is.
+- **`/partner pause`**: stop proposing; keep listening; health fixes still apply.
+- **After a crash or a compaction**: read `.claude/vj-state.json`, `.claude/vj-proposals.jsonl` and
+  the journal; `get_state` to see what is live (the shader hash tells you which edits made it);
+  discard the first meter window; resume.
 
-## Common pitfalls
+## Pitfalls
 
-These v1 pitfalls still stand: GLSL reserved words, feedback blowouts, strobe direction,
-bass-pulse stacking, kaleido persistence via feedback, JSON-serializable `eval` returns, and
-one-line summaries. The v1 browser pitfalls (page-stateful devtools, unstable pageIds, cursor
-parking, `fullscreen=true` ejecting the tab) are gone with the show browser. New in v2:
-
-- **Don't let beats become cron in disguise.** If every beat is a fixed 60 s no-op, you've
-  rebuilt v1; stretch the healthy hold and let events/user words drive the fast path.
-- **`ScheduleWakeup` may be missing** outside `/loop` in some harness builds. The fallback
-  heartbeat works everywhere: a Bash call with `run_in_background: true` running `sleep <secs>`;
-  the harness re-invokes the session when it exits. Same delays as the table.
-- **Never skip the re-arm.** A beat that ends without ScheduleWakeup (or stop) parks the loop
-  silently — the exact v1 failure this design exists to kill.
-- **Meter windows and wake times are decoupled** — a 30 s beat still reads a 50 s meter window;
-  overlapping windows across beats are fine, double-counting a spike into two decisions is not.
-- **Quote `eval` sources in single quotes** and use double quotes inside the JS, so the shell
-  passes the function through untouched (`$` inside single quotes is safe from the shell — but
-  remember this file is a skill template: a dollar sign followed by a digit gets substituted
-  at render, so never write one in an `eval` source here).
-- **A `<task-notification>` is not the user.** Handle it inside the loop's discipline; don't
-  treat it as permission for a bigger move than the evidence supports.
+- **Editing any file the page fetches** (`src/**`, `scripts/vj/*.js`) can reload the display and
+  wipe an accrued flow state (2026-08-20: a set's complexity dropped from 99.6% to 5%). Shader
+  edits through `write_shader` hot-swap without a reload; everything else waits for after the set.
+- **A `<task-notification>` is not Aaron.** It never licenses a bigger move than the evidence.
+- **GLSL reserved words** (`input`, `output`, `filter`, `sample`) break the compile; `write_shader`
+  refuses them, so read its error.
+- **A mic is 10-30x quieter than a line feed.** A gate that never opens while music plays is an
+  input level, not a track boundary (`/show` check, "Gate").
