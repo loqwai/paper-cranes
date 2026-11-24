@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createRoomHub, routeMessage, roomSecretControl } from './room.js'
 import { createDisplayLock } from './secret.js'
-import { roomCounts, isViewer } from './mirror.js'
+import { roomCounts, isViewer, viewersFull, MAX_VIEWERS } from './mirror.js'
 
 const fakeSocket = (name, att) => ({
   name,
@@ -96,5 +96,15 @@ describe('board mirror: the room counts viewers apart', () => {
   it('leaves viewers out of connectedClients and counts them as viewers', () => {
     join('tv'); join('pad'); viewer('a'); viewer('b'); viewer('c')
     expect(roomCounts(ctx)).toEqual({ connectedClients: 2, viewers: 3 })
+  })
+})
+
+describe('board mirror: a room takes a bounded crowd', () => {
+  it('is full at MAX_VIEWERS mirrors, and displays and pads do not count toward it', () => {
+    join('tv'); join('pad')
+    for (let i = 0; i < MAX_VIEWERS - 1; i++) viewer(`m${i}`)
+    expect(viewersFull(ctx)).toBe(false)
+    viewer('last')
+    expect(viewersFull(ctx)).toBe(true)
   })
 })

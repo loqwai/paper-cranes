@@ -50,7 +50,7 @@ import { createVjMcpServer } from '../../../vite-plugins/vj-mcp/server.js'
 import guide from '../../../docs/vj-mcp-guide.md'
 import { createRoomHub, routeMessage, siteShaders, displayOriginAllowed, decodeRoom, roomSecretControl, RELAY_VENUE } from './room.js'
 import { createDisplayLock } from './secret.js'
-import { VIEW_ID, roomCounts } from './mirror.js'
+import { VIEW_ID, roomCounts, viewersFull } from './mirror.js'
 import { authorize, mcpError } from './access.js'
 
 export class RelayRoom extends DurableObject {
@@ -94,11 +94,13 @@ export class RelayRoom extends DurableObject {
             return new Response('expected a websocket upgrade', { status: 426 })
         }
 
-        const [client, server] = Object.values(new WebSocketPair())
-        this.ctx.acceptWebSocket(server)
         // A board mirror joins at /view/<view id> (mirror.js): a viewer, never a display.
         // Otherwise: whether this socket may register as a display, decided once from its page's Origin.
         const viewer = new URL(request.url).pathname.startsWith('/view/')
+        if (viewer && viewersFull(this.ctx)) return new Response('this room has all the mirrors it takes\n', { status: 429 })
+
+        const [client, server] = Object.values(new WebSocketPair())
+        this.ctx.acceptWebSocket(server)
         server.serializeAttachment(viewer ? { viewer: true, mayDisplay: false } : { mayDisplay: displayOriginAllowed(request.headers.get('Origin')) })
         this.broadcastStatus()
 

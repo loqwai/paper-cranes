@@ -44,6 +44,10 @@ only while at least one mirror watches.
 
 A mirror only watches.
 
+Threat model: watching a show is low harm, and is meant to be shareable. What a mirror shows beyond the
+picture is the wall's shader source and name and the knob and feature values the shader reads. It never
+shows the room name, the display secret, or another socket's traffic.
+
 - The relay drops every frame a viewer sends: knobs, a display hello, a forged feed, and `vj-signal`.
 - A viewer never registers as a display, so `list_displays`, `inspect` and the display secret never see it.
 - A viewer hears only `status` and the feed. It never hears the room's `update-params` or `audio-features`.
@@ -51,6 +55,16 @@ A mirror only watches.
   display secret, that is a display that proved the secret.
 - The view id is the room's Durable Object id, a keyed one-way hash of the room name. You cannot get the
   room name back from it. So a mirror link on a board that many people read does not let them steer the wall.
+- The view id is not a secret from someone who knows or guesses the room name: `/view-key/<room>` answers
+  for any room. That gives nothing new, because the room name already lets a socket join `/ws/<room>`,
+  hear everything and steer. Guessable room names are the exposure, mirror or not.
+- The view id cannot be rotated. A mirror link that leaked keeps working until the room changes its name.
+  Rotating the display secret does not change it.
+- A room takes at most 32 mirrors (`MAX_VIEWERS`, `workers/remote-relay/src/mirror.js`); the 33rd gets a 429.
+  Each mirror costs the room a copy of every feed frame, and each join costs every socket a `status`.
+- A crowd of joins costs the wall one shader resend a second, not one per join (`STATE_GAP_MS`).
+- A mirror listens only to `relay.beadfamous.com` or a loopback relay. A `?relay=` naming any other host
+  opens nothing, because a mirror sits on boards other people edit and draws whatever shader its socket sends.
 - The mirror never reads or needs `display_secret`. A board drops a link's hash before it loads the frame.
 - `status.connectedClients` leaves viewers out, because editors show it as "N displays". `status.viewers`
   counts them.

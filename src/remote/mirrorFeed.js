@@ -8,6 +8,9 @@
 // both only from a registered display, and only to viewers (workers/remote-relay/src/mirror.js).
 
 export const FRAME_HZ = 20
+// A viewer joining asks for the shader again, at most this often: a crowd of joins (a public board
+// opening, a mirror's reconnect loop) costs the wall one resend a second, not one per join.
+export const STATE_GAP_MS = 1000
 const ROUND = 1e4
 
 const IDENT = /[A-Za-z_][A-Za-z0-9_]*/g
@@ -40,17 +43,21 @@ export const createMirrorFeed = ({ send, read, now = () => Date.now(), setInterv
   let viewers = 0
   let sentCode = null
   let names = new Set()
+  let stateAt = -Infinity
+  let stateDue = false
 
   const sendState = () => {
     const { code, shader } = read()
     sentCode = code
+    stateAt = now()
+    stateDue = false
     names = namesIn(code)
     send('mirror-state', { code, shader: shader ?? null, fullscreen: String(code ?? '').includes('@fullscreen: true') })
   }
 
   const tick = () => {
     const { code, last } = read()
-    if (code !== sentCode) sendState()
+    if (code !== sentCode || (stateDue && now() - stateAt >= STATE_GAP_MS)) sendState()
     if (!last) return
     send('mirror-frame', { t: round(last.time), f: frameUniforms(last.features, names), sent: now() })
   }
@@ -71,8 +78,11 @@ export const createMirrorFeed = ({ send, read, now = () => Date.now(), setInterv
         timer = null
         return
       }
-      // A mirror that just joined needs the shader before its first frame.
-      if (joined) sendState()
+      // A mirror that just joined needs the shader before its first frame (now, or on the tick
+      // after STATE_GAP_MS when another join just had it sent).
+      if (!joined) return
+      if (now() - stateAt >= STATE_GAP_MS) sendState()
+      else stateDue = true
     },
     running: () => Boolean(timer),
   }

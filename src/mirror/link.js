@@ -20,6 +20,9 @@ export const mirrorSettings = (search) => {
   const view = params.get('view')
   if (!VIEW_ID.test(view ?? '')) return null
   const relayHost = params.get('relay') || DEFAULT_RELAY_HOST
+  // A mirror sits on boards other people edit, and draws whatever shader its socket sends: so it
+  // listens only to our relay, or to one on this machine, never to a host a link names.
+  if (relayHost !== DEFAULT_RELAY_HOST && !LOOPBACK_HOST.test(relayHost)) return null
   const scheme = LOOPBACK_HOST.test(relayHost) ? 'ws' : 'wss'
   return {
     socketUrl: `${scheme}://${relayHost}/view/${view}`,

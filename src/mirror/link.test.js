@@ -15,6 +15,13 @@ describe('mirror link', () => {
     expect(mirrorSettings(`?view=${VIEW.toUpperCase()}`)).toBeNull()
   })
 
+  it('listens only to our relay or a loopback one, never a host the link names', () => {
+    expect(mirrorSettings(`?view=${VIEW}&relay=evil.example`)).toBeNull()
+    expect(mirrorSettings(`?view=${VIEW}&relay=relay.beadfamous.com@evil.example`)).toBeNull()
+    expect(mirrorSettings(`?view=${VIEW}&relay=relay.beadfamous.com.evil.example`)).toBeNull()
+    expect(mirrorSettings(`?view=${VIEW}&relay=relay.beadfamous.com`).socketUrl).toBe(`wss://relay.beadfamous.com/view/${VIEW}`)
+  })
+
   it('keeps scale and fps inside what a phone can carry', () => {
     expect(mirrorSettings(`?view=${VIEW}&scale=4&fps=240`)).toMatchObject({ scale: 0.5, fps: 30 })
     expect(mirrorSettings(`?view=${VIEW}&scale=&fps=abc`)).toMatchObject({ scale: 0.5, fps: 30 })

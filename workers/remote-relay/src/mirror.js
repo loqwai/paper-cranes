@@ -21,6 +21,11 @@ export const VIEW_ID = /^[0-9a-f]{64}$/
 // The biggest feed frame passed on: a state carries the shader source (tens of KiB at most).
 export const MAX_MIRROR_CHARS = 256 * 1024
 
+// The most mirrors one room takes. Each costs the room a copy of every feed frame, and each join
+// costs every socket a status and the wall a shader resend, so an unbounded crowd (a public board,
+// a reconnect loop) would make the wall's room do work per viewer. A board plays at most 2.
+export const MAX_VIEWERS = 32
+
 const readAtt = (ws) => { try { return ws.deserializeAttachment() ?? {} } catch { return {} } }
 
 export const isViewer = (ws) => readAtt(ws).viewer === true
@@ -35,6 +40,9 @@ export const roomCounts = (ctx, leaving) => {
   const viewers = sockets.filter(isViewer).length
   return { connectedClients: sockets.length - viewers, viewers }
 }
+
+/** Whether the room has no room for another mirror. */
+export const viewersFull = (ctx) => ctx.getWebSockets().filter(isViewer).length >= MAX_VIEWERS
 
 /** A feed frame from `ws`: passed to every viewer only when `ws` is a registered display. */
 export const routeMirror = ({ ctx, ws, message }) => {
