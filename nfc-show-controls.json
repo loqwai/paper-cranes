@@ -1,0 +1,45 @@
+{
+  "about": "What each smiley sticker on Aaron's arm does (docs/nfc-show-controls.md). A tag holds only its id (s1..s8); this file maps ids to actions, so re-assigning a sticker is an edit here, never a rewrite of the tag. `do`: keep | panic | next | prev | take | drop | set. `set` sends its object as update-params (a shader and/or knobs). A show's `stickers` override the base map; its beats come from setlists/<show>.json (the /show skill's setlists) when that file exists, else `beats` here; a setlist with a `driver` gives NEXT/PREV nothing to do. PANIC sends no fork (the display uses its own boot fork) unless a panic sticker names `fork`.",
+  "default": "clit-set",
+  "stickers": {
+    "s1": {
+      "do": "keep",
+      "label": "KEEP"
+    },
+    "s2": {
+      "do": "panic",
+      "label": "PANIC"
+    },
+    "s3": {
+      "do": "next",
+      "label": "NEXT"
+    },
+    "s4": {
+      "do": "take",
+      "label": "TAKE"
+    },
+    "s5": {
+      "do": "set",
+      "label": "FAV A",
+      "set": {
+        "shader": "clit-set/2"
+      }
+    },
+    "s6": {
+      "do": "set",
+      "label": "FAV B",
+      "set": {
+        "shader": "clit-set/1"
+      }
+    },
+    "s7": {
+      "do": "prev",
+      "label": "PREV"
+    },
+    "s8": {
+      "do": "drop",
+      "label": "DROP"
+    }
+  },
+  "shows": {}
+}
