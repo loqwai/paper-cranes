@@ -68,8 +68,10 @@ Insert at the end of §7b in `src/vj/runtime.js`, immediately after the `setInte
 
 ## Live injection (no reload — what is running now)
 
-Same body, pasted through `javascript_tool` on the display tab, guarded so a re-inject replaces
-the old poller instead of stacking:
+**Retired path, kept as history.** On 2026-08-20 the same body was pasted through
+claude-in-chrome's `javascript_tool` on the display tab. Agents no longer inject into the show
+page: only the VJ MCP touches it (docs/live-session-architecture.md). The guard below made a
+re-inject replace the old poller instead of stacking:
 
 ```js
 if (window.__vjAutoLearn) clearInterval(window.__vjAutoLearn)

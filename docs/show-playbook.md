@@ -34,10 +34,16 @@ network needed.
 ## 2. Launch sequence
 
 ```bash
+node scripts/vj/preflight.js     # one ✅/❌ line per check; fixes: .claude/skills/show/check.md
 node scripts/vj/show.js stop     # always first: clears a leftover page-less show browser ("not running" is fine)
 node scripts/vj/show.js launch "http://localhost:6969/jam.html?shader=clit-set/2&controller=clit-set&wavelet=true&vj=1&remote=display"
-node scripts/vj/show.js eval '() => ({ input: window.cranes.audioInputLabel ?? null, energy: window.cranes.flattenFeatures().energy })'
+node scripts/vj/preflight.js --after --shader clit-set/2   # display, audio.input + energy, controller clock, pad
 ```
+
+After `launch`, only the VJ MCP touches the page (`scripts/vj/mcp-call.js` or the registered
+`paper-cranes-vj` tools: `get_state`, `screenshot`, `set_params`, `set_shader`, `panic`).
+`show.js` is for the browser itself (`launch`, `stop`, `status`, `displays`, `focus`, `shot`), never
+for `eval` into the page. The one exception is in section 7.
 
 - **Expected input:** `"BlackHole 2ch (Virtual)"` with an energy reading above 0. If the label is
   wrong, **don't start**: fix the OS default input. Add `&audio_device=<label>` only to
@@ -161,28 +167,27 @@ Open a fork with `jam.html?shader=sun/N&controller=sun-N&wavelet=true&vj=1&remot
 | Symptom | Check | Fix |
 |---|---|---|
 | Every `show.js` command errors ("must have exactly one page" / context error) | `curl -s 127.0.0.1:9333/json/list` returns `[]` | `node scripts/vj/show.js stop`, then `launch` |
-| **Picture frozen**, but the page is alive | `show.js eval` an rAF count (the page is alive); `bs_time` isn't advancing; calling `window._hotController(window.cranes.flattenFeatures())` throws "non-finite bs_…" | A NaN is latched in `window.__blackSunState`. Set the named field to a finite default in the page. The fix in the file is `make()` backfilling defaults |
+| **Picture frozen**, but the page is alive | `get_state` twice, 2 s apart: `frameCount` rises (the page is alive), `controller.bs_time` does not, and `recentErrors` names a "non-finite bs_…" field | A NaN is latched in `window.__blackSunState`. The lasting fix is in the controller file: `make()` backfills a finite default, and saving the controller hot-swaps it with no reload. **The one exception to "only the VJ MCP touches the page":** if the wall must move before that lands, set the named field to a finite default with `node scripts/vj/show.js eval '() => { window.__blackSunState.<field> = 0 }'`, once, and say so in the journal |
 | Black flash or reload when a controller is saved | `boot` signal in `.claude/vj-signals.jsonl` | Confirm the PR #144 plugin fix is present. Never restart the server or `goto` for a controller change |
 | Flicker or shiver (meter flicker above 0.7, or a `flicker` alert) | Make sure your hands weren't on the knobs. Take two shots about 100 ms apart | Audio is driving a background **phase or position**. Move it to a monotonic controller accumulator where audio sets only the rate, and run brightness through attack/release envelopes, not raw z-scores |
 | Whole frame blows bright on loud **or quiet** moments | `lumMax` jumps in the pulses; clip stays 0 | Use a frame-level brightness budget (one soft knee), gate light terms by energy presence, and clamp z-scores in silence |
 | Grey veil over the night sky | Shot: empty space reads grey, not navy | Fade the tiles toward the space colour, not grey, and lower the black point |
 | Dev server down (background `npm run dev` exited 143) | `curl -s -o /dev/null -w '%{http_code}' localhost:6969/` | Restart `npm run dev`. The wall reconnects |
 | Jank spikes (130–150 ms worst-case frames) | `jank.over100` in the pulses | Usually a shader recompile during a hot-swap. If they come with no edits, look for expensive event branches |
-| Wrong or silent input | `window.cranes.audioInputLabel`, `energy` | Fix the OS default input (macOS Sound / Windows Sound settings). `audio_device=` only overrides it |
-| Scene dim and nearly frozen while music plays | `energyMean` vs the GATE thresholds; `bs_presence` | The input is quieter than the gates expect (a mic, or a low OS input volume). Raise the OS input volume first, then `window.cranes.inputGain.gain.value` (`audio_gain`; Surface mic needed ×32). Rescaling GATE/SLOW_GATE/presence in the `-wip` shader and controller is the last resort |
+| Wrong or silent input | `get_state`: `audio.input` (the track label), `audio.energy` | Fix the OS default input (macOS Sound / Windows Sound settings). `audio_device=` only overrides it |
+| Scene dim and nearly frozen while music plays | `energyMean` vs the GATE thresholds; `bs_presence` | The input is quieter than the gates expect (a mic, or a low OS input volume). Raise the OS input volume first; `audio_gain=<x>` on the next launch scales the input (a Surface mic needed ×32). It is a URL param, so changing it means a reload: do it between sets. Rescaling GATE/SLOW_GATE/presence in the `-wip` shader and controller is the last resort |
 | Looks samey; rays short; the story never builds | `bs_power`/`bs_build` flat for minutes | The story envelopes were tuned on another set. Sample features for ~25 s, find the 2–3 that move with this music and are independent, and drive ray reach/brightness from smoothed envelopes of those (rate and light only, never phase) |
 | Ghost copies of the suns, or a smeared second exposure | A composition offset or pan was added recently | The previous-frame feedback UV must get the same offset as the frame, or last frame's bright objects come back misregistered |
-| **Panic: get a known-good look on the wall now** | — | Hot-swap. Never `goto` (snippet below) |
+| **Panic: get a known-good look on the wall now** | — | `panic` hot-swaps in place. Never `goto` (below) |
 
 ```bash
-node scripts/vj/show.js eval 'async (path) => {
-  const src = await fetch("/shaders/" + path + ".frag?t=" + Date.now()).then(r => r.text())
-  const v = window.__vjValidate(src); if (!v.ok) return { ok: false, info: v.info }
-  window.cranes.shader = src
-  const u = new URL(location.href); u.searchParams.set("shader", path); history.replaceState({}, "", u)
-  return { ok: true }
-}' '["sun/7"]'
+PORT=6969 node scripts/vj/mcp-call.js panic '{"fork":"sun/7"}'          # no fork: the boot fork
+PORT=6969 node scripts/vj/mcp-call.js screenshot '{"width":256}'         # confirm the look came back
 ```
+
+His own PANIC (the vjpad, its MIDI pad, `Esc Esc` on the jam page, `ctl-panic` on the board) does
+the same and is faster. `set_shader '{"shader":"sun/7"}'` is the same swap without the `panic`
+signal.
 
 The live controller keeps running. A fork's look depends mostly on its shader, and its
 `bs_*` uniforms come from whichever controller is loaded.

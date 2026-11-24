@@ -150,11 +150,12 @@ export const createVjMcpServer = ({ hub, shaders, venue, onCall, displaySecret, 
       display: displayArg,
       features: z.enum(['core', 'all', 'none']).optional().describe('audio features to include (default core)'),
       screenshot: z.boolean().optional().describe('also return a screenshot (default false)'),
+      source: z.boolean().optional().describe('also return the GLSL on screen as `source` (default false; KBs, for scripts: read_shader reads the file, this reads the page)'),
     },
     annotations: { readOnlyHint: true },
-  }, guard(async ({ display, features = 'core', screenshot = false }) => {
+  }, guard(async ({ display, features = 'core', screenshot = false, source = false }) => {
     const d = hub.resolve(display)
-    const st = await hub.request(d, 'state', { features })
+    const st = await hub.request(d, 'state', { features, ...(source ? { source: true } : {}) })
     // Every knob the shader reads, plus any other knob that is set. value null = never set on
     // this page (the uniform reads 0 unless a controller supplies its own default).
     const declared = st.shader ? await shaderKnobs(st.shader) : {}

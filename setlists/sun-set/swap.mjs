@@ -6,19 +6,24 @@
 //   node setlists/sun-set/swap.mjs list
 //   node setlists/sun-set/swap.mjs <n|name|next> [--cold] [--no-knobs] [--auto-story] [--hold A,B]
 // The dials are driven by controllers/sun-set.js (chained after black-sun); this only tells it the beat.
+// It reaches the page only through the VJ MCP (one control plane): get_state for the clocks and the
+// live source, write_shader + set_shader for the swap, set_params for the beat. The re-anchored code
+// is written to shaders/<LIVE>.frag (gitignored), so later beats hot-swap by HMR with no reload.
+// The current beat lives in .claude/setlist-state.json, shared with scripts/vj/board-bridge.js.
 //   node setlists/sun-set/swap.mjs dry <file.frag> --time T --bud B --flux F --flow W --gal G [--wall a.frag] [--hold A,B] [--cold] [--out b.frag]
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
-import { execFileSync } from 'node:child_process'
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { BEATS } from '../../controllers/sun-set.js'
+import { connectVj } from '../../scripts/vj/mcp-client.js'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(HERE, '..', '..')
-const SHOW = join(ROOT, 'scripts', 'vj', 'show.js')
+const STATE = join(ROOT, '.claude', 'setlist-state.json')
+const LIVE = 'claude/wip/black-sun/sun-set-live'
 const LEAD = 3
 
-// Pure. It is serialised into the page eval, so it closes over nothing.
+// Pure.
 // at: clock values the fresh anchors land on ({ time, bud, flux, flow, gal }), wall: the source on the wall.
 const rewrite = (src, { at, wall = '', hold = [], cold = false }) => {
   const DEF = /^(#define[ \t]+)(\w+)([ \t]+)(-?\d+(?:\.\d+)?(?:e[-+]?\d+)?)/gm
@@ -106,44 +111,58 @@ const rewrite = (src, { at, wall = '', hold = [], cold = false }) => {
   return { src: out, diff }
 }
 
-// Runs in the show page: sample the clocks twice, predict them at +lead, rewrite, validate, swap, set the beat, URL.
-const page = async (src, opts, rewrite) => {
-  const read = () => {
-    const f = window.cranes.controllerFeatures ?? {}
-    return { time: f.bs_time, bud: f.bs_budPh, flux: f.bs_fluxPh, flow: f.bs_flowPh, gal: f.bs_galPh }
+const CLOCKS = { time: 'bs_time', bud: 'bs_budPh', flux: 'bs_fluxPh', flow: 'bs_flowPh', gal: 'bs_galPh' }
+const clocksOf = st => Object.fromEntries(Object.entries(CLOCKS).map(([k, out]) => [k, st.controller?.[out]]))
+const sleep = ms => new Promise(r => setTimeout(r, ms))
+const until = async (test, ms) => {
+  for (const end = Date.now() + ms; Date.now() < end; await sleep(500)) {
+    try { if (await test()) return true } catch { /* the page is busy compiling: ask again */ }
   }
-  const a = read()
-  await new Promise(r => setTimeout(r, 400))
-  const b = read()
-  if (!(b.time > a.time)) return { ok: false, why: 'bs_time is not advancing: the controller is frozen or missing (playbook section 7)', a, b }
+  return false
+}
+const bare = s => String(s).replace(/^[ \t]*\/\/.*$/gm, '')   // comment-only lines: sun/16 and 17 are sun/15 with new header comments
+
+// Sample the clocks twice, predict them at +lead, rewrite against the code on screen, swap, set the beat.
+const put = async (vj, src, opts) => {
+  const a = clocksOf(await vj.call('get_state', { features: 'none' }))
+  await sleep(400)
+  const st = await vj.call('get_state', { features: 'none', source: true })
+  const b = clocksOf(st)
+  if (!(b.time > a.time)) return { ok: false, why: 'bs_time is not advancing: the controller is frozen or missing (playbook section 7)' }
   const at = Object.fromEntries(Object.keys(b).map(k => [k, b[k] + opts.lead * (b[k] - a[k]) / (b.time - a.time)]))
-  const wall = window.cranes.shader ?? ''
-  const out = (() => {
-    try { return rewrite(src, { at, wall, hold: opts.hold, cold: opts.cold }) } catch (e) { return { error: e.message } }
-  })()
-  if (out.error) return { ok: false, why: out.error }
-  const bare = s => String(s).replace(/^[ \t]*\/\/.*$/gm, '')   // comment-only lines: sun/16 and 17 are sun/15 with new header comments
+  // get_state.source is the code on screen; a page from before that option falls back to the file.
+  const wall = st.source ?? (st.shader ? (await vj.call('read_shader', { shader: st.shader })).code : '')
+  let out
+  try { out = rewrite(src, { at, wall, hold: opts.hold, cold: opts.cold }) } catch (e) { return { ok: false, why: e.message } }
   const same = bare(out.src) === bare(wall)
+  let swap = null
   if (!same) {
-    const v = window.__vjValidate(out.src)
-    if (!v.ok) return { ok: false, why: 'compile', info: v.info, diff: out.diff }
-    window.cranes.shader = out.src
+    const w = await vj.call('write_shader', { shader: LIVE, code: out.src }).catch(e => ({ error: e.message }))
+    if (w.error) return { ok: false, why: 'compile', info: w.error, diff: out.diff }
+    // A big fork can stall the page for seconds while it compiles, so a tool call may time out
+    // while the swap is still landing: judge by the page running the written source (its hash).
+    const step = st.shader !== LIVE
+      ? await vj.call('set_shader', { shader: LIVE }).then(r => (r.held ? 'held' : 'set_shader'), () => 'set_shader')
+      : w.displays?.[0]?.held ? 'held' : 'hot-swap'
+    if (step === 'held') swap = 'held (his hands are on the dials)'
+    else {
+      const landed = await until(async () => (await vj.call('get_state', { features: 'none' })).shaderHash === w.hash, 60000)
+      if (!landed) return { ok: false, why: `${step}: the page did not run the new source within 60 s`, diff: out.diff }
+      swap = step
+    }
   }
   // The dials are the sun-set controller's job: it eases them along the user's journey for this beat.
-  // Pad/remote pins (messageParams) outrank everything, so drop any knob pins first.
-  for (const k of Object.keys(window.cranes.messageParams ?? {})) if (k.startsWith('knob_')) delete window.cranes.messageParams[k]
-  for (const [k, v] of Object.entries(opts.features)) window.cranes.updateFeature(k, v)
-  const dials = window.__sunSetState ? (opts.features.sunset_beat ? 'sun-set controller easing' : 'left alone') : 'NOT DRIVEN: add &controller=sun-set after black-sun'
-  if (opts.path) {
-    const u = new URL(location.href)
-    u.searchParams.set('shader', opts.path)
-    history.replaceState({}, '', u)
-  }
-  window.__sunSet = { beat: opts.beat, at: b.time }
-  return { ok: true, beat: opts.beat, swapped: !same, dials, bsTime: +b.time.toFixed(1), diff: out.diff.filter(d => d.why !== 'inherit') }
+  // Pins outrank everything, so release any knob pin in the same call that sets the beat.
+  const unpin = Object.fromEntries(Object.keys(st.pinned ?? {}).filter(k => k.startsWith('knob_')).map(k => [k, null]))
+  const p = await vj.call('set_params', { params: { ...unpin, ...opts.features } })
+  const chain = st.controllers ?? []
+  const dials = chain.includes('sun-set') ? (opts.features.sunset_beat ? 'sun-set controller easing' : 'left alone') : 'NOT DRIVEN: add &controller=sun-set after black-sun'
+  return { ok: true, swapped: !same, swap, held: Boolean(p.held), dials, bsTime: +b.time.toFixed(1), diff: out.diff.filter(d => d.why !== 'inherit') }
 }
 
-const PAGE = `async (src, opts) => (${page})(src, opts, ${rewrite})`
+const readState = () => {
+  try { return JSON.parse(readFileSync(STATE, 'utf8')) } catch { return {} }
+}
 
 const args = process.argv.slice(2)
 const flag = name => {
@@ -154,11 +173,6 @@ const has = name => args.includes(`--${name}`)
 // ../sun-set.json beats: what goes on the wall; controllers/sun-set.js: how long each beat holds and the dial journey
 const beats = JSON.parse(readFileSync(join(HERE, '..', 'sun-set.json'), 'utf8')).beats.map(b => ({ ...b, hold: BEATS.find(c => c.name === b.name).hold }))
 const holdFlag = () => flag('hold')?.split(',') ?? []
-
-const show = (...argv) => {
-  const out = execFileSync('node', [SHOW, ...argv], { cwd: ROOT, encoding: 'utf8', timeout: 30000, maxBuffer: 1 << 24 })
-  return JSON.parse(out.trim().split('\n').pop())
-}
 
 // Beat-scoped page features. Keys another beat sets are cleared (null) so nothing leaks forward.
 const featuresFor = beat => {
@@ -193,10 +207,13 @@ const dry = () => {
   if (flag('out')) writeFileSync(flag('out'), out.src)
 }
 
-const current = () => show('eval', '() => window.__sunSet?.beat ?? 0')
+const current = () => {
+  const st = readState()
+  return st.setlist === 'sun-set' ? st.n : 0
+}
 
-const run = key => {
-  const target = key === 'next' ? String(current() + 1) : key
+const run = async key => {
+  const target = key === 'next' ? String(current() + 1) : key === 'prev' ? String(Math.max(1, current() - 1)) : key
   const beat = beats.find(b => String(b.n) === target || b.name === target)
   if (!beat) throw new Error(`no beat ${target}; run: swap.mjs list`)
   const src = readFileSync(join(ROOT, beat.file), 'utf8')
@@ -205,23 +222,32 @@ const run = key => {
     hold: [...(beat.holdAnchors ?? []), ...holdFlag()],
     cold: has('cold'),
     features: featuresFor(beat),
-    path: beat.path,
-    beat: beat.n,
   }
-  const res = show('eval', PAGE, JSON.stringify([src, opts]))
-  console.log(`beat ${beat.n} ${beat.name}: ${res.ok ? (res.swapped ? 'swapped' : 'same code, beat only') : `REFUSED: ${res.why}`}${res.bsTime ? ` at bs_time ${res.bsTime}` : ''}${res.dials ? `; dials: ${res.dials}` : ''}`)
-  if (res.info) console.log(res.info)
-  if (res.diff) printDiff(res.diff)
-  if (!res.ok) process.exit(1)
-  const dir = join(ROOT, '.claude', 'vj-shots')
-  mkdirSync(dir, { recursive: true })
-  console.log(show('shot', join(dir, `sun-set-${beat.n}.png`)))
+  const vj = await connectVj({ name: 'sun-set-swap' })
+  try {
+    const res = await put(vj, src, opts)
+    console.log(`beat ${beat.n} ${beat.name}: ${res.ok ? (res.swapped ? `swapped (${res.swap})` : 'same code, beat only') : `REFUSED: ${res.why}`}${res.bsTime ? ` at bs_time ${res.bsTime}` : ''}${res.dials ? `; dials: ${res.dials}` : ''}${res.held ? '; beat params held until his hands let go' : ''}`)
+    if (res.info) console.log(res.info)
+    if (res.diff) printDiff(res.diff)
+    if (!res.ok) process.exit(1)
+    writeFileSync(STATE, JSON.stringify({ setlist: 'sun-set', n: beat.n, name: beat.name, t: new Date().toISOString(), bsTime: res.bsTime }) + '\n')
+    // A small picture for the record, saved for a person or the board; no model has to look at it.
+    const shot = await vj.call('screenshot', { width: 480 })
+    const dir = join(ROOT, '.claude', 'vj-shots')
+    mkdirSync(dir, { recursive: true })
+    const file = join(dir, `sun-set-${beat.n}.jpg`)
+    if (shot.images?.[0]) writeFileSync(file, Buffer.from(shot.images[0].data, 'base64'))
+    console.log(file)
+  } finally {
+    await vj.close()
+  }
 }
 
 const commands = { list, dry }
+if (!existsSync(join(ROOT, '.claude'))) mkdirSync(join(ROOT, '.claude'), { recursive: true })
 const [cmd] = args
 if (!cmd) {
   console.error('usage: swap.mjs list | dry <file.frag> --time T ... | <n|name|next> [--cold] [--no-knobs] [--auto-story] [--hold A,B]')
   process.exit(2)
 }
-commands[cmd] ? commands[cmd]() : run(cmd)
+commands[cmd] ? commands[cmd]() : await run(cmd)
