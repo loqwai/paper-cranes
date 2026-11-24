@@ -139,6 +139,10 @@ const client = new WebSocketClient(
             paint()
         } else if (msg.type === 'vjpad-peer' && msg.data?.id !== myId) {
             onPeer(msg.data)
+        } else if (msg.type === 'proposal') {
+            showProposal(msg.data)
+        } else if (msg.type === 'proposal-clear') {
+            clearProposal(msg.data?.id)
         } else if (msg.type === 'vj-status' || msg.type === 'vj-learn-result') {
             /* the VJ loop's feedback channel (vjpad-v2 Phase 1) — beat notes, LEARN verdicts,
                health actions. vj-learn-result kept as an alias for older loop tooling. */
@@ -147,7 +151,10 @@ const client = new WebSocketClient(
     },
     (s) => {
         status = s
-        if (s === 'connected') announce()
+        if (s === 'connected') {
+            announce()
+            padHello()
+        }
         paint()
     }
 )
@@ -561,6 +568,70 @@ $('learnfeed').addEventListener('click', () => {
     const dr = $('loopdrawer')
     if (dr) dr.hidden = !dr.hidden
 })
+
+/* ── live show: KEEP, PANIC, proposals (docs/live-show-contract.md) ────────
+   The display does the work in-page (src/vj/live.js); these only send one message
+   each, so a press reaches the wall in one socket hop with no model in the path.
+   pad-hello every 2 s is how the display knows a pad is in a hand (pad-alive). */
+const padHello = () => sendRaw('pad-hello', { pad: myId })
+setInterval(() => { if (status === 'connected') padHello() }, 2000)
+
+$('keep').addEventListener('click', () => {
+    sendRaw('vj-keep', {})
+    buzz([40])
+})
+$('panic').addEventListener('click', () => {
+    sendRaw('vj-panic', {})
+    buzz([120, 60, 120])
+})
+
+const cards = new Map() // id -> { el, timer }
+const clearProposal = (id) => {
+    const c = cards.get(id)
+    if (!c) return
+    clearInterval(c.timer)
+    c.el.remove()
+    cards.delete(id)
+}
+const showProposal = (p) => {
+    if (!p || typeof p.id !== 'string') return
+    clearProposal(p.id)
+    const el = document.createElement('div')
+    el.className = 'proposal'
+    el.dataset.id = p.id
+    const label = document.createElement('span')
+    label.className = 'label'
+    label.textContent = String(p.label ?? p.id)
+    const ttl = document.createElement('span')
+    ttl.className = 'ttl'
+    const take = document.createElement('button')
+    take.type = 'button'
+    take.className = 'take'
+    take.textContent = 'KEEP'
+    const drop = document.createElement('button')
+    drop.type = 'button'
+    drop.className = 'drop'
+    drop.textContent = '✕'
+    drop.setAttribute('aria-label', 'dismiss')
+    const answer = (yes) => {
+        sendRaw('proposal-answer', { id: p.id, take: yes })
+        clearProposal(p.id)
+        buzz(yes ? [40] : [15])
+    }
+    take.addEventListener('click', () => answer(true))
+    drop.addEventListener('click', () => answer(false))
+    el.append(label, ttl, take, drop)
+    $('proposals').appendChild(el)
+    const expiresAt = Number(p.expiresAt) || Date.now() + 30000
+    const tick = () => {
+        const left = Math.ceil((expiresAt - Date.now()) / 1000)
+        if (left <= 0) return clearProposal(p.id)
+        ttl.textContent = `${left}s`
+    }
+    tick()
+    cards.set(p.id, { el, timer: setInterval(tick, 1000) })
+    buzz([20, 30, 20])
+}
 
 /* ── LEARN — confirm the gesture ──────────────────────────────────────────
    User 2026-08-20: "I need to be able to click some button to 'confirm' the
