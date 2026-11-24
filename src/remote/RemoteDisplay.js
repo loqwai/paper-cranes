@@ -1,9 +1,19 @@
 import { WebSocketClient } from './WebSocketClient.js'
 import { loadShader } from '../shaderLoader.js'
+import { inspectorAllowedOn, withoutPinned } from './relay.js'
 
-// The VJ MCP (docs/vj-mcp.md) reaches this display through the dev-server broker. Never on the
-// public relay (`?room=`): there no broker filters who may send `inspect`.
-const inspectable = import.meta.env.DEV && !new URLSearchParams(window.location.search).get('room')
+// The VJ MCP (docs/vj-mcp.md) reaches this display through a broker: the dev server's /ws, or on
+// `?room=` the relay Worker's room, which drops any `inspect` a client sends. The inspector loads
+// only where that broker is one we run (relay.js: a dev build with no room, or a room on
+// relay.beadfamous.com or a loopback relay); a `?relay=` link to any other host relays as before
+// but never answers inspect. Even where it loads, the inspector answers nothing until the broker
+// itself has welcomed it (inspect.js), so a page on a relay that predates the broker does not
+// answer a forged inspect (deploy the relay first).
+//
+// The socket's host is fixed at page load (WebSocketClient) and update-params can never set relay
+// or room (withoutPinned). As a second layer, the host is judged again on the socket actually
+// open, on every connect and on every welcome and inspect, not once at load.
+const dev = import.meta.env.DEV
 let inspector = null
 
 /**
@@ -12,6 +22,9 @@ let inspector = null
  */
 export const initRemoteDisplay = () => {
   console.log('[Remote Display] Initializing...')
+
+  // Read when a message or connect arrives, so it always judges the socket that is open now.
+  const onTrustedSocket = () => inspectorAllowedOn(client.socket?.url, { dev })
 
   const handleMessage = (message) => {
     if (message.type !== 'audio-features') console.log('[Remote Display] Received:', message.type, message.data)
@@ -25,11 +38,15 @@ export const initRemoteDisplay = () => {
         break
 
       case 'inspect':
-        inspector?.handle(message.data)
+        if (onTrustedSocket()) inspector?.handle(message.data)
         break
 
       case 'display-rekey':
         inspector?.rekey()
+        break
+
+      case 'display-welcome':
+        if (onTrustedSocket()) inspector?.welcome(message.data)
         break
 
       case 'status':
@@ -45,7 +62,8 @@ export const initRemoteDisplay = () => {
 
   const handleStatusChange = (status) => {
     console.log('[Remote Display] Status:', status)
-    if (status === 'connected') inspector?.hello()
+    if (status === 'connected' && onTrustedSocket()) inspector?.hello()
+    else inspector?.unwelcome()
     // Only show indicator for connection problems
     if (status !== 'connected') {
       updateStatusIndicator(status)
@@ -53,11 +71,11 @@ export const initRemoteDisplay = () => {
   }
 
   const client = new WebSocketClient(handleMessage, handleStatusChange)
-  if (inspectable) {
+  if (inspectorAllowedOn(client.url, { dev })) {
     import('./inspect.js')
       .then(({ createInspector }) => {
         inspector = createInspector((type, data) => client.send(type, data))
-        if (client.isConnected) inspector.hello()
+        if (client.isConnected && onTrustedSocket()) inspector.hello()
       })
       .catch((e) => console.warn('[Remote Display] inspect unavailable:', e))
   }
@@ -80,8 +98,10 @@ export const initRemoteDisplay = () => {
 /**
  * Apply received parameters to the visualizer
  */
-const applyParams = async (data) => {
-  if (!data || typeof data !== 'object') return
+const applyParams = async (incoming) => {
+  if (!incoming || typeof incoming !== 'object') return
+  // A room peer chooses these, so never relay or room: where the socket goes is fixed at load.
+  const data = withoutPinned(incoming)
 
   // Ensure cranes state exists
   window.cranes = window.cranes || {}
