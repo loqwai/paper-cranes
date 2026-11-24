@@ -16,7 +16,14 @@ vi.mock('./WebSocketClient.js', () => ({
     send() {}
   },
 }))
-vi.mock('../shaderLoader.js', () => ({ loadShader: async () => ({}) }))
+// A shader whose name ends in `-slow` takes 500 ms to fetch, as a first Vite transform can.
+vi.mock('../shaderLoader.js', () => ({
+  loadShader: async (name) => {
+    await new Promise((r) => setTimeout(r, name.endsWith('-slow') ? 500 : 10))
+    window.cranes.shader = `code of ${name}`
+    return {}
+  },
+}))
 vi.mock('./inspect.js', () => ({ createInspector: () => ({ hello() {}, unwelcome() {}, welcome() {}, handle() {}, rekey() {} }) }))
 
 let href
@@ -80,6 +87,16 @@ describe('RemoteDisplay update-params from a room peer', () => {
     vi.advanceTimersByTime(1000)
     expect(query().getAll('controller')).toEqual(['clit-set'])
     expect(query().get('remote')).toBe('display')
+  })
+})
+
+describe('RemoteDisplay shader switching', () => {
+  it('ends on the shader picked last, even when the one before it loads slower', async () => {
+    const client = await boot()
+    client.onMessage({ type: 'update-params', data: { shader: 'first-slow' } })
+    client.onMessage({ type: 'update-params', data: { shader: 'second' } })
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(window.cranes.shader).toBe('code of second')
   })
 })
 

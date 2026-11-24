@@ -122,17 +122,6 @@ const applyParams = async (incoming) => {
     }
   }
 
-  // Handle shader switching by path (from list page remote mode)
-  if (data.shader) {
-    console.log('[Remote Display] Switching shader to:', data.shader)
-    try {
-      await loadShader(data.shader, { updateUrl: true })
-      inspector?.hello() // the broker's display list shows the shader on screen
-    } catch (e) {
-      console.error('[Remote Display] Failed to load shader:', e)
-    }
-  }
-
   // Handle fullscreen param explicitly (overrides metadata-based fullscreen)
   if (data.fullscreen !== undefined) {
     const canvas = document.getElementById('visualizer')
@@ -158,6 +147,30 @@ const applyParams = async (incoming) => {
 
   // Mirror non-shaderCode params into the URL so a refresh preserves display state
   syncParamsToUrl(data)
+
+  // Shader switching by path (list page, VJ MCP set_shader) goes last, so the knobs in the same
+  // message never wait on a fetch (the hot-path rule above).
+  if (data.shader) await switchShader(data.shader)
+}
+
+// Switches run one at a time and only the newest one loads. Run concurrently, two quick picks
+// raced: when the first fetch was slower (a first Vite transform), it landed second and the
+// display ended on the shader that was NOT picked last.
+let shaderLoads = Promise.resolve()
+let latestShader = 0
+const switchShader = (name) => {
+  const mine = ++latestShader
+  console.log('[Remote Display] Switching shader to:', name)
+  shaderLoads = shaderLoads.then(async () => {
+    if (mine !== latestShader) return
+    try {
+      await loadShader(name, { updateUrl: true })
+      inspector?.hello() // the broker's display list shows the shader on screen
+    } catch (e) {
+      console.error('[Remote Display] Failed to load shader:', e)
+    }
+  })
+  return shaderLoads
 }
 
 // PERF (2026-08-19): this used to run on EVERY update-params message. vjpad coalesces to one
