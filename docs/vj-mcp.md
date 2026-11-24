@@ -87,6 +87,13 @@ relay is one we run: `relay.beadfamous.com` (the default) or a loopback relay (`
 `inspectorAllowed`). A link with `?relay=<any other host>` still relays knobs as before, but the
 page never answers `inspect` there, so a stranger's relay cannot welcome it and read its canvas,
 audio features, knobs or console.
+Where the socket goes is fixed when the page loads: `WebSocketClient` reads its URL once and every
+reconnect reuses it, and `update-params` can never set `relay` or `room` (`withoutPinned`), not
+into the page's params and not into the URL mirror. Without that, a room peer could send
+`update-params {relay}`, the mirror would write it into the URL, and the next reconnect would take
+the still-inspectable display to the peer's relay (found in the #221 re-review; the e2e test
+reproduces it with a stand-in relay). As a second layer the page judges the socket actually open
+(`inspectorAllowedOn`, its parsed host) on every connect and on every welcome and `inspect`.
 It answers `inspect` only after its broker has answered its hello with `display-welcome`. A relay
 that predates the broker never welcomes, so on it the inspector stays silent to a forged `inspect`
 (checked 2026-11-24 against the live relay: 0 replies). That old relay does relay the hello itself,
@@ -327,7 +334,8 @@ The paper-cranes equivalent would be one more tool on this server:
 ## Follow-ups from the #221 security review
 
 Fixed in #221: the inspector answers only through `relay.beadfamous.com` or a loopback relay (a
-`?relay=` link elsewhere cannot read the display); the read tools mark display output as
+`?relay=` link elsewhere cannot read the display, and a room peer cannot move the page's socket
+with `update-params {relay, room}`); the read tools mark display output as
 untrusted; a room that is not valid percent-encoding gets 400; vitest skips `dist/`.
 
 Left for later:
