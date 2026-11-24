@@ -1,4 +1,4 @@
-import { getRelativeOrAbsoluteShaderUrl } from './utils.js'
+import { getRelativeOrAbsoluteShaderUrl, looksLikeWebPage } from './utils.js'
 
 /**
  * The shader on screen now, by path. Read it at the moment you need it, never once at boot: a
@@ -16,6 +16,9 @@ export const shaderOnScreen = () => new URLSearchParams(window.location.search).
  */
 export const loadShader = async (shaderPath, { updateUrl = false } = {}) => {
   const code = await getRelativeOrAbsoluteShaderUrl(shaderPath)
+  // Checked here too, not only in the fetch helper: a boot-time prefetch (PR #223) can hand back
+  // the body without going through that helper's checks.
+  if (looksLikeWebPage(code)) throw new Error(`shader ${shaderPath} not found (the host sent a web page)`)
 
   // Parse metadata
   const fullscreen = code.includes('@fullscreen: true')
