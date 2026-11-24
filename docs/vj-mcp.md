@@ -324,6 +324,19 @@ The paper-cranes equivalent would be one more tool on this server:
   the link streams features into the room), the in-chat widget joining its room without holding
   the room secret, and agent scripts that should not need an MCP session.
 
+## Follow-ups from the #221 security review
+
+Fixed in #221: the inspector answers only through `relay.beadfamous.com` or a loopback relay (a
+`?relay=` link elsewhere cannot read the display); the read tools mark display output as
+untrusted; a room that is not valid percent-encoding gets 400; vitest skips `dist/`.
+
+Left for later:
+- **Room-secret handshake.** The room name is the only lock on `/ws/<room>`, and a non-browser
+  client can forge `Origin` and register a fake display whose reports reach the agent (it cannot
+  touch the real display). A display could prove more than the room name, for example a per-room
+  secret the MCP mints and hands to the display link.
+- The reviewer's remaining nits are tracked in the PR thread.
+
 ## Open questions
 
 - **Persistence of live shader edits** on the relay (see write_shader without a disk).
