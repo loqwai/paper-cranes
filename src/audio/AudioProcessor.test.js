@@ -34,6 +34,37 @@ beforeEach(() => {
 })
 afterEach(() => vi.unstubAllGlobals())
 
+// A worker that reports a hand-set normalized value.
+const fixedWorker = () => {
+    let normalized = 0
+    return {
+        set: (v) => { normalized = v },
+        getResult: () => ({ type: 'computedValue', value: normalized, stats: { current: normalized, normalized, zScore: 0, min: 0, max: 1 } }),
+    }
+}
+
+describe('smoothing', () => {
+    // audio_file defaults smoothing to 0.85, and ZScore/Normalized keys get
+    // 1.5x that: 1.275. An EMA weight above 1 overshoots, so a 0-1 feature
+    // left its range and rang on every step.
+    it.each([0.15, 0.85, 1])('keeps a Normalized feature inside 0-1 at smoothing %s', (smoothing) => {
+        const processor = new AudioProcessor(fakeContext(), {}, 500, 4096)
+        processor.smoothingFactor = smoothing
+        const bass = fixedWorker()
+        processor.workers.set('bass', bass)
+
+        frames(processor, 150) // past warm-up, settled at 0
+        bass.set(1)
+        const seen = []
+        for (let i = 0; i < 20; i++) {
+            processor.updateCurrentFeatures()
+            seen.push(processor.getFeatures().bassNormalized)
+        }
+        expect(Math.max(...seen)).toBeLessThanOrEqual(1)
+        expect(seen.at(-1)).toBeGreaterThan(0.9)
+    })
+})
+
 describe('beat', () => {
     it('stays off in silence, when every spectralFlux value is the same', () => {
         // hypnosound reports zScore 1 when its history is flat (max === min).

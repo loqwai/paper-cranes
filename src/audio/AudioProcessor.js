@@ -108,9 +108,11 @@ export class AudioProcessor {
 
                 // Exponential smoothing formula
                 // For z-scores and normalized values, use less smoothing to maintain responsiveness
-                const smoothingFactor = key.includes('ZScore') || key.includes('Normalized')
+                // Capped at 1 (no smoothing): a weight above 1 overshoots every step,
+                // and audio_file's default 0.85 * 1.5 = 1.275 pushed 0-1 features out of range.
+                const smoothingFactor = Math.min(1, key.includes('ZScore') || key.includes('Normalized')
                     ? currentSmoothing * 1.5
-                    : currentSmoothing
+                    : currentSmoothing)
 
                 this.smoothedFeatures[key] = this.smoothedFeatures[key] * (1 - smoothingFactor) +
                                              newFeatures[key] * smoothingFactor
