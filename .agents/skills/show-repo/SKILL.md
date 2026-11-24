@@ -1,6 +1,6 @@
 ---
 name: show-repo
-description: "Make a show repo: \"make a show repo for <name>\", \"a repo/site for the <name> show\", \"deploy <name> to <name>.beadfamous.com\". Strips paper-cranes to one shader + its controller (shared git history kept), builds, verifies the show page headless, then with Aaron's go-ahead creates the GitHub repo and deploys it. Usage: `/show-repo <name> <shader-path> [controller] [k=v ...]`, `/show-repo sync <name>` (pull main's fixes into a show repo), `/show-repo publish <name>`."
+description: "Any request to make, create, sync or publish a show repo (\"make a show repo for <name>\", \"a repo/site for the <name> show\", \"deploy <name> to <name>.beadfamous.com\"). Strips paper-cranes to one shader + its controller (shared git history kept), builds, verifies the show page headless, then with Aaron's go-ahead creates the GitHub repo and deploys it. Usage: `/show-repo <name> <shader-path> [controller] [k=v ...]`, `/show-repo sync <name>` (pull main's fixes into a show repo), `/show-repo publish <name>`."
 allowed-tools: Bash Read Write Edit Grep Glob
 ---
 

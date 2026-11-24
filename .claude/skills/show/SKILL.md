@@ -1,6 +1,6 @@
 ---
 name: show
-description: "Run a live show on the wall now (making a show repo or site is /show-repo, not this): start the wall (\"start the show\", \"show time\", \"put it on the projector\"), check it is ready (\"preflight\", \"are we ready\"), get a safe look back when the wall goes wrong (\"panic\", \"it's black\", \"it froze\", \"get it back\"), play a setlist (\"play the sun set\", \"next beat\"), jam with no partner (\"just jam\", \"lite\"), or wrap up (\"end the show\", \"we're done\"). Puts the show on a draw board as Aaron's phone status board and control surface."
+description: "Run a live show on the wall tonight: start the wall (\"start the show\", \"show time\", \"put it on the projector\"), check it is ready (\"preflight\", \"are we ready\"), get a safe look back when the wall goes wrong (\"panic\", \"it's black\", \"it froze\", \"get it back\"), play a setlist (\"play the sun set\", \"next beat\"), jam with no partner (\"just jam\", \"lite\"), or wrap up (\"end the show\", \"we're done\"). Puts the show on a draw board as Aaron's phone status board and control surface. Never for making a repo."
 allowed-tools: Bash Read Write Edit Grep Glob Agent Monitor TaskStop
 ---
 
