@@ -124,6 +124,10 @@ draw gaps: [draw-control-surface.md](draw-control-surface.md).
 
 ## Wire messages (room/dev `/ws`, for anyone writing a new control)
 
+The same messages also travel over a phone wall's local link (a pad and a `?wall=1` display on one
+phone, [phone-wall.md](phone-wall.md)), into the same `RemoteDisplay` handler, so everything in this
+contract holds there unchanged.
+
 | type | direction | data |
 |---|---|---|
 | `update-params` | any -> display | params; envelope may carry `source` |
