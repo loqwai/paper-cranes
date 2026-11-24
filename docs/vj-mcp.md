@@ -191,8 +191,7 @@ Edit that file; never copy its text into JS.
 when its host passes `guide`. The dev server reads the file on each request (an edit shows without
 a restart); the relay Worker imports it as a string through the `Text` rule in
 `workers/remote-relay/wrangler.jsonc`. A workflow whose section starts `> Status:` is listed as
-"coming soon" (today: `live-show-partner`, until the live-show page and its `propose` tool merge;
-then delete its Status line).
+"coming soon" and never answers a question first (none today).
 
 ## Tools
 
@@ -204,6 +203,12 @@ people changing the server, not to agents using it:
   that `set_shader` moved counts as showing the new shader: pages match HMR events with
   `shaderOnScreen()` (`src/shaderLoader.js`), which reads `?shader=` when the event arrives, never
   the value from boot.
+- The live show's tools (`propose`, `answer_proposal`, `keep`, `panic`) and `source` on
+  `set_params` / `set_shader` follow the [live-show contract](live-show-contract.md). Every MCP
+  write goes out with `source: "agent"` on the `update-params` envelope (`hub-core.js` `send`'s
+  `extra`), which is what the page's HANDS gate holds. Mid-lock a write answers `held: true`
+  instead of a read-back. `write_shader` on dev first sends `vj-agent-shader {shader, hash}` so the
+  page's HMR handler holds exactly that code; Aaron's own editor saves still swap at once.
 
 `display` is optional when one display is connected, and otherwise any unique prefix of an
 id. An id is the first 6 hex characters of a key kept in the tab's `sessionStorage`, so it
@@ -378,6 +383,8 @@ rewritten:
   the screen red (decoded from the tool's own screenshot), a forged `inspect` reaches nobody,
   `write_shader` turns the display green with `persisted: false` and the file untouched,
   `set_shader` loads from the display's own site, and join/leave events.
+
+`npx vitest run --config vitest.e2e.config.js e2e/live-show.test.js` (port 7142): a display and a vjpad, the pad's moves turn HANDS on and an agent `set_params` is held then applied when the 300 ms test lock (`?hands_ms=300`) ends; `propose` then KEEP on the pad's card applies the param and signals `proposal-taken`; PANIC on the pad swaps to the boot fork with no page load. `src/vj/live.test.js` covers the state machine, `vite-plugins/vj-mcp/live-tools.test.js` the new tools.
 
 The dev-server suite:
 

@@ -42,6 +42,14 @@ Each line in `.claude/vj-signals.jsonl` is one JSON object with a server-stamped
 - **Health alerts** — a 5 s watchdog with a 30 s per-type cooldown: `clip`, `flicker` (> 0.7),
   `too-dark` (`lumMin` < 0.06 at a clean gate), `shiver` (> 0.45), and `gate-drop` / `gate-clean`
   marking track boundaries.
+- **Live show** ([contract](live-show-contract.md)), from `src/vj/live.js` via `RemoteDisplay`, on
+  any `?vj=1&remote=display` page:
+  - `hands {on, knob}`: on at his first dial, pad, MIDI or board move; off 8 s after the last
+    (`?hands_ms=`). Agent writes wait while it is on.
+  - `release {knob, value}`: a dial went still for 50 ms (`?release_ms=`). This replaces polling
+    with `scripts/vj/watch-release.js`.
+  - `keep {shader, params, t}`, `panic {fork}`, `pad-alive {alive, pads}`,
+    `proposal-taken {id}`, `proposal-dropped {id, why}`.
 - **`knobtrack`** — **opt-in, see below.**
 
 ### `?vjtrack=1` — gesture logging (off by default)

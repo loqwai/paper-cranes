@@ -437,6 +437,8 @@ if (import.meta.hot) {
             .replace(/\.frag$/, '')
         const showing = shaderOnScreen()
         if (!changed || !showing || changed !== showing) return
+        // An agent's write_shader mid HANDS lock waits for his hands to come off (RemoteDisplay).
+        if (window.cranes?.holdHmr?.({ shader: showing })) return
 
         // Same shader: swap the source in place. window.cranes.shader is what
         // animateShader reads every frame, so assigning it recompiles without
