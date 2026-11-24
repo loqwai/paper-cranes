@@ -672,7 +672,7 @@ The installed PWA opens with whatever URL the user was on when they installed. F
 - `index.html` — manifest link injection + 7-tap install trigger
 - `vite-plugins/shader-plugin.js` — `prettifyShaderName()`, `makeManifest()`, `generateManifests()`
 - `public/icons/` — shared PWA icons (all shaders use the same set)
-- `service-worker.js` — offline caching
+- `public/service-worker.js` — offline caching (the only copy; Vite ships public/ as-is)
 
 ## ChromaDepth Shader Variants
 

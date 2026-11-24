@@ -3,13 +3,22 @@ const STORAGE_KEY = 'cranes-midi-profiles'
 const makeCCKey = (ccNumber, channel) =>
   channel === 1 ? `${ccNumber}` : `${ccNumber}_${channel}`
 
+const isPlainObject = (value) => typeof value === 'object' && value !== null && !Array.isArray(value)
+
+/**
+ * Only profiles with a mappings object survive the load. One without (a hand edit, a show.json
+ * seed written by hand) used to throw on every CC and blank midi.html.
+ */
 const loadProfiles = () => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return { version: 1, profiles: {} }
     const data = JSON.parse(raw)
-    if (data.version === 1) return data
-    return { version: 1, profiles: {} }
+    if (data?.version !== 1 || !isPlainObject(data.profiles)) return { version: 1, profiles: {} }
+    const profiles = Object.fromEntries(
+      Object.entries(data.profiles).filter(([, profile]) => isPlainObject(profile) && isPlainObject(profile.mappings))
+    )
+    return { ...data, profiles }
   } catch {
     return { version: 1, profiles: {} }
   }
