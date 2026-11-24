@@ -8,6 +8,7 @@ body {
   justify-content: center;
   align-items: center;
   user-select: none;
+  touch-action: manipulation; /* Disable double-tap-to-zoom so rapid taps work on iOS */
   background-color: #000000;
 }
 canvas {
