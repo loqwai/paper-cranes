@@ -12,6 +12,7 @@
 // Read-only plus `validate` (a scratch compile): knob and shader changes go through the existing
 // `update-params` path, not through here. Handlers are adapted from PR #182/#187's inspect.js.
 import { hashSource } from './hash.js'
+import { shaderOnScreen as currentShader } from '../shaderLoader.js'
 
 const S = (window.__cranesInspect ??= { logRing: [], consoleWrapped: false })
 
@@ -59,7 +60,6 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 // A hidden tab gets no rAF, so never wait on a frame alone.
 const nextFrameOr = (ms) => Promise.race([new Promise((r) => requestAnimationFrame(() => r())), sleep(ms)])
 const canvasEl = () => document.getElementById('visualizer') ?? document.querySelector('canvas')
-const currentShader = () => new URLSearchParams(location.search).get('shader')
 const code = () => window.cranes?.shader ?? ''
 
 const audioState = () => {

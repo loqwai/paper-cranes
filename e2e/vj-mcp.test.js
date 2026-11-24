@@ -2,10 +2,10 @@
 // client over streamable HTTP calling the tools the way Claude Code would. Every assertion is
 // on something observable: the page's pixels (decoded from the tool's own screenshot), the
 // page's live uniforms, or the file on disk. docs/vj-mcp.md.
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll, onTestFinished } from 'vitest'
 import { chromium } from 'playwright'
 import { createServer } from 'vite'
-import { mkdir, rm, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, rm, readFile, readdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { WebSocket } from 'ws'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
@@ -21,6 +21,10 @@ const KNOB_SHADER = `void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 `
 const GREEN_SHADER = `void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   fragColor = vec4(0.0, 1.0, 0.0, 1.0);
+}
+`
+const solid = (r, g, b) => `void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  fragColor = vec4(${r}.0, ${g}.0, ${b}.0, 1.0);
 }
 `
 
@@ -220,6 +224,42 @@ describe('vj mcp', () => {
     d.ws.close()
     await until(async () => (await ids()).length === 0)
   })
+
+  // The jam and show pages boot on one shader. After set_shader moves them to another, an edit
+  // to the shader now on screen must still hot-swap: the HMR filter has to follow the page, not
+  // the URL it loaded with.
+  for (const page of ['jam.html', 'show.html']) {
+    it(`${page}: write_shader hot-swaps the shader set_shader switched to`, async () => {
+      const A = `claude/wip/vj-mcp-e2e/${page.replace('.html', '')}-a`
+      const B = `claude/wip/vj-mcp-e2e/${page.replace('.html', '')}-b`
+      await writeFile(resolve(ROOT, `shaders/${A}.frag`), solid(0, 0, 1))
+      await writeFile(resolve(ROOT, `shaders/${B}.frag`), solid(1, 0, 0))
+      const p = await browser.newPage({ viewport: { width: 160, height: 120 } })
+      onTestFinished(async () => {
+        await p.close()
+        await until(async () => (await ids()).length === 0)
+      })
+      await p.goto(`http://127.0.0.1:${port}/${page}?shader=${A}&remote=display&noaudio=true`)
+      const [id] = await until(async () => { const l = await ids(); return l.length === 1 ? l : null })
+      const rgb = async () => meanRgb((await call('screenshot', { display: id, width: 64 })).image)
+      await until(async () => (await rgb())[2] > 200)
+
+      const { json: set } = await call('set_shader', { display: id, shader: B })
+      expect(set).toMatchObject({ shader: B, loaded: true, compiles: true })
+      await until(async () => (await rgb())[0] > 200)
+
+      const { json: wrote } = await call('write_shader', { shader: B, code: solid(0, 1, 0) })
+      expect(wrote.displays).toEqual([expect.objectContaining({ id, pickedUp: true })])
+      const green = await until(async () => { const c = await rgb(); return c[1] > 200 ? c : null })
+      expect(green[0]).toBeLessThan(40)
+
+      // Space saves a snapshot for the shader on screen, not the one the page booted with.
+      const snaps = (s) => readdir(resolve(ROOT, `shaders/${s}/docs/.snapshots`)).catch(() => [])
+      await p.keyboard.press('Space')
+      await until(async () => (await snaps(B)).length === 1)
+      expect(await snaps(A)).toEqual([])
+    })
+  }
 
   it('keeps both tabs when a duplicated tab arrives with the same key', async () => {
     const url = `http://127.0.0.1:${port}/?shader=${SHADER}&remote=display&noaudio=true`
