@@ -229,7 +229,7 @@ const listen = async function* ({ base, board, ticket, signal }) {
 
 // The control frame, live: draw's read-only portal socket, opened with the listen ticket. Every
 // commit that moves a fader knob or the XY dot arrives as a delta; `onWrites` gets the knob values.
-// Reconnects with backoff; a draw without the ticket route (404/426) is retried each minute.
+// Reconnects with backoff; a draw without the ticket route (401/404/426) is retried each minute.
 const watchFrame = ({ base, board, ticket, frame, signal, onWrites, log }) => {
   const held = new Map()
   let wholeSeq = null
@@ -266,7 +266,8 @@ const watchFrame = ({ base, board, ticket, frame, signal, onWrites, log }) => {
       })
       if (signal.aborted) return
       if (closed.status === 403) throw Object.assign(new Error('portal refused the listen ticket: call the draw listener tool again'), { code: 2 })
-      if (closed.status === 404 || closed.status === 426) {
+      // 401: a draw without the route sends the path to its sign-in gate (measured on draw.hypnodroid.com, 2026-11-24).
+      if (closed.status === 401 || closed.status === 404 || closed.status === 426) {
         if (!missing) log({ faders: `off: this draw has no ticket portal route yet (${closed.status}); buttons still work; retrying each minute` })
         missing = true
         await sleep(60_000, signal)
