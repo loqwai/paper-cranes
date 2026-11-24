@@ -64,8 +64,9 @@ export const initRemoteDisplay = () => {
     console.log('[Remote Display] Status:', status)
     if (status === 'connected' && onTrustedSocket()) inspector?.hello()
     else inspector?.unwelcome()
-    // Only show indicator for connection problems
-    if (status !== 'connected') {
+    // Show the badge only for connection problems, but once one is up, a reconnect must clear it:
+    // skipping 'connected' left "Reconnecting..." lit on the wall after every drop.
+    if (status !== 'connected' || document.getElementById('remote-status-indicator')) {
       updateStatusIndicator(status)
     }
   }
@@ -100,7 +101,8 @@ export const initRemoteDisplay = () => {
  */
 const applyParams = async (incoming) => {
   if (!incoming || typeof incoming !== 'object') return
-  // A room peer chooses these, so never relay or room: where the socket goes is fixed at load.
+  // A room peer chooses these, so never relay, room, controller or any other boot-time key
+  // (relay.js PINNED): what the socket and the next reload load is fixed at page load.
   const data = withoutPinned(incoming)
 
   // Ensure cranes state exists
@@ -117,17 +119,6 @@ const applyParams = async (incoming) => {
     const canvas = document.getElementById('visualizer')
     if (canvas) {
       canvas.classList.toggle('fullscreen', fullscreen)
-    }
-  }
-
-  // Handle shader switching by path (from list page remote mode)
-  if (data.shader) {
-    console.log('[Remote Display] Switching shader to:', data.shader)
-    try {
-      await loadShader(data.shader, { updateUrl: true })
-      inspector?.hello() // the broker's display list shows the shader on screen
-    } catch (e) {
-      console.error('[Remote Display] Failed to load shader:', e)
     }
   }
 
@@ -156,6 +147,30 @@ const applyParams = async (incoming) => {
 
   // Mirror non-shaderCode params into the URL so a refresh preserves display state
   syncParamsToUrl(data)
+
+  // Shader switching by path (list page, VJ MCP set_shader) goes last, so the knobs in the same
+  // message never wait on a fetch (the hot-path rule above).
+  if (data.shader) await switchShader(data.shader)
+}
+
+// Switches run one at a time and only the newest one loads. Run concurrently, two quick picks
+// raced: when the first fetch was slower (a first Vite transform), it landed second and the
+// display ended on the shader that was NOT picked last.
+let shaderLoads = Promise.resolve()
+let latestShader = 0
+const switchShader = (name) => {
+  const mine = ++latestShader
+  console.log('[Remote Display] Switching shader to:', name)
+  shaderLoads = shaderLoads.then(async () => {
+    if (mine !== latestShader) return
+    try {
+      await loadShader(name, { updateUrl: true })
+      inspector?.hello() // the broker's display list shows the shader on screen
+    } catch (e) {
+      console.error('[Remote Display] Failed to load shader:', e)
+    }
+  })
+  return shaderLoads
 }
 
 // PERF (2026-08-19): this used to run on EVERY update-params message. vjpad coalesces to one

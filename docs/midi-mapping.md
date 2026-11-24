@@ -10,7 +10,7 @@ Open `/midi.html` to manage mappings visually. Three columns:
 - **CC → Knob** — every mapping for the selected device. Edit the knob index inline, watch live value bars when CCs fire, click `×` to unmap
 - **Knobs** — `knob_1`..`knob_N` grid. Click a tile to learn-bind: the next CC from any controller maps to that knob, replacing any prior mapping
 
-Mappings persist to the same `cranes-midi-profiles` localStorage key the rest of the app reads, so changes apply on the next shader page load.
+Mappings persist to the same `cranes-midi-profiles` localStorage key the rest of the app reads. A shader page already open in another tab picks the change up at once (it listens for the `storage` event), and its own auto-assignments never overwrite what you set here.
 
 ## Auto-Assignment
 

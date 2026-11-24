@@ -173,7 +173,7 @@ refuses it. Use the relay URL above instead, which has managed OAuth.
 | `list_displays` | Connected displays: `id`, shader, user agent, canvas, audio state, plus the event `seq`. |
 | `list_shaders {query?, include_wip?, limit?}` | Shaders from `shaders.json`, newest first, with the knobs each reads and their names. |
 | `get_state {display?, features?, screenshot?}` | Shader and its source hash, compile error, fps, audio state, knob values with names, pinned params, controller outputs, core audio features, the `?vj=1` meter and jank summaries, recent console errors. `screenshot: true` adds a JPEG. |
-| `screenshot {display?, width?}` | JPEG of the canvas, captured on the page. Width is at most 960 px, because the encode runs on the render thread. |
+| `screenshot {display?, width?}` | JPEG of the canvas, captured on the page. Its long side is at most 960 px, because the encode runs on the render thread. |
 | `set_params {display?, params}` | Sends `update-params` down that display's socket (the vjpad / `remote-send.js` path), then reads the values back from the page. A value is pinned above MIDI and controllers; `null` releases it. |
 | `set_shader {display?, shader, params?}` | Switches in place (no reload, audio history kept), waits until the page runs that exact source, and reports whether it compiles. If the page never picks the source up, `loaded` is false and `compiles` is null. |
 | `read_shader {shader}` | Source, knobs and hash of `shaders/<shader>.frag`. |
@@ -338,6 +338,11 @@ Fixed in #221: the inspector answers only through `relay.beadfamous.com` or a lo
 with `update-params {relay, room}`); the read tools mark display output as
 untrusted; a room that is not valid percent-encoding gets 400; vitest skips `dist/`.
 
+Fixed in bughunt/remote: `update-params` can no longer set or delete any key the page reads once
+at boot (`controller`, which imports JavaScript, plus `image`, `audio_file`, `remote`, `vj`,
+`midi`, `audio_send` and the rest of `PINNED` in `src/remote/relay.js`), so a room peer cannot
+plant one in the URL mirror for the next reload; and `screenshot` caps the long side at 960 px.
+
 Left for later:
 - **Room-secret handshake.** The room name is the only lock on `/ws/<room>`, and a non-browser
   client can forge `Origin` and register a fake display whose reports reach the agent (it cannot
@@ -346,9 +351,6 @@ Left for later:
 - **Certs refetch has no rate limit** (`workers/remote-relay/src/access.js`, `verifyAccessJwt`):
   every token with an unknown `kid` refetches the Access certs. Only traffic Access already let
   through reaches it, but refetch at most once every 30-60 s.
-- **Screenshot height is uncapped** (`src/remote/inspect.js`, `shot`): the width is capped at 960
-  px, the height is not. A portrait phone gives a 960x2080 JPEG near the socket message limit,
-  encoded on the render thread. Cap the long side instead.
 - **Attachment caps count characters, not bytes** (`workers/remote-relay/src/room.js`, `pack`):
   a long non-ASCII hello can push the attachment past 2 KiB; `writeAtt` swallows the error, so
   the display is welcomed but never listed. Cap by bytes and fail loudly.
