@@ -18,6 +18,9 @@ const IMAGES_FILE = 'images.json'
 const MANIFESTS_DIR = 'manifests'
 const IMAGE_EXTENSIONS = /\.(png|jpe?g|gif|webp|avif)$/i
 
+/** cp filter for controllers/ → dist/: everything but tests. */
+export const isShippedController = (src) => !/\.(test|spec)\.[cm]?js$/.test(src)
+
 /**
  * Tags come from `// @tags: a, b`, but extractMetadata only splits on comma —
  * a single tag arrives as a bare string. Normalize so consumers never branch.
@@ -287,7 +290,8 @@ export function shaderPlugin() {
       // Like shaders, they live in the repo root and Vite won't bundle them — copy to dist so
       // they exist on the deployed site. Without this, every controller 404s in production and
       // controllerFeatures is empty (all quietGate/wavelet-driven effects silently dead).
-      await cp(CONTROLLER_DIR, join(outDir, CONTROLLER_DIR), { recursive: true })
+      // Test files stay home: they import vitest, which the site does not ship.
+      await cp(CONTROLLER_DIR, join(outDir, CONTROLLER_DIR), { recursive: true, filter: isShippedController })
       console.log(`[shaders] Copied ${CONTROLLER_DIR}/ to ${outDir}/`)
       const count = await generateShadersJson(outDir)
       console.log(`[shaders] Generated ${outDir}/shaders.json with ${count} shaders`)
