@@ -30,6 +30,16 @@ For fully deterministic screenshots, combine with time and seed overrides:
 
 This gives you the same visual frame every time — useful for regression testing and comparing shader changes.
 
+## Which browser plays it
+
+Measured 2026-11-24 on WSL: in Playwright's bundled Chromium, headless and headful, with or without
+SwiftShader, `audioWorklet.addModule('/window-processor.js')` never resolves. The page then stays
+on the no-audio stub, silently: the canvas renders and every audio feature is empty. Check
+`Object.keys(window.cranes.measuredAudioFeatures).length > 0` before trusting an audio assertion.
+What works: system Google Chrome (`channel: 'chrome'`, as `e2e/audio-file.test.js` uses),
+Playwright Firefox, and the soul Playwright lanes with a CORS-OK file URL. See
+`.claude/skills/verify-paper-cranes/features/shader-render.md`.
+
 ## Key Files
 
 - `src/audio/audioFileSource.js` — file loading, decoding, and looping buffer source

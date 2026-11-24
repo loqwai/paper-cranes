@@ -139,12 +139,18 @@ them (pin a specific look for presets/NFC tags). `wooli/chromadepth-*` use `seed
 
 - **Screenshot every iteration** (headless Chromium / Playwright vs the dev server). Reactivity bugs
   (no red, washed pastel, banding) jump out of a *still*; motion bugs do not — so also...
-- **A/B audio-reactive states by injecting features** — there's no mic in headless:
+- **A/B audio-reactive states by injecting features** — there's no mic in headless, and in
+  Playwright's bundled Chromium `audio_file=` gives no features either (the AudioWorklet module
+  never loads, headless or headful; measured 2026-11-24):
   ```js
   await page.evaluate(f => Object.assign(window.cranes.manualFeatures, f),
     { quietGate: 1, energySpring: 0.6, waveletBassSpring: 0.9, melodyFlow: 0.7 })
   ```
-  Capture a "rest" frame vs a "kick/loud" frame to see the reactivity.
+  Capture a "rest" frame vs a "kick/loud" frame to see the reactivity. To prove real audio flows,
+  play `audio_file=` in Playwright Firefox ([audio-file-playback.md](audio-file-playback.md)).
+- **The scripted way:** the `/verify-paper-cranes` skill (`.claude/skills/verify-paper-cranes/`)
+  launches its own server on a free port, runs this A/B (`pc-verify render`), records the headful
+  video, and keeps the evidence in `~/paper-cranes-proof/`.
 - **Test touch/knob controllers** by driving real pointer/touch events (`page.mouse` / touch) and
   reading back `window.cranes.manualFeatures` / `window.cranes.controllerFeatures`.
 - **Deterministic stills:** `?time=<seconds>` holds `iTime` (pair with `?noaudio=true`). Note that
