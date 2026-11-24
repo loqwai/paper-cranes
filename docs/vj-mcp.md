@@ -335,7 +335,19 @@ Left for later:
   client can forge `Origin` and register a fake display whose reports reach the agent (it cannot
   touch the real display). A display could prove more than the room name, for example a per-room
   secret the MCP mints and hands to the display link.
-- The reviewer's remaining nits are tracked in the PR thread.
+- **Certs refetch has no rate limit** (`workers/remote-relay/src/access.js`, `verifyAccessJwt`):
+  every token with an unknown `kid` refetches the Access certs. Only traffic Access already let
+  through reaches it, but refetch at most once every 30-60 s.
+- **Screenshot height is uncapped** (`src/remote/inspect.js`, `shot`): the width is capped at 960
+  px, the height is not. A portrait phone gives a 960x2080 JPEG near the socket message limit,
+  encoded on the render thread. Cap the long side instead.
+- **Attachment caps count characters, not bytes** (`workers/remote-relay/src/room.js`, `pack`):
+  a long non-ASCII hello can push the attachment past 2 KiB; `writeAtt` swallows the error, so
+  the display is welcomed but never listed. Cap by bytes and fail loudly.
+- **Display origins are too wide** (`workers/remote-relay/src/room.js`, `DISPLAY_ORIGIN`): every
+  `*.hypnodroid.com` origin may register as a display, draw.hypnodroid.com included. That matters
+  only if one of those hosts serves content someone else can write. Narrow it to the hosts that
+  serve paper-cranes.
 
 ## Open questions
 
