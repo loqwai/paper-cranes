@@ -42,6 +42,23 @@ export const loadShader = async (shaderPath, { updateUrl = false } = {}) => {
 }
 
 /**
+ * A link to a shader this host does not have (#207) must not be a silent black screen.
+ * A small corner note says which shader is missing while the default one plays.
+ * @param {string} shaderPath
+ */
+const showShaderMissing = (shaderPath) => {
+  const note = document.createElement('div')
+  note.setAttribute('role', 'status')
+  note.textContent = `shader not found: ${shaderPath}`
+  Object.assign(note.style, {
+    position: 'fixed', left: '8px', bottom: '8px', zIndex: '9999', padding: '4px 8px',
+    font: '12px system-ui, sans-serif', color: '#fff', background: 'rgba(160, 0, 0, 0.75)',
+    borderRadius: '4px', pointerEvents: 'none',
+  })
+  document.body.appendChild(note)
+}
+
+/**
  * Get fragment shader from URL params, localStorage, or default
  * @returns {Promise<{code: string, fullscreen: boolean}>}
  */
@@ -58,7 +75,13 @@ export const getInitialShader = async () => {
   // Check for shader path in URL
   const shaderPath = params.get('shader')
   if (shaderPath) {
-    return loadShader(shaderPath)
+    try {
+      return await loadShader(shaderPath)
+    } catch (error) {
+      console.error(`[cranes] ${error.message}; showing the default shader instead`)
+      showShaderMissing(shaderPath)
+      return loadShader('default')
+    }
   }
 
   // Check localStorage
