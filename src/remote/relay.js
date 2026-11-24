@@ -44,10 +44,21 @@ export const inspectorAllowedOn = (socketUrl, { dev }) => {
 /** The same question for a page at `loc`, before it has a socket. */
 export const inspectorAllowed = (loc, { dev }) => inspectorAllowedOn(wsUrlFor(loc), { dev })
 
-// Where the page's socket goes is fixed when the page loads (WebSocketClient takes its URL once).
 // A room peer can send update-params, so these keys are never taken from it: not into the
-// page's params, and not into the URL mirror that a refresh would read back.
-const PINNED = ['relay', 'room']
+// page's params, and not into the URL mirror that a refresh would read back (setting or, with
+// null, deleting them). They are all read once at boot:
+// - where the socket goes (WebSocketClient takes its URL once): relay, room;
+// - what code or media the page loads: controller (a full http URL is imported as JavaScript, so a
+//   peer setting it ran its script on the display's next reload), image, audio_file;
+// - what the page is and what it captures or sends: remote, vj, vjtrack, midi, embed, noaudio,
+//   audio, audio_send, audio_device, audio_time.
+// Knobs, numeric uniforms, shader and shaderCode stay settable: they are what a controller is for.
+const PINNED = new Set([
+  'relay', 'room',
+  'controller', 'image', 'audio_file',
+  'remote', 'vj', 'vjtrack', 'midi', 'embed', 'noaudio',
+  'audio', 'audio_send', 'audio_device', 'audio_time',
+])
 
-/** `data` without the keys that choose where the socket goes. */
-export const withoutPinned = (data) => Object.fromEntries(Object.entries(data).filter(([key]) => !PINNED.includes(key)))
+/** `data` without the keys a peer may not set: where the socket goes and what boot loads. */
+export const withoutPinned = (data) => Object.fromEntries(Object.entries(data).filter(([key]) => !PINNED.has(key)))

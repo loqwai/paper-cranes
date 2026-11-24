@@ -100,7 +100,8 @@ export const initRemoteDisplay = () => {
  */
 const applyParams = async (incoming) => {
   if (!incoming || typeof incoming !== 'object') return
-  // A room peer chooses these, so never relay or room: where the socket goes is fixed at load.
+  // A room peer chooses these, so never relay, room, controller or any other boot-time key
+  // (relay.js PINNED): what the socket and the next reload load is fixed at page load.
   const data = withoutPinned(incoming)
 
   // Ensure cranes state exists
