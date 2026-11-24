@@ -25,9 +25,9 @@ Microphone → MediaStream → AudioContext → WindowNode (Hanning) → FFT Ana
 - Extracts 15 audio features from hypnosound library
 
 #### 2. WorkerRPC (`src/audio/WorkerRPC.js`)
-- Manages worker communication with 30ms timeout
-- Handles feature calculation in parallel
-- Returns smoothed default values on timeout
+- One worker per feature, fire-and-forget: each frame posts the FFT, and `getResult()` returns the latest reply
+- No timeout: a slow or dead worker leaves its last value in place
+- Replaces any non-finite stat with 0 before it reaches the shader
 
 #### 3. Visualizer (`src/Visualizer.js`)
 - WebGL2 context with frame buffer ping-ponging
@@ -210,7 +210,7 @@ Group features by domain and pick from DIFFERENT domains for variety:
    - Query param: `?fft_size=4096`
 2. **Smoothing**: Reduced from 0.8 to 0.05-0.2
    - Query param: `?smoothing=0.15`
-3. **Worker Timeout**: Optimized to 30ms
+3. **No worker wait**: features come from each worker's latest reply; nothing awaits a round trip
 
 ### Jitter Reduction
 - Exponential smoothing on all features
