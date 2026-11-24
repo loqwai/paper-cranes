@@ -26,15 +26,28 @@ export const wsUrlFor = (loc) => {
 }
 
 /**
- * May this page load the inspector (answer the VJ MCP's `inspect`)? Only when its broker is one we
- * run: the dev server's /ws (a dev build with no room), or a room on relay.beadfamous.com or on a
- * loopback relay. `?relay=` still relays through any host, but a relay we do not run could
+ * May a page answer the VJ MCP's `inspect` on the socket at `socketUrl`? Only when that socket's
+ * broker is one we run: the dev server's own /ws (a dev build), or a room on relay.beadfamous.com
+ * or on a loopback relay. `?relay=` still relays through any host, but a relay we do not run could
  * welcome the display and read its canvas, audio features, knobs and console, so there the page
- * never answers. Exact host match: `relay.beadfamous.com@evil.example` is evil.example.
+ * never answers. Judged on the parsed socket URL, so `relay.beadfamous.com@evil.example` is
+ * evil.example. RemoteDisplay asks this of the socket actually connected, on every connect.
  */
-export const inspectorAllowed = (loc, { dev }) => {
-  const params = new URLSearchParams(loc.search)
-  if (!params.get('room')) return Boolean(dev)
-  const host = relayHostOf(params)
-  return host === DEFAULT_RELAY_HOST || LOOPBACK_HOST.test(host)
+export const inspectorAllowedOn = (socketUrl, { dev }) => {
+  let url
+  try { url = new URL(socketUrl) } catch { return false }
+  if (url.pathname === '/ws') return Boolean(dev)
+  if (!/^\/ws\/[^/]+$/.test(url.pathname)) return false
+  return url.host === DEFAULT_RELAY_HOST || LOOPBACK_HOST.test(url.host)
 }
+
+/** The same question for a page at `loc`, before it has a socket. */
+export const inspectorAllowed = (loc, { dev }) => inspectorAllowedOn(wsUrlFor(loc), { dev })
+
+// Where the page's socket goes is fixed when the page loads (WebSocketClient takes its URL once).
+// A room peer can send update-params, so these keys are never taken from it: not into the
+// page's params, and not into the URL mirror that a refresh would read back.
+const PINNED = ['relay', 'room']
+
+/** `data` without the keys that choose where the socket goes. */
+export const withoutPinned = (data) => Object.fromEntries(Object.entries(data).filter(([key]) => !PINNED.includes(key)))

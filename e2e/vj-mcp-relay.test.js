@@ -10,7 +10,7 @@ import { spawn } from 'node:child_process'
 import { mkdir, rm, readFile, writeFile } from 'node:fs/promises'
 import { createServer as netServer } from 'node:net'
 import { resolve } from 'node:path'
-import { WebSocket } from 'ws'
+import { WebSocket, WebSocketServer } from 'ws'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 
@@ -198,6 +198,49 @@ describe('vj mcp on the relay', () => {
     expect(json).toMatchObject({ shader: 'plasma', loaded: true, compiles: true })
     const { json: src } = await call('read_shader', { shader: SHADER })
     expect(src.code).toBe(KNOB_SHADER)
+  })
+
+  it('a room peer cannot steer the display to another relay (update-params {relay, room} then a reconnect)', async () => {
+    // A stand-in hostile relay on loopback: it welcomes whoever says hello and asks for a screenshot.
+    const hostile = new WebSocketServer({ host: '127.0.0.1', port: 0 })
+    await new Promise((r) => hostile.once('listening', r))
+    const hostilePort = hostile.address().port
+    const got = { connections: 0, replies: 0 }
+    hostile.on('connection', (ws) => {
+      got.connections++
+      ws.on('message', (m) => {
+        const msg = JSON.parse(m.toString())
+        if (msg.type === 'display-hello') {
+          const id = String(msg.data.key).replace(/-/g, '').slice(0, 6).toLowerCase()
+          ws.send(JSON.stringify({ type: 'display-welcome', data: { id } }))
+          ws.send(JSON.stringify({ type: 'inspect', data: { id: 'steal', cmd: 'state', args: {} } }))
+        }
+        if (msg.type === 'inspect-reply') got.replies++
+      })
+    })
+    const p = await peer()
+    p.ws.send(JSON.stringify({ type: 'update-params', data: { relay: `127.0.0.1:${hostilePort}`, room: 'elsewhere' } }))
+    await new Promise((r) => setTimeout(r, 1200)) // past the 750 ms URL mirror
+    // The connection drops (as a network blip would) and the client reconnects on its own. A
+    // client-initiated close() would sit in CLOSING against workerd, so fire the drop handler.
+    await display.evaluate(() => {
+      const s = window.cranes.remoteClient.socket
+      const dropped = s.onclose
+      s.onclose = null
+      s.close()
+      dropped({ code: 1006, reason: 'e2e: connection dropped' })
+    })
+    await until(async () => got.connections > 0 || (await call('list_displays')).json.displays.length === 1, 20_000)
+    await new Promise((r) => setTimeout(r, 1500))
+    expect(got).toEqual({ connections: 0, replies: 0 })
+    expect((await call('list_displays')).json.displays).toHaveLength(1)
+    const after = await display.evaluate(() => {
+      const q = new URLSearchParams(location.search)
+      return { relay: q.get('relay'), room: q.get('room'), params: [window.cranes.messageParams?.relay ?? null, window.cranes.messageParams?.room ?? null] }
+    })
+    expect(after).toEqual({ relay: `127.0.0.1:${relayPort}`, room: ROOM, params: [null, null] })
+    p.ws.close()
+    hostile.close()
   })
 
   it('reports the display leaving', async () => {

@@ -1,12 +1,6 @@
 import { wsUrlFor } from './relay.js'
 
 /**
- * Get the WebSocket URL for remote control: the Cloudflare relay when a `room` param is
- * present, otherwise the local dev server. See relay.js.
- */
-const getWsUrl = () => wsUrlFor(window.location)
-
-/**
  * Robust WebSocket client with auto-reconnect
  */
 export class WebSocketClient {
@@ -17,6 +11,10 @@ export class WebSocketClient {
     this.maxReconnectDelay = 30000
     this.socket = null
     this.isIntentionallyClosed = false
+    // The socket URL (the relay for a `room`, else the dev server; relay.js) is read once, here,
+    // and every reconnect reuses it. Reading location on each connect let a room peer move the
+    // page: update-params {relay} reached the URL mirror, and the next reconnect followed it.
+    this.url = wsUrlFor(window.location)
   }
 
   connect() {
@@ -24,7 +22,7 @@ export class WebSocketClient {
 
     this.isIntentionallyClosed = false
 
-    const wsUrl = getWsUrl()
+    const wsUrl = this.url
     console.log('[Remote] Connecting to', wsUrl)
 
     try {
