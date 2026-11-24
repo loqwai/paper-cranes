@@ -97,13 +97,6 @@ export const mountPhoneWall = ({ client, host, getShader, getState, onProject, o
     }
   })
 
-  const projector = createProjector({
-    wallUrl,
-    win,
-    onScreen: (present) => dispatch({ type: 'screen', present }),
-    onConnection: (conn) => client.link.attach(conn),
-  })
-
   const project = async () => {
     dispatch({ type: 'project' })
     onProject?.()
@@ -149,6 +142,13 @@ export const mountPhoneWall = ({ client, host, getShader, getState, onProject, o
     }
   }
 
+  // Last: it reports the screen it finds at once, which paints.
+  const projector = createProjector({
+    wallUrl,
+    win,
+    onScreen: (present) => dispatch({ type: 'screen', present }),
+    onConnection: (conn) => client.link.attach(conn),
+  })
   paint()
   return {
     project,
