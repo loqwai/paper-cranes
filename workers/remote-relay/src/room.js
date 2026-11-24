@@ -85,6 +85,21 @@ export const createRoomHub = (ctx, { uuid = () => crypto.randomUUID() } = {}) =>
     noneHint: 'Open a page with ?remote=display&room=<this room> (e.g. https://visuals.beadfamous.com/?shader=<path>&remote=display&room=<room>), then retry; list_displays shows what is connected.',
   })
 
+// A ?vj=1 page's health alerts, boot beacon and pulses (src/vj/runtime.js). The dev server takes
+// them on POST /__vj-signal; a page on a room sends them down its own socket instead, and they
+// become `vj-signal` events for wait_for_event, in the same shape the dev hub pushes. Only from a
+// socket whose page may be a display (the boot beacon can beat the hello, so no welcome is
+// needed), never relayed to peers, and bounded: the event ring keeps 500 of them in memory.
+const VJ_SIGNAL = 'vj-signal'
+const MAX_SIGNAL_CHARS = 64 * 1024
+const takeSignal = ({ hub, ws, message, data }) => {
+  const att = readAtt(ws)
+  if (!att.mayDisplay || message.length > MAX_SIGNAL_CHARS) return 'drop'
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return 'drop'
+  hub.pushEvent(VJ_SIGNAL, { display: att.display?.id ?? null, signal: typeof data.type === 'string' ? data.type : null, data })
+  return 'hub'
+}
+
 /**
  * Route one inbound frame. Returns what happened, for tests and logs:
  *   'relay'  sent verbatim to every other socket
@@ -111,6 +126,7 @@ export const routeMessage = async ({ ctx, hub, ws, message }) => {
     }
     return 'drop'
   }
+  if (type === VJ_SIGNAL) return takeSignal({ hub, ws, message, data: msg.data })
   // Relay the ORIGINAL text, so a payload is never reserialized and subtly changed in transit.
   for (const peer of ctx.getWebSockets()) {
     if (peer === ws) continue

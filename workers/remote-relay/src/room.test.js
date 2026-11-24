@@ -99,6 +99,37 @@ describe('relay room: hub traffic never reaches peers', () => {
   })
 })
 
+describe('relay room: ?vj=1 signals reach wait_for_event', () => {
+  it('turns a display page\'s vj-signal into a hub event, and never relays it', async () => {
+    const tv = join('tv'), pad = join('pad')
+    await hello(tv)
+    const since = hub.seq
+    pad.sent.length = 0
+    expect(await say(tv, 'vj-signal', { type: 'flicker', flicker: 0.8 })).toBe('hub')
+    expect(pad.sent).toEqual([])
+    const { events } = await hub.waitFor({ since, types: ['flicker'], timeoutMs: 10 })
+    expect(events).toMatchObject([{ type: 'vj-signal', signal: 'flicker', display: 'a1b2c3', data: { type: 'flicker', flicker: 0.8 } }])
+  })
+
+  it('takes a boot signal that arrives before the hello, with no display id yet', async () => {
+    const tv = join('tv')
+    const since = hub.seq
+    expect(await say(tv, 'vj-signal', { type: 'boot', url: 'https://visuals.beadfamous.com/?vj=1' })).toBe('hub')
+    const { events } = await hub.waitFor({ since, types: ['boot'], timeoutMs: 10 })
+    expect(events).toMatchObject([{ type: 'vj-signal', signal: 'boot', display: null }])
+  })
+
+  it('drops a vj-signal from a socket whose page may not be a display, or one that is too big', async () => {
+    const stranger = join('stranger', { mayDisplay: false }), tv = join('tv')
+    const since = hub.seq
+    expect(await say(stranger, 'vj-signal', { type: 'boot' })).toBe('drop')
+    expect(await say(tv, 'vj-signal', { type: 'knobtrack', pad: 'x'.repeat(70 * 1024) })).toBe('drop')
+    expect(await say(tv, 'vj-signal', 'not an object')).toBe('drop')
+    expect(tv.sent).toEqual([])
+    expect((await hub.waitFor({ since, timeoutMs: 10 })).events).toEqual([])
+  })
+})
+
 describe('relay room: display registry', () => {
   it('lists a display, and survives a hibernation (a fresh hub over the same sockets)', async () => {
     const tv = join('tv')

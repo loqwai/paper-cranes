@@ -1,8 +1,11 @@
 // VJ runtime — loaded by ?vj=1 (see index.js). Closes the 2026-08-18 journal todo "bake VJ
 // tooling into the display page": validator, aesthetic meter and cursor-hide now survive every
 // reload because the PAGE installs them at boot, and the page WAKES the vibej loop by POSTing
-// signals to /__vj-signal (picked up by a Monitor on .claude/vj-signals.jsonl).
-const post = sig => fetch('/__vj-signal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sig) }).catch(() => {})
+// signals to /__vj-signal (picked up by a Monitor on .claude/vj-signals.jsonl). On a relay room
+// they go down the display's socket instead, to the relay MCP's wait_for_event (signals.js).
+import { createSignalPoster } from './signals.js'
+
+const post = createSignalPoster({ getClient: () => window.cranes?.remoteClient, dev: import.meta.env.DEV, search: location.search })
 
 export const startVjRuntime = async () => {
   // 1. cursor hygiene (live-show rule: a corner-parked hover still shows a pointer)
