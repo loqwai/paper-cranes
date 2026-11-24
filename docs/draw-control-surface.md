@@ -76,6 +76,22 @@ single unit with a value.
   the fader back in charge.
 - Status is a widget write through a link. It is never a Send or a chat line, so it wakes no agent.
 
+## Who can play the wall
+
+The bridge trusts the board. Anyone who can change the control frame drives the wall:
+
+- **Buttons**: anyone who can Send on the board (its editors).
+- **Faders and the XY pad**: any write that moves a knob part. That includes a person's drag, an
+  agent's `draw`, and a script holding a frame `link` that covers the control frame.
+- **Never shared**: the show board stays `access: user` (draw's default) with no editor but Aaron.
+  Share it view-only, or not at all. Lane Back Door's unlisted boards will add a `controls` scope
+  that allows only a Send and a knob drag; until that lands, an unlisted or shared link with edit
+  rights is a link to the wall.
+- **The ticket is a key**: the `listener` ticket reads the whole board for 8 h. Pass it in
+  `DRAW_LISTEN_TICKET` rather than `--ticket`, and never paste it into a board, a chat or a doc.
+- PANIC goes only to the fork given with `--panic` on the bridge's command line. The VJ MCP refuses a
+  fork that is not a plain shader path, so a board cannot name what PANIC loads.
+
 ## What costs tokens, and what does not
 
 - The bridge runs no model. Taps, drags, and status updates cost no tokens.

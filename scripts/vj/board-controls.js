@@ -203,10 +203,13 @@ export const draggedControl = (id) => {
  * The knob writes a portal message implies, given every element the bridge holds (id → element, updated first).
  * One write per moved control, newest geometry wins; a control whose base part is missing writes nothing. A whole
  * `frame` picture (on connect, or when the frame itself moved) writes nothing: it says where the knobs are drawn, not
- * that anyone moved one, and replaying it would yank the wall back to the board.
+ * that anyone moved one, and replaying it would yank the wall back to the board. Draw sends a frame of more than 500
+ * elements as a `frame` plus `delta`s at that same seq (`wholeFrame` in draw's board.ts), so a delta at `wholeSeq`,
+ * the seq of the last `frame`, is the rest of that picture and writes nothing either.
  */
-export const knobWrites = (message, held) => {
+export const knobWrites = (message, held, wholeSeq = null) => {
   if (message?.t !== 'delta') return {}
+  if (wholeSeq !== null && message.seq === wholeSeq) return {}
   const out = {}
   for (const e of message.elements ?? []) {
     if (e.isDeleted) continue

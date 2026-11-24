@@ -14,7 +14,8 @@
 //     --around/--picture draw around the live picture in Window's `show` frame; without them, a column frame.
 //
 // --ticket   from the draw MCP `listener` tool, called as the bridge's own agent (e.g. show-bridge).
-//            It lasts 8 h; exit code 2 means it expired: mint another and restart.
+//            It lasts 8 h; exit code 2 means it expired: mint another and restart. Or set
+//            DRAW_LISTEN_TICKET instead, which keeps the ticket out of `ps` and pasted command lines.
 // --frame    the control frame the faders live in (default `controls`). Faders need draw's
 //            ticket portal route (/api/listen/<board>/portal); until a draw deploy has it, the
 //            bridge says so once and keeps retrying each minute, and the buttons work regardless.
@@ -231,6 +232,7 @@ const listen = async function* ({ base, board, ticket, signal }) {
 // Reconnects with backoff; a draw without the ticket route (404/426) is retried each minute.
 const watchFrame = ({ base, board, ticket, frame, signal, onWrites, log }) => {
   const held = new Map()
+  let wholeSeq = null
   let failures = 0
   let missing = false
   let socket = null
@@ -253,10 +255,10 @@ const watchFrame = ({ base, board, ticket, frame, signal, onWrites, log }) => {
         socket.on('message', (raw) => {
           let message
           try { message = JSON.parse(String(raw)) } catch { return }
-          if (message.t === 'frame') held.clear()
+          if (message.t === 'frame') { held.clear(); wholeSeq = message.seq ?? null }
           for (const e of message.elements ?? []) e.isDeleted ? held.delete(e.id) : held.set(e.id, e)
           if (message.t === 'gone') log({ faders: `frame ${frame} is gone: draw the controls again (board-bridge.js layout)` })
-          const writes = knobWrites(message, held)
+          const writes = knobWrites(message, held, wholeSeq)
           if (Object.keys(writes).length) onWrites(writes)
         })
         socket.on('close', (code) => resolve({ code }))
@@ -411,6 +413,8 @@ const main = async () => {
   const argv = process.argv.slice(2)
   const command = argv[0] && !argv[0].startsWith('--') ? argv.shift() : 'run'
   const opts = parseArgs(argv)
+  // The ticket reads 8 h of the whole board: prefer the env var, which `ps` and a pasted command line do not show.
+  opts.ticket ??= process.env.DRAW_LISTEN_TICKET
   const mcpUrl = process.env.MCP_URL || `http://localhost:${process.env.PORT || 6969}/mcp`
   if (command === 'layout') return layout(opts, mcpUrl)
   if (!opts.board || !opts.ticket) {

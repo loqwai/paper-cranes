@@ -81,6 +81,12 @@ describe('knobWrites: what a portal message asks of the wall', () => {
     expect(knobWrites({ t: 'frame', elements: [...held.values()] }, held)).toEqual({})
   })
 
+  it('writes nothing for the rest of a big whole frame, sent as deltas at the same seq', () => {
+    const knob = { ...held.get('fad-k12-knob'), y: 0 }
+    expect(knobWrites({ t: 'delta', seq: 40, elements: [knob] }, held, 40)).toEqual({})
+    expect(knobWrites({ t: 'delta', seq: 41, elements: [knob] }, held, 40)).toEqual({ knob_12: 1 })
+  })
+
   it('ignores labels, tracks, buttons, deletions and controls it cannot place', () => {
     const elements = [held.get('fad-k12-label'), held.get('fad-k12-track'), { id: 'ctl-panic-face' }, { ...held.get('fad-k12-knob'), isDeleted: true }, { id: 'fad-k99-knob', y: 0, height: 50 }]
     expect(knobWrites({ t: 'delta', elements }, held)).toEqual({})

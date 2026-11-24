@@ -6,7 +6,7 @@
 //   - a Send selecting a widget button's face presses it: knob button → knob value on the wall
 //   - a portal delta moving a fader knob → knob value on the wall, through the display's socket
 //   - the whole frame sent on connect writes nothing; SIGTERM stops the bridge with exit 0
-// Port 7143 (6969/6977/6978/6991 belong to live sessions on this machine).
+// Port E2E_PORT, else 7143 (6969/6977/6978/6991 belong to live sessions on this machine).
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { chromium } from 'playwright'
 import { createServer } from 'vite'
@@ -17,7 +17,7 @@ import { WebSocketServer } from 'ws'
 import { FADER } from '../scripts/vj/board-controls.js'
 
 const ROOT = new URL('..', import.meta.url).pathname
-const PORT = 7143
+const PORT = Number(process.env.E2E_PORT || 7143)
 const TICKET = 'ticket-e2e'
 const BOARD = 'show-e2e'
 
