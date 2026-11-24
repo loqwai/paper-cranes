@@ -31,6 +31,10 @@ Preconditions:
 
 ## Gotchas
 
+- The display run reports one page error, `Unexpected token '<', "<!doctype "... is not valid JSON`:
+  `index.html` fetches `/manifests/<shader>.json` for the PWA manifest and gets the HTML fallback
+  for an unknown shader. It does not affect the render or the note; do not count it as this
+  feature failing (2026-11-24, review of #240).
 - The note is `pointer-events: none` and fixed bottom-left; a phone screenshot shows it, a canvas
   screenshot does not. Keep both.
 - On a build, `edit.html` strips `?shader=` and reloads once; `--wait` covers it, or wait for the

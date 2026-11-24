@@ -122,7 +122,7 @@ on this box.
 | Command | Drives |
 |---|---|
 | `$B render [--shader S] [--features JSON] [--params QS] [--video]` | a shader at held `time=5`: rest frame, inject features, injected frame, diff; with `--video` a headful 8 s sweep rest to loud and back, twice. Default features suit `plasma`; pass `--features` for other shaders. |
-| `$B open <path\|url> [--viewport 390x844] [--canvas] [--eval JS] [--wait MS] [--video] [--browser firefox] [--name N] [--feature F]` | any page: screenshot, pixel stats (`--canvas`), the value of a JS expression, console log |
+| `$B open <path\|url> [--viewport 390x844] [--canvas] [--eval JS] [--wait MS] [--headful] [--video] [--browser firefox] [--name N] [--feature F]` | any page: screenshot, pixel stats (`--canvas`), the value of a JS expression, console log |
 | `bin/editor-sync.mjs [--video]` | edit.html save reaching a display and disk (dev only) |
 | `bin/list-page.mjs [--query Q] [--base URL] [--video]` | list.html on a phone: search, `+` to the set, GO, perform overlay |
 | `MCP_URL=http://127.0.0.1:<port>/mcp node scripts/vj/mcp-call.js <tool> '<json>'` | the VJ MCP (dev) |
