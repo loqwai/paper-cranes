@@ -2,7 +2,7 @@
 // A crafted link (?remote=display&room=x&relay=evil.example) must not let a stranger's relay
 // welcome the display and read its canvas, features, knobs and logs.
 import { describe, it, expect } from 'vitest'
-import { wsUrlFor, inspectorAllowed, inspectorAllowedOn, withoutPinned, DEFAULT_RELAY_HOST } from './relay.js'
+import { wsUrlFor, inspectorAllowed, inspectorAllowedOn, withoutPinned, DEFAULT_RELAY_HOST, displaySecretFrom, withoutSecret, secretFor } from './relay.js'
 
 const at = (search, { protocol = 'https:', host = 'visuals.beadfamous.com' } = {}) => ({ search, protocol, host })
 
@@ -62,5 +62,33 @@ describe('inspectorAllowedOn', () => {
   it("the dev server's own /ws only in a dev build", () => {
     expect(inspectorAllowedOn('ws://localhost:6969/ws', { dev: true })).toBe(true)
     expect(inspectorAllowedOn('wss://visuals.beadfamous.com/ws', { dev: false })).toBe(false)
+  })
+})
+
+describe('display secret', () => {
+  const S = 'ds_abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG'
+  it('is read from the hash, or the query as a fallback', () => {
+    expect(displaySecretFrom({ hash: `#display_secret=${S}`, search: '?room=x' })).toBe(S)
+    expect(displaySecretFrom({ hash: `#knob_1=0.5&display_secret=${S}`, search: '' })).toBe(S)
+    expect(displaySecretFrom({ hash: '', search: `?room=x&display_secret=${S}` })).toBe(S)
+    expect(displaySecretFrom({ hash: '', search: '?room=x' })).toBeNull()
+  })
+  it('is cut out of every href the page reports, wherever it sits', () => {
+    expect(withoutSecret(`https://v.example/?shader=a&room=x#display_secret=${S}`)).toBe('https://v.example/?shader=a&room=x')
+    expect(withoutSecret(`https://v.example/?room=x#knob_1=0.5&display_secret=${S}`)).toBe('https://v.example/?room=x#knob_1=0.5')
+    expect(withoutSecret(`https://v.example/?display_secret=${S}&room=x`)).toBe('https://v.example/?room=x')
+    expect(withoutSecret('https://v.example/?room=x#knob_1=0.5')).toBe('https://v.example/?room=x#knob_1=0.5')
+  })
+  it('goes only to a relay room we run: never the dev server, never another relay', () => {
+    expect(secretFor(`wss://${DEFAULT_RELAY_HOST}/ws/x`, S)).toBe(S)
+    expect(secretFor('ws://127.0.0.1:8798/ws/x', S)).toBe(S)
+    expect(secretFor('ws://localhost:6969/ws', S)).toBeUndefined()
+    expect(secretFor('wss://evil.example/ws/x', S)).toBeUndefined()
+    expect(secretFor(undefined, S)).toBeUndefined()
+    expect(secretFor(`wss://${DEFAULT_RELAY_HOST}/ws/x`, null)).toBeUndefined()
+  })
+  it('cannot be set or released by a room peer', () => {
+    expect(withoutPinned({ display_secret: 'ds_evil', knob_1: 0.5 })).toEqual({ knob_1: 0.5 })
+    expect(withoutPinned({ display_secret: null })).toEqual({})
   })
 })
