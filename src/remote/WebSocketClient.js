@@ -18,9 +18,12 @@ export class WebSocketClient {
   }
 
   connect() {
-    if (this.socket?.readyState === WebSocket.OPEN) return
+    // CONNECTING counts too: a second socket here gets every broadcast twice, and on close each
+    // one schedules its own reconnect, so the duplicates multiply.
+    if (this.socket?.readyState === WebSocket.OPEN || this.socket?.readyState === WebSocket.CONNECTING) return
 
     this.isIntentionallyClosed = false
+    clearTimeout(this.reconnectTimer)
 
     const wsUrl = this.url
     console.log('[Remote] Connecting to', wsUrl)
@@ -33,13 +36,20 @@ export class WebSocketClient {
       return
     }
 
+    // Events from a socket this client has already replaced (disconnect then connect: the old
+    // close lands after the new connect) must not reconnect or report status.
+    const socket = this.socket
+    const current = () => this.socket === socket
+
     this.socket.onopen = () => {
+      if (!current()) return
       console.log('[Remote] Connected')
       this.reconnectDelay = 1000 // Reset reconnect delay on success
       this.onStatusChange?.('connected')
     }
 
     this.socket.onmessage = (e) => {
+      if (!current()) return
       try {
         const data = JSON.parse(e.data)
         this.onMessage?.(data)
@@ -49,6 +59,7 @@ export class WebSocketClient {
     }
 
     this.socket.onclose = (e) => {
+      if (!current()) return
       console.log('[Remote] Disconnected', e.code, e.reason)
       this.onStatusChange?.('disconnected')
 
@@ -58,6 +69,7 @@ export class WebSocketClient {
     }
 
     this.socket.onerror = (err) => {
+      if (!current()) return
       console.error('[Remote] Error:', err)
       this.onStatusChange?.('error')
     }
@@ -69,7 +81,8 @@ export class WebSocketClient {
     this.onStatusChange?.('reconnecting')
     console.log(`[Remote] Reconnecting in ${this.reconnectDelay}ms...`)
 
-    setTimeout(() => {
+    clearTimeout(this.reconnectTimer)
+    this.reconnectTimer = setTimeout(() => {
       if (!this.isIntentionallyClosed) {
         this.connect()
       }
@@ -96,6 +109,7 @@ export class WebSocketClient {
 
   disconnect() {
     this.isIntentionallyClosed = true
+    clearTimeout(this.reconnectTimer)
     if (this.socket) {
       this.socket.close()
       this.socket = null
