@@ -533,7 +533,7 @@ paramsManager.setShader(code)      // Syncs shader to remote
     ├── remote-ws-plugin.js      # WebSocket server for remote control
     ├── editor-sync-plugin.js    # Bidirectional editor↔disk sync (dev only)
     ├── same-origin.js           # 403 for cross-site POSTs to the dev write endpoints (/__save-shader, /__vj-signal, ...)
-    ├── vj-signal-plugin.js      # /__vj-signal endpoint; writes .Codex/vj-signals.jsonl (dev only)
+    ├── vj-signal-plugin.js      # /__vj-signal endpoint; writes .claude/vj-signals.jsonl (dev only)
     ├── vj-mcp-plugin.js         # /mcp: VJ MCP server, streamable HTTP (dev only) — docs/vj-mcp.md
     ├── vj-mcp/server.js, hub-core.js  # the tool set and display hub, shared with the relay Worker
     ├── vj-mcp/hub.js, tools.js  #   their dev-server hosts (Node ws sockets, shaders on disk)
@@ -748,7 +748,7 @@ ChromaDepth 3D glasses create depth from color: red=near, green=middle, blue/vio
 
 **Full guide:** See [docs/MAKING_A_NEW_SHADER.md](docs/MAKING_A_NEW_SHADER.md#creating-chromadepth-versions-of-existing-shaders)
 
-**Reference shaders:** `wooli/chromadepth-1.frag`, `wooli/chromadepth-2.frag`, `Codex/chromadepth-julia.frag`
+**Reference shaders:** `wooli/chromadepth-1.frag`, `wooli/chromadepth-2.frag`, `claude/chromadepth-julia.frag`
 
 ## Common Issues & Solutions
 
@@ -818,6 +818,22 @@ float complexity = spectralEntropyNormalized * spectralFluxZScore;
 5. **Worker Architecture**: Parallel processing via Web Workers is essential for real-time performance with 15+ audio features.
 
 6. **Shader Philosophy**: Shaders should be artistic, reactive, and performant - avoiding dead zones while maintaining visual coherence.
+
+## Testing
+
+Full guide: [docs/testing.md](docs/testing.md).
+
+- `npm test` - unit tests (vitest, node).
+- `npm run test:smoke` - builds, serves `dist/` like Cloudflare Pages on :7129, and drives every page in
+  headless Chromium (Playwright): plasma paints real pixels, a missing shader shows the default plus
+  `shader not found: <name>`, the list fills on a phone, the editor holds GLSL, no service-worker
+  reload loop, `?vj=1` runtime, vjpad, midi.
+- `npm run test:smoke:prod` - the same against https://visuals.beadfamous.com, plus `e2e/relay.test.js`
+  (a peer in a live `?room=` sets a knob but cannot set `controller`; `vj-signal` is not relayed).
+  Point it at a Pages preview with `E2E_BASE_URL=<url>`; record videos with `E2E_VIDEO_DIR=<dir>`.
+- `npm run test:e2e` - every `e2e/*.test.js`, including the dev-server VJ MCP suites.
+- Smoke checks wait on conditions, never sleeps, and pin `time=` + `noaudio=true`. Run the smoke
+  suite against the Pages preview before merging a change to a page.
 
 ## Shader Validation
 
@@ -909,6 +925,12 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 | `/changelog` | Update docs/CHANGELOG.md and README with recent features. |
 | `/pr` | Create a PR, request review, and open in browser. |
 | `/show-repo` | One show, one repo: strip to one shader + controller (shared git history), build, verify headless, then publish to `<show>.beadfamous.com` on Aaron's go-ahead. Its front page is `show.html`: canvas only, MIDI, `?room=` remote jamming, snapshots. See [docs/show-repos.md](docs/show-repos.md). |
+| `/show` | Show day: preflight checklist, launch the show browser on the show shader + controller, verify audio and runtime, arm the health monitors, hand off to `/vibej2`. `/show check` is preflight only; `/show panic <fork>` hot-swaps to a known-good fork. See [docs/show-playbook.md](docs/show-playbook.md). |
+| `/vibej2` | Live auto-VJ as a responsive in-session loop: burst iterations, the page as sensor (`?vj=1` + `/__vj-signal`), an atomic edit macro. `/vibej2 stop\|pause\|tick`. |
+| `/vibej` (alias `/vj`) | v1 auto-VJ: mutates the shader once a minute to match the track, via `/__save-shader` and HMR. `/vibej stop`, `/vibej tick`. |
+| `/sun-set` | Replay the 2026-10-09/10 sun set beat by beat (`/sun-set next`, `/sun-set <n>`, `/sun-set auto`), each advance a hot-swap. Run after `/show` has the wall up. |
+| `/remap` | Reset the MIDI mapping: clears `localStorage['cranes-midi-profiles']` (all, or one device) and reloads, so the next CC twist auto-assigns. |
+| `/verify-paper-cranes` | Prove a change in the real app: launch an instance on a free port (never 6969/6977/6978/6991), doctor it, drive a mapped feature with Playwright, keep screenshots, pixel stats, logs and a headful video in `~/paper-cranes-proof/`, then clean up. Feature map in `.claude/skills/verify-paper-cranes/features/`. |
 
 ## Live Sessions: the Parent Stays Responsive
 
