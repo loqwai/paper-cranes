@@ -897,6 +897,12 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 | `/changelog` | Update docs/CHANGELOG.md and README with recent features. |
 | `/pr` | Create a PR, request review, and open in browser. |
 | `/show-repo` | One show, one repo: strip to one shader + controller (shared git history), build, verify headless, then publish to `<show>.beadfamous.com` on Aaron's go-ahead. Its front page is `show.html`: canvas only, MIDI, `?room=` remote jamming, snapshots. See [docs/show-repos.md](docs/show-repos.md). |
+| `/show` | Show day: preflight checklist, launch the show browser on the show shader + controller, verify audio and runtime, arm the health monitors, hand off to `/vibej2`. `/show check` is preflight only; `/show panic <fork>` hot-swaps to a known-good fork. See [docs/show-playbook.md](docs/show-playbook.md). |
+| `/vibej2` | Live auto-VJ as a responsive in-session loop: burst iterations, the page as sensor (`?vj=1` + `/__vj-signal`), an atomic edit macro. `/vibej2 stop\|pause\|tick`. |
+| `/vibej` (alias `/vj`) | v1 auto-VJ: mutates the shader once a minute to match the track, via `/__save-shader` and HMR. `/vibej stop`, `/vibej tick`. |
+| `/sun-set` | Replay the 2026-10-09/10 sun set beat by beat (`/sun-set next`, `/sun-set <n>`, `/sun-set auto`), each advance a hot-swap. Run after `/show` has the wall up. |
+| `/remap` | Reset the MIDI mapping: clears `localStorage['cranes-midi-profiles']` (all, or one device) and reloads, so the next CC twist auto-assigns. |
+| `/verify-paper-cranes` | Prove a change in the real app: launch an instance on a free port (never 6969/6977/6978/6991), doctor it, drive a mapped feature with Playwright, keep screenshots, pixel stats, logs and a headful video in `~/paper-cranes-proof/`, then clean up. Feature map in `.claude/skills/verify-paper-cranes/features/`. |
 
 ## Live Sessions: the Parent Stays Responsive
 
