@@ -2,6 +2,28 @@
 <html lang="en">
 
 <head>
+    <script>
+    // Start the shader and image downloads now instead of after the module graph loads.
+    // getRelativeOrAbsoluteShaderUrl consumes window.cranesEarlyShader only when its URL matches.
+    (function() {
+      var hash = new URLSearchParams(window.location.hash.slice(1))
+      var query = new URLSearchParams(window.location.search)
+      var param = function(key) { return hash.has(key) ? hash.get(key) : query.get(key) }
+      var image = document.createElement('link')
+      image.rel = 'preload'
+      image.as = 'image'
+      image.crossOrigin = 'anonymous'
+      image.href = param('image') || 'images/placeholder-image.png'
+      document.head.appendChild(image)
+      if (param('shaderCode')) return
+      var shader = param('shader')
+      if (!shader && localStorage.getItem('cranes-manual-code')) return
+      var url = shader || 'default'
+      if (!url.includes('http')) url = '/shaders/' + (url.endsWith('.frag') ? url : url + '.frag')
+      window.cranesEarlyShader = { url: url, text: fetch(url, { mode: 'no-cors' }).then(function(r) { return r.text() }) }
+      window.cranesEarlyShader.text.catch(function() {})
+    })()
+    </script>
     <link rel="stylesheet" href="index.css" />
     <title>Paper Cranes</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
