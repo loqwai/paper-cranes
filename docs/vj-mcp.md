@@ -93,8 +93,8 @@ relay is one we run: `relay.beadfamous.com` (the default) or a loopback relay (`
 page never answers `inspect` there, so a stranger's relay cannot welcome it and read its canvas,
 audio features, knobs or console.
 Where the socket goes is fixed when the page loads: `WebSocketClient` reads its URL once and every
-reconnect reuses it, and `update-params` can never set `relay` or `room` (`withoutPinned`), not
-into the page's params and not into the URL mirror. Without that, a room peer could send
+reconnect reuses it, and `update-params` can never set `relay` or `room`, or any other boot-time
+key in `PINNED` (`withoutPinned`), not into the page's params and not into the URL mirror. Without that, a room peer could send
 `update-params {relay}`, the mirror would write it into the URL, and the next reconnect would take
 the still-inspectable display to the peer's relay (found in the #221 re-review; the e2e test
 reproduces it with a stand-in relay). As a second layer the page judges the socket actually open
@@ -280,7 +280,7 @@ rewritten:
 
 - `npx vitest run workers/remote-relay`: the room broker with fake sockets (relay verbatim, a
   forged `inspect` dropped, point-to-point routing, the registry surviving hibernation, rekey and
-  takeover, the 2 KiB attachment cap, display origins, shader fetches) and the Access JWT check
+  takeover, every attachment under the 16 KiB limit even for a non-ASCII hello, display origins, shader fetches) and the Access JWT check
   (valid, wrong AUD, wrong issuer, expired, forged, the loopback-only local bypass, 503 when
   unconfigured).
 - `npx vitest run --config vitest.e2e.config.js e2e/vj-mcp-relay.test.js`: `wrangler dev` running
@@ -345,7 +345,7 @@ untrusted; a room that is not valid percent-encoding gets 400; vitest skips `dis
 
 Fixed after #221 (the relay bug hunt): an unknown `kid` refetches the Access certs at most once
 every 30 s, and concurrent misses share one fetch; `?vj=1` signals reach the relay's
-`wait_for_event` (below); `wrangler.jsonc` records the `v1` SQLite migration the account already
+`wait_for_event` (see the room broker above); `wrangler.jsonc` records the `v1` SQLite migration the account already
 has. Not a bug after all: the attachment caps count UTF-16 units, but the attachment limit is
 16 KiB, not 2 KiB, and the largest hello `pack` keeps is about 3 KiB even in non-ASCII (a 200 x
 `光` hello lists on workerd).

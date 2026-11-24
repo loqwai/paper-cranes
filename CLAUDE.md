@@ -340,12 +340,12 @@ uniform float my_param;  // = 0.5
 uniform float another;   // = 1.2
 ```
 
-**Note:** Only numeric values work. Known params (`shader`, `noaudio`, `fft_size`, etc.) and `knob_*` params are excluded.
+**Note:** Only numeric values work. Known params (`shader`, `noaudio`, `fft_size`, etc.) and `knob_*` params are excluded. A hyphen becomes an underscore (`?my-param=0.5` is `uniform float my_param`), a name that is not a legal GLSL identifier (`?3d=1`, `?gl_x=1`, `?a__b=1`) is skipped, and a name the shader already declares is not declared again (`src/shader-transformers/shader-wrapper.js`).
 
 ## Query Parameters
 
 ### Core Parameters
-- `shader` - Shader file to load (e.g., `?shader=star`)
+- `shader` - Shader file to load (e.g., `?shader=star`). A path the host does not have plays the default shader with a small `shader not found: <path>` note
 - `fft_size` - FFT window size (default: 4096)
 - `smoothing` - Smoothing factor (default: 0.15)
 - `history_size` - Statistical history buffer (default: 500)
@@ -361,7 +361,7 @@ uniform float another;   // = 1.2
 - `audio_device=<label substring>` - Open the mic input whose label contains this (e.g. `USB Audio CODEC`); no match means no audio, never a different device. Omitted → the OS default input
 - `audio_time=<seconds>` - Start audio file playback at this offset (default: 0)
 - `time=<seconds>` - Hold time constant (useful for deterministic screenshots/testing)
-- `vj=1` - Install the VJ runtime on the display: cursor-hide, GL validator, aesthetic meter, frame-time probe, and health signals POSTed to `/__vj-signal`. This is how the auto-VJ loop sees a page it cannot screenshot. See [docs/vj-telemetry.md](docs/vj-telemetry.md)
+- `vj=1` - Install the VJ runtime on the display: cursor-hide, GL validator, aesthetic meter, frame-time probe, and health signals (POSTed to `/__vj-signal` on the dev server; on a `?remote=display&room=` page, production included, also sent down the room socket to the relay MCP's `wait_for_event`). This is how the auto-VJ loop sees a page it cannot screenshot. See [docs/vj-telemetry.md](docs/vj-telemetry.md)
 - `vjtrack=1` - With `vj=1`, also log every knob move at 10Hz with the full audio-feature vector, for working out which feature a fader is imitating. **Off by default and not for use during a show** — it is a ~17KB JSON serialise + fetch every 2s on the render thread
 
 ### Dynamic Override
@@ -465,6 +465,7 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   │   ├── analyzer.js         # Worker analyzer loader
 │   │   ├── tabAudioSource.js   # ?audio=tab capture via getDisplayMedia
 │   │   ├── tabAudioButton.js   # Tab audio overlay UI
+│   │   ├── micWatchdog.js      # Re-acquires the mic after a phone lock / OS takeover (?debug_audio=true)
 │   │   └── audioFileSource.js  # ?audio_file= deterministic playback
 │   ├── midi/
 │   │   └── MidiMapper.js       # MIDI CC→knob mapping with profiles
@@ -478,11 +479,14 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   │   ├── RemoteController.js # Sends commands to displays
 │   │   ├── RemoteDisplay.js    # Receives commands from controllers
 │   │   ├── inspect.js          # Display side of the VJ MCP (state, shot, logs, validate)
+│   │   ├── relay.js            # Which relay a page may answer on; PINNED boot-time keys update-params cannot set
 │   │   └── WebSocketClient.js  # WebSocket client wrapper
 │   ├── vj/
-│   │   └── runtime.js          # ?vj=1 page runtime (validator, meter, jank probe, signals)
+│   │   ├── runtime.js          # ?vj=1 page runtime (validator, meter, jank probe, signals)
+│   │   └── signals.js          # where ?vj=1 signals go: /__vj-signal (dev) and/or the relay room socket
 │   ├── Visualizer.js           # WebGL rendering
 │   ├── shaderLoader.js         # Centralized shader loading
+│   ├── listStore.js            # list page's localStorage (cranes-list-*), shape-checked reads
 │   └── shader-transformers/     # Shader preprocessing
 ├── shaders/                     # GLSL visualization shaders
 │   ├── wip/claude/             # Claude-created shaders go here
@@ -493,13 +497,19 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   └── the-coat.js             # Drop sustain with exponential decay
 ├── scripts/
 │   ├── remap-knobs.js          # Utility to remap knob assignments in shaders
+│   ├── validate-shader.js      # Compile one shader through the real wrapper
+│   ├── production-shaders.test.js # npm test: every shader outside wip/ must compile
 │   └── vj/                     # Live-VJ tooling — see docs/vj-telemetry.md
 │       ├── show.js             #   the show browser: fullscreen Chrome driven over CDP (launch/eval/shot)
-│       ├── aesthetic-meter.js  #   FETCHED BY URL at runtime; do not move
+│       ├── aesthetic-meter.js  #   dev fetches it by URL, a build bundles it (src/vj/runtime.js); do not move
 │       ├── remote-send.js      #   push update-params to the display from a shell
 │       ├── mcp-call.js         #   call one VJ MCP tool from a shell
 │       ├── watch-release.js    #   emit a line when a fader is released
 │       └── knob-correlate.js   #   which audio feature was that gesture imitating?
+├── public/
+│   └── service-worker.js        # The only service worker (Vite copies public/ as-is)
+├── workers/
+│   └── remote-relay/            # relay.beadfamous.com: /ws/<room> broker + live VJ MCP (Durable Object)
 ├── jam.js                       # Jam page: canvas only, MIDI + spacebar snapshots, no on-screen UI
 ├── index.js                     # Main entry point
 ├── edit.js                      # Editor interface
@@ -508,6 +518,7 @@ paramsManager.setShader(code)      // Syncs shader to remote
 └── vite-plugins/
     ├── remote-ws-plugin.js      # WebSocket server for remote control
     ├── editor-sync-plugin.js    # Bidirectional editor↔disk sync (dev only)
+    ├── same-origin.js           # 403 for cross-site POSTs to the dev write endpoints (/__save-shader, /__vj-signal, ...)
     ├── vj-signal-plugin.js      # /__vj-signal endpoint; writes .claude/vj-signals.jsonl (dev only)
     ├── vj-mcp-plugin.js         # /mcp: VJ MCP server, streamable HTTP (dev only) — docs/vj-mcp.md
     ├── vj-mcp/server.js, hub-core.js  # the tool set and display hub, shared with the relay Worker
@@ -805,6 +816,9 @@ This will check for:
 - Missing required uniforms
 - Common mistakes
 
+`npm test` also compiles every shader outside `wip/` through the same wrapper
+(`scripts/production-shaders.test.js`), so a broken production shader fails the suite.
+
 ## Mobile Optimization for Raymarching Shaders
 
 Raymarching (fractals, SDFs) is expensive. Use these limits for mobile:
@@ -865,7 +879,7 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 3. **Not handling aspect ratio**: Use `uv.x *= iResolution.x / iResolution.y` for non-square viewports
 4. **Too much feedback**: `mix(prev, new, 0.1)` can accumulate to white - use `mix(prev * 0.99, new, 0.1)`
 5. **Hardcoded resolution**: Always use `iResolution`, never hardcode 1920x1080
-6. **Metadata before #version**: If your shader has `#version 300 es`, it MUST be the first line. Put metadata comments (`// @fullscreen: true`) on line 2, not line 1. Shaders without `#version` (ShaderToy-style) can have metadata on line 1.
+6. **Metadata before #version**: If your shader has `#version 300 es`, keep it on the first line and put metadata comments (`// @fullscreen: true`) on line 2. The wrapper hoists a `#version` that only `//` comments precede, so such a shader still compiles, but any other code above `#version` is an error. Shaders without `#version` (ShaderToy-style) can have metadata on line 1.
 
 ## Claude Code Skills
 

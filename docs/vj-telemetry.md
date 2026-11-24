@@ -65,8 +65,9 @@ serves the last 50 lines anyway.
 
 ## Tools (`scripts/vj/`)
 
-> `scripts/vj/aesthetic-meter.js` is **fetched by URL** at runtime (`/scripts/vj/…`). Moving it
-> breaks the meter, and the failure is swallowed into an `error` signal rather than thrown.
+> `scripts/vj/aesthetic-meter.js` is **fetched by URL** on the dev server (`/scripts/vj/…`, fresh on
+> every reload) and **bundled** into a build (`?raw` import in `src/vj/runtime.js`). Moving it breaks
+> both: in dev the failure is swallowed into an `error` signal rather than thrown.
 
 - **`remote-send.js`** — push `update-params` to the display from a shell. The display joins the
   dev-server WebSocket when it has no `?room`, and `remote-ws-plugin` rebroadcasts. This is the
