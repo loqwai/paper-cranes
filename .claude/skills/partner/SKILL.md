@@ -128,9 +128,10 @@ timer: 90 s with no event and hands off (a background `sleep 90`).
 
 ## The art critic: between tracks only
 
-At a track boundary (`gate-drop`, then the next `gate-clean`), start ONE background agent that
-reads and adopts `.claude/agents/art-critic.md` and give it a screenshot pair, the meter, the
-brief and `docs/vj-preferences.md`. Its verdict comes back to you; its top fix becomes at most one
+At a track boundary (`gate-drop`, then the next `gate-clean`), start ONE background
+`art-critic` agent (`.claude/agents/art-critic.md`: read-only, it can call the VJ MCP's
+`get_state` and `screenshot` itself) with the brief, the meter and `docs/vj-preferences.md`.
+Where the VJ MCP is not registered as `paper-cranes-vj`, pass it screenshot paths instead. Its verdict comes back to you; its top fix becomes at most one
 proposal, through the same queue, never a direct edit and never in front of his hands. Your
 words and his outrank it (playbook: "your words outrank it").
 

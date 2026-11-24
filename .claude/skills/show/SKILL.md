@@ -179,7 +179,9 @@ node scripts/vj/stray-guard.mjs                                                 
   the bridge): take `screenshot` through the VJ MCP, place it in frame `kept` with the draw
   `image` tool, with a 1-line label (time, shader, the knobs that differ from 0). The page has
   already saved the moment to the snapshot queue (`shaders/<shader>/docs/.snapshots/`), which
-  `/keep process` turns into forks and presets after the set.
+  `/keep process` turns into forks and presets after the set. When the shader on the wall is a
+  `-wip` or a partner candidate (`-p<N>`), copy its file now to `.claude/keeps/<time>-<name>.frag`:
+  that file keeps changing, and the fork needs the code as it was.
 - **`pad-alive` with `alive: false`**: the pad's socket dropped. Paint `st-wall` blocked, tell Aaron
   in one line. Idle must never look the same as broken (2026-08-20: the pad was dead for 4 min).
 - **`clip`, `too-dark`, `boot`**: the partner lane fixes these. You only tell Aaron if it cannot.
