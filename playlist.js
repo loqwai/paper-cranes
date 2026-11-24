@@ -196,7 +196,7 @@ const main = async () => {
 
     // Load first shader
     const { code: fragmentShader } = await loadShader(playlist[0].name)
-    document.title = `Paper Cranes - Playlist: ${playlist[0].displayName || playlist[0].name}`
+    document.title = `Paper Cranes - Playlist: ${playlist[0].prettyName || playlist[0].name}`
 
     // Setup audio and canvas
     const audio = await setupAudio()
@@ -238,7 +238,7 @@ const main = async () => {
         currentIndex = (currentIndex + 1) % playlist.length
         const shader = playlist[currentIndex]
         console.log(`Playlist: switching to ${shader.name} (${currentIndex + 1}/${playlist.length})`)
-        document.title = `Paper Cranes - Playlist: ${shader.displayName || shader.name}`
+        document.title = `Paper Cranes - Playlist: ${shader.prettyName || shader.name}`
         await loadShader(shader.name)
     }
 
