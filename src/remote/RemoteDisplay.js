@@ -146,6 +146,8 @@ const startLiveShow = (client) => {
     const url = new URL(window.location.href)
     url.searchParams.set('shader', fork)
     window.history.replaceState({}, '', url.toString())
+    // The debounced URL mirror may still hold the shader PANIC just replaced; it would put it back.
+    if (urlPending && 'shader' in urlPending) urlPending.shader = fork
     inspector?.hello()
   }
 

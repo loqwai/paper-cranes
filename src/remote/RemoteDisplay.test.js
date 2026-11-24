@@ -199,6 +199,8 @@ describe('RemoteDisplay live show (docs/live-show-contract.md)', () => {
     await vi.advanceTimersByTimeAsync(0)
     expect(window.cranes.shader).toBe('code at /shaders/clit-set/2.frag')
     expect(query().get('shader')).toBe('clit-set/2')
+    vi.advanceTimersByTime(1000) // the debounced URL mirror must not put the old shader back
+    expect(query().get('shader')).toBe('clit-set/2')
   })
 
   it('?panic= names the fork PANIC swaps to', async () => {

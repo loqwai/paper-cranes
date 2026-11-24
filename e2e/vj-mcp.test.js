@@ -90,7 +90,7 @@ describe('vj mcp', () => {
   it('lists the tools over streamable HTTP', async () => {
     const { tools } = await client.listTools()
     expect(tools.map((t) => t.name).sort()).toEqual(
-      ['get_state', 'list_displays', 'list_shaders', 'read_shader', 'screenshot', 'set_params', 'set_shader', 'wait_for_event', 'write_shader'],
+      ['answer_proposal', 'get_state', 'keep', 'list_displays', 'list_shaders', 'panic', 'propose', 'read_shader', 'screenshot', 'set_params', 'set_shader', 'wait_for_event', 'write_shader'],
     )
   })
 
