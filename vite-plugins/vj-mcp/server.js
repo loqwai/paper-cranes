@@ -204,13 +204,14 @@ export const createVjMcpServer = ({ hub, shaders, venue, onCall, displaySecret }
       display: displayArg,
       shader: z.string().describe('path under shaders/ without .frag, e.g. "clit-set/2"'),
       params: z.record(z.union([z.number(), z.null()])).optional().describe('knobs to set in the same message'),
+      source: z.enum(['agent', 'board']).optional().describe('default agent (held while his hands are on the dials); "board" only for a switch Aaron made by tapping the draw board'),
     },
-  }, guard(async ({ display, shader, params = {} }) => {
+  }, guard(async ({ display, shader, params = {}, source = 'agent' }) => {
     const d = hub.resolve(display)
     const { name, code } = await readShader(strictShader(shader))
     for (const k of Object.keys(params)) if (RESERVED.has(k) || !PARAM_KEY.test(k)) throw new ToolError(`bad param name ${k}`)
-    hub.send(d, 'update-params', { shader: name, ...params }, { source: 'agent' })
-    if ((await liveOf(d))?.hands) return text({ display: d.id, shader: name, loaded: false, held: true, note: 'his hands are on the dials; the page swaps 8 s after his last move' })
+    hub.send(d, 'update-params', { shader: name, ...params }, { source })
+    if (source === 'agent' && (await liveOf(d))?.hands) return text({ display: d.id, shader: name, loaded: false, held: true, note: 'his hands are on the dials; the page swaps 8 s after his last move' })
     const { pickedUp, state } = await awaitSource(d, hashSource(code), 6000)
     // Only judge the compile once the page runs the new source; otherwise it would be the old one's.
     const verdict = pickedUp ? await hub.request(d, 'validate', {}) : null

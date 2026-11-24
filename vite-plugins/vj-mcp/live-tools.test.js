@@ -53,6 +53,13 @@ describe('live-show tools', () => {
     expect(r.json).toMatchObject({ held: true, loaded: false })
   })
 
+  it('set_shader from the board is his own switch: marked board, never reported held', async () => {
+    const { sent, call } = await harness({ live: { hands: true, held: [], proposals: [] } })
+    const r = await call('set_shader', { shader: 'sun/7', source: 'board' })
+    expect(sent[0]).toMatchObject({ source: 'board', data: { shader: 'sun/7' } })
+    expect(r.json?.held).toBeUndefined()
+  }, 10_000)
+
   it('propose, answer_proposal, keep and panic each send one message to the display', async () => {
     const { sent, call } = await harness()
     await call('propose', { id: 'p1', label: 'k9 to max?', params: { knob_9: 1 } })

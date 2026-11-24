@@ -64,6 +64,7 @@ since the page has not applied it yet.
 | tool | args | does |
 |---|---|---|
 | `set_params` | `{display?, params, source?: "agent"\|"board"}` | as before; `source` defaults to `"agent"` (held by HANDS). The board bridge passes `"board"`. |
+| `set_shader` | `{display?, shader, params?, source?: "agent"\|"board"}` | as before; `source` defaults to `"agent"`. The board bridge passes `"board"` for a setlist beat he tapped. |
 | `propose` | `{display?, id, label, params, shader?}` | shows a one-line proposal card on every connected vjpad (and a chip on the display only with `?vj=1&show_proposals=1`). Times out after 30 s. |
 | `answer_proposal` | `{display?, id, take: boolean}` | the card's KEEP (`take:true`) or dismiss (`take:false`), for the board bridge |
 | `keep` | `{display?}` | presses KEEP on the display |
@@ -92,6 +93,20 @@ exactly as for the on-screen/vjpad/MIDI control.
 
 - Controls: the KEEP button on vjpad, a MIDI CC or note (`?midi_keep=cc:N` / `note:N`, persisted),
   the VJ MCP `keep` tool, and `k` on jam/show (Space still saves a plain snapshot).
+
+## The draw board bridge
+
+`scripts/vj/board-bridge.js` (built by the Set List lane, carried in this PR) turns a draw board into
+a control surface with no model in the path: it listens for Sends and maps one selected control to
+one VJ MCP call.
+
+| board element id | call |
+|---|---|
+| `ctl-panic` | `panic {fork?}` (`--panic <fork>`) |
+| `ctl-keep` | `keep` |
+| `ctl-k<N>-<0..100>`, `ctl-k<N>-off` | `set_params {params:{knob_N: v\|null}, source:"board"}` |
+| `ctl-next`, `ctl-prev` | the next/previous setlist beat: `set_shader {..., source:"board"}` |
+| `prop-<id>-take`, `prop-<id>-drop` | `answer_proposal {id, take}` |
 
 ## Wire messages (room/dev `/ws`, for anyone writing a new control)
 
