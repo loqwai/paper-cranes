@@ -53,7 +53,7 @@ See also: watch-page, displays, servers
 
 ## change-knobs: Change knobs live
 
-1. Find out which knobs the shader reads: `get_state {}`. `knobs` maps `knob_N` to
+1. Know the knob? Skip to step 2. Otherwise find out which knobs the shader reads: `get_state {}`. `knobs` maps `knob_N` to
    `{value, name?, unused?}`; `name` comes from the shader's `// K12 TWIST STEP` comment, and
    `unused: true` marks a knob that is set but the shader never reads. `list_shaders {query: "<name>"}`
    also lists each shader's knobs, as `"12:TWIST STEP"`.
@@ -76,10 +76,10 @@ See also: knobs, screenshot-judge, live-show-partner
 
 Switching to another shader that exists:
 
-1. Find one: `list_shaders {query: "clit", limit: 10}`. Names are paths under `shaders/` without
-   `.frag`, e.g. `"clit-set/2"`.
+1. Know the name? Skip to step 2. Otherwise find one: `list_shaders {query: "clit", limit: 10}`.
+   Names are paths under `shaders/` without `.frag`, e.g. `"clit-set/2"`.
 2. `set_shader {shader: "clit-set/2", params: {"knob_1": 0.5}}` (`params` optional). The page
-   swaps in place: no reload, audio history kept.
+   swaps in place: no reload, audio history kept. This one call is the whole swap.
 3. Check the reply: `loaded: true` and `compiles: true`. `loaded: false` means the page never ran
    the new source within 6 s; `compiles: false` comes with the compile `error`.
 

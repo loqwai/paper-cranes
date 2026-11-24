@@ -424,14 +424,25 @@ so a refresh preserves state) and per-message DOM work was removed outright.
 ### VJ MCP (any agent harness)
 An MCP server (streamable HTTP, stateless, never SSE) whose tools read and drive every display:
 `list_displays`, `list_shaders`, `get_state`, `screenshot`, `set_params`, `set_shader`,
-`read_shader`, `write_shader`, `wait_for_event`. It runs in two places with the same code
-(`vite-plugins/vj-mcp/server.js` + `hub-core.js`):
+`read_shader`, `write_shader`, `wait_for_event`, `guide`, plus `display_secret` on the relay only. It runs in two places with
+the same code (`vite-plugins/vj-mcp/server.js` + `hub-core.js`):
+- **Ask the server how to use it:** `guide` (no args: contents; `{topic}`: one section;
+  `{question: "how do I ..."}`: the best matching sections, keyword-ranked, no model). Its
+  workflows (pick a display, change knobs, hot-swap a shader, watch signals, judge a screenshot,
+  run a relay room, partner on a live show) are also MCP prompts and `vj://guide/...` resources,
+  and its orientation is the server `instructions`. All of it comes from one file,
+  [docs/vj-mcp-guide.md](docs/vj-mcp-guide.md): edit that, never the JS.
 - **Live:** `https://relay.beadfamous.com/mcp/<room>` on the relay Worker. Displays are any
   `?remote=display&room=<room>` page; the room's Durable Object is the broker. Cloudflare Access
   managed OAuth in front (`claude mcp add --transport http paper-cranes-live
   https://relay.beadfamous.com/mcp/<room>`, then sign in from `/mcp`), the JWT checked again in the
   Worker. `write_shader` there applies code live and saves nothing (`persisted: false`). The room
   drops any `inspect` a client sends; everything else is relayed verbatim as before.
+  **Display secret:** `display_secret {action: "rotate"}` locks the room and returns a display link
+  ending `#display_secret=ds_…`; from then on only a page opened from that link registers as a
+  display (others get `display-refused` and stay plain room peers). The room stores only its
+  SHA-256; `rotate` again drops every display, `clear` reopens the room, and a room never locked
+  behaves as before. The page never reports the secret and a peer cannot set it.
 - **Dev:** `http://localhost:6969/mcp` on the dev server (`claude mcp add --transport http
   paper-cranes-vj http://localhost:6969/mcp`), displays are `?remote=display` pages there, and
   `write_shader` writes `shaders/<x>.frag` and hot-swaps.
@@ -526,6 +537,7 @@ paramsManager.setShader(code)      // Syncs shader to remote
     ├── vj-mcp-plugin.js         # /mcp: VJ MCP server, streamable HTTP (dev only) — docs/vj-mcp.md
     ├── vj-mcp/server.js, hub-core.js  # the tool set and display hub, shared with the relay Worker
     ├── vj-mcp/hub.js, tools.js  #   their dev-server hosts (Node ws sockets, shaders on disk)
+    ├── vj-mcp/guide.js          #   guide tool, workflow prompts, vj://guide resources, from docs/vj-mcp-guide.md
     └── shader-plugin.js         # Shader discovery, metadata, and manifest generation
 ```
 
