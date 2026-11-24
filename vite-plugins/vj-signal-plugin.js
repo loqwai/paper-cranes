@@ -5,6 +5,7 @@
 // instead of discovering it a beat later. (vibej v2 design, 2026-08-19.)
 import { appendFileSync, mkdirSync, readFileSync, existsSync, renameSync } from 'fs'
 import { resolve } from 'path'
+import { refuseOtherSites } from './same-origin.js'
 
 // onSignal: the VJ MCP hub's event feed (wait_for_event), called with each parsed signal.
 export const vjSignalPlugin = ({ onSignal } = {}) => ({
@@ -17,6 +18,7 @@ export const vjSignalPlugin = ({ onSignal } = {}) => ({
     // last 50 lines, and an agent reading the whole file blows its own context — so each dev
     // session starts clean and the previous run is kept as one .prev for post-mortem.
     try { if (existsSync(file)) renameSync(file, file + '.prev') } catch {}
+    server.middlewares.use(refuseOtherSites(['/__vj-signal']))
     server.middlewares.use('/__vj-signal', (req, res) => {
       if (req.method === 'POST') {
         let body = ''
