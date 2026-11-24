@@ -243,6 +243,19 @@ describe('vj mcp on the relay', () => {
     hostile.close()
   })
 
+  it('hears a ?vj=1 page\'s signals through the room, and no peer does', async () => {
+    const { json: before } = await call('list_displays')
+    const p = await peer()
+    const waiting = call('wait_for_event', { since: before.seq, types: ['boot'], timeout_s: 40 })
+    const vj = await browser.newPage({ viewport: { width: 320, height: 240 } })
+    await vj.goto(`http://127.0.0.1:${vitePort}/?shader=plasma&remote=display&noaudio=true&vj=1&${roomQuery()}`)
+    const { json: evt } = await waiting
+    expect(evt.events[0]).toMatchObject({ type: 'vj-signal', signal: 'boot', data: { type: 'boot', flags: { vj: '1', room: ROOM } } })
+    expect(p.types()).not.toContain('vj-signal')
+    await vj.close()
+    p.ws.close()
+  })
+
   it('reports the display leaving', async () => {
     const { json: before } = await call('list_displays')
     const waiting = call('wait_for_event', { since: before.seq, types: ['display-left'], timeout_s: 40 })

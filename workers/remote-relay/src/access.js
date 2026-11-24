@@ -9,11 +9,16 @@ const b64url = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/
 const json = (s) => JSON.parse(new TextDecoder().decode(b64url(s)))
 
 const CERTS_TTL_MS = 10 * 60 * 1000
+// An unknown kid may force a refetch, but not more often than this: otherwise every token with a
+// made-up kid costs a request to the certs URL, a free amplifier for anyone who can reach /mcp.
+const REFRESH_COOLDOWN_MS = 30 * 1000
+// A shared fetch is trusted for this long. The request that started it can be canceled (its client
+// disconnected), and then the fetch never settles: shared forever, it would hang every later caller.
+const FETCH_TIMEOUT_MS = 5 * 1000
 const certCache = new Map() // certs url -> { at, keys: Map(kid -> CryptoKey) }
+const inflight = new Map() // certs url -> { at, p: Promise<Map> }, so concurrent misses share one fetch
 
-const keysFor = async (url, fetchImpl, now, refresh = false) => {
-  const hit = certCache.get(url)
-  if (hit && !refresh && now - hit.at < CERTS_TTL_MS) return hit.keys
+const fetchKeys = async (url, fetchImpl, now) => {
   const res = await fetchImpl(url)
   if (!res.ok) throw new Error(`certs ${res.status}`)
   const { keys = [] } = await res.json()
@@ -25,6 +30,22 @@ const keysFor = async (url, fetchImpl, now, refresh = false) => {
   certCache.set(url, { at: now, keys: map })
   return map
 }
+
+const keysFor = (url, fetchImpl, now, refresh = false) => {
+  const hit = certCache.get(url)
+  if (hit && now - hit.at < (refresh ? REFRESH_COOLDOWN_MS : CERTS_TTL_MS)) return hit.keys
+  const running = inflight.get(url)
+  if (running && now - running.at < FETCH_TIMEOUT_MS) return within(running.p, FETCH_TIMEOUT_MS)
+  const p = fetchKeys(url, fetchImpl, now).finally(() => { if (inflight.get(url)?.p === p) inflight.delete(url) })
+  inflight.set(url, { at: now, p })
+  return within(p, FETCH_TIMEOUT_MS)
+}
+
+// p, or a rejection after ms. The timer is the caller's own, so it fires even when p never settles.
+const within = (p, ms) => new Promise((resolve, reject) => {
+  const timer = setTimeout(() => reject(new Error('certs fetch timed out')), ms)
+  p.then((v) => { clearTimeout(timer); resolve(v) }, (e) => { clearTimeout(timer); reject(e) })
+})
 
 export const accessConfig = (env) => {
   const team = String(env.ACCESS_TEAM_DOMAIN ?? '').replace(/^https:\/\//, '').replace(/\/+$/, '')

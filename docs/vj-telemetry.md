@@ -8,6 +8,11 @@ lives outside the current Chrome tab group and **cannot be scripted or screensho
 at boot (`src/vj/runtime.js`) and POSTs signals to `/__vj-signal`, which the dev server appends to
 `.claude/vj-signals.jsonl` (gitignored). A `Monitor` on that file wakes the loop within seconds.
 
+A display on a relay room (`?remote=display&room=<room>`, including a production page) also sends
+each signal down its room socket, where the relay VJ MCP's `wait_for_event` sees it as a
+`vj-signal` event (`src/vj/signals.js`, [vj-mcp.md](vj-mcp.md)). A production build has no
+`/__vj-signal` and bundles the aesthetic meter instead of fetching `/scripts/vj/`.
+
 ```
 http://localhost:6969/?shader=<path>&vj=1
 ```
