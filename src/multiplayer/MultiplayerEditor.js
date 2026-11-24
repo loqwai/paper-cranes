@@ -3,6 +3,12 @@ import { getIdentity } from './identity.js'
 
 const STYLE_EL_ID = 'mp-peer-styles'
 
+// Every editor on the dev server shares one /ws, so each message carries the shader it is about.
+// Unscoped, a tab on star applied plasma's keystrokes, and a new tab took its first buffer from
+// whichever peer answered its hello, on any shader. Read when used: the editor can switch shader.
+const shaderNow = () => new URLSearchParams(window.location.search).get('shader') ?? ''
+const SCOPED = new Set(['mp-hello', 'mp-sync-full', 'mp-edit', 'mp-cursor'])
+
 const ensurePeerStyle = (userId, color, colorAlpha) => {
     let styleEl = document.getElementById(STYLE_EL_ID)
     if (!styleEl) {
@@ -113,6 +119,7 @@ export const initMultiplayerEditor = (editor) => {
         if (!type?.startsWith('mp-')) return
 
         if (data?.userId === identity.userId) return
+        if (SCOPED.has(type) && data?.shader !== shaderNow()) return
 
         switch (type) {
             case 'mp-hello': {
@@ -120,6 +127,7 @@ export const initMultiplayerEditor = (editor) => {
                 client.send('mp-presence', identity)
                 client.send('mp-sync-full', {
                     userId: identity.userId,
+                    shader: shaderNow(),
                     targetUserId: data.userId,
                     content: editor.getValue(),
                 })
@@ -179,7 +187,7 @@ export const initMultiplayerEditor = (editor) => {
         if (status === 'connected') {
             // Announce ourselves and request state from any existing peers
             client.send('mp-presence', identity)
-            client.send('mp-hello', { userId: identity.userId })
+            client.send('mp-hello', { userId: identity.userId, shader: shaderNow() })
             // Go live after a brief settle period so the initial setValue
             // from monaco.js doesn't get broadcast as an edit
             setTimeout(() => {
@@ -200,6 +208,7 @@ export const initMultiplayerEditor = (editor) => {
         const selection = editor.getSelection()
         client.send('mp-cursor', {
             ...identity,
+            shader: shaderNow(),
             position: position ? { lineNumber: position.lineNumber, column: position.column } : null,
             selection: selection ? {
                 startLineNumber: selection.startLineNumber,
@@ -226,6 +235,7 @@ export const initMultiplayerEditor = (editor) => {
         if (!isReady) return
         client.send('mp-edit', {
             userId: identity.userId,
+            shader: shaderNow(),
             changes: e.changes.map(c => ({
                 range: {
                     startLineNumber: c.range.startLineNumber,
