@@ -64,6 +64,7 @@ export const shaderWrapper = (shader) => {
         const queryUniforms = getQueryParamUniforms(shader, otherUniforms)
         return /* glsl */ `#version 300 es
 precision highp float;
+#define PAPER_CRANES 1
 
 out vec4 fragColor;
 ${compatUniforms}
