@@ -75,7 +75,11 @@ Claude Code ──POST /mcp/<room>──► Cloudflare Access (OAuth; 401 + chal
 - A duplicated tab is told to rekey after the hub pings the first tab with an `inspect` (any
   reply, even "unknown cmd" from an older page, counts as alive).
 
-**The page side.** A production page loads `src/remote/inspect.js` only when it has `?room=`.
+**The page side.** A production page loads `src/remote/inspect.js` only when it has `?room=` and its
+relay is one we run: `relay.beadfamous.com` (the default) or a loopback relay (`src/remote/relay.js`,
+`inspectorAllowed`). A link with `?relay=<any other host>` still relays knobs as before, but the
+page never answers `inspect` there, so a stranger's relay cannot welcome it and read its canvas,
+audio features, knobs or console.
 It answers `inspect` only after its broker has answered its hello with `display-welcome`. A relay
 that predates the broker never welcomes, so on it the inspector stays silent to a forged `inspect`
 (checked 2026-11-24 against the live relay: 0 replies). That old relay does relay the hello itself,

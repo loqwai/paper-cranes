@@ -1,12 +1,15 @@
 import { WebSocketClient } from './WebSocketClient.js'
 import { loadShader } from '../shaderLoader.js'
+import { inspectorAllowed } from './relay.js'
 
 // The VJ MCP (docs/vj-mcp.md) reaches this display through a broker: the dev server's /ws, or on
-// `?room=` the relay Worker's room, which drops any `inspect` a client sends. A production page
-// with no room has no broker at all, so it never loads the inspector. Even where it does, the
-// inspector answers nothing until the broker itself has welcomed it (inspect.js), so a page on a
-// relay that predates the broker does not answer a forged inspect (deploy the relay first).
-const inspectable = import.meta.env.DEV || Boolean(new URLSearchParams(window.location.search).get('room'))
+// `?room=` the relay Worker's room, which drops any `inspect` a client sends. The inspector loads
+// only where that broker is one we run (relay.js: a dev build with no room, or a room on
+// relay.beadfamous.com or a loopback relay); a `?relay=` link to any other host relays as before
+// but never answers inspect. Even where it loads, the inspector answers nothing until the broker
+// itself has welcomed it (inspect.js), so a page on a relay that predates the broker does not
+// answer a forged inspect (deploy the relay first).
+const inspectable = inspectorAllowed(window.location, { dev: import.meta.env.DEV })
 let inspector = null
 
 /**

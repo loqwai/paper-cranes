@@ -1,30 +1,10 @@
-// The worker is deployed from workers/remote-relay. It ALSO answers on
-// paper-cranes-remote.loqwai.workers.dev, but do not point clients there: a
-// wildcard Cloudflare Access app guards that subdomain (and *.hypnodroid.com)
-// and 302s the websocket upgrade to a login page. beadfamous.com carries no
-// such app, which is the only reason this host is the default.
-const DEFAULT_RELAY_HOST = 'relay.beadfamous.com'
+import { wsUrlFor } from './relay.js'
 
 /**
- * Get the WebSocket URL for remote control.
- * Uses the Cloudflare relay when a `room` param is present,
- * otherwise falls back to the local dev server.
+ * Get the WebSocket URL for remote control: the Cloudflare relay when a `room` param is
+ * present, otherwise the local dev server. See relay.js.
  */
-const getWsUrl = () => {
-  const params = new URLSearchParams(window.location.search)
-  const room = params.get('room')
-
-  if (room) {
-    const relayHost = params.get('relay') || DEFAULT_RELAY_HOST
-    // A relay on this machine (`wrangler dev` in workers/remote-relay) speaks plain ws.
-    const scheme = /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(relayHost) ? 'ws' : 'wss'
-    return `${scheme}://${relayHost}/ws/${encodeURIComponent(room)}`
-  }
-
-  // Fallback: local dev server (existing behavior)
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  return `${protocol}//${window.location.host}/ws`
-}
+const getWsUrl = () => wsUrlFor(window.location)
 
 /**
  * Robust WebSocket client with auto-reconnect
