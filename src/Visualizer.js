@@ -23,21 +23,24 @@ const positions = [
     1, 1, 0,
 ]
 
-const getTexture = async (gl, url) => {
-    const src = url
-    return new Promise((resolve) => {
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
-        const texture = createTexture(gl, {
-            src,
-            crossOrigin: 'anonymous',
-            min: gl.NEAREST,
-            mag: gl.NEAREST,
-            wrap: gl.REPEAT
-        }, () => {
-            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false)
-            resolve(texture)
-        })
+// Returns at once with a 1x1 black texture so the shader can compile and draw while the image
+// downloads; onLoad fires after the image replaces it.
+const createImageTexture = (gl, src, onLoad) => {
+    const texture = createTexture(gl, {
+        src,
+        crossOrigin: 'anonymous',
+        color: [0, 0, 0, 1],
+        flipY: true,
+        min: gl.NEAREST,
+        mag: gl.NEAREST,
+        wrap: gl.REPEAT
+    }, (err) => {
+        // twgl sets UNPACK_FLIP_Y_WEBGL for the upload and leaves it set.
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false)
+        if (!err) onLoad()
     })
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false)
+    return texture
 }
 
 const handleShaderError = (gl, wrappedFragmentShader, newFragmentShader) => {
@@ -137,9 +140,9 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         e.preventDefault()
         contextLost = true
     })
-    canvas.addEventListener('webglcontextrestored', async () => {
+    canvas.addEventListener('webglcontextrestored', () => {
         // Reinitialize all GL resources in-place instead of reloading
-        initialTexture = await getTexture(gl, initialImageUrl)
+        initialTexture = createImageTexture(gl, initialImageUrl, reseedFromImage)
         frameBuffers = [createFramebufferInfo(gl), createFramebufferInfo(gl)]
         frameBuffers.forEach(setFramebufferTexParams)
         bufferInfo = createBufferInfoFromArrays(gl, { position: positions })
@@ -161,7 +164,10 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         canvas.classList.add('fullscreen')
     }
 
-    let initialTexture = await getTexture(gl, initialImageUrl)
+    let useInitialTextureAsPrev = false
+    // Feedback shaders read the image as prevFrame on frame 0; when it lands after that, seed again.
+    const reseedFromImage = () => { useInitialTextureAsPrev = true }
+    let initialTexture = createImageTexture(gl, initialImageUrl, reseedFromImage)
     let frameBuffers = [createFramebufferInfo(gl), createFramebufferInfo(gl)]
 
     const setFramebufferTexParams = (fb) => {
@@ -192,7 +198,6 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
     let ceilingRetryDelay = 20000
     let lastCanvasWidth = 0
     let lastCanvasHeight = 0
-    let useInitialTextureAsPrev = false
 
     const render = ({ time, features, fragmentShader: newFragmentShader }) => {
         if (contextLost) return
