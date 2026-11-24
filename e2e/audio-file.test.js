@@ -1,13 +1,23 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
 import { chromium } from 'playwright'
 import { createServer } from 'vite'
+import { existsSync } from 'node:fs'
 import { swing, mean, stddev, maxConsecutiveDiff } from './helpers.js'
 
 let server, port, browser, page
 
 const STABILIZE_MS = 4000
 
+// These assertions are tied to one track's sections (drop at 76s, build at 419s),
+// and that track is not in git (public/test-audio/ is gitignored). Without it,
+// skip and say why instead of failing every run on a fresh checkout.
+const FIXTURE = new URL('../public/test-audio/imaginary-friends.mp3', import.meta.url).pathname
+const missing = existsSync(FIXTURE) ? [] : [`fixture ${FIXTURE}`]
+if (missing.length) console.warn(`[e2e] audio-file suite skipped, missing: ${missing.join(', ')}`)
+const suite = missing.length ? describe.skip : describe
+
 beforeAll(async () => {
+  if (missing.length) return
   server = await createServer({
     configFile: new URL('../vite.config.js', import.meta.url).pathname,
     server: { port: 0, host: '127.0.0.1', strictPort: false },
@@ -110,7 +120,7 @@ const captureFrameMAEs = (count = 5, intervalMs = 200) =>
 //  SMOKE
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe('smoke: audio file loads and plays', () => {
+suite('smoke: audio file loads and plays', () => {
   beforeAll(() => loadAtTime(27))
 
   it('audioBuffer is present on window.cranes', async () => {
@@ -135,7 +145,7 @@ describe('smoke: audio file loads and plays', () => {
 //  not fully silent, and the history buffer is still building)
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe('quiet intro (0–2s)', () => {
+suite('quiet intro (0–2s)', () => {
   let samples, frameSim
 
   beforeAll(async () => {
@@ -170,7 +180,7 @@ describe('quiet intro (0–2s)', () => {
 //  FULL ENERGY (27–30s) — loud, reactive
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe('full energy section (27–30s)', () => {
+suite('full energy section (27–30s)', () => {
   let samples, frameSim
 
   beforeAll(async () => {
@@ -209,7 +219,7 @@ describe('full energy section (27–30s)', () => {
 //  DROP (76–78s) — smooth transition, no snapping
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe('drop section (76–78s)', () => {
+suite('drop section (76–78s)', () => {
   let samples
 
   beforeAll(async () => {
@@ -235,7 +245,7 @@ describe('drop section (76–78s)', () => {
 //  QUIET → LOUD (419–422s) — transition responsiveness
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe('quiet→loud transition (419–422s)', () => {
+suite('quiet→loud transition (419–422s)', () => {
   let earlyFeatures, lateFeatures
 
   beforeAll(async () => {

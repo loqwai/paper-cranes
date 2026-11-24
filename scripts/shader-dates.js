@@ -15,8 +15,10 @@
  *
  * So the real history is baked into a committed `shader-dates.json` and the
  * build prefers it whenever live history is unavailable or degenerate. Live git
- * still wins when it is genuinely usable (i.e. local dev), so the file does not
- * need babysitting during normal work — it is refreshed automatically.
+ * still wins when it is genuinely usable (i.e. local dev). A dev server or build
+ * refreshes the file only while the tree has uncommitted .frag changes (see
+ * shouldAutoRefreshBake), and that refresh cannot see the commit it rides in, so
+ * run `npm run shader-dates` after committing shader work.
  */
 import { execFile } from 'child_process'
 import { promisify } from 'util'
@@ -116,11 +118,44 @@ export const resolveDates = async () => {
   return { dates, source: `${DATES_FILE} (${reason})`, live, usable }
 }
 
-/** Writes the baked file. Only ever called when live history is trustworthy. */
-export const writeBakedDates = async (dates) => {
-  const sorted = Object.fromEntries([...dates.entries()].sort(([a], [b]) => a.localeCompare(b)))
-  await writeFile(DATES_FILE, `${JSON.stringify(sorted, null, 2)}\n`)
-  return Object.keys(sorted).length
+/**
+ * The baked file's exact text: only shaders that still exist (git log also names
+ * deleted and renamed-away files), keys in code-point order so the bytes never
+ * depend on the machine's locale.
+ * @param {Map<string,string>} dates
+ * @param {Set<string>} [existing] posix paths of shaders on disk; omit to keep every entry
+ */
+export const bakedDatesText = (dates, existing) => {
+  const entries = [...dates.entries()].filter(([path]) => !existing || existing.has(path))
+  entries.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+  return `${JSON.stringify(Object.fromEntries(entries), null, 2)}\n`
+}
+
+/**
+ * Writes the baked file when its text would change. Only ever called when live history is trustworthy.
+ * @returns {Promise<{count: number, written: boolean}>}
+ */
+export const writeBakedDates = async (dates, { existing, file = DATES_FILE } = {}) => {
+  const text = bakedDatesText(dates, existing)
+  const count = Object.keys(JSON.parse(text)).length
+  const current = await readFile(file, 'utf-8').catch(() => null)
+  if (current === text) return { count, written: false }
+  await writeFile(file, text)
+  return { count, written: true }
+}
+
+/**
+ * Should a dev-server start or build refresh the committed baked file? Only when
+ * history is real AND this tree is already changing shaders, so the refresh rides
+ * along with that commit. A clean checkout (CI, an agent's gate run) must leave
+ * `git status` clean; `npm run shader-dates` refreshes it on purpose.
+ */
+export const shouldAutoRefreshBake = ({ usable, dirtyShaderCount }) => usable && dirtyShaderCount > 0
+
+/** @returns {Promise<Set<string>>} posix paths of the shaders git tracks */
+export const trackedShaderFiles = async () => {
+  const { stdout } = await execFileAsync('git', ['ls-files', '--', SHADER_DIR], { maxBuffer: 16 * 1024 * 1024 })
+  return new Set(stdout.split('\n').filter((line) => line.endsWith('.frag')))
 }
 
 const main = async () => {
@@ -137,8 +172,8 @@ const main = async () => {
     process.exit(1)
   }
 
-  const count = await writeBakedDates(live)
-  console.log(`[shader-dates] Wrote ${DATES_FILE}: ${count} shaders, ${distinct} distinct dates.`)
+  const { count, written } = await writeBakedDates(live, { existing: await trackedShaderFiles() })
+  console.log(`[shader-dates] ${written ? 'Wrote' : 'Unchanged'} ${DATES_FILE}: ${count} shaders, ${distinct} distinct dates.`)
 }
 
 // pathToFileURL, not `file://${argv[1]}` — on Windows argv[1] is a backslash path

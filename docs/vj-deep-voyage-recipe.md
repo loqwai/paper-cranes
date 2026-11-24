@@ -147,7 +147,7 @@ Things that worked:
 4. **Check the frame** with a colour census (vivid share, hot-pink share, grey share, white, mean L).
    For a dramatic change, render it headless across all six waypoints (`?voyage0=0..5`) before the
    phone sees it.
-5. **Commit after every move** (revert `shader-dates.json` first). Merge remote changes only when they
+5. **Commit after every move** (a `shader-dates.json` refresh may ride along: it only changes with your `.frag` edits). Merge remote changes only when they
    don't touch reload-risk files (`index.js`, `src/`, `vite-plugins/`).
 6. **Journal** cool moments with the audio fingerprint and what made them work.
 
