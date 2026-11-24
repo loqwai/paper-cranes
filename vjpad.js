@@ -706,7 +706,8 @@ const phoneWall = mountPhoneWall({
     client,
     host: $('wallbar'),
     getShader: () => activeShader,
-    getState: () => ({ ...state }),
+    // Every value the pad holds, minus its own bookkeeping (__gate).
+    getState: () => Object.fromEntries(Object.entries(state).filter(([k]) => !k.startsWith('__'))),
     onProject: () => {
         if (wakeSupported && !lock) wakeBtn.click()
         buzz([30])

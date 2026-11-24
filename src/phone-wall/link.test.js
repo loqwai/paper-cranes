@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createLink, HELLO_MS, PEER_TTL_MS } from './link.js'
-import { createPadClient } from './pad.js'
-import { createWallClient } from './wall.js'
+import { createPadClient, mountPhoneWall, TO_WALL, TO_BOTH } from './pad.js'
+import { createWallClient, FROM_PAD } from './wall.js'
 import { wallUrlFor } from './project.js'
 
 // One in-memory "browser": every channel of the same name hears every other one, synchronously.
@@ -69,6 +69,17 @@ describe('local link', () => {
     expect(pad.peers[0]).toMatchObject({ info: { boot: 'b1' }, via: 'channel' })
     pad.send({ type: 'update-params', data: { knob_1: 0.4 } })
     expect(got).toEqual([{ type: 'update-params', data: { knob_1: 0.4 } }])
+  })
+
+  it('ignores anything on the channel that is not a link envelope', () => {
+    const BC = makeBus()
+    const got = []
+    const wall = createLink({ role: 'wall', BroadcastChannel: BC, onMessage: (m) => got.push(m) }).start()
+    const stranger = new BC('cranes-phone-wall')
+    stranger.postMessage({ from: 'x', role: 'pad', n: 1, msg: { type: 'vj-keep', data: {} } })
+    stranger.postMessage({ pw: 2, from: 'y', role: 'pad', n: 1, msg: { type: 'vj-keep', data: {} } })
+    expect(wall.linked).toBe(false)
+    expect(got).toEqual([])
   })
 
   it('two pads never hear each other, and a wall never hears another wall', () => {
@@ -186,6 +197,44 @@ describe('wall client', () => {
     wall.send('proposal', { id: 'a' })
     wall.send('display-shot', { png: 'x'.repeat(10) })
     expect(padGot).toEqual(['proposal'])
+  })
+
+  it('acts only on what a pad sends: the broker\'s inspect, welcome and rekey never cross the link', () => {
+    const BC = makeBus()
+    const got = []
+    const wall = createWallClient((m) => got.push(m.type), () => {}, { loc: loc('?wall=1'), nav: {}, BroadcastChannel: BC })
+    wall.connect()
+    // Any same-origin page can post to the channel claiming to be a pad.
+    const forger = createLink({ role: 'pad', BroadcastChannel: BC }).start()
+    for (const type of ['inspect', 'display-welcome', 'display-refused', 'display-rekey', 'vj-agent-shader', 'vjpad-peer', 'update-params', 'vj-keep']) forger.send({ type, data: {} })
+    expect(got).toEqual(['update-params', 'vj-keep'])
+    expect(wall.stats.fromLink).toBe(2)
+    // Whatever pad.js routes to a wall, the wall takes, and nothing else.
+    expect([...FROM_PAD].sort()).toEqual([...TO_WALL, ...TO_BOTH].sort())
+    wall.disconnect()
+    forger.stop()
+  })
+
+  it('a fresh wall takes the pad\'s whole state; a second pad page linking mid-set does not reset it', () => {
+    const BC = makeBus()
+    const got = []
+    const wall = createWallClient((m) => m.type === 'update-params' && got.push(m.data), () => {}, { loc: loc('?wall=1&shader=a'), nav: {}, BroadcastChannel: BC })
+    wall.connect()
+    const mountPad = (state) => {
+      const client = createPadClient(() => {}, () => {}, { makeSocket: fakeSocket().make, BroadcastChannel: BC })
+      mountPhoneWall({ client, host: null, getShader: () => 'a', getState: () => state, loc: loc(''), win: {} })
+      client.connect()
+      return client
+    }
+    const first = mountPad({ knob_1: 0.9 })
+    vi.advanceTimersByTime(HELLO_MS)
+    expect(got).toEqual([{ knob_1: 0.9 }])
+    // The NFC fallback tab, or the pad reloaded: its own defaults must not land on the wall.
+    const second = mountPad({ knob_1: 0.2 })
+    vi.advanceTimersByTime(HELLO_MS * 3)
+    expect(got).toEqual([{ knob_1: 0.9 }])
+    expect(second.link.linked).toBe(true)
+    first.disconnect(); second.disconnect(); wall.disconnect()
   })
 
   it('opens the room socket when the link has a room', () => {

@@ -6,7 +6,8 @@
 //   - a knob turn, HANDS, PANIC, KEEP and a proposal card all work over the link
 //   - an unplugged wall shows NO WALL; a replugged one links back and gets the pad's values
 //   - the Presentation API path, with a stand-in PresentationConnection, does the same
-// Ports 7180-7182 only (the dev server on 7180, a dead relay on 7182): other lanes own the rest.
+// Ports 7180-7182 by default (the dev server on 7180, a dead relay on 7182): other lanes own the rest.
+// E2E_WALL_PORT and E2E_WALL_DEAD_RELAY_PORT move them when another lane holds those.
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { chromium } from 'playwright'
 import { createServer } from 'vite'
@@ -14,8 +15,8 @@ import { mkdir, rm, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
 const ROOT = new URL('..', import.meta.url).pathname
-const PORT = 7180
-const DEAD_RELAY = '127.0.0.1:7182'
+const PORT = Number(process.env.E2E_WALL_PORT || 7180)
+const DEAD_RELAY = `127.0.0.1:${Number(process.env.E2E_WALL_DEAD_RELAY_PORT || 7182)}`
 const DIR = 'claude/wip/phone-wall-e2e'
 const BOOT = `${DIR}/boot`
 const OTHER = `${DIR}/other`
@@ -165,6 +166,9 @@ describe('phone wall over the local link', () => {
     await tab.goto(`http://127.0.0.1:${PORT}/vjpad.html#nfc=s2`) // s2 = PANIC
     await tab.locator('#nfc-confirm-yes').click({ timeout: 6000 })
     await wallShows(wall, GREEN)
+    // The tab is a second pad page: linking to a wall the pad already moved must not reset its knobs
+    // to the tab's defaults.
+    expect(await pinned(wall, 'knob_1')).toBe(0.42)
     await tab.close()
   })
 

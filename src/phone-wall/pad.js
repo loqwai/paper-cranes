@@ -10,8 +10,9 @@ import { createProjector, wallUrlFor } from './project.js'
 
 // Messages a display acts on. pad-hello goes both ways: the wall counts the pad, and so does a
 // room display. Everything else (vjpad-peer bank claims) is between pads, on the room only.
-const TO_WALL = new Set(['update-params', 'vj-keep', 'vj-panic', 'proposal-answer'])
-const TO_BOTH = new Set(['pad-hello'])
+// wall.js FROM_PAD must accept exactly these (link.test.js holds the two together).
+export const TO_WALL = new Set(['update-params', 'vj-keep', 'vj-panic', 'proposal-answer'])
+export const TO_BOTH = new Set(['pad-hello'])
 
 export const createPadClient = (onMessage, onStatus, { makeSocket, BroadcastChannel } = {}) => {
   let socketStatus = 'reconnecting'
@@ -85,6 +86,8 @@ export const mountPhoneWall = ({ client, host, getShader, getState, onProject, o
       const boot = w.info?.boot
       if (!boot || fed.has(boot)) continue
       fed.add(boot)
+      // A wall another pad page already moved keeps its look (wall.js `fresh`).
+      if (w.info?.fresh === false) continue
       const shader = w.info?.wantsShader ? getShader?.() : null
       const payload = { ...(shader ? { shader } : {}), ...(getState?.() ?? {}) }
       if (Object.keys(payload).length) client.send('update-params', payload)
