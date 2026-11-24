@@ -51,6 +51,11 @@ machine): Send to bridge **168-226 ms**; tap to the page confirming the value **
 median 805 ms (the `set_params` read-back samples fps for 300 ms). So the board is for beats,
 KEEP, PANIC and knob presets; the dials and the vjpad stay the instrument (~16 ms).
 
+**Stickers.** The smiley NFC stickers on his arm send KEEP, PANIC, NEXT/PREV, TAKE/DROP and two
+favourites from the armed vjpad (`/vjpad?room=<room>&nfc_show=<show>`, chip **NFC ●**), with no
+board or model in the path. Their NEXT/PREV cursor is the phone's, not the bridge's, so he uses
+one or the other for beats. [docs/nfc-show-controls.md](../../../docs/nfc-show-controls.md).
+
 ## The bridge
 
 1. Mint its ticket: `listener` with `agent: "show-bridge"`. Mint the status link: `link` with

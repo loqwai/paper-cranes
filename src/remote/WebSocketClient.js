@@ -92,14 +92,15 @@ export class WebSocketClient {
     this.reconnectDelay = Math.min(this.reconnectDelay * 2, this.maxReconnectDelay)
   }
 
-  send(type, data) {
+  // `extra` adds envelope fields beside type and data, e.g. { via: 'nfc' } (docs/nfc-show-controls.md).
+  send(type, data, extra) {
     if (this.socket?.readyState !== WebSocket.OPEN) {
       console.warn('[Remote] Cannot send - not connected')
       return false
     }
 
     try {
-      this.socket.send(JSON.stringify({ type, data }))
+      this.socket.send(JSON.stringify({ ...extra, type, data }))
       return true
     } catch (e) {
       console.error('[Remote] Send failed:', e)
