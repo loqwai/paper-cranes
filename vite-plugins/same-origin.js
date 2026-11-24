@@ -15,10 +15,18 @@ export const fromOtherSite = (req) => {
   }
 }
 
+// Does `url` reach a handler for `path`? Match the way connect mounts do: case-insensitive, and
+// also any sub-path, so `/__VJ-SIGNAL`, `/__vj-signal/` and `/__vj-signal.x` are covered too.
+// (An exact match let all three reach `use('/__vj-signal', ...)` with the check skipped.)
+const reaches = (url, path) => {
+  const u = String(url ?? '').toLowerCase()
+  const p = path.toLowerCase()
+  return u.startsWith(p) && (u.length === p.length || '/.?#'.includes(u[p.length]))
+}
+
 // Connect middleware: 403 for a write from another site on any of `paths`.
 export const refuseOtherSites = (paths) => (req, res, next) => {
-  const path = req.url?.split('?')[0]
-  if (req.method === 'GET' || !paths.includes(path) || !fromOtherSite(req)) return next()
+  if (req.method === 'GET' || !paths.some((path) => reaches(req.url, path)) || !fromOtherSite(req)) return next()
   res.statusCode = 403
   res.end(JSON.stringify({ error: `origin ${req.headers.origin} may not write to this dev server` }))
 }

@@ -81,4 +81,31 @@ describe('dev-server write endpoints refuse other sites (CSRF)', () => {
     expect(r.status).toBe(403)
     expect(onSignal).not.toHaveBeenCalled()
   })
+
+  it('refuses it on every URL that reaches the /__vj-signal mount, not only the exact path', async () => {
+    const onSignal = vi.fn()
+    const send = serve(vjSignalPlugin({ onSignal }))
+    for (const url of ['/__vj-signal/', '/__vj-signal/x', '/__vj-signal.json', '/__vj-signal?x=1']) {
+      const r = await send({ url, headers: { origin: 'https://evil.example' }, body: JSON.stringify({ type: 'boot' }) })
+      expect(r.status, url).toBe(403)
+    }
+    expect(onSignal).not.toHaveBeenCalled()
+  })
+
+  it('matches paths case-insensitively, as connect mounts do', async () => {
+    const { refuseOtherSites } = await import('./same-origin.js')
+    const res = { end: vi.fn() }
+    const next = vi.fn()
+    refuseOtherSites(['/__vj-signal'])({ method: 'POST', url: '/__VJ-SIGNAL', headers: { host: 'localhost:6969', origin: 'https://evil.example' } }, res, next)
+    expect(res.statusCode).toBe(403)
+    expect(next).not.toHaveBeenCalled()
+  })
+
+  it('still lets the page itself and scripts through', async () => {
+    const onSignal = vi.fn()
+    const send = serve(vjSignalPlugin({ onSignal }))
+    expect((await send({ url: '/__vj-signal', headers: { origin: 'http://localhost:6969' }, body: '{"type":"a"}' })).status).toBe(204)
+    expect((await send({ url: '/__vj-signal', body: '{"type":"b"}' })).status).toBe(204)
+    expect(onSignal).toHaveBeenCalledTimes(2)
+  })
 })
