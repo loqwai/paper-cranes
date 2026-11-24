@@ -79,6 +79,12 @@ describe('display secret', () => {
     expect(withoutSecret(`https://v.example/?display_secret=${S}&room=x`)).toBe('https://v.example/?room=x')
     expect(withoutSecret('https://v.example/?room=x#knob_1=0.5')).toBe('https://v.example/?room=x#knob_1=0.5')
   })
+  it('cuts a percent-encoded key too, since the page reads one', () => {
+    const href = `https://v.example/?room=x#display%5Fsecret=${S}`
+    expect(displaySecretFrom(new URL(href))).toBe(S)
+    expect(withoutSecret(href)).not.toContain(S)
+    expect(withoutSecret(`https://v.example/?display%5fsecret=${S}&room=x`)).toBe('https://v.example/?room=x')
+  })
   it('goes only to a relay room we run: never the dev server, never another relay', () => {
     expect(secretFor(`wss://${DEFAULT_RELAY_HOST}/ws/x`, S)).toBe(S)
     expect(secretFor('ws://127.0.0.1:8798/ws/x', S)).toBe(S)

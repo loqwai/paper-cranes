@@ -320,6 +320,21 @@ describe('relay room: a display secret locks who may be a display', () => {
     expect(hub.list().map((d) => d.id)).toEqual(['a1b2c3'])
   })
 
+  it('a hello still waiting on the hub when the secret rotates is refused, and keeps no old proof', async () => {
+    const first = secretOf((await control.rotate()).link)
+    const a = join('a'), b = join('b')
+    await helloL(a, { displaySecret: first })
+    a.sent.length = 0
+    // Same key: the hub pings the first tab before it decides, so this hello is mid-flight.
+    const pending = helloL(b, { displaySecret: first })
+    await vi.waitFor(() => expect(a.sent).toHaveLength(1))
+    await control.rotate()
+    expect(await pending).toBe('refused')
+    expect(lastData(b)).toEqual({ reason: REFUSED.rotated })
+    expect(b.att).not.toHaveProperty('gen')
+    expect(hub.list()).toEqual([])
+  })
+
   it('a peer cannot forge display-refused to a display', async () => {
     const tv = join('tv'), pad = join('pad')
     await helloL(tv)

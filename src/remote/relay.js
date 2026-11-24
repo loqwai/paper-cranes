@@ -78,18 +78,20 @@ export const displaySecretFrom = (loc) => {
 }
 
 /** `href` with any display secret cut out of its hash and query. */
+// Judged on the decoded keys, as displaySecretFrom reads them: `#display%5Fsecret=` is the secret
+// too, and a raw-text check would report it.
 export const withoutSecret = (href) => {
   const s = String(href ?? '')
-  if (!s.includes(SECRET_PARAM)) return s
   try {
     const url = new URL(s)
-    url.searchParams.delete(SECRET_PARAM)
     const hash = new URLSearchParams(url.hash.slice(1))
+    if (!url.searchParams.has(SECRET_PARAM) && !hash.has(SECRET_PARAM)) return s
+    url.searchParams.delete(SECRET_PARAM)
     hash.delete(SECRET_PARAM)
     url.hash = hash.toString()
     return url.toString()
   } catch {
-    return s.replace(/display_secret=[^&#]*&?/g, '')
+    return s.replace(/display(_|%5f)secret=[^&#]*&?/gi, '')
   }
 }
 
