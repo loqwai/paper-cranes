@@ -25,9 +25,13 @@ const readAtt = (ws) => { try { return ws.deserializeAttachment() ?? {} } catch 
 
 export const isViewer = (ws) => readAtt(ws).viewer === true
 
-/** How many sockets in the room are displays-or-controllers, and how many are mirrors. */
-export const roomCounts = (ctx) => {
-  const sockets = ctx.getWebSockets()
+/**
+ * How many sockets in the room are displays-or-controllers, and how many are mirrors. `leaving` is a
+ * socket whose close is being handled: workerd can still list it then, and a mirror counted after
+ * it left would keep the wall's feed running for nobody.
+ */
+export const roomCounts = (ctx, leaving) => {
+  const sockets = ctx.getWebSockets().filter((ws) => ws !== leaving)
   const viewers = sockets.filter(isViewer).length
   return { connectedClients: sockets.length - viewers, viewers }
 }

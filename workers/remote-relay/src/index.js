@@ -75,11 +75,11 @@ export class RelayRoom extends DurableObject {
      * that would silently come back empty.
      */
 
-    broadcastStatus() {
-        const sockets = this.ctx.getWebSockets()
+    broadcastStatus(leaving) {
+        const sockets = this.ctx.getWebSockets().filter((ws) => ws !== leaving)
         // Board mirrors (mirror.js) are counted apart: a controller's "N connected" means pages
         // that can be steered, and a display starts its mirror feed only while `viewers` > 0.
-        const status = JSON.stringify({ type: 'status', data: roomCounts(this.ctx) })
+        const status = JSON.stringify({ type: 'status', data: roomCounts(this.ctx, leaving) })
         for (const ws of sockets) {
             try {
                 ws.send(status)
@@ -114,14 +114,14 @@ export class RelayRoom extends DurableObject {
 
     async webSocketClose(ws) {
         this.hub.onClose(ws)
-        // The socket is already out of ctx.getWebSockets() by the time this
-        // runs, so the count this broadcasts is the post-departure one.
-        this.broadcastStatus()
+        // workerd may still list the closing socket here, so it is left out by hand: the count
+        // this broadcasts is the post-departure one.
+        this.broadcastStatus(ws)
     }
 
     async webSocketError(ws) {
         this.hub.onClose(ws)
-        this.broadcastStatus()
+        this.broadcastStatus(ws)
     }
 
     /**

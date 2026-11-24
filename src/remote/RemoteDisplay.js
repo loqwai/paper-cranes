@@ -102,6 +102,7 @@ export const initRemoteDisplay = () => {
   // Expose client for debugging
   window.cranes = window.cranes || {}
   window.cranes.remoteClient = client
+  window.cranes.mirrorFeed = mirrorFeed
 
   return client
 }
