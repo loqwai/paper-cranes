@@ -46,6 +46,8 @@
 import { DurableObject } from 'cloudflare:workers'
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
 import { createVjMcpServer } from '../../../vite-plugins/vj-mcp/server.js'
+// The guide's markdown, bundled as a string by the Text rule in wrangler.jsonc.
+import guide from '../../../docs/vj-mcp-guide.md'
 import { createRoomHub, routeMessage, siteShaders, displayOriginAllowed, decodeRoom, roomSecretControl, RELAY_VENUE } from './room.js'
 import { createDisplayLock } from './secret.js'
 import { authorize, mcpError } from './access.js'
@@ -133,6 +135,7 @@ export class RelayRoom extends DurableObject {
             hub: this.hub,
             shaders: siteShaders({ hub: this.hub, env: this.env }),
             venue: RELAY_VENUE,
+            guide,
             displaySecret: roomSecretControl({
                 ctx: this.ctx,
                 hub: this.hub,

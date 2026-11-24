@@ -19,6 +19,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { ToolError } from './errors.js'
 import { extractKnobs, parseKnobs } from '../../scripts/shader-utils.js'
 import { hashSource } from '../../src/remote/hash.js'
+import { registerGuide, guideInstructions } from './guide.js'
 
 const INSTRUCTIONS = (where) => `Paper Cranes VJ: drive live audio-reactive shader displays.
 Loop: list_displays -> get_state (screenshot:true to see it) -> set_params / set_shader -> get_state again to confirm.
@@ -56,10 +57,12 @@ const RESERVED = new Set(['shader', 'shaderCode', 'fullscreen', 'remote', 'room'
 const PARAM_KEY = /^[A-Za-z_][A-Za-z0-9_]{0,63}$/
 
 // venue: { where: one line on what a display is here, noneHint: how to connect one, persists: bool }
+// guide: docs/vj-mcp-guide.md's text (the host reads or bundles it); it becomes the instructions,
+//   the guide tool, the workflow prompts and the vj://guide resources (guide.js).
 // displaySecret: the relay room's lock (workers/remote-relay/src/room.js roomSecretControl),
 //   { status(), rotate({shader}), clear() }; the dev server has none, and no display_secret tool.
-export const createVjMcpServer = ({ hub, shaders, venue, onCall, displaySecret }) => {
-  const server = new McpServer({ name: 'paper-cranes-vj', version: '0.2.0' }, { instructions: INSTRUCTIONS(venue.where) })
+export const createVjMcpServer = ({ hub, shaders, venue, onCall, displaySecret, guide }) => {
+  const server = new McpServer({ name: 'paper-cranes-vj', version: '0.2.0' }, { instructions: guide ? guideInstructions(guide, venue) : INSTRUCTIONS(venue.where) })
   const persists = typeof shaders.write === 'function'
   const registerTool = (name, spec, handler) =>
     server.registerTool(name, spec, onCall ? (args, extra) => { onCall(name, args); return handler(args, extra) } : handler)
@@ -349,6 +352,8 @@ export const createVjMcpServer = ({ hub, shaders, venue, onCall, displaySecret }
   }, guard(async ({ since, types = [], timeout_s = 25 }, extra) =>
     text(await hub.waitFor({ since: since ?? hub.seq, types, timeoutMs: timeout_s * 1000, signal: extra?.signal })),
   ))
+
+  if (guide) registerGuide(server, guide, { registerTool })
 
   return server
 }

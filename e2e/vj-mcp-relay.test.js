@@ -102,8 +102,21 @@ describe('vj mcp on the relay', () => {
   it('serves the same tools over streamable HTTP at /mcp/<room>', async () => {
     const { tools } = await client.listTools()
     expect(tools.map((t) => t.name).sort()).toEqual(
-      ['answer_proposal', 'display_secret', 'get_state', 'keep', 'list_displays', 'list_shaders', 'panic', 'propose', 'read_shader', 'screenshot', 'set_params', 'set_shader', 'wait_for_event', 'write_shader'],
+      ['answer_proposal', 'display_secret', 'get_state', 'guide', 'keep', 'list_displays', 'list_shaders', 'panic', 'propose', 'read_shader', 'screenshot', 'set_params', 'set_shader', 'wait_for_event', 'write_shader'],
     )
+  })
+
+  it('answers how to use itself from the bundled guide: instructions, guide, prompts, resources', async () => {
+    expect(client.getInstructions()).toMatch(/call `guide`/)
+    expect(client.getInstructions()).toContain('There is no disk here')
+    const { prompts } = await client.listPrompts()
+    expect(prompts.map((p) => p.name)).toContain('relay-room')
+    const prompt = await client.getPrompt({ name: 'relay-room' })
+    expect(prompt.messages[0].content.text).toContain('display_secret {action: "rotate"')
+    const { contents } = await client.readResource({ uri: 'vj://guide/topics/servers' })
+    expect(contents[0].text).toContain('relay.beadfamous.com/mcp/<room>')
+    const { text } = await call('guide', { question: 'how do I lock the room so nobody can fake a display' })
+    expect(text).toMatch(/^Best matches for .*: relay-room/)
   })
 
   it('refuses GET (no SSE), browser origins, and a missing room', async () => {
