@@ -11,14 +11,16 @@
 //
 //   node scripts/vj/knob-correlate.js            → last completed gesture
 //   node scripts/vj/knob-correlate.js --live     → gesture in progress
-import { readFileSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
 
 const live = process.argv.includes('--live')
 // `ms` is performance.now(), which RESETS TO 0 on every page reload — sorting on it alone puts
 // post-reload moves BEFORE older ones and makes "the last gesture" the stale pre-reload one.
 // Re-anchor each move to the batch's server-stamped wall clock, which is monotonic across reloads.
+// No log yet (no ?vj=1&vjtrack=1 page has run on this checkout) is the same answer as an empty one.
+const FILE = '.claude/vj-signals.jsonl'
 const rows = []
-for (const line of readFileSync('.claude/vj-signals.jsonl', 'utf8').trim().split('\n')) {
+for (const line of (existsSync(FILE) ? readFileSync(FILE, 'utf8') : '').trim().split('\n')) {
   let d; try { d = JSON.parse(line) } catch { continue }
   if (d.type !== 'knobtrack' || !d.moves?.length) continue
   const base = Date.parse(d.t), last = Math.max(...d.moves.map(m => m.ms))

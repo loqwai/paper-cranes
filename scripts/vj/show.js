@@ -78,7 +78,13 @@ const PLATFORMS = {
     profile: join(process.env.XDG_CONFIG_HOME || join(homedir(), '.config'), 'paper-cranes-show'),
     // " 0: +*DP-1 2560/597x1440/336+0+0  DP-1": the * marks the primary.
     displays: () => {
-      const out = execFileSync('xrandr', ['--listmonitors']).toString()
+      let out
+      try {
+        out = execFileSync('xrandr', ['--listmonitors']).toString()
+      } catch (err) {
+        if (err.code !== 'ENOENT') throw err
+        throw new Error('show.js finds displays with xrandr, which is not installed: install it (Debian/Ubuntu: x11-xserver-utils, Arch: xorg-xrandr)')
+      }
       return [...out.matchAll(/^\s*\d+:\s+\+?(\*?)(\S+)\s+(\d+)\/\d+x(\d+)\/\d+\+(-?\d+)\+(-?\d+)/gm)]
         .map(([, star, name, width, height, left, top]) => ({ primary: star === '*', name, left: +left, top: +top, width: +width, height: +height }))
         .sort((a, b) => (b.primary - a.primary) || (a.left - b.left))
@@ -319,5 +325,10 @@ if (!commands[command]) {
   console.error(`usage: show.js ${Object.keys(commands).join('|')} ...`)
   process.exit(2)
 }
-const result = await commands[command](...rest)
-console.log(JSON.stringify(result))
+try {
+  console.log(JSON.stringify(await commands[command](...rest)))
+} catch (err) {
+  // The message is the instruction ("run: node scripts/vj/show.js launch <url>"); a stack trace buries it.
+  console.error(`show.js ${command}: ${err.message}`)
+  process.exit(1)
+}

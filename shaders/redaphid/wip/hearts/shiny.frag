@@ -1,6 +1,6 @@
 
 
-define HEART_SIZE 1.3
+#define HEART_SIZE 1.3
 #define PI 3.14159265359
 
 // Psychedelic palette
