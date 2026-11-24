@@ -61,7 +61,9 @@ availability). With neither, nothing on the pad changes.
 `proposal-answer` and `pad-hello` to it over the link first, then to the room as well while the
 room socket is up, so a second display in the room still gets every move. Each such message
 carries a `pwid` (the pad's link id and a count); the wall, which hears the room too, acts on the
-first copy and drops the other (`createOnce` in `link.js`). Bank claims (`vjpad-peer`) stay on the
+link copy and drops a room copy whose `pwid` names a pad on its link (`fromLinkedPeer` in
+`link.js`). It never drops a link copy because of a `pwid` heard on the room: any room peer can
+send any `pwid`, and must not be able to swallow his PANIC. Bank claims (`vjpad-peer`) stay on the
 room. The wall sends the pad only what a pad uses
 (`proposal`, `proposal-clear`, `vj-status`, `vj-learn-result`), over the link and the room both,
 tagged the same way, so a pad in a room shows each loop line once; the inspector's canvas shots

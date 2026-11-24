@@ -5,7 +5,7 @@
 //                    other displays in the room still get them and the wall acts on each once.
 //   mountPhoneWall   the PROJECT button, the WALL chip and the NO WALL banner, driven by state.js.
 import { WebSocketClient } from '../remote/WebSocketClient.js'
-import { createLink, createOnce } from './link.js'
+import { createLink, fromLinkedPeer } from './link.js'
 import { initialWall, stepWall, wallView } from './state.js'
 import { createProjector, wallUrlFor } from './project.js'
 
@@ -26,9 +26,8 @@ export const createPadClient = (onMessage, onStatus, { dev = false, loc = global
   let reported = null
   let sent = 0
   const listeners = new Set()
-  // The wall sends what a pad uses over the link and the room both (wall.js); act on it once.
-  const once = createOnce()
-  const take = (msg) => { if (once(msg)) onMessage(msg) }
+  // The wall sends what a pad uses over the link and the room both (wall.js): act on the link copy.
+  const fromRoom = (msg) => { if (!fromLinkedPeer(link, msg)) onMessage(msg) }
   const report = () => {
     const effective = link.linked ? 'connected' : socketStatus
     if (effective === reported) return
@@ -37,11 +36,11 @@ export const createPadClient = (onMessage, onStatus, { dev = false, loc = global
   }
   const link = createLink({
     role: 'pad',
-    onMessage: take,
+    onMessage,
     ...(BroadcastChannel ? { BroadcastChannel } : {}),
     onPeers: (walls) => { report(); listeners.forEach((fn) => fn(walls)) },
   })
-  const socket = wantsSocket ? (makeSocket ?? ((m, s) => new WebSocketClient(m, s)))(take, (s) => { socketStatus = s; report() }) : null
+  const socket = wantsSocket ? (makeSocket ?? ((m, s) => new WebSocketClient(m, s)))(fromRoom,(s) => { socketStatus = s; report() }) : null
   // Say bye on the way out, so the wall drops this pad at once; come back from the back-forward
   // cache (DIALS and back) linked again.
   globalThis.addEventListener?.('pagehide', () => link.stop())
