@@ -424,7 +424,7 @@ so a refresh preserves state) and per-message DOM work was removed outright.
 ### VJ MCP (any agent harness)
 An MCP server (streamable HTTP, stateless, never SSE) whose tools read and drive every display:
 `list_displays`, `list_shaders`, `get_state`, `screenshot`, `set_params`, `set_shader`,
-`read_shader`, `write_shader`, `wait_for_event`. It runs in two places with the same code
+`read_shader`, `write_shader`, `wait_for_event`, plus `display_secret` on the relay only. It runs in two places with the same code
 (`vite-plugins/vj-mcp/server.js` + `hub-core.js`):
 - **Live:** `https://relay.beadfamous.com/mcp/<room>` on the relay Worker. Displays are any
   `?remote=display&room=<room>` page; the room's Durable Object is the broker. Cloudflare Access
@@ -432,6 +432,11 @@ An MCP server (streamable HTTP, stateless, never SSE) whose tools read and drive
   https://relay.beadfamous.com/mcp/<room>`, then sign in from `/mcp`), the JWT checked again in the
   Worker. `write_shader` there applies code live and saves nothing (`persisted: false`). The room
   drops any `inspect` a client sends; everything else is relayed verbatim as before.
+  **Display secret:** `display_secret {action: "rotate"}` locks the room and returns a display link
+  ending `#display_secret=ds_…`; from then on only a page opened from that link registers as a
+  display (others get `display-refused` and stay plain room peers). The room stores only its
+  SHA-256; `rotate` again drops every display, `clear` reopens the room, and a room never locked
+  behaves as before. The page never reports the secret and a peer cannot set it.
 - **Dev:** `http://localhost:6969/mcp` on the dev server (`claude mcp add --transport http
   paper-cranes-vj http://localhost:6969/mcp`), displays are `?remote=display` pages there, and
   `write_shader` writes `shaders/<x>.frag` and hot-swaps.
@@ -525,7 +530,7 @@ paramsManager.setShader(code)      // Syncs shader to remote
     ├── remote-ws-plugin.js      # WebSocket server for remote control
     ├── editor-sync-plugin.js    # Bidirectional editor↔disk sync (dev only)
     ├── same-origin.js           # 403 for cross-site POSTs to the dev write endpoints (/__save-shader, /__vj-signal, ...)
-    ├── vj-signal-plugin.js      # /__vj-signal endpoint; writes .Codex/vj-signals.jsonl (dev only)
+    ├── vj-signal-plugin.js      # /__vj-signal endpoint; writes .claude/vj-signals.jsonl (dev only)
     ├── vj-mcp-plugin.js         # /mcp: VJ MCP server, streamable HTTP (dev only) — docs/vj-mcp.md
     ├── vj-mcp/server.js, hub-core.js  # the tool set and display hub, shared with the relay Worker
     ├── vj-mcp/hub.js, tools.js  #   their dev-server hosts (Node ws sockets, shaders on disk)
@@ -739,7 +744,7 @@ ChromaDepth 3D glasses create depth from color: red=near, green=middle, blue/vio
 
 **Full guide:** See [docs/MAKING_A_NEW_SHADER.md](docs/MAKING_A_NEW_SHADER.md#creating-chromadepth-versions-of-existing-shaders)
 
-**Reference shaders:** `wooli/chromadepth-1.frag`, `wooli/chromadepth-2.frag`, `Codex/chromadepth-julia.frag`
+**Reference shaders:** `wooli/chromadepth-1.frag`, `wooli/chromadepth-2.frag`, `claude/chromadepth-julia.frag`
 
 ## Common Issues & Solutions
 
@@ -809,6 +814,22 @@ float complexity = spectralEntropyNormalized * spectralFluxZScore;
 5. **Worker Architecture**: Parallel processing via Web Workers is essential for real-time performance with 15+ audio features.
 
 6. **Shader Philosophy**: Shaders should be artistic, reactive, and performant - avoiding dead zones while maintaining visual coherence.
+
+## Testing
+
+Full guide: [docs/testing.md](docs/testing.md).
+
+- `npm test` - unit tests (vitest, node).
+- `npm run test:smoke` - builds, serves `dist/` like Cloudflare Pages on :7129, and drives every page in
+  headless Chromium (Playwright): plasma paints real pixels, a missing shader shows the default plus
+  `shader not found: <name>`, the list fills on a phone, the editor holds GLSL, no service-worker
+  reload loop, `?vj=1` runtime, vjpad, midi.
+- `npm run test:smoke:prod` - the same against https://visuals.beadfamous.com, plus `e2e/relay.test.js`
+  (a peer in a live `?room=` sets a knob but cannot set `controller`; `vj-signal` is not relayed).
+  Point it at a Pages preview with `E2E_BASE_URL=<url>`; record videos with `E2E_VIDEO_DIR=<dir>`.
+- `npm run test:e2e` - every `e2e/*.test.js`, including the dev-server VJ MCP suites.
+- Smoke checks wait on conditions, never sleeps, and pin `time=` + `noaudio=true`. Run the smoke
+  suite against the Pages preview before merging a change to a page.
 
 ## Shader Validation
 

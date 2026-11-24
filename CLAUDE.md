@@ -815,6 +815,22 @@ float complexity = spectralEntropyNormalized * spectralFluxZScore;
 
 6. **Shader Philosophy**: Shaders should be artistic, reactive, and performant - avoiding dead zones while maintaining visual coherence.
 
+## Testing
+
+Full guide: [docs/testing.md](docs/testing.md).
+
+- `npm test` - unit tests (vitest, node).
+- `npm run test:smoke` - builds, serves `dist/` like Cloudflare Pages on :7129, and drives every page in
+  headless Chromium (Playwright): plasma paints real pixels, a missing shader shows the default plus
+  `shader not found: <name>`, the list fills on a phone, the editor holds GLSL, no service-worker
+  reload loop, `?vj=1` runtime, vjpad, midi.
+- `npm run test:smoke:prod` - the same against https://visuals.beadfamous.com, plus `e2e/relay.test.js`
+  (a peer in a live `?room=` sets a knob but cannot set `controller`; `vj-signal` is not relayed).
+  Point it at a Pages preview with `E2E_BASE_URL=<url>`; record videos with `E2E_VIDEO_DIR=<dir>`.
+- `npm run test:e2e` - every `e2e/*.test.js`, including the dev-server VJ MCP suites.
+- Smoke checks wait on conditions, never sleeps, and pin `time=` + `noaudio=true`. Run the smoke
+  suite against the Pages preview before merging a change to a page.
+
 ## Shader Validation
 
 Use the CLI to validate shader syntax before committing:
