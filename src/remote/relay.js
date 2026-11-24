@@ -48,13 +48,14 @@ export const inspectorAllowed = (loc, { dev }) => inspectorAllowedOn(wsUrlFor(lo
 // page's params, and not into the URL mirror that a refresh would read back (setting or, with
 // null, deleting them). They are all read once at boot:
 // - where the socket goes (WebSocketClient takes its URL once): relay, room;
+// - the room's display secret (below), which only the page's own link may carry: display_secret;
 // - what code or media the page loads: controller (a full http URL is imported as JavaScript, so a
 //   peer setting it ran its script on the display's next reload), image, audio_file;
 // - what the page is and what it captures or sends: remote, vj, vjtrack, midi, embed, noaudio,
 //   audio, audio_send, audio_device, audio_time.
 // Knobs, numeric uniforms, shader and shaderCode stay settable: they are what a controller is for.
 const PINNED = new Set([
-  'relay', 'room',
+  'relay', 'room', 'display_secret',
   'controller', 'image', 'audio_file',
   'remote', 'vj', 'vjtrack', 'midi', 'embed', 'noaudio',
   'audio', 'audio_send', 'audio_device', 'audio_time',
@@ -62,3 +63,40 @@ const PINNED = new Set([
 
 /** `data` without the keys a peer may not set: where the socket goes and what boot loads. */
 export const withoutPinned = (data) => Object.fromEntries(Object.entries(data).filter(([key]) => !PINNED.has(key)))
+
+// A room's display secret (docs/vj-mcp.md, "Display secret"): the VJ MCP's display_secret tool
+// hands out a display link with `#display_secret=ds_…` in its hash. A browser never sends the hash
+// to a server, so the secret stays out of the site's request logs. The page reads it once, at load
+// (RemoteDisplay), sends it only in its display-hello to a relay room we run, and never reports it:
+// every href the page tells the agent goes through withoutSecret first.
+export const SECRET_PARAM = 'display_secret'
+
+/** The display secret in the page's link (`loc.hash`, or the query as a fallback), or null. */
+export const displaySecretFrom = (loc) => {
+  const fromHash = new URLSearchParams(String(loc?.hash ?? '').replace(/^#/, '')).get(SECRET_PARAM)
+  return fromHash || new URLSearchParams(loc?.search ?? '').get(SECRET_PARAM) || null
+}
+
+/** `href` with any display secret cut out of its hash and query. */
+// Judged on the decoded keys, as displaySecretFrom reads them: `#display%5Fsecret=` is the secret
+// too, and a raw-text check would report it.
+export const withoutSecret = (href) => {
+  const s = String(href ?? '')
+  try {
+    const url = new URL(s)
+    const hash = new URLSearchParams(url.hash.slice(1))
+    if (!url.searchParams.has(SECRET_PARAM) && !hash.has(SECRET_PARAM)) return s
+    url.searchParams.delete(SECRET_PARAM)
+    hash.delete(SECRET_PARAM)
+    url.hash = hash.toString()
+    return url.toString()
+  } catch {
+    return s.replace(/display(_|%5f)secret=[^&#]*&?/gi, '')
+  }
+}
+
+/** The secret to put in a hello on the socket at `socketUrl`: only to a relay room we run. */
+export const secretFor = (socketUrl, secret) => {
+  if (!secret || !inspectorAllowedOn(socketUrl, { dev: false })) return undefined
+  return secret
+}

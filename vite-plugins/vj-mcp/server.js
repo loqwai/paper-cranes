@@ -55,7 +55,9 @@ const RESERVED = new Set(['shader', 'shaderCode', 'fullscreen', 'remote', 'room'
 const PARAM_KEY = /^[A-Za-z_][A-Za-z0-9_]{0,63}$/
 
 // venue: { where: one line on what a display is here, noneHint: how to connect one, persists: bool }
-export const createVjMcpServer = ({ hub, shaders, venue, onCall }) => {
+// displaySecret: the relay room's lock (workers/remote-relay/src/room.js roomSecretControl),
+//   { status(), rotate({shader}), clear() }; the dev server has none, and no display_secret tool.
+export const createVjMcpServer = ({ hub, shaders, venue, onCall, displaySecret }) => {
   const server = new McpServer({ name: 'paper-cranes-vj', version: '0.2.0' }, { instructions: INSTRUCTIONS(venue.where) })
   const persists = typeof shaders.write === 'function'
   const registerTool = (name, spec, handler) =>
@@ -261,6 +263,18 @@ export const createVjMcpServer = ({ hub, shaders, venue, onCall }) => {
       }
     }))
     return text({ ...saved, hash, persisted: true, validatedOn: validated || 'skipped', displays })
+  }))
+
+  if (displaySecret) registerTool('display_secret', {
+    description: 'Lock this room so only displays holding its secret can register: then list_displays, get_state, screenshot and wait_for_event show only pages opened from the link this returns, and a script that knows the room name can no longer pose as a display. action "rotate" (the first one creates the secret) returns that display link, with the secret in its URL hash; give it only to whoever runs the display. Every display already registered is dropped at once until it opens the new link (it still receives knobs from the room meanwhile). The secret is stored hashed and cannot be shown again: rotate for a new link. "status" says whether the room is locked; "clear" opens it again to any page with the room name.',
+    inputSchema: {
+      action: z.enum(['status', 'rotate', 'clear']).optional().describe('default status'),
+      shader: z.string().optional().describe('shader for the link (rotate only; default: the shader on the only connected display)'),
+    },
+  }, guard(async ({ action = 'status', shader }) => {
+    if (action === 'rotate') return text(await displaySecret.rotate({ shader: shader === undefined ? undefined : strictShader(shader) }))
+    if (action === 'clear') return text(await displaySecret.clear())
+    return text(await displaySecret.status())
   }))
 
   registerTool('wait_for_event', {

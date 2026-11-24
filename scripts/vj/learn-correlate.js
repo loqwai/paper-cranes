@@ -1,4 +1,4 @@
-// scripts/vj/learn-correlate.js — FETCHED BY URL at runtime (like aesthetic-meter.js); do not move.
+// scripts/vj/learn-correlate.js — FETCHED BY URL at runtime (as aesthetic-meter.js is in dev); do not move.
 // Installs window.__vjLearn(samples) → ranked guesses of which audio feature each moved knob was
 // imitating, over a CONFIRMED gesture window (see runtime.js §7b — the vjpad LEARN button).
 // Implements the 2026-08-19 measurement lessons (journal lattice-vj-6, "each cost a wrong answer"):
