@@ -95,6 +95,7 @@ export class WaveletProcessor {
     }
 
     publish = () => {
+        if (this.stopped) return
         requestAnimationFrame(this.publish)
         if (!this.latest) return
 
@@ -140,6 +141,7 @@ export class WaveletProcessor {
     }
 
     cleanup = () => {
+        this.stopped = true // ends the publish loop, which would keep writing stale features
         this.worker.terminate()
     }
 }

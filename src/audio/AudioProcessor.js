@@ -80,6 +80,7 @@ export class AudioProcessor {
     }
 
     updateCurrentFeatures = () => {
+        if (this.stopped) return
         requestAnimationFrame(this.updateCurrentFeatures)
 
         // Pull latest results from workers (no allocations, just reference swaps)
@@ -174,6 +175,7 @@ export class AudioProcessor {
     }
 
     updateFftData = () => {
+        if (this.stopped) return
         requestAnimationFrame(this.updateFftData)
         this.fftAnalyzer.getByteFrequencyData(this.fftData)
         // Onsets first, on the freshest possible spectrum. Deliberately NOT
@@ -193,6 +195,7 @@ export class AudioProcessor {
     getFeatures = () => Object.assign(this.currentFeatures, this.onsetFeatures)
 
     cleanup = () => {
+        this.stopped = true // ends both frame loops on their next tick
         this.workers.forEach(worker => worker.terminate())
         this.workers.clear()
     }

@@ -65,6 +65,30 @@ describe('smoothing', () => {
     })
 })
 
+describe('cleanup', () => {
+    // ?audio=tab calls cleanup() and builds a new processor every time the
+    // user stops sharing and picks another tab. The old frame loops kept
+    // running, reading a closed analyser and running onset detection, one
+    // more pair per re-share.
+    it('stops both frame loops', () => {
+        const ctx = fakeContext()
+        const processor = new AudioProcessor(ctx, {}, 500, 4096)
+        const read = vi.spyOn(processor.fftAnalyzer, 'getByteFrequencyData')
+        processor.updateCurrentFeatures()
+        processor.updateFftData()
+
+        processor.cleanup()
+        read.mockClear()
+        for (let i = 0; i < 5; i++) {
+            const queued = rafQueue
+            rafQueue = []
+            queued.forEach((fn) => fn())
+        }
+        expect(read).not.toHaveBeenCalled()
+        expect(rafQueue).toHaveLength(0)
+    })
+})
+
 describe('beat', () => {
     it('stays off in silence, when every spectralFlux value is the same', () => {
         // hypnosound reports zScore 1 when its history is flat (max === min).

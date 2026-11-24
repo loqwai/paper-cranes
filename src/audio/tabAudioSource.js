@@ -92,9 +92,10 @@ export const setupTabAudio = ({ params, AudioProcessor }) => {
             await processor.start()
 
             // PROTOTYPE: opt-in wavelet (DWT) analysis on the same tab source.
+            let wavelet = null
             if (params.get('wavelet') === 'true') {
                 const { WaveletProcessor } = await import('./WaveletProcessor.js')
-                const wavelet = new WaveletProcessor(audioContext, sourceNode, historySize)
+                wavelet = new WaveletProcessor(audioContext, sourceNode, historySize)
                 await wavelet.start()
                 if (window.cranes) window.cranes.waveletProcessor = wavelet
             }
@@ -107,6 +108,7 @@ export const setupTabAudio = ({ params, AudioProcessor }) => {
                 holder.getFeatures = () => ({})
                 if (window.cranes) window.cranes.tabAudioLabel = null
                 processor.cleanup()
+                wavelet?.cleanup()
                 audioContext.close().catch(() => {})
                 run()
             })
