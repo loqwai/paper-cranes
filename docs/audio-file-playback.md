@@ -33,4 +33,6 @@ This gives you the same visual frame every time — useful for regression testin
 ## Key Files
 
 - `src/audio/audioFileSource.js` — file loading, decoding, and looping buffer source
-- `e2e/audio-file.test.js` — e2e tests using deterministic audio
+- `e2e/audio-file.test.js` — e2e tests using deterministic audio. They assert sections of one
+  track, `public/test-audio/imaginary-friends.mp3`, which is gitignored; without it the suite
+  skips and prints the missing path, so `npm run test:e2e` passes on a fresh checkout.

@@ -15,8 +15,10 @@
  *
  * So the real history is baked into a committed `shader-dates.json` and the
  * build prefers it whenever live history is unavailable or degenerate. Live git
- * still wins when it is genuinely usable (i.e. local dev), so the file does not
- * need babysitting during normal work — it is refreshed automatically.
+ * still wins when it is genuinely usable (i.e. local dev). A dev server or build
+ * refreshes the file only while the tree has uncommitted .frag changes (see
+ * shouldAutoRefreshBake), and that refresh cannot see the commit it rides in, so
+ * run `npm run shader-dates` after committing shader work.
  */
 import { execFile } from 'child_process'
 import { promisify } from 'util'

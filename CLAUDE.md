@@ -601,13 +601,19 @@ Metadata is extracted at build time and included in `dist/shaders.json`.
   and no visible symptom because every shader still *has* a date. So real history is
   baked into a committed **`shader-dates.json`** (`scripts/shader-dates.js`), and the
   build prefers it whenever live history is shallow or degenerate. Live git still wins
-  when it is genuinely usable (local dev). A dev-server start or build refreshes the
-  baked file only while the tree has uncommitted `.frag` changes (so the refresh rides
-  with that commit, and a clean checkout stays clean), and only writes when the text
-  changes; regenerate on purpose with `npm run shader-dates`. The build refuses to overwrite the baked file from a shallow
-  clone, and logs a loud warning if the result has fewer than 2 distinct dates.
-  If dates are genuinely unavailable, `modified` is `null` and the list page hides ages
-  and removes the "newest" sort rather than showing a fabricated order.
+  when it is genuinely usable (local dev). The baked file holds only shaders that still
+  exist, keyed in code-point order, and is written only when its text changes. A
+  dev-server start, a `.frag` save or a build refreshes it only while the tree has
+  uncommitted `.frag` changes, so the refresh rides with that commit and a clean
+  checkout stays clean. That refresh reads committed history, so it cannot see the
+  commit it rides in: a shader you add or edit gets its baked date at the next refresh.
+  Until then the live site shows a new shader with no date (it sorts last under
+  "newest first") and an edited one at its previous date. After committing shader work,
+  run `npm run shader-dates` and commit `shader-dates.json`. The build never writes
+  the baked file from a shallow clone, `npm run shader-dates` refuses to run on one, and
+  the build logs a loud warning if the result has fewer than 2 distinct dates. If no
+  shader has a usable date, the list page hides ages and removes the "newest" sort
+  rather than showing a fabricated order.
 - `presets` — preset URLs read from the shader source. The list page used to fetch all
   345 `.frag` files (6.5MB) on every load to find these; it now ships in `shaders.json`.
 - `prettyName` — display name, and `tags` normalised to always be an array (a single
