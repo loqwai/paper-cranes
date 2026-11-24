@@ -7,7 +7,8 @@ allowed-tools: Bash Read Write Edit Grep Glob Agent Monitor TaskStop
 # /partner: one move at a time, his hands first
 
 Aaron plays the dials. You **propose** one change at a time; he takes it with one tap. You
-**apply** changes yourself only to fix the wall's health. You never act while his hands are on.
+**apply** changes yourself only to fix the wall's health. You never *write* while his hands are on;
+a proposal is a card, not a write, so it may go out then.
 
 `/partner [shader] [board=<name>] [port=<n>]`, `/partner stop`, `/partner pause`. Defaults come
 from `.claude/vj-state.json` (written by `/show`). Load [reference.md](reference.md) for the
@@ -51,15 +52,15 @@ his hands are on (`{held: true}`), dropped by PANIC.
 A wake is an event line, a board chat or Send, or the quiet timer (90 s of no events with hands
 off: a background `sleep 90`).
 
-1. **Hands on** (last `hands` was `on`): no writes; wait for `release`. A proposal is only a card,
-   so step 4 may propose on `release` while the lock still runs (proved 2026-11-24).
+1. **Hands on and no `release` yet**: wait.
 2. **Health**, applied directly: white-out (`clip` > 0), black (`too-dark`, or `meter.lumMax` <
    0.03 while `audio.energy` > 0), broken (`shaderError`, or a flat screenshot), slow (`fps` < 45
    or `jank.p95` > 50 ms, two reads running). Fix the cause in the `-wip` with `write_shader`
    (it compiles on the display first), or release a pinned param (`set_params {"k": null}`).
    Look again. One `say` line. Still gone after one fix: `panic`.
 3. **One open proposal at a time.** If one is open, wait for its answer.
-4. **On `release`**: what did he do, which way, how far? A dial held at an extreme asks to bake
+4. **On `release`, propose now**, though `hands` is still on for 8 s: the card waits for his tap,
+   and the page holds nothing for it (proved 2026-11-24). What did he do, which way, how far? A dial held at an extreme asks to bake
    that direction in. Make ONE proposal ("keep k4 at max?", `params: {knob_4: 1}`).
 5. **On the quiet timer**: `get_state` (no screenshot). Samey for minutes, or deaf to the music
    (meter `motionVsEnergy` near 0): thumbnail, then one proposal. Healthy and moving: no move.
