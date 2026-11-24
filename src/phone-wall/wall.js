@@ -3,7 +3,7 @@
 // socket. RemoteDisplay hands both to the same handler, so HANDS, KEEP, PANIC and proposals behave
 // exactly as they do for a remote display.
 import { WebSocketClient } from '../remote/WebSocketClient.js'
-import { createLink } from './link.js'
+import { createLink, createOnce } from './link.js'
 
 // What the wall tells the pad over the link. The inspector's traffic (canvas shots, state) is for
 // the VJ MCP on the room socket and never crosses to the pad.
@@ -27,7 +27,9 @@ export const isWallPage = (loc = window.location, nav = globalThis.navigator) =>
 export const createWallClient = (onMessage, onStatus, { dev = false, loc = window.location, nav = globalThis.navigator, makeSocket, link: givenLink, BroadcastChannel } = {}) => {
   const params = new URLSearchParams(loc.search)
   const wantsSocket = params.has('room') || dev
-  const socket = wantsSocket ? (makeSocket ?? ((m, s) => new WebSocketClient(m, s)))(onMessage, onStatus) : null
+  // A linked pad in a room sends each move over the link and the room both (pad.js); act once.
+  const once = createOnce()
+  const socket = wantsSocket ? (makeSocket ?? ((m, s) => new WebSocketClient(m, s)))((msg) => { if (once(msg)) onMessage(msg) }, onStatus) : null
   const boot = Math.random().toString(36).slice(2, 10)
   const stats = { fromLink: 0, toLink: 0 }
   // Has any pad moved this wall yet? Only a fresh wall (just opened or replugged) takes a pad's
@@ -43,8 +45,7 @@ export const createWallClient = (onMessage, onStatus, { dev = false, loc = windo
     info: () => ({ boot, fresh: !fed, wantsShader: !fed && !params.has('shader') }),
     onMessage: (msg) => {
       if (!FROM_PAD.has(msg?.type)) return
-      stats.fromLink++
-      onMessage(msg)
+      if (once(msg)) { stats.fromLink++; onMessage(msg) }
       if (msg.type === 'update-params' && !fed) { fed = true; link.hello() }
     },
     ...(BroadcastChannel ? { BroadcastChannel } : {}),

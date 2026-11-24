@@ -1,7 +1,8 @@
 // The pad half of the phone wall (docs/phone-wall.md). Two parts:
 //   createPadClient  a WebSocketClient-shaped client: the room socket as before, plus the local
 //                    link to a wall on this same phone. While a wall is linked, display-bound
-//                    messages go to it over the link only, so the wall acts on each once.
+//                    messages go to it over the link and to the room as well, tagged `pwid`, so
+//                    other displays in the room still get them and the wall acts on each once.
 //   mountPhoneWall   the PROJECT button, the WALL chip and the NO WALL banner, driven by state.js.
 import { WebSocketClient } from '../remote/WebSocketClient.js'
 import { createLink } from './link.js'
@@ -23,6 +24,7 @@ export const createPadClient = (onMessage, onStatus, { dev = false, loc = global
   const wantsSocket = new URLSearchParams(loc?.search ?? '').has('room') || dev
   let socketStatus = wantsSocket ? 'reconnecting' : 'disconnected'
   let reported = null
+  let sent = 0
   const listeners = new Set()
   const report = () => {
     const effective = link.linked ? 'connected' : socketStatus
@@ -51,10 +53,12 @@ export const createPadClient = (onMessage, onStatus, { dev = false, loc = global
       socket?.connect()
     },
     send(type, data, extra) {
-      const local = link.linked && (TO_WALL.has(type) || TO_BOTH.has(type))
-      if (local) link.send({ ...extra, type, data })
-      if (local && !TO_BOTH.has(type)) return true
-      return Boolean(socket?.send(type, data, extra)) || local
+      if (!link.linked || !(TO_WALL.has(type) || TO_BOTH.has(type))) return Boolean(socket?.send(type, data, extra))
+      // The link first, so the wall's hop never waits on the network. The room gets the same
+      // message, so a second display there is not starved; the wall hears both and acts once.
+      const tagged = { ...extra, pwid: `${link.id}.${++sent}` }
+      const local = link.send({ ...tagged, type, data })
+      return Boolean(socket?.isConnected && socket.send(type, data, tagged)) || local
     },
     disconnect() {
       link.stop()

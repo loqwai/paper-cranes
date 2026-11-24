@@ -34,7 +34,8 @@ or a wall is linked; on a phone with no external display the pad looks as before
   it, else a window placed there) and turns the AWAKE lock on.
 - **WALL ✓**: a wall on this phone is linked. The pad's messages for the display (the same
   `update-params`, `vj-keep`, `vj-panic`, `proposal-answer`) then go to it over the local link,
-  not the room, so they work with no network. The status line says `wall`.
+  so they work with no network, and to the room too when it is up, so other displays there keep
+  up; the wall acts on each once. The status line says `wall`.
 - **NO WALL** (red): the wall stopped answering (cable out). The pad keeps working; a returning
   wall links by itself and gets the pad's values. **✕** stops waiting.
 

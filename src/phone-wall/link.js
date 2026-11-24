@@ -140,3 +140,20 @@ export const createLink = ({
   }
   return link
 }
+
+/**
+ * A message sent over both the link and the room carries `pwid` (the sender's link id and a count),
+ * so a side that hears it on both acts on it once, whichever copy comes first. A message without
+ * one (another pad, an agent) always passes. Returns `take(msg)`: true the first time only.
+ */
+export const createOnce = (size = 256) => {
+  const seen = new Set()
+  return (msg) => {
+    const id = msg?.pwid
+    if (typeof id !== 'string') return true
+    if (seen.has(id)) return false
+    seen.add(id)
+    if (seen.size > size) seen.delete(seen.values().next().value)
+    return true
+  }
+}

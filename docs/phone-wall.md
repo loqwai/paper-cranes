@@ -56,9 +56,12 @@ banner stops waiting.
 The button shows only while a second screen is seen (`screen.isExtended`, or presentation
 availability). With neither, nothing on the pad changes.
 
-**Routing.** While a wall is linked, the pad sends `update-params`, `vj-keep`, `vj-panic` and
-`proposal-answer` to it over the link **only**, so the wall acts on each once; `pad-hello` goes to
-both; bank claims (`vjpad-peer`) stay on the room. The wall sends the pad only what a pad uses
+**Routing.** While a wall is linked, the pad sends `update-params`, `vj-keep`, `vj-panic`,
+`proposal-answer` and `pad-hello` to it over the link first, then to the room as well while the
+room socket is up, so a second display in the room still gets every move. Each such message
+carries a `pwid` (the pad's link id and a count); the wall, which hears the room too, acts on the
+first copy and drops the other (`createOnce` in `link.js`). Bank claims (`vjpad-peer`) stay on the
+room. The wall sends the pad only what a pad uses
 (`proposal`, `proposal-clear`, `vj-status`); the inspector's canvas shots stay on the room socket.
 With no wall linked, the pad uses the room exactly as before.
 
