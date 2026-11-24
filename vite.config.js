@@ -49,7 +49,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      'hypnosound': 'https://esm.sh/hypnosound@1.10.2',
+      'hypnosound': 'https://esm.sh/hypnosound@2.1.0',
       'twgl-base.js': 'https://esm.sh/twgl-base.js@5.5.3',
     },
   },

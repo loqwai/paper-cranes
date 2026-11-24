@@ -18,8 +18,8 @@ importers:
         specifier: ^3.1.1
         version: 3.1.1
       hypnosound:
-        specifier: ^1.14.0
-        version: 1.14.0
+        specifier: ^2.1.0
+        version: 2.1.0
       preact:
         specifier: ^10.25.4
         version: 10.28.3
@@ -1039,8 +1039,8 @@ packages:
     resolution: {integrity: sha512-4FbRdAX+bSdmo4AUFuS0WNiPz8NgFt+r8ThgNWmlrjQjt1Q7ZR9+zTlce2859x4KSXrwIsaeTqDoKQmtP8pLmQ==}
     engines: {node: '>= 0.8'}
 
-  hypnosound@1.14.0:
-    resolution: {integrity: sha512-vR10pOzX/AJkANWfVsRJF4ydw7R3HwOB6fY0+MrIz9SNSKeQyydLZerJfXx2IAf7QDaFHx+3PD9d1R6KUfF5dQ==}
+  hypnosound@2.1.0:
+    resolution: {integrity: sha512-SeYtldxV5eNvt6A2nhVgvtV2BzOhIc/06dJfLP3zkYpzL021tds8YC95Y6Wy7xmi1akPohnNypvLmtPZL3hhrA==}
 
   iconv-lite@0.7.3:
     resolution: {integrity: sha512-IKXpvIzjnC9XTAUbVBcMfGS0EPaIXtW6v+zr+RRp+hqULEpo0owZax6wyRwPOJbWbzjYspQwusTsfVr0ifh4uQ==}
@@ -2761,7 +2761,7 @@ snapshots:
       statuses: 2.0.2
       toidentifier: 1.0.1
 
-  hypnosound@1.14.0: {}
+  hypnosound@2.1.0: {}
 
   iconv-lite@0.7.3:
     dependencies:

@@ -44,7 +44,7 @@ const fixedWorker = () => {
 }
 
 describe('smoothing', () => {
-    // audio_file defaults smoothing to 0.85, and ZScore/Normalized keys get
+    // ?smoothing=0.85 (the old audio_file default), and ZScore/Normalized keys get
     // 1.5x that: 1.275. An EMA weight above 1 overshoots, so a 0-1 feature
     // left its range and rang on every step.
     it.each([0.15, 0.85, 1])('keeps a Normalized feature inside 0-1 at smoothing %s', (smoothing) => {
