@@ -1,12 +1,12 @@
 // cue: wait for the music to give a cue, print ONE line, exit. Run it as a background Monitor.
 // It reads the live controller's own musical states (window.__blackSunState), the same ones the story
 // engine moves acts on, so a cue here is a moment the story would also call musical.
-//   node .claude/skills/sun-set/cue.mjs <build|drop|breakdown> [--max 180]
+//   node setlists/sun-set/cue.mjs <build|drop|breakdown> [--max 180]
 import { execFileSync } from 'node:child_process'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const SHOW = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'scripts', 'vj', 'show.js')
+const SHOW = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'scripts', 'vj', 'show.js')
 const FN = '() => { const s = window.__blackSunState ?? {}; return { buildT: s.buildT, dropEnv: s.dropEnv, lowT: s.lowT, calmT: s.calmT } }'
 const CUES = {
   build: s => s.buildT > 8,

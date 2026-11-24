@@ -1,9 +1,9 @@
-// node --test .claude/skills/sun-set/sun-set.test.mjs
+// node --test setlists/sun-set/sun-set.node-test.mjs
 // Drives controllers/sun-set.js through its public make() the way the page does: one call per frame,
 // knobs read back from window.cranes.manualFeatures.
 import { test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
-import { make, BEATS } from '../../../controllers/sun-set.js'
+import { make, BEATS } from '../../controllers/sun-set.js'
 
 let clock = 0
 Object.defineProperty(globalThis, 'performance', { value: { now: () => clock * 1000 }, configurable: true })

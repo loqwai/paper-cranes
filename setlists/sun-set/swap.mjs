@@ -3,18 +3,18 @@
 // bs_* clocks of the moment it was saved, so a straight swap hides its layers until bs_time catches up.
 // rewrite() re-anchors them: a layer the wall already shows keeps the wall's anchor (no jump), a layer
 // the wall lacks is anchored at now + 3 s, so it cross-fades in over its own 8–240 s.
-//   node .claude/skills/sun-set/swap.mjs list
-//   node .claude/skills/sun-set/swap.mjs <n|name|next> [--cold] [--no-knobs] [--auto-story] [--hold A,B]
+//   node setlists/sun-set/swap.mjs list
+//   node setlists/sun-set/swap.mjs <n|name|next> [--cold] [--no-knobs] [--auto-story] [--hold A,B]
 // The dials are driven by controllers/sun-set.js (chained after black-sun); this only tells it the beat.
-//   node .claude/skills/sun-set/swap.mjs dry <file.frag> --time T --bud B --flux F --flow W --gal G [--wall a.frag] [--hold A,B] [--cold] [--out b.frag]
+//   node setlists/sun-set/swap.mjs dry <file.frag> --time T --bud B --flux F --flow W --gal G [--wall a.frag] [--hold A,B] [--cold] [--out b.frag]
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { BEATS } from '../../../controllers/sun-set.js'
+import { BEATS } from '../../controllers/sun-set.js'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
-const ROOT = join(HERE, '..', '..', '..')
+const ROOT = join(HERE, '..', '..')
 const SHOW = join(ROOT, 'scripts', 'vj', 'show.js')
 const LEAD = 3
 
@@ -151,8 +151,8 @@ const flag = name => {
   return i === -1 ? undefined : args[i + 1]
 }
 const has = name => args.includes(`--${name}`)
-// beats.json: what goes on the wall; controllers/sun-set.js: how long each beat holds and the dial journey
-const beats = JSON.parse(readFileSync(join(HERE, 'beats.json'), 'utf8')).map(b => ({ ...b, hold: BEATS.find(c => c.name === b.name).hold }))
+// ../sun-set.json beats: what goes on the wall; controllers/sun-set.js: how long each beat holds and the dial journey
+const beats = JSON.parse(readFileSync(join(HERE, '..', 'sun-set.json'), 'utf8')).beats.map(b => ({ ...b, hold: BEATS.find(c => c.name === b.name).hold }))
 const holdFlag = () => flag('hold')?.split(',') ?? []
 
 const show = (...argv) => {
