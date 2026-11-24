@@ -24,8 +24,8 @@ export const createSignalPoster = ({ getClient, dev, search, fetchImpl = (...a) 
   // The room socket, when this page has one to a relay we run; undefined when it never will.
   const roomClient = () => {
     const c = getClient()
-    if (!c?.url || !ROOM_SOCKET.test(new URL(c.url).pathname)) return undefined
-    return inspectorAllowedOn(c.url, { dev }) ? c : undefined
+    if (!c?.url || !inspectorAllowedOn(c.url, { dev })) return undefined
+    return ROOM_SOCKET.test(new URL(c.url).pathname) ? c : undefined
   }
 
   const flush = () => {
