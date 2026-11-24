@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // Load-time benchmark for the production build: cold and warm time to the first shader frame.
 import { createServer } from 'node:http'
-import { readFile, stat } from 'node:fs/promises'
+import { readFile, readdir, stat } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { brotliCompressSync, constants as zc } from 'node:zlib'
-import { extname, join, resolve, normalize } from 'node:path'
+import { extname, join, resolve, normalize, relative, sep } from 'node:path'
 import { writeFileSync, openSync, closeSync, readFileSync, unlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { chromium } from 'playwright'
@@ -60,10 +60,21 @@ const MIME = {
 }
 const COMPRESSIBLE = new Set(['.html', '.js', '.mjs', '.css', '.json', '.frag', '.vert', '.svg', '.webmanifest'])
 
+// Every file's path and bytes, so two dists that differ anywhere get different ids.
+const hashTree = async (root) => {
+  const hash = createHash('sha1')
+  const files = (await readdir(root, { recursive: true, withFileTypes: true }))
+    .filter((e) => e.isFile())
+    .map((e) => relative(root, join(e.parentPath, e.name)).split(sep).join('/'))
+    .sort()
+  for (const file of files) hash.update(file).update(String.fromCharCode(10)).update(await readFile(join(root, file)))
+  return hash.digest('hex').slice(0, 12)
+}
+
 // Mirrors what Cloudflare Pages does for this site: ETag + revalidate every request, brotli for text.
 const serveDir = async (dir) => {
   const root = resolve(dir)
-  const buildId = createHash('sha1').update(await readFile(join(root, 'index.html'))).update(await readFile(join(root, 'assets', 'index.js'))).digest('hex').slice(0, 12)
+  const buildId = await hashTree(root)
   const cache = new Map()
   const load = async (path) => {
     if (cache.has(path)) return cache.get(path)
@@ -152,9 +163,12 @@ const withTimeout = (p, ms, what) => Promise.race([
   p, new Promise((_, rej) => setTimeout(() => rej(new Error(`timeout: ${what} after ${ms} ms`)), ms)),
 ])
 
-const runOnce = async ({ browser, origin, buildId, caseName, profile, runtime }) => {
+// One throttled, instrumented page in a fresh context. `serviceWorkers` decides whether the app's
+// service worker may register: CDP throttling on the page does not cover fetches the SW makes, so
+// a SW that claims the page mid-visit would serve the rest of the cold load unthrottled.
+const openPage = async ({ browser, origin, buildId, caseName, profile, serviceWorkers }) => {
   const context = await browser.newContext({
-    viewport: { width: 412, height: 915 }, deviceScaleFactor: 2.625, isMobile: true, hasTouch: true,
+    viewport: { width: 412, height: 915 }, deviceScaleFactor: 2.625, isMobile: true, hasTouch: true, serviceWorkers,
   })
   const page = await context.newPage()
   let firstFrame
@@ -189,7 +203,7 @@ const runOnce = async ({ browser, origin, buildId, caseName, profile, runtime })
   })
 
   const url = origin + '/' + CASES[caseName].query
-  const load = async (go) => {
+  const measure = async (go) => {
     requests = new Map()
     const frame = new Promise((r) => { firstFrame = r })
     await go()
@@ -199,14 +213,10 @@ const runOnce = async ({ browser, origin, buildId, caseName, profile, runtime })
     if (served !== buildId) throw new Error(`document came from build ${served}, expected ${buildId}`)
     if (ff.lit === 0) throw new Error(`first frame was black (${ff.sampled} pixels sampled)`)
     if (/swiftshader|software|llvmpipe/i.test(ff.renderer)) throw new Error(`software WebGL: ${ff.renderer}`)
-    const nav = await page.evaluate(() => {
-      const n = performance.getEntriesByType('navigation')[0]
-      const fcp = performance.getEntriesByName('first-contentful-paint')[0]
-      return { navStartWall: performance.timeOrigin, fcp: fcp?.startTime ?? null, responseEnd: n?.responseEnd }
-    })
-    return { ff, nav }
+    const fcp = await page.evaluate(() => performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? null)
+    return summarize(ff, fcp, requests)
   }
-  const summarize = (ff, nav, reqs) => {
+  const summarize = (ff, fcp, reqs) => {
     // CDP timestamps are monotonic seconds; anchor them on the navigation request.
     const all = [...reqs.values()]
     const doc = all.find((r) => r.url.startsWith(url.split('?')[0])) ?? all[0]
@@ -218,10 +228,11 @@ const runOnce = async ({ browser, origin, buildId, caseName, profile, runtime })
     return {
       firstFrame: ff.t,
       litPixels: ff.lit,
-      fcp: nav.fcp,
+      fcp,
       requestsToFirstFrame: before.length,
       bytesToFirstFrame: before.reduce((s, r) => s + (r.bytes || 0), 0),
       swControlled: ff.controlled,
+      swServedBeforeFirstFrame: before.filter((r) => r.fromSw).length,
       esmRequests: esm.length,
       esmLastEnd: esm.length ? Math.max(...esm.map((r) => rel(r.end))) : null,
       esmBusy: esm.reduce((s, r) => s + (r.end - r.start) * 1000, 0),
@@ -231,22 +242,38 @@ const runOnce = async ({ browser, origin, buildId, caseName, profile, runtime })
       })),
     }
   }
+  return { context, page, url, measure, allRequests: () => [...requests.values()] }
+}
 
+const runOnce = async ({ browser, origin, buildId, caseName, profile, runtime }) => {
+  const opts = { browser, origin, buildId, caseName, profile }
+
+  // Cold: first visit, no cache, service worker blocked so every request stays on the throttled network.
+  const cold = await openPage({ ...opts, serviceWorkers: 'block' })
+  let coldSummary, totalBytes, totalRequests, frames = null
   try {
-    const cold = await load(() => page.goto(url, { waitUntil: 'commit' }))
-    const coldSummary = summarize(cold.ff, cold.nav, requests)
-    // Let the cold visit finish the way a real one does: load event, then the service worker.
-    await page.waitForLoadState('load', { timeout: 120_000 })
-    await withTimeout(page.evaluate(() => navigator.serviceWorker?.ready.then(() => true)), 60_000, 'sw ready')
-    await page.waitForTimeout(1500)
-    const coldReqs = [...requests.values()]
-    const totalBytes = coldReqs.reduce((s, r) => s + (r.bytes || 0), 0)
-    const totalRequests = coldReqs.length
-    let frames = null
-    if (runtime) frames = await page.evaluate(RUNTIME_PROBE, 10_000)
+    coldSummary = await cold.measure(() => cold.page.goto(cold.url, { waitUntil: 'commit' }))
+    if (coldSummary.swControlled || coldSummary.swServedBeforeFirstFrame) {
+      throw new Error('service worker was in control during the cold load')
+    }
+    await cold.page.waitForLoadState('load', { timeout: 120_000 })
+    await cold.page.waitForTimeout(1500)
+    const reqs = cold.allRequests()
+    totalBytes = reqs.reduce((s, r) => s + (r.bytes || 0), 0)
+    totalRequests = reqs.length
+    if (runtime) frames = await cold.page.evaluate(RUNTIME_PROBE, 10_000)
+  } finally {
+    await cold.context.close()
+  }
 
-    const warm = await load(() => page.reload({ waitUntil: 'commit' }))
-    const warmSummary = summarize(warm.ff, warm.nav, requests)
+  // Warm: a first visit installs the service worker (unmeasured), then the reload is measured.
+  const warm = await openPage({ ...opts, serviceWorkers: 'allow' })
+  try {
+    await warm.page.goto(warm.url, { waitUntil: 'load', timeout: 120_000 })
+    await withTimeout(warm.page.evaluate(() => navigator.serviceWorker?.ready.then(() => true)), 60_000, 'sw ready')
+    await warm.page.waitForTimeout(1500)
+    const warmSummary = await warm.measure(() => warm.page.reload({ waitUntil: 'commit' }))
+    if (!warmSummary.swControlled) throw new Error('service worker was not in control during the warm load')
     return {
       ...coldSummary, totalBytes, totalRequests,
       warmFirstFrame: warmSummary.firstFrame, warmSwControlled: warmSummary.swControlled,
@@ -255,7 +282,7 @@ const runOnce = async ({ browser, origin, buildId, caseName, profile, runtime })
       frames,
     }
   } finally {
-    await context.close()
+    await warm.context.close()
   }
 }
 
