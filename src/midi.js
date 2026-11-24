@@ -1,4 +1,5 @@
 import { createMidiMapper } from './midi/MidiMapper.js'
+import { readUrlParams } from './params/url.js'
 
 const relativeKnobs = new Set()
 
@@ -14,17 +15,17 @@ const isAbsoluteEncoder = (knob, value) => {
 const setKnobValue = (knob, value) => {
   if (!window.cranes.updateFeature) return
   // Ensure value stays within min/max bounds
-  const currentUrl = new URL(window.location)
-  const min = parseFloat(currentUrl.searchParams.get(`${knob}.min`) ?? 0)
-  const max = parseFloat(currentUrl.searchParams.get(`${knob}.max`) ?? 1)
+  const urlParams = readUrlParams()
+  const min = parseFloat(urlParams.get(`${knob}.min`) ?? 0)
+  const max = parseFloat(urlParams.get(`${knob}.max`) ?? 1)
   const clampedValue = Math.max(min, Math.min(max, value))
   window.cranes.updateFeature(knob, clampedValue)
 }
 
 function updateKnobValue(knob, value) {
-  const currentUrl = new URL(window.location)
-  const min = parseFloat(currentUrl.searchParams.get(`${knob}.min`) ?? 0)
-  const max = parseFloat(currentUrl.searchParams.get(`${knob}.max`) ?? 1)
+  const urlParams = readUrlParams()
+  const min = parseFloat(urlParams.get(`${knob}.min`) ?? 0)
+  const max = parseFloat(urlParams.get(`${knob}.max`) ?? 1)
   const range = Math.abs(max - min)
 
   const scaledValue = (value / 127) * range + min

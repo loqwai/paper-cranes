@@ -1,6 +1,7 @@
 import { AudioProcessor } from './src/audio/AudioProcessor.js'
 import { makeVisualizer } from './src/Visualizer.js'
 import { loadShader } from './src/shaderLoader.js'
+import { readUrlParams } from './src/params/url.js'
 
 const SEED_KEY = 'paperCranes.seeds'
 
@@ -17,7 +18,7 @@ const loadOrCreateSeeds = () => {
     return seeds
 }
 
-const params = new URLSearchParams(window.location.search)
+const params = readUrlParams()
 let startTime = 0
 
 const getNormalizedCoordinates = (event, element) => {

@@ -1,5 +1,6 @@
 import debounce from 'debounce'
 import { initRemoteController } from '../remote/RemoteController.js'
+import { readUrlParams, writeUrlParams } from './url.js'
 
 /**
  * ParamsManager - Single source of truth for all shader parameters
@@ -34,7 +35,7 @@ export const createParamsManager = (options = {}) => {
 
   // Initialize from URL
   const initFromUrl = () => {
-    const searchParams = new URLSearchParams(window.location.search)
+    const searchParams = readUrlParams()
     searchParams.forEach((value, key) => {
       // Parse numeric values
       const numValue = parseFloat(value)
@@ -45,16 +46,7 @@ export const createParamsManager = (options = {}) => {
   // URL sync (debounced)
   const syncToUrlDebounced = debounce((changedParams) => {
     if (!syncToUrl) return
-
-    const url = new URL(window.location)
-    for (const [key, value] of Object.entries(changedParams)) {
-      if (value === null || value === undefined) {
-        url.searchParams.delete(key)
-      } else {
-        url.searchParams.set(key, value)
-      }
-    }
-    window.history.replaceState({}, '', url.toString())
+    writeUrlParams(changedParams)
   }, urlSyncDelay)
 
   // Remote sync (debounced, faster for smooth updates)

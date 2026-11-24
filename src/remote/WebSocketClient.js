@@ -3,6 +3,7 @@
 // wildcard Cloudflare Access app guards that subdomain (and *.hypnodroid.com)
 // and 302s the websocket upgrade to a login page. beadfamous.com carries no
 // such app, which is the only reason this host is the default.
+import { readUrlParams } from '../params/url.js'
 const DEFAULT_RELAY_HOST = 'relay.beadfamous.com'
 
 /**
@@ -11,7 +12,7 @@ const DEFAULT_RELAY_HOST = 'relay.beadfamous.com'
  * otherwise falls back to the local dev server.
  */
 const getWsUrl = () => {
-  const params = new URLSearchParams(window.location.search)
+  const params = readUrlParams()
   const room = params.get('room')
 
   if (room) {

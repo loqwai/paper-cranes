@@ -4,6 +4,7 @@ import { html } from 'htm/preact'
 import { getRelativeOrAbsoluteShaderUrl } from './src/utils.js'
 import { createParamsManager } from './src/params/ParamsManager.js'
 import { initMultiplayerEditor } from './src/multiplayer/MultiplayerEditor.js'
+import { readUrlParams, writeUrlParams } from './src/params/url.js'
 
 // Initialize multiplayer editing as soon as Monaco is ready
 const startMultiplayer = () => {
@@ -22,7 +23,7 @@ if (window.__monacoEditor) {
 }
 
 // Check if we're in remote control mode
-const searchParams = new URLSearchParams(window.location.search)
+const searchParams = readUrlParams()
 const isRemoteControlMode = searchParams.get('remote') === 'control'
 
 // Create params manager - single source of truth for all params
@@ -170,11 +171,13 @@ const ParamNavigator = (() => {
             mkBtn('→ list', '#644', () => {
                 const url = new URL(window.location.href)
                 url.pathname = '/list.html'
+                const current = readUrlParams()
                 const keep = new URLSearchParams()
                 for (const k of ['remote', 'room', 'relay']) {
-                    if (url.searchParams.has(k)) keep.set(k, url.searchParams.get(k))
+                    if (current.has(k)) keep.set(k, current.get(k))
                 }
                 url.search = keep.toString()
+                url.hash = ''
                 window.location.href = url.toString()
             }),
         )
@@ -184,13 +187,7 @@ const ParamNavigator = (() => {
     }
 
     const setParam = (key, value) => {
-        const url = new URL(window.location.href)
-        if (value === '' || value === null || value === undefined) {
-            url.searchParams.delete(key)
-        } else {
-            url.searchParams.set(key, value)
-        }
-        window.history.replaceState({}, '', url.toString())
+        writeUrlParams({ [key]: value === '' ? null : value })
         // Also push to paramsManager so the visualizer/remote pick it up
         const num = parseFloat(value)
         if (window.paramsManager) {
@@ -205,8 +202,7 @@ const ParamNavigator = (() => {
     const render = () => {
         if (!listEl) return
         listEl.innerHTML = ''
-        const url = new URL(window.location.href)
-        const entries = Array.from(url.searchParams.entries())
+        const entries = Array.from(readUrlParams().entries())
         if (entries.length === 0) {
             const empty = document.createElement('div')
             empty.style.cssText = 'opacity:0.5;font-style:italic;padding:8px 0;'
@@ -613,11 +609,13 @@ const FeatureAdder = () => {
                 const listUrl = new URL(window.location.href)
                 listUrl.pathname = '/list.html'
                 // Drop shader-specific params, keep passthrough ones
+                const current = readUrlParams()
                 const keep = new URLSearchParams()
                 for (const k of ['remote', 'room', 'relay', 'filter', 'favoritesOnly', 'fullscreenOnly', 'wip']) {
-                    if (listUrl.searchParams.has(k)) keep.set(k, listUrl.searchParams.get(k))
+                    if (current.has(k)) keep.set(k, current.get(k))
                 }
                 listUrl.search = keep.toString()
+                listUrl.hash = ''
                 window.location.href = listUrl.toString()
             }
         }
@@ -700,9 +698,7 @@ const FeatureAdder = () => {
             }
 
             // Production: strip ?shader= and reload (original behavior)
-            const newUrl = new URL(window.location)
-            newUrl.searchParams.delete('shader')
-            window.history.replaceState({}, '', newUrl)
+            writeUrlParams({ shader: null })
             window.location.reload()
             return true
         } catch (error) {
@@ -734,7 +730,7 @@ const FeatureAdder = () => {
 
     useEffect(() => {
         const init = async () => {
-            const searchParams = new URLSearchParams(window.location.search)
+            const searchParams = readUrlParams()
 
             const shaderHandled = await handleShaderParam(searchParams)
             if (shaderHandled) return

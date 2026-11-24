@@ -3,8 +3,9 @@
 import { createParamsManager } from './src/params/ParamsManager.js'
 import { loadControllers, composeControllers } from './src/controllerChain.js'
 import { buildSnapshot, postSnapshot, undoSnapshot } from './src/snapshot.js'
+import { readUrlParams } from './src/params/url.js'
 
-const searchParams = new URLSearchParams(window.location.search)
+const searchParams = readUrlParams()
 
 // Knob moves mirror into the URL (debounced) so a refresh keeps the set's state. With
 // ?remote=control they also drive remote displays (MIDI here → the projector elsewhere).

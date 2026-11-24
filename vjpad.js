@@ -62,6 +62,7 @@ import { WebSocketClient } from './src/remote/WebSocketClient.js'
 import LAYOUTS from './vjpad-layouts.json'
 import { resolveBanks, loadOverrides, saveOverrides, mirrorKnob, parseKnobs } from './src/vj/vjpad-layout.js'
 import { mountEditor } from './src/vj/vjpad-edit.js'
+import { readUrlParams } from './src/params/url.js'
 
 const $ = (id) => document.getElementById(id)
 const clamp01 = (t) => (t < 0 ? 0 : t > 1 ? 1 : t)
@@ -78,7 +79,7 @@ const fmt = (a, v) => (a.fmt ? a.fmt(v) : v.toFixed(2))
    The shader strip already existed and was already one tap; it now also decides
    which banks are on screen, so switching shader and switching control surface
    are the same gesture instead of two. */
-const params = new URLSearchParams(location.search)
+const params = readUrlParams()
 const SHADER_KEY = 'vjpad-shader'
 const KNOBS_KEY = 'cranes-vjpad-knobs'
 

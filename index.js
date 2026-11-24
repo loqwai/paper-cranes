@@ -14,6 +14,7 @@ const maybeStartWavelet = async (params, audioContext, sourceNode) => {
 import { makeVisualizer, askForWakeLock } from './src/Visualizer.js'
 import { getInitialShader, loadShader } from './src/shaderLoader.js'
 import { loadControllers, composeControllers } from './src/controllerChain.js'
+import { readUrlParams } from './src/params/url.js'
 
 
 const SEED_KEY = 'paperCranes.seeds'
@@ -34,7 +35,10 @@ const loadOrCreateSeeds = () => {
 const events = ['touchstart', 'touchmove', 'touchstop', 'keydown', 'mousedown', 'resize']
 let ranMain = false
 let startTime = 0
-const params = new URLSearchParams(window.location.search)
+let params = readUrlParams()
+// A hash edit does not reload the page, so re-read: getCranesState picks up the new values on the next frame.
+// Boot-only params (shader, audio setup) and names with no declared uniform still need a reload.
+window.addEventListener('hashchange', () => { params = readUrlParams() })
 
 // ?vj=1 — load the VJ runtime (validator + aesthetic meter + cursor-hide + /__vj-signal
 // watchdog) at page boot, so reloads can never strip the /vibej loop's tooling and the page
@@ -261,6 +265,8 @@ const setupCranesState = () => {
         frameCount: 0,
         // Centralized feature flattening function with proper order of precedence
         flattenFeatures: getCranesState,
+        // Controllers load unbundled and cannot import src/params/url.js, so they read the merged params here
+        get urlParams() { return params },
         // Used by src/midi.js to set knob values
         updateFeature: (name, value) => {
             window.cranes.manualFeatures[name] = value
@@ -420,7 +426,7 @@ if (import.meta.hot) {
         const changed = String(path ?? '')
             .replace(/^.*?shaders\//, '')
             .replace(/\.frag$/, '')
-        const showing = new URLSearchParams(window.location.search).get('shader')
+        const showing = readUrlParams().get('shader')
         if (!changed || !showing || changed !== showing) return
 
         // Same shader: swap the source in place. window.cranes.shader is what

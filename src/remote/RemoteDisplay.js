@@ -1,9 +1,10 @@
 import { WebSocketClient } from './WebSocketClient.js'
 import { loadShader } from '../shaderLoader.js'
+import { readUrlParams, writeUrlParams } from '../params/url.js'
 
 // The VJ MCP (docs/vj-mcp.md) reaches this display through the dev-server broker. Never on the
 // public relay (`?room=`): there no broker filters who may send `inspect`.
-const inspectable = import.meta.env.DEV && !new URLSearchParams(window.location.search).get('room')
+const inspectable = import.meta.env.DEV && !readUrlParams().get('room')
 let inspector = null
 
 /**
@@ -154,16 +155,8 @@ const flushParamsToUrl = () => {
   urlPending = null
   if (!data) return
   try {
-    const url = new URL(window.location.href)
-    for (const [key, value] of Object.entries(data)) {
-      if (key === 'shaderCode') continue
-      if (value === null || value === undefined) {
-        url.searchParams.delete(key)
-      } else {
-        url.searchParams.set(key, value)
-      }
-    }
-    window.history.replaceState({}, '', url.toString())
+    const { shaderCode, ...params } = data
+    writeUrlParams(params)
   } catch (e) {
     console.warn('[Remote Display] URL sync failed:', e)
   }

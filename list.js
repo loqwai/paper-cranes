@@ -1,9 +1,10 @@
 import { render } from 'preact'
 import { useState, useEffect, useRef, useMemo } from 'preact/hooks'
 import { html } from 'htm/preact'
+import { readUrlParams, writeUrlParams } from './src/params/url.js'
 
 // Check if we're in remote control mode
-const params = new URLSearchParams(window.location.search)
+const params = readUrlParams()
 const isRemoteControlMode = params.get('remote') === 'control'
 
 // Remote controller instance (initialized in List component)
@@ -23,7 +24,7 @@ const LIST_UI_PARAMS = new Set([
 ])
 
 const carryPassthroughParams = (url) => {
-  const current = new URLSearchParams(window.location.search)
+  const current = readUrlParams()
   for (const [key, value] of current) {
     // Never let the current page clobber the preset's CONTROLLER CHAIN.
     if (LIST_UI_PARAMS.has(key) || key === 'controller') continue
@@ -741,16 +742,15 @@ const List = () => {
 
   // Keep the URL shareable/reloadable
   useEffect(() => {
-    const next = new URL(window.location)
-    const apply = (key, value) => (value ? next.searchParams.set(key, value) : next.searchParams.delete(key))
-    apply('filter', filterText)
-    apply('sort', sortMode === DEFAULT_SORT ? '' : sortMode)
-    apply('favoritesOnly', favoritesOnly ? 'true' : '')
-    apply('mobileOnly', mobileOnly ? 'true' : '')
-    apply('wip', showWip ? 'true' : '')
-    apply('tags', [...includeTags].join(','))
-    apply('notags', [...excludeTags].join(','))
-    window.history.replaceState({}, '', next)
+    writeUrlParams({
+      filter: filterText || null,
+      sort: sortMode === DEFAULT_SORT ? null : sortMode,
+      favoritesOnly: favoritesOnly ? 'true' : null,
+      mobileOnly: mobileOnly ? 'true' : null,
+      wip: showWip ? 'true' : null,
+      tags: [...includeTags].join(',') || null,
+      notags: [...excludeTags].join(',') || null,
+    })
   }, [filterText, sortMode, favoritesOnly, mobileOnly, showWip, includeTags, excludeTags])
 
   useEffect(() => {
