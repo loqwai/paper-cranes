@@ -71,8 +71,19 @@ export const createLiveShow = ({
     post({ type: 'release', knob, value: k.value })
   }
 
+  // His write is newer than any held agent value for the same key, so that value is dropped: the
+  // lock's end must never move a dial back from where he left it. (held is {} unless an agent
+  // wrote mid-lock, so this is one property check on his path.)
+  const supersede = (key) => {
+    if (key in held) {
+      delete held[key]
+      onChange()
+    }
+  }
+
   // A dial, pad, MIDI or board move. Called after the value is already applied.
   const moved = (knob, value) => {
+    supersede(knob)
     lastMove = now()
     if (!handsOn) {
       handsOn = true
@@ -92,7 +103,11 @@ export const createLiveShow = ({
   // After Aaron's own update-params was applied: every knob in it counts as a move.
   const fromHands = (data) => {
     if (!data || typeof data !== 'object') return
-    for (const [key, value] of Object.entries(data)) if (KNOB.test(key) && value !== null) moved(key, value)
+    for (const [key, value] of Object.entries(data)) {
+      if (KNOB.test(key) && value !== null) moved(key, value)
+      else if (SHADER_KEYS.includes(key)) SHADER_KEYS.forEach(supersede)
+      else supersede(key)
+    }
   }
 
   // An agent's write: applied now when his hands are off, else held (newest wins per key).
@@ -111,7 +126,9 @@ export const createLiveShow = ({
 
   // PROPOSALS
   const proposals = new Map() // id -> { id, label, params, shader?, expiresAt, timer }
-  const card = ({ id, label, params, shader, expiresAt }) => ({ id, label, params, ...(shader ? { shader } : {}), expiresAt })
+  // ttlMs rides beside expiresAt because the pad's clock is not the display's: a phone a few
+  // seconds off would count a card down wrong, or hide it at once, if it trusted expiresAt.
+  const card = ({ id, label, params, shader, expiresAt }) => ({ id, label, params, ...(shader ? { shader } : {}), expiresAt, ttlMs: Math.max(0, expiresAt - now()) })
 
   const drop = (id, why) => {
     const p = proposals.get(id)

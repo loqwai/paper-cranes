@@ -57,6 +57,36 @@ describe('HANDS lock', () => {
     expect(applied).toEqual([{ shader: 'sun/7' }])
   })
 
+  it('applies held writes exactly once: a second lock that holds nothing applies nothing', () => {
+    const live = make({ handsMs: 300 })
+    live.fromHands({ knob_1: 0.2 })
+    live.fromAgent({ knob_3: 0.9 })
+    vi.advanceTimersByTime(300)
+    live.fromHands({ knob_1: 0.3 })
+    vi.advanceTimersByTime(300)
+    expect(applied).toEqual([{ knob_3: 0.9 }])
+  })
+
+  it('his own later write to a held key wins: the lock\'s end never moves that dial back', () => {
+    const live = make({ handsMs: 300 })
+    live.fromHands({ knob_1: 0.2 })
+    live.fromAgent({ knob_1: 0.9, knob_4: 0.4 })
+    live.fromHands({ knob_1: 0.25 }) // he is still on knob_1, after the agent's write
+    live.moved('knob_4', 0.7) // MIDI path: RemoteDisplay never sees it
+    vi.advanceTimersByTime(300)
+    expect(applied).toEqual([])
+    expect(live.status().held).toEqual([])
+  })
+
+  it('his own shader pick or release mid-lock drops a held agent shader or value for that key', () => {
+    const live = make({ handsMs: 300 })
+    live.fromHands({ knob_1: 0.2 })
+    live.fromAgent({ shaderCode: 'void main(){}', knob_9: 0.5, gain: 2 })
+    live.fromHands({ shader: 'his/pick', gain: null })
+    vi.advanceTimersByTime(300)
+    expect(applied).toEqual([{ knob_9: 0.5 }])
+  })
+
   it('only knob keys count as hands: a LEARN stamp or a release (null) does not lock', () => {
     const live = make()
     live.fromHands({ vjConfirm: 123, knob_5: null })

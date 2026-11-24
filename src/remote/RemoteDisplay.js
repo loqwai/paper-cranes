@@ -287,8 +287,9 @@ const switchShader = (name) => {
   shaderLoads = shaderLoads.then(async () => {
     if (mine !== latestShader) return
     try {
-      await loadShader(name, { updateUrl: true })
-      inspector?.hello() // the broker's display list shows the shader on screen
+      // Checked again after the fetch: a PANIC (swap) pressed while it was in flight must win.
+      const loaded = await loadShader(name, { updateUrl: true, stillWanted: () => mine === latestShader })
+      if (loaded) inspector?.hello() // the broker's display list shows the shader on screen
     } catch (e) {
       console.error('[Remote Display] Failed to load shader:', e)
     }

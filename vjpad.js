@@ -622,7 +622,9 @@ const showProposal = (p) => {
     drop.addEventListener('click', () => answer(false))
     el.append(label, ttl, take, drop)
     $('proposals').appendChild(el)
-    const expiresAt = Number(p.expiresAt) || Date.now() + 30000
+    // ttlMs, not the display's expiresAt: this phone's clock may be seconds off the display's.
+    const ttl = Number(p.ttlMs)
+    const expiresAt = Date.now() + (Number.isFinite(ttl) ? ttl : 30000)
     const tick = () => {
         const left = Math.ceil((expiresAt - Date.now()) / 1000)
         if (left <= 0) return clearProposal(p.id)
