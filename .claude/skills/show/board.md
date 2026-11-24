@@ -54,11 +54,11 @@ KEEP, PANIC and knob presets; the dials and the vjpad stay the instrument (~16 m
 ## The bridge
 
 1. Mint its ticket: `listener` with `agent: "show-bridge"`. Mint the status link: `link` with
-   `target: "st-wall"`.
+   `target: "st-wall"`, and the KEEP link: `link` with `target: "kept"` (draw the frame first).
 2. Run in the background, with a Monitor on its output:
    ```bash
    DRAW_LISTEN_TICKET=<show-bridge ticket> PORT=$P node scripts/vj/board-bridge.js --board <board> \
-     --panic <boot shader> [--setlist <name>] --status-link <st-wall link>
+     --panic <boot shader> [--setlist <name>] --status-link <st-wall link> --kept-link <kept link>
    ```
    One JSON line per tap: `{sent, control, ok, ms}`. On `"status":"link refused"` (links last an
    hour) mint a new link and restart it. Exit 2: the ticket expired (8 h); mint another.
@@ -71,11 +71,12 @@ KEEP, PANIC and knob presets; the dials and the vjpad stay the instrument (~16 m
 
 ## KEEP
 
-On each `keep` event: `screenshot {"width":480}` through the VJ MCP, place it in frame `kept` with
-the draw `image` tool, label it in one line (time, shader, the knobs that differ from 0). If the
-shader is a `-wip` or a partner candidate (`-p<N>`), copy its file now to
-`.claude/keeps/<time>-<name>.frag`, since that file keeps changing. The page has already queued
-the snapshot for `/keep process`.
+Nothing for a model to do. With `--kept-link`, the bridge answers every `keep` (pad, MIDI,
+spacebar, board): a card in frame `kept` (time, shader, the knobs that differ from 0), the picture
+in `.claude/vj-shots/keep-<time>.jpg`, and a `-wip` or `-p<N>` shader copied to `.claude/keeps/`
+(those files keep changing). The page has already queued the snapshot for `/keep process`. The
+picture is not on the board yet: draw cannot take an upload from a script (feedback 0cb3f01d).
+When the link expires (1 h) the bridge logs `card refused`: mint a new one and restart it.
 
 ## Story (`/show end`)
 

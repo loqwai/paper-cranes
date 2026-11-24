@@ -116,3 +116,12 @@ The bridge trusts the board. Anyone who can change the control frame drives the 
 
 Until draw has the ticket portal route, the bridge logs "faders off" once and retries every minute.
 The buttons work regardless.
+
+## KEEP onto the board, no model
+
+`--kept-link <link to frame kept>` makes the bridge answer every page `keep` signal (vjpad, MIDI
+pad, spacebar, `ctl-keep`) itself (`scripts/vj/board-kept.js`): a card in frame `kept` with the
+time, shader and non-zero knobs, the picture saved to `.claude/vj-shots/keep-<time>.jpg`, and a
+`-wip` or `-p<N>` shader copied to `.claude/keeps/`. No model sees the image. The picture stays
+on disk until draw lets a link upload a file: a link takes ops only, and an image element needs a
+file that only the draw MCP's `image` tool can upload (draw feedback 0cb3f01d, 2026-11-24).
