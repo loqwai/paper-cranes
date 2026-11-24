@@ -57,11 +57,14 @@ const declaredUniforms = (code) => {
 }
 
 export const shaderWrapper = (shader) => {
-    const [firstLine, ...lines] = shader.split('\n')
-    if (firstLine.includes('#version')) {
-        lines.unshift('#define PAPER_CRANES 1')
-        lines.unshift(firstLine)
-        return lines.join('\n')
+    // WebGL wants #version on line 1, but a comment above it (`// @fullscreen: true`) is an easy
+    // slip: hoist it. The output is always one line longer than the source (the define).
+    const lines = shader.split('\n')
+    const firstCode = lines.findIndex(line => line.trim() && !line.trim().startsWith('//'))
+    if (lines[firstCode]?.trim().startsWith('#version')) {
+        const [version] = lines.splice(firstCode, 1)
+        lines.splice(firstCode, 0, '#define PAPER_CRANES 1')
+        return [version, ...lines].join('\n')
     }
     if (shader.includes('mainImage')) {
         const compatUniforms = shaderToyCompatibilityUniforms()

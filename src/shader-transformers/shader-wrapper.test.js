@@ -39,6 +39,18 @@ ${mainImage('fragColor = vec4(beat ? 1. : 0.);')}`
         expect(compileErrors(shader)).toBe('')
     })
 
+    it('hoists #version above a leading comment, which WebGL rejects', () => {
+        const shader = `// @fullscreen: true
+#version 300 es
+precision highp float;
+out vec4 fragColor;
+void main() { fragColor = vec4(1.); }`
+        const wrapped = shaderWrapper(shader).split('\n')
+        expect(wrapped[0]).toBe('#version 300 es')
+        expect(wrapped).toHaveLength(shader.split('\n').length + 1)
+        expect(compileErrors(shader)).toBe('')
+    })
+
     it('declares a numeric URL param as a uniform', () => {
         withUrl('?my_param=0.5')
         expect(compileErrors(mainImage('fragColor = vec4(my_param);'))).toBe('')
