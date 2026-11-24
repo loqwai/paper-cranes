@@ -23,6 +23,19 @@ const pageInputs = () => Object.fromEntries(
     .filter(([, path]) => existsSync(path)),
 )
 
+const BOOT_MODULES = [
+  'vite/preload-helper.js',
+  '/src/worker-communication.js',
+  '/src/audio/WorkerRPC.js',
+  '/src/audio/OnsetProcessor.js',
+  '/src/audio/AudioProcessor.js',
+  '/src/shader-transformers/shader-wrapper.js',
+  '/src/wakeLock.js',
+  '/src/Visualizer.js',
+  '/src/utils.js',
+  '/src/shaderLoader.js',
+]
+
 export default defineConfig({
   server: {
     port,
@@ -38,12 +51,15 @@ export default defineConfig({
   build: {
     target: 'esnext',
     outDir: 'dist',
+    modulePreload: { polyfill: false },
     rollupOptions: {
       input: pageInputs(),
       output: {
         entryFileNames: 'assets/[name].js',
         chunkFileNames: 'assets/[name].js',
         assetFileNames: 'assets/[name][extname]',
+        // One request for everything the first frame needs, instead of one per shared chunk.
+        manualChunks: (id) => (BOOT_MODULES.some((m) => id.endsWith(m)) ? 'boot' : undefined),
       },
     },
   },
