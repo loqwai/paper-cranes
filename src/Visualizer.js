@@ -85,7 +85,7 @@ const calculateResolutionRatio = (frameTime, renderTimes, lastResolutionRatio, c
     // Calculate average frame time over last 20 frames
     const avgFrameTime = renderTimes.reduce((a, b) => a + b) / renderTimes.length
 
-    if (avgFrameTime > 25) return Math.max(0.5, lastResolutionRatio - 0.25)
+    if (avgFrameTime > 25) return Math.max(Math.min(0.5, ceiling), lastResolutionRatio - 0.25)
     if (avgFrameTime < 17.5 && lastResolutionRatio < ceiling) return Math.min(ceiling, lastResolutionRatio + 0.25)
     return lastResolutionRatio
 }
@@ -113,9 +113,11 @@ void main() {
     gl_Position = position;
 }`
 
-export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) => {
+// `wakeLock: false` and `maxRatio` < 1 are for a guest view that must stay cheap (mirror.html, docs/board-mirror.md):
+// it never holds the screen on, and it never draws above that share of its CSS size.
+export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen, wakeLock = true, maxRatio = 1 }) => {
     // Not awaited: the screen lock must never sit between the user and the visual.
-    askForWakeLock()
+    if (wakeLock) askForWakeLock()
 
     const gl = canvas.getContext('webgl2', {
         antialias: false,
@@ -181,7 +183,7 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
 
     let bufferInfo = createBufferInfoFromArrays(gl, { position: positions })
 
-    resizeCanvasToDisplaySize(gl.canvas, 1)
+    resizeCanvasToDisplaySize(gl.canvas, maxRatio)
 
     let frameNumber = 0
     let lastRender = performance.now()
@@ -189,8 +191,8 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
     let lastFragmentShader
     let pendingShaderSource = null
     let renderTimes = []
-    let lastResolutionRatio = 1
-    let resolutionCeiling = 1
+    let lastResolutionRatio = maxRatio
+    let resolutionCeiling = maxRatio
     let lastClientSize = ''
     let ceilingRetryAt = 0
     let ceilingRetryDelay = 20000
@@ -241,7 +243,7 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         const clientSize = `${gl.canvas.clientWidth}x${gl.canvas.clientHeight}`
         if (clientSize !== lastClientSize) {
             lastClientSize = clientSize
-            resolutionCeiling = 1
+            resolutionCeiling = maxRatio
             ceilingRetryDelay = 20000
         }
         const resolutionRatio = frameNumber < 60
@@ -251,8 +253,8 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
             resolutionCeiling = resolutionRatio
             ceilingRetryAt = currentTime + ceilingRetryDelay
             ceilingRetryDelay = Math.min(ceilingRetryDelay * 2, 320000)
-        } else if (resolutionCeiling < 1 && currentTime > ceilingRetryAt) {
-            resolutionCeiling = Math.min(1, resolutionCeiling + 0.25)
+        } else if (resolutionCeiling < maxRatio && currentTime > ceilingRetryAt) {
+            resolutionCeiling = Math.min(maxRatio, resolutionCeiling + 0.25)
             ceilingRetryAt = currentTime + ceilingRetryDelay
         }
 

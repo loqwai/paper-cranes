@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <!-- A board mirror: the wall's picture, drawn here from the numbers the wall drew with.
+         Watch only: no mic, no knobs, no room name. docs/board-mirror.md -->
+    <meta charset="utf-8">
+    <title>Paper Cranes mirror</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
+    <style>
+        html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+        #visualizer { display: block; width: 100%; height: 100%; image-rendering: auto; }
+        #mirror-note {
+            position: fixed; left: 8px; bottom: 8px; padding: 2px 8px; border-radius: 4px;
+            font: 12px system-ui, sans-serif; color: #fff; background: rgba(0, 0, 0, 0.55);
+            pointer-events: none; transition: opacity 0.4s;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="visualizer"></canvas>
+    <div id="mirror-note" role="status">connecting</div>
+    <script type="module" src="./src/mirror/mirror.js"></script>
+</body>
+
+</html>

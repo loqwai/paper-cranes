@@ -1,6 +1,7 @@
 import { WebSocketClient } from './WebSocketClient.js'
-import { loadShader } from '../shaderLoader.js'
+import { loadShader, shaderOnScreen } from '../shaderLoader.js'
 import { inspectorAllowedOn, withoutPinned, displaySecretFrom, secretFor } from './relay.js'
+import { createMirrorFeed } from './mirrorFeed.js'
 
 // The VJ MCP (docs/vj-mcp.md) reaches this display through a broker: the dev server's /ws, or on
 // `?room=` the relay Worker's room, which drops any `inspect` a client sends. The inspector loads
@@ -57,8 +58,10 @@ export const initRemoteDisplay = () => {
         break
 
       case 'status':
-        // Connection status updates
+        // Connection status updates. A relay room also counts board mirrors (docs/board-mirror.md);
+        // the feed runs only while there is one to watch it.
         console.log('[Remote Display] Connected clients:', message.data?.connectedClients)
+        mirrorFeed.viewers(message.data?.viewers)
         break
 
       default:
@@ -79,6 +82,11 @@ export const initRemoteDisplay = () => {
   }
 
   const client = new WebSocketClient(handleMessage, handleStatusChange)
+  const mirrorFeed = createMirrorFeed({
+    send: (type, data) => { if (client.isConnected) client.send(type, data) },
+    // What animateShader draws: window.cranes.shader once anything loaded one, else the boot shader.
+    read: () => ({ code: window.cranes?.shader ?? window.shader, shader: shaderOnScreen(), last: window.cranes?.lastRender }),
+  })
   if (inspectorAllowedOn(client.url, { dev })) {
     import('./inspect.js')
       .then(({ createInspector }) => {
