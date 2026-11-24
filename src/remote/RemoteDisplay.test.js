@@ -24,7 +24,14 @@ vi.mock('../shaderLoader.js', () => ({
     return {}
   },
 }))
-vi.mock('./inspect.js', () => ({ createInspector: () => ({ hello() {}, unwelcome() {}, welcome() {}, handle() {}, rekey() {} }) }))
+const inspectors = vi.hoisted(() => [])
+vi.mock('./inspect.js', () => ({
+  createInspector: (send, opts) => {
+    const i = { opts, refusedWith: null, hello() {}, unwelcome() {}, welcome() {}, handle() {}, rekey() {}, refused(d) { i.refusedWith = d } }
+    inspectors.push(i)
+    return i
+  },
+}))
 
 let href
 const elements = {}
@@ -32,6 +39,7 @@ beforeEach(() => {
   vi.useFakeTimers()
   vi.spyOn(console, 'log').mockImplementation(() => {})
   clients.length = 0
+  inspectors.length = 0
   for (const k of Object.keys(elements)) delete elements[k]
   href = 'http://localhost:6969/?shader=plasma&remote=display&room=show&controller=clit-set'
   globalThis.window = {
@@ -111,5 +119,44 @@ describe('RemoteDisplay status badge', () => {
     const badge = elements['remote-status-indicator']
     expect(badge.textContent).not.toBe('Reconnecting...')
     expect(Number(badge.style.opacity)).toBeLessThan(1)
+  })
+})
+
+describe('RemoteDisplay display secret', () => {
+  const S = 'ds_abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG'
+  const bootWithSecret = async () => {
+    href = `http://localhost:6969/?shader=plasma&remote=display&room=show#display_secret=${S}`
+    const client = await boot()
+    await vi.dynamicImportSettled()
+    return { client, inspector: inspectors[0] }
+  }
+
+  it('sends the secret the page loaded with, only on a relay room socket', async () => {
+    const { client, inspector } = await bootWithSecret()
+    expect(inspector.opts.secret()).toBeUndefined() // the dev server's /ws: never
+    client.socket.url = 'ws://127.0.0.1:8798/ws/show'
+    expect(inspector.opts.secret()).toBe(S)
+    client.socket.url = 'wss://evil.example/ws/show'
+    expect(inspector.opts.secret()).toBeUndefined()
+  })
+
+  it('is pinned at load: a later hash edit or a peer cannot change it, and the mirror never touches it', async () => {
+    const { client, inspector } = await bootWithSecret()
+    client.socket.url = 'ws://127.0.0.1:8798/ws/show'
+    client.onMessage({ type: 'update-params', data: { display_secret: 'ds_peer', knob_1: 0.5 } })
+    client.onMessage({ type: 'update-params', data: { display_secret: null } })
+    vi.advanceTimersByTime(1000)
+    expect(new URL(href).hash).toBe(`#display_secret=${S}`)
+    expect(query().has('display_secret')).toBe(false)
+    expect(window.cranes.messageParams).not.toHaveProperty('display_secret')
+    href = href.replace(S, 'ds_edited')
+    expect(inspector.opts.secret()).toBe(S)
+  })
+
+  it('hands the relay\'s display-refused to the inspector', async () => {
+    const { client, inspector } = await bootWithSecret()
+    client.socket.url = 'ws://127.0.0.1:8798/ws/show'
+    client.onMessage({ type: 'display-refused', data: { reason: 'wrong display secret' } })
+    expect(inspector.refusedWith).toEqual({ reason: 'wrong display secret' })
   })
 })

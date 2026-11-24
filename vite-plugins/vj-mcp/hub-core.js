@@ -19,8 +19,9 @@ import { ToolError } from './errors.js'
 const EVENT_RING = 500
 
 // Every message type that belongs to the hub and the one display it concerns. A broker hands the
-// first two to the hub and drops all four from clients: only the hub may send the last two.
-export const HUB_TYPES = new Set(['display-hello', 'inspect-reply', 'inspect', 'display-rekey', 'display-welcome'])
+// first two to the hub and drops all of them from clients: only the hub may send the rest.
+// display-refused is the relay's answer to a hello without the room's display secret.
+export const HUB_TYPES = new Set(['display-hello', 'inspect-reply', 'inspect', 'display-rekey', 'display-welcome', 'display-refused'])
 
 export const VALID_KEY = /^[0-9a-f-]{8,64}$/i
 export const idOf = (key) => String(key).replace(/-/g, '').slice(0, 6).toLowerCase()

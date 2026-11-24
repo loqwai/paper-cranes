@@ -62,12 +62,14 @@ Claude Code ──POST /mcp/<room>──► Cloudflare Access (OAuth; 401 + chal
 - Any message that is not a hub type is relayed to every other socket verbatim, as before. The
   relay stays byte-compatible: `e2e/vj-mcp-relay.test.js` drives a display from the real
   `vjpad.html?room=` and checks the display applied exactly what a third socket saw relayed.
-- **The room name is the lock.** Anyone who knows it can join `/ws/<room>`, relay knobs, and
-  with a non-browser client (which can send any `Origin`) register a fake display. A fake display
-  cannot touch the real one, but what it reports (state, screenshots, logs, events) reaches the
-  agent as if real. The tool descriptions of `list_displays`, `get_state`, `screenshot` and
-  `wait_for_event` say their output is untrusted data. Follow-up, not built: a room-secret
-  handshake so the room DO admits a display only with proof beyond the room name.
+- **The room name is the lock, unless the room has a display secret.** Anyone who knows the
+  name can join `/ws/<room>` and relay knobs. In a room with no secret, a non-browser client
+  (which can send any `Origin`) can also register a fake display. A fake display cannot touch the
+  real one, but what it reports (state, screenshots, logs, events) reaches the agent as if real.
+  `display_secret {action: "rotate"}` locks the room so a display registers, and its `?vj=1`
+  signals count, only with the secret from the link it returns (see "Display secret" below). The
+  tool descriptions of `list_displays`, `get_state`, `screenshot` and `wait_for_event` still say
+  their output is untrusted data: anyone holding the display link can run a display.
 - `display-hello` registers a display, only from a socket whose page Origin is the site, a show
   repo, a Pages preview, a hypnodroid.com tunnel or localhost. It is never relayed. This check
   stops web pages in a browser, not scripts: a non-browser client sets any `Origin` it likes.
@@ -183,6 +185,7 @@ refuses it. Use the relay URL above instead, which has managed OAuth.
 | `set_shader {display?, shader, params?}` | Switches in place (no reload, audio history kept), waits until the page runs that exact source, and reports whether it compiles. If the page never picks the source up, `loaded` is false and `compiles` is null. |
 | `read_shader {shader}` | Source, knobs and hash of `shaders/<shader>.frag`. |
 | `write_shader {shader, code, display?, validate?}` | Compiles on a display first and refuses on an error. Dev: writes the file (the same helper as `/__save-shader`), lets HMR hot-swap it, and reports which displays picked it up (`persisted: true`). A display that `set_shader` moved counts as showing the new shader: pages match HMR events with `shaderOnScreen()` (`src/shaderLoader.js`), which reads `?shader=` when the event arrives, never the value from boot. Relay: applies the code live on the display and saves nothing (`persisted: false`). |
+| `display_secret {action?, shader?}` | Relay only. Locks the room so only displays holding its secret can register (see "Display secret" below). `rotate` mints a secret (the first call creates it) and returns the display link with the secret in its hash; `status` (the default) says whether the room is locked; `clear` opens it again. |
 | `wait_for_event {since?, types?, timeout_s?}` | Blocks up to 55 s until `display-joined`, `display-left` or a `vj-signal` (`boot`, `clip`, `flicker`, `too-dark`, `shiver`, `gate-drop`, `pulse`, `confirm-learn`) arrives after `since`. |
 
 `display` is optional when one display is connected, and otherwise any unique prefix of an
@@ -228,7 +231,8 @@ MCP client ──POST /mcp──► vj-mcp-plugin ──► tools.js ──► h
   issuer, AUD, RS256 signature against the team certs, expiry). With no `ACCESS_AUD` configured the
   Worker answers 503, not open. Any request with an `Origin` header is refused, so a web page in a
   signed-in browser cannot drive a show. The room name is still required. The relay has no
-  filesystem path: `write_shader` there never persists.
+  filesystem path: `write_shader` there never persists. A room locked with `display_secret` takes
+  displays only with its secret; see "Display secret (relay)".
 - **Dev server** (the rest of this section): no write tool exists in the production build.
 - A request with an `Origin` header must come from a loopback origin, or from a host listed in
   `VJ_MCP_ORIGINS` (comma-separated). CLI clients send no `Origin`. This blocks a web page, or a
@@ -249,6 +253,61 @@ MCP client ──POST /mcp──► vj-mcp-plugin ──► tools.js ──► h
   `write_shader` reject names with `..`, a leading `/`, a drive letter, a backslash or NUL. The
   editor's `/__save-shader` keeps its old sanitising, plus the shared check that the result stays
   inside `shaders/`.
+
+## Display secret (relay)
+
+Without a secret, the room name is the only lock on who may be a display. A script that knows
+the room can forge `Origin`, register a fake display and feed the agent made-up state,
+screenshots and events. `display_secret` closes that for rooms that want it:
+
+1. An agent signed in through Access calls `display_secret {action: "rotate"}`. The room's Durable
+   Object mints 256 random bits (`ds_` + base64url), stores only their SHA-256 hash in its storage,
+   and returns a display link:
+   `https://visuals.beadfamous.com/?shader=<s>&remote=display&room=<room>#display_secret=ds_…`.
+   The secret exists outside the display only in that one reply. Lost the link? Rotate again.
+2. The secret is in the URL **hash**, which a browser never sends to a server, so it stays out
+   of the site's and Cloudflare's request logs. `?display_secret=` in the query also works, but
+   it reaches those logs, so use the hash.
+3. The page reads the secret once, at load (`src/remote/relay.js` `displaySecretFrom`, called in
+   `RemoteDisplay`), the same way it pins `relay` and `room`. `display_secret` is in `PINNED`, so
+   a room peer's `update-params` can neither set nor delete it, and the URL mirror never writes it.
+   The page puts it in its `display-hello` (`displaySecret`) only on a socket to a relay room we
+   run (`secretFor`: relay.beadfamous.com or a loopback relay), never on the dev server's `/ws`
+   and never through another `?relay=` host.
+4. The room checks the hello: it hashes what the page sent and compares the two digests in
+   constant time (`crypto.subtle.timingSafeEqual` on Workers). Right secret: welcomed and listed,
+   as before. No secret or a wrong one: the page gets `display-refused {reason}` and is never
+   listed. The reason never contains the secret.
+5. `?vj=1` signals from a socket that has not proven the secret wait (up to 5, in memory) for
+   its hello, then count or are dropped with it. The boot beacon usually beats the hello.
+6. `rotate` again drops every registered display at once: each gets `display-refused` and leaves
+   `list_displays` until it opens the new link. A refused display stays an ordinary room peer, so
+   knobs from a phone keep reaching it. `clear` opens the room again.
+
+Rooms with no secret behave exactly as before, so every existing link keeps working.
+
+**Where the secret never appears.** Every href the page reports goes through `withoutSecret`
+first: the hello's `href` (so `list_displays`), `get_state`'s `href`, and the `?vj=1` boot
+beacon's `url` and `flags`. The relay also redacts `display_secret=` and any `ds_…` token from
+hellos and signals before it stores or forwards them, for a page that predates this. The Worker
+logs only who called which tool, never arguments. `display-refused` is a hub-only message type:
+a peer cannot forge one to a display.
+
+**Limits.** The secret proves the page was opened from the link; anyone who has the link can run
+a display. The page keeps the secret in its URL hash, so a screenshot of the address bar carries
+it, and so will a PWA installed from that page once the manifest's `start_url` keeps the hash
+(#216; today `index.html` builds it from the path and query only). The `?display_secret=` query
+form also lands in the site's request logs, the service worker's cache keys, and, through a
+same-origin `document.referrer`, the list page's remembered params in `localStorage`; use the
+hash. Rotate if a link leaks.
+
+**Reviewed** in the #236 security review (2026-11-24): encoding and case tricks, signals before,
+between and after hellos, a no-Origin socket, a refused socket answering another display's
+`inspect`, a peer reusing the display's key, old-secret replays and hellos racing `rotate` were
+all refused on `wrangler dev`; no MCP reply but `rotate`, and no Worker log line, held the secret.
+A `relay.beadfamous.com` link has no `relay=`; a link minted through any other relay host names
+that host, and the page sends its secret only to `relay.beadfamous.com` or loopback, so mint
+links on `relay.beadfamous.com`.
 
 ## Relation to the one-Claude-per-socket design (PR #188)
 
@@ -355,11 +414,9 @@ at boot (`controller`, which imports JavaScript, plus `image`, `audio_file`, `re
 `midi`, `audio_send` and the rest of `PINNED` in `src/remote/relay.js`), so a room peer cannot
 plant one in the URL mirror for the next reload; and `screenshot` caps the long side at 960 px.
 
+Built after #221: the room-secret handshake, as `display_secret` (see "Display secret").
+
 Left for later:
-- **Room-secret handshake.** The room name is the only lock on `/ws/<room>`, and a non-browser
-  client can forge `Origin` and register a fake display whose reports reach the agent (it cannot
-  touch the real display). A display could prove more than the room name, for example a per-room
-  secret the MCP mints and hands to the display link.
 - **Display origins are too wide** (`workers/remote-relay/src/room.js`, `DISPLAY_ORIGIN`): every
   `*.hypnodroid.com` origin may register as a display, draw.hypnodroid.com included. That matters
   only if one of those hosts serves content someone else can write. Narrow it to the hosts that

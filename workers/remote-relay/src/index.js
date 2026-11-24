@@ -46,7 +46,8 @@
 import { DurableObject } from 'cloudflare:workers'
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
 import { createVjMcpServer } from '../../../vite-plugins/vj-mcp/server.js'
-import { createRoomHub, routeMessage, siteShaders, displayOriginAllowed, decodeRoom, RELAY_VENUE } from './room.js'
+import { createRoomHub, routeMessage, siteShaders, displayOriginAllowed, decodeRoom, roomSecretControl, RELAY_VENUE } from './room.js'
+import { createDisplayLock } from './secret.js'
 import { authorize, mcpError } from './access.js'
 
 export class RelayRoom extends DurableObject {
@@ -54,6 +55,10 @@ export class RelayRoom extends DurableObject {
         super(ctx, env)
         // Rebuilt after every hibernation; the display registry lives in socket attachments.
         this.hub = createRoomHub(ctx)
+        // The room's display secret, hashed in this object's storage (secret.js). Signals that
+        // beat their socket's hello wait in `held`; hibernation may forget them, which is fine.
+        this.lock = createDisplayLock(ctx.storage)
+        this.held = new WeakMap()
     }
 
     /**
@@ -100,7 +105,7 @@ export class RelayRoom extends DurableObject {
         // Match the dev server: validate, then relay the ORIGINAL text, so we
         // never reserialize and subtly change a payload in transit. Hub types
         // (display-hello, inspect-reply, inspect, ...) are never relayed.
-        await routeMessage({ ctx: this.ctx, hub: this.hub, ws, message })
+        await routeMessage({ ctx: this.ctx, hub: this.hub, ws, message, lock: this.lock, held: this.held })
     }
 
     async webSocketClose(ws) {
@@ -123,10 +128,20 @@ export class RelayRoom extends DurableObject {
      */
     async mcp({ url, method, headers, body }, who) {
         const request = new Request(url, { method, headers, body })
+        const { host, pathname } = new URL(url)
         const server = createVjMcpServer({
             hub: this.hub,
             shaders: siteShaders({ hub: this.hub, env: this.env }),
             venue: RELAY_VENUE,
+            displaySecret: roomSecretControl({
+                ctx: this.ctx,
+                hub: this.hub,
+                lock: this.lock,
+                held: this.held,
+                room: decodeRoom(pathname.split('/')[2]),
+                relayHost: host,
+                site: this.env.SITE_ORIGIN || undefined,
+            }),
             onCall: (tool) => console.log(`[vj-mcp] ${who?.email ?? who?.id ?? who?.kind} ${tool}`),
         })
         const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true })

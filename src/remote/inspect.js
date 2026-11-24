@@ -12,6 +12,7 @@
 // Read-only plus `validate` (a scratch compile): knob and shader changes go through the existing
 // `update-params` path, not through here. Handlers are adapted from PR #182/#187's inspect.js.
 import { hashSource } from './hash.js'
+import { withoutSecret } from './relay.js'
 import { shaderOnScreen as currentShader } from '../shaderLoader.js'
 
 const S = (window.__cranesInspect ??= { logRing: [], consoleWrapped: false })
@@ -99,7 +100,7 @@ export const hello = () => {
   const c = canvasEl()
   return {
     key: displayKey,
-    href: location.href.slice(0, 600),
+    href: withoutSecret(location.href).slice(0, 600),
     path: location.pathname,
     shader: currentShader(),
     ua: navigator.userAgent,
@@ -113,7 +114,7 @@ const commands = {
   state: async ({ features = 'core', meterSecs = 10 } = {}) => {
     const flat = window.cranes.flattenFeatures()
     const out = {
-      href: location.href.slice(0, 600),
+      href: withoutSecret(location.href).slice(0, 600),
       shader: currentShader(),
       shaderHash: hashSource(code()),
       shaderError: window.cranes.error ?? null,
@@ -164,8 +165,9 @@ const commands = {
   validate: async ({ src } = {}) => validate(typeof src === 'string' ? src : code()),
 }
 
-// send(type, data) is the RemoteDisplay socket's send.
-export const createInspector = (send) => {
+// send(type, data) is the RemoteDisplay socket's send. secret() is the room's display secret for
+// the socket open now (relay.js secretFor), or undefined: it goes in the hello and nowhere else.
+export const createInspector = (send, { secret = () => undefined } = {}) => {
   installLogCapture()
   let welcomed = false
   const handle = async ({ id, cmd, args } = {}) => {
@@ -178,7 +180,10 @@ export const createInspector = (send) => {
       send('inspect-reply', { id, ok: false, error: String(e?.message ?? e) })
     }
   }
-  const sayHello = () => send('display-hello', hello())
+  const sayHello = () => {
+    const displaySecret = secret()
+    send('display-hello', displaySecret ? { ...hello(), displaySecret } : hello())
+  }
   const rekey = () => {
     displayKey = loadKey(true)
     sayHello()
@@ -186,5 +191,11 @@ export const createInspector = (send) => {
   // A welcome names the id this tab's key maps to; one for another id is not for this tab.
   const welcome = ({ id } = {}) => { if (id === displayKey.replace(/-/g, '').slice(0, 6).toLowerCase()) welcomed = true }
   const unwelcome = () => { welcomed = false }
-  return { handle, hello: sayHello, rekey, welcome, unwelcome }
+  // The relay refused this display: no display secret, a wrong one, or it was rotated. It stays a
+  // room peer (knobs still arrive); only the VJ MCP no longer sees it.
+  const refused = ({ reason } = {}) => {
+    welcomed = false
+    console.warn(`[Remote Display] the relay refused this display for the VJ MCP: ${reason ?? 'no reason given'}`)
+  }
+  return { handle, hello: sayHello, rekey, welcome, unwelcome, refused }
 }
