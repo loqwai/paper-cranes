@@ -167,22 +167,25 @@ const didThingsChange = async (request, response) => {
 }
 
 /**
- * Fetches a request and caches the response. Always starts the fetch immediately.
- * @param {Request} request - The request object.
- * @returns {Promise<Response>} - The response object.
+ * Answers from the cache when it can, else with the network response as soon as it arrives.
+ * Diffing and caching run on a clone after the page has its response.
+ * @param {FetchEvent} event
+ * @returns {Promise<Response>}
  */
-async function fetchWithCache(request) {
-    const networkPromise = fetchWithRetry(request).then(async (response) => {
-        if (await didThingsChange(request, response)) {
-            contentChanged = true
-            // Trigger reload right away when changes are detected
-            reloadAllClients()
-        }
-        await addToCache(request, response)
-        return response
-    })
-
+async function fetchWithCache(event) {
+    const { request } = event
+    const networkPromise = fetchWithRetry(request)
+    event.waitUntil(networkPromise.then((response) => updateCache(request, response.clone())))
     return (await getFromCache(request)) ?? networkPromise
+}
+
+const updateCache = async (request, response) => {
+    if (await didThingsChange(request, response)) {
+        contentChanged = true
+        // Trigger reload right away when changes are detected
+        reloadAllClients()
+    }
+    await addToCache(request, response)
 }
 
 /**
@@ -198,5 +201,5 @@ self.addEventListener("fetch", (e) => {
     if (e.request.url.includes("esbuild")) return
     // if the url is not in our domain, continue
     // if (!e.request.url.includes(location.origin)) return // actually I want to get and cache monaco.
-    e.respondWith(fetchWithCache(e.request))
+    e.respondWith(fetchWithCache(e))
 })
