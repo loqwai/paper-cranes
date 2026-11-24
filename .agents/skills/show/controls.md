@@ -8,11 +8,12 @@
   `read_shader`, `// K4 ZOOM`).
 
 **Bridge** (no model in the path; ids in `docs/live-show-contract.md`): mint `listener` with
-`agent: "show-bridge"` and `link` with `target: "st-wall"`, then run in the background under a
+`agent: "show-bridge"`, `link` with `target: "st-wall"` and `link` with `target: "kept"` (draw the
+frame first), then run in the background under a
 Monitor:
 
 ```bash
-DRAW_LISTEN_TICKET=<ticket> PORT=$P node scripts/vj/board-bridge.js --board <board> --panic <boot shader> [--setlist <name>] --status-link <link>
+DRAW_LISTEN_TICKET=<ticket> PORT=$P node scripts/vj/board-bridge.js --board <board> --panic <boot shader> [--setlist <name>] --status-link <link> --kept-link <kept link>
 ```
 
 The env var keeps the ticket (8 h read of the whole board) out of `ps`. One JSON line per tap.

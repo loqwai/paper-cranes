@@ -46,10 +46,10 @@ Read a reference file only when its row or step says so. Failure fixes:
 3. **Board and bridge**: read [board.md](board.md) and [controls.md](controls.md). Fly his tab to `controls`.
 4. **Watch** (Monitors, re-armed on expiry):
    ```bash
-   PORT=$P node scripts/vj/watch-events.js keep panic pad-alive boot
+   PORT=$P node scripts/vj/watch-events.js panic pad-alive boot
    node scripts/vj/stray-guard.mjs
    ```
-   - `keep`: put its picture in frame `kept` ([kept.md](kept.md)).
+   - KEEP needs nothing from you: the bridge puts it in frame `kept` ([kept.md](kept.md)).
    - `pad-alive` false: paint `st-wall` blocked, tell him in one line.
    - `panic`: tell `/partner` to drop its move.
 5. **Start `/partner`** (not in lite) as one background `Agent` with the shader, board and port.
