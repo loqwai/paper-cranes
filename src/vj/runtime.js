@@ -31,7 +31,14 @@ export const startVjRuntime = async () => {
   }
   // 3. aesthetic meter (5-probe kit + shiver probe; IIFE that installs window.__vjMeter)
   if (!window.__vjMeter) {
-    try { eval(await fetch('/scripts/vj/aesthetic-meter.js?t=' + Date.now()).then(r => r.text())) } catch (e) { post({ type: 'error', what: 'meter-install', info: String(e) }) }
+    // Dev fetches it fresh, so the vibej loop's edits land on the next reload. A build has no
+    // /scripts/ (the static host answers its HTML shell, and eval of that is a SyntaxError), so it
+    // bundles the source instead: without it, a production ?vj=1 page had no meter, no alerts and
+    // no pulses.
+    const meterSource = () => import.meta.env.DEV
+      ? fetch('/scripts/vj/aesthetic-meter.js?t=' + Date.now()).then(r => r.text())
+      : import('../../scripts/vj/aesthetic-meter.js?raw').then(m => m.default)
+    try { eval(await meterSource()) } catch (e) { post({ type: 'error', what: 'meter-install', info: String(e) }) }
     if (window.__vjMeter && !window.__vjMeter.timer) window.__vjMeter.timer = setInterval(() => window.__vjMeter.sample(), window.__vjMeter.PERIOD_MS)
   }
   // 3b. JANK PROBE — the loop kept being told "the visual stutters" with no way to confirm it.
