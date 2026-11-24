@@ -14,8 +14,14 @@ import { createProjector, wallUrlFor } from './project.js'
 export const TO_WALL = new Set(['update-params', 'vj-keep', 'vj-panic', 'proposal-answer'])
 export const TO_BOTH = new Set(['pad-hello'])
 
-export const createPadClient = (onMessage, onStatus, { makeSocket, BroadcastChannel } = {}) => {
-  let socketStatus = 'reconnecting'
+/**
+ * The room socket is opened only where there is a broker, as on the wall (wall.js): a `?room=`
+ * link, or the dev server. On a static host with no room a socket would retry `/ws` forever, a
+ * console error every few seconds for the whole show.
+ */
+export const createPadClient = (onMessage, onStatus, { dev = false, loc = globalThis.location, makeSocket, BroadcastChannel } = {}) => {
+  const wantsSocket = new URLSearchParams(loc?.search ?? '').has('room') || dev
+  let socketStatus = wantsSocket ? 'reconnecting' : 'disconnected'
   let reported = null
   const listeners = new Set()
   const report = () => {
@@ -30,7 +36,7 @@ export const createPadClient = (onMessage, onStatus, { makeSocket, BroadcastChan
     ...(BroadcastChannel ? { BroadcastChannel } : {}),
     onPeers: (walls) => { report(); listeners.forEach((fn) => fn(walls)) },
   })
-  const socket = (makeSocket ?? ((m, s) => new WebSocketClient(m, s)))(onMessage, (s) => { socketStatus = s; report() })
+  const socket = wantsSocket ? (makeSocket ?? ((m, s) => new WebSocketClient(m, s)))(onMessage, (s) => { socketStatus = s; report() }) : null
   // Say bye on the way out, so the wall drops this pad at once; come back from the back-forward
   // cache (DIALS and back) linked again.
   globalThis.addEventListener?.('pagehide', () => link.stop())
@@ -42,21 +48,21 @@ export const createPadClient = (onMessage, onStatus, { makeSocket, BroadcastChan
     onWalls(fn) { listeners.add(fn); return () => listeners.delete(fn) },
     connect() {
       link.start()
-      socket.connect()
+      socket?.connect()
     },
     send(type, data, extra) {
       const local = link.linked && (TO_WALL.has(type) || TO_BOTH.has(type))
       if (local) link.send({ ...extra, type, data })
       if (local && !TO_BOTH.has(type)) return true
-      return socket.send(type, data, extra) || local
+      return Boolean(socket?.send(type, data, extra)) || local
     },
     disconnect() {
       link.stop()
-      socket.disconnect()
+      socket?.disconnect()
     },
-    get isConnected() { return Boolean(socket.isConnected || link.linked) },
-    get socket() { return socket.socket },
-    get url() { return socket.url },
+    get isConnected() { return Boolean(socket?.isConnected || link.linked) },
+    get socket() { return socket?.socket ?? null },
+    get url() { return socket?.url },
   }
 }
 

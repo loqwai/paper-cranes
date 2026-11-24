@@ -55,6 +55,8 @@ const fakeSocket = () => {
   }
 }
 
+const loc = (search) => ({ search, protocol: 'https:', host: 'visuals.beadfamous.com', hash: '' })
+
 beforeEach(() => vi.useFakeTimers())
 afterEach(() => vi.useRealTimers())
 
@@ -151,7 +153,7 @@ describe('pad client', () => {
     const BC = makeBus()
     const sock = fakeSocket()
     const wallGot = []
-    const pad = createPadClient(() => {}, () => {}, { makeSocket: sock.make, BroadcastChannel: BC })
+    const pad = createPadClient(() => {}, () => {}, { loc: loc('?room=r'), makeSocket: sock.make, BroadcastChannel: BC })
     pad.connect()
     pad.send('update-params', { knob_1: 0.1 })
     expect(sock.sent.map((m) => m.type)).toEqual(['update-params']) // no wall yet: the room
@@ -170,10 +172,26 @@ describe('pad client', () => {
     expect(sock.sent.map((m) => m.type)).toEqual(['pad-hello', 'vjpad-peer'])
   })
 
+  it('opens no socket on a static host with no room; a room or the dev server gets one', () => {
+    // Production with no room= used to retry wss://visuals.beadfamous.com/ws, a static host that
+    // answers 200: a console error every few seconds for the whole show, and battery.
+    const made = []
+    const makeSocket = (...a) => (made.push(a), fakeSocket().make(...a))
+    const pad = createPadClient(() => {}, () => {}, { loc: loc(''), makeSocket, BroadcastChannel: makeBus() })
+    pad.connect()
+    expect(made).toEqual([])
+    expect(pad.send('update-params', { knob_1: 0.1 })).toBe(false)
+    expect(pad.isConnected).toBe(false)
+    pad.disconnect()
+    createPadClient(() => {}, () => {}, { loc: loc('?room=abc'), makeSocket, BroadcastChannel: makeBus() })
+    createPadClient(() => {}, () => {}, { loc: loc(''), dev: true, makeSocket, BroadcastChannel: makeBus() })
+    expect(made.length).toBe(2)
+  })
+
   it('reports connected while a wall is linked even with no room socket', () => {
     const BC = makeBus()
     const statuses = []
-    const pad = createPadClient(() => {}, (s) => statuses.push(s), { makeSocket: fakeSocket().make, BroadcastChannel: BC })
+    const pad = createPadClient(() => {}, (s) => statuses.push(s), { loc: loc('?room=r'), makeSocket: fakeSocket().make, BroadcastChannel: BC })
     pad.connect()
     const wall = createLink({ role: 'wall', BroadcastChannel: BC }).start()
     expect(pad.isConnected).toBe(true)
@@ -183,8 +201,6 @@ describe('pad client', () => {
 })
 
 describe('wall client', () => {
-  const loc = (search) => ({ search, protocol: 'https:', host: 'visuals.beadfamous.com', hash: '' })
-
   it('opens no socket on a static host with no room, and tells pads only what pads use', () => {
     const BC = makeBus()
     const padGot = []

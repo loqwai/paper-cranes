@@ -65,8 +65,11 @@ With no wall linked, the pad uses the room exactly as before.
 **The room is the mirror.** With `?room=` on the pad, the wall joins the same room as a display,
 so agents, the VJ MCP (`screenshot`, `get_state`, `propose`, `panic`) and the draw board bridge
 reach it as any remote display. The pad's display secret, when its link carries one, rides along
-in the wall's hash. On a static host with no room the wall opens no socket at all, and a phone wall
-never lights the "Reconnecting" badge on the projector.
+in the wall's hash. On a static host with no room neither the pad nor the wall opens a socket at
+all (`?room=` or the dev server's `/ws` is what opens one): a phone wall never lights the
+"Reconnecting" badge on the projector, and a roomless pad does not retry `/ws` on a host that has
+none, which logged a console error every few seconds and cost battery for the whole show. A
+roomless pad with no wall says NO SERVER.
 
 **The live show is unchanged.** The wall is a `?remote=display` page and every link message goes
 through the same `RemoteDisplay` handler as a room message: HANDS, KEEP, PANIC, proposals and NFC

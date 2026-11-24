@@ -162,7 +162,8 @@ const client = createPadClient(
         }
         paint()
         nfc?.onStatus(s)
-    }
+    },
+    { dev: import.meta.env.DEV }
 )
 nfc = mountVjpadNfc({ client, buzz: (ms) => buzz(ms), chip: document.getElementById('nfc') })
 
