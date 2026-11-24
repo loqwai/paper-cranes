@@ -38,7 +38,10 @@ export function make() {
     kAge: 1, kAmp: 0,
   }
 
-  return (f) => {
+  return (features) => {
+    // Audio features are missing until audio starts; read them as 0 so the
+    // envelopes below cannot latch NaN before the music arrives.
+    const f = new Proxy(features, { get: (t, k) => t[k] ?? 0 })
     const now = performance.now() / 1000
     if (S.lastT === null) S.lastT = now
     let dt = now - S.lastT

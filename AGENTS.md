@@ -19,15 +19,16 @@ Microphone → MediaStream → AudioContext → WindowNode (Hanning) → FFT Ana
 
 #### 1. AudioProcessor (`src/audio/AudioProcessor.js`)
 - **FFT Size**: 4096 (optimized from 32768 for ~85ms latency)
-- **Smoothing**: 0.15 exponential smoothing factor
-- **Analyzer Smoothing**: 0.2 time constant
+- **Smoothing**: the EMA weight on each new worker value (`?smoothing=`; mic default 0.15, `audio_file` default 0.85). Higher is more responsive and more jittery; lower is smoother and later. `*Normalized`/`*ZScore` use 1.5x that weight, capped at 1
+- **Analyzer Smoothing**: 0.4 `smoothingTimeConstant`
+- **Onsets**: `OnsetProcessor` reads the raw spectrum every display frame, outside the workers and the EMA, and publishes `onsetKick`/`Snare`/`Hat`/`Full` plus `Trigger`, `Strength` and `Age`. Its detector is vendored in `src/audio/vendor/` until hypnosound publishes it. It counts frames, so triggers misfire more on 120/144 Hz displays. See [docs/onset-detection.md](docs/onset-detection.md)
 - Uses Web Workers for parallel feature extraction
 - Extracts 15 audio features from hypnosound library
 
 #### 2. WorkerRPC (`src/audio/WorkerRPC.js`)
-- Manages worker communication with 30ms timeout
-- Handles feature calculation in parallel
-- Returns smoothed default values on timeout
+- One worker per feature, fire-and-forget: each frame posts the FFT, and `getResult()` returns the latest reply
+- No timeout: a slow or dead worker leaves its last value in place
+- Replaces any non-finite stat with 0 before it reaches the shader
 
 #### 3. Visualizer (`src/Visualizer.js`)
 - WebGL2 context with frame buffer ping-ponging
@@ -55,7 +56,7 @@ Each feature has 11 statistical variations:
 - SpectralSkew, PitchClass
 - Bass, Mids, Treble
 - Energy
-- Beat detection
+- Beat detection (`beat`: `spectralFlux` zScore above 0.9; never true while the history is flat, as in silence)
 
 ## Audio Features Reference (Hypnosound)
 
@@ -208,9 +209,8 @@ Group features by domain and pick from DIFFERENT domains for variety:
 ### Latency Reduction (from ~1000ms to ~100ms)
 1. **FFT Size**: Reduced from 16384 to 4096 
    - Query param: `?fft_size=4096`
-2. **Smoothing**: Reduced from 0.8 to 0.05-0.2
-   - Query param: `?smoothing=0.15`
-3. **Worker Timeout**: Optimized to 30ms
+2. **Smoothing**: `?smoothing=0.15` (mic default) is the weight on the newest value, so raising it cuts lag and adds jitter
+3. **No worker wait**: features come from each worker's latest reply; nothing awaits a round trip
 
 ### Jitter Reduction
 - Exponential smoothing on all features
@@ -354,6 +354,8 @@ uniform float another;   // = 1.2
 - `fullscreen` - Start in fullscreen
 - `remote` - Remote mode: `display` (receive commands) or `control` (send commands)
 - `audio=tab` - Capture audio from a browser tab instead of mic. Chrome/Edge only. See [docs/tab-audio.md](docs/tab-audio.md)
+- `audio_send=true` - Broadcast this page's audio features over the remote WebSocket (works with mic, `audio=tab`, or `audio_file`)
+- `audio=remote` - Take audio features from a machine running `audio_send=true` instead of the local mic. Same dev server or `room=`
 - `audio_file=<url>` - Play a deterministic audio file through the analyzer. See [docs/audio-file-playback.md](docs/audio-file-playback.md)
 - `wavelet=true` - Enable opt-in wavelet (DWT) analysis alongside FFT. Adds `wavelet*` uniforms (octave bands, centroid/spread, bassHit trigger, FFT×wavelet combos). See [docs/wavelet-analysis.md](docs/wavelet-analysis.md)
 - `audio_device=<label substring>` - Open the mic input whose label contains this (e.g. `USB Audio CODEC`); no match means no audio, never a different device. Omitted → the OS default input
@@ -363,11 +365,12 @@ uniform float another;   // = 1.2
 - `vjtrack=1` - With `vj=1`, also log every knob move at 10Hz with the full audio-feature vector, for working out which feature a fader is imitating. **Off by default and not for use during a show** — it is a ~17KB JSON serialise + fetch every 2s on the render thread
 
 ### Dynamic Override
-All parameters can be overridden at runtime via:
+Two audio parameters can be changed at runtime:
 ```javascript
-window.cranes.manualFeatures.smoothing = 0.2
-window.cranes.manualFeatures.fft_size = 8192
+window.cranes.manualFeatures.smoothing = 0.2      // next frame
+window.cranes.manualFeatures.history_size = 1000  // restarts every feature's stats history
 ```
+`fft_size` is read once at startup; changing it needs a reload with `?fft_size=`.
 
 ## Remote Control Mode
 
@@ -415,6 +418,25 @@ full frame (~16ms) of lag whenever the renderer's rAF is queued first. The genui
 per-message work has been moved out instead: the URL mirror is debounced to 750ms (it only exists
 so a refresh preserves state) and per-message DOM work was removed outright.
 
+### VJ MCP (any agent harness)
+An MCP server (streamable HTTP, stateless, never SSE) whose tools read and drive every display:
+`list_displays`, `list_shaders`, `get_state`, `screenshot`, `set_params`, `set_shader`,
+`read_shader`, `write_shader`, `wait_for_event`. It runs in two places with the same code
+(`vite-plugins/vj-mcp/server.js` + `hub-core.js`):
+- **Live:** `https://relay.beadfamous.com/mcp/<room>` on the relay Worker. Displays are any
+  `?remote=display&room=<room>` page; the room's Durable Object is the broker. Cloudflare Access
+  managed OAuth in front (`claude mcp add --transport http paper-cranes-live
+  https://relay.beadfamous.com/mcp/<room>`, then sign in from `/mcp`), the JWT checked again in the
+  Worker. `write_shader` there applies code live and saves nothing (`persisted: false`). The room
+  drops any `inspect` a client sends; everything else is relayed verbatim as before.
+- **Dev:** `http://localhost:6969/mcp` on the dev server (`claude mcp add --transport http
+  paper-cranes-vj http://localhost:6969/mcp`), displays are `?remote=display` pages there, and
+  `write_shader` writes `shaders/<x>.frag` and hot-swaps.
+
+Knobs go out as `update-params` on the display's own socket; reads come back over a point-to-point
+`inspect` channel the broker never broadcasts, answered only after the broker welcomed the page.
+See [docs/vj-mcp.md](docs/vj-mcp.md).
+
 ### ParamsManager
 The `ParamsManager` (`src/params/ParamsManager.js`) is the unified system for handling all shader parameters:
 - Single source of truth for knobs, settings, and shader code
@@ -455,6 +477,7 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   ├── remote/
 │   │   ├── RemoteController.js # Sends commands to displays
 │   │   ├── RemoteDisplay.js    # Receives commands from controllers
+│   │   ├── inspect.js          # Display side of the VJ MCP (state, shot, logs, validate)
 │   │   └── WebSocketClient.js  # WebSocket client wrapper
 │   ├── vj/
 │   │   └── runtime.js          # ?vj=1 page runtime (validator, meter, jank probe, signals)
@@ -467,13 +490,14 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   └── melted-satin/2.frag
 ├── controllers/                 # JS companions to shaders (frame-persistent state)
 │   ├── example.js              # Documented example
-│   └── griz-coat.js            # Drop sustain with exponential decay
+│   └── the-coat.js             # Drop sustain with exponential decay
 ├── scripts/
 │   ├── remap-knobs.js          # Utility to remap knob assignments in shaders
 │   └── vj/                     # Live-VJ tooling — see docs/vj-telemetry.md
 │       ├── show.js             #   the show browser: fullscreen Chrome driven over CDP (launch/eval/shot)
 │       ├── aesthetic-meter.js  #   FETCHED BY URL at runtime; do not move
 │       ├── remote-send.js      #   push update-params to the display from a shell
+│       ├── mcp-call.js         #   call one VJ MCP tool from a shell
 │       ├── watch-release.js    #   emit a line when a fader is released
 │       └── knob-correlate.js   #   which audio feature was that gesture imitating?
 ├── jam.js                       # Jam page: canvas only, MIDI + spacebar snapshots, no on-screen UI
@@ -485,6 +509,9 @@ paramsManager.setShader(code)      // Syncs shader to remote
     ├── remote-ws-plugin.js      # WebSocket server for remote control
     ├── editor-sync-plugin.js    # Bidirectional editor↔disk sync (dev only)
     ├── vj-signal-plugin.js      # /__vj-signal endpoint; writes .Codex/vj-signals.jsonl (dev only)
+    ├── vj-mcp-plugin.js         # /mcp: VJ MCP server, streamable HTTP (dev only) — docs/vj-mcp.md
+    ├── vj-mcp/server.js, hub-core.js  # the tool set and display hub, shared with the relay Worker
+    ├── vj-mcp/hub.js, tools.js  #   their dev-server hosts (Node ws sockets, shaders on disk)
     └── shader-plugin.js         # Shader discovery, metadata, and manifest generation
 ```
 
@@ -845,12 +872,15 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 | `/solo` | Toggle a shader between knob mode and audio mode. Auto-detects current mode and switches. Use `/solo knobs` or `/solo audio` to force a mode. Defaults to the modified `.frag` in the worktree. |
 | `/changelog` | Update docs/CHANGELOG.md and README with recent features. |
 | `/pr` | Create a PR, request review, and open in browser. |
+| `/show-repo` | One show, one repo: strip to one shader + controller (shared git history), build, verify headless, then publish to `<show>.beadfamous.com` on Aaron's go-ahead. Its front page is `show.html`: canvas only, MIDI, `?room=` remote jamming, snapshots. See [docs/show-repos.md](docs/show-repos.md). |
 
 ## Live Sessions: the Parent Stays Responsive
 
 **Show day:** run `/show`. It does the preflight, launch, watchers and hand-off. Follow
 [docs/show-playbook.md](docs/show-playbook.md) for the runbook, knob map, story, fork library and
 failure fixes.
+
+**Getting a set into "explore it for hours" depth:** [docs/vj-deep-voyage-recipe.md](docs/vj-deep-voyage-recipe.md), from the [2026-11-22 clit coaster show](journals/2026-11-22-clit-coaster-show.md).
 
 During any **live session** — a VJ set (`/vibej2`), a jam, a `/live-session`, anything where the
 user has a hand on a controller — the main Codex session is a **dispatcher, not a worker**. It

@@ -29,10 +29,11 @@ export function make(cranes) {
     // Get time from performance API
     const time = performance.now() / 1000
 
-    // Update animation values
-    state.rotation += 0.01 * (1 + features.bassNormalized * 2)
+    // Update animation values. Audio features are missing until audio starts (mic
+    // prompt, file still loading): default them, or an accumulator goes NaN for good.
+    state.rotation += 0.01 * (1 + (features.bassNormalized ?? 0) * 2)
     state.pulse = Math.sin(time * 2) * 0.5 + 0.5
-    state.colorShift += 0.005 * (1 + features.spectralFluxNormalized)
+    state.colorShift += 0.005 * (1 + (features.spectralFluxNormalized ?? 0))
     state.frameCount++
 
     // Return features to be added to controllerFeatures object
@@ -44,12 +45,12 @@ export function make(cranes) {
       controllerFrameCount: state.frameCount,
 
       // Custom beat detection
-      customBeat: features.bassNormalized > 0.8 && features.spectralFluxZScore > 1.2,
+      customBeat: (features.bassNormalized ?? 0) > 0.8 && (features.spectralFluxZScore ?? 0) > 1.2,
 
       // Values calculated from audio features
-      bassImpact: Math.pow(features.bassNormalized, 2) * 2.0,
-      midImpact: features.midsNormalized * 1.5,
-      trebleImpact: features.trebleNormalized * 0.8,
+      bassImpact: Math.pow((features.bassNormalized ?? 0), 2) * 2.0,
+      midImpact: (features.midsNormalized ?? 0) * 1.5,
+      trebleImpact: (features.trebleNormalized ?? 0) * 0.8,
 
       // Time-based values
       smoothTime: time * 0.5,
@@ -57,9 +58,9 @@ export function make(cranes) {
 
       // Combined audio reactivity metrics
       reactivity: (
-        features.spectralFluxNormalized +
-        features.bassNormalized +
-        features.energyNormalized
+        (features.spectralFluxNormalized ?? 0) +
+        (features.bassNormalized ?? 0) +
+        (features.energyNormalized ?? 0)
       ) / 3.0
     }
   }

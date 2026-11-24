@@ -19,15 +19,16 @@ Microphone → MediaStream → AudioContext → WindowNode (Hanning) → FFT Ana
 
 #### 1. AudioProcessor (`src/audio/AudioProcessor.js`)
 - **FFT Size**: 4096 (optimized from 32768 for ~85ms latency)
-- **Smoothing**: 0.15 exponential smoothing factor
-- **Analyzer Smoothing**: 0.2 time constant
+- **Smoothing**: the EMA weight on each new worker value (`?smoothing=`; mic default 0.15, `audio_file` default 0.85). Higher is more responsive and more jittery; lower is smoother and later. `*Normalized`/`*ZScore` use 1.5x that weight, capped at 1
+- **Analyzer Smoothing**: 0.4 `smoothingTimeConstant`
+- **Onsets**: `OnsetProcessor` reads the raw spectrum every display frame, outside the workers and the EMA, and publishes `onsetKick`/`Snare`/`Hat`/`Full` plus `Trigger`, `Strength` and `Age`. Its detector is vendored in `src/audio/vendor/` until hypnosound publishes it. It counts frames, so triggers misfire more on 120/144 Hz displays. See [docs/onset-detection.md](docs/onset-detection.md)
 - Uses Web Workers for parallel feature extraction
 - Extracts 15 audio features from hypnosound library
 
 #### 2. WorkerRPC (`src/audio/WorkerRPC.js`)
-- Manages worker communication with 30ms timeout
-- Handles feature calculation in parallel
-- Returns smoothed default values on timeout
+- One worker per feature, fire-and-forget: each frame posts the FFT, and `getResult()` returns the latest reply
+- No timeout: a slow or dead worker leaves its last value in place
+- Replaces any non-finite stat with 0 before it reaches the shader
 
 #### 3. Visualizer (`src/Visualizer.js`)
 - WebGL2 context with frame buffer ping-ponging
@@ -55,7 +56,7 @@ Each feature has 11 statistical variations:
 - SpectralSkew, PitchClass
 - Bass, Mids, Treble
 - Energy
-- Beat detection
+- Beat detection (`beat`: `spectralFlux` zScore above 0.9; never true while the history is flat, as in silence)
 
 ## Audio Features Reference (Hypnosound)
 
@@ -208,9 +209,8 @@ Group features by domain and pick from DIFFERENT domains for variety:
 ### Latency Reduction (from ~1000ms to ~100ms)
 1. **FFT Size**: Reduced from 16384 to 4096 
    - Query param: `?fft_size=4096`
-2. **Smoothing**: Reduced from 0.8 to 0.05-0.2
-   - Query param: `?smoothing=0.15`
-3. **Worker Timeout**: Optimized to 30ms
+2. **Smoothing**: `?smoothing=0.15` (mic default) is the weight on the newest value, so raising it cuts lag and adds jitter
+3. **No worker wait**: features come from each worker's latest reply; nothing awaits a round trip
 
 ### Jitter Reduction
 - Exponential smoothing on all features
@@ -365,11 +365,12 @@ uniform float another;   // = 1.2
 - `vjtrack=1` - With `vj=1`, also log every knob move at 10Hz with the full audio-feature vector, for working out which feature a fader is imitating. **Off by default and not for use during a show** — it is a ~17KB JSON serialise + fetch every 2s on the render thread
 
 ### Dynamic Override
-All parameters can be overridden at runtime via:
+Two audio parameters can be changed at runtime:
 ```javascript
-window.cranes.manualFeatures.smoothing = 0.2
-window.cranes.manualFeatures.fft_size = 8192
+window.cranes.manualFeatures.smoothing = 0.2      // next frame
+window.cranes.manualFeatures.history_size = 1000  // restarts every feature's stats history
 ```
+`fft_size` is read once at startup; changing it needs a reload with `?fft_size=`.
 
 ## Remote Control Mode
 
@@ -489,7 +490,7 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   └── melted-satin/2.frag
 ├── controllers/                 # JS companions to shaders (frame-persistent state)
 │   ├── example.js              # Documented example
-│   └── griz-coat.js            # Drop sustain with exponential decay
+│   └── the-coat.js             # Drop sustain with exponential decay
 ├── scripts/
 │   ├── remap-knobs.js          # Utility to remap knob assignments in shaders
 │   └── vj/                     # Live-VJ tooling — see docs/vj-telemetry.md

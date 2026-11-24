@@ -1,3 +1,5 @@
+import { looksLikeWebPage } from './utils.js'
+
 // Service worker registration
 // In dev mode (Vite HMR available), skip the SW entirely — it detects file
 // changes and force-reloads all clients, which conflicts with HMR.
@@ -52,17 +54,16 @@ export const receive = async (event) => {
       // console.log('Ignoring message: Invalid structure or type not update-params', event.data)
       return
   }
-  const { shader } = data
-  if (shader) {
-    // get the shader code
-    const shaderCode = await fetch(`/shaders/${shader}.frag`, {mode: 'no-cors'}).then(res => res.text())
-    // update the shader code
-    window.cranes.shader = shaderCode
+  // Code wins over a name: edit.js's pop-out sends both every frame, and
+  // fetching the named .frag just to discard it costs a request per frame.
+  const { shader, shaderCode } = data
+  if (shaderCode) window.cranes.shader = shaderCode
+  else if (shader) {
+    const code = await fetch(`/shaders/${shader}.frag`, {mode: 'no-cors'}).then(res => res.text())
+    // A missing .frag comes back as the site's index.html (#233): keep the shader on screen.
+    if (looksLikeWebPage(code)) console.error(`[cranes] shader ${shader} not found; keeping the current one`)
+    else window.cranes.shader = code
   }
-
-  // Update shader code if provided. (A line here used to assign the shader NAME as code, so every
-  // {shader: 'plasma'} message ended in a compile error and a black canvas.)
-  if(data.shaderCode) window.cranes.shader = data.shaderCode
 
   // Store all params
   Object.entries(data).forEach(([key, value]) => {

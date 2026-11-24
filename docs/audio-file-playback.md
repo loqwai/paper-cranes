@@ -18,7 +18,7 @@ The audio file loads, loops continuously, and feeds into `AudioProcessor` exactl
 | `audio_time` | `0` | Start playback at this offset (seconds) |
 | `history_size` | `500` | Statistical history buffer size |
 | `fft_size` | `4096` | FFT window size |
-| `smoothing` | `0.85` | Smoothing factor (higher default than live audio for stability) |
+| `smoothing` | `0.85` | Weight of each new frame in the feature EMA. Higher is **less** smoothing (more responsive, more jitter); `1` is none. The live mic defaults to `0.15`, so a file is much less smoothed than the mic unless you pass `smoothing=0.15` |
 
 ## Combining with Other Test Params
 
