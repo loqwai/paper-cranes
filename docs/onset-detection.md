@@ -180,4 +180,4 @@ These are measured and characterized in hypnosound's `src/utils/onset.js` header
 
 The detector and envelope live in **hypnosound** (`makeOnsetDetector`, `makeOnsetEnvelope`), so the ESP32 badge firmware can run the identical algorithm rather than a lookalike.
 
-**This needs hypnosound ≥ 2.1, which is not yet published.** `package.json` currently pins `^1.14.0`. Until that lands, `OnsetProcessor` detects the missing exports, logs one warning, and leaves every onset uniform at rest — shaders still compile and read 0, nothing breaks, but nothing fires either.
+**No published hypnosound has the detector yet** (npm stops at 2.0.0; `package.json` pins `^1.14.0`). Until one does, `OnsetProcessor` uses a vendored copy of the unreleased detector and envelope in `src/audio/vendor/` (from hypnosound PR #18, commit `c5384ab3`). When the installed hypnosound exports `makeOnsetDetector`/`makeOnsetEnvelope`, those win automatically; delete the vendored files then.

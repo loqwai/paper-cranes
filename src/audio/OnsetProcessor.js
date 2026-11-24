@@ -61,6 +61,14 @@
 // your own and no `mix(prev, …)` damping.
 
 import * as hypnosound from 'hypnosound'
+// No published hypnosound exports the detector yet (npm stops at 2.0.0), so
+// fall back to a vendored copy of the unreleased one. See vendor/onset.js.
+import { makeOnsetDetector as vendoredOnsetDetector } from './vendor/onset.js'
+import { makeOnsetEnvelope as vendoredOnsetEnvelope } from './vendor/onsetEnvelope.js'
+
+// An injected dep wins even when it is undefined: that is how a test asks for
+// "no detector at all".
+const pick = (deps, name, fallback) => (name in deps ? deps[name] : (hypnosound[name] ?? fallback))
 
 // Band edges in Hz. Converted to FFT bins at construction, once the real
 // sampleRate is known. Deliberately WIDER than the textbook drum ranges:
@@ -97,8 +105,8 @@ export class OnsetProcessor {
         this.sampleRate = sampleRate
         this.binCount = binCount
 
-        const makeOnsetDetector = deps.makeOnsetDetector ?? hypnosound.makeOnsetDetector
-        const makeOnsetEnvelope = deps.makeOnsetEnvelope ?? hypnosound.makeOnsetEnvelope
+        const makeOnsetDetector = pick(deps, 'makeOnsetDetector', vendoredOnsetDetector)
+        const makeOnsetEnvelope = pick(deps, 'makeOnsetEnvelope', vendoredOnsetEnvelope)
 
         // The installed hypnosound may predate the onset detector. Degrade to a
         // no-op that publishes resting values rather than throwing: a missing
