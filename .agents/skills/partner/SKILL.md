@@ -45,6 +45,8 @@ his hands are on (`{held: true}`), dropped by PANIC.
    ```bash
    PORT=$P node scripts/vj/watch-events.js hands release keep panic proposal-taken proposal-dropped clip too-dark boot gate-drop gate-clean
    ```
+   The page sends `release` after 50 ms of stillness, so one sweep is a burst; the watcher prints
+   only the last, once the dial has stayed still 1 s (`--settle <ms>`), so one sweep is one wake.
 4. `say` once on frame `status`: "partner on: I propose, you tap; I only fix health."
 
 ## The step (one per wake)

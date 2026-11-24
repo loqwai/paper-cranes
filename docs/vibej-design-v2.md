@@ -1,7 +1,7 @@
 # vibej v2 — Design: from cron ticks to a live responsive loop
 
 **Status:** draft for review (2026-08-18, written at shutdown of the lattice-vj session).
-**Companion:** `.claude/skills/vibej2/SKILL.md` — the live v2 skill. (The old `SKILL-v2-draft.md`
+**Companion:** `.claude/skills/partner/SKILL.md` — `/partner`, which the v2 skill (`/vibej2`) became on 2026-11-24. (The old `SKILL-v2-draft.md`
 was deleted 2026-08-20: it had diverged ~88 lines from the shipped v2 and its own header already
 redirected edits to the vibej2 copy. This file remains the design rationale record.)
 

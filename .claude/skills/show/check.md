@@ -28,7 +28,7 @@ PORT=$P node scripts/vj/mcp-call.js get_state '{"features":"core"}'      # twice
 | Runtime | `get_state.meter` is present (`?vj=1` booted). |
 | Controller | its clock (`controller.cs_time` on clit-set, `bs_time` on the sun line) rises between the two reads. Else it is throwing: playbook section 7. |
 | Gate | with music playing, the shader's quiet gate (`cs_presence`, `quietGate`) sits near 1. Low: fix the level, not the shader. |
-| Pad | `watch-events.js pad-alive` prints `alive: true` within 10 s of opening the vjpad. |
+| Pad | `get_state.live.pads` is 1 or more. (`pad-alive` fires only when the count changes, so a pad opened before the watcher never prints it.) |
 | Board | the bridge printed `{"bridge":"up",…}` and `st-wall` shows a number. |
 
 `get_state` does not report the input device's label. Read it on the wall's machine (the OS
