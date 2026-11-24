@@ -304,7 +304,7 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
             frame: frameNumber,
             iRandom: Math.random(),
             iResolution: [frame.width, frame.height, 0],
-            iMouse: [features.touchX, features.touchY, features.touched ? 1: 0, 0],
+            iMouse: shaderToyMouse(features, frame.width, frame.height),
             iChannel0: initialTexture,
             iChannel1: prevTexture,
             iChannel2: initialTexture,
@@ -337,6 +337,13 @@ const wrapOrReport = (source) => {
         console.error('Error information:', window.cranes.error)
         return null
     }
+}
+
+// ShaderToy's iMouse is in pixels, z > 0 while pressed. Pages publish the pointer as
+// `touch: [x, y]` normalized 0..1 (GL y-up); there is no touchX/touchY, which made iMouse.xy NaN.
+export const shaderToyMouse = ({ touch, touched } = {}, width, height) => {
+    const [x = 0.5, y = 0.5] = Array.isArray(touch) ? touch : []
+    return [x * width, y * height, touched ? 1 : 0, 0]
 }
 
 // Features and URL params -> the uniforms object handed to twgl.
