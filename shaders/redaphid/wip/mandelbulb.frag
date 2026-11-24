@@ -1,3 +1,6 @@
+// @fullscreen: true
+// @mobile: true
+// @tags: fractal, 3d, mandelbulb
 float mandelbulbDE(vec3 pos) {
     const int iterations = 8;
     const float bailout = 2.0;
@@ -26,19 +29,17 @@ float mandelbulbDE(vec3 pos) {
     return 0.5 * log(r) * r / dr;
 }
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec2 uv = (fragCoord - 0.5 * iResolution.xy) / iResolution.y;
-    vec3 camPos = vec3(0.0, 0.0, -2.0); // Camera position, peering into the abyss
-    // rotate camera over time
-    camPos.xz = mat2(cos(iTime), sin(iTime), -sin(iTime), cos(iTime)) * camPos.xz;
-    vec3 camTarget = vec3(0.0, 0.0, 0.0); // The point in space the camera looks at, the heart of the mystery
-    vec3 camDir = normalize(camTarget - camPos); // The camera's gaze, fixed upon the unknown
-    vec3 camUp = vec3(0.0, 1.0, 0.0); // Upwards, towards the heavens, or what passes for them here
-    vec3 camRight = cross(camDir, camUp); // To the right, where shadows lie
+    vec2 uv = (fragCoord - 0.5 * resolution) / min(resolution.x, resolution.y);
+    vec3 camPos = vec3(0.0, 0.0, -2.0);
+    camPos.xz = mat2(cos(time), sin(time), -sin(time), cos(time)) * camPos.xz;
+    vec3 camTarget = vec3(0.0, 0.0, 0.0);
+    vec3 camDir = normalize(camTarget - camPos);
+    vec3 camUp = vec3(0.0, 1.0, 0.0);
+    vec3 camRight = cross(camDir, camUp);
 
-    float fov = 90.0; // Field of view, the breadth of our vision
-    float aspectRatio = iResolution.x / iResolution.y; // The aspect ratio of our canvas, the window to another world
-    float planeDist = 1.0 / tan(radians(fov) / 2.0); // The distance to the projection plane, a mere mathematical construct
-    vec3 rayDir = normalize(camDir * planeDist + uv.x * camRight * aspectRatio + uv.y * camUp); // The direction of our inquiry, our probe into the depths
+    float fov = 90.0;
+    float planeDist = 1.0 / tan(radians(fov) / 2.0);
+    vec3 rayDir = normalize(camDir * planeDist + uv.x * camRight + uv.y * camUp);
 
     float totalDistance = 0.0; // The total distance marched, a tally of our steps into the darkness
     const float maxDistance = 100.0; // The furthest we can go before we must admit defeat
