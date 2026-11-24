@@ -7,6 +7,11 @@ export const getRelativeOrAbsoluteShaderUrl = async (url) => {
         }
         url = `/shaders/${url}`
     }
+    const early = globalThis.cranesEarlyShader
+    if (early?.url === url) {
+        globalThis.cranesEarlyShader = undefined
+        try { return await early.text } catch {}
+    }
     const res = await fetch(url, {mode: 'no-cors'})
     const shader = await res.text()
     return shader
