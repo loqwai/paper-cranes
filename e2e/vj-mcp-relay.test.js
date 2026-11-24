@@ -102,7 +102,7 @@ describe('vj mcp on the relay', () => {
   it('serves the same tools over streamable HTTP at /mcp/<room>', async () => {
     const { tools } = await client.listTools()
     expect(tools.map((t) => t.name).sort()).toEqual(
-      ['get_state', 'list_displays', 'list_shaders', 'read_shader', 'screenshot', 'set_params', 'set_shader', 'wait_for_event', 'write_shader'],
+      ['display_secret', 'get_state', 'list_displays', 'list_shaders', 'read_shader', 'screenshot', 'set_params', 'set_shader', 'wait_for_event', 'write_shader'],
     )
   })
 
