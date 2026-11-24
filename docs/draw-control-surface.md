@@ -52,7 +52,7 @@ headless Chromium emulating an iPhone 13. Every timestamp came from one clock. T
    `show-bridge`, so its Sends never land in an agent's inbox:
 
    ```bash
-   node scripts/vj/board-bridge.js --board <show board> --ticket <ticket> --frame show \
+   DRAW_LISTEN_TICKET=<ticket> node scripts/vj/board-bridge.js --board <show board> --frame show \
      --panic clit-set/2 --setlist sun-set --status-link <status-card widget link>
    ```
 

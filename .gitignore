@@ -166,3 +166,4 @@ public/images/*.webp
 
 # show repos made by scripts/show-repo/create.js (each is its own git repo)
 .show-repos/
+shaders/claude/wip/black-sun/sun-set-live.frag

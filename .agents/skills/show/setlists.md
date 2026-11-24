@@ -26,8 +26,9 @@ them before the first beat.
 The 2026-10-09/10 set: 13 beats from the pre-party tile sky to the OG sky return, under
 `controller=black-sun&controller=sun-set`. Its driver `setlists/sun-set/swap.mjs` re-anchors each
 fork's clocks so new layers fade in, and `controllers/sun-set.js` eases his own dial moves back in.
-Read `setlists/sun-set/SETLIST.md` first. Its driver and cue still reach the page through
-`show.js eval`; porting them to `write_shader` / `get_state` is open work.
+Read `setlists/sun-set/SETLIST.md` first. Its driver and cue use only the VJ MCP (`get_state`,
+`write_shader`, `set_shader`, `set_params`, `screenshot`), so they run beside the bridge with no
+page eval.
 
 ## clit-set (`setlists/clit-set.json`)
 
