@@ -3,6 +3,10 @@ import { getIdentity } from './identity.js'
 
 const STYLE_EL_ID = 'mp-peer-styles'
 
+// Peers' names and colors arrive from any /ws client, so they are text, never markup or CSS.
+const PLAIN_COLOR = /^(#[0-9a-f]{3,8}|(hsl|rgb)a?\([\d.,%\s]+\))$/i
+const safeColor = (c) => (typeof c === 'string' && PLAIN_COLOR.test(c) ? c : 'gray')
+
 // Every editor on the dev server shares one /ws, so each message carries the shader it is about.
 // Unscoped, a tab on star applied plasma's keystrokes, and a new tab took its first buffer from
 // whichever peer answered its hello, on any shader. Read when used: the editor can switch shader.
@@ -19,9 +23,9 @@ const ensurePeerStyle = (userId, color, colorAlpha) => {
     const className = `mp-peer-${userId.replace(/[^a-z0-9]/gi, '')}`
     if (styleEl.textContent.includes(`.${className}-cursor`)) return className
     styleEl.textContent += `
-        .${className}-cursor { background: ${color} !important; }
-        .${className}-cursor::before { background: ${color}; }
-        .${className}-selection { background: ${colorAlpha}; }
+        .${className}-cursor { background: ${safeColor(color)} !important; }
+        .${className}-cursor::before { background: ${safeColor(color)}; }
+        .${className}-selection { background: ${safeColor(colorAlpha)}; }
     `
     return className
 }
@@ -43,13 +47,17 @@ export const initMultiplayerEditor = (editor) => {
 
     const updatePeersUI = () => {
         if (!peersEl) return
-        const chips = [
-            `<span class="mp-chip" style="background:${identity.color}">${identity.name} (you)</span>`,
-            ...Array.from(peers.values()).map(p =>
-                `<span class="mp-chip" style="background:${p.color}">${p.name}</span>`
-            ),
-        ]
-        peersEl.innerHTML = chips.join('')
+        const chip = (name, color) => {
+            const el = document.createElement('span')
+            el.className = 'mp-chip'
+            el.style.background = safeColor(color)
+            el.textContent = String(name ?? '')
+            return el
+        }
+        peersEl.replaceChildren(
+            chip(`${identity.name} (you)`, identity.color),
+            ...Array.from(peers.values()).map(p => chip(p.name, p.color)),
+        )
     }
 
     const renderPeerCursor = (peer) => {

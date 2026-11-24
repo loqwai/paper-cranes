@@ -101,4 +101,16 @@ describe('MultiplayerEditor', () => {
     client.onMessage(other.client.sent.find((m) => m.type === 'mp-edit'))
     expect(editor.getValue()).toBe('PLASMA!')
   })
+
+  it('never puts a peer name into the page as HTML', async () => {
+    const { client } = await start()
+    client.onMessage({ type: 'mp-presence', data: { userId: 'evil', name: '<img src=x onerror=alert(1)>', color: 'red', colorAlpha: 'red' } })
+    expect(peersEl.innerHTML).not.toContain('<img')
+  })
+
+  it('never writes a peer color into the stylesheet unless it is a plain color', async () => {
+    const { client } = await start()
+    client.onMessage({ type: 'mp-cursor', data: { userId: 'evil', name: 'x', color: 'red} body{display:none', colorAlpha: 'red', position: { lineNumber: 1, column: 1 } } })
+    expect(styleEl?.textContent ?? '').not.toContain('display:none')
+  })
 })
