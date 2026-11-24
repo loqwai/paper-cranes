@@ -1,12 +1,12 @@
 // Show-mode boot. Runs BEFORE index.js (show.html lists it first; module scripts run in document
-// order), because index.js reads window.location.search once, at module load.
+// order), because index.js reads the URL params once, at module load.
 //
 // A show repo ships a show.json (shader, controllers, params, MIDI profiles). The show-config vite
 // plugin inlines it into <script type="application/json" id="show-config">, so the bare URL
 // (https://<show>.beadfamous.com/) boots the show with no query string. Anything already in the
 // URL wins, so `?knob_3=0.4` or a different `?shader=` still works for rehearsal.
 
-import { SHOW_CONFIG_ID, MIDI_PROFILES_KEY, mergeShowParams, seedMidiProfiles, toSearch } from './params.js'
+import { SHOW_CONFIG_ID, MIDI_PROFILES_KEY, seedMidiProfiles, withShowDefaults } from './params.js'
 
 const readConfig = () => {
     const text = document.getElementById(SHOW_CONFIG_ID)?.textContent?.trim()
@@ -33,8 +33,7 @@ export const bootShow = () => {
     const config = readConfig()
     window.showConfig = config
     if (config.title) document.title = config.title
-    const params = mergeShowParams(window.location.search, config)
-    const search = toSearch(params)
+    const search = withShowDefaults(window.location, config)
     if (search !== window.location.search.replace(/^\?/, '')) {
         window.history.replaceState(window.history.state, '', `${window.location.pathname}?${search}${window.location.hash}`)
     }

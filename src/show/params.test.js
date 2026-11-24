@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { mergeShowParams, seedMidiProfiles, toSearch } from './params.js'
+import { mergeShowParams, seedMidiProfiles, toSearch, withShowDefaults } from './params.js'
 
 describe('toSearch', () => {
     const clit = { shader: 'claude/wip/clit-vibej/2', controllers: ['clit-set'], params: { wavelet: 'true', coaster: 1 } }
@@ -77,5 +77,28 @@ describe('seedMidiProfiles', () => {
         const stored = { version: 1, profiles: { Other: { mappings: {} } } }
         const next = seedMidiProfiles(stored, { 'Midi Fighter Twister': twister })
         expect(Object.keys(next.profiles).sort()).toEqual(['Midi Fighter Twister', 'Other'])
+    })
+})
+
+describe('withShowDefaults', () => {
+    const at = (href) => new URL(href, 'https://show.test')
+    const legacy = (href, config) => toSearch(mergeShowParams(at(href).search, config))
+    const config = { shader: 'claude/wip/x/2', controllers: ['a', 'b'], params: { knob_3: 0.4 } }
+
+    it.each(['/show.html', '/show.html?knob_3=0.9', '/show.html?room=abc', '/show.html?shader=y%2Fz&controller=c'])(
+        'gives a query-only URL the same query as before: %s',
+        (href) => expect(withShowDefaults(at(href), config)).toBe(legacy(href, config))
+    )
+
+    it('makes a hash room a display in that room', () => {
+        const search = new URLSearchParams(withShowDefaults(at('/show.html?shader=x#room=abc'), {}))
+        expect(search.get('remote')).toBe('display')
+    })
+
+    it('treats a key in the hash as already set by the URL', () => {
+        const search = new URLSearchParams(withShowDefaults(at('/show.html#shader=mine&controller=c&knob_3=0.1'), config))
+        expect(search.has('shader')).toBe(false)
+        expect(search.has('controller')).toBe(false)
+        expect(search.has('knob_3')).toBe(false)
     })
 })
