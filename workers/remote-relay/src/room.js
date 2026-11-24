@@ -13,6 +13,17 @@ import { ToolError } from '../../../vite-plugins/vj-mcp/errors.js'
 
 const OPEN = 1
 
+// The room name from a path segment, or null when it is empty or not valid percent-encoding
+// (`/mcp/%E0`), which the Worker answers with 400 instead of letting decodeURIComponent throw a 500.
+export const decodeRoom = (part) => {
+  try {
+    const room = decodeURIComponent(part ?? '')
+    return room || null
+  } catch {
+    return null
+  }
+}
+
 // Pages allowed to register as displays: the site and its show repos, Pages previews, the
 // Access-protected tunnel hosts, and a laptop's own localhost (the only origin with a mic).
 // Every display still needs the room name; this only stops a page elsewhere posing as one.

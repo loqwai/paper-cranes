@@ -46,7 +46,7 @@
 import { DurableObject } from 'cloudflare:workers'
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
 import { createVjMcpServer } from '../../../vite-plugins/vj-mcp/server.js'
-import { createRoomHub, routeMessage, siteShaders, displayOriginAllowed, RELAY_VENUE } from './room.js'
+import { createRoomHub, routeMessage, siteShaders, displayOriginAllowed, decodeRoom, RELAY_VENUE } from './room.js'
 import { authorize, mcpError } from './access.js'
 
 export class RelayRoom extends DurableObject {
@@ -146,8 +146,9 @@ const handleMcp = async (request, env, roomPart) => {
     // A web page in a signed-in browser must not drive a show: MCP clients send no Origin.
     if (request.headers.get('Origin')) return mcpError(403, 'VJ MCP: browser origins are refused')
     if (request.method !== 'POST') return mcpError(405, 'stateless streamable HTTP: POST only, no SSE stream', { allow: 'POST' })
-    const room = roomPart ? decodeURIComponent(roomPart) : ''
-    if (!room) return mcpError(404, 'VJ MCP: put the room in the path, /mcp/<room>, the same room as the display page\'s ?room=')
+    if (!roomPart) return mcpError(404, 'VJ MCP: put the room in the path, /mcp/<room>, the same room as the display page\'s ?room=')
+    const room = decodeRoom(roomPart)
+    if (!room) return mcpError(400, 'VJ MCP: the room in the path is not valid percent-encoding')
     const body = await request.text()
     const headers = [...request.headers].filter(([k]) => !k.toLowerCase().startsWith('cf-access-') && k.toLowerCase() !== 'cookie')
     return env.ROOM.getByName(room).mcp({ url: request.url, method: request.method, headers, body }, who)
@@ -170,6 +171,8 @@ export default {
             })
         }
 
-        return env.ROOM.getByName(decodeURIComponent(match[1])).fetch(request)
+        const room = decodeRoom(match[1])
+        if (!room) return new Response('bad room name: not valid percent-encoding\n', { status: 400 })
+        return env.ROOM.getByName(room).fetch(request)
     },
 }

@@ -113,6 +113,11 @@ describe('vj mcp on the relay', () => {
     expect((await post(`http://127.0.0.1:${relayPort}/mcp`)).status).toBe(404)
   })
 
+  it('answers 400, not 500, for a room that is not valid percent-encoding', async () => {
+    expect((await fetch(`http://127.0.0.1:${relayPort}/mcp/%E0`, { method: 'POST', body: '{}' })).status).toBe(400)
+    expect((await fetch(`http://127.0.0.1:${relayPort}/ws/%E0`)).status).toBe(400)
+  })
+
   it('sees a ?room= display join through the relay', async () => {
     const { json: before } = await call('list_displays')
     expect(before.displays).toEqual([])

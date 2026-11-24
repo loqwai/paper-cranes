@@ -1,7 +1,7 @@
 // The relay room's broker, driven with plain fake sockets (no Workers runtime): what it relays, what
 // it drops, how it routes inspect point to point, and the display registry kept in attachments.
 import { describe, it, expect, beforeEach } from 'vitest'
-import { createRoomHub, routeMessage, attachmentRegistry, displayOriginAllowed, siteShaders } from './room.js'
+import { createRoomHub, routeMessage, attachmentRegistry, displayOriginAllowed, siteShaders, decodeRoom } from './room.js'
 
 const fakeSocket = (name, { mayDisplay = true } = {}) => {
   const ws = {
@@ -182,5 +182,14 @@ describe('relay room: shaders come from the display’s own site', () => {
     expect((await shaders.read('clit-set/2')).code).toMatch(/mainImage/)
     await expect(shaders.read('missing')).rejects.toThrow(/not found/)
     expect(asked[0]).toBe('https://clit.beadfamous.com/shaders/clit-set/2.frag')
+  })
+})
+
+describe('relay room: room names from the path', () => {
+  it('decodes a room, and answers null (a 400) for one that is not valid percent-encoding', () => {
+    expect(decodeRoom('my%20room')).toBe('my room')
+    expect(decodeRoom('%E0')).toBeNull()
+    expect(decodeRoom('%')).toBeNull()
+    expect(decodeRoom('')).toBeNull()
   })
 })
