@@ -57,12 +57,12 @@ const handleShaderError = (gl, wrappedFragmentShader, newFragmentShader) => {
     const wrappedLines = wrappedFragmentShader.split('\n');
     const headerLines = wrappedLines.findIndex(line => line.includes('31CF3F64-9176-4686-9E52-E3CFEC21FE72'));
 
-    let message = `there was something wrong with ur shader`
-    let lineNumber = 0
-    for (const line of error.matchAll(/ERROR: \d+:(\d+):/g)) {
-        lineNumber = parseInt(line[1]) - headerLines - 1;
-        message = error.split(':').slice(3).join(':').trim();
-    }
+    // Report the first error, with its own line and message. A #version shader has no marker:
+    // the wrapper adds exactly one line (#define PAPER_CRANES) above the source's code.
+    const linesAdded = headerLines === -1 ? 1 : headerLines + 1
+    const first = error.match(/ERROR: \d+:(\d+):(.*)/)
+    const lineNumber = first ? parseInt(first[1]) - linesAdded : 0
+    const message = first ? first[2].replace(/\0/g, '').trim() : `there was something wrong with ur shader`
 
     window.cranes.error = {lineNumber, message}
     console.error(`Error information:`, window.cranes.error);
@@ -133,9 +133,13 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
 
     // Recover from GPU context loss (common on mobile/desktop switch)
     let contextLost = false
+    // Bumped on every loss: a compile started on the old context must not settle into the new one.
+    let contextGeneration = 0
     canvas.addEventListener('webglcontextlost', (e) => {
         e.preventDefault()
         contextLost = true
+        contextGeneration++
+        pendingShaderSource = null
     })
     canvas.addEventListener('webglcontextrestored', async () => {
         // Reinitialize all GL resources in-place instead of reloading
@@ -197,12 +201,17 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
     const render = ({ time, features, fragmentShader: newFragmentShader }) => {
         if (contextLost) return
 
-        if (newFragmentShader !== lastFragmentShader && newFragmentShader !== pendingShaderSource) {
-            const wrappedFragmentShader = shaderWrapper(newFragmentShader)
+        const isNewShader = newFragmentShader !== lastFragmentShader && newFragmentShader !== pendingShaderSource
+        const wrappedFragmentShader = isNewShader ? wrapOrReport(newFragmentShader) : null
+        // Refused by the wrapper: keep drawing the last good shader, as a compile error does.
+        if (isNewShader && wrappedFragmentShader === null) lastFragmentShader = newFragmentShader
+        if (wrappedFragmentShader !== null) {
             const sourceAtCompile = newFragmentShader
+            const generationAtCompile = contextGeneration
             pendingShaderSource = newFragmentShader
             createProgramInfoAsync(gl, [defaultVertexShader, wrappedFragmentShader])
                 .then((newProgramInfo) => {
+                    if (generationAtCompile !== contextGeneration) return
                     if (sourceAtCompile !== pendingShaderSource) {
                         gl.deleteProgram(newProgramInfo.program)
                         return
@@ -214,6 +223,7 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
                     window.cranes.error = null
                 })
                 .catch(() => {
+                    if (generationAtCompile !== contextGeneration) return
                     if (sourceAtCompile !== pendingShaderSource) return
                     handleShaderError(gl, shaderWrapper(sourceAtCompile), sourceAtCompile)
                     lastFragmentShader = sourceAtCompile
@@ -301,19 +311,14 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
             frame: frameNumber,
             iRandom: Math.random(),
             iResolution: [frame.width, frame.height, 0],
-            iMouse: [features.touchX, features.touchY, features.touched ? 1: 0, 0],
+            iMouse: shaderToyMouse(features, frame.width, frame.height),
             iChannel0: initialTexture,
             iChannel1: prevTexture,
             iChannel2: initialTexture,
             iChannel3: prevTexture,
             ...features,
         }
-        // filter out null, undefined, and NaN values
-        uniforms = Object.fromEntries(
-            Object.entries(uniforms).filter(([, value]) => value !== null && value !== undefined && !Number.isNaN(value))
-        )
-        // resolve string references to other uniforms (e.g., time_val=time)
-        uniforms = resolveReferences(uniforms)
+        uniforms = prepareUniforms(uniforms)
 
         setBuffersAndAttributes(gl, programInfo, bufferInfo)
         setUniforms(programInfo, uniforms)
@@ -327,6 +332,40 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
     }
 
     return render
+}
+
+// A shader the wrapper refuses (no mainImage, say) used to throw on every frame and never reach
+// window.cranes.error, which the editor and the VJ MCP's get_state read.
+const wrapOrReport = (source) => {
+    try {
+        return shaderWrapper(source)
+    } catch (e) {
+        window.cranes.error = { lineNumber: 0, message: e.message }
+        console.error('Error information:', window.cranes.error)
+        return null
+    }
+}
+
+// ShaderToy's iMouse is in pixels, z > 0 while pressed. Pages publish the pointer as
+// `touch: [x, y]` normalized 0..1 (GL y-up); there is no touchX/touchY, which made iMouse.xy NaN.
+export const shaderToyMouse = ({ touch, touched } = {}, width, height) => {
+    const [x = 0.5, y = 0.5] = Array.isArray(touch) ? touch : []
+    return [x * width, y * height, touched ? 1 : 0, 0]
+}
+
+// Features and URL params -> the uniforms object handed to twgl.
+export const prepareUniforms = (raw) => {
+    // filter out null, undefined, and NaN values
+    const uniforms = Object.fromEntries(
+        Object.entries(raw).filter(([, value]) => value !== null && value !== undefined && !Number.isNaN(value))
+    )
+    // The wrapper declares ?my-param=1 as `uniform float my_param`: feed it under that name too.
+    for (const [key, value] of Object.entries(uniforms)) {
+        const name = key.replace(/-/g, '_')
+        if (name !== key && !(name in uniforms)) uniforms[name] = value
+    }
+    // resolve string references to other uniforms (e.g., time_val=time)
+    return resolveReferences(uniforms)
 }
 
 // Resolve string references to other uniforms (e.g., ?time_val=time, ?knob_71=bassNormalized)

@@ -1,6 +1,7 @@
 import { render } from 'preact'
 import { useState, useEffect, useRef, useMemo } from 'preact/hooks'
 import { html } from 'htm/preact'
+import { readStore, writeStore } from './src/listStore.js'
 
 // Check if we're in remote control mode
 const params = new URLSearchParams(window.location.search)
@@ -41,37 +42,6 @@ const carryPassthroughParams = (url) => {
 const setControllerChain = (url, controllers) => {
   url.searchParams.delete('controller')
   controllers.forEach((controller) => url.searchParams.append('controller', controller))
-}
-
-// ---------------------------------------------------------------------------
-// Local memory
-//
-// Everything the performer marks at a party (stars, tags, what got played,
-// the knob/image tweaks) lives in localStorage, deliberately:
-//   - At a party he is on the deployed static site from a phone. There is no
-//     server to write to and no build step to run, so a file write is not an
-//     option at the moment he wants to tag something.
-//   - The phone IS the performance device, so per-device storage is the right
-//     scope. Build-time `@tags` / `@favorite` in the .frag stay the permanent,
-//     shareable, in-repo truth; these merge on top of them.
-// ---------------------------------------------------------------------------
-const STORE_PREFIX = 'cranes-list'
-
-const readStore = (key, fallback) => {
-  try {
-    const raw = localStorage.getItem(`${STORE_PREFIX}-${key}`)
-    return raw === null ? fallback : JSON.parse(raw)
-  } catch {
-    return fallback
-  }
-}
-
-const writeStore = (key, value) => {
-  try {
-    localStorage.setItem(`${STORE_PREFIX}-${key}`, JSON.stringify(value))
-  } catch {
-    // Private mode / quota — the page still works, it just forgets.
-  }
 }
 
 // ---------------------------------------------------------------------------

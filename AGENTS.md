@@ -218,7 +218,7 @@ Group features by domain and pick from DIFFERENT domains for variety:
 - Smart initialization to prevent jumps
 
 ### Browser-Specific Fixes
-- Firefox: Automatic microphone reconnection every 5 seconds
+- Mic watchdog (`src/audio/micWatchdog.js`): resumes a suspended AudioContext and re-acquires an ended or frozen mic; `?debug_audio=true` shows its state
 - Chrome: Proper async initialization of audio worklet
 
 ## Shader Development
@@ -679,7 +679,7 @@ The installed PWA opens with whatever URL the user was on when they installed. F
 - `index.html` — manifest link injection + 7-tap install trigger
 - `vite-plugins/shader-plugin.js` — `prettifyShaderName()`, `makeManifest()`, `generateManifests()`
 - `public/icons/` — shared PWA icons (all shaders use the same set)
-- `service-worker.js` — offline caching
+- `public/service-worker.js` — offline caching (the only copy; Vite ships public/ as-is)
 
 ## ChromaDepth Shader Variants
 

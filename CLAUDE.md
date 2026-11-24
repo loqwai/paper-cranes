@@ -218,7 +218,7 @@ Group features by domain and pick from DIFFERENT domains for variety:
 - Smart initialization to prevent jumps
 
 ### Browser-Specific Fixes
-- Firefox: Automatic microphone reconnection every 5 seconds
+- Mic watchdog (`src/audio/micWatchdog.js`): resumes a suspended AudioContext and re-acquires an ended or frozen mic; `?debug_audio=true` shows its state
 - Chrome: Proper async initialization of audio worklet
 
 ## Shader Development
@@ -418,12 +418,23 @@ per-message work has been moved out instead: the URL mirror is debounced to 750m
 so a refresh preserves state) and per-message DOM work was removed outright.
 
 ### VJ MCP (any agent harness)
-The dev server serves an MCP server at **`/mcp`** (streamable HTTP, stateless, never SSE) whose tools
-read and drive every `?remote=display` page: `list_displays`, `list_shaders`, `get_state`,
-`screenshot`, `set_params`, `set_shader`, `read_shader`, `write_shader`, `wait_for_event`.
-Register: `claude mcp add --transport http paper-cranes-vj http://localhost:6969/mcp`. Knobs go out as
-`update-params` on the display's own socket; reads come back over a point-to-point `inspect` channel
-the broker never broadcasts. Dev only. See [docs/vj-mcp.md](docs/vj-mcp.md).
+An MCP server (streamable HTTP, stateless, never SSE) whose tools read and drive every display:
+`list_displays`, `list_shaders`, `get_state`, `screenshot`, `set_params`, `set_shader`,
+`read_shader`, `write_shader`, `wait_for_event`. It runs in two places with the same code
+(`vite-plugins/vj-mcp/server.js` + `hub-core.js`):
+- **Live:** `https://relay.beadfamous.com/mcp/<room>` on the relay Worker. Displays are any
+  `?remote=display&room=<room>` page; the room's Durable Object is the broker. Cloudflare Access
+  managed OAuth in front (`claude mcp add --transport http paper-cranes-live
+  https://relay.beadfamous.com/mcp/<room>`, then sign in from `/mcp`), the JWT checked again in the
+  Worker. `write_shader` there applies code live and saves nothing (`persisted: false`). The room
+  drops any `inspect` a client sends; everything else is relayed verbatim as before.
+- **Dev:** `http://localhost:6969/mcp` on the dev server (`claude mcp add --transport http
+  paper-cranes-vj http://localhost:6969/mcp`), displays are `?remote=display` pages there, and
+  `write_shader` writes `shaders/<x>.frag` and hot-swaps.
+
+Knobs go out as `update-params` on the display's own socket; reads come back over a point-to-point
+`inspect` channel the broker never broadcasts, answered only after the broker welcomed the page.
+See [docs/vj-mcp.md](docs/vj-mcp.md).
 
 ### ParamsManager
 The `ParamsManager` (`src/params/ParamsManager.js`) is the unified system for handling all shader parameters:
@@ -498,7 +509,8 @@ paramsManager.setShader(code)      // Syncs shader to remote
     ├── editor-sync-plugin.js    # Bidirectional editor↔disk sync (dev only)
     ├── vj-signal-plugin.js      # /__vj-signal endpoint; writes .claude/vj-signals.jsonl (dev only)
     ├── vj-mcp-plugin.js         # /mcp: VJ MCP server, streamable HTTP (dev only) — docs/vj-mcp.md
-    ├── vj-mcp/hub.js, tools.js  #   display registry shared with the /ws broker; the tool set
+    ├── vj-mcp/server.js, hub-core.js  # the tool set and display hub, shared with the relay Worker
+    ├── vj-mcp/hub.js, tools.js  #   their dev-server hosts (Node ws sockets, shaders on disk)
     └── shader-plugin.js         # Shader discovery, metadata, and manifest generation
 ```
 
@@ -693,7 +705,7 @@ The installed PWA opens with whatever URL the user was on when they installed. F
 - `index.html` — manifest link injection + 7-tap install trigger
 - `vite-plugins/shader-plugin.js` — `prettifyShaderName()`, `makeManifest()`, `generateManifests()`
 - `public/icons/` — shared PWA icons (all shaders use the same set)
-- `service-worker.js` — offline caching
+- `public/service-worker.js` — offline caching (the only copy; Vite ships public/ as-is)
 
 ## ChromaDepth Shader Variants
 

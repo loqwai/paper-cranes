@@ -54,13 +54,6 @@ const wrapShaderForValidation = (shader) => {
 }
 
 /**
- * A `#version` shader is wrapped by inserting one line (`#define PAPER_CRANES 1`)
- * after line 1, so every later line sits one further down in the compiled source.
- */
-const versionShaderLine = (wrapperLines, wrappedLineNum) =>
-  wrapperLines[1] === '#define PAPER_CRANES 1' && wrappedLineNum > 2 ? wrappedLineNum - 1 : wrappedLineNum
-
-/**
  * Compiles shader using glslangValidator
  * Returns { success: boolean, errors: string[] }
  */
@@ -95,7 +88,8 @@ const compileShader = async (shaderContent) => {
         const message = match[2]
 
         // Adjust line number to original file (subtract wrapper header lines)
-        const originalLineNum = markerLineIndex > 0 ? wrappedLineNum - markerLineIndex - 1 : versionShaderLine(wrapperLines, wrappedLineNum)
+        // A #version shader has no marker; the wrapper adds one line (#define PAPER_CRANES) to it.
+        const originalLineNum = markerLineIndex > 0 ? wrappedLineNum - markerLineIndex - 1 : wrappedLineNum - 1
         if (originalLineNum > 0) {
           errors.push(`Line ${originalLineNum}: ${message}`)
         } else {
