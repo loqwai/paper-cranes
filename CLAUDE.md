@@ -19,8 +19,9 @@ Microphone → MediaStream → AudioContext → WindowNode (Hanning) → FFT Ana
 
 #### 1. AudioProcessor (`src/audio/AudioProcessor.js`)
 - **FFT Size**: 4096 (optimized from 32768 for ~85ms latency)
-- **Smoothing**: 0.15 exponential smoothing factor
-- **Analyzer Smoothing**: 0.2 time constant
+- **Smoothing**: the EMA weight on each new worker value (`?smoothing=`; mic default 0.15, `audio_file` default 0.85). Higher is more responsive and more jittery; lower is smoother and later. `*Normalized`/`*ZScore` use 1.5x that weight, capped at 1
+- **Analyzer Smoothing**: 0.4 `smoothingTimeConstant`
+- **Onsets**: `OnsetProcessor` reads the raw spectrum every display frame, outside the workers and the EMA, and publishes `onsetKick`/`Snare`/`Hat`/`Full` plus `Trigger`, `Strength` and `Age`. Its detector is vendored in `src/audio/vendor/` until hypnosound publishes it. It counts frames, so triggers misfire more on 120/144 Hz displays. See [docs/onset-detection.md](docs/onset-detection.md)
 - Uses Web Workers for parallel feature extraction
 - Extracts 15 audio features from hypnosound library
 
@@ -55,7 +56,7 @@ Each feature has 11 statistical variations:
 - SpectralSkew, PitchClass
 - Bass, Mids, Treble
 - Energy
-- Beat detection
+- Beat detection (`beat`: `spectralFlux` zScore above 0.9; never true while the history is flat, as in silence)
 
 ## Audio Features Reference (Hypnosound)
 
@@ -208,8 +209,7 @@ Group features by domain and pick from DIFFERENT domains for variety:
 ### Latency Reduction (from ~1000ms to ~100ms)
 1. **FFT Size**: Reduced from 16384 to 4096 
    - Query param: `?fft_size=4096`
-2. **Smoothing**: Reduced from 0.8 to 0.05-0.2
-   - Query param: `?smoothing=0.15`
+2. **Smoothing**: `?smoothing=0.15` (mic default) is the weight on the newest value, so raising it cuts lag and adds jitter
 3. **No worker wait**: features come from each worker's latest reply; nothing awaits a round trip
 
 ### Jitter Reduction

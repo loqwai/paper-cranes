@@ -4,6 +4,7 @@
 // OnsetProcessor prefers the installed hypnosound's copy when one exists, so
 // delete this file once paper-cranes depends on a release that exports it.
 // Change it upstream, not here.
+// hypnosound is MIT licensed, Copyright (c) 2024 hypnodroid.
 
 // Synthesized attack-decay envelope driven by discrete onset events.
 //

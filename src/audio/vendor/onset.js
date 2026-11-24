@@ -3,6 +3,7 @@
 // onset detector: npm stops at 2.0.0. OnsetProcessor prefers the installed
 // hypnosound's copy when one exists, so delete this file once paper-cranes
 // depends on a release that exports it. Change it upstream, not here.
+// hypnosound is MIT licensed, Copyright (c) 2024 hypnodroid.
 
 // Onset detection: half-wave-rectified spectral flux gated by a robust adaptive
 // threshold (rolling median + MAD) and a refractory period.
