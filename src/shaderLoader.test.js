@@ -63,3 +63,25 @@ describe('getInitialShader with a missing ?shader=', () => {
     expect(appended[0].textContent).toContain('clit-vibej/2')
   })
 })
+
+describe('loadShader given code that did not come through the fetch helper', () => {
+  afterEach(() => {
+    vi.doUnmock('./utils.js')
+    vi.resetModules()
+    vi.unstubAllGlobals()
+  })
+
+  // A boot-time prefetch (PR #223) hands loadShader the response body directly, so the page check
+  // in the fetch helper never runs. loadShader has to refuse the web page itself.
+  it('refuses a web page and falls back to the default shader', async () => {
+    stubPage('?shader=clit-vibej/2')
+    vi.resetModules()
+    vi.doMock('./utils.js', async (importOriginal) => {
+      const real = await importOriginal()
+      return { ...real, getRelativeOrAbsoluteShaderUrl: async (path) => (path === 'default' ? DEFAULT_FRAG : INDEX_HTML) }
+    })
+    const { loadShader, getInitialShader } = await import('./shaderLoader.js')
+    await expect(loadShader('clit-vibej/2')).rejects.toThrow(/clit-vibej\/2/)
+    expect((await getInitialShader()).code).toBe(DEFAULT_FRAG)
+  })
+})
