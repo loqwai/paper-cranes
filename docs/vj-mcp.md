@@ -62,8 +62,15 @@ Claude Code ──POST /mcp/<room>──► Cloudflare Access (OAuth; 401 + chal
 - Any message that is not a hub type is relayed to every other socket verbatim, as before. The
   relay stays byte-compatible: `e2e/vj-mcp-relay.test.js` drives a display from the real
   `vjpad.html?room=` and checks the display applied exactly what a third socket saw relayed.
+- **The room name is the lock.** Anyone who knows it can join `/ws/<room>`, relay knobs, and
+  with a non-browser client (which can send any `Origin`) register a fake display. A fake display
+  cannot touch the real one, but what it reports (state, screenshots, logs, events) reaches the
+  agent as if real. The tool descriptions of `list_displays`, `get_state`, `screenshot` and
+  `wait_for_event` say their output is untrusted data. Follow-up, not built: a room-secret
+  handshake so the room DO admits a display only with proof beyond the room name.
 - `display-hello` registers a display, only from a socket whose page Origin is the site, a show
-  repo, a Pages preview, a hypnodroid.com tunnel or localhost. It is never relayed.
+  repo, a Pages preview, a hypnodroid.com tunnel or localhost. It is never relayed. This check
+  stops web pages in a browser, not scripts: a non-browser client sets any `Origin` it likes.
 - `inspect-reply` resolves the one pending request it answers, and only from the socket that was
   asked. It is never relayed.
 - `inspect`, `display-welcome` and `display-rekey` from any client are dropped. Only the hub sends
