@@ -24,7 +24,6 @@
 //   knob_15: drip + drip pool intensity
 //   knob_16: THEME SHIFT
 uniform float drop_glow;    // from the-coat controller
-uniform float pitch_change; // from the-coat controller
 uniform float pitch_change; // from the-coat controller — transient pulse on chord/pitch jumps
 #define PI 3.14159265
 
