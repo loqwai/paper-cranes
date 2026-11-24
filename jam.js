@@ -4,6 +4,7 @@ import { createParamsManager } from './src/params/ParamsManager.js'
 import { loadControllers, composeControllers } from './src/controllerChain.js'
 import { buildSnapshot, postSnapshot, undoSnapshot } from './src/snapshot.js'
 import { readUrlParams } from './src/params/url.js'
+import { shaderOnScreen } from './src/shaderLoader.js'
 
 const searchParams = readUrlParams()
 
@@ -17,12 +18,12 @@ const paramsManager = createParamsManager({
 window.paramsManager = paramsManager
 
 const snapshotPreset = async () => {
-    const data = await postSnapshot(buildSnapshot(window.cranes, searchParams.get('shader')))
+    const data = await postSnapshot(buildSnapshot(window.cranes, shaderOnScreen()))
     console.log('[jam] snapshot saved', data)
 }
 
 const undoLastSnapshot = async () => {
-    const data = await undoSnapshot(searchParams.get('shader'))
+    const data = await undoSnapshot(shaderOnScreen())
     console.log(`[jam] deleted ${data.deleted} (${data.remaining} left)`)
 }
 
@@ -47,7 +48,7 @@ import('./src/midi.js')
 // Hot-swap shader code without reloading (preserves the audio pipeline and its feature history)
 if (import.meta.hot) {
     import.meta.hot.on('shader-update', ({ shader, code }) => {
-        if (shader !== searchParams.get('shader')) return
+        if (shader !== shaderOnScreen()) return
         window.cranes.shader = code
     })
 

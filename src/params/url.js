@@ -1,7 +1,7 @@
 // The app's URL params: the query string plus `key=value` pairs after `#`.
 // Nothing on the server or in the service worker reads a param by name, so every key may live in either place.
 
-const hashParams = (url) => new URLSearchParams(url.hash.slice(1))
+const hashParams = (url) => new URLSearchParams((url.hash ?? '').slice(1))
 
 // One merged view. A key in the winning layer replaces all of that key's values from the other.
 export const mergeUrlParams = (url) => {

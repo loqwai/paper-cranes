@@ -1,11 +1,128 @@
 # VJ MCP: VJ a display from any agent harness
 
-The dev server serves an MCP server at `/mcp`. Any MCP client (Claude Code, Codex, a
-per-socket Claude process, an Agent SDK script) can then read a running display, turn its
-knobs, switch or rewrite its shader, screenshot it and wait for its health signals.
+An MCP server that reads a running display, turns its knobs, switches or rewrites its shader,
+screenshots it and waits for its health signals. Any MCP client can use it: Claude Code, Codex, a
+per-socket Claude process, an Agent SDK script. It runs in two places with the same tools:
 
-- **Transport:** streamable HTTP, stateless, plain JSON responses. No SSE: `GET /mcp` answers
-  405.
+| | Dev server | Live, on the relay |
+|---|---|---|
+| URL | `http://localhost:6969/mcp` | `https://relay.beadfamous.com/mcp/<room>` |
+| A display is | a `?remote=display` page on that dev server | any `?remote=display&room=<room>` page, production or dev |
+| Broker | the dev server's `/ws` (`remote-ws-plugin.js`) | the room's Durable Object (`workers/remote-relay`) |
+| Auth | loopback / LAN, Origin check | Cloudflare Access (managed OAuth), JWT checked again in the Worker, plus the room name |
+| `write_shader` | compiles on the display, writes `shaders/<x>.frag`, HMR hot-swaps | compiles on the display, applies the code live on it, saves nothing (`persisted: false`) |
+| Shaders read from | disk | the site the display was served by (else `SITE_ORIGIN`, visuals.beadfamous.com) |
+
+- **Transport:** streamable HTTP, stateless, plain JSON responses. No SSE: `GET` answers 405 in
+  both places.
+- **Shared code:** the tools are `vite-plugins/vj-mcp/server.js` and the display hub is
+  `vite-plugins/vj-mcp/hub-core.js`. The dev server wraps them in `tools.js` and `hub.js`; the
+  relay wraps them in `workers/remote-relay/src/room.js`. Neither host forks the tool set.
+
+## Live, on the relay (`/mcp/<room>`)
+
+Decided 2026-11-24 (coordinator; Aaron: "I want that MCP to work _deployed_ live"): the MCP lives on
+the relay Worker, the room's Durable Object is the broker, and Cloudflare Access managed OAuth
+guards it. Change this only by asking first.
+
+**Register it** (once per room; the room is the same secret as the display page's `?room=`):
+
+```bash
+claude mcp add --transport http paper-cranes-live https://relay.beadfamous.com/mcp/<room>
+```
+
+Then run `/mcp` in Claude Code and sign in: Access answers the first request with `401` and an
+OAuth challenge, Claude Code opens the Access login in a browser, and after that it holds a token
+(15-minute access tokens, refreshed for up to 14 days). The claude.ai app can add the same URL as a
+custom connector; Access's dynamic client registration allows the claude.ai and claude.com
+callbacks.
+
+**Open a display** on any page of the site with `remote=display` and the room, for example
+`https://visuals.beadfamous.com/?shader=clit-set/2&remote=display&room=<room>`, or a show repo's
+page, or `http://localhost:6969/jam.html?...&remote=display&room=<room>` on the show laptop. The
+vjpad on `vjpad.html?room=<room>` keeps working beside it, unchanged.
+
+**How a request flows:**
+
+```
+Claude Code ──POST /mcp/<room>──► Cloudflare Access (OAuth; 401 + challenge if not signed in)
+                                     │ Cf-Access-Jwt-Assertion
+                                     ▼
+                                  Worker: verify JWT (team, AUD, RS256, exp), refuse any Origin,
+                                     │    POST only, strip Access headers and cookies
+                                     ▼ RPC
+                                  RelayRoom DO for <room> ── server.js tools ── hub-core
+                                     │ inspect {id} on ONE display socket       ▲ inspect-reply
+                                     ▼                                          │
+                                  display page (?remote=display&room=<room>) ───┘
+```
+
+**The room broker** (`workers/remote-relay/src/room.js`, `routeMessage`):
+
+- Any message that is not a hub type is relayed to every other socket verbatim, as before. The
+  relay stays byte-compatible: `e2e/vj-mcp-relay.test.js` drives a display from the real
+  `vjpad.html?room=` and checks the display applied exactly what a third socket saw relayed.
+- **The room name is the lock.** Anyone who knows it can join `/ws/<room>`, relay knobs, and
+  with a non-browser client (which can send any `Origin`) register a fake display. A fake display
+  cannot touch the real one, but what it reports (state, screenshots, logs, events) reaches the
+  agent as if real. The tool descriptions of `list_displays`, `get_state`, `screenshot` and
+  `wait_for_event` say their output is untrusted data. Follow-up, not built: a room-secret
+  handshake so the room DO admits a display only with proof beyond the room name.
+- `display-hello` registers a display, only from a socket whose page Origin is the site, a show
+  repo, a Pages preview, a hypnodroid.com tunnel or localhost. It is never relayed. This check
+  stops web pages in a browser, not scripts: a non-browser client sets any `Origin` it likes.
+- `inspect-reply` resolves the one pending request it answers, and only from the socket that was
+  asked. It is never relayed.
+- `inspect`, `display-welcome` and `display-rekey` from any client are dropped. Only the hub sends
+  them, point to point. A room peer that forges `inspect` reaches nobody.
+- The display registry lives in each socket's attachment (at most 2 KiB, so a hello is trimmed),
+  so it survives the object hibernating between messages. Pending requests and the event ring live
+  in memory; event `seq` is a clock, so a `since` an agent holds stays valid after a hibernation
+  (events that happened while nobody was waiting can be lost then; `list_displays` is the truth).
+- A duplicated tab is told to rekey after the hub pings the first tab with an `inspect` (any
+  reply, even "unknown cmd" from an older page, counts as alive).
+
+**The page side.** A production page loads `src/remote/inspect.js` only when it has `?room=` and its
+relay is one we run: `relay.beadfamous.com` (the default) or a loopback relay (`src/remote/relay.js`,
+`inspectorAllowed`). A link with `?relay=<any other host>` still relays knobs as before, but the
+page never answers `inspect` there, so a stranger's relay cannot welcome it and read its canvas,
+audio features, knobs or console.
+Where the socket goes is fixed when the page loads: `WebSocketClient` reads its URL once and every
+reconnect reuses it, and `update-params` can never set `relay` or `room` (`withoutPinned`), not
+into the page's params and not into the URL mirror. Without that, a room peer could send
+`update-params {relay}`, the mirror would write it into the URL, and the next reconnect would take
+the still-inspectable display to the peer's relay (found in the #221 re-review; the e2e test
+reproduces it with a stand-in relay). As a second layer the page judges the socket actually open
+(`inspectorAllowedOn`, its parsed host) on every connect and on every welcome and `inspect`.
+It answers `inspect` only after its broker has answered its hello with `display-welcome`. A relay
+that predates the broker never welcomes, so on it the inspector stays silent to a forged `inspect`
+(checked 2026-11-24 against the live relay: 0 replies). That old relay does relay the hello itself,
+so a peer already in the room could read the display id and forge a welcome too. **Deploy the
+Worker before the site build that carries this page code**; after that, the room drops client
+welcomes and the gap is closed.
+
+**write_shader without a disk.** On the relay, `write_shader` compiles the code on the target
+display (the one named, else the ones showing that shader, else the only one) and refuses on an
+error. Then it sends `update-params {shaderCode}` to those displays and waits until they run that
+exact source. It reports `persisted: false`: nothing is saved, and a reload brings back the shader
+named in the URL. Where an agent's live edits should be kept is an open question, not designed
+here (a commit to a branch, a KV draft per room, or copying from `get_state` by hand).
+
+**Local relay.** `npx wrangler dev --config workers/remote-relay/wrangler.jsonc --ip 127.0.0.1
+--port 8787 --var VJ_MCP_LOCAL:1 --local-upstream 127.0.0.1:8787` runs the real Worker and Durable
+Object. Pages reach it with `?room=<room>&relay=127.0.0.1:8787` (a loopback relay speaks plain
+`ws`). `VJ_MCP_LOCAL=1` skips Access only when the request's hostname is loopback, which is why
+`--local-upstream` is needed: without it wrangler dev rewrites the URL to relay.beadfamous.com.
+
+**Cloudflare setup** (done 2026-11-24 through the API): Access application "paper-cranes VJ MCP
+(relay /mcp, managed OAuth)", id `eb818752-c50f-4183-a769-97a4152c2ff4`, on
+`relay.beadfamous.com/mcp` and `/mcp/*`. Managed OAuth on, dynamic client registration for the
+claude.ai/claude.com callbacks and loopback, the reusable policy "allow aaronherres/hypnodroid
+emails". No service-token policy. Its AUD is `ACCESS_AUD` in `workers/remote-relay/wrangler.jsonc`
+(public, not a secret). `/ws/*` and `/` are not covered, so the venue relay is unchanged.
+
+## Dev server (`/mcp`)
+
 - **Where:** a Vite plugin (`vite-plugins/vj-mcp-plugin.js`) on the dev server, the same
   process as the `/ws` broker. It exists only under `npm run dev`; the static production build
   has no `/mcp`.
@@ -13,7 +130,7 @@ knobs, switch or rewrite its shader, screenshot it and wait for its health signa
   show page `jam.html?shader=clit-set/2&controller=clit-set&wavelet=true&vj=1&remote=display`.
   A phone on the Cloudflare Access tunnel counts too: everything goes over its own `/ws` socket.
 
-## Register it
+### Register it
 
 Start the dev server first (`npm run dev`, port 6969 unless `PORT` is set).
 
@@ -47,7 +164,7 @@ Aaron's call, because they widen who can reach the dev server.
 
 **claude.ai app.** A custom connector must reach a public HTTPS URL from Anthropic's servers,
 and it authenticates with OAuth only, never with custom headers. The Access-protected tunnel
-refuses it. Making that work means changing the tunnel's auth, which is not done here.
+refuses it. Use the relay URL above instead, which has managed OAuth.
 
 ## Tools
 
@@ -60,7 +177,7 @@ refuses it. Making that work means changing the tunnel's auth, which is not done
 | `set_params {display?, params}` | Sends `update-params` down that display's socket (the vjpad / `remote-send.js` path), then reads the values back from the page. A value is pinned above MIDI and controllers; `null` releases it. |
 | `set_shader {display?, shader, params?}` | Switches in place (no reload, audio history kept), waits until the page runs that exact source, and reports whether it compiles. If the page never picks the source up, `loaded` is false and `compiles` is null. |
 | `read_shader {shader}` | Source, knobs and hash of `shaders/<shader>.frag`. |
-| `write_shader {shader, code, display?, validate?}` | Compiles on a display first and refuses to write on an error. Then writes the file (the same helper as `/__save-shader`), lets HMR hot-swap it, and reports which displays picked it up. |
+| `write_shader {shader, code, display?, validate?}` | Compiles on a display first and refuses on an error. Dev: writes the file (the same helper as `/__save-shader`), lets HMR hot-swap it, and reports which displays picked it up (`persisted: true`). A display that `set_shader` moved counts as showing the new shader: pages match HMR events with `shaderOnScreen()` (`src/shaderLoader.js`), which reads `?shader=` when the event arrives, never the value from boot. Relay: applies the code live on the display and saves nothing (`persisted: false`). |
 | `wait_for_event {since?, types?, timeout_s?}` | Blocks up to 55 s until `display-joined`, `display-left` or a `vj-signal` (`boot`, `clip`, `flicker`, `too-dark`, `shiver`, `gate-drop`, `pulse`, `confirm-learn`) arrives after `since`. |
 
 `display` is optional when one display is connected, and otherwise any unique prefix of an
@@ -86,22 +203,28 @@ MCP client ──POST /mcp──► vj-mcp-plugin ──► tools.js ──► h
                           /__vj-signal (?vj=1 page) ──► hub event ring ──► wait_for_event
 ```
 
-- `vite-plugins/vj-mcp/hub.js` holds the data: `Display { id, key, ws, info, connectedAt,
+- `vite-plugins/vj-mcp/hub-core.js` holds the data (`hub.js` is its dev-server host): `Display { id, key, ws, info, connectedAt,
   lastSeenAt }`, pending requests by id, and a ring of the last 500 events. Nothing is
   persisted. After a dev-server restart, every display announces itself again when it
   reconnects.
-- `src/remote/inspect.js` is the page side. It runs only in a dev build, and only when the page
-  has no `?room=`, because on the public relay no broker filters who may send `inspect`. Its
-  commands are read-only (`state`, `shot`, `logs`) plus `validate`, a scratch compile that
-  changes nothing on screen. It has no `eval`.
+- `src/remote/inspect.js` is the page side. It runs in a dev build, and in production only on a
+  `?room=` page (the relay is its broker). It answers nothing until its broker sends
+  `display-welcome`. Its commands are read-only (`state`, `shot`, `logs`, `ping`) plus
+  `validate`, a scratch compile that changes nothing on screen. It has no `eval`.
 - `remote-ws-plugin.js` routes `display-hello` and `inspect-reply` to the hub and never
-  broadcasts them. It drops any `inspect` or `display-rekey` a client sends, so only the hub can
-  question a display. `e2e/vj-mcp.test.js` asserts this.
+  broadcasts them. It drops any `inspect`, `display-welcome` or `display-rekey` a client sends,
+  so only the hub can address a display. `e2e/vj-mcp.test.js` asserts this; the relay room does
+  the same (`workers/remote-relay/src/room.js`).
 
 ## Security
 
-- Dev server only. No write tool exists in the production build, and `inspect` handling is
-  removed from it.
+- **Relay:** see "Live, on the relay" above. Two locks on `/mcp/<room>`: Access (OAuth, Aaron's
+  email domains) and the Worker's own check of the Access JWT (`workers/remote-relay/src/access.js`:
+  issuer, AUD, RS256 signature against the team certs, expiry). With no `ACCESS_AUD` configured the
+  Worker answers 503, not open. Any request with an `Origin` header is refused, so a web page in a
+  signed-in browser cannot drive a show. The room name is still required. The relay has no
+  filesystem path: `write_shader` there never persists.
+- **Dev server** (the rest of this section): no write tool exists in the production build.
 - A request with an `Origin` header must come from a loopback origin, or from a host listed in
   `VJ_MCP_ORIGINS` (comma-separated). CLI clients send no `Origin`. This blocks a web page, or a
   DNS-rebinding page, from driving the display through your browser.
@@ -140,11 +263,29 @@ rewritten:
   `checkAct` guards from `vj-rules.js`. This server exposes the primitives (`get_state`,
   `set_params`, `set_shader`, `write_shader`). The seat's guarded `act` belongs on top of them,
   restricted for Sonnet seats. Aaron's own harness keeps the raw tools.
+- **On the relay** the same rules hold: the room's Durable Object is the broker, the socket is the
+  credential for a display, and the Access JWT names the caller (`who`, logged with each tool
+  call), which is the identity a per-socket seat needs. A seat bound to one display would pass that
+  display's id and the room; nothing here assumes a single agent per room.
 - **Divergence: transport.** #188 reaches its tools through a stdio MCP server and a 0600 unix
   socket. This server is HTTP on the dev server, because "any harness" includes ones that cannot
   spawn a child process next to the broker.
 
 ## Tests
+
+- `npx vitest run workers/remote-relay`: the room broker with fake sockets (relay verbatim, a
+  forged `inspect` dropped, point-to-point routing, the registry surviving hibernation, rekey and
+  takeover, the 2 KiB attachment cap, display origins, shader fetches) and the Access JWT check
+  (valid, wrong AUD, wrong issuer, expired, forged, the loopback-only local bypass, 503 when
+  unconfigured).
+- `npx vitest run --config vitest.e2e.config.js e2e/vj-mcp-relay.test.js`: `wrangler dev` running
+  the real Worker and Durable Object, a display and the real vjpad on one `?room=`, and an MCP
+  client on `/mcp/<room>`. It checks vjpad still drives the display byte for byte, a knob turns
+  the screen red (decoded from the tool's own screenshot), a forged `inspect` reaches nobody,
+  `write_shader` turns the display green with `persisted: false` and the file untouched,
+  `set_shader` loads from the display's own site, and join/leave events.
+
+The dev-server suite:
 
 `npx vitest run --config vitest.e2e.config.js e2e/vj-mcp.test.js` starts a dev server and a
 headless Chromium display, then calls every tool through an MCP client. It checks the knob by
@@ -157,3 +298,70 @@ point-to-point routing behave as described above. It also checks the hardening:
 - a duplicated tab carrying the same key is listed alongside the original, and closing it leaves
   the original in place;
 - shader names that climb out of `shaders/` are refused.
+
+## Proposed, not built: ticketed URLs for scripts and remote audio
+
+Aaron, 2026-11-24: "Use mindmeld to remember how we use urls with tickets etc in the Draw board mcp,
+to make it easier to write scripts that agents write to update data. This might potentially be
+useful for remote mic data". draw's `link` tool (draw `src/link.ts`, `src/linkRoutes.ts`; vault
+`kb/tools/draw-link-tickets.md`) mints a one-hour URL scoped to one frame or widget, the path
+being the only credential, 60 uses a minute, 50 live links, revocable, with a curl line and a node
+script in the reply.
+
+The paper-cranes equivalent would be one more tool on this server:
+
+- **`link {scope, display?, keys?, ttl_min?}`** mints `https://relay.beadfamous.com/l/<id>`. Only an
+  Access-signed-in MCP caller can mint, so the room secret never has to leave the agent.
+- **The ticket** is a random 128-bit id stored in the room's Durable Object storage with
+  `{scope, display, keys, expires, by}`, prefixed with the room's DO id so the Worker can route it
+  without knowing the room name. Storage, not an HMAC, so `revoke` ends it early.
+- **Scopes**, each a whitelist of what the holder may send, never anything it may read:
+  `params` (only the listed knob keys, relayed as `update-params`, optionally to one display),
+  and `audio-features` (relayed as `audio-features`, which `audio=remote` pages already consume).
+  Never `shaderCode`, never a hub type, no `inspect`, no screenshot.
+- **Transport:** POST with `{"protocol":"params","values":{...}}` for scripts; a ticketed WebSocket
+  upgrade on the same URL for a stream (a stranger's phone mic sending features at frame rate).
+  GET describes the link; `/openapi.json` gives the schema.
+- **Lifetime and limits:** 1 hour by default, 8 hours at most (one show); 60 POSTs a minute;
+  a stream capped at 60 messages a second and 4 KB a message; 50 live links a room.
+- **A leaked ticket** lets its holder move the listed knobs, or feed audio features, in that one
+  room until it expires or is revoked. It cannot read the display, change the shader, learn the
+  room name or mint more links.
+- **Where it fits:** a stranger's own mic or audio reaching the visual (the phone page opened from
+  the link streams features into the room), the in-chat widget joining its room without holding
+  the room secret, and agent scripts that should not need an MCP session.
+
+## Follow-ups from the #221 security review
+
+Fixed in #221: the inspector answers only through `relay.beadfamous.com` or a loopback relay (a
+`?relay=` link elsewhere cannot read the display, and a room peer cannot move the page's socket
+with `update-params {relay, room}`); the read tools mark display output as
+untrusted; a room that is not valid percent-encoding gets 400; vitest skips `dist/`.
+
+Left for later:
+- **Room-secret handshake.** The room name is the only lock on `/ws/<room>`, and a non-browser
+  client can forge `Origin` and register a fake display whose reports reach the agent (it cannot
+  touch the real display). A display could prove more than the room name, for example a per-room
+  secret the MCP mints and hands to the display link.
+- **Certs refetch has no rate limit** (`workers/remote-relay/src/access.js`, `verifyAccessJwt`):
+  every token with an unknown `kid` refetches the Access certs. Only traffic Access already let
+  through reaches it, but refetch at most once every 30-60 s.
+- **Screenshot height is uncapped** (`src/remote/inspect.js`, `shot`): the width is capped at 960
+  px, the height is not. A portrait phone gives a 960x2080 JPEG near the socket message limit,
+  encoded on the render thread. Cap the long side instead.
+- **Attachment caps count characters, not bytes** (`workers/remote-relay/src/room.js`, `pack`):
+  a long non-ASCII hello can push the attachment past 2 KiB; `writeAtt` swallows the error, so
+  the display is welcomed but never listed. Cap by bytes and fail loudly.
+- **Display origins are too wide** (`workers/remote-relay/src/room.js`, `DISPLAY_ORIGIN`): every
+  `*.hypnodroid.com` origin may register as a display, draw.hypnodroid.com included. That matters
+  only if one of those hosts serves content someone else can write. Narrow it to the hosts that
+  serve paper-cranes.
+
+## Open questions
+
+- **Persistence of live shader edits** on the relay (see write_shader without a disk).
+- **Service tokens** for headless agents (Sonnet VJ seats from #188): the Access app admits only
+  Aaron's email domains through OAuth. Adding a service-token policy, and which token, is Aaron's
+  call.
+- **`?vj=1` signals in production:** `wait_for_event` on the relay only sees joins and leaves,
+  because the page posts its signals to the dev server's `/__vj-signal`, which production lacks.

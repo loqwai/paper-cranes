@@ -2,6 +2,13 @@ import { getRelativeOrAbsoluteShaderUrl } from './utils.js'
 import { readUrlParams, writeUrlParams } from './params/url.js'
 
 /**
+ * The shader on screen now, by path. Read it at the moment you need it, never once at boot: a
+ * remote set_shader (loadShader with updateUrl) switches the page in place and rewrites ?shader=.
+ * @returns {string|null}
+ */
+export const shaderOnScreen = () => readUrlParams().get('shader')
+
+/**
  * Load a shader and apply all associated side effects
  * @param {string} shaderPath - Path to shader or full URL
  * @param {Object} options - Options

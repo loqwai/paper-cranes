@@ -12,7 +12,7 @@ const maybeStartWavelet = async (params, audioContext, sourceNode) => {
     window.cranes.waveletProcessor = wavelet
 }
 import { makeVisualizer, askForWakeLock } from './src/Visualizer.js'
-import { getInitialShader, loadShader } from './src/shaderLoader.js'
+import { getInitialShader, loadShader, shaderOnScreen } from './src/shaderLoader.js'
 import { loadControllers, composeControllers } from './src/controllerChain.js'
 import { readUrlParams } from './src/params/url.js'
 
@@ -426,7 +426,7 @@ if (import.meta.hot) {
         const changed = String(path ?? '')
             .replace(/^.*?shaders\//, '')
             .replace(/\.frag$/, '')
-        const showing = readUrlParams().get('shader')
+        const showing = shaderOnScreen()
         if (!changed || !showing || changed !== showing) return
 
         // Same shader: swap the source in place. window.cranes.shader is what
