@@ -50,6 +50,7 @@ import { createVjMcpServer } from '../../../vite-plugins/vj-mcp/server.js'
 import guide from '../../../docs/vj-mcp-guide.md'
 import { createRoomHub, routeMessage, siteShaders, displayOriginAllowed, decodeRoom, roomSecretControl, RELAY_VENUE } from './room.js'
 import { createDisplayLock } from './secret.js'
+import { VIEW_ID, roomCounts, viewersFull } from './mirror.js'
 import { authorize, mcpError } from './access.js'
 
 export class RelayRoom extends DurableObject {
@@ -74,12 +75,11 @@ export class RelayRoom extends DurableObject {
      * that would silently come back empty.
      */
 
-    broadcastStatus() {
-        const sockets = this.ctx.getWebSockets()
-        const status = JSON.stringify({
-            type: 'status',
-            data: { connectedClients: sockets.length },
-        })
+    broadcastStatus(leaving) {
+        const sockets = this.ctx.getWebSockets().filter((ws) => ws !== leaving)
+        // Board mirrors (mirror.js) are counted apart: a controller's "N connected" means pages
+        // that can be steered, and a display starts its mirror feed only while `viewers` > 0.
+        const status = JSON.stringify({ type: 'status', data: roomCounts(this.ctx, leaving) })
         for (const ws of sockets) {
             try {
                 ws.send(status)
@@ -94,10 +94,14 @@ export class RelayRoom extends DurableObject {
             return new Response('expected a websocket upgrade', { status: 426 })
         }
 
+        // A board mirror joins at /view/<view id> (mirror.js): a viewer, never a display.
+        // Otherwise: whether this socket may register as a display, decided once from its page's Origin.
+        const viewer = new URL(request.url).pathname.startsWith('/view/')
+        if (viewer && viewersFull(this.ctx)) return new Response('this room has all the mirrors it takes\n', { status: 429 })
+
         const [client, server] = Object.values(new WebSocketPair())
         this.ctx.acceptWebSocket(server)
-        // Whether this socket may register as a display: decided once, from its page's Origin.
-        server.serializeAttachment({ mayDisplay: displayOriginAllowed(request.headers.get('Origin')) })
+        server.serializeAttachment(viewer ? { viewer: true, mayDisplay: false } : { mayDisplay: displayOriginAllowed(request.headers.get('Origin')) })
         this.broadcastStatus()
 
         return new Response(null, { status: 101, webSocket: client })
@@ -112,14 +116,14 @@ export class RelayRoom extends DurableObject {
 
     async webSocketClose(ws) {
         this.hub.onClose(ws)
-        // The socket is already out of ctx.getWebSockets() by the time this
-        // runs, so the count this broadcasts is the post-departure one.
-        this.broadcastStatus()
+        // workerd may still list the closing socket here, so it is left out by hand: the count
+        // this broadcasts is the post-departure one.
+        this.broadcastStatus(ws)
     }
 
     async webSocketError(ws) {
         this.hub.onClose(ws)
-        this.broadcastStatus()
+        this.broadcastStatus(ws)
     }
 
     /**
@@ -177,6 +181,22 @@ export default {
         const url = new URL(request.url)
         const mcp = url.pathname.match(/^\/mcp(?:\/([^/]+))?\/?$/)
         if (mcp) return handleMcp(request, env, mcp[1])
+
+        // A board mirror (docs/board-mirror.md): /view/<view id> is the room's Durable Object id,
+        // which names the room without revealing it; /view-key/<room> turns a room into one.
+        const view = url.pathname.match(/^\/view\/([^/]+)$/)
+        if (view) {
+            if (!VIEW_ID.test(view[1])) return new Response('bad view id\n', { status: 400 })
+            let id
+            try { id = env.ROOM.idFromString(view[1]) } catch { return new Response('bad view id\n', { status: 400 }) }
+            return env.ROOM.get(id).fetch(request)
+        }
+        const viewKey = url.pathname.match(/^\/view-key\/(.+)$/)
+        if (viewKey) {
+            const room = decodeRoom(viewKey[1])
+            if (!room) return new Response('bad room name: not valid percent-encoding\n', { status: 400 })
+            return Response.json({ view: env.ROOM.idFromName(room).toString() }, { headers: { 'cache-control': 'no-store' } })
+        }
 
         const match = url.pathname.match(/^\/ws\/(.+)$/)
 

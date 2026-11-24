@@ -297,9 +297,12 @@ const animateShader = ({ render, fragmentShader }) => {
         const features = window.cranes.flattenFeatures()
         // Update frame count
         window.cranes.frameCount++
+        const time = ((performance.now() - startTime) / 1000) % 1000
+        // What this frame drew with, for a board mirror's feed (src/remote/mirrorFeed.js) to copy.
+        window.cranes.lastRender = { time, features }
         // Render the shader
         render({
-            time: ((performance.now() - startTime) / 1000) % 1000,
+            time,
             features,
             fragmentShader: window.cranes?.shader ?? fragmentShader,
         })

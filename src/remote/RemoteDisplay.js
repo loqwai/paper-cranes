@@ -1,6 +1,7 @@
 import { WebSocketClient } from './WebSocketClient.js'
-import { loadShader } from '../shaderLoader.js'
+import { loadShader, shaderOnScreen } from '../shaderLoader.js'
 import { inspectorAllowedOn, withoutPinned, displaySecretFrom, secretFor } from './relay.js'
+import { createMirrorFeed } from './mirrorFeed.js'
 import { getRelativeOrAbsoluteShaderUrl } from '../utils.js'
 import { hashSource } from './hash.js'
 import { createLiveShow } from '../vj/live.js'
@@ -75,8 +76,10 @@ export const initRemoteDisplay = () => {
         break
 
       case 'status':
-        // Connection status updates
+        // Connection status updates. A relay room also counts board mirrors (docs/board-mirror.md);
+        // the feed runs only while there is one to watch it.
         console.log('[Remote Display] Connected clients:', message.data?.connectedClients)
+        mirrorFeed.viewers(message.data?.viewers)
         break
 
       default:
@@ -107,6 +110,11 @@ export const initRemoteDisplay = () => {
   const client = wall
     ? createWallClient(handleMessage, handleStatusChange, { dev })
     : new WebSocketClient(handleMessage, handleStatusChange)
+  const mirrorFeed = createMirrorFeed({
+    send: (type, data) => { if (client.isConnected) client.send(type, data) },
+    // What animateShader draws: window.cranes.shader once anything loaded one, else the boot shader.
+    read: () => ({ code: window.cranes?.shader ?? window.shader, shader: shaderOnScreen(), last: window.cranes?.lastRender }),
+  })
   const { live, expectAgentShader } = startLiveShow(client)
   if (inspectorAllowedOn(client.url, { dev })) {
     import('./inspect.js')
@@ -123,6 +131,7 @@ export const initRemoteDisplay = () => {
   // Expose client for debugging
   window.cranes = window.cranes || {}
   window.cranes.remoteClient = client
+  window.cranes.mirrorFeed = mirrorFeed
 
   return client
 }

@@ -361,6 +361,7 @@ uniform float another;   // = 1.2
 - `audio=tab` - Capture audio from a browser tab instead of mic. Chrome/Edge only. See [docs/tab-audio.md](docs/tab-audio.md)
 - `audio_send=true` - Broadcast this page's audio features over the remote WebSocket (works with mic, `audio=tab`, or `audio_file`)
 - `audio=remote` - Take audio features from a machine running `audio_send=true` instead of the local mic. Same dev server or `room=`
+- `mirror.html?view=<view id>` - A watch-only copy of a relay room's wall, drawn locally from the uniforms the wall drew with (a few KB/s, no video, no mic, no room name). For a draw board or a second screen. `scale=` (default 0.5) and `fps=` (default 30) cap its cost. See [docs/board-mirror.md](docs/board-mirror.md)
 - `audio_file=<url>` - Play a deterministic audio file through the analyzer. Smoothing defaults to 0.15, the same as the mic. See [docs/audio-file-playback.md](docs/audio-file-playback.md)
 - `wavelet=true` - Enable opt-in wavelet (DWT) analysis alongside FFT. Adds `wavelet*` uniforms (octave bands, centroid/spread, bassHit trigger, FFT×wavelet combos). See [docs/wavelet-analysis.md](docs/wavelet-analysis.md)
 - `audio_device=<label substring>` - Open the mic input whose label contains this (e.g. `USB Audio CODEC`); no match means no audio, never a different device. Omitted → the OS default input
@@ -474,6 +475,16 @@ socket, no model in the path: [docs/draw-control-surface.md](docs/draw-control-s
 (buttons ~155 ms Send→wall; faders ~170 ms, draw's push throttle is the floor).
 See [docs/vj-mcp.md](docs/vj-mcp.md).
 
+### Board mirror (watch-only viewer)
+`mirror.html?view=<view id>` shows a relay room's wall on any page, such as a draw board, without
+video: while a mirror watches, the display sends the uniforms its shader reads (~20 Hz, a few hundred
+bytes each) and the mirror renders the same shader at half size. The mirror joins the relay at
+`/view/<view id>`, the room's Durable Object id (`GET /view-key/<room>` gives it). It holds no room
+name, so a mirror link on a shared board cannot steer the wall. The relay drops everything a viewer
+sends, never lists it as a display, gives it only the feed, and counts it in `status.viewers`, not in
+`connectedClients`. Relay rooms only: the dev server's `/ws` has no viewers. See
+[docs/board-mirror.md](docs/board-mirror.md).
+
 ### ParamsManager
 The `ParamsManager` (`src/params/ParamsManager.js`) is the unified system for handling all shader parameters:
 - Single source of truth for knobs, settings, and shader code
@@ -523,10 +534,12 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   │   ├── RemoteDisplay.js    # Receives commands from controllers
 │   │   ├── inspect.js          # Display side of the VJ MCP (state, shot, logs, validate)
 │   │   ├── relay.js            # Which relay a page may answer on; PINNED boot-time keys update-params cannot set
+│   │   ├── mirrorFeed.js       # Display side of a board mirror: the uniforms it drew with, while a mirror watches
 │   │   └── WebSocketClient.js  # WebSocket client wrapper
 │   ├── vj/
 │   │   ├── runtime.js          # ?vj=1 page runtime (validator, meter, jank probe, signals)
 │   │   └── signals.js          # where ?vj=1 signals go: /__vj-signal (dev) and/or the relay room socket
+│   ├── mirror/                 # mirror.html: watch-only wall copy for boards (docs/board-mirror.md)
 │   ├── Visualizer.js           # WebGL rendering
 │   ├── shaderLoader.js         # Centralized shader loading
 │   ├── listStore.js            # list page's localStorage (cranes-list-*), shape-checked reads
@@ -551,7 +564,8 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │       ├── watch-release.js    #   emit a line when a fader is released
 │       ├── watch-events.js     #   one line per page signal (keep, panic, release, …): a Monitor's feed
 │       ├── stray-guard.mjs     #   closes any page in the show Chrome that isn't the wall
-│       └── knob-correlate.js   #   which audio feature was that gesture imitating?
+│       ├── knob-correlate.js   #   which audio feature was that gesture imitating?
+│       └── mirror-bench.js     #   board mirror vs WebRTC vs snapshots, measured (docs/board-mirror.md)
 ├── public/
 │   └── service-worker.js        # The only service worker (Vite copies public/ as-is)
 ├── workers/

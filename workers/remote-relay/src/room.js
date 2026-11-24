@@ -13,6 +13,7 @@
 import { createHubCore, HUB_TYPES } from '../../../vite-plugins/vj-mcp/hub-core.js'
 import { ToolError } from '../../../vite-plugins/vj-mcp/errors.js'
 import { REFUSED, redactSecret } from './secret.js'
+import { MIRROR_TYPES, isViewer, routeMirror } from './mirror.js'
 
 const OPEN = 1
 
@@ -166,12 +167,15 @@ const OPEN_LOCK = { current: async () => null, check: async () => ({ ok: true, g
  *   'hub'      consumed by the hub (a display's hello or reply, a vj-signal)
  *   'refused'  a display-hello without this room's display secret; the page is told why
  *   'held'     a vj-signal from a socket that has not proven the secret yet
- *   'drop'     not relayed: binary, not JSON, or a hub-only type from a client
+ *   'drop'     not relayed: binary, not JSON, a hub-only type from a client, or anything a viewer sends
+ *   'mirror'   a board mirror's feed from a registered display, sent to viewers only (mirror.js)
  * lock  the room's display lock (secret.js); left out, the room is open
  * held  WeakMap socket -> signals waiting for that socket's hello
  */
 export const routeMessage = async ({ ctx, hub, ws, message, lock = OPEN_LOCK, held = new WeakMap() }) => {
   if (typeof message !== 'string') return 'drop'
+  // A board mirror only watches: nothing it sends reaches the room, the hub or a display.
+  if (isViewer(ws)) return 'drop'
   let msg
   try {
     msg = JSON.parse(message)
@@ -188,9 +192,11 @@ export const routeMessage = async ({ ctx, hub, ws, message, lock = OPEN_LOCK, he
     return 'drop'
   }
   if (type === VJ_SIGNAL) return takeSignal({ hub, lock, held, ws, message })
+  if (MIRROR_TYPES.has(type)) return routeMirror({ ctx, ws, message })
   // Relay the ORIGINAL text, so a payload is never reserialized and subtly changed in transit.
   for (const peer of ctx.getWebSockets()) {
-    if (peer === ws) continue
+    // Mirrors hear the feed alone, never the room's knobs or audio.
+    if (peer === ws || isViewer(peer)) continue
     try {
       peer.send(message)
     } catch {

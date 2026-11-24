@@ -16,7 +16,7 @@ const hub = createHub()
 
 // Every page the site can build. Only the ones present are built, so a show repo
 // (scripts/show-repo/create.js deletes edit.html, list.html, ...) builds without editing this file.
-const PAGES = ['index', 'show', 'edit', 'jam', 'list', 'analyze', 'playlist', 'nfc-writer', 'midi', 'vj', 'vjpad']
+const PAGES = ['index', 'show', 'edit', 'jam', 'list', 'analyze', 'playlist', 'nfc-writer', 'midi', 'vj', 'vjpad', 'mirror']
 const pageInputs = () => Object.fromEntries(
   PAGES
     .map((page) => [page === 'index' ? 'main' : page, resolve(import.meta.dirname, `${page}.html`)])
