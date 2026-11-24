@@ -131,9 +131,15 @@ profiles in `cranes-midi-profiles`.
 | `vjpad-shader` | the shader the pad is pointed at |
 | `cranes-vjpad-knobs` | cached knob index from `shaders.json`, so a dead wifi moment does not cost you your pads |
 | `cranes-vjpad-layout` | this phone's layout overrides |
+| `cranes-nfc-home` | the last vjpad query with a `room`, where a tag-opened tab goes ([nfc-show-controls.md](nfc-show-controls.md)) |
+| `cranes-nfc-show`, `cranes-nfc-beat:<show>` | which sticker map the NFC chip uses, and its NEXT/PREV cursor |
 
 `?shader=<path>` on the vjpad URL preselects the shader, overriding the
 remembered one.
+
+The **NFC** chip in the header arms Web NFC (Android Chrome) so the smiley
+stickers on Aaron's arm work as KEEP, PANIC, NEXT and favourites. See
+[nfc-show-controls.md](nfc-show-controls.md).
 
 ## Rejected alternatives
 

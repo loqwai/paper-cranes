@@ -62,6 +62,7 @@ import { WebSocketClient } from './src/remote/WebSocketClient.js'
 import LAYOUTS from './vjpad-layouts.json'
 import { resolveBanks, loadOverrides, saveOverrides, mirrorKnob, parseKnobs } from './src/vj/vjpad-layout.js'
 import { mountEditor } from './src/vj/vjpad-edit.js'
+import { mountVjpadNfc } from './src/vj/vjpad-nfc.js'
 
 const $ = (id) => document.getElementById(id)
 const clamp01 = (t) => (t < 0 ? 0 : t > 1 ? 1 : t)
@@ -132,8 +133,10 @@ const SHADERS = LAYOUTS.shaders ?? []
 let displays = 0
 let status = 'reconnecting'
 
+let nfc = null // NFC smiley stickers (docs/nfc-show-controls.md), mounted once client exists
 const client = new WebSocketClient(
     (msg) => {
+        nfc?.onMessage(msg)
         if (msg.type === 'status') {
             displays = Math.max(0, (msg.data?.connectedClients || 0) - 1)
             paint()
@@ -149,8 +152,10 @@ const client = new WebSocketClient(
         status = s
         if (s === 'connected') announce()
         paint()
+        nfc?.onStatus(s)
     }
 )
+nfc = mountVjpadNfc({ client, buzz: (ms) => buzz(ms), chip: document.getElementById('nfc') })
 
 const sendRaw = (type, data) => client.send(type, data)
 

@@ -1,6 +1,7 @@
 import { WebSocketClient } from './WebSocketClient.js'
 import { loadShader } from '../shaderLoader.js'
 import { inspectorAllowedOn, withoutPinned, displaySecretFrom, secretFor } from './relay.js'
+import { nfcFlash } from '../vj/nfc-flash.js'
 
 // The VJ MCP (docs/vj-mcp.md) reaches this display through a broker: the dev server's /ws, or on
 // `?room=` the relay Worker's room, which drops any `inspect` a client sends. The inspector loads
@@ -31,6 +32,7 @@ export const initRemoteDisplay = () => {
 
   const handleMessage = (message) => {
     if (message.type !== 'audio-features') console.log('[Remote Display] Received:', message.type, message.data)
+    nfcFlash(message)
 
     switch (message.type) {
       case 'update-params':
