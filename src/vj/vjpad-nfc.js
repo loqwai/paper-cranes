@@ -12,6 +12,8 @@ const SETLISTS = Object.fromEntries(
 )
 
 const HOME_KEY = 'cranes-nfc-home'
+// How long a roomless fallback tab waits for a phone wall's local link before dropping its sticker.
+const WALL_WAIT_MS = 4000
 const SHOW_KEY = 'cranes-nfc-show'
 
 const safe = (fn, fallback = null) => {
@@ -108,18 +110,28 @@ export const mountVjpadNfc = ({ client, buzz, chip, loc = window.location, stora
     nfc.fire(id)
   }
   if (pending) history.replaceState(null, '', loc.pathname + loc.search)
-  // No room (a stranger's phone, or one that never opened a vjpad with one): nothing to ask about.
-  if (!params.has('room')) pending = null
-  if (pending) {
-    confirmFallback({
-      label: show.stickers[pending]?.label ?? pending,
-      onYes: () => { confirmed = true; fireIfReady() },
-      onNo: () => { pending = null },
-    })
-  }
+  const ask = () => confirmFallback({
+    label: show.stickers[pending]?.label ?? pending,
+    onYes: () => { confirmed = true; fireIfReady() },
+    onNo: () => { pending = null },
+  })
+  // No room: the one place this tab can still reach is a phone wall on this same phone
+  // (docs/phone-wall.md), whose local link answers within about a second. Ask only once it has.
+  // Otherwise (a stranger's phone, or one that never opened a vjpad with one) there is nothing to
+  // ask about, and the sticker is dropped.
+  let awaitingWall = false
+  if (pending && !params.has('room')) {
+    awaitingWall = true
+    setTimeout(() => { if (awaitingWall) { awaitingWall = false; pending = null } }, WALL_WAIT_MS)
+  } else if (pending) ask()
   const onStatus = (status) => {
-    if (status === 'connected') fireIfReady()
+    if (status !== 'connected') return
+    if (awaitingWall && client.link?.linked) { awaitingWall = false; ask() }
+    fireIfReady()
   }
+  // A wall can link after the room socket already reported connected (dev server), which reports
+  // no new status; hear the wall itself too.
+  client.onWalls?.((walls) => { if (walls.length) onStatus('connected') })
 
   window.cranes = window.cranes || {}
   window.cranes.nfc = nfc

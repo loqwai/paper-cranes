@@ -7,6 +7,7 @@ import { hashSource } from './hash.js'
 import { createLiveShow } from '../vj/live.js'
 import { createSignalPoster } from '../vj/signals.js'
 import { nfcFlash } from '../vj/nfc-flash.js'
+import { isWallPage, createWallClient } from '../phone-wall/wall.js'
 
 // The VJ MCP (docs/vj-mcp.md) reaches this display through a broker: the dev server's /ws, or on
 // `?room=` the relay Worker's room, which drops any `inspect` a client sends. The inspector loads
@@ -96,12 +97,19 @@ export const initRemoteDisplay = () => {
     else inspector?.unwelcome()
     // Show the badge only for connection problems, but once one is up, a reconnect must clear it:
     // skipping 'connected' left "Reconnecting..." lit on the wall after every drop.
+    // Never on a phone wall: its pad is on the local link, and nobody at the projector can act on it.
+    if (wall) return
     if (status !== 'connected' || document.getElementById('remote-status-indicator')) {
       updateStatusIndicator(status)
     }
   }
 
-  const client = new WebSocketClient(handleMessage, handleStatusChange)
+  // A phone wall (docs/phone-wall.md) hears its pad over the local link as well as the room socket,
+  // through the same handler, so the live show behaves the same either way.
+  const wall = isWallPage()
+  const client = wall
+    ? createWallClient(handleMessage, handleStatusChange, { dev })
+    : new WebSocketClient(handleMessage, handleStatusChange)
   const mirrorFeed = createMirrorFeed({
     send: (type, data) => { if (client.isConnected) client.send(type, data) },
     // What animateShader draws: window.cranes.shader once anything loaded one, else the boot shader.

@@ -274,6 +274,7 @@ Controllers are JavaScript modules (`controllers/*.js`) that run once per frame 
 - MIDI controllers auto-map CCs to knobs with per-device profiles persisted in localStorage. Manage mappings visually at `/midi.html`. See [docs/midi-mapping.md](docs/midi-mapping.md)
 - The phone touch surface at `/vjpad.html` builds its pads from `vjpad-layouts.json` plus whatever knobs the shader declares. See [docs/vjpad.md](docs/vjpad.md)
 - NFC smiley stickers on the arm are show controls: the vjpad reads them with Web NFC (Android Chrome) and sends KEEP, PANIC, NEXT, TAKE or a favourite look down its room socket, with no model in the path. Tags hold only an id; `nfc-show-controls.json` says what each does; write them at `/nfc-writer.html#show`. See [docs/nfc-show-controls.md](docs/nfc-show-controls.md)
+- Phone plugged into a projector (USB-C DP Alt Mode): PROJECT on the vjpad opens the visuals on the external display and keeps the phone as the pad; the two talk over a BroadcastChannel or PresentationConnection, no network needed, and HANDS/KEEP/PANIC/proposals/NFC work unchanged. See [docs/phone-wall.md](docs/phone-wall.md)
 
 ### Naming a knob in the shader (convention)
 
@@ -371,6 +372,8 @@ uniform float another;   // = 1.2
 - `release_ms=<ms>` - How long a dial must be still before the `release` signal (default 50)
 - `panic=<shader>` - The fork PANIC swaps to (default: the shader the page loaded with)
 - `show_proposals=1` - With `vj=1`, show a small chip on the display naming open proposals (they live on the vjpad otherwise)
+- `wall=1` - This display is a phone wall: it also hears a vjpad on the same phone over a local link (no network), opens a room socket only for `room=` or the dev server, and never shows the reconnect badge. The vjpad's PROJECT opens it. See [docs/phone-wall.md](docs/phone-wall.md)
+- `wall_url=<same-origin path>` - On the vjpad: the page PROJECT opens as the wall (default `/`)
 - `midi_panic=cc:N|note:N[:ch]`, `midi_keep=…` - Bind a MIDI control to PANIC / KEEP (persisted). See [docs/midi-mapping.md](docs/midi-mapping.md)
 - `vjtrack=1` - With `vj=1`, also log every knob move at 10Hz with the full audio-feature vector, for working out which feature a fader is imitating. **Off by default and not for use during a show** — it is a ~17KB JSON serialise + fetch every 2s on the render thread
 
@@ -466,7 +469,10 @@ writes are never held and still apply synchronously (hot-path rule). Agents chan
 `propose` (a card on the vjpad; he presses KEEP), never by setting his dials. PANIC (vjpad, MIDI,
 Escape twice on jam/show, `panic` tool) hot-swaps to the boot fork with no reload; KEEP (vjpad, MIDI,
 `k` on jam/show, `keep` tool) saves a snapshot and signals `keep`. The draw board bridge
-(`scripts/vj/board-bridge.js`) maps board taps to these calls with `source: "board"`.
+(`scripts/vj/board-bridge.js`) maps board taps to these calls with `source: "board"`, and board
+faders/XY (draw widgets from `scripts/vj/board-controls.js`) to `update-params` on the display's
+socket, no model in the path: [docs/draw-control-surface.md](docs/draw-control-surface.md)
+(buttons ~155 ms Send→wall; faders ~170 ms, draw's push throttle is the floor).
 See [docs/vj-mcp.md](docs/vj-mcp.md).
 
 ### Board mirror (watch-only viewer)
@@ -517,6 +523,12 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   │   └── multiplayer.css     # Cursor and peer chip styles
 │   ├── params/
 │   │   └── ParamsManager.js    # Unified params (URL, remote, features)
+│   ├── phone-wall/             # One phone, two screens: pad + wall over a local link (docs/phone-wall.md)
+│   │   ├── link.js             #   BroadcastChannel / PresentationConnection link, hello + TTL
+│   │   ├── pad.js              #   vjpad client (room + link) and the PROJECT / WALL / NO WALL bar
+│   │   ├── wall.js             #   ?wall=1 display client for RemoteDisplay
+│   │   ├── project.js          #   find the second screen, open the wall on it
+│   │   └── state.js            #   none / available / connecting / presenting / lost
 │   ├── remote/
 │   │   ├── RemoteController.js # Sends commands to displays
 │   │   ├── RemoteDisplay.js    # Receives commands from controllers
