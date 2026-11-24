@@ -133,9 +133,13 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
 
     // Recover from GPU context loss (common on mobile/desktop switch)
     let contextLost = false
+    // Bumped on every loss: a compile started on the old context must not settle into the new one.
+    let contextGeneration = 0
     canvas.addEventListener('webglcontextlost', (e) => {
         e.preventDefault()
         contextLost = true
+        contextGeneration++
+        pendingShaderSource = null
     })
     canvas.addEventListener('webglcontextrestored', async () => {
         // Reinitialize all GL resources in-place instead of reloading
@@ -203,9 +207,11 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
         if (isNewShader && wrappedFragmentShader === null) lastFragmentShader = newFragmentShader
         if (wrappedFragmentShader !== null) {
             const sourceAtCompile = newFragmentShader
+            const generationAtCompile = contextGeneration
             pendingShaderSource = newFragmentShader
             createProgramInfoAsync(gl, [defaultVertexShader, wrappedFragmentShader])
                 .then((newProgramInfo) => {
+                    if (generationAtCompile !== contextGeneration) return
                     if (sourceAtCompile !== pendingShaderSource) {
                         gl.deleteProgram(newProgramInfo.program)
                         return
@@ -217,6 +223,7 @@ export const makeVisualizer = async ({ canvas, initialImageUrl, fullscreen }) =>
                     window.cranes.error = null
                 })
                 .catch(() => {
+                    if (generationAtCompile !== contextGeneration) return
                     if (sourceAtCompile !== pendingShaderSource) return
                     handleShaderError(gl, shaderWrapper(sourceAtCompile), sourceAtCompile)
                     lastFragmentShader = sourceAtCompile
