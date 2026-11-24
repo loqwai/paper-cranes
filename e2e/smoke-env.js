@@ -126,19 +126,23 @@ export const canvasStats = async page => {
 }
 
 // Poll until fn() is truthy (returns it) or the deadline passes.
+// `seen` is what the last poll observed, for the timeout message; a checker sets it via the
+// second argument to fn.
 export const until = async (fn, { timeout = 20_000, interval = 250, what = 'condition' } = {}) => {
-  let last
+  let last, seen
+  const observe = v => { seen = v }
   for (const end = Date.now() + timeout; ;) {
-    last = await fn()
+    last = await fn(observe)
     if (last) return last
-    if (Date.now() > end) throw new Error(`timed out after ${timeout}ms waiting for ${what}`)
+    if (Date.now() > end) throw new Error(`timed out after ${timeout}ms waiting for ${what}${seen ? ` (last seen: ${JSON.stringify(seen)})` : ''}`)
     await new Promise(r => setTimeout(r, interval))
   }
 }
 
 // Wait for the canvas to be painted: some share of it lit and more than a handful of colours.
 export const untilRendered = (page, { minLit = 0.2, minColours = 50, timeout = 25_000 } = {}) =>
-  until(async () => {
+  until(async observe => {
     const s = await canvasStats(page)
+    observe(s)
     return s.litFraction >= minLit && s.colours >= minColours ? s : null
   }, { timeout, interval: 500, what: 'the canvas to render' })

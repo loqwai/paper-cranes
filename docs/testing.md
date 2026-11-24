@@ -81,6 +81,9 @@ to load a web page as shader source, so the suite keeps it.
   cache before the worker updates and reloads. Against a deploy, check what actually loaded (the
   served script, `window.cranes.shader`) rather than assuming the new build is on screen. The
   smoke suite avoids this with a fresh browser context per page.
+- Against a Pages preview deployed seconds ago, the first canvas check can time out on a cold edge
+  (seen once in 3 runs on 2026-11-24; the next two passed 14/14). Rerun before you debug, and read
+  the `last seen:` canvas stats in the timeout message.
 - `page.route('**/name.wav')` also matches the page URL when its query string ends in that name,
   so the page itself gets served audio. Match on `new URL(req.url()).pathname` instead.
 
