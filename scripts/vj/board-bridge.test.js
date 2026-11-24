@@ -29,8 +29,10 @@ describe('controlOf: which control a board Send pressed', () => {
     expect(controlOf(send('ctl-panicky'))).toBeNull()
   })
 
-  it('uses the first control in a selection', () => {
-    expect(controlOf(send('note', 'ctl-keep', 'ctl-panic'))).toMatchObject({ kind: 'keep' })
+  it('needs exactly one control: a view sent whole, or two controls, presses nothing', () => {
+    expect(controlOf(send('note', 'ctl-keep', 'ctl-keep-text'))).toMatchObject({ kind: 'keep' })
+    expect(controlOf(send('ctl-keep', 'ctl-panic'))).toBeNull()
+    expect(controlOf({ sent: 'send-3', scope: 'viewport', selected: ['ctl-panic'] })).toBeNull()
   })
 })
 

@@ -1,0 +1,14 @@
+{
+  "name": "clit-set",
+  "about": "Starter setlist for the clit-set voyage (shaders/clit-set/clit-set.md). Each beat is a hot-swap through the VJ MCP set_shader; the clit-set controller keeps running. After a set, rewrite the beats from what /keep process made.",
+  "shader": "clit-set/2",
+  "controllers": ["clit-set"],
+  "url": "wavelet=true",
+  "panic": "clit-set/2",
+  "beats": [
+    { "n": 1, "name": "voyage", "shader": "clit-set/2", "params": { "knob_4": null, "knob_5": null } },
+    { "n": 2, "name": "first-light", "shader": "clit-set/1" },
+    { "n": 3, "name": "deep-zoom", "shader": "clit-set/2", "params": { "knob_4": 0.6 } },
+    { "n": 4, "name": "turn", "shader": "clit-set/2", "params": { "knob_4": 0.3, "knob_5": 0.5 } }
+  ]
+}

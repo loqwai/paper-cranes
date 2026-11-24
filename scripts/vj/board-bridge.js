@@ -39,9 +39,17 @@ const SETLIST_STATE = join(ROOT, '.claude', 'setlist-state.json')
 
 const shapeOf = (id) => id.replace(/-text$/, '')
 
+// A press is a Send that selects exactly one control. A Send of the whole view (scope viewport:
+// the button with nothing selected) lists everything on screen, and a chat line is words, so
+// neither ever fires a control; nor does a selection holding two different controls.
 export const controlOf = (send) => {
-  for (const raw of send?.selected ?? []) {
-    const id = shapeOf(String(raw))
+  if (!send || send.scope === 'viewport' || send.scope === 'chat') return null
+  const found = [...new Set((send.selected ?? []).map((raw) => shapeOf(String(raw))))].map(controlFor).filter(Boolean)
+  return found.length === 1 ? found[0] : null
+}
+
+const controlFor = (id) => {
+  {
     if (id === 'ctl-panic') return { kind: 'panic', id }
     if (id === 'ctl-keep') return { kind: 'keep', id }
     if (id === 'ctl-next') return { kind: 'beat', step: 1, id }
@@ -210,7 +218,7 @@ const statusLoop = async (mcp, opts, signals) => {
           number: fps === null ? '-' : `${fps}`,
           unit: `fps · ${hands} · ${pad}`.slice(0, 40),
           provenance: `get_state · board-bridge · ${new Date().toISOString().slice(11, 19)}Z`,
-        } }),
+        }, expires: '2m' }),
       })
       if (!res.ok && !warned) {
         warned = true
@@ -259,7 +267,10 @@ const main = async () => {
     for await (const send of listen({ base: process.env.DRAW_URL || 'https://draw.hypnodroid.com', board: opts.board, ticket: opts.ticket })) {
       const recv = performance.now()
       const control = controlOf(send)
-      if (!control) continue
+      if (!control) {
+        console.log(JSON.stringify({ sent: send.sent, ignored: send.scope ?? 'no scope', selected: (send.selected ?? []).length }))
+        continue
+      }
       let line
       try {
         const result = await act[control.kind]({ ...control, sent: send.sent })
