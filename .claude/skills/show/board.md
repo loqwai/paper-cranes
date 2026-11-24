@@ -62,12 +62,17 @@ one or the other for beats. [docs/nfc-show-controls.md](../../../docs/nfc-show-c
    `target: "st-wall"`.
 2. Run in the background, with a Monitor on its output:
    ```bash
-   PORT=$P node scripts/vj/board-bridge.js --board <board> --ticket <show-bridge ticket> \
+   DRAW_LISTEN_TICKET=<show-bridge ticket> PORT=$P node scripts/vj/board-bridge.js --board <board> \
      --panic <boot shader> [--setlist <name>] --status-link <st-wall link>
    ```
    One JSON line per tap: `{sent, control, ok, ms}`. On `"status":"link refused"` (links last an
    hour) mint a new link and restart it. Exit 2: the ticket expired (8 h); mint another.
-3. The bridge is maintained by the draw-surface lane (`feat/draw-control-surface`).
+3. **Faders and an XY pad** (optional): `board-bridge.js layout --shader <name>` prints the
+   `vj-controls` skill and draw ops; submit the skill once, `draw` the ops once. Drags reach the
+   wall in ~170 ms (buttons ~155 ms); "faders off" in the log means draw lacks the ticket portal
+   route, and buttons still work. Guide: `docs/draw-control-surface.md`.
+4. **Whoever can edit the board plays the wall.** Keep the show board `access: user`, no other
+   editors, and no other agent listening on it (each control Send wakes every listener).
 
 ## KEEP
 
