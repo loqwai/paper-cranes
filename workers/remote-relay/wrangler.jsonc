@@ -3,6 +3,9 @@
   "main": "src/index.js",
   "compatibility_date": "2026-08-01",
   "workers_dev": true,
+  // docs/vj-mcp-guide.md is imported as a string (src/index.js): the VJ MCP's guide, one source
+  // for the dev server and this Worker.
+  "rules": [{ "type": "Text", "globs": ["**/*.md"], "fallthrough": true }],
   // The VJ MCP at /mcp/<room> (docs/vj-mcp.md). Access answers unauthenticated clients; the Worker
   // checks the JWT again against these. ACCESS_AUD is the "paper-cranes VJ MCP (relay /mcp, managed
   // OAuth)" Access application (eb818752-c50f-4183-a769-97a4152c2ff4); it is public, not a secret.
