@@ -100,6 +100,27 @@ describe('guide tool', () => {
     expect(bestMatches(text).length).toBeLessThanOrEqual(3)
   })
 
+  // Other people's agents pay for every byte here (Aaron: "I don't want to be egregious when it
+  // comes to token use"). Budgets at ~4 bytes a token: instructions ~250, an answer ~800.
+  it('stays inside its token budget: short instructions, one full section per answer', async () => {
+    expect(Buffer.byteLength(client.getInstructions())).toBeLessThan(1000)
+    for (const question of ['how do I swap the shader without reloading', 'how do I turn a knob', 'what do the signals mean', 'how do I lock the room']) {
+      const { text } = await ask(client, { question })
+      expect(Buffer.byteLength(text), question).toBeLessThan(3200)
+      expect(text.match(/^## [a-z0-9-]+: /gm), question).toHaveLength(1)
+    }
+  })
+
+  it('never answers first with a section for tools that are not live yet', async () => {
+    const { text } = await ask(client, { question: 'the screen is black, how do I fix it' })
+    expect(bestMatches(text)[0]).not.toBe('live-show-partner')
+  })
+
+  it('names a not-live workflow as coming soon in its prompt, in full words', async () => {
+    const { prompts } = await client.listPrompts()
+    expect(prompts.find((p) => p.name === 'live-show-partner').description).toMatch(/coming soon; not live yet\)$/)
+  })
+
   it('falls back to the contents when nothing matches', async () => {
     const { text } = await ask(client, { question: 'zzqx' })
     expect(text).toMatch(/No section matched/)

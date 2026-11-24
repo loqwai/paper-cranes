@@ -427,7 +427,7 @@ An MCP server (streamable HTTP, stateless, never SSE) whose tools read and drive
 `read_shader`, `write_shader`, `wait_for_event`, `guide`, plus `display_secret` on the relay only. It runs in two places with
 the same code (`vite-plugins/vj-mcp/server.js` + `hub-core.js`):
 - **Ask the server how to use it:** `guide` (no args: contents; `{topic}`: one section;
-  `{question: "how do I ..."}`: the best matching sections, keyword-ranked, no model). Its
+  `{question: "how do I ..."}`: the best matching section plus close-match ids, keyword-ranked, no model). Its
   workflows (pick a display, change knobs, hot-swap a shader, watch signals, judge a screenshot,
   run a relay room, partner on a live show) are also MCP prompts and `vj://guide/...` resources,
   and its orientation is the server `instructions`. All of it comes from one file,

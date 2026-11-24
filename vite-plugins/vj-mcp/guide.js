@@ -34,7 +34,7 @@ export const parseGuide = (md) => {
     orientation: orientation.join('\n').trim(),
     entries: entries.map(({ lines, ...e }) => {
       const body = lines.join('\n').trim()
-      const status = /^> Status: ([\s\S]*?)(?:\n(?!>)|$)/m.exec(body)?.[1].replace(/\n> ?/g, ' ').trim() ?? null
+      const status = /^> Status: ([\s\S]*?)(?:\n(?!>)|(?![\s\S]))/m.exec(body)?.[1].replace(/\n> ?/g, ' ').trim() ?? null
       const seeAlso = /^See also: (.+)$/m.exec(body)?.[1].split(',').map((s) => s.trim()).filter(Boolean) ?? []
       return { ...e, body, status, seeAlso }
     }),
@@ -59,7 +59,7 @@ const stem = (w) => {
   return w
 }
 // Words an agent says for what the guide calls by another name.
-const SYNONYMS = { turn: ['knob'], slider: ['knob'], dial: ['knob'], fader: ['knob'], param: ['knob'], look: ['screenshot'], see: ['screenshot'], image: ['screenshot'], picture: ['screenshot'], judge: ['screenshot'], watch: ['wait'], poll: ['wait'], event: ['wait', 'signal'], listen: ['wait'], lock: ['secret'], live: ['relay'], deploy: ['relay'], room: ['relay'], edit: ['write'], save: ['write'], switch: ['swap'], load: ['swap'], hotswap: ['swap'], compile: ['validate'], broken: ['troubleshoot'], error: ['troubleshoot'], fail: ['troubleshoot'], screen: ['display'], tv: ['display'], projector: ['display'] }
+const SYNONYMS = { turn: ['knob'], slider: ['knob'], dial: ['knob'], fader: ['knob'], param: ['knob'], look: ['screenshot'], see: ['screenshot'], image: ['screenshot'], picture: ['screenshot'], judge: ['screenshot'], watch: ['wait'], poll: ['wait'], event: ['wait', 'signal'], listen: ['wait'], lock: ['secret'], live: ['relay'], deploy: ['relay'], room: ['relay'], edit: ['write'], save: ['write'], switch: ['swap'], load: ['swap'], hotswap: ['swap'], compile: ['validate'], broken: ['troubleshoot'], error: ['troubleshoot'], fail: ['troubleshoot'], screen: ['display'], tv: ['display'], projector: ['display'], target: ['display'], second: ['display'], parameter: ['knob'], bright: ['knob'], brighter: ['knob'], brightness: ['knob'], nudge: ['knob'], visual: ['shader'], glsl: ['shader'], notify: ['wait', 'signal'], notifi: ['wait', 'signal'], alert: ['wait', 'signal'], blown: ['clip'], white: ['clip'], good: ['screenshot', 'judge'] }
 const terms = (text) => {
   const out = []
   for (const raw of String(text).toLowerCase().match(/[a-z0-9_]+/g) ?? []) {
@@ -93,7 +93,9 @@ const index = (g) => {
     return docs
       .map((d) => ({
         entry: d.e,
-        score: (d.e.kind === favour ? 1.3 : 1) * q.reduce((s, t) => {
+        // A section marked `> Status:` describes tools that do not exist yet: never the first answer
+        // over a live one on a near tie.
+        score: (d.e.kind === favour ? 1.3 : 1) * (d.e.status ? 0.5 : 1) * q.reduce((s, t) => {
           const f = d.tf.get(t) ?? 0
           return s + (f ? idf(t) * (f * 2.2) / (f + 1.2 * (0.25 + 0.75 * d.len / avg)) : 0)
         }, 0),
@@ -120,7 +122,8 @@ export const guideTopic = (md, id) => {
   return e ? section(e) : null
 }
 
-// The top sections for a question, at most 3, dropping any far below the best.
+// The best section in full, plus up to 2 more close matches named by id (an agent reads one with
+// guide {topic}), so an answer costs one section's tokens, not three.
 export const guideAnswer = (md, question) => {
   const g = parsed(md)
   const ranked = g.rank(question)
@@ -131,8 +134,10 @@ export const guideAnswer = (md, question) => {
     .filter((id) => !shown.has(id) && g.byId.has(id))
   const text = [
     `Best matches for ${JSON.stringify(question)}: ${hits.map((h) => h.entry.id).join(', ')}`,
-    ...hits.map((h) => section(h.entry)),
-    more.length ? `See also: ${more.map((id) => `${id} (${g.byId.get(id).title})`).join('; ')}. Read one with guide {topic: "<id>"}.` : '',
+    section(hits[0].entry),
+    hits.length > 1 ? `Also matching: ${hits.slice(1).map((h) => `${h.entry.id} (${h.entry.title})`).join('; ')}.` : '',
+    more.length ? `See also: ${more.map((id) => `${id} (${g.byId.get(id).title})`).join('; ')}.` : '',
+    'Read any of these with guide {topic: "<id>"}.',
   ].filter(Boolean).join('\n\n---\n\n')
   return { hits: hits.map((h) => ({ id: h.entry.id, score: +h.score.toFixed(3) })), text }
 }
@@ -147,7 +152,7 @@ export const registerGuide = (server, md, { registerTool = server.registerTool.b
   const ids = g.entries.map((e) => e.id)
 
   registerTool('guide', {
-    description: 'How to use this server, answered from its own guide (no model involved). No arguments: the contents (workflows and topics). topic: one section by id, e.g. "hot-swap-shader". question: the 1-3 best matching sections for a how-to question, e.g. "how do I swap the shader without reloading", with see-also ids. Workflows are numbered tool-call recipes with real argument shapes.',
+    description: 'How to use this server, answered from its own guide (no model involved). No arguments: the contents (workflows and topics). topic: one section by id, e.g. "hot-swap-shader". question: the best matching section for a how-to question, e.g. "how do I swap the shader without reloading", plus the ids of close matches. Workflows are numbered tool-call recipes with real argument shapes.',
     inputSchema: {
       topic: z.string().optional().describe(`a section id: ${ids.join(', ')}`),
       question: z.string().optional().describe('a how-to question in plain words'),
@@ -166,7 +171,7 @@ export const registerGuide = (server, md, { registerTool = server.registerTool.b
   for (const e of g.entries.filter((e) => e.kind === 'workflow')) {
     server.registerPrompt(e.id, {
       title: e.title,
-      description: `VJ MCP workflow: ${e.title}${e.status ? ` (${e.status})` : ''}`,
+      description: `VJ MCP workflow: ${e.title}${e.status ? ' (coming soon; not live yet)' : ''}`,
     }, () => ({
       description: e.title,
       messages: [{ role: 'user', content: { type: 'text', text: `Follow this Paper Cranes VJ MCP workflow. Call the tools it names with the argument shapes shown, and confirm each step from the reply.\n\n${section(e)}` } }],

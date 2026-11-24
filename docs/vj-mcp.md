@@ -183,7 +183,7 @@ Edit that file; never copy its text into JS.
 | What the agent sees | Where it comes from |
 |---|---|
 | server `instructions` on initialize | the guide's `# Orientation`, plus this host's one-line venue note |
-| `guide {}` / `guide {topic}` / `guide {question}` | contents / one section verbatim / the 1-3 best sections for a question, ranked by BM25 term overlap with a few synonyms, how-to questions favouring workflows and what-is questions favouring topics. No model, no embeddings: the same question always gets the same answer. |
+| `guide {}` / `guide {topic}` / `guide {question}` | contents / one section verbatim / the best section for a question in full, plus the ids of up to 2 close matches and its see-also ids (one section per answer keeps it under ~800 tokens), ranked by BM25 term overlap with a few synonyms, how-to questions favouring workflows, what-is questions favouring topics, and `> Status:` (not live yet) sections demoted. No model, no embeddings: the same question always gets the same answer. |
 | `prompts/list`, `prompts/get` | one prompt per workflow, named by its id |
 | `resources/list`, `resources/read` | `vj://guide` (contents), `vj://guide/workflows/<id>`, `vj://guide/topics/<id>`, and `skill://paper-cranes-vj/SKILL.md` (the whole guide as one skill file, as draw serves `skill://draw/SKILL.md`) |
 
