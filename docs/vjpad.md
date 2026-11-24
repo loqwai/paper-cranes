@@ -10,6 +10,20 @@ read the header comment in `vjpad.js`. This document is about **where the layout
 comes from**, i.e. how you point the pad at a shader that is not the one it was
 built for.
 
+## Live show: KEEP, PANIC and proposal cards
+
+Above the footer ([contract](live-show-contract.md)):
+
+- **KEEP** (green): saves the look on the display (snapshot plus a `keep` signal for the agents).
+- **PANIC** (big, red): the display swaps to its boot fork in place, with no reload and no agent.
+- **Proposal cards**: an agent's `propose` shows one line with a countdown, **KEEP** and **✕**.
+  KEEP applies it on the display as his own move; ✕ drops it; after 30 s it goes by itself.
+
+Each press is one message to the room (`vj-keep`, `vj-panic`, `proposal-answer`); the display does
+the work in-page. The pad also says `pad-hello` every 2 s, so the display can tell the agents
+whether a pad is in a hand (`pad-alive`). Any pad move turns the display's HANDS lock on, which
+holds agent writes until 8 s after the last move.
+
 ## Three layers, and you never have to touch any of them
 
 | Layer | Lives in | Good for |

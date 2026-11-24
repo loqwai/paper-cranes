@@ -1,4 +1,5 @@
 import { createMidiMapper } from './midi/MidiMapper.js'
+import { createMidiActions } from './midi/MidiActions.js'
 
 const relativeKnobs = new Set()
 
@@ -57,6 +58,16 @@ const mapper = createMidiMapper()
 window.cranes = window.cranes || {}
 window.cranes.midiMapper = mapper
 
+// PANIC / KEEP buttons (src/midi/MidiActions.js, docs/live-show-contract.md). They act on this page:
+// the display's live show when it has one (RemoteDisplay), else KEEP saves a plain snapshot.
+const actions = createMidiActions({ search: window.location.search })
+window.cranes.midiActions = actions
+const fire = (action) => {
+  const c = window.cranes
+  const run = action === 'panic' ? c.panic?.() : c.keep ? c.keep() : c.snapshot?.()
+  Promise.resolve(run).catch((e) => console.warn(`[midi] ${action} failed`, e))
+}
+
 // statechange fires "connected" again when open() opens the port, and on every replug of the same
 // MIDIInput object; attaching each time stacked listeners, so each CC was handled twice or more
 // and a relative encoder moved its knob 2x, 3x, ... as fast.
@@ -68,6 +79,10 @@ const attachInput = (input) => {
   attached.add(input)
   input.addEventListener('midimessage', (message) => {
     const [command, control, value] = message.data
+
+    const act = actions.handle(message.data)
+    if (act?.action) fire(act.action)
+    if (act) return
 
     // Check if it's a Control Change message (0xB0 to 0xBF)
     const isCC = (command & 0xf0) === 0xb0
@@ -90,6 +105,9 @@ const attachInput = (input) => {
     }
 
     updateKnobValue(knobName, value)
+    // His hands are on a dial: the live show's HANDS lock (applied first, stamped after).
+    const now = window.cranes.manualFeatures?.[knobName]
+    window.cranes.live?.moved(knobName, typeof now === 'number' ? now : null)
   })
   // addEventListener doesn't implicitly open a port the way onmidimessage does — without this the
   // Twister's CCs reached Chrome but never this listener

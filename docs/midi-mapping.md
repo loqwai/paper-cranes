@@ -45,7 +45,24 @@ Knobs are injected as float uniforms (0–1 range):
 
 Knobs can also be set via URL query params (`?knob_1=0.5`) or the ParamsManager API.
 
+## PANIC and KEEP buttons
+
+One CC or note can be bound to each of the live show's two buttons
+([contract](live-show-contract.md)). A bound control fires once per press (a note-on, or a CC
+crossing up through 64) and never reaches the knob mapper.
+
+- **From the URL**, persisted in `localStorage['cranes-midi-actions']`:
+  `?midi_panic=cc:64`, `?midi_keep=note:36`; add `:<channel>` to pin a channel (`cc:64:2`).
+- **Learn**: in the console, `cranes.midiActions.learn('panic')`, then press the button.
+- **Change or clear**: `cranes.midiActions.set('keep', 'cc:20')`, `cranes.midiActions.set('keep', null)`.
+
+They act on the page MIDI is plugged into: the display's live show (`?remote=display`, or show
+with `?room=`), where PANIC swaps to the boot fork in place and KEEP saves a snapshot and signals
+`keep`. On a page with no live show, KEEP saves a plain snapshot and PANIC does nothing. Every
+mapped knob move also turns the display's HANDS lock on.
+
 ## Key Files
 
 - `src/midi/MidiMapper.js` — profile storage, auto-assignment, and learn mode
 - `src/midi.js` — Web MIDI API integration and CC event handling
+- `src/midi/MidiActions.js` — PANIC / KEEP bindings, learn and edge detection
