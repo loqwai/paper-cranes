@@ -9,7 +9,7 @@
     "test": "vitest run",
     "test:e2e": "vitest run --config vitest.e2e.config.js",
     "test:smoke": "vite build && vitest run --config vitest.e2e.config.js e2e/smoke.test.js e2e/relay.test.js",
-    "test:smoke:prod": "E2E_BASE_URL=https://visuals.beadfamous.com E2E_RELAY=1 vitest run --config vitest.e2e.config.js e2e/smoke.test.js e2e/relay.test.js",
+    "test:smoke:prod": "E2E_BASE_URL=${E2E_BASE_URL:-https://visuals.beadfamous.com} E2E_RELAY=1 vitest run --config vitest.e2e.config.js e2e/smoke.test.js e2e/relay.test.js",
     "build": "vite build",
     "dev": "vite",
     "preview": "vite preview",

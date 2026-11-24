@@ -5,8 +5,8 @@ Three layers, cheapest first.
 | Command | What it runs | Needs |
 |---|---|---|
 | `npm test` | Unit tests (`vitest.config.js`): pure functions, plugins, workers | nothing |
-| `npm run test:smoke` | Builds, serves `dist/` like Cloudflare Pages, and drives every page in headless Chromium (`e2e/smoke.test.js`) | Playwright's Chromium |
-| `npm run test:smoke:prod` | The same smoke suite against https://visuals.beadfamous.com, plus the live-relay checks (`e2e/relay.test.js`) | network |
+| `npm run test:smoke` | Builds, serves `dist/` like Cloudflare Pages, and drives every page in headless Chromium (`e2e/smoke.test.js`; `e2e/relay.test.js` too when `E2E_RELAY=1`) | Playwright's Chromium |
+| `npm run test:smoke:prod` | The same smoke suite against https://visuals.beadfamous.com (or `E2E_BASE_URL` if set), plus the live-relay checks (`e2e/relay.test.js`) | network |
 | `npm run test:e2e` | Every `e2e/*.test.js`, including the dev-server suites (`vj-mcp`, `vj-mcp-relay`, `audio-file`) | see each file's header; the smoke suite skips without `dist/`, `audio-file` without its gitignored track ([audio-file-playback.md](audio-file-playback.md)), each saying why |
 
 ## Smoke suite
@@ -68,10 +68,19 @@ to load a web page as shader source, so the suite keeps it.
   is not valid JSON` from `/manifests/<name>.json` (the missing-shader check allows exactly that one
   error and names it); `/edit.html` and `/vjpad.html` log a failed `/ws` handshake on a static host
   (console errors, which the suite does not assert on those pages).
-- Plain headless Chromium never starts `audio_file` playback: `window.cranes.audio` stays the
-  no-audio stub with no error. The smoke suite has no audio checks for that reason. Audio-file
-  checks need a real Chrome (`e2e/audio-file.test.js` launches `channel: 'chrome'`) or a headed
-  browser lane, and a CORS-enabled audio URL.
+- Plain headless Chromium (including the local one on Aaron's WSL box) never starts `audio_file`
+  playback and logs nothing: `window.cranes.audio` stays the no-audio stub. The smoke suite has no
+  audio checks for that reason. Audio-file checks need a real Chrome (`e2e/audio-file.test.js`
+  launches `channel: 'chrome'`) or a headed browser lane (on soul: `playwright-lane1`, taken with
+  `browser-lanes` `lane_acquire` and given back with `lane_release`), and a CORS-enabled audio URL
+  such as `https://cdn.jsdelivr.net/gh/Tonejs/audio@master/drum-samples/breakbeat.mp3`.
+  Playwright's bundled Firefox does play it headless (checked 2026-11-24 with
+  `firefoxUserPrefs: { 'media.autoplay.default': 0 }`: `measuredAudioFeatures.bass`/`energy` move
+  every second), so `firefox.launch()` is the cheapest local route to an audio check.
+- A return visitor's first load after a deploy can run the previous build from the service-worker
+  cache before the worker updates and reloads. Against a deploy, check what actually loaded (the
+  served script, `window.cranes.shader`) rather than assuming the new build is on screen. The
+  smoke suite avoids this with a fresh browser context per page.
 - `page.route('**/name.wav')` also matches the page URL when its query string ends in that name,
   so the page itself gets served audio. Match on `new URL(req.url()).pathname` instead.
 

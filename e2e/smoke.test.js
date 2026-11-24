@@ -75,7 +75,7 @@ describe.skipIf(!hasTarget())('smoke', () => {
   }
 
   it('the editor loads the shader source as GLSL', async () => {
-    const { page, close } = await env.newPage({ name: 'editor' })
+    const { page, pageErrors, close } = await env.newPage({ name: 'editor' })
     // A build (not the dev server) stores the fetched source, strips ?shader= and reloads once:
     // wait for that second load before reading the editor.
     await page.goto(`${env.base}/edit.html?shader=plasma&noaudio=true`)
@@ -86,16 +86,18 @@ describe.skipIf(!hasTarget())('smoke', () => {
     await close()
     expect(code).toMatch(/mainImage|void\s+main/)
     expect(code).not.toMatch(/<!doctype html|<html/i)
+    expect(pageErrors).toEqual([])
   })
 
   it('the editor opens a missing shader on the default GLSL, not a web page', async () => {
-    const { page, close } = await env.newPage({ name: 'editor-missing' })
+    const { page, pageErrors, close } = await env.newPage({ name: 'editor-missing' })
     await page.goto(`${env.base}/edit.html?shader=${MISSING}&noaudio=true`)
     const code = await until(() => page.evaluate(() => window.monaco?.editor?.getModels?.()[0]?.getValue() || ''),
       { what: 'the Monaco model to fill' })
     await close()
     expect(code).toMatch(/mainImage|void\s+main/)
     expect(code).not.toMatch(/<!doctype html|<html/i)
+    expect(pageErrors).toEqual([])
   })
 
   it('the service worker takes control without a reload loop', async () => {
