@@ -66,7 +66,8 @@ const code = () => window.cranes?.shader ?? ''
 const audioState = () => {
   const ctx = window.cranes?.audioContext
   const energy = window.cranes?.measuredAudioFeatures?.energy
-  return { state: ctx?.state ?? 'none', energy: typeof energy === 'number' ? round(energy) : null }
+  // input: the mic or line-in track's label (index.js getAudioStream); null for a file, a tab or no audio.
+  return { state: ctx?.state ?? 'none', energy: typeof energy === 'number' ? round(energy) : null, input: window.cranes?.audioInputLabel ?? null }
 }
 
 let fps = null

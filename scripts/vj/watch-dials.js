@@ -3,6 +3,8 @@
 // (watch-release.js's source) serialises ~17KB every 2s on the render thread and is banned at
 // shows. A release is a knob vector that changed and then held still for SETTLE_MS.
 // Usage: node scripts/vj/watch-dials.js   (run from the repo root, as a Monitor)
+// Studio only. At a show use `watch-events.js release`: the page sends releases itself, and only
+// the VJ MCP may touch the show page (docs/show-playbook.md).
 import { execFileSync } from 'child_process'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'

@@ -31,8 +31,8 @@ PORT=$P node scripts/vj/mcp-call.js get_state '{"features":"core"}'      # twice
 | Pad | `get_state.live.pads` is 1 or more. (`pad-alive` fires only when the count changes, so a pad opened before the watcher never prints it.) |
 | Board | the bridge printed `{"bridge":"up",…}` and `st-wall` shows a number. |
 
-`get_state` does not report the input device's label. Read it on the wall's machine (the OS
-input setting), and say it to Aaron in the launch line.
+`get_state.audio.input` is the input track's label (null for a file or tab). Say it to Aaron in
+the launch line; never launch on a wrong one.
 
 **On the board.** One rectangle per check in frame `check`: id `chk-<key>`, `role: "healthy"` and
 text `✅ <key>`, or `role: "error"` and `❌ <key>`; `expires: "30m"`, `source` = the command. Look
