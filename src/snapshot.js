@@ -1,4 +1,4 @@
-// Spacebar snapshot: everything /preset needs to process a knob state offline. Shared by the jam
+// Spacebar snapshot: everything `/keep process` needs to process a knob state offline. Shared by the jam
 // page (jam.js) and show mode (show.js).
 
 const AUDIO_FEATURES = [

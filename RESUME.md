@@ -31,7 +31,7 @@ The current `edit.html` is too heavy (Monaco, multiplayer, save/publish buttons)
 The `/__snapshot-preset` endpoint is in `vite-plugins/editor-sync-plugin.js`. It:
 - Accepts POST with `{ shader, knobs, audio, name, musicTab, userNote }`
 - Writes a timestamped JSON file to `shaders/<shader>/docs/.snapshots/`
-- Claude processes these snapshots later with `/preset` skill (adds musical interpretation, naming, etc.)
+- Claude processes these snapshots later with `/keep process` (adds musical interpretation, naming, etc.)
 
 ### Key files to study
 - `edit.js` — the knob drawer UI is here. Look for the Preact component that renders knob sliders, the drawer toggle, MIDI learn buttons, `ParamNavigator` for keyboard nav. STRIP OUT: Monaco integration, save/publish/reset buttons, multiplayer, shader code syncing, remote control mode.

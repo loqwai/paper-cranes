@@ -1,4 +1,4 @@
-// vj-signal-plugin — dev-only endpoint that lets the DISPLAY PAGE wake the /vibej loop.
+// vj-signal-plugin — dev-only endpoint that lets the DISPLAY PAGE wake the /partner loop.
 // The ?vj=1 runtime (src/vj/runtime.js) POSTs health alerts + boot beacons here; each becomes a
 // JSONL line in .claude/vj-signals.jsonl, which the vibej session watches with a Monitor —
 // so Claude is woken by the page itself within seconds of a reload or a health breach,

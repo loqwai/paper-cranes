@@ -2,7 +2,7 @@
 // Chain it AFTER the story controller: ?controller=black-sun&controller=sun-set
 //
 // Each beat holds the knob vectors the user actually had at moments of that era (dial RELEASE lines
-// from watch-dials, the fork .md tables, the 01:50 boot URL — see .claude/skills/sun-set/JOURNEY.md).
+// from watch-dials, the fork .md tables, the 01:50 boot URL — see setlists/sun-set/JOURNEY.md).
 // span is the beat's real length on the night in minutes (JOURNEY.md, 259 in all). The set is scaled
 // to sunset_minutes (default 45): each beat holds its share of that, never under 90 s, and its era's
 // real dial timeline plays at the same scaled speed. Every knob eases toward the current

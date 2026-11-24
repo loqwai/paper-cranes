@@ -1,6 +1,6 @@
 # VJ Telemetry (`?vj=1`) — the page as a sensor
 
-The auto-VJ loop (`/vibej`) needs to know what the display actually looks like. Screenshots are
+The VJ partner (`/partner`) needs to know what the display actually looks like. Screenshots are
 the ground truth, but they are not always available: a display tab opened by a previous session
 lives outside the current Chrome tab group and **cannot be scripted or screenshotted at all**.
 
