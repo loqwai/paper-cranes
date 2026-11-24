@@ -116,6 +116,11 @@ one VJ MCP call.
 | `ctl-k<N>-<0..100>`, `ctl-k<N>-off` | `set_params {params:{knob_N: v\|null}, source:"board"}` |
 | `ctl-next`, `ctl-prev` | the next/previous setlist beat: `set_shader {..., source:"board"}` |
 | `prop-<id>-take`, `prop-<id>-drop` | `answer_proposal {id, take}` |
+| `fad-k<N>` (vj-fader widget, dragged) | `update-params {knob_N}` on the display's `/ws`, `source:"board"` (not a Send: the portal socket) |
+| `xy-k<A>-k<B>` (vj-xy widget, dragged) | `update-params {knob_A, knob_B}`, `source:"board"` |
+
+A widget button's parts (`<id>-face`, `<id>-label`) count as the button. Layout, latency and the
+draw gaps: [draw-control-surface.md](draw-control-surface.md).
 
 ## Wire messages (room/dev `/ws`, for anyone writing a new control)
 

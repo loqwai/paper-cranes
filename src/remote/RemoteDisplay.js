@@ -5,6 +5,7 @@ import { getRelativeOrAbsoluteShaderUrl } from '../utils.js'
 import { hashSource } from './hash.js'
 import { createLiveShow } from '../vj/live.js'
 import { createSignalPoster } from '../vj/signals.js'
+import { nfcFlash } from '../vj/nfc-flash.js'
 
 // The VJ MCP (docs/vj-mcp.md) reaches this display through a broker: the dev server's /ws, or on
 // `?room=` the relay Worker's room, which drops any `inspect` a client sends. The inspector loads
@@ -82,6 +83,8 @@ export const initRemoteDisplay = () => {
         // Forward unknown messages via postMessage for extensibility
         window.postMessage(message, '*')
     }
+    // After the apply, never before it (CLAUDE.md hot-path rule): a sticker's own params land first.
+    nfcFlash(message)
   }
 
   const handleStatusChange = (status) => {

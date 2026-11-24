@@ -12,8 +12,19 @@
 Monitor:
 
 ```bash
-PORT=$P node scripts/vj/board-bridge.js --board <board> --ticket <ticket> --panic <boot shader> [--setlist <name>] --status-link <link>
+DRAW_LISTEN_TICKET=<ticket> PORT=$P node scripts/vj/board-bridge.js --board <board> --panic <boot shader> [--setlist <name>] --status-link <link>
 ```
 
-One JSON line per tap. `"status":"link refused"`: mint a link (they last an hour), restart.
-Exit 2: the ticket expired (8 h); mint another.
+The env var keeps the ticket (8 h read of the whole board) out of `ps`. One JSON line per tap.
+`"status":"link refused"`: mint a link (they last an hour), restart. Exit 2: the ticket expired;
+mint another.
+
+- **Faders and an XY pad** (optional): `board-bridge.js layout --shader <name>` prints the
+  `vj-controls` skill and draw ops; submit the skill once, `draw` the ops once. Drags ~170 ms.
+  "faders off" in the log: draw lacks the ticket portal route; buttons still work.
+  `docs/draw-control-surface.md`.
+- **Whoever can edit the board plays the wall.** Show board `access: user`, no other editors, no
+  other agent listening on it (each control Send wakes every listener).
+- **Stickers**: the NFC smileys send KEEP, PANIC, NEXT/PREV, TAKE/DROP from the armed vjpad
+  (`/vjpad?room=<room>&nfc_show=<show>`), no board or model in the path. Their NEXT/PREV cursor is
+  the phone's, not the bridge's: use one or the other for beats. `docs/nfc-show-controls.md`.

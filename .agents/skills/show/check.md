@@ -21,6 +21,7 @@ node scripts/vj/preflight.js --after --shader <shader>    # after launch (VJ MCP
 | controller | Its clock (`cs_time`, `bs_time`) stands still: it is throwing. Playbook section 7, frozen picture. |
 | gate | With music playing, the quiet gate (`cs_presence`, `quietGate`) sits low: fix the level, not the shader. |
 | pad | No vjpad connected (`get_state.live.pads` 0). Open `/vjpad.html` on his phone. |
+| stickers | Only when he uses the NFC smileys (not in the script): the vjpad chip reads **NFC ●** and **AWAKE** is on. [docs/nfc-show-controls.md](../../../docs/nfc-show-controls.md) |
 | board | The bridge never printed `{"bridge":"up",…}` or `st-wall` shows no number: see controls.md. |
 
 **On the board.** One card per line in frame `check` (controls.md). Look at the frame, then

@@ -273,6 +273,7 @@ Controllers are JavaScript modules (`controllers/*.js`) that run once per frame 
 - Set via URL query params (e.g., `?knob_1=0.5`), MIDI controllers, or the ParamsManager API
 - MIDI controllers auto-map CCs to knobs with per-device profiles persisted in localStorage. Manage mappings visually at `/midi.html`. See [docs/midi-mapping.md](docs/midi-mapping.md)
 - The phone touch surface at `/vjpad.html` builds its pads from `vjpad-layouts.json` plus whatever knobs the shader declares. See [docs/vjpad.md](docs/vjpad.md)
+- NFC smiley stickers on the arm are show controls: the vjpad reads them with Web NFC (Android Chrome) and sends KEEP, PANIC, NEXT, TAKE or a favourite look down its room socket, with no model in the path. Tags hold only an id; `nfc-show-controls.json` says what each does; write them at `/nfc-writer.html#show`. See [docs/nfc-show-controls.md](docs/nfc-show-controls.md)
 
 ### Naming a knob in the shader (convention)
 
@@ -464,7 +465,10 @@ writes are never held and still apply synchronously (hot-path rule). Agents chan
 `propose` (a card on the vjpad; he presses KEEP), never by setting his dials. PANIC (vjpad, MIDI,
 Escape twice on jam/show, `panic` tool) hot-swaps to the boot fork with no reload; KEEP (vjpad, MIDI,
 `k` on jam/show, `keep` tool) saves a snapshot and signals `keep`. The draw board bridge
-(`scripts/vj/board-bridge.js`) maps board taps to these calls with `source: "board"`.
+(`scripts/vj/board-bridge.js`) maps board taps to these calls with `source: "board"`, and board
+faders/XY (draw widgets from `scripts/vj/board-controls.js`) to `update-params` on the display's
+socket, no model in the path: [docs/draw-control-surface.md](docs/draw-control-surface.md)
+(buttons ~155 ms Send→wall; faders ~170 ms, draw's push throttle is the floor).
 See [docs/vj-mcp.md](docs/vj-mcp.md).
 
 ### ParamsManager
