@@ -17,12 +17,12 @@ const paramsManager = createParamsManager({
 window.paramsManager = paramsManager
 
 const snapshotPreset = async () => {
-    const data = await postSnapshot(buildSnapshot(window.cranes, searchParams.get('shader')))
+    const data = await postSnapshot(buildSnapshot(window.cranes, shaderOnScreen()))
     console.log('[jam] snapshot saved', data)
 }
 
 const undoLastSnapshot = async () => {
-    const data = await undoSnapshot(searchParams.get('shader'))
+    const data = await undoSnapshot(shaderOnScreen())
     console.log(`[jam] deleted ${data.deleted} (${data.remaining} left)`)
 }
 

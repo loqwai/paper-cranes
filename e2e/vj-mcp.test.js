@@ -5,7 +5,7 @@
 import { describe, it, expect, beforeAll, afterAll, onTestFinished } from 'vitest'
 import { chromium } from 'playwright'
 import { createServer } from 'vite'
-import { mkdir, rm, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, rm, readFile, readdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { WebSocket } from 'ws'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
@@ -252,6 +252,12 @@ describe('vj mcp', () => {
       expect(wrote.displays).toEqual([expect.objectContaining({ id, pickedUp: true })])
       const green = await until(async () => { const c = await rgb(); return c[1] > 200 ? c : null })
       expect(green[0]).toBeLessThan(40)
+
+      // Space saves a snapshot for the shader on screen, not the one the page booted with.
+      const snaps = (s) => readdir(resolve(ROOT, `shaders/${s}/docs/.snapshots`)).catch(() => [])
+      await p.keyboard.press('Space')
+      await until(async () => (await snaps(B)).length === 1)
+      expect(await snaps(A)).toEqual([])
     })
   }
 

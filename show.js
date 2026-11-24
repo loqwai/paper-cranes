@@ -36,7 +36,7 @@ window.showSnapshots = readLocalSnapshots
 // A static host has no /__snapshot-preset, and a 404 there is a red console line on show night,
 // so only the dev server is asked.
 const snapshot = async () => {
-    const body = buildSnapshot(window.cranes, searchParams.get('shader'))
+    const body = buildSnapshot(window.cranes, shaderOnScreen())
     if (import.meta.env.DEV) return console.log('[show] snapshot saved', await postSnapshot(body))
     const list = [...readLocalSnapshots(), { ...body, at: new Date().toISOString() }]
     writeLocalSnapshots(list)
@@ -44,7 +44,7 @@ const snapshot = async () => {
 }
 
 const undo = async () => {
-    if (import.meta.env.DEV) return console.log('[show] snapshot removed', await undoSnapshot(searchParams.get('shader')))
+    if (import.meta.env.DEV) return console.log('[show] snapshot removed', await undoSnapshot(shaderOnScreen()))
     const list = readLocalSnapshots()
     list.pop()
     writeLocalSnapshots(list)
