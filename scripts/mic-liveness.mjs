@@ -89,7 +89,7 @@ const events = {
 }
 
 const browser = await launchers[browserName]()
-const page = await browser.newPage()
+const page = await browser.newPage(process.env.UA ? { userAgent: process.env.UA } : {})
 page.on('console', m => { if (/mic|audio/i.test(m.text())) console.error(`[page] ${m.text()}`) })
 await page.addInitScript(fakeMic)
 await page.goto(url)
@@ -97,7 +97,7 @@ const t0 = Date.now()
 const at = (s) => page.waitForTimeout(Math.max(0, t0 + s * 1000 - Date.now()))
 
 if (scenario === 'flap') {
-    for (let s = 10; s < Number(seconds); s += 15) {
+    for (let s = 10; s < Number(seconds); s += Number(process.env.FLAP_S ?? 15)) {
         await at(s)
         await page.evaluate(events.trackend)
     }

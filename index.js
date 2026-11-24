@@ -1,4 +1,5 @@
 import { AudioProcessor } from './src/audio/AudioProcessor.js'
+import { watchMic } from './src/audio/micWatchdog.js'
 import { createAudioFileSource, initAudioFromFile } from './src/audio/audioFileSource.js'
 
 // PROTOTYPE: opt-in multiresolution (wavelet) analysis alongside the FFT pipeline.
@@ -159,6 +160,7 @@ const setupMicAudio = async () => {
         audioProcessor.start();
 
         await maybeStartWavelet(params, audioContext, sourceNode);
+        watchMic({ audioContext, inputGain, getStream: () => getAudioStream(audioConfig), debug: params.get('debug_audio') === 'true' });
         return audioProcessor;
     } catch (err) {
         console.error('Audio initialization failed:', err);

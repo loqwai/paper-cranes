@@ -32,7 +32,7 @@ beforeEach(() => {
     }
     const makeSource = (stream) => ({
         mediaStream: stream,
-        connect() { connected.add(this) },
+        connect(target) { connected.add(this); this.target = target },
         disconnect() { connected.delete(this) },
     })
     audioContext = Object.assign(new EventTarget(), {
@@ -76,14 +76,14 @@ describe('watchMic', () => {
         expect(audioContext.resume).toHaveBeenCalledTimes(1)
     })
 
-    it('replaces an ended mic track in front of inputGain and stops the old one', async () => {
+    it('replaces an ended mic track in front of inputGain and disconnects the old one', async () => {
         const old = window.cranes.audioSource
         old.mediaStream.track.stop()
         await flush()
         expect(getStream).toHaveBeenCalledTimes(1)
         expect(window.cranes.audioSource).not.toBe(old)
         expect([...connected]).toEqual([window.cranes.audioSource])
-        expect(inputGain.connect).toHaveBeenCalledWith(window.cranes.audioSource)
+        expect(window.cranes.audioSource.target).toBe(inputGain)
     })
 
     it('re-acquires a frozen input while visible, never while hidden', async () => {
