@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import CONFIG from '../../nfc-show-controls.json'
+import CLIT_SET from '../../setlists/clit-set.json'
+import SUN_SET from '../../setlists/sun-set.json'
 import { idFromUrl, idFromRecords, resolveShow, planAction, createNfcControls, HAPTICS } from './nfc-controls.js'
 
 const enc = (s) => new TextEncoder().encode(s)
-const show = resolveShow(CONFIG, 'clit-set')
+const show = resolveShow(CONFIG, 'clit-set', { 'clit-set': CLIT_SET })
 
 const harness = (over = {}) => {
   const sent = [], buzzed = [], store = new Map()
@@ -48,6 +50,17 @@ describe('the sticker map', () => {
   it('beats come from setlists/<show>.json when the build has it', () => {
     const s = resolveShow(CONFIG, 'clit-set', { 'clit-set': { beats: [{ shader: 'from/setlist' }] } })
     expect(s.beats).toEqual([{ shader: 'from/setlist' }])
+  })
+
+  it('a show that has only a setlist (no entry in the map) is still that show', () => {
+    expect(resolveShow(CONFIG, 'clit-set', { 'clit-set': CLIT_SET }).beats).toBe(CLIT_SET.beats)
+    expect(resolveShow({ default: 'a', stickers: {} }, 'b', { b: { beats: [{ shader: 'y' }] } }).name).toBe('b')
+  })
+
+  it('a setlist played by a driver script (sun-set) gives NEXT nothing to do on the phone', () => {
+    const sun = resolveShow(CONFIG, 'sun-set', { 'sun-set': SUN_SET })
+    expect(sun.name).toBe('sun-set')
+    expect(planAction(sun, 's3')).toMatchObject({ kind: 'empty', messages: [] })
   })
 
   it('an unknown show falls back to the default', () => {

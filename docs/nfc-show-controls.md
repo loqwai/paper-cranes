@@ -25,8 +25,10 @@ sticker (URL record …/vjpad#nfc=s3)
   PR #243): `vj-keep`, `vj-panic`, `proposal-answer`, and `update-params` for beats and favourites.
   A sticker is Aaron's own hand, so its messages carry no `source`: the HANDS lock never holds
   them. The envelope adds `via: "nfc"`, which only the display's flash reads.
-- `vj-keep`, `vj-panic` and `proposal-answer` do something on the display only once PR #243 is
-  merged. `update-params` (NEXT, PREV, FAV) works on any display today.
+- They take the same paths in the display as the vjpad's buttons (`src/remote/RemoteDisplay.js`,
+  `src/vj/live.js`): `update-params` applies synchronously and then counts as his hands, so a beat
+  or favourite drops any agent value held for the same key; `vj-panic` with no fork swaps to the
+  display's own boot fork.
 
 ## Why this mechanism
 
@@ -61,7 +63,7 @@ means nothing until the phone's map says what it does, so re-assigning a sticker
 | sticker | default action | buzz (ms) |
 |---|---|---|
 | s1 | KEEP: save this look | 60 |
-| s2 | PANIC: the show's boot fork | 120, 60, 120 |
+| s2 | PANIC: the display's boot fork (`?panic=`, else the shader it booted with) | 120, 60, 120 |
 | s3 | NEXT beat | 25, 50, 25 |
 | s4 | TAKE the newest proposal card | 60, 40, 20 |
 | s5 | FAV A: `clit-set/2` | 20, 30, 20, 30, 20 |
@@ -73,13 +75,17 @@ means nothing until the phone's map says what it does, so re-assigning a sticker
 | TAKE with no card, NEXT past the end | nothing is sent | 15, 80, 15 |
 
 - **Map format.** `do`: `keep | panic | next | prev | take | drop | set`. `set` sends its object
-  as `update-params` (a `shader`, knobs, or both). `fork` on a panic sticker overrides the show's.
-- **Shows.** `shows.<name>` overrides `stickers` and gives `panic` and `beats`. The vjpad picks the
-  show from `?nfc_show=<name>` (remembered on the phone), else `default`.
-- **Beats.** NEXT and PREV walk `setlists/<show>.json` when the build has that file (the `/show`
-  skill's setlists, PR #244), else the show's `beats` here. The cursor is kept per phone
-  (`localStorage['cranes-nfc-beat:<show>']`). It is separate from the board bridge's cursor, so
-  mixing NEXT on the arm with ▶ on the board can skip or repeat a beat.
+  as `update-params` (a `shader`, knobs, or both). `fork` on a panic sticker names a fork; without
+  it PANIC sends `{}`, exactly as the vjpad's PANIC button does.
+- **Shows.** A show is a `setlists/<name>.json` (the `/show` skill's setlists) or an entry in
+  `shows.<name>`, which can override `stickers` and give `beats`. The vjpad picks the show from
+  `?nfc_show=<name>` (remembered on the phone), else `default` (`clit-set`).
+- **Beats.** NEXT and PREV walk the setlist's `beats`, reading each beat's `shader` or `path` and
+  `params`, as the board bridge does. A setlist with a `driver` (`sun-set`) gives them nothing to do:
+  its beats need the laptop's driver script to rebake clock anchors, so use ▶ on the board there.
+  The cursor is kept per phone (`localStorage['cranes-nfc-beat:<show>']`). It is separate from the
+  board bridge's cursor, so mixing NEXT on the arm with ▶ on the board can skip or repeat a beat:
+  use one or the other. One shared cursor: [#247](https://github.com/loqwai/paper-cranes/issues/247).
 - **Double reads.** The same sticker read again within 1.5 s counts as one press, so a shaky
   NEXT never skips a beat.
 
@@ -99,10 +105,12 @@ After the first grant, a reload re-arms by itself.
 ### When the vjpad is not on screen
 
 If another app is in front, Android opens the tag's URL in a new Chrome tab. That tab has no room,
-so it goes to the room this phone's vjpad last used (`localStorage['cranes-nfc-home']`), fires the
-sticker once, and removes the `#nfc=` from its URL. This takes about 1.5 to 3 s and leaves a second
-vjpad tab open. On a phone that has never opened a vjpad with a room, such as a stranger's, the tab
-has no room and sends nothing.
+so it goes to the room this phone's vjpad last used (`localStorage['cranes-nfc-home']`), removes
+the `#nfc=` from its URL, and shows one full-screen button: **SEND PANIC** (or the sticker's
+label) and a small **cancel**. Tap it and the sticker fires once. The button goes away after
+20 s, and a reload never brings it back. This takes about 1.5 to 3 s plus the tap, and leaves a
+second vjpad tab open. On a phone that has never opened a vjpad with a room, such as a
+stranger's, the tab has no room, shows no button and sends nothing.
 
 ## Write the stickers
 
@@ -121,8 +129,23 @@ has no room and sends nothing.
   (`workers/remote-relay/src/index.js`), and NFC does not widen who holds it.
 - **No new endpoint, so no new attack surface.** Every message goes through the vjpad's existing
   room socket. The display secret (PR #236) is unchanged, and stickers cannot register a display.
+- **A link is a sticker to the fallback.** Any web page, QR code, chat message or giveaway tag
+  that opens `visuals.beadfamous.com/vjpad#nfc=s2` on Aaron's phone looks exactly like a tag the
+  phone read while the vjpad was not in front. So the fallback tab asks for one tap first, and a
+  link alone does nothing.
+  Blast radius if he does tap: one action from his own map, the same as a button on his vjpad
+  (one visible shader swap, KEEP, or a proposal answered). Nothing reads state, and nothing
+  escapes the room.
 - **A forged sticker** (a stranger's tag with `#nfc=s2` that Aaron taps by mistake) can fire only
-  an action on his own map, which he could fire by hand anyway.
+  an action on his own map, which he could fire by hand anyway. With the vjpad in front it fires
+  at once, like any of his stickers; in the fallback it waits for the tap.
+- **Giveaway stickers never drive his room.** They hold `/s/<random id>` links (board
+  [event-stickers](https://draw.hypnodroid.com/b/event-stickers)), a path the vjpad never reads,
+  and `idFromUrl` takes ids only from `#nfc=`/`?nfc=`. Keep the `/s/` resolver from ever
+  redirecting to `/vjpad`.
+- **The home room** is any vjpad URL with `room=` this phone opened last, so a link to
+  `/vjpad?room=other` moves it. That can only send his own taps to the wrong room. It never stores
+  a `display_secret`.
 
 ### iPhone, later
 
@@ -147,15 +170,17 @@ design, if it is ever needed:
 - How reliably a sticker on skin reads through a sleeve, and at what distance (NTAG21x stickers
   read at about 1 to 3 cm).
 - That vibration patterns can be told apart in a loud room.
-- The fallback tab: whether Android reuses the open vjpad tab or opens a new one.
+- The fallback tab: whether Android reuses the open vjpad tab or opens a new one, and whether the
+  extra tap is bearable in the dark.
 
 ## Tests
 
 - `src/vj/nfc-controls.test.js`: id parsing, the map, the wire messages, debounce, offline, and
   proposals.
 - `e2e/nfc-show-controls.test.js`: a vjpad with a stubbed `NDEFReader` and a display in one room on
-  a local relay (port 7170, site on 7168). A FAV tap switches the display's shader, KEEP reaches
-  the room as `vj-keep` with `via: "nfc"`, a wrong tag sends nothing, the fallback tab finds the
-  room and fires once, and a stranger's tab sends nothing. Run it with `npm run build && npx vitest
-  run --config vitest.e2e.config.js e2e/nfc-show-controls.test.js`. Add `E2E_NFC_LIVE=1` to go
-  through `relay.beadfamous.com` and print the measured hop.
+  a local relay (`E2E_NFC_RELAY_PORT`, default 7170; site on `E2E_PORT`, default 7168). A FAV tap
+  switches the display's shader, KEEP reaches the room as `vj-keep` with `via: "nfc"`, a wrong tag
+  sends nothing, the fallback tab finds the room and fires only after its tap, cancel and reload
+  fire nothing, and a stranger's tab shows no button and sends nothing. Run it with `npm run build
+  && npx vitest run --config vitest.e2e.config.js e2e/nfc-show-controls.test.js`. Add
+  `E2E_NFC_LIVE=1` to go through `relay.beadfamous.com` and print the measured hop.

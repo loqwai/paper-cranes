@@ -145,7 +145,7 @@ profiles in `cranes-midi-profiles`.
 | `vjpad-shader` | the shader the pad is pointed at |
 | `cranes-vjpad-knobs` | cached knob index from `shaders.json`, so a dead wifi moment does not cost you your pads |
 | `cranes-vjpad-layout` | this phone's layout overrides |
-| `cranes-nfc-home` | the last vjpad query with a `room`, where a tag-opened tab goes ([nfc-show-controls.md](nfc-show-controls.md)) |
+| `cranes-nfc-home` | the last vjpad query with a `room` (never a `display_secret`), where a tag-opened tab goes after one confirm tap ([nfc-show-controls.md](nfc-show-controls.md)) |
 | `cranes-nfc-show`, `cranes-nfc-beat:<show>` | which sticker map the NFC chip uses, and its NEXT/PREV cursor |
 
 `?shader=<path>` on the vjpad URL preselects the shader, overriding the

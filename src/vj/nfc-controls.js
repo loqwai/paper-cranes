@@ -60,13 +60,17 @@ export const idFromRecords = (records = []) => {
  * PANIC button sends unless the sticker itself names a fork.
  */
 export const resolveShow = (config, name, setlists = {}) => {
-  const show = name && config.shows?.[name] ? name : config.default
+  const known = (n) => Boolean(n && (config.shows?.[n] || setlists[n]))
+  const show = known(name) ? name : config.default
   const own = config.shows?.[show] ?? {}
   const setlist = setlists[show]
   return {
     name: show,
     stickers: { ...config.stickers, ...own.stickers },
-    beats: setlist?.beats ?? own.beats ?? [],
+    // A setlist with a `driver` (sun-set) plays a beat by running a script on the laptop that
+    // rebakes the fork's clock anchors (board bridge, /sun-set). A phone cannot, and a bare shader
+    // swap would land the beat without its fade-ins, so NEXT/PREV there do nothing: use ▶ on the board.
+    beats: setlist?.driver ? [] : setlist?.beats ?? own.beats ?? [],
   }
 }
 
