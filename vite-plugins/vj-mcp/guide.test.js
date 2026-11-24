@@ -43,9 +43,14 @@ describe('the guide markdown', () => {
     for (const e of g.entries) for (const s of e.seeAlso) expect(ids.has(s), `${e.id} -> ${s}`).toBe(true)
   })
 
-  it('marks the live-show workflow as not live yet, and nothing else', () => {
+  it('marks nothing as not live yet (live-show-partner went live with PR #243)', () => {
     const g = parseGuide(GUIDE)
-    expect(g.entries.filter((e) => e.status).map((e) => e.id)).toEqual(['live-show-partner'])
+    expect(g.entries.filter((e) => e.status).map((e) => e.id)).toEqual([])
+  })
+
+  it('still parses a `> Status:` line as not live, for the next workflow that needs one', () => {
+    const md = GUIDE.replace('## live-show-partner: Partner on a live show (propose, KEEP, HANDS, PANIC)\n', '$&\n> Status: coming later.\n')
+    expect(parseGuide(md).entries.filter((e) => e.status).map((e) => e.id)).toEqual(['live-show-partner'])
   })
 })
 
@@ -62,7 +67,7 @@ describe('guide tool', () => {
   it('lists every workflow and topic when called with no arguments', async () => {
     const { text } = await ask(client, {})
     for (const id of [...WORKFLOWS, ...TOPICS]) expect(text).toContain(`\`${id}\``)
-    expect(text).toMatch(/live-show-partner.*coming soon/)
+    expect(text).not.toMatch(/coming soon/)
   })
 
   it('returns one section verbatim by topic', async () => {
@@ -111,14 +116,20 @@ describe('guide tool', () => {
     }
   })
 
-  it('never answers first with a section for tools that are not live yet', async () => {
-    const { text } = await ask(client, { question: 'the screen is black, how do I fix it' })
-    expect(bestMatches(text)[0]).not.toBe('live-show-partner')
+  it('answers a proposal question with the live-show partner workflow', async () => {
+    const { text } = await ask(client, { question: 'how do I propose a change' })
+    expect(bestMatches(text)[0]).toBe('live-show-partner')
+    expect(text).toContain('propose {id:')
   })
 
-  it('names a not-live workflow as coming soon in its prompt, in full words', async () => {
-    const { prompts } = await client.listPrompts()
+  it('demotes a not-live workflow and names it coming soon in its prompt, in full words', async () => {
+    const md = GUIDE.replace('## live-show-partner: Partner on a live show (propose, KEEP, HANDS, PANIC)\n', '$&\n> Status: coming later.\n')
+    const c = await connect({ guide: md })
+    const { prompts } = await c.listPrompts()
     expect(prompts.find((p) => p.name === 'live-show-partner').description).toMatch(/coming soon; not live yet\)$/)
+    const { text } = await ask(c, { question: 'the screen is black, how do I fix it' })
+    expect(bestMatches(text)[0]).not.toBe('live-show-partner')
+    await c.close()
   })
 
   it('falls back to the contents when nothing matches', async () => {

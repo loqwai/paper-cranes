@@ -72,9 +72,11 @@ export const createHubCore = ({ io, registry, uuid, alive, nextSeq = (last) => l
     }
   }
 
-  const send = (d, type, data) => {
+  // extra: envelope fields beside type and data, e.g. { source: 'agent' } on update-params, which the
+  // page's HANDS gate reads (docs/live-show-contract.md).
+  const send = (d, type, data, extra) => {
     if (!io.isOpen(d.sock)) throw new ToolError(`display ${d.id} is not connected`)
-    io.send(d.sock, JSON.stringify({ type, data }))
+    io.send(d.sock, JSON.stringify({ ...extra, type, data }))
   }
 
   const request = (d, cmd, args = {}, timeoutMs = 5000) =>

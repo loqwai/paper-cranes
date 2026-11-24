@@ -102,7 +102,7 @@ describe('vj mcp on the relay', () => {
   it('serves the same tools over streamable HTTP at /mcp/<room>', async () => {
     const { tools } = await client.listTools()
     expect(tools.map((t) => t.name).sort()).toEqual(
-      ['display_secret', 'get_state', 'guide', 'list_displays', 'list_shaders', 'read_shader', 'screenshot', 'set_params', 'set_shader', 'wait_for_event', 'write_shader'],
+      ['answer_proposal', 'display_secret', 'get_state', 'guide', 'keep', 'list_displays', 'list_shaders', 'panic', 'propose', 'read_shader', 'screenshot', 'set_params', 'set_shader', 'wait_for_event', 'write_shader'],
     )
   })
 
@@ -136,7 +136,7 @@ describe('vj mcp on the relay', () => {
     expect(before.displays).toEqual([])
     const waiting = call('wait_for_event', { since: before.seq, types: ['display-joined'], timeout_s: 40 })
     display = await browser.newPage({ viewport: { width: 320, height: 240 } })
-    await display.goto(`http://127.0.0.1:${vitePort}/?shader=${SHADER}&remote=display&noaudio=true&knob_1=0&${roomQuery()}`)
+    await display.goto(`http://127.0.0.1:${vitePort}/?shader=${SHADER}&remote=display&noaudio=true&knob_1=0&hands_ms=300&${roomQuery()}`)
     const { json: evt } = await waiting
     expect(evt.events[0]).toMatchObject({ type: 'display-joined', shader: SHADER })
     const { json } = await call('list_displays')
@@ -161,6 +161,9 @@ describe('vj mcp on the relay', () => {
     const release = Object.fromEntries(Object.keys(params).map((k) => [k, null]))
     watcher.ws.send(JSON.stringify({ type: 'update-params', data: release }))
     await until(() => display.evaluate((keys) => keys.every((k) => !(k in window.cranes.messageParams)), Object.keys(params)))
+    // The pad's RESET was his hands on the dials: the HANDS lock (docs/live-show-contract.md) holds
+    // agent writes until it ends, 300 ms here (hands_ms), so the agent tests below wait it out.
+    await until(() => display.evaluate(() => !window.cranes.live.handsOn))
     await pad.close()
     watcher.ws.close()
   })

@@ -3,6 +3,7 @@
 import { createParamsManager } from './src/params/ParamsManager.js'
 import { loadControllers, composeControllers } from './src/controllerChain.js'
 import { buildSnapshot, postSnapshot, undoSnapshot } from './src/snapshot.js'
+import { installLiveKeys } from './src/vj/live-keys.js'
 import { shaderOnScreen } from './src/shaderLoader.js'
 
 const searchParams = new URLSearchParams(window.location.search)
@@ -26,6 +27,9 @@ const undoLastSnapshot = async () => {
     console.log(`[jam] deleted ${data.deleted} (${data.remaining} left)`)
 }
 
+// k = KEEP, Escape twice = PANIC (src/vj/live-keys.js); KEEP saves through this page's snapshot path.
+installLiveKeys({ snapshot: snapshotPreset })
+
 document.addEventListener('keydown', (event) => {
     if (event.target.matches('input, textarea, select')) return
     if (event.code === 'Space') {
@@ -48,6 +52,8 @@ import('./src/midi.js')
 if (import.meta.hot) {
     import.meta.hot.on('shader-update', ({ shader, code }) => {
         if (shader !== shaderOnScreen()) return
+        // An agent's write_shader mid HANDS lock waits for his hands to come off (RemoteDisplay).
+        if (window.cranes.holdHmr?.({ shader, code })) return
         window.cranes.shader = code
     })
 
