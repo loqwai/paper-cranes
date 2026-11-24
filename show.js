@@ -11,6 +11,7 @@
 import { createParamsManager } from './src/params/ParamsManager.js'
 import { loadControllers, composeControllers } from './src/controllerChain.js'
 import { buildSnapshot, postSnapshot, undoSnapshot } from './src/snapshot.js'
+import { shaderOnScreen } from './src/shaderLoader.js'
 
 const SNAPSHOTS_KEY = 'cranes-show-snapshots'
 const searchParams = new URLSearchParams(window.location.search)
@@ -71,7 +72,7 @@ import('./src/midi.js')
 // Dev only: hot-swap the shader and the controller chain without a reload, as the jam page does.
 if (import.meta.hot) {
     import.meta.hot.on('shader-update', ({ shader, code }) => {
-        if (shader !== searchParams.get('shader')) return
+        if (shader !== shaderOnScreen()) return
         window.cranes.shader = code
     })
 

@@ -3,6 +3,7 @@
 import { createParamsManager } from './src/params/ParamsManager.js'
 import { loadControllers, composeControllers } from './src/controllerChain.js'
 import { buildSnapshot, postSnapshot, undoSnapshot } from './src/snapshot.js'
+import { shaderOnScreen } from './src/shaderLoader.js'
 
 const searchParams = new URLSearchParams(window.location.search)
 
@@ -46,7 +47,7 @@ import('./src/midi.js')
 // Hot-swap shader code without reloading (preserves the audio pipeline and its feature history)
 if (import.meta.hot) {
     import.meta.hot.on('shader-update', ({ shader, code }) => {
-        if (shader !== searchParams.get('shader')) return
+        if (shader !== shaderOnScreen()) return
         window.cranes.shader = code
     })
 
