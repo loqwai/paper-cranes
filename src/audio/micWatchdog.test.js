@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { watchMic } from './micWatchdog.js'
 
 // A mic the OS can take away: stop() ends the track the way Android does on a call or lock.
-const makeStream = () => {
-    const track = Object.assign(new EventTarget(), { readyState: 'live', muted: false })
+const makeStream = (deviceId = 'default') => {
+    const track = Object.assign(new EventTarget(), { readyState: 'live', muted: false, getSettings: () => ({ deviceId }) })
     track.stop = vi.fn(() => {
         if (track.readyState === 'ended') return
         track.readyState = 'ended'
@@ -12,7 +12,8 @@ const makeStream = () => {
     return { track, getAudioTracks: () => [track], getTracks: () => [track] }
 }
 
-let frozen
+// 'live' = a moving signal, 'frozen' = a stuck graph repeating one buffer, 'silent' = exact zeros
+let input
 let probes
 let connected
 let audioContext
@@ -23,12 +24,12 @@ const flush = () => vi.advanceTimersByTimeAsync(0)
 
 beforeEach(() => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'setTimeout', 'clearTimeout', 'performance'] })
-    frozen = false
+    input = 'live'
     probes = 0
     connected = new Set()
     globalThis.AnalyserNode = class {
         constructor() { this.fftSize = 32; probes++ }
-        getFloatTimeDomainData(samples) { samples.fill(frozen ? 0 : Math.random()) }
+        getFloatTimeDomainData(samples) { samples.fill({ live: Math.random(), frozen: 0.25, silent: 0 }[input]) }
     }
     const makeSource = (stream) => ({
         mediaStream: stream,
@@ -41,10 +42,10 @@ beforeEach(() => {
         createMediaStreamSource: makeSource,
     })
     inputGain = { connect: vi.fn() }
-    getStream = vi.fn(async () => makeStream())
+    getStream = vi.fn(async (deviceId) => makeStream(deviceId))
     globalThis.document = { hidden: false }
     globalThis.window = Object.assign(new EventTarget(), { cranes: {} })
-    const first = makeSource(makeStream())
+    const first = makeSource(makeStream('bh'))
     first.connect()
     window.cranes.audioSource = first
     watchMic({ audioContext, inputGain, getStream })
@@ -87,7 +88,7 @@ describe('watchMic', () => {
     })
 
     it('re-acquires a frozen input while visible, never while hidden', async () => {
-        frozen = true
+        input = 'frozen'
         document.hidden = true
         await vi.advanceTimersByTimeAsync(10000)
         expect(getStream).not.toHaveBeenCalled()
@@ -96,8 +97,8 @@ describe('watchMic', () => {
         expect(getStream).toHaveBeenCalledTimes(1)
     })
 
-    it('backs off on true silence: 60 s of frozen input costs at most 6 re-acquires', async () => {
-        frozen = true
+    it('backs off on a stuck input: 60 s of a repeating buffer costs at most 6 re-acquires', async () => {
+        input = 'frozen'
         await vi.advanceTimersByTimeAsync(60000)
         expect(getStream.mock.calls.length).toBeGreaterThanOrEqual(1)
         expect(getStream.mock.calls.length).toBeLessThanOrEqual(6)
@@ -116,5 +117,25 @@ describe('watchMic', () => {
         expect(probes).toBe(1)
         expect(tracks.every(t => t.readyState === 'ended')).toBe(true)
         expect(currentTrack().readyState).toBe('live')
+    })
+
+    it('leaves a live, unmuted track alone through digital silence', async () => {
+        input = 'silent'
+        await vi.advanceTimersByTimeAsync(60000)
+        expect(getStream).not.toHaveBeenCalled()
+    })
+
+    it('re-acquires a track the OS keeps muted while the page is visible', async () => {
+        input = 'silent'
+        currentTrack().muted = true
+        currentTrack().dispatchEvent(new Event('mute'))
+        await vi.advanceTimersByTimeAsync(3000)
+        expect(getStream).toHaveBeenCalledTimes(1)
+    })
+
+    it('re-acquires the device in use, not the one the page loaded with', async () => {
+        currentTrack().stop()
+        await flush()
+        expect(getStream).toHaveBeenCalledWith('bh')
     })
 })
