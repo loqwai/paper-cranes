@@ -11,6 +11,7 @@
 import { createParamsManager } from './src/params/ParamsManager.js'
 import { loadControllers, composeControllers } from './src/controllerChain.js'
 import { buildSnapshot, postSnapshot, undoSnapshot } from './src/snapshot.js'
+import { shaderOnScreen } from './src/shaderLoader.js'
 
 const SNAPSHOTS_KEY = 'cranes-show-snapshots'
 const searchParams = new URLSearchParams(window.location.search)
@@ -35,7 +36,7 @@ window.showSnapshots = readLocalSnapshots
 // A static host has no /__snapshot-preset, and a 404 there is a red console line on show night,
 // so only the dev server is asked.
 const snapshot = async () => {
-    const body = buildSnapshot(window.cranes, searchParams.get('shader'))
+    const body = buildSnapshot(window.cranes, shaderOnScreen())
     if (import.meta.env.DEV) return console.log('[show] snapshot saved', await postSnapshot(body))
     const list = [...readLocalSnapshots(), { ...body, at: new Date().toISOString() }]
     writeLocalSnapshots(list)
@@ -43,7 +44,7 @@ const snapshot = async () => {
 }
 
 const undo = async () => {
-    if (import.meta.env.DEV) return console.log('[show] snapshot removed', await undoSnapshot(searchParams.get('shader')))
+    if (import.meta.env.DEV) return console.log('[show] snapshot removed', await undoSnapshot(shaderOnScreen()))
     const list = readLocalSnapshots()
     list.pop()
     writeLocalSnapshots(list)
@@ -71,7 +72,7 @@ import('./src/midi.js')
 // Dev only: hot-swap the shader and the controller chain without a reload, as the jam page does.
 if (import.meta.hot) {
     import.meta.hot.on('shader-update', ({ shader, code }) => {
-        if (shader !== searchParams.get('shader')) return
+        if (shader !== shaderOnScreen()) return
         window.cranes.shader = code
     })
 
