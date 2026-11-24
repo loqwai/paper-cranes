@@ -218,7 +218,7 @@ Group features by domain and pick from DIFFERENT domains for variety:
 - Smart initialization to prevent jumps
 
 ### Browser-Specific Fixes
-- Firefox: Automatic microphone reconnection every 5 seconds
+- Mic watchdog (`src/audio/micWatchdog.js`): resumes a suspended AudioContext and re-acquires an ended or frozen mic; `?debug_audio=true` shows its state
 - Chrome: Proper async initialization of audio worklet
 
 ## Shader Development
