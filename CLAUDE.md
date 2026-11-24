@@ -478,7 +478,7 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   └── melted-satin/2.frag
 ├── controllers/                 # JS companions to shaders (frame-persistent state)
 │   ├── example.js              # Documented example
-│   └── griz-coat.js            # Drop sustain with exponential decay
+│   └── the-coat.js             # Drop sustain with exponential decay
 ├── scripts/
 │   ├── remap-knobs.js          # Utility to remap knob assignments in shaders
 │   └── vj/                     # Live-VJ tooling — see docs/vj-telemetry.md
