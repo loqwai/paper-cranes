@@ -58,7 +58,7 @@
  * all, and each carries an explicit `knobBase` so its mirror range stays put no
  * matter where it lands in the list.
  */
-import { WebSocketClient } from './src/remote/WebSocketClient.js'
+import { createPadClient, mountPhoneWall } from './src/phone-wall/pad.js'
 import LAYOUTS from './vjpad-layouts.json'
 import { resolveBanks, loadOverrides, saveOverrides, mirrorKnob, parseKnobs } from './src/vj/vjpad-layout.js'
 import { mountEditor } from './src/vj/vjpad-edit.js'
@@ -127,14 +127,16 @@ const loadShaderKnobs = async () => {
 const SHADERS = LAYOUTS.shaders ?? []
 
 /* ── transport ────────────────────────────────────────────────────────────
-   We drive WebSocketClient directly rather than initRemoteController because we
+   We drive the socket directly rather than initRemoteController because we
    need to see peer messages (the bank claims below), and RemoteController only
-   surfaces `status`. Nothing in src/ is modified. */
+   surfaces `status`. createPadClient is the room's WebSocketClient plus the
+   phone wall's local link (docs/phone-wall.md): while a wall on this same phone
+   is linked, display-bound messages go to it over the link, with no network. */
 let displays = 0
 let status = 'reconnecting'
 
 let nfc = null // NFC smiley stickers (docs/nfc-show-controls.md), mounted once client exists
-const client = new WebSocketClient(
+const client = createPadClient(
     (msg) => {
         nfc?.onMessage(msg)
         if (msg.type === 'status') {
@@ -476,7 +478,8 @@ const paintFingers = () => {
 const paint = () => {
     const dot = $('dot')
     const txt = $('status')
-    dot.className = 'dot ' + (status === 'connected' ? (displays > 0 ? 'live' : 'wait') : 'dead')
+    const wall = client.link.linked
+    dot.className = 'dot ' + (status === 'connected' ? (displays > 0 || wall ? 'live' : 'wait') : 'dead')
     const others = livePeers().size
     if (status !== 'connected') {
         txt.textContent = status === 'reconnecting' ? 'reconnecting…' : 'NO SERVER'
@@ -484,7 +487,8 @@ const paint = () => {
         const b = banks[bank] ?? { name: '—' }
         txt.textContent =
             `${b.name}${pinned ? ' ◉' : ''} · ` +
-            (displays > 0 ? `${displays} display${displays === 1 ? '' : 's'}` : 'no display') +
+            (wall ? 'wall' + (displays > 0 ? ' + ' : '') : '') +
+            (displays > 0 ? `${displays} display${displays === 1 ? '' : 's'}` : wall ? '' : 'no display') +
             (others ? ` · ${others} other phone${others === 1 ? '' : 's'}` : '')
     }
     ;[...bankHost.children].forEach((c, i) => {
@@ -692,6 +696,24 @@ document.addEventListener('visibilitychange', async () => {
     }
 })
 
+/* ── phone wall (docs/phone-wall.md) ──────────────────────────────────────
+   Plugged into a projector, this phone can be the pad AND the wall: PROJECT
+   opens the visuals on the external display, and this page stays the pad. The
+   bar stays hidden on a phone with no second screen. A fresh wall is handed
+   the pad's shader and every value the pad holds, so a replugged cable picks up
+   where it left off. */
+const phoneWall = mountPhoneWall({
+    client,
+    host: $('wallbar'),
+    getShader: () => activeShader,
+    getState: () => ({ ...state }),
+    onProject: () => {
+        if (wakeSupported && !lock) wakeBtn.click()
+        buzz([30])
+    },
+    onChange: () => paint(),
+})
+
 /* ── the setup screen ──────────────────────────────────────────────────────
    Out of the performance path by construction: it lives behind a LONG PRESS on
    the status line — the one strip of the page with no control on it — and while
@@ -752,6 +774,7 @@ window.vjpad = {
     active,
     send,
     client,
+    phoneWall,
     setBank,
     setShader,
     relayout,

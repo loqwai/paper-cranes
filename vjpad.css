@@ -439,6 +439,62 @@ body {
     background: var(--panel);
 }
 
+/* ── phone wall: PROJECT, WALL ✓, NO WALL (docs/phone-wall.md) ──
+   Repainted only on a state change, so it costs nothing while you play. */
+.wallbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 6px 0;
+    flex: 0 0 auto;
+    background: var(--panel);
+}
+
+.wallbar[hidden] {
+    display: none;
+}
+
+.wallchip {
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    border: 1px solid var(--line);
+    color: var(--ink-dim);
+}
+
+.wallbar.presenting .wallchip {
+    border-color: #22d3ee;
+    color: #a5f3fc;
+}
+
+.wallbar.lost .wallchip {
+    flex: 1 1 auto;
+    text-align: center;
+    padding: 10px;
+    font-size: 16px;
+    border: 2px solid #ef4444;
+    color: #fecaca;
+    background: #2a0505;
+}
+
+.bigbtn.project {
+    min-height: 64px;
+    font-size: 20px;
+    border: 2px solid #a855f7;
+    color: #e9d5ff;
+    background: #1e0a33;
+}
+
+.bigbtn.project:active {
+    background: #4c1d95;
+}
+
+body.editing .wallbar {
+    display: none;
+}
+
 /* ── live show: KEEP, PANIC and proposal cards (docs/live-show-contract.md) ── */
 .liveshow {
     display: flex;
