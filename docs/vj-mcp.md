@@ -62,12 +62,14 @@ Claude Code ──POST /mcp/<room>──► Cloudflare Access (OAuth; 401 + chal
 - Any message that is not a hub type is relayed to every other socket verbatim, as before. The
   relay stays byte-compatible: `e2e/vj-mcp-relay.test.js` drives a display from the real
   `vjpad.html?room=` and checks the display applied exactly what a third socket saw relayed.
-- **The room name is the lock.** Anyone who knows it can join `/ws/<room>`, relay knobs, and
-  with a non-browser client (which can send any `Origin`) register a fake display. A fake display
-  cannot touch the real one, but what it reports (state, screenshots, logs, events) reaches the
-  agent as if real. The tool descriptions of `list_displays`, `get_state`, `screenshot` and
-  `wait_for_event` say their output is untrusted data. Follow-up, not built: a room-secret
-  handshake so the room DO admits a display only with proof beyond the room name.
+- **The room name is the lock, unless the room has a display secret.** Anyone who knows the
+  name can join `/ws/<room>` and relay knobs. In a room with no secret, a non-browser client
+  (which can send any `Origin`) can also register a fake display. A fake display cannot touch the
+  real one, but what it reports (state, screenshots, logs, events) reaches the agent as if real.
+  `display_secret {action: "rotate"}` locks the room so a display registers, and its `?vj=1`
+  signals count, only with the secret from the link it returns (see "Display secret" below). The
+  tool descriptions of `list_displays`, `get_state`, `screenshot` and `wait_for_event` still say
+  their output is untrusted data: anyone holding the display link can run a display.
 - `display-hello` registers a display, only from a socket whose page Origin is the site, a show
   repo, a Pages preview, a hypnodroid.com tunnel or localhost. It is never relayed. This check
   stops web pages in a browser, not scripts: a non-browser client sets any `Origin` it likes.
@@ -229,7 +231,8 @@ MCP client ──POST /mcp──► vj-mcp-plugin ──► tools.js ──► h
   issuer, AUD, RS256 signature against the team certs, expiry). With no `ACCESS_AUD` configured the
   Worker answers 503, not open. Any request with an `Origin` header is refused, so a web page in a
   signed-in browser cannot drive a show. The room name is still required. The relay has no
-  filesystem path: `write_shader` there never persists.
+  filesystem path: `write_shader` there never persists. A room locked with `display_secret` takes
+  displays only with its secret; see "Display secret (relay)".
 - **Dev server** (the rest of this section): no write tool exists in the production build.
 - A request with an `Origin` header must come from a loopback origin, or from a host listed in
   `VJ_MCP_ORIGINS` (comma-separated). CLI clients send no `Origin`. This blocks a web page, or a
@@ -291,8 +294,20 @@ logs only who called which tool, never arguments. `display-refused` is a hub-onl
 a peer cannot forge one to a display.
 
 **Limits.** The secret proves the page was opened from the link; anyone who has the link can run
-a display. The page keeps the secret in its URL, so a screenshot of the address bar or an
-installed PWA's start URL carries it. Rotate if a link leaks.
+a display. The page keeps the secret in its URL hash, so a screenshot of the address bar carries
+it, and so will a PWA installed from that page once the manifest's `start_url` keeps the hash
+(#216; today `index.html` builds it from the path and query only). The `?display_secret=` query
+form also lands in the site's request logs, the service worker's cache keys, and, through a
+same-origin `document.referrer`, the list page's remembered params in `localStorage`; use the
+hash. Rotate if a link leaks.
+
+**Reviewed** in the #236 security review (2026-11-24): encoding and case tricks, signals before,
+between and after hellos, a no-Origin socket, a refused socket answering another display's
+`inspect`, a peer reusing the display's key, old-secret replays and hellos racing `rotate` were
+all refused on `wrangler dev`; no MCP reply but `rotate`, and no Worker log line, held the secret.
+A `relay.beadfamous.com` link has no `relay=`; a link minted through any other relay host names
+that host, and the page sends its secret only to `relay.beadfamous.com` or loopback, so mint
+links on `relay.beadfamous.com`.
 
 ## Relation to the one-Claude-per-socket design (PR #188)
 
