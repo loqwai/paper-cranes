@@ -90,8 +90,20 @@ describe('vj mcp', () => {
   it('lists the tools over streamable HTTP', async () => {
     const { tools } = await client.listTools()
     expect(tools.map((t) => t.name).sort()).toEqual(
-      ['get_state', 'list_displays', 'list_shaders', 'read_shader', 'screenshot', 'set_params', 'set_shader', 'wait_for_event', 'write_shader'],
+      ['get_state', 'guide', 'list_displays', 'list_shaders', 'read_shader', 'screenshot', 'set_params', 'set_shader', 'wait_for_event', 'write_shader'],
     )
+  })
+
+  it('answers how to use itself: instructions, guide, workflow prompts and resources', async () => {
+    expect(client.getInstructions()).toMatch(/call `guide`/)
+    const { prompts } = await client.listPrompts()
+    expect(prompts.map((p) => p.name)).toContain('hot-swap-shader')
+    const prompt = await client.getPrompt({ name: 'hot-swap-shader' })
+    expect(prompt.messages[0].content.text).toContain('write_shader {shader:')
+    const { resources } = await client.listResources()
+    expect(resources.map((r) => r.uri)).toContain('vj://guide/workflows/change-knobs')
+    const { text } = await call('guide', { question: 'how do I swap the shader without reloading' })
+    expect(text).toMatch(/^Best matches for .*: hot-swap-shader/)
   })
 
   it('answers a clear error when no display is connected', async () => {
