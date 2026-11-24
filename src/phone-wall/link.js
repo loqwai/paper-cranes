@@ -126,6 +126,7 @@ export const createLink = ({
     /** Re-announce now (info changed). */
     hello,
     get linked() { return peers.size > 0 },
+    isPeer: (pid) => peers.has(pid),
     get peers() { return [...peers].map(([pid, p]) => ({ id: pid, info: p.info, via: p.port.kind })) },
     stop() {
       if (!timer) return
@@ -139,4 +140,19 @@ export const createLink = ({
     },
   }
   return link
+}
+
+/**
+ * A message sent over both the link and the room carries `pwid`: the sender's link id, a dot, a
+ * count. The link copy is the one to act on. Only a page in this browser can post to the link,
+ * while any room peer sees every pwid sent there and can send any message with any pwid, so a pwid
+ * heard on the room must never stop a link copy (a peer could pre-send the pad's next ids and
+ * swallow his PANIC). The link side always acts; the room side drops a message whose pwid names a
+ * peer on the link, since that copy comes over the link. A room message with no pwid, or one naming
+ * no linked peer, passes as before.
+ */
+export const fromLinkedPeer = (link, msg) => {
+  const id = msg?.pwid
+  if (typeof id !== 'string') return false
+  return link.isPeer(id.slice(0, id.lastIndexOf('.')))
 }

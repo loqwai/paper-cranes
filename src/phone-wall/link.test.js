@@ -55,6 +55,30 @@ const fakeSocket = () => {
   }
 }
 
+const loc = (search) => ({ search, protocol: 'https:', host: 'visuals.beadfamous.com', hash: '' })
+
+// One relay room: what a member sends, every other member hears, as the broker relays it verbatim.
+const makeRoom = () => {
+  const members = []
+  const make = (onMessage) => {
+    const me = {
+      connect: () => {},
+      disconnect: () => {},
+      send: (type, data, extra) => {
+        const text = JSON.stringify({ ...extra, type, data })
+        for (const m of members) if (m !== me) m.onMessage(JSON.parse(text))
+        return true
+      },
+      isConnected: true,
+      url: 'ws://relay/ws/r',
+      onMessage,
+    }
+    members.push(me)
+    return me
+  }
+  return { make }
+}
+
 beforeEach(() => vi.useFakeTimers())
 afterEach(() => vi.useRealTimers())
 
@@ -147,11 +171,11 @@ describe('local link', () => {
 })
 
 describe('pad client', () => {
-  it('routes display-bound messages to a linked wall only, bank claims to the room only', () => {
+  it('routes display-bound messages to a linked wall, and to the room only while it is up; bank claims to the room', () => {
     const BC = makeBus()
     const sock = fakeSocket()
     const wallGot = []
-    const pad = createPadClient(() => {}, () => {}, { makeSocket: sock.make, BroadcastChannel: BC })
+    const pad = createPadClient(() => {}, () => {}, { loc: loc('?room=r'), makeSocket: sock.make, BroadcastChannel: BC })
     pad.connect()
     pad.send('update-params', { knob_1: 0.1 })
     expect(sock.sent.map((m) => m.type)).toEqual(['update-params']) // no wall yet: the room
@@ -162,18 +186,38 @@ describe('pad client', () => {
     pad.send('vj-panic', {}, { via: 'nfc' })
     pad.send('pad-hello', { pad: 'x' })
     pad.send('vjpad-peer', { id: 'x' })
-    expect(wallGot).toEqual([
+    expect(wallGot.map(({ pwid, ...m }) => m)).toEqual([
       { type: 'update-params', data: { knob_1: 0.2 } },
       { type: 'vj-panic', data: {}, via: 'nfc' },
       { type: 'pad-hello', data: { pad: 'x' } },
     ])
-    expect(sock.sent.map((m) => m.type)).toEqual(['pad-hello', 'vjpad-peer'])
+    expect(new Set(wallGot.map((m) => m.pwid)).size).toBe(3)
+    // This room socket is down: no per-frame "not connected" warning for the moves.
+    expect(sock.sent.map((m) => m.type)).toEqual(['vjpad-peer'])
+  })
+
+  it('opens no socket on a static host with no room; a room or the dev server gets one', () => {
+    // Production with no room= used to retry wss://visuals.beadfamous.com/ws, a static host that
+    // answers 200: a console error every few seconds for the whole show, and battery.
+    const made = []
+    const makeSocket = (...a) => (made.push(a), fakeSocket().make(...a))
+    const statuses = []
+    const pad = createPadClient(() => {}, (s) => statuses.push(s), { loc: loc(''), makeSocket, BroadcastChannel: makeBus() })
+    pad.connect()
+    expect(made).toEqual([])
+    expect(statuses).toEqual(['disconnected']) // NO SERVER at once, not "reconnecting…" forever
+    expect(pad.send('update-params', { knob_1: 0.1 })).toBe(false)
+    expect(pad.isConnected).toBe(false)
+    pad.disconnect()
+    createPadClient(() => {}, () => {}, { loc: loc('?room=abc'), makeSocket, BroadcastChannel: makeBus() })
+    createPadClient(() => {}, () => {}, { loc: loc(''), dev: true, makeSocket, BroadcastChannel: makeBus() })
+    expect(made.length).toBe(2)
   })
 
   it('reports connected while a wall is linked even with no room socket', () => {
     const BC = makeBus()
     const statuses = []
-    const pad = createPadClient(() => {}, (s) => statuses.push(s), { makeSocket: fakeSocket().make, BroadcastChannel: BC })
+    const pad = createPadClient(() => {}, (s) => statuses.push(s), { loc: loc('?room=r'), makeSocket: fakeSocket().make, BroadcastChannel: BC })
     pad.connect()
     const wall = createLink({ role: 'wall', BroadcastChannel: BC }).start()
     expect(pad.isConnected).toBe(true)
@@ -183,8 +227,6 @@ describe('pad client', () => {
 })
 
 describe('wall client', () => {
-  const loc = (search) => ({ search, protocol: 'https:', host: 'visuals.beadfamous.com', hash: '' })
-
   it('opens no socket on a static host with no room, and tells pads only what pads use', () => {
     const BC = makeBus()
     const padGot = []
@@ -235,6 +277,41 @@ describe('wall client', () => {
     expect(got).toEqual([{ knob_1: 0.9 }])
     expect(second.link.linked).toBe(true)
     first.disconnect(); second.disconnect(); wall.disconnect()
+  })
+
+  it('a linked wall does not starve the room: another display gets every move, and the wall acts on each once', () => {
+    const BC = makeBus()
+    const room = makeRoom()
+    const wallGot = []
+    const otherGot = []
+    const wall = createWallClient((m) => wallGot.push(m.type), () => {}, { loc: loc('?wall=1&room=r'), nav: {}, BroadcastChannel: BC, makeSocket: room.make })
+    wall.connect()
+    room.make((m) => otherGot.push(m.type)) // a second display in the same room
+    const pad = createPadClient(() => {}, () => {}, { loc: loc('?room=r'), makeSocket: room.make, BroadcastChannel: BC })
+    pad.connect()
+    expect(pad.link.linked).toBe(true)
+    pad.send('update-params', { knob_1: 0.3 })
+    pad.send('vj-keep', {})
+    pad.send('vj-panic', {}, { via: 'nfc' })
+    pad.send('proposal-answer', { id: 'a', take: true })
+    const moves = ['update-params', 'vj-keep', 'vj-panic', 'proposal-answer']
+    expect(otherGot).toEqual(moves)
+    expect(wallGot.filter((t) => t !== 'pad-hello')).toEqual(moves)
+    pad.disconnect(); wall.disconnect()
+  })
+
+  it('a status line from the wall reaches a pad in the room once, though it goes over the link and the room', () => {
+    const BC = makeBus()
+    const room = makeRoom()
+    const padGot = []
+    const wall = createWallClient(() => {}, () => {}, { loc: loc('?wall=1&room=r'), nav: {}, BroadcastChannel: BC, makeSocket: room.make })
+    wall.connect()
+    const pad = createPadClient((m) => padGot.push(m.type), () => {}, { loc: loc('?room=r'), makeSocket: room.make, BroadcastChannel: BC })
+    pad.connect()
+    wall.send('vj-status', { kind: 'swap', text: 'PANIC → plasma' })
+    wall.send('proposal', { id: 'p1', label: 'x' })
+    expect(padGot).toEqual(['vj-status', 'proposal'])
+    pad.disconnect(); wall.disconnect()
   })
 
   it('opens the room socket when the link has a room', () => {

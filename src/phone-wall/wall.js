@@ -3,7 +3,7 @@
 // socket. RemoteDisplay hands both to the same handler, so HANDS, KEEP, PANIC and proposals behave
 // exactly as they do for a remote display.
 import { WebSocketClient } from '../remote/WebSocketClient.js'
-import { createLink } from './link.js'
+import { createLink, fromLinkedPeer } from './link.js'
 
 // What the wall tells the pad over the link. The inspector's traffic (canvas shots, state) is for
 // the VJ MCP on the room socket and never crosses to the pad.
@@ -27,9 +27,13 @@ export const isWallPage = (loc = window.location, nav = globalThis.navigator) =>
 export const createWallClient = (onMessage, onStatus, { dev = false, loc = window.location, nav = globalThis.navigator, makeSocket, link: givenLink, BroadcastChannel } = {}) => {
   const params = new URLSearchParams(loc.search)
   const wantsSocket = params.has('room') || dev
-  const socket = wantsSocket ? (makeSocket ?? ((m, s) => new WebSocketClient(m, s)))(onMessage, onStatus) : null
+  // A linked pad in a room sends each move over the link and the room both (pad.js): act on the
+  // link copy. `link` is assigned below, before connect() lets any message in.
+  const fromRoom = (msg) => { if (!fromLinkedPeer(link, msg)) onMessage(msg) }
+  const socket = wantsSocket ? (makeSocket ?? ((m, s) => new WebSocketClient(m, s)))(fromRoom, onStatus) : null
   const boot = Math.random().toString(36).slice(2, 10)
   const stats = { fromLink: 0, toLink: 0 }
+  let count = 0
   // Has any pad moved this wall yet? Only a fresh wall (just opened or replugged) takes a pad's
   // whole state: a second pad page (the NFC fallback tab, a reloaded or restored pad) linking to a
   // wall mid-set must not reset every knob on it to that page's defaults.
@@ -72,8 +76,10 @@ export const createWallClient = (onMessage, onStatus, { dev = false, loc = windo
     },
     send(type, data, extra) {
       let sent = false
-      if (TO_PAD.has(type) && link.send({ ...extra, type, data })) { stats.toLink++; sent = true }
-      if (socket) sent = socket.send(type, data, extra) || sent
+      // What a pad uses goes over the link and the room both; `pwid` lets a pad in the room act once.
+      const env = TO_PAD.has(type) ? { ...extra, pwid: `${link.id}.${++count}` } : extra
+      if (TO_PAD.has(type) && link.send({ ...env, type, data })) { stats.toLink++; sent = true }
+      if (socket) sent = socket.send(type, data, env) || sent
       return sent
     },
     disconnect() {

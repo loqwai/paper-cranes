@@ -162,7 +162,8 @@ const client = createPadClient(
         }
         paint()
         nfc?.onStatus(s)
-    }
+    },
+    { dev: import.meta.env.DEV }
 )
 nfc = mountVjpadNfc({ client, buzz: (ms) => buzz(ms), chip: document.getElementById('nfc') })
 
@@ -173,9 +174,13 @@ const sendRaw = (type, data) => client.send(type, data)
    we would flood the socket with five redundant messages per frame. */
 let pending = null
 let queued = false
+// Keys RELEASE handed back to the music (sent as null) until he moves them again. A replugged
+// wall gets the pad's state (getState below), and must not get these pinned again.
+const released = new Set()
 const flush = () => {
     queued = false
     if (!pending) return
+    for (const k in pending) pending[k] === null ? released.add(k) : released.delete(k)
     sendRaw('update-params', pending)
     pending = null
 }
@@ -706,8 +711,8 @@ const phoneWall = mountPhoneWall({
     client,
     host: $('wallbar'),
     getShader: () => activeShader,
-    // Every value the pad holds, minus its own bookkeeping (__gate).
-    getState: () => Object.fromEntries(Object.entries(state).filter(([k]) => !k.startsWith('__'))),
+    // Every value the pad holds, minus its own bookkeeping (__gate) and what RELEASE gave back.
+    getState: () => Object.fromEntries(Object.entries(state).filter(([k]) => !k.startsWith('__') && !released.has(k))),
     onProject: () => {
         if (wakeSupported && !lock) wakeBtn.click()
         buzz([30])

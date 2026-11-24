@@ -32,7 +32,8 @@ pad." Storyboard: board [live-show-skills](https://draw.hypnodroid.com/b/live-sh
    the wall asks for one when it boots.
 
 If the cable comes out mid-set, the pad shows **NO WALL** in red and keeps working. Plug it back:
-the wall links again (WALL ✓) and gets the pad's shader and every value the pad holds. **✕** on the
+the wall links again (WALL ✓) and gets the pad's shader and every value the pad holds, except the
+knobs RELEASE handed back to the music (until he moves them again). **✕** on the
 banner stops waiting.
 
 ## How it works
@@ -56,17 +57,27 @@ banner stops waiting.
 The button shows only while a second screen is seen (`screen.isExtended`, or presentation
 availability). With neither, nothing on the pad changes.
 
-**Routing.** While a wall is linked, the pad sends `update-params`, `vj-keep`, `vj-panic` and
-`proposal-answer` to it over the link **only**, so the wall acts on each once; `pad-hello` goes to
-both; bank claims (`vjpad-peer`) stay on the room. The wall sends the pad only what a pad uses
-(`proposal`, `proposal-clear`, `vj-status`); the inspector's canvas shots stay on the room socket.
+**Routing.** While a wall is linked, the pad sends `update-params`, `vj-keep`, `vj-panic`,
+`proposal-answer` and `pad-hello` to it over the link first, then to the room as well while the
+room socket is up, so a second display in the room still gets every move. Each such message
+carries a `pwid` (the pad's link id and a count); the wall, which hears the room too, acts on the
+link copy and drops a room copy whose `pwid` names a pad on its link (`fromLinkedPeer` in
+`link.js`). It never drops a link copy because of a `pwid` heard on the room: any room peer can
+send any `pwid`, and must not be able to swallow his PANIC. Bank claims (`vjpad-peer`) stay on the
+room. The wall sends the pad only what a pad uses
+(`proposal`, `proposal-clear`, `vj-status`, `vj-learn-result`), over the link and the room both,
+tagged the same way, so a pad in a room shows each loop line once; the inspector's canvas shots
+stay on the room socket.
 With no wall linked, the pad uses the room exactly as before.
 
 **The room is the mirror.** With `?room=` on the pad, the wall joins the same room as a display,
 so agents, the VJ MCP (`screenshot`, `get_state`, `propose`, `panic`) and the draw board bridge
 reach it as any remote display. The pad's display secret, when its link carries one, rides along
-in the wall's hash. On a static host with no room the wall opens no socket at all, and a phone wall
-never lights the "Reconnecting" badge on the projector.
+in the wall's hash. On a static host with no room neither the pad nor the wall opens a socket at
+all (`?room=` or the dev server's `/ws` is what opens one): a phone wall never lights the
+"Reconnecting" badge on the projector, and a roomless pad does not retry `/ws` on a host that has
+none, which logged a console error every few seconds and cost battery for the whole show. A
+roomless pad with no wall says NO SERVER.
 
 **The live show is unchanged.** The wall is a `?remote=display` page and every link message goes
 through the same `RemoteDisplay` handler as a room message: HANDS, KEEP, PANIC, proposals and NFC
@@ -75,7 +86,8 @@ stickers (including the roomless fallback tab, which now fires over a linked wal
 
 **A fresh wall gets the pad's state.** The wall's hello carries a boot id and `fresh`, true until
 a pad has moved it. On a fresh wall the pad has not fed, it sends one `update-params` with every
-value it holds, plus its shader when the wall was opened without one. Like any of his moves, that
+value it holds, plus its shader when the wall was opened without one. Keys RELEASE sent as null
+stay out of it until a move sends them again, so a replug never pins a released knob. Like any of his moves, that
 turns the HANDS lock on. A wall a pad already moved is left alone: a second pad page linking mid-set
 (the NFC fallback tab, a reloaded pad, a tab Android discarded and restored) must not reset every
 knob on the wall to that page's defaults.

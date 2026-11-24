@@ -1,10 +1,11 @@
 // The pad half of the phone wall (docs/phone-wall.md). Two parts:
 //   createPadClient  a WebSocketClient-shaped client: the room socket as before, plus the local
 //                    link to a wall on this same phone. While a wall is linked, display-bound
-//                    messages go to it over the link only, so the wall acts on each once.
+//                    messages go to it over the link and to the room as well, tagged `pwid`, so
+//                    other displays in the room still get them and the wall acts on each once.
 //   mountPhoneWall   the PROJECT button, the WALL chip and the NO WALL banner, driven by state.js.
 import { WebSocketClient } from '../remote/WebSocketClient.js'
-import { createLink } from './link.js'
+import { createLink, fromLinkedPeer } from './link.js'
 import { initialWall, stepWall, wallView } from './state.js'
 import { createProjector, wallUrlFor } from './project.js'
 
@@ -14,10 +15,19 @@ import { createProjector, wallUrlFor } from './project.js'
 export const TO_WALL = new Set(['update-params', 'vj-keep', 'vj-panic', 'proposal-answer'])
 export const TO_BOTH = new Set(['pad-hello'])
 
-export const createPadClient = (onMessage, onStatus, { makeSocket, BroadcastChannel } = {}) => {
-  let socketStatus = 'reconnecting'
+/**
+ * The room socket is opened only where there is a broker, as on the wall (wall.js): a `?room=`
+ * link, or the dev server. On a static host with no room a socket would retry `/ws` forever, a
+ * console error every few seconds for the whole show.
+ */
+export const createPadClient = (onMessage, onStatus, { dev = false, loc = globalThis.location, makeSocket, BroadcastChannel } = {}) => {
+  const wantsSocket = new URLSearchParams(loc?.search ?? '').has('room') || dev
+  let socketStatus = wantsSocket ? 'reconnecting' : 'disconnected'
   let reported = null
+  let sent = 0
   const listeners = new Set()
+  // The wall sends what a pad uses over the link and the room both (wall.js): act on the link copy.
+  const fromRoom = (msg) => { if (!fromLinkedPeer(link, msg)) onMessage(msg) }
   const report = () => {
     const effective = link.linked ? 'connected' : socketStatus
     if (effective === reported) return
@@ -30,7 +40,7 @@ export const createPadClient = (onMessage, onStatus, { makeSocket, BroadcastChan
     ...(BroadcastChannel ? { BroadcastChannel } : {}),
     onPeers: (walls) => { report(); listeners.forEach((fn) => fn(walls)) },
   })
-  const socket = (makeSocket ?? ((m, s) => new WebSocketClient(m, s)))(onMessage, (s) => { socketStatus = s; report() })
+  const socket = wantsSocket ? (makeSocket ?? ((m, s) => new WebSocketClient(m, s)))(fromRoom,(s) => { socketStatus = s; report() }) : null
   // Say bye on the way out, so the wall drops this pad at once; come back from the back-forward
   // cache (DIALS and back) linked again.
   globalThis.addEventListener?.('pagehide', () => link.stop())
@@ -42,21 +52,26 @@ export const createPadClient = (onMessage, onStatus, { makeSocket, BroadcastChan
     onWalls(fn) { listeners.add(fn); return () => listeners.delete(fn) },
     connect() {
       link.start()
-      socket.connect()
+      socket?.connect()
+      // With no socket nothing else ever reports, and the pad would say "reconnecting…" forever
+      // until a wall links. Say so now: NO SERVER, or connected if a wall already answered.
+      if (!socket) report()
     },
     send(type, data, extra) {
-      const local = link.linked && (TO_WALL.has(type) || TO_BOTH.has(type))
-      if (local) link.send({ ...extra, type, data })
-      if (local && !TO_BOTH.has(type)) return true
-      return socket.send(type, data, extra) || local
+      if (!link.linked || !(TO_WALL.has(type) || TO_BOTH.has(type))) return Boolean(socket?.send(type, data, extra))
+      // The link first, so the wall's hop never waits on the network. The room gets the same
+      // message, so a second display there is not starved; the wall hears both and acts once.
+      const tagged = { ...extra, pwid: `${link.id}.${++sent}` }
+      const local = link.send({ ...tagged, type, data })
+      return Boolean(socket?.isConnected && socket.send(type, data, tagged)) || local
     },
     disconnect() {
       link.stop()
-      socket.disconnect()
+      socket?.disconnect()
     },
-    get isConnected() { return Boolean(socket.isConnected || link.linked) },
-    get socket() { return socket.socket },
-    get url() { return socket.url },
+    get isConnected() { return Boolean(socket?.isConnected || link.linked) },
+    get socket() { return socket?.socket ?? null },
+    get url() { return socket?.url },
   }
 }
 
