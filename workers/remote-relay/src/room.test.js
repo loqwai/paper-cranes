@@ -274,7 +274,9 @@ describe('relay room: a display secret locks who may be a display', () => {
     const secret = secretOf(link)
     const noKey = join('noKey'), wrongKey = join('wrongKey'), pad = join('pad')
     expect(await helloL(noKey)).toBe('refused')
-    expect(await helloL(wrongKey, { displaySecret: `${secret.slice(0, -1)}A` }, KEY_B)).toBe('refused')
+    // Change the last character to one it is not: a fixed 'A' was the secret itself 1 time in 64.
+    const wrong = `${secret.slice(0, -1)}${secret.endsWith('A') ? 'B' : 'A'}`
+    expect(await helloL(wrongKey, { displaySecret: wrong }, KEY_B)).toBe('refused')
     expect(hub.list()).toEqual([])
     expect(types(noKey)).toEqual(['display-refused'])
     expect(lastData(noKey)).toEqual({ reason: REFUSED.missing })

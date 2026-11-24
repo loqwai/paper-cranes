@@ -173,24 +173,42 @@ Aaron's call, because they widen who can reach the dev server.
 and it authenticates with OAuth only, never with custom headers. The Access-protected tunnel
 refuses it. Use the relay URL above instead, which has managed OAuth.
 
+## Ask the server: `guide`, workflows, instructions
+
+The server answers questions about how to use it, so an agent never needs this page. Everything
+it says comes from one file, **[vj-mcp-guide.md](vj-mcp-guide.md)**, which holds the tool table,
+the workflows (numbered tool-call recipes with real argument shapes) and the reference topics.
+Edit that file; never copy its text into JS.
+
+| What the agent sees | Where it comes from |
+|---|---|
+| server `instructions` on initialize | the guide's `# Orientation`, plus this host's one-line venue note |
+| `guide {}` / `guide {topic}` / `guide {question}` | contents / one section verbatim / the best section for a question in full, plus the ids of up to 2 close matches and its see-also ids (one section per answer keeps it under ~800 tokens), ranked by BM25 term overlap with a few synonyms, how-to questions favouring workflows, what-is questions favouring topics, and `> Status:` (not live yet) sections demoted. No model, no embeddings: the same question always gets the same answer. |
+| `prompts/list`, `prompts/get` | one prompt per workflow, named by its id |
+| `resources/list`, `resources/read` | `vj://guide` (contents), `vj://guide/workflows/<id>`, `vj://guide/topics/<id>`, and `skill://paper-cranes-vj/SKILL.md` (the whole guide as one skill file, as draw serves `skill://draw/SKILL.md`) |
+
+`vite-plugins/vj-mcp/guide.js` parses the markdown and registers all of it; `server.js` calls it
+when its host passes `guide`. The dev server reads the file on each request (an edit shows without
+a restart); the relay Worker imports it as a string through the `Text` rule in
+`workers/remote-relay/wrangler.jsonc`. A workflow whose section starts `> Status:` is listed as
+"coming soon" and never answers a question first (none today).
+
 ## Tools
 
-| Tool | Contract |
-|---|---|
-| `list_displays` | Connected displays: `id`, shader, user agent, canvas, audio state, plus the event `seq`. |
-| `list_shaders {query?, include_wip?, limit?}` | Shaders from `shaders.json`, newest first, with the knobs each reads and their names. |
-| `get_state {display?, features?, screenshot?}` | Shader and its source hash, compile error, fps, audio state, knob values with names, pinned params, controller outputs, core audio features, the `?vj=1` meter and jank summaries, recent console errors. `screenshot: true` adds a JPEG. |
-| `screenshot {display?, width?}` | JPEG of the canvas, captured on the page. Its long side is at most 960 px, because the encode runs on the render thread. |
-| `set_params {display?, params, source?}` | Sends `update-params` down that display's socket (the vjpad / `remote-send.js` path), then reads the values back from the page. A value is pinned above MIDI and controllers; `null` releases it. Marked `source: "agent"`, so while Aaron's hands are on the dials the page holds it until 8 s after his last move and the reply says `held: true` ([live-show contract](live-show-contract.md)). `source: "board"` is for the draw board bridge only: his own tap, never held. |
-| `set_shader {display?, shader, params?, source?}` | Switches in place (no reload, audio history kept), waits until the page runs that exact source, and reports whether it compiles. If the page never picks the source up, `loaded` is false and `compiles` is null. Held like `set_params` mid-lock (`held: true`, no wait); `source: "board"` is never held. |
-| `read_shader {shader}` | Source, knobs and hash of `shaders/<shader>.frag`. |
-| `write_shader {shader, code, display?, validate?}` | Compiles on a display first and refuses on an error. Dev: writes the file (the same helper as `/__save-shader`), lets HMR hot-swap it, and reports which displays picked it up (`persisted: true`). A display that `set_shader` moved counts as showing the new shader: pages match HMR events with `shaderOnScreen()` (`src/shaderLoader.js`), which reads `?shader=` when the event arrives, never the value from boot. Relay: applies the code live on the display and saves nothing (`persisted: false`). Mid HANDS lock a display reports `held: true`: dev announces the hash first (`vj-agent-shader`) so the page's HMR handler holds that code, and Aaron's own editor saves still swap at once. |
-| `propose {display?, id, label, params, shader?}` | Shows a one-line card on every connected vjpad (and a chip on a `?vj=1&show_proposals=1` display). KEEP on the card applies `params` (and `shader`) as his own write and signals `proposal-taken`; dismiss or 30 s signals `proposal-dropped`. The way to change his dials mid-set. |
-| `answer_proposal {display?, id, take}` | Presses KEEP (`take: true`) or dismiss on a card: for the draw board bridge relaying his tap. |
-| `keep {display?}` | Presses KEEP: the page saves a snapshot through its own snapshot path and signals `keep {shader, params, t}`. |
-| `panic {display?, fork?}` | Presses PANIC: an in-place swap to the boot fork (`?panic=`, else the shader the page loaded with), dropping held writes and open proposals; signals `panic {fork}`. |
-| `display_secret {action?, shader?}` | Relay only. Locks the room so only displays holding its secret can register (see "Display secret" below). `rotate` mints a secret (the first call creates it) and returns the display link with the secret in its hash; `status` (the default) says whether the room is locked; `clear` opens it again. |
-| `wait_for_event {since?, types?, timeout_s?}` | Blocks up to 55 s until `display-joined`, `display-left` or a `vj-signal` (`boot`, `clip`, `flicker`, `too-dark`, `shiver`, `gate-drop`, `pulse`, `confirm-learn`) arrives after `since`; plus the live show's `hands`, `release`, `keep`, `panic`, `pad-alive`, `proposal-taken`, `proposal-dropped` ([contract](live-show-contract.md)). |
+The table of tools and their arguments is the guide's `tools` topic
+([vj-mcp-guide.md](vj-mcp-guide.md#tools-every-tool-and-its-arguments)). Details that matter to
+people changing the server, not to agents using it:
+
+- `write_shader` on the dev server writes through the same helper as `/__save-shader`. A display
+  that `set_shader` moved counts as showing the new shader: pages match HMR events with
+  `shaderOnScreen()` (`src/shaderLoader.js`), which reads `?shader=` when the event arrives, never
+  the value from boot.
+- The live show's tools (`propose`, `answer_proposal`, `keep`, `panic`) and `source` on
+  `set_params` / `set_shader` follow the [live-show contract](live-show-contract.md). Every MCP
+  write goes out with `source: "agent"` on the `update-params` envelope (`hub-core.js` `send`'s
+  `extra`), which is what the page's HANDS gate holds. Mid-lock a write answers `held: true`
+  instead of a read-back. `write_shader` on dev first sends `vj-agent-shader {shader, hash}` so the
+  page's HMR handler holds exactly that code; Aaron's own editor saves still swap at once.
 
 `display` is optional when one display is connected, and otherwise any unique prefix of an
 id. An id is the first 6 hex characters of a key kept in the tab's `sessionStorage`, so it
@@ -200,9 +218,7 @@ pings the first one. If the first answers, the newcomer gets `display-rekey`, mi
 and says hello again, so both tabs are listed. If it does not answer (a phone that dropped off
 wifi), the newcomer takes over the id.
 
-A typical loop: `list_displays`, then `get_state {screenshot:true}`, then `set_params`, then
-`get_state` again to see the change. Between moves, `wait_for_event` waits for the page to
-report something instead of polling.
+The typical loop and every other recipe are the guide's workflows: ask the server, `guide {}`.
 
 ## How it works
 
@@ -341,6 +357,13 @@ rewritten:
 
 ## Tests
 
+- `npx vitest run vite-plugins/vj-mcp/guide.test.js`: the guide through a real MCP client (every
+  workflow and topic parsed, See also ids real, instructions, `guide` with no args, a topic, an
+  unknown topic, eight how-to questions each landing on the right section first, prompts,
+  resources, and the dev host reading `docs/`). `workers/remote-relay/src/guide-bundle.test.js`
+  builds the real Worker bundle (`wrangler deploy --dry-run`) and finds the guide text in it. Both
+  e2e suites below ask the live server for its instructions, a prompt, a resource and a `guide`
+  answer.
 - `npx vitest run workers/remote-relay`: the room broker with fake sockets (relay verbatim, a
   forged `inspect` dropped, point-to-point routing, the registry surviving hibernation, rekey and
   takeover, every attachment under the 16 KiB limit even for a non-ASCII hello, display origins, shader fetches) and the Access JWT check

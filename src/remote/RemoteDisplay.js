@@ -152,9 +152,10 @@ const startLiveShow = (client) => {
   }
 
   const state = () => {
-    const all = { ...window.cranes?.manualFeatures, ...window.cranes?.messageParams }
+    // Small on purpose (it rides a signal to agents): knobs, plus whatever the room pinned.
+    const knobs = Object.entries(window.cranes?.manualFeatures ?? {}).filter(([k]) => /^knob_\d+$/.test(k))
     const out = {}
-    for (const [k, v] of Object.entries(all)) if (typeof v === 'number' && Number.isFinite(v)) out[k] = v
+    for (const [k, v] of [...knobs, ...Object.entries(window.cranes?.messageParams ?? {})]) if (typeof v === 'number' && Number.isFinite(v)) out[k] = +v.toFixed(3)
     return { shader: new URLSearchParams(window.location.search).get('shader'), params: out }
   }
 
@@ -286,8 +287,9 @@ const switchShader = (name) => {
   shaderLoads = shaderLoads.then(async () => {
     if (mine !== latestShader) return
     try {
-      await loadShader(name, { updateUrl: true })
-      inspector?.hello() // the broker's display list shows the shader on screen
+      // Checked again after the fetch: a PANIC (swap) pressed while it was in flight must win.
+      const loaded = await loadShader(name, { updateUrl: true, stillWanted: () => mine === latestShader })
+      if (loaded) inspector?.hello() // the broker's display list shows the shader on screen
     } catch (e) {
       console.error('[Remote Display] Failed to load shader:', e)
     }

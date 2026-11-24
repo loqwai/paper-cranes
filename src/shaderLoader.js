@@ -14,8 +14,11 @@ export const shaderOnScreen = () => new URLSearchParams(window.location.search).
  * @param {boolean} options.updateUrl - Whether to update browser URL (default: false)
  * @returns {Promise<{code: string, fullscreen: boolean}>}
  */
-export const loadShader = async (shaderPath, { updateUrl = false } = {}) => {
+// stillWanted: checked once the fetch is back; false means a newer switch (or PANIC) has taken
+// the screen meanwhile, so this one returns null and touches nothing.
+export const loadShader = async (shaderPath, { updateUrl = false, stillWanted = () => true } = {}) => {
   const code = await getRelativeOrAbsoluteShaderUrl(shaderPath)
+  if (!stillWanted()) return null
   // Checked here too, not only in the fetch helper: a boot-time prefetch (PR #223) can hand back
   // the body without going through that helper's checks.
   if (looksLikeWebPage(code)) throw new Error(`shader ${shaderPath} not found (the host sent a web page)`)

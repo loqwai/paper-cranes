@@ -18,8 +18,9 @@ vi.mock('./WebSocketClient.js', () => ({
 }))
 // A shader whose name ends in `-slow` takes 500 ms to fetch, as a first Vite transform can.
 vi.mock('../shaderLoader.js', () => ({
-  loadShader: async (name) => {
+  loadShader: async (name, { stillWanted = () => true } = {}) => {
     await new Promise((r) => setTimeout(r, name.endsWith('-slow') ? 500 : 10))
+    if (!stillWanted()) return null
     window.cranes.shader = `code of ${name}`
     return {}
   },
@@ -201,6 +202,24 @@ describe('RemoteDisplay live show (docs/live-show-contract.md)', () => {
     expect(query().get('shader')).toBe('clit-set/2')
     vi.advanceTimersByTime(1000) // the debounced URL mirror must not put the old shader back
     expect(query().get('shader')).toBe('clit-set/2')
+  })
+
+  it('PANIC wins over a shader switch whose fetch was still in flight', async () => {
+    const client = await bootLive()
+    client.onMessage({ type: 'update-params', data: { shader: 'agent/pick-slow' } })
+    await vi.advanceTimersByTimeAsync(100) // its fetch is under way
+    client.onMessage({ type: 'vj-panic', data: {} })
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(window.cranes.shader).toBe('code at /shaders/clit-set/2.frag')
+  })
+
+  it('his own later move on a key keeps his value when the lock ends', async () => {
+    const client = await bootLive()
+    client.onMessage({ type: 'update-params', data: { knob_1: 0.2 } })
+    client.onMessage({ type: 'update-params', source: 'agent', data: { knob_1: 0.9 } })
+    client.onMessage({ type: 'update-params', data: { knob_1: 0.3 } })
+    vi.advanceTimersByTime(300)
+    expect(window.cranes.messageParams.knob_1).toBe(0.3)
   })
 
   it('?panic= names the fork PANIC swaps to', async () => {
