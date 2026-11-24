@@ -1,4 +1,4 @@
-import { getRelativeOrAbsoluteShaderUrl } from './utils.js'
+import { getRelativeOrAbsoluteShaderUrl, looksLikeWebPage } from './utils.js'
 
 /**
  * The shader on screen now, by path. Read it at the moment you need it, never once at boot: a
@@ -16,6 +16,9 @@ export const shaderOnScreen = () => new URLSearchParams(window.location.search).
  */
 export const loadShader = async (shaderPath, { updateUrl = false } = {}) => {
   const code = await getRelativeOrAbsoluteShaderUrl(shaderPath)
+  // Checked here too, not only in the fetch helper: a boot-time prefetch (PR #223) can hand back
+  // the body without going through that helper's checks.
+  if (looksLikeWebPage(code)) throw new Error(`shader ${shaderPath} not found (the host sent a web page)`)
 
   // Parse metadata
   const fullscreen = code.includes('@fullscreen: true')
@@ -52,6 +55,23 @@ const decodeShaderCode = (code) => {
 }
 
 /**
+ * A link to a shader this host does not have (#207) must not be a silent black screen.
+ * A small corner note says which shader is missing while the default one plays.
+ * @param {string} shaderPath
+ */
+const showShaderMissing = (shaderPath) => {
+  const note = document.createElement('div')
+  note.setAttribute('role', 'status')
+  note.textContent = `shader not found: ${shaderPath}`
+  Object.assign(note.style, {
+    position: 'fixed', left: '8px', bottom: '8px', zIndex: '9999', padding: '4px 8px',
+    font: '12px system-ui, sans-serif', color: '#fff', background: 'rgba(160, 0, 0, 0.75)',
+    borderRadius: '4px', pointerEvents: 'none',
+  })
+  document.body.appendChild(note)
+}
+
+/**
  * Get fragment shader from URL params, localStorage, or default
  * @returns {Promise<{code: string, fullscreen: boolean}>}
  */
@@ -68,7 +88,13 @@ export const getInitialShader = async () => {
   // Check for shader path in URL
   const shaderPath = params.get('shader')
   if (shaderPath) {
-    return loadShader(shaderPath)
+    try {
+      return await loadShader(shaderPath)
+    } catch (error) {
+      console.error(`[cranes] ${error.message}; showing the default shader instead`)
+      showShaderMissing(shaderPath)
+      return loadShader('default')
+    }
   }
 
   // Check localStorage
