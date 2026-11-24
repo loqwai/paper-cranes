@@ -452,7 +452,10 @@ writes are never held and still apply synchronously (hot-path rule). Agents chan
 `propose` (a card on the vjpad; he presses KEEP), never by setting his dials. PANIC (vjpad, MIDI,
 Escape twice on jam/show, `panic` tool) hot-swaps to the boot fork with no reload; KEEP (vjpad, MIDI,
 `k` on jam/show, `keep` tool) saves a snapshot and signals `keep`. The draw board bridge
-(`scripts/vj/board-bridge.js`) maps board taps to these calls with `source: "board"`.
+(`scripts/vj/board-bridge.js`) maps board taps to these calls with `source: "board"`, and board
+faders/XY (draw widgets from `scripts/vj/board-controls.js`) to `update-params` on the display's
+socket, no model in the path: [docs/draw-control-surface.md](docs/draw-control-surface.md)
+(buttons ~155 ms Send→wall; faders ~170 ms, draw's push throttle is the floor).
 See [docs/vj-mcp.md](docs/vj-mcp.md).
 
 ### ParamsManager

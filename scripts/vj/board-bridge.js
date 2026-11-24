@@ -1,33 +1,49 @@
 // board-bridge — a draw board (https://draw.hypnodroid.com) as the show's phone control surface,
-// with no model in the path. It listens on the board as one agent, and each Send that selects a
-// control shape becomes one VJ MCP call on the display: PANIC, KEEP, take or dismiss a proposal,
-// the next or previous setlist beat, a knob to a value. It can also keep a status card on the
-// board fresh from get_state. Skills start it; nothing here asks a model anything.
+// with no model in the path. Buttons: each Send that selects one control becomes one VJ MCP call on
+// the display (PANIC, KEEP, take or drop a proposal, the next or previous setlist beat, a knob to a
+// value). Faders and the XY pad: the bridge watches the control frame on draw's read-only portal
+// socket, and every drag commit becomes one `update-params` on the display's socket, as a dial's
+// would. It can also keep a status card on the board fresh from get_state. Skills start it; nothing
+// here asks a model anything. Full guide: docs/draw-control-surface.md.
 //
 //   node scripts/vj/board-bridge.js --board show-2026-11-24 --ticket <listener ticket> \
-//     [--panic clit-set/2] [--setlist sun-set] [--status-link <widget link>] [--status-every 5]
+//     [--frame controls] [--panic clit-set/2] [--setlist sun-set] [--status-link <widget link>] [--status-every 5]
+//   node scripts/vj/board-bridge.js layout --shader clit-set/2 --frame show --around 0,5600,1600,900 --picture 320,5780,960,540
+//   node scripts/vj/board-bridge.js layout --shader clit-set/2 [--frame controls] [--x 0] [--y 0] [--faders 4]
+//     prints {skill, ops}: submit `skill` once with the draw MCP `skill` tool, then `draw` the `ops`.
+//     --around/--picture draw around the live picture in Window's `show` frame; without them, a column frame.
 //
 // --ticket   from the draw MCP `listener` tool, called as the bridge's own agent (e.g. show-bridge).
 //            It lasts 8 h; exit code 2 means it expired: mint another and restart.
+// --frame    the control frame the faders live in (default `controls`). Faders need draw's
+//            ticket portal route (/api/listen/<board>/portal); until a draw deploy has it, the
+//            bridge says so once and keeps retrying each minute, and the buttons work regardless.
 // --panic    the known-good fork PANIC swaps to (no reload). Without it, PANIC calls the page's
 //            own `panic` tool when the VJ MCP has one, else it is refused.
 // --setlist  setlists/<name>.json, for ◀ / ▶. A setlist with a `driver` plays a beat by running it
 //            (`node <driver> <n>`); otherwise a beat is set_shader {shader, params}.
 // --status-link  a status-card widget link from the draw MCP `link` tool. Links last an hour:
 //            when it answers 4xx the bridge says so once and stops posting; mint a new one.
+// --hub      the display's socket for fader writes (default ws://<MCP host>/ws). Without one,
+//            faders fall back to set_params, which is slower (it reads the value back).
 // MCP_URL (default http://localhost:$PORT/mcp) and DRAW_URL (default https://draw.hypnodroid.com).
+// SIGINT / SIGTERM stop it cleanly: sockets closed, the status card set to stopped.
 //
-// Control ids (a shape's bound label `<id>-text` counts as the shape):
+// Control ids (a shape's bound label `<id>-text`, or a widget part `<id>-face` / `<id>-label`, counts
+// as the control):
 //   ctl-panic · ctl-keep · ctl-next · ctl-prev · ctl-k<N>-<0..100> (knob_N = value/100)
 //   ctl-k<N>-off (release knob_N) · prop-<id>-take · prop-<id>-drop (answer proposal <id>)
+//   fad-k<N> (vj-fader: drag fad-k<N>-knob) · xy-k<A>-k<B> (vj-xy: drag xy-k<A>-k<B>-dot)
 // Every other Send is left alone: it is for a model (chat, a question) and its own listener.
 //
 // One line per action on stdout and in .claude/board-bridge.jsonl:
 //   {sent, control, ok, ms}  ms = Send received → MCP call answered (the page has applied it).
+// Fader writes are not logged one by one (ten a second); a line per drag says how many went out.
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { aroundOps, knobWrites, knobsOf, layoutOps, SKILL } from './board-controls.js'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const LOG = join(ROOT, '.claude', 'board-bridge.jsonl')
@@ -37,7 +53,7 @@ const SETLIST_STATE = join(ROOT, '.claude', 'setlist-state.json')
 
 // ---- pure: which control did this Send press? ----
 
-const shapeOf = (id) => id.replace(/-text$/, '')
+const shapeOf = (id) => id.replace(/-(text|face|label)$/, '')
 
 // A press is a Send that selects exactly one control. A Send of the whole view (scope viewport:
 // the button with nothing selected) lists everything on screen, and a chat line is words, so
@@ -109,7 +125,7 @@ const connect = async (url) => {
   return { call, has: (n) => names.has(n), tools: [...names], close: () => client.close() }
 }
 
-const knobsOf = (state) => Object.fromEntries(
+const statedKnobs = (state) => Object.fromEntries(
   Object.entries({ ...(state.knobs ?? {}), ...(state.pinned ?? {}) })
     .map(([k, v]) => [k, typeof v === 'object' && v !== null ? v.value : v])
     .filter(([k, v]) => /^knob_\d+$/.test(k) && Number.isFinite(v)),
@@ -131,7 +147,7 @@ const actions = (mcp, opts) => ({
       mkdirSync(dirname(shot), { recursive: true })
       writeFileSync(shot, Buffer.from(images[0].data, 'base64'))
     }
-    const kept = { t, source: 'board', sent, shader: state.shader, shaderHash: state.shaderHash, controllers: state.controllers, params: knobsOf(state), features: state.features, shot }
+    const kept = { t, source: 'board', sent, shader: state.shader, shaderHash: state.shaderHash, controllers: state.controllers, params: statedKnobs(state), features: state.features, shot }
     append(KEEPS, kept)
     return { kept: kept.shader, knobs: Object.keys(kept.params).length, shot }
   },
@@ -171,24 +187,33 @@ const actions = (mcp, opts) => ({
   },
 })
 
+const sleep = (ms, signal) => new Promise((resolve) => {
+  const timer = setTimeout(resolve, ms)
+  signal?.addEventListener('abort', () => { clearTimeout(timer); resolve() }, { once: true })
+})
+
+/** 250 ms doubling to `cap`: how long to wait before the nth retry in a row. */
+export const backoff = (failures, cap = 4000) => Math.min(cap, 250 * 2 ** failures)
+
 // GET /api/listen/<board>: the same long poll the draw listener script makes, kept in one process
 // so a tap costs one request and one MCP call, not a node start.
-const listen = async function* ({ base, board, ticket }) {
+const listen = async function* ({ base, board, ticket, signal }) {
   let ack
   let first = true
   let failures = 0
-  while (true) {
+  while (!signal.aborted) {
     const q = new URLSearchParams({ ...(ack && { ack }), ...(first && { handoff: '1' }) })
     let res
     try {
-      res = await fetch(new URL(`/api/listen/${board}?${q}`, base), { headers: { 'Draw-Listen-Ticket': ticket }, signal: AbortSignal.timeout(95_000) })
-    } catch (e) {
-      await new Promise((r) => setTimeout(r, Math.min(4000, 250 * 2 ** failures++)))
+      res = await fetch(new URL(`/api/listen/${board}?${q}`, base), { headers: { 'Draw-Listen-Ticket': ticket }, signal: AbortSignal.any([signal, AbortSignal.timeout(95_000)]) })
+    } catch {
+      await sleep(backoff(failures++), signal)
       continue
     }
     if (res.status === 403) throw Object.assign(new Error('listen ticket refused or expired: call the draw listener tool again'), { code: 2 })
-    if ([500, 502, 503, 504].includes(res.status)) {
-      await new Promise((r) => setTimeout(r, Math.min(4000, 250 * 2 ** failures++)))
+    if ([429, 500, 502, 503, 504].includes(res.status)) {
+      await res.body?.cancel()
+      await sleep(backoff(failures++), signal)
       continue
     }
     if (!res.ok) throw new Error(`listen answered ${res.status}: ${await res.text()}`)
@@ -201,43 +226,147 @@ const listen = async function* ({ base, board, ticket }) {
   }
 }
 
-const statusLoop = async (mcp, opts, signals) => {
+// The control frame, live: draw's read-only portal socket, opened with the listen ticket. Every
+// commit that moves a fader knob or the XY dot arrives as a delta; `onWrites` gets the knob values.
+// Reconnects with backoff; a draw without the ticket route (404/426) is retried each minute.
+const watchFrame = ({ base, board, ticket, frame, signal, onWrites, log }) => {
+  const held = new Map()
+  let failures = 0
+  let missing = false
+  let socket = null
+  signal.addEventListener('abort', () => socket?.close(1000, 'bridge stopped'), { once: true })
+  const open = async () => {
+    const { WebSocket } = await import('ws')
+    while (!signal.aborted) {
+      const url = new URL(`/api/listen/${board}/portal`, base)
+      url.protocol = url.protocol === 'http:' ? 'ws:' : 'wss:'
+      const closed = await new Promise((resolve) => {
+        socket = new WebSocket(url, { headers: { 'Draw-Listen-Ticket': ticket } })
+        socket.on('unexpected-response', (_req, res) => { resolve({ status: res.statusCode }); res.resume() })
+        socket.on('open', () => {
+          failures = 0
+          if (missing) log({ faders: 'draw has the ticket portal now: faders on' })
+          missing = false
+          socket.send(JSON.stringify({ t: 'watch', frame, since: null }))
+          log({ faders: 'watching', frame })
+        })
+        socket.on('message', (raw) => {
+          let message
+          try { message = JSON.parse(String(raw)) } catch { return }
+          if (message.t === 'frame') held.clear()
+          for (const e of message.elements ?? []) e.isDeleted ? held.delete(e.id) : held.set(e.id, e)
+          if (message.t === 'gone') log({ faders: `frame ${frame} is gone: draw the controls again (board-bridge.js layout)` })
+          const writes = knobWrites(message, held)
+          if (Object.keys(writes).length) onWrites(writes)
+        })
+        socket.on('close', (code) => resolve({ code }))
+        socket.on('error', () => {})
+      })
+      if (signal.aborted) return
+      if (closed.status === 403) throw Object.assign(new Error('portal refused the listen ticket: call the draw listener tool again'), { code: 2 })
+      if (closed.status === 404 || closed.status === 426) {
+        if (!missing) log({ faders: `off: this draw has no ticket portal route yet (${closed.status}); buttons still work; retrying each minute` })
+        missing = true
+        await sleep(60_000, signal)
+        continue
+      }
+      await sleep(backoff(failures++, 10_000), signal)
+    }
+  }
+  return open()
+}
+
+// Fader writes: straight onto the display's socket as an `update-params` with source "board", the
+// path a dial takes (docs/live-show-contract.md), so the HANDS lock treats them as his hands. Newest
+// value per knob wins while the socket is down; without a hub, one set_params at a time, newest wins.
+const knobWriter = ({ hub, mcp, signal, log }) => {
+  let socket = null
+  let up = false
+  let waiting = {}
+  let inflight = false
+  const viaMcp = async () => {
+    if (inflight || !Object.keys(waiting).length) return
+    inflight = true
+    const params = waiting
+    waiting = {}
+    try { await mcp.call('set_params', { params, source: 'board' }) } catch (e) { log({ faders: 'set_params failed', error: e.message }) }
+    inflight = false
+    viaMcp()
+  }
+  const flush = () => {
+    if (!Object.keys(waiting).length) return
+    if (up) {
+      socket.send(JSON.stringify({ type: 'update-params', data: waiting, source: 'board' }))
+      waiting = {}
+      return
+    }
+    if (!hub) viaMcp()
+  }
+  const connect = async () => {
+    if (!hub) return
+    const { WebSocket } = await import('ws')
+    let failures = 0
+    while (!signal.aborted) {
+      await new Promise((resolve) => {
+        socket = new WebSocket(hub)
+        socket.on('open', () => { up = true; failures = 0; flush() })
+        socket.on('close', () => { up = false; resolve() })
+        socket.on('error', () => {})
+      })
+      if (!signal.aborted) await sleep(backoff(failures++, 10_000), signal)
+    }
+  }
+  signal.addEventListener('abort', () => socket?.close(), { once: true })
+  connect()
+  return (writes) => { Object.assign(waiting, writes); flush() }
+}
+
+const statusLoop = async (mcp, opts, signals, signal) => {
   if (!opts.statusLink) return
   let warned = false
-  while (true) {
+  while (!signal.aborted) {
     try {
       const { body: s } = await mcp.call('get_state', { features: 'none' })
       const fps = Number.isFinite(s.fps) ? Math.round(s.fps) : null
       const hands = signals.hands ? `hands ON ${signals.hands.knob ?? ''}`.trim() : 'hands off'
       const pad = signals.pad == null ? 'pad ?' : signals.pad ? 'pad alive' : 'PAD DOWN'
       const state = s.shaderError || fps === null || fps < 30 || signals.pad === false ? 'blocked' : 'running'
-      const res = await fetch(opts.statusLink, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ protocol: 'widget', values: {
-          title: String(s.shader ?? 'no shader').slice(-32),
-          state,
-          number: fps === null ? '-' : `${fps}`,
-          unit: `fps · ${hands} · ${pad}`.slice(0, 40),
-          provenance: `get_state · board-bridge · ${new Date().toISOString().slice(11, 19)}Z`,
-        }, expires: '2m' }),
-      })
-      if (!res.ok && !warned) {
+      const ok = await postStatus(opts.statusLink, {
+        title: String(s.shader ?? 'no shader').slice(-32),
+        state,
+        number: fps === null ? '-' : `${fps}`,
+        unit: `fps · ${hands} · ${pad}`.slice(0, 40),
+        provenance: `get_state · board-bridge · ${new Date().toISOString().slice(11, 19)}Z`,
+      }, '2m')
+      if (!ok && !warned) {
         warned = true
-        console.log(JSON.stringify({ status: 'link refused', code: res.status, fix: 'mint a new status-card link and restart with --status-link' }))
+        console.log(JSON.stringify({ status: 'link refused', fix: 'mint a new status-card link and restart with --status-link' }))
       }
-      if (!res.ok) return
+      if (!ok) return
     } catch (e) {
       console.log(JSON.stringify({ status: 'get_state failed', error: e.message }))
     }
-    await new Promise((r) => setTimeout(r, opts.statusEvery * 1000))
+    await sleep(opts.statusEvery * 1000, signal)
   }
 }
 
+// A status card is a widget write through a link: a draw, never a Send or a chat line, so it wakes no
+// agent listening on the board.
+const postStatus = async (link, values, expires) => {
+  const res = await fetch(link, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ protocol: 'widget', values, expires }),
+    signal: AbortSignal.timeout(10_000),
+  }).catch(() => null)
+  await res?.body?.cancel()
+  return !!res?.ok
+}
+
 // hands / pad-alive come from the page's ?vj=1 signals; the status card shows the latest of each.
-const signalLoop = async (mcp, signals) => {
+const signalLoop = async (mcp, signals, signal) => {
   let since
-  while (true) {
+  while (!signal.aborted) {
     try {
       const { body } = await mcp.call('wait_for_event', { ...(since !== undefined && { since }), timeout_s: 50 })
       since = body.seq
@@ -247,30 +376,86 @@ const signalLoop = async (mcp, signals) => {
         if (type === 'pad-alive') signals.pad = !!e.signal?.alive
       }
     } catch {
-      await new Promise((r) => setTimeout(r, 2000))
+      await sleep(2000, signal)
     }
   }
 }
 
+// `layout`: the widgets skill and the draw ops for the control frame, for an agent to apply once with
+// the draw MCP (`skill` then `draw`). Reads the shader's knob names from the dev server's shaders.json
+// and, when a display is up, where its knobs stand now.
+const layout = async (opts, mcpUrl) => {
+  const origin = new URL(mcpUrl).origin
+  const shaders = await (await fetch(`${origin}/shaders.json`)).json()
+  const list = Array.isArray(shaders) ? shaders : shaders.shaders ?? []
+  const shader = opts.shader && list.find((s) => s.name === opts.shader)
+  if (opts.shader && !shader) throw new Error(`no shader ${opts.shader} in ${origin}/shaders.json`)
+  let values = {}
+  try {
+    const mcp = await connect(mcpUrl)
+    const { body } = await mcp.call('get_state', { features: 'none' })
+    values = Object.fromEntries(Object.entries({ ...(body.knobs ?? {}), ...(body.pinned ?? {}) }).map(([k, v]) => [k, typeof v === 'object' && v ? v.value : v]))
+    await mcp.close()
+  } catch {}
+  const knobs = knobsOf(shader?.knobs)
+  const box = (s) => { const [x, y, width, height] = String(s).split(',').map(Number); return { x, y, width, height } }
+  // --around <frame box> --picture <picture box>: the controls drawn around the live picture in an existing frame
+  // (frame `show`, docs/draw-control-surface.md); otherwise a phone-width column frame of its own.
+  const ops = opts.around
+    ? aroundOps({ frameId: opts.frame ?? 'show', frame: box(opts.around), picture: box(opts.picture), knobs, values })
+    : layoutOps({ frame: opts.frame ?? 'controls', x: Number(opts.x ?? 0), y: Number(opts.y ?? 0), knobs, faders: Number(opts.faders ?? 4), values })
+  console.log(JSON.stringify({ skill: SKILL, ops }))
+}
+
 const main = async () => {
-  const opts = parseArgs(process.argv.slice(2))
+  const argv = process.argv.slice(2)
+  const command = argv[0] && !argv[0].startsWith('--') ? argv.shift() : 'run'
+  const opts = parseArgs(argv)
+  const mcpUrl = process.env.MCP_URL || `http://localhost:${process.env.PORT || 6969}/mcp`
+  if (command === 'layout') return layout(opts, mcpUrl)
   if (!opts.board || !opts.ticket) {
-    console.error('usage: board-bridge.js --board <name> --ticket <listener ticket> [--panic <fork>] [--setlist <name>] [--status-link <url>]')
+    console.error('usage: board-bridge.js --board <name> --ticket <listener ticket> [--frame controls] [--panic <fork>] [--setlist <name>] [--status-link <url>] [--hub <ws url>]\n       board-bridge.js layout --shader <name> [--frame controls] [--x 0] [--y 0] [--faders 4]')
     process.exit(64)
   }
-  const mcpUrl = process.env.MCP_URL || `http://localhost:${process.env.PORT || 6969}/mcp`
+  const stop = new AbortController()
+  const { signal } = stop
+  const log = (line) => console.log(JSON.stringify(line))
   const mcp = await connect(mcpUrl)
   const act = actions(mcp, opts)
   const signals = { hands: null, pad: null }
-  console.log(JSON.stringify({ bridge: 'up', board: opts.board, mcp: mcpUrl, pageTools: ['panic', 'keep', 'answer_proposal', 'propose'].filter(mcp.has) }))
-  statusLoop(mcp, opts, signals)
-  signalLoop(mcp, signals)
+  const base = process.env.DRAW_URL || 'https://draw.hypnodroid.com'
+  const hub = opts.hub ?? (() => { const u = new URL(mcpUrl); u.protocol = u.protocol === 'https:' ? 'wss:' : 'ws:'; u.pathname = '/ws'; return u.href })()
+  const finish = async (code) => {
+    if (signal.aborted) return
+    stop.abort()
+    if (opts.statusLink) await postStatus(opts.statusLink, { title: 'board bridge', state: 'waiting', number: '-', unit: 'bridge stopped', provenance: `board-bridge · ${new Date().toISOString().slice(11, 19)}Z` }, '10m')
+    await mcp.close().catch(() => {})
+    log({ bridge: 'stopped', code })
+    process.exit(code)
+  }
+  process.once('SIGINT', () => finish(0))
+  process.once('SIGTERM', () => finish(0))
+  log({ bridge: 'up', board: opts.board, mcp: mcpUrl, hub, frame: opts.frame ?? 'controls', pageTools: ['panic', 'keep', 'answer_proposal', 'propose'].filter(mcp.has) })
+  statusLoop(mcp, opts, signals, signal)
+  signalLoop(mcp, signals, signal)
+  const write = knobWriter({ hub, mcp, signal, log })
+  let moved = 0
+  let quiet = null
+  watchFrame({
+    base, board: opts.board, ticket: opts.ticket, frame: opts.frame ?? 'controls', signal, log,
+    onWrites: (writes) => {
+      write(writes)
+      moved++
+      clearTimeout(quiet)
+      quiet = setTimeout(() => { log({ faders: 'drag', writes: moved, last: writes }); moved = 0 }, 500)
+    },
+  }).catch((e) => { console.error(e.message); finish(e.code ?? 1) })
   try {
-    for await (const send of listen({ base: process.env.DRAW_URL || 'https://draw.hypnodroid.com', board: opts.board, ticket: opts.ticket })) {
+    for await (const send of listen({ base, board: opts.board, ticket: opts.ticket, signal })) {
       const recv = performance.now()
       const control = controlOf(send)
       if (!control) {
-        console.log(JSON.stringify({ sent: send.sent, ignored: send.scope ?? 'no scope', selected: (send.selected ?? []).length }))
+        log({ sent: send.sent, ignored: send.scope ?? 'no scope', selected: (send.selected ?? []).length })
         continue
       }
       let line
@@ -281,12 +466,13 @@ const main = async () => {
         line = { sent: send.sent, control: control.id, ok: false, ms: Math.round(performance.now() - recv), error: e.message }
       }
       line.t = new Date().toISOString()
-      console.log(JSON.stringify(line))
+      log(line)
       append(LOG, line)
     }
   } catch (e) {
+    if (signal.aborted) return
     console.error(e.message)
-    process.exit(e.code ?? 1)
+    await finish(e.code ?? 1)
   }
 }
 
