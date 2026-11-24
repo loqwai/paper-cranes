@@ -9,7 +9,7 @@ allowed-tools: Bash Read Write Edit Grep Glob Agent Monitor TaskStop
 | Say | Does |
 |---|---|
 | `/show [shader] [audio=<label>] [gain=<x>] [board=<name>]` | launch: check, wall, board, bridge, then the `/partner` lane |
-| `/show check` | preflight only, as ✅/❌ cards on the board |
+| `/show check` | preflight only (`node scripts/vj/context.js`, then [check.md](check.md)), as ✅/❌ cards on the board |
 | `/show lite [shader] [audio_file=<url>]` | a jam: wall, status and controls; no partner, critic or setlist |
 | `/show panic [fork]` | a known-good look now, no reload |
 | `/show setlist <name> [list\|next\|prev\|<n>\|auto]` | play `setlists/<name>.json` |
