@@ -24,6 +24,22 @@ the work in-page. The pad also says `pad-hello` every 2 s, so the display can te
 whether a pad is in a hand (`pad-alive`). Any pad move turns the display's HANDS lock on, which
 holds agent writes until 8 s after the last move.
 
+## Phone wall: PROJECT, WALL ✓, NO WALL
+
+When the phone itself drives a projector over USB-C, the pad can put the visuals there and stay the
+pad ([phone-wall.md](phone-wall.md)). A bar above KEEP/PANIC shows only while a second screen is seen
+or a wall is linked; on a phone with no external display the pad looks as before.
+
+- **PROJECT** (purple): opens the wall on the external display (Presentation API when Chrome offers
+  it, else a window placed there) and turns the AWAKE lock on.
+- **WALL ✓**: a wall on this phone is linked. The pad's messages for the display (the same
+  `update-params`, `vj-keep`, `vj-panic`, `proposal-answer`) then go to it over the local link,
+  not the room, so they work with no network. The status line says `wall`.
+- **NO WALL** (red): the wall stopped answering (cable out). The pad keeps working; a returning
+  wall links by itself and gets the pad's values. **✕** stops waiting.
+
+`?wall_url=<same-origin path>` on the pad picks the wall page (default `/`).
+
 ## Three layers, and you never have to touch any of them
 
 | Layer | Lives in | Good for |
@@ -147,6 +163,7 @@ profiles in `cranes-midi-profiles`.
 | `cranes-vjpad-layout` | this phone's layout overrides |
 | `cranes-nfc-home` | the last vjpad query with a `room` (never a `display_secret`), where a tag-opened tab goes after one confirm tap ([nfc-show-controls.md](nfc-show-controls.md)) |
 | `cranes-nfc-show`, `cranes-nfc-beat:<show>` | which sticker map the NFC chip uses, and its NEXT/PREV cursor |
+| `cranes-wall-presentation` (sessionStorage) | the phone wall's presentation id, so a replugged display reconnects without a tap |
 
 `?shader=<path>` on the vjpad URL preselects the shader, overriding the
 remembered one.

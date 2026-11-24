@@ -51,13 +51,13 @@ export const inspectorAllowed = (loc, { dev }) => inspectorAllowedOn(wsUrlFor(lo
 // - the room's display secret (below), which only the page's own link may carry: display_secret;
 // - what code or media the page loads: controller (a full http URL is imported as JavaScript, so a
 //   peer setting it ran its script on the display's next reload), image, audio_file;
-// - what the page is and what it captures or sends: remote, vj, vjtrack, midi, embed, noaudio,
+// - what the page is and what it captures or sends: remote, wall, vj, vjtrack, midi, embed, noaudio,
 //   audio, audio_send, audio_device, audio_time.
 // Knobs, numeric uniforms, shader and shaderCode stay settable: they are what a controller is for.
 const PINNED = new Set([
   'relay', 'room', 'display_secret',
   'controller', 'image', 'audio_file',
-  'remote', 'vj', 'vjtrack', 'midi', 'embed', 'noaudio',
+  'remote', 'wall', 'vj', 'vjtrack', 'midi', 'embed', 'noaudio',
   'audio', 'audio_send', 'audio_device', 'audio_time',
 ])
 
