@@ -1,7 +1,8 @@
 // The relay room's broker, driven with plain fake sockets (no Workers runtime): what it relays, what
 // it drops, how it routes inspect point to point, and the display registry kept in attachments.
-import { describe, it, expect, beforeEach } from 'vitest'
-import { createRoomHub, routeMessage, attachmentRegistry, displayOriginAllowed, siteShaders, decodeRoom } from './room.js'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { createRoomHub, routeMessage, attachmentRegistry, displayOriginAllowed, siteShaders, decodeRoom, roomSecretControl, displayLink } from './room.js'
+import { createDisplayLock, REFUSED } from './secret.js'
 
 const fakeSocket = (name, { mayDisplay = true } = {}) => {
   const ws = {
@@ -157,6 +158,7 @@ describe('relay room: display registry', () => {
     a.sent.length = 0
     const pending = hello(b)
     // The hub pings the first tab; it answers (even an unknown-cmd error is a sign of life).
+    await vi.waitFor(() => expect(a.sent).toHaveLength(1))
     const ping = JSON.parse(a.sent.at(-1))
     expect(ping.data.cmd).toBe('ping')
     await say(a, 'inspect-reply', { id: ping.data.id, ok: false, error: 'unknown cmd ping' })
@@ -222,5 +224,131 @@ describe('relay room: room names from the path', () => {
     expect(decodeRoom('%E0')).toBeNull()
     expect(decodeRoom('%')).toBeNull()
     expect(decodeRoom('')).toBeNull()
+  })
+})
+
+describe('relay room: a display secret locks who may be a display', () => {
+  let lock, held, control
+  const memoryStorage = () => { const m = new Map(); return { get: async (k) => m.get(k), put: async (k, v) => { m.set(k, v) }, delete: async (k) => { m.delete(k) } } }
+  const sayL = (ws, type, data) => routeMessage({ ctx, hub, ws, message: JSON.stringify({ type, data }), lock, held })
+  const helloL = (ws, extra = {}, key = KEY_A) => sayL(ws, 'display-hello', { key, shader: 'plasma', href: 'https://visuals.beadfamous.com/?shader=plasma&room=x', ...extra })
+  const lastData = (ws) => JSON.parse(ws.sent.at(-1)).data
+  const secretOf = (link) => new URLSearchParams(new URL(link).hash.slice(1)).get('display_secret')
+  const allText = () => JSON.stringify({ list: hub.list(), atts: sockets.map((s) => s.att), sent: sockets.map((s) => s.sent) })
+
+  beforeEach(() => {
+    lock = createDisplayLock(memoryStorage())
+    held = new WeakMap()
+    control = roomSecretControl({ ctx, hub, lock, held, room: 'show night', relayHost: 'relay.beadfamous.com' })
+  })
+
+  it('an open room registers a hello with no secret, exactly as before', async () => {
+    const tv = join('tv')
+    expect(await control.status()).toEqual({ locked: false, since: null })
+    expect(await helloL(tv)).toBe('hub')
+    expect(types(tv)).toEqual(['display-welcome'])
+  })
+
+  it('refuses a hello with no secret or a wrong one, and never lists it', async () => {
+    const { link } = await control.rotate()
+    const secret = secretOf(link)
+    const noKey = join('noKey'), wrongKey = join('wrongKey'), pad = join('pad')
+    expect(await helloL(noKey)).toBe('refused')
+    expect(await helloL(wrongKey, { displaySecret: `${secret.slice(0, -1)}A` }, KEY_B)).toBe('refused')
+    expect(hub.list()).toEqual([])
+    expect(types(noKey)).toEqual(['display-refused'])
+    expect(lastData(noKey)).toEqual({ reason: REFUSED.missing })
+    expect(lastData(wrongKey)).toEqual({ reason: REFUSED.wrong })
+    expect(pad.sent).toEqual([])
+  })
+
+  it('registers a hello with the right secret, and keeps the secret out of everything it stores or sends', async () => {
+    const { link } = await control.rotate()
+    const secret = secretOf(link)
+    const tv = join('tv'), pad = join('pad')
+    const href = `https://visuals.beadfamous.com/?shader=plasma&remote=display&room=x#display_secret=${secret}`
+    expect(await helloL(tv, { displaySecret: secret, href })).toBe('hub')
+    expect(types(tv)).toEqual(['display-welcome'])
+    expect(hub.list().map((d) => d.id)).toEqual(['a1b2c3'])
+    expect(hub.list()[0].href).toBe('https://visuals.beadfamous.com/?shader=plasma&remote=display&room=x#display_secret=REDACTED')
+    expect(allText()).not.toContain(secret)
+    expect(pad.sent).toEqual([])
+  })
+
+  it('holds a signal that beats the hello, and lets it through once the hello proves the secret', async () => {
+    const { link } = await control.rotate()
+    const secret = secretOf(link)
+    const tv = join('tv')
+    const since = hub.seq
+    expect(await sayL(tv, 'vj-signal', { type: 'boot', url: `https://visuals.beadfamous.com/?vj=1#display_secret=${secret}` })).toBe('held')
+    expect((await hub.waitFor({ since, timeoutMs: 10 })).events).toEqual([])
+    await helloL(tv, { displaySecret: secret })
+    expect(await sayL(tv, 'vj-signal', { type: 'pulse' })).toBe('hub')
+    const { events } = await hub.waitFor({ since, types: ['vj-signal'], timeoutMs: 10 })
+    expect(events.map((e) => e.signal)).toEqual(['boot', 'pulse'])
+    expect(events[0].data.url).toBe('https://visuals.beadfamous.com/?vj=1#display_secret=REDACTED')
+    expect(JSON.stringify(events)).not.toContain(secret)
+  })
+
+  it('drops what a forged display signalled once its hello is refused, and holds only a few', async () => {
+    await control.rotate()
+    const fake = join('fake')
+    const since = hub.seq
+    for (let i = 0; i < 5; i++) expect(await sayL(fake, 'vj-signal', { type: 'too-dark', i })).toBe('held')
+    expect(await sayL(fake, 'vj-signal', { type: 'too-dark', i: 5 })).toBe('drop')
+    await helloL(fake, { displaySecret: 'ds_forged-forged-forged-forged-forged' })
+    expect(await sayL(fake, 'vj-signal', { type: 'clip' })).toBe('held')
+    expect((await hub.waitFor({ since, types: ['vj-signal'], timeoutMs: 10 })).events).toEqual([])
+  })
+
+  it('rotation drops every registered display at once and refuses the old secret; the display stays a room peer', async () => {
+    const first = secretOf((await control.rotate()).link)
+    const tv = join('tv'), pad = join('pad')
+    await helloL(tv, { displaySecret: first })
+    const since = hub.seq
+    const { link, dropped } = await control.rotate()
+    expect(dropped).toEqual(['a1b2c3'])
+    expect(hub.list()).toEqual([])
+    expect(lastData(tv)).toEqual({ reason: REFUSED.rotated })
+    expect((await hub.waitFor({ since, timeoutMs: 10 })).events.map((e) => e.type)).toEqual(['display-left'])
+    expect(await sayL(tv, 'vj-signal', { type: 'pulse' })).toBe('held')
+    expect(await helloL(tv, { displaySecret: first })).toBe('refused')
+    // Knobs from a phone still reach it.
+    await routeMessage({ ctx, hub, ws: pad, message: '{"type":"update-params","data":{"knob_1":0.5}}', lock, held })
+    expect(tv.sent.at(-1)).toBe('{"type":"update-params","data":{"knob_1":0.5}}')
+    expect(await helloL(tv, { displaySecret: secretOf(link) })).toBe('hub')
+    expect(hub.list().map((d) => d.id)).toEqual(['a1b2c3'])
+  })
+
+  it('a peer cannot forge display-refused to a display', async () => {
+    const tv = join('tv'), pad = join('pad')
+    await helloL(tv)
+    tv.sent.length = 0
+    expect(await sayL(pad, 'display-refused', { reason: 'go away' })).toBe('drop')
+    expect(tv.sent).toEqual([])
+  })
+
+  it('clear opens the room again', async () => {
+    await control.rotate()
+    expect((await control.status()).locked).toBe(true)
+    expect(await control.clear()).toEqual({ locked: false, since: null })
+    expect(await helloL(join('tv'))).toBe('hub')
+  })
+
+  it('the link opens a display in this room with the secret in its hash, and names the shader on screen', async () => {
+    const tv = join('tv')
+    await helloL(tv)
+    const { link } = await control.rotate()
+    const url = new URL(link)
+    expect(url.origin).toBe('https://visuals.beadfamous.com')
+    expect(Object.fromEntries(url.searchParams)).toEqual({ shader: 'plasma', remote: 'display', room: 'show night' })
+    expect(url.search).not.toContain('ds_')
+    expect(secretOf(link)).toMatch(/^ds_/)
+    expect(new URL((await control.rotate({ shader: 'clit-set/2' })).link).searchParams.get('shader')).toBe('clit-set/2')
+  })
+
+  it('a link for a local relay names that relay', () => {
+    const link = displayLink({ site: 'http://localhost:7125', room: 'r', relayHost: 'localhost:8798', secret: 'ds_x' })
+    expect(link).toBe('http://localhost:7125/?remote=display&room=r&relay=localhost%3A8798#display_secret=ds_x')
   })
 })
