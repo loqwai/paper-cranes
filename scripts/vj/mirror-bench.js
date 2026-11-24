@@ -15,7 +15,7 @@
 // phone: Pixel 7 emulation, CPU throttled 4x, and site isolation off, as on Android, where a
 // cross-site iframe shares the page's renderer process. GPU is whatever this machine's headless
 // Chromium has (SwiftShader or llvmpipe in WSL: software, so slower than a phone's GPU).
-// Ports 7171 (relay) and 7172 (Vite): never one the live show uses.
+// Ports 7171 (relay) and 7172 (Vite), or E2E_RELAY_PORT / E2E_VITE_PORT: never one the live show uses.
 import { chromium, devices } from 'playwright'
 import { createServer } from 'vite'
 import { spawn } from 'node:child_process'
@@ -31,7 +31,7 @@ const SECONDS = Number(arg('seconds', 10))
 const SHADER = arg('shader', 'clit-set/2')
 // Extra mirror settings to try, such as `&fps=15&scale=0.35`.
 const MIRROR_QUERY = arg('mirror-query', '')
-const RELAY_PORT = 7171, VITE_PORT = 7172
+const RELAY_PORT = Number(process.env.E2E_RELAY_PORT ?? 7171), VITE_PORT = Number(process.env.E2E_VITE_PORT ?? 7172)
 const RELAY = `127.0.0.1:${RELAY_PORT}`
 const ROOM = `bench-${Math.random().toString(36).slice(2)}`
 const GL = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--disable-features=WebRtcHideLocalIpsWithMdns', '--autoplay-policy=no-user-gesture-required']
