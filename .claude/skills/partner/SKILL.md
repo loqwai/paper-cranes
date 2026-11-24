@@ -51,7 +51,8 @@ his hands are on (`{held: true}`), dropped by PANIC.
 A wake is an event line, a board chat or Send, or the quiet timer (90 s of no events with hands
 off: a background `sleep 90`).
 
-1. **Hands on** (last `hands` was `on`): do nothing; wait for `release`.
+1. **Hands on** (last `hands` was `on`): no writes; wait for `release`. A proposal is only a card,
+   so step 4 may propose on `release` while the lock still runs (proved 2026-11-24).
 2. **Health**, applied directly: white-out (`clip` > 0), black (`too-dark`, or `meter.lumMax` <
    0.03 while `audio.energy` > 0), broken (`shaderError`, or a flat screenshot), slow (`fps` < 45
    or `jank.p95` > 50 ms, two reads running). Fix the cause in the `-wip` with `write_shader`
