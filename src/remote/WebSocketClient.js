@@ -16,7 +16,9 @@ const getWsUrl = () => {
 
   if (room) {
     const relayHost = params.get('relay') || DEFAULT_RELAY_HOST
-    return `wss://${relayHost}/ws/${encodeURIComponent(room)}`
+    // A relay on this machine (`wrangler dev` in workers/remote-relay) speaks plain ws.
+    const scheme = /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(relayHost) ? 'ws' : 'wss'
+    return `${scheme}://${relayHost}/ws/${encodeURIComponent(room)}`
   }
 
   // Fallback: local dev server (existing behavior)

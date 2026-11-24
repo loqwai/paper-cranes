@@ -1,9 +1,12 @@
 import { WebSocketClient } from './WebSocketClient.js'
 import { loadShader } from '../shaderLoader.js'
 
-// The VJ MCP (docs/vj-mcp.md) reaches this display through the dev-server broker. Never on the
-// public relay (`?room=`): there no broker filters who may send `inspect`.
-const inspectable = import.meta.env.DEV && !new URLSearchParams(window.location.search).get('room')
+// The VJ MCP (docs/vj-mcp.md) reaches this display through a broker: the dev server's /ws, or on
+// `?room=` the relay Worker's room, which drops any `inspect` a client sends. A production page
+// with no room has no broker at all, so it never loads the inspector. Even where it does, the
+// inspector answers nothing until the broker itself has welcomed it (inspect.js), so a page on a
+// relay that predates the broker never answers a peer.
+const inspectable = import.meta.env.DEV || Boolean(new URLSearchParams(window.location.search).get('room'))
 let inspector = null
 
 /**
@@ -32,6 +35,10 @@ export const initRemoteDisplay = () => {
         inspector?.rekey()
         break
 
+      case 'display-welcome':
+        inspector?.welcome(message.data)
+        break
+
       case 'status':
         // Connection status updates
         console.log('[Remote Display] Connected clients:', message.data?.connectedClients)
@@ -46,6 +53,7 @@ export const initRemoteDisplay = () => {
   const handleStatusChange = (status) => {
     console.log('[Remote Display] Status:', status)
     if (status === 'connected') inspector?.hello()
+    else inspector?.unwelcome()
     // Only show indicator for connection problems
     if (status !== 'connected') {
       updateStatusIndicator(status)

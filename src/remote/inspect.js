@@ -1,10 +1,12 @@
 // Page side of the VJ MCP server (docs/vj-mcp.md). A `?remote=display` page announces itself to
-// the dev-server broker with `display-hello` and answers `inspect` requests on the same socket.
+// its broker with `display-hello` and answers `inspect` requests on the same socket. The broker is
+// the dev server's /ws, or on `?room=` the relay Worker's room Durable Object.
 //
-// Trust: `inspect` frames reach the page only from the broker. remote-ws-plugin drops any
-// `inspect` a client sends and never broadcasts `inspect-reply`, so another tab on /ws can
-// neither ask a display for anything nor read its answers. On the public relay (`?room=`) no
-// broker sits in the middle, so RemoteDisplay never installs this there.
+// Trust: `inspect` frames reach the page only from the broker. Both brokers drop any `inspect`,
+// `display-welcome` or `display-rekey` a client sends and never broadcast `inspect-reply`, so
+// another client can neither ask a display for anything nor read its answers. And the page answers
+// nothing until the broker has answered its hello with `display-welcome`: a relay that predates the
+// broker relays a hello to its peers but never welcomes, so there the inspector stays silent.
 //
 // Read-only plus `validate` (a scratch compile): knob and shader changes go through the existing
 // `update-params` path, not through here. Handlers are adapted from PR #182/#187's inspect.js.
@@ -152,6 +154,9 @@ const commands = {
 
   logs: async ({ n = 50 } = {}) => S.logRing.slice(-n),
 
+  // The hub's liveness probe when a second tab says hello with this tab's key.
+  ping: async () => ({ ok: true }),
+
   // Compile GLSL in a scratch context with the same wrapper the Visualizer uses. Nothing on
   // screen changes. `src` omitted = the shader currently on screen.
   validate: async ({ src } = {}) => validate(typeof src === 'string' ? src : code()),
@@ -160,7 +165,9 @@ const commands = {
 // send(type, data) is the RemoteDisplay socket's send.
 export const createInspector = (send) => {
   installLogCapture()
+  let welcomed = false
   const handle = async ({ id, cmd, args } = {}) => {
+    if (!welcomed) return
     const fn = Object.hasOwn(commands, cmd) ? commands[cmd] : null
     if (!fn) return send('inspect-reply', { id, ok: false, error: `unknown cmd ${cmd}` })
     try {
@@ -174,5 +181,8 @@ export const createInspector = (send) => {
     displayKey = loadKey(true)
     sayHello()
   }
-  return { handle, hello: sayHello, rekey }
+  // A welcome names the id this tab's key maps to; one for another id is not for this tab.
+  const welcome = ({ id } = {}) => { if (id === displayKey.replace(/-/g, '').slice(0, 6).toLowerCase()) welcomed = true }
+  const unwelcome = () => { welcomed = false }
+  return { handle, hello: sayHello, rekey, welcome, unwelcome }
 }
