@@ -8,6 +8,8 @@ Open `edit.html` in multiple browser tabs (or on different machines pointing at 
 
 When you type, your edits are broadcast to all connected peers via WebSocket. Cursor positions and text selections are visible to everyone in real time.
 
+Every `mp-hello`, `mp-sync-full`, `mp-edit` and `mp-cursor` carries the `shader` the tab has open (`?shader=`), and a tab ignores those for any other shader. Tabs editing different shaders on the same dev server share the socket but never each other's text. Presence chips still list every editor on the server.
+
 ## Architecture
 
 ```

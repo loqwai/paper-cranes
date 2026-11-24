@@ -19,8 +19,9 @@ Microphone → MediaStream → AudioContext → WindowNode (Hanning) → FFT Ana
 
 #### 1. AudioProcessor (`src/audio/AudioProcessor.js`)
 - **FFT Size**: 4096 (optimized from 32768 for ~85ms latency)
-- **Smoothing**: 0.15 exponential smoothing factor
-- **Analyzer Smoothing**: 0.2 time constant
+- **Smoothing**: the EMA weight on each new worker value (`?smoothing=`; default 0.15 for both the mic and `audio_file`). Higher is more responsive and more jittery; lower is smoother and later. `*Normalized`/`*ZScore` use 1.5x that weight, capped at 1
+- **Analyzer Smoothing**: 0.4 `smoothingTimeConstant`
+- **Onsets**: `OnsetProcessor` reads the raw spectrum every display frame, outside the workers and the EMA, and publishes `onsetKick`/`Snare`/`Hat`/`Full` plus `Trigger`, `Strength` and `Age`. Its detector is hypnosound's `makeOnsetDetector`/`makeOnsetEnvelope` (2.1.0 on). It counts frames, so triggers misfire more on 120/144 Hz displays. See [docs/onset-detection.md](docs/onset-detection.md)
 - Uses Web Workers for parallel feature extraction
 - Extracts 16 audio features from hypnosound 2.1.0. The browser loads it from esm.sh, pinned in `src/audio/analyzer.js` (workers) and the `vite.config.js` `hypnosound` alias (main thread). Bump both pins and `package.json` together; a mismatch once left the main thread on 1.10.2 while the workers ran 1.14.0
 
@@ -54,8 +55,8 @@ Each feature has 11 statistical variations:
 - SpectralRoughness, SpectralKurtosis, SpectralEntropy, SpectralCrest
 - SpectralSkew, PitchClass
 - Bass, Mids, Treble
-- Energy
-- Beat detection
+- Energy, Rms, Dbfs
+- Beat detection (`beat`: `spectralFlux` zScore above 0.9; never true while the history is flat, as in silence)
 
 ## Audio Features Reference (Hypnosound)
 
@@ -210,8 +211,7 @@ Group features by domain and pick from DIFFERENT domains for variety:
 ### Latency Reduction (from ~1000ms to ~100ms)
 1. **FFT Size**: Reduced from 16384 to 4096 
    - Query param: `?fft_size=4096`
-2. **Smoothing**: Reduced from 0.8 to 0.05-0.2
-   - Query param: `?smoothing=0.15`
+2. **Smoothing**: `?smoothing=0.15` (mic default) is the weight on the newest value, so raising it cuts lag and adds jitter
 3. **No worker wait**: features come from each worker's latest reply; nothing awaits a round trip
 
 ### Jitter Reduction
@@ -220,7 +220,7 @@ Group features by domain and pick from DIFFERENT domains for variety:
 - Smart initialization to prevent jumps
 
 ### Browser-Specific Fixes
-- Firefox: Automatic microphone reconnection every 5 seconds
+- Mic watchdog (`src/audio/micWatchdog.js`): resumes a suspended AudioContext and re-acquires an ended or frozen mic; `?debug_audio=true` shows its state
 - Chrome: Proper async initialization of audio worklet
 
 ## Shader Development
@@ -422,12 +422,23 @@ per-message work has been moved out instead: the URL mirror is debounced to 750m
 so a refresh preserves state) and per-message DOM work was removed outright.
 
 ### VJ MCP (any agent harness)
-The dev server serves an MCP server at **`/mcp`** (streamable HTTP, stateless, never SSE) whose tools
-read and drive every `?remote=display` page: `list_displays`, `list_shaders`, `get_state`,
-`screenshot`, `set_params`, `set_shader`, `read_shader`, `write_shader`, `wait_for_event`.
-Register: `claude mcp add --transport http paper-cranes-vj http://localhost:6969/mcp`. Knobs go out as
-`update-params` on the display's own socket; reads come back over a point-to-point `inspect` channel
-the broker never broadcasts. Dev only. See [docs/vj-mcp.md](docs/vj-mcp.md).
+An MCP server (streamable HTTP, stateless, never SSE) whose tools read and drive every display:
+`list_displays`, `list_shaders`, `get_state`, `screenshot`, `set_params`, `set_shader`,
+`read_shader`, `write_shader`, `wait_for_event`. It runs in two places with the same code
+(`vite-plugins/vj-mcp/server.js` + `hub-core.js`):
+- **Live:** `https://relay.beadfamous.com/mcp/<room>` on the relay Worker. Displays are any
+  `?remote=display&room=<room>` page; the room's Durable Object is the broker. Cloudflare Access
+  managed OAuth in front (`claude mcp add --transport http paper-cranes-live
+  https://relay.beadfamous.com/mcp/<room>`, then sign in from `/mcp`), the JWT checked again in the
+  Worker. `write_shader` there applies code live and saves nothing (`persisted: false`). The room
+  drops any `inspect` a client sends; everything else is relayed verbatim as before.
+- **Dev:** `http://localhost:6969/mcp` on the dev server (`claude mcp add --transport http
+  paper-cranes-vj http://localhost:6969/mcp`), displays are `?remote=display` pages there, and
+  `write_shader` writes `shaders/<x>.frag` and hot-swaps.
+
+Knobs go out as `update-params` on the display's own socket; reads come back over a point-to-point
+`inspect` channel the broker never broadcasts, answered only after the broker welcomed the page.
+See [docs/vj-mcp.md](docs/vj-mcp.md).
 
 ### ParamsManager
 The `ParamsManager` (`src/params/ParamsManager.js`) is the unified system for handling all shader parameters:
@@ -502,7 +513,8 @@ paramsManager.setShader(code)      // Syncs shader to remote
     ├── editor-sync-plugin.js    # Bidirectional editor↔disk sync (dev only)
     ├── vj-signal-plugin.js      # /__vj-signal endpoint; writes .claude/vj-signals.jsonl (dev only)
     ├── vj-mcp-plugin.js         # /mcp: VJ MCP server, streamable HTTP (dev only) — docs/vj-mcp.md
-    ├── vj-mcp/hub.js, tools.js  #   display registry shared with the /ws broker; the tool set
+    ├── vj-mcp/server.js, hub-core.js  # the tool set and display hub, shared with the relay Worker
+    ├── vj-mcp/hub.js, tools.js  #   their dev-server hosts (Node ws sockets, shaders on disk)
     └── shader-plugin.js         # Shader discovery, metadata, and manifest generation
 ```
 
@@ -690,7 +702,7 @@ The installed PWA opens with whatever URL the user was on when they installed. F
 - `index.html` — manifest link injection + 7-tap install trigger
 - `vite-plugins/shader-plugin.js` — `prettifyShaderName()`, `makeManifest()`, `generateManifests()`
 - `public/icons/` — shared PWA icons (all shaders use the same set)
-- `service-worker.js` — offline caching
+- `public/service-worker.js` — offline caching (the only copy; Vite ships public/ as-is)
 
 ## ChromaDepth Shader Variants
 

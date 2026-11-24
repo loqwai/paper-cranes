@@ -111,7 +111,7 @@ export class AudioProcessor {
                 // Exponential smoothing formula
                 // For z-scores and normalized values, use less smoothing to maintain responsiveness
                 // Capped at 1 (no smoothing): a weight above 1 overshoots every step,
-                // and audio_file's default 0.85 * 1.5 = 1.275 pushed 0-1 features out of range.
+                // and ?smoothing=0.85 (audio_file's default before 2.1.0) * 1.5 = 1.275 pushed 0-1 features out of range.
                 const smoothingFactor = Math.min(1, key.includes('ZScore') || key.includes('Normalized')
                     ? currentSmoothing * 1.5
                     : currentSmoothing)
@@ -162,17 +162,6 @@ export class AudioProcessor {
 
         this.updateCurrentFeatures()
         this.updateFftData()
-        if(navigator.userAgent.toLowerCase().includes('firefox')) this.enableMicDisconnectionMitigations()
-
-    }
-
-    enableMicDisconnectionMitigations = () => {
-        setInterval(async () => {
-            const newStream = await navigator.mediaDevices.getUserMedia({ audio: true })
-            this.sourceNode = this.audioContext.createMediaStreamSource(newStream)
-            this.sourceNode.connect(this.fftAnalyzer)
-
-        }, 5000)
     }
 
     updateFftData = () => {

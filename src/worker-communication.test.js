@@ -32,4 +32,15 @@ describe('receive (window update-params)', () => {
         expect(fetchMock).not.toHaveBeenCalled()
         expect(window.cranes.shader).toBe('live code')
     })
+
+    // A static host answers a missing .frag with its index.html (#233). Compiling
+    // that as GLSL is a black screen, so the shader on screen stays.
+    it('keeps the current shader when the named one is missing', async () => {
+        fetchMock.mockImplementation(async () => ({ text: async () => '<!doctype html><html></html>' }))
+        vi.spyOn(console, 'error').mockImplementation(() => {})
+        const { receive } = await load()
+        window.cranes.shader = 'current code'
+        await receive({ data: { type: 'update-params', data: { shader: 'no-such-shader' } } })
+        expect(window.cranes.shader).toBe('current code')
+    })
 })

@@ -1,4 +1,5 @@
 import { AudioProcessor } from './src/audio/AudioProcessor.js'
+import { watchMic } from './src/audio/micWatchdog.js'
 import { createAudioFileSource, initAudioFromFile } from './src/audio/audioFileSource.js'
 
 // PROTOTYPE: opt-in multiresolution (wavelet) analysis alongside the FFT pipeline.
@@ -97,6 +98,18 @@ const getAudioStream = async (config) => {
     return stream;
 };
 
+// The mic watchdog re-acquires the device in use, which scripts/show/audio-swap.js can change
+// after load. The load-time ?audio_device is only used when there is no track or that device is gone.
+const reacquireStream = async (deviceId) => {
+    if (!deviceId) return getAudioStream(audioConfig);
+    try {
+        return await navigator.mediaDevices.getUserMedia({ audio: { ...audioConfig, deviceId: { exact: deviceId } } });
+    } catch (err) {
+        if (err.name !== 'OverconstrainedError' && err.name !== 'NotFoundError') throw err;
+        return getAudioStream(audioConfig);
+    }
+};
+
 // Factor out coordinate handling
 const coordsHandler = {
     coords: { x: 0.5, y: 0.5 },
@@ -159,6 +172,7 @@ const setupMicAudio = async () => {
         audioProcessor.start();
 
         await maybeStartWavelet(params, audioContext, sourceNode);
+        watchMic({ audioContext, inputGain, getStream: reacquireStream, debug: params.get('debug_audio') === 'true' });
         return audioProcessor;
     } catch (err) {
         console.error('Audio initialization failed:', err);

@@ -17,10 +17,7 @@ const getQueryParamUniforms = (shader, otherUniforms = '') => {
     const knownParams = new Set(['shader', 'audio', 'noaudio', 'embed', 'fullscreen', 'remote', 'fft_size', 'smoothing', 'history_size', 'controller', 'performance'])
     const knownUniforms = getKnownUniforms()
 
-    // Every name already declared, including comma lists (`uniform float a, b, c;`): a second
-    // declaration of the same name is a compile error.
-    const declared = new Set([...(shader + otherUniforms).matchAll(/\buniform\s+\w+\s+([^;]+);/g)]
-        .flatMap(m => m[1].split(',').map(name => name.trim().split(/[\s[]/)[0])))
+    const declared = declaredUniforms(shader + otherUniforms)
 
     const uniforms = []
     for (let [key, value] of params) {
@@ -28,6 +25,7 @@ const getQueryParamUniforms = (shader, otherUniforms = '') => {
         if (knownParams.has(key)) continue
         if (key.startsWith('knob_')) continue  // Already handled
         if (key.includes('.')) continue  // Skip metadata params like param.min, param.max
+        if (!isGlslIdentifier(key)) continue  // `?3d=1` or `?gl_x=1` would be a compile error
         if (declared.has(key)) continue
         // Create uniform if value is numeric OR references a known uniform
         if (!isNaN(parseFloat(value)) || knownUniforms.has(value)) {
@@ -39,21 +37,34 @@ const getQueryParamUniforms = (shader, otherUniforms = '') => {
 }
 
 const getKnobUniforms = (shader) => {
-    const existingKnobs = new Set(
-        [...shader.matchAll(/uniform\s+float\s+knob_(\d+)/g)].map(m => parseInt(m[1]))
-    )
-    return Array.from({length: 200}, (_, i) => i + 1)
-        .filter(i => !existingKnobs.has(i))
-        .map(i => `uniform float knob_${i};`)
+    const declared = declaredUniforms(shader)
+    return Array.from({length: 200}, (_, i) => `knob_${i + 1}`)
+        .filter(name => !declared.has(name))
+        .map(name => `uniform float ${name};`)
         .join('\n')
 }
 
+// Names a GLSL ES 3.00 shader may declare: reserved `gl_` prefixes and `__` are compile errors.
+const isGlslIdentifier = (name) => /^[A-Za-z_]\w*$/.test(name) && !name.startsWith('gl_') && !name.includes('__')
+
+// Every uniform name the code declares, ignoring comments and seeing through precision
+// qualifiers and comma lists (`uniform highp float a, b[2];`). Declaring a name twice is a
+// compile error, so anything in here must not be declared again.
+const declaredUniforms = (code) => {
+    const live = code.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+    return new Set([...live.matchAll(/\buniform\s+(?:(?:highp|mediump|lowp)\s+)?\w+\s+([^;]+);/g)]
+        .flatMap(m => m[1].split(',').map(name => name.trim().split(/[\s[]/)[0])))
+}
+
 export const shaderWrapper = (shader) => {
-    const [firstLine, ...lines] = shader.split('\n')
-    if (firstLine.includes('#version')) {
-        lines.unshift('#define PAPER_CRANES 1')
-        lines.unshift(firstLine)
-        return lines.join('\n')
+    // WebGL wants #version on line 1, but a comment above it (`// @fullscreen: true`) is an easy
+    // slip: hoist it. The output is always one line longer than the source (the define).
+    const lines = shader.split('\n')
+    const firstCode = lines.findIndex(line => line.trim() && !line.trim().startsWith('//'))
+    if (lines[firstCode]?.trim().startsWith('#version')) {
+        const [version] = lines.splice(firstCode, 1)
+        lines.splice(firstCode, 0, '#define PAPER_CRANES 1')
+        return [version, ...lines].join('\n')
     }
     if (shader.includes('mainImage')) {
         const compatUniforms = shaderToyCompatibilityUniforms()
@@ -64,6 +75,7 @@ export const shaderWrapper = (shader) => {
         const queryUniforms = getQueryParamUniforms(shader, otherUniforms)
         return /* glsl */ `#version 300 es
 precision highp float;
+#define PAPER_CRANES 1
 
 out vec4 fragColor;
 ${compatUniforms}
@@ -113,10 +125,10 @@ const getWaveletUniforms = () => {
 const getAudioUniforms = (shader = '') => {
     // Skip any uniform the shader already declares itself, so explicit declarations (common
     // in wavelet shaders written before these auto-declared) don't cause a redefinition error.
-    const code = shader.replace(/\s+/g, ' ')
+    const declared = declaredUniforms(shader)
     return [...Object.keys(getFlatAudioFeatures()), ...getWaveletUniforms(), ...getOnsetUniformNames(), 'beat']
         .sort()
-        .filter(f => !code.includes(`uniform float ${f};`) && !code.includes(`uniform bool ${f};`))
+        .filter(f => !declared.has(f))
         .map(f => `uniform ${f === 'beat' ? 'bool' : 'float'} ${f};`)
         .join('\n')
 }

@@ -369,9 +369,12 @@ const QUEUES = {
   ],
 }
 
-// URL hash selects queue: #taco / #coat, default = iris
-const QUEUE_NAME = (location.hash.replace("#", "") || "iris")
-const QUEUE = QUEUES[QUEUE_NAME] || QUEUES.iris
+// URL hash selects queue: #taco / #coat, default = iris.
+// An unknown hash (#clit before a clit queue exists) must not title the page "clit" while it
+// writes iris URLs onto the tags: the name, title and saved progress all follow the queue used.
+const ASKED_QUEUE = location.hash.replace("#", "")
+const QUEUE_NAME = QUEUES[ASKED_QUEUE] ? ASKED_QUEUE : "iris"
+const QUEUE = QUEUES[QUEUE_NAME]
 document.getElementById("title").textContent = QUEUE_NAME + " NFC writer"
 document.title = QUEUE_NAME + " NFC writer"
 
@@ -563,6 +566,9 @@ if (!("NDEFReader" in window)) {
 }
 
 render()
+if (ASKED_QUEUE && ASKED_QUEUE !== QUEUE_NAME) {
+  setStatus(`No "${ASKED_QUEUE}" queue here, showing ${QUEUE_NAME}. Queues: ${Object.keys(QUEUES).join(", ")}`, "err")
+}
 </script>
 </body>
 </html>
