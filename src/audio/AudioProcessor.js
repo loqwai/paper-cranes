@@ -139,9 +139,13 @@ export class AudioProcessor {
         this.currentFeatures.beat = this.warmupFrame >= WARMUP_FRAMES && this.isBeat()
     }
 
+    // hypnosound reports zScore 1 when its history is flat (max === min), which is
+    // exactly what silence or a still-suspended AudioContext produces. A flat
+    // history has no spike in it, so it is never a beat.
     isBeat = () => {
-        const spectralFlux = this.rawFeatures.spectralFlux
-        return spectralFlux?.stats.zScore > 0.9 || false
+        const stats = this.rawFeatures.spectralFlux?.stats
+        if (!stats || stats.max === stats.min) return false
+        return stats.zScore > 0.9
     }
 
     start = async () => {
