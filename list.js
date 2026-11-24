@@ -636,20 +636,20 @@ const DEFAULT_SORT = HAS_REAL_DATES ? 'modified' : 'name'
 const validSort = (mode) => (SORT_MODES.some((entry) => entry.id === mode) ? mode : DEFAULT_SORT)
 
 const List = () => {
-  const url = new URL(window.location)
+  const url = readUrlParams()
   const prefs = readStore('prefs', {})
 
-  const [filterText, setFilterText] = useState(url.searchParams.get('filter') || '')
-  const [sortMode, setSortMode] = useState(validSort(url.searchParams.get('sort') || prefs.sort || DEFAULT_SORT))
+  const [filterText, setFilterText] = useState(url.get('filter') || '')
+  const [sortMode, setSortMode] = useState(validSort(url.get('sort') || prefs.sort || DEFAULT_SORT))
   const [shuffleSeed, setShuffleSeed] = useState(1)
-  const [favoritesOnly, setFavoritesOnly] = useState(url.searchParams.get('favoritesOnly') === 'true')
-  const [mobileOnly, setMobileOnly] = useState(url.searchParams.get('mobileOnly') === 'true')
-  const [showWip, setShowWip] = useState(url.searchParams.get('wip') === 'true')
+  const [favoritesOnly, setFavoritesOnly] = useState(url.get('favoritesOnly') === 'true')
+  const [mobileOnly, setMobileOnly] = useState(url.get('mobileOnly') === 'true')
+  const [showWip, setShowWip] = useState(url.get('wip') === 'true')
   const [includeTags, setIncludeTags] = useState(
-    () => new Set((url.searchParams.get('tags') || '').split(',').filter(Boolean))
+    () => new Set((url.get('tags') || '').split(',').filter(Boolean))
   )
   const [excludeTags, setExcludeTags] = useState(
-    () => new Set((url.searchParams.get('notags') || '').split(',').filter(Boolean))
+    () => new Set((url.get('notags') || '').split(',').filter(Boolean))
   )
 
   const [stars, setStars] = useState(() => readStore('stars', []))
