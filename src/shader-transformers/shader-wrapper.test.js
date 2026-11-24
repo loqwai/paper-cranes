@@ -38,4 +38,26 @@ float beat = 0.0;
 ${mainImage('fragColor = vec4(beat ? 1. : 0.);')}`
         expect(compileErrors(shader)).toBe('')
     })
+
+    it('declares a numeric URL param as a uniform', () => {
+        withUrl('?my_param=0.5')
+        expect(compileErrors(mainImage('fragColor = vec4(my_param);'))).toBe('')
+    })
+
+    it('ignores URL params whose names are not GLSL identifiers', () => {
+        withUrl('?3d=1&gl_depth=1&a__b=2&_=1732400000&ok=1')
+        expect(compileErrors(mainImage('fragColor = vec4(ok);'))).toBe('')
+    })
+
+    it('accepts knobs the shader declares in a comma list', () => {
+        const shader = `uniform float knob_1, knob_2;
+${mainImage('fragColor = vec4(knob_1, knob_2, 0., 1.);')}`
+        expect(compileErrors(shader)).toBe('')
+    })
+
+    it('accepts audio features the shader declares in a comma list', () => {
+        const shader = `uniform float bass, treble;
+${mainImage('fragColor = vec4(bass, treble, 0., 1.);')}`
+        expect(compileErrors(shader)).toBe('')
+    })
 })
