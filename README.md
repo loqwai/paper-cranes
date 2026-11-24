@@ -2,7 +2,8 @@
 
 ## What's New
 
-- **[Show browser](docs/jam-page.md#live-shows)** — `node scripts/vj/show.js launch '<jam url>'` projects a fullscreen Chrome with nothing on the wall but the visual: no banners, no cursor, no prompts. `/vibej2` drives it without ever touching the mouse
+- **[Show browser](docs/jam-page.md#live-shows)** — `node scripts/vj/show.js launch '<jam url>'` projects a fullscreen Chrome with nothing on the wall but the visual: no banners, no cursor, no prompts. `/show` puts it up and `/partner` VJs with you through the VJ MCP, never touching the mouse
+- **[Live shows on a draw board](docs/show-playbook.md#3-roles-during-the-set)** — `/show` puts the preflight, the wall's health, the partner's proposals, kept moments and PANIC / KEEP / beat buttons on a [draw](https://draw.hypnodroid.com) board you run from your phone. We build draw too; a show is a good test of it
 - **[Onset envelopes](docs/onset-detection.md)** — visuals that land on the beat instead of a second after it
 - **[Wavelet audio analysis](docs/wavelet-analysis.md)** — Opt-in `?wavelet=true` multiresolution DWT alongside the FFT: octave bands, brightness/complexity axes, and a sharp low-latency deep-bass drop trigger
 - **[MIDI mapping page](docs/midi-mapping.md#mapping-page-midihtml)** — Visual `/midi.html` UI: see every device + mapping at once, click-to-learn knobs, edit indices inline

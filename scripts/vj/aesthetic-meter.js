@@ -1,4 +1,4 @@
-// Aesthetic meter for /vibej — paste into the display tab (or `await import`) to sample the WebGL
+// Aesthetic meter for /partner — paste into the display tab (or `await import`) to sample the WebGL
 // canvas at 2 Hz (PERIOD_MS) and summarise motion / flicker / dark floor / clipping / hue drift, correlated
 // against live audio features. Written live 2026-08-18 (lattice-vj/2 exploration run).
 //

@@ -1,12 +1,9 @@
----
-name: sun-set
-description: "Replay the sun set from the 2026-10-09/10 show: thirteen beats the wall reached that night (JOURNEY.md), from the pre-party tile sky through the orbit preview, the fractal sky, the painterly sun, the giant we orbit, to the OG sky return, with the user's own dial moves eased back in by controllers/sun-set.js. Every advance is a hot-swap that rebakes the fork's clock anchors so new layers fade in. Run after /show has the wall up. Usage: `/sun-set` (list, start at beat 1), `/sun-set next`, `/sun-set <n|name>`, `/sun-set list`, `/sun-set auto`, `/sun-set give-back`."
-allowed-tools: Bash Read Write Edit Grep Glob Agent Monitor TaskStop ScheduleWakeup
----
+# The sun set: replay the 2026-10-09/10 sun set
 
-# sun-set: replay the 2026-10-09/10 sun set
+Played by `/show setlist sun-set [list|next|prev|<n|name>|auto|give-back]` (was the `/sun-set`
+skill until 2026-11-24). Setlist file: `setlists/sun-set.json`.
 
-This skill runs **after `/show`** has the wall up, the watchers armed and `/vibej2` listening. It
+This skill runs **after `/show`** has the wall up, the watchers armed and `/partner` listening. It
 never launches, reloads or `goto`s the page, and it repeats none of /show's preflight. It takes the
 wall through the looks the night actually reached, in order, each backed by a real fork file, and
 replays the dials the user turned in each era.
@@ -17,12 +14,11 @@ below cites its entry. Brief every agent you start with **docs/vj-preferences.md
 | File | Does |
 |---|---|
 | `JOURNEY.md` | The timeline from 20:08 to 02:45 and every knob vector there is data for |
-| `beats.json` | What goes on the wall: file, URL path, cue, held anchors, page features |
-| `../../../controllers/sun-set.js` | The dial journey per beat (keyframes + holds); eases the knobs, yields to hands |
+| `../sun-set.json` | What goes on the wall: file, URL path, cue, held anchors, page features |
+| `../../controllers/sun-set.js` | The dial journey per beat (keyframes + holds); eases the knobs, yields to hands |
 | `swap.mjs` | One beat onto the wall: one `show.js eval` (rewrite, validate, swap, set the beat, URL), then one shot |
 | `cue.mjs` | Waits for a build, drop or breakdown from the live controller's own states, prints one line |
-| `stray-guard.mjs` | Closes any page in the show Chrome that isn't the wall, then re-activates the wall |
-| `sun-set.test.mjs` | `node --test .claude/skills/sun-set/sun-set.test.mjs`: easing, hand override, K1/K5 rules |
+| `sun-set.node-test.mjs` | `npm run test:setlists`: easing, hand override, K1/K5 rules |
 
 ## Setup: chain the dial controller
 
@@ -39,14 +35,14 @@ replay scale with it). Without it in the chain, `swap.mjs` still swaps and repor
 
 ## Usage
 
-- **`/sun-set`:** print `node .claude/skills/sun-set/swap.mjs list` to the user, then run beat 1.
-- **`/sun-set next`:** the beat after `window.__sunSet.beat` (set by every swap).
-- **`/sun-set <n|name>`:** jump to that beat, e.g. `/sun-set 8` or `/sun-set giant`.
-- **`/sun-set list`:** print the list only.
-- **`/sun-set give-back`:** hand the dials the user took back to the replay:
+- **`/show setlist sun-set`:** print `node setlists/sun-set/swap.mjs list` to the user, then run beat 1.
+- **`/show setlist sun-set next`:** the beat after `window.__sunSet.beat` (set by every swap).
+- **`/show setlist sun-set <n|name>`:** jump to that beat, e.g. `/show setlist sun-set 8` or `/show setlist sun-set giant`.
+- **`/show setlist sun-set list`:** print the list only.
+- **`/show setlist sun-set give-back`:** hand the dials the user took back to the replay:
   `node scripts/vj/show.js eval '() => window.cranes.updateFeature("sunset_hands_reset", Date.now())'`.
   Which knobs are the user's: `window.__sunSetState.hands`.
-- **`/sun-set auto`:** advance on the holds and cues (see Auto). `/vibej2` keeps listening. For a
+- **`/show setlist sun-set auto`:** advance on the holds and cues (see Auto). `/partner` keeps listening. For a
   set length other than 45 min, put `sunset_minutes` on the wall URL and scale the holds `swap.mjs
   list` prints (they are at 45) by the same factor.
 
@@ -56,11 +52,11 @@ finished look at once (a cut; use after an outage or as panic), `--no-knobs` sto
 
 ## Advance: one eval, one shot
 
-The parent is the dispatcher (CLAUDE.md, `/vibej2`). An advance is the only page touch it makes
+The parent is the dispatcher (CLAUDE.md, `/show`). An advance is the only page touch it makes
 itself, and it is short:
 
 1. If an editing fork holds the page, let it finish or stop it first. Only one agent drives the page.
-2. Run `node .claude/skills/sun-set/swap.mjs <n>`. It prints the beat, the anchors it moved, the dial
+2. Run `node setlists/sun-set/swap.mjs <n>`. It prints the beat, the anchors it moved, the dial
    status and the shot path. Read the shot.
 3. Tell the user in one line: the beat, what arrives over the next minute, and the cue for the next.
 4. On `REFUSED`, stay on the current beat and hand the compile info to a fork. Never retry blind,
@@ -267,7 +263,7 @@ offset (the fan's c, the flow) — a jump. RELOAD-REBAKE left `FLOW0` alone for 
 6 → 7 line change, and anything the outgoing beat had that the incoming one lacks. Land those swaps
 on the cue.
 
-Dry run, no page: `node .claude/skills/sun-set/swap.mjs dry shaders/sun/14.frag --time 2100 --bud
+Dry run, no page: `node setlists/sun-set/swap.mjs dry shaders/sun/14.frag --time 2100 --bud
 2000 --flux 330 --flow 2000 --gal 190 [--wall prev.frag] [--out next.frag]` prints the anchor diff.
 Chain `--out` into the next `--wall` to rehearse the whole set.
 
@@ -298,7 +294,7 @@ to the boot URL and every dial, so `sun-set` writes `manualFeatures` itself.
   0** (TRIP).
 - **Hands win, for the rest of the set.** A `manualFeatures` value that differs from the one
   `sun-set` wrote last frame is a dial. From then on that knob is the user's, across every later
-  beat, and the replay keeps driving only the dials nobody has touched. `/sun-set give-back` returns
+  beat, and the replay keeps driving only the dials nobody has touched. `/show setlist sun-set give-back` returns
   every touched knob to the replay, eased from where the hand left it.
 - **The Twister is absolute:** the rings don't follow the replay, so the first touch of a dial jumps
   that knob to its ring, and the controller then yields to it.
@@ -306,23 +302,23 @@ to the boot URL and every dial, so `sun-set` writes `manualFeatures` itself.
   `updateFeature`, so the URL keeps it across a refresh, and it drops any `knob_*` pins in
   `messageParams`. Not `remote-send.js` for knobs: its pins outrank the Twister.
 
-## Auto: `/sun-set auto`
+## Auto: `/show setlist sun-set auto`
 
 1. Swap the beat. Then `ScheduleWakeup(hold)` (60 s minimum) and end the turn.
-2. On wake, arm `Monitor({ command: "node .claude/skills/sun-set/cue.mjs <cue> --max 180", timeout_ms: 200000 })`
+2. On wake, arm `Monitor({ command: "node setlists/sun-set/cue.mjs <cue> --max 180", timeout_ms: 200000 })`
    with the next beat's cue (`beats.json`).
 3. On `CUE …` or `CUE TIMEOUT`, swap the next beat. On `CUE ERROR`, stop auto and check the wall.
-4. The user's words and dial releases come first, through `/vibej2`. "Stay", "hold" or a dial pinned
-   at an extreme pauses auto (`ScheduleWakeup(stop: true)`, TaskStop the cue Monitor); `/sun-set
+4. The user's words and dial releases come first, through `/partner`. "Stay", "hold" or a dial pinned
+   at an extreme pauses auto (`ScheduleWakeup(stop: true)`, TaskStop the cue Monitor); `/show setlist sun-set
    next` resumes. A user instruction always outranks the setlist.
-5. After beat 13, stop auto and leave `/vibej2` running.
+5. After beat 13, stop auto and leave `/partner` running.
 
 ## Pitfalls that bit that night
 
 | Pitfall | What happens | Do |
 |---|---|---|
 | **Dev server dies** | The page reloads on reconnect, bs_time resets to 0, dials and runtime ramps reset, and the wall shows the boot shader's pre-everything look (01:44–01:52; critic #62, 3.5/10) | Restart `npm run dev` in the serving checkout, rerun the MIDI bridge (`node node_modules/.midi-keep.mjs`), then `swap.mjs <current beat>`: the wall is the boot shader, so the beat fades back in over 60–75 s, or use `--cold` to bring it back at once |
-| **Stray pages** | The show Chrome is the only Chrome, so any opened link (an MCP OAuth page at 01:14, critic #48) lands on the wall, and `show.js` refuses to run with two pages | Arm `Monitor({ command: "node .claude/skills/sun-set/stray-guard.mjs", timeout_ms: 1800000 })` before beat 1 and re-arm it on expiry. It closes nothing unless exactly one jam page exists |
+| **Stray pages** | The show Chrome is the only Chrome, so any opened link (an MCP OAuth page at 01:14, critic #48) lands on the wall, and `show.js` refuses to run with two pages | Arm `Monitor({ command: "node setlists/sun-set/stray-guard.mjs", timeout_ms: 1800000 })` before beat 1 and re-arm it on expiry. It closes nothing unless exactly one jam page exists |
 | **Screen recording** | Recording the screen costs frames on the show machine | Don't record the wall during the set |
 | **Compile hitch** | Each swap recompiles, about 0.5 s (467 ms measured at AUDIO-WEB) | Swap in the cue's run-up, not on the downbeat of a drop. Beats 10–11 skip it |
 | **`watch-dials.js` dies** | One failed CDP poll throws in its interval and the process exits; dial releases stop arriving | Run it as `while true; do node scripts/vj/watch-dials.js; echo 'watch-dials restarted'; sleep 1; done` |

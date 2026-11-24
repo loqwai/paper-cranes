@@ -200,6 +200,14 @@ A typical loop: `list_displays`, then `get_state {screenshot:true}`, then `set_p
 `get_state` again to see the change. Between moves, `wait_for_event` waits for the page to
 report something instead of polling.
 
+## Driving it from a draw board
+
+A [draw](https://draw.hypnodroid.com) board can drive the same tools from a phone.
+`scripts/vj/board-bridge.js` listens to the board and turns a Send of one control (PANIC, KEEP,
+◀ ▶, a knob preset, a proposal's TAKE) into one tool call with `source: "board"`, no model in the
+path: median 0.8 s from tap to the page confirming (2026-11-24). `/show` sets it up; see
+`.claude/skills/show/board.md`. We maintain draw as well, so gaps found here become draw work.
+
 ## How it works
 
 ```

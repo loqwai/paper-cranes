@@ -495,6 +495,7 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   ├── wip/Codex/             # Codex-created shaders go here
 │   ├── plasma.frag
 │   └── melted-satin/2.frag
+├── setlists/                    # /show setlist <name>: beats as hot-swaps (sun-set.json, clit-set.json)
 ├── controllers/                 # JS companions to shaders (frame-persistent state)
 │   ├── example.js              # Documented example
 │   └── the-coat.js             # Drop sustain with exponential decay
@@ -508,6 +509,8 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │       ├── remote-send.js      #   push update-params to the display from a shell
 │       ├── mcp-call.js         #   call one VJ MCP tool from a shell
 │       ├── watch-release.js    #   emit a line when a fader is released
+│       ├── watch-events.js     #   one line per page signal (keep, panic, release, …): a Monitor's feed
+│       ├── stray-guard.mjs     #   closes any page in the show Chrome that isn't the wall
 │       └── knob-correlate.js   #   which audio feature was that gesture imitating?
 ├── public/
 │   └── service-worker.js        # The only service worker (Vite copies public/ as-is)
