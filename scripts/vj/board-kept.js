@@ -11,6 +11,10 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
+// Under the bridge's 30 s MCP call timeout: a longer wait is cut off client-side before it returns a
+// seq, so `since` never advances, a KEEP in the retry gap is lost, and every quiet half-minute logs an error.
+export const WAIT_S = 25
+
 const r2 = (v) => Math.round(v * 100) / 100
 
 // Pure: the card's text: time and shader, then the knobs that are not 0.
@@ -84,7 +88,7 @@ export const watchKeeps = async ({ mcp, root, link, frame = 'kept', signal, log 
   let since
   while (!signal?.aborted) {
     try {
-      const { body } = await mcp.call('wait_for_event', { ...(since !== undefined && { since }), types: ['keep'], timeout_s: 50 })
+      const { body } = await mcp.call('wait_for_event', { ...(since !== undefined && { since }), types: ['keep'], timeout_s: WAIT_S })
       since = body.seq
       for (const e of body.events ?? []) {
         if (e.signal !== 'keep' && e.data?.type !== 'keep') continue

@@ -48,7 +48,7 @@ import { spawnSync } from 'node:child_process'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { aroundOps, knobWrites, knobsOf, layoutOps, SKILL } from './board-controls.js'
-import { watchKeeps } from './board-kept.js'
+import { WAIT_S, watchKeeps } from './board-kept.js'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const LOG = join(ROOT, '.claude', 'board-bridge.jsonl')
@@ -375,7 +375,7 @@ const signalLoop = async (mcp, signals, signal) => {
   let since
   while (!signal.aborted) {
     try {
-      const { body } = await mcp.call('wait_for_event', { ...(since !== undefined && { since }), timeout_s: 50 })
+      const { body } = await mcp.call('wait_for_event', { ...(since !== undefined && { since }), timeout_s: WAIT_S })
       since = body.seq
       for (const e of body.events ?? []) {
         const type = e.signal?.type ?? e.type
