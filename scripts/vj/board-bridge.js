@@ -25,6 +25,9 @@
 //            (`node <driver> <n>`); otherwise a beat is set_shader {shader, params}.
 // --status-link  a status-card widget link from the draw MCP `link` tool. Links last an hour:
 //            when it answers 4xx the bridge says so once and stops posting; mint a new one.
+// --kept-link  a link to frame `kept` from the draw MCP `link` tool: every KEEP (pad, MIDI, spacebar,
+//            board) gets its card there and its picture in .claude/vj-shots/, no model (board-kept.js).
+// --kept-frame  that frame's id (default `kept`).
 // --hub      the display's socket for fader writes (default ws://<MCP host>/ws). Without one,
 //            faders fall back to set_params, which is slower (it reads the value back).
 // MCP_URL (default http://localhost:$PORT/mcp) and DRAW_URL (default https://draw.hypnodroid.com).
@@ -45,6 +48,7 @@ import { spawnSync } from 'node:child_process'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { aroundOps, knobWrites, knobsOf, layoutOps, SKILL } from './board-controls.js'
+import { WAIT_S, watchKeeps } from './board-kept.js'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const LOG = join(ROOT, '.claude', 'board-bridge.jsonl')
@@ -371,7 +375,7 @@ const signalLoop = async (mcp, signals, signal) => {
   let since
   while (!signal.aborted) {
     try {
-      const { body } = await mcp.call('wait_for_event', { ...(since !== undefined && { since }), timeout_s: 50 })
+      const { body } = await mcp.call('wait_for_event', { ...(since !== undefined && { since }), timeout_s: WAIT_S })
       since = body.seq
       for (const e of body.events ?? []) {
         const type = e.signal?.type ?? e.type
@@ -419,7 +423,7 @@ const main = async () => {
   const mcpUrl = process.env.MCP_URL || `http://localhost:${process.env.PORT || 6969}/mcp`
   if (command === 'layout') return layout(opts, mcpUrl)
   if (!opts.board || !opts.ticket) {
-    console.error('usage: board-bridge.js --board <name> --ticket <listener ticket> [--frame controls] [--panic <fork>] [--setlist <name>] [--status-link <url>] [--hub <ws url>]\n       board-bridge.js layout --shader <name> [--frame controls] [--x 0] [--y 0] [--faders 4]')
+    console.error('usage: board-bridge.js --board <name> --ticket <listener ticket> [--frame controls] [--panic <fork>] [--setlist <name>] [--status-link <url>] [--kept-link <url>] [--hub <ws url>]\n       board-bridge.js layout --shader <name> [--frame controls] [--x 0] [--y 0] [--faders 4]')
     process.exit(64)
   }
   const stop = new AbortController()
@@ -443,6 +447,7 @@ const main = async () => {
   log({ bridge: 'up', board: opts.board, mcp: mcpUrl, hub, frame: opts.frame ?? 'controls', pageTools: ['panic', 'keep', 'answer_proposal', 'propose'].filter(mcp.has) })
   statusLoop(mcp, opts, signals, signal)
   signalLoop(mcp, signals, signal)
+  if (opts.keptLink) watchKeeps({ mcp, root: ROOT, link: opts.keptLink, frame: opts.keptFrame ?? 'kept', signal, log })
   const write = knobWriter({ hub, mcp, signal, log })
   let moved = 0
   let quiet = null

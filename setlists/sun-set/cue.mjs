@@ -1,17 +1,14 @@
 // cue: wait for the music to give a cue, print ONE line, exit. Run it as a background Monitor.
-// It reads the live controller's own musical states (window.__blackSunState), the same ones the story
-// engine moves acts on, so a cue here is a moment the story would also call musical.
+// It reads the live controller's own musical timers (black-sun's bs_buildT, bs_lowT, bs_calmT and
+// bs_dropEnv), the same ones the story engine moves acts on, so a cue here is a moment the story would
+// also call musical. Reads go through the VJ MCP's get_state, once a second (no model in the loop).
 //   node setlists/sun-set/cue.mjs <build|drop|breakdown> [--max 180]
-import { execFileSync } from 'node:child_process'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { connectVj } from '../../scripts/vj/mcp-client.js'
 
-const SHOW = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'scripts', 'vj', 'show.js')
-const FN = '() => { const s = window.__blackSunState ?? {}; return { buildT: s.buildT, dropEnv: s.dropEnv, lowT: s.lowT, calmT: s.calmT } }'
 const CUES = {
-  build: s => s.buildT > 8,
-  drop: s => s.dropEnv > 0.5,
-  breakdown: s => s.lowT > 10 || s.calmT > 15,
+  build: s => s.bs_buildT > 8,
+  drop: s => s.bs_dropEnv > 0.5,
+  breakdown: s => s.bs_lowT > 10 || s.bs_calmT > 15,
 }
 
 const [cue] = process.argv.slice(2)
@@ -24,22 +21,29 @@ if (!CUES[cue]) {
 
 const start = Date.now()
 const elapsed = () => Math.round((Date.now() - start) / 1000)
+let vj = null
 let fails = 0
+let line = `CUE TIMEOUT ${cue} after ${max} s`
 while (elapsed() < max) {
   try {
-    const s = JSON.parse(execFileSync('node', [SHOW, 'eval', FN], { encoding: 'utf8', timeout: 5000 }).trim().split('\n').pop())
+    vj ??= await connectVj({ name: 'sun-set-cue' })
+    const { controller = {} } = await vj.call('get_state', { features: 'none' })
+    if (!('bs_buildT' in controller)) throw new Error('no bs_buildT: black-sun is not loaded, or predates the cue outputs')
     fails = 0
-    if (CUES[cue](s)) {
-      console.log(`CUE ${cue} after ${elapsed()} s`)
-      process.exit(0)
+    if (CUES[cue](controller)) {
+      line = `CUE ${cue} after ${elapsed()} s`
+      break
     }
-  } catch {
-    fails++
-    if (fails >= 10) {
-      console.log(`CUE ERROR ${cue}: 10 failed polls in a row (is the wall up?)`)
-      process.exit(1)
+  } catch (e) {
+    if (++fails >= 10) {
+      line = `CUE ERROR ${cue}: 10 failed polls in a row (${e.message.split('\n')[0]})`
+      break
     }
+    await vj?.close().catch(() => {})
+    vj = null
   }
   await new Promise(r => setTimeout(r, 1000))
 }
-console.log(`CUE TIMEOUT ${cue} after ${max} s`)
+await vj?.close().catch(() => {})
+console.log(line)
+process.exit(line.startsWith('CUE ERROR') ? 1 : 0)

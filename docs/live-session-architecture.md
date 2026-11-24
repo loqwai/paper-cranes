@@ -140,8 +140,11 @@ Rules:
 - Shader `.frag` edits are safe — they hot-swap via the atomic edit macro.
 - Everything else waits for **between sets**. Stage it as a patch file (see
   [vj-auto-learn-patch.md](vj-auto-learn-patch.md)) and apply it when nothing is on the wall.
-- To inject behaviour *now* without a reload, run it through `javascript_tool` into the live page.
-  That is how the auto-LEARN poller was installed mid-set.
+- Do not inject behaviour into the live page. On 2026-08-20 the auto-LEARN poller went in mid-set
+  through claude-in-chrome's `javascript_tool`; that path is retired (its cursor reaches the wall).
+  Live changes go through the VJ MCP (`set_params`, `set_shader`, `write_shader`, `panic`) or wait
+  for between sets. The one page-eval exception left is the frozen-picture fix in
+  [show-playbook.md](show-playbook.md) section 7.
 - Recovery if it happens anyway: `node scripts/vj/remote-send.js '{"evoPhase":<value>}'` pins the
   clock back (the pad-pin path overrides controller outputs; `window.cranes.manualFeatures` does
   **not**), and `null` releases it. But note a pin *freezes* the clock — it restores the look while

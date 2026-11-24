@@ -59,3 +59,25 @@ describe('display_secret tool', () => {
     await client.close()
   })
 })
+
+describe('get_state source', () => {
+  const run = async (args) => {
+    const asked = []
+    const d = { id: 'a1' }
+    const hub = { list: () => [d], seq: 0, resolve: () => d, request: async (_d, _cmd, a) => { asked.push(a); return { shader: null, source: a.source ? 'void main(){}' : undefined } } }
+    const server = createVjMcpServer({ hub, shaders: { index: async () => [], read: async () => ({}) }, venue: { displays: 'x', where: 'x', noneHint: 'x' } })
+    const [x, y] = InMemoryTransport.createLinkedPair()
+    const client = new Client({ name: 't', version: '0' })
+    await Promise.all([server.connect(x), client.connect(y)])
+    const out = JSON.parse((await client.callTool({ name: 'get_state', arguments: args })).content[0].text)
+    await client.close()
+    return { asked, out }
+  }
+
+  it('asks the page for its code only when source is true', async () => {
+    expect((await run({})).asked).toEqual([{ features: 'core' }])
+    const { asked, out } = await run({ source: true, features: 'none' })
+    expect(asked).toEqual([{ features: 'none', source: true }])
+    expect(out.source).toBe('void main(){}')
+  })
+})

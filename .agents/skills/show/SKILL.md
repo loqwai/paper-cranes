@@ -1,6 +1,6 @@
 ---
 name: show
-description: "Run a live show: start the wall (\"start the show\", \"show time\", \"put it on the projector\"), check it is ready (\"preflight\", \"are we ready\"), get a safe look back when the wall goes wrong (\"panic\", \"it's black\", \"it froze\", \"get it back\"), play a setlist (\"play the sun set\", \"next beat\"), jam with no partner (\"just jam\", \"lite\"), or wrap up (\"end the show\", \"we're done\"). Puts the show on a draw board as Aaron's phone status board and control surface. Not for making a repo or site for one show: that is /show-repo."
+description: "Run a live show on the wall tonight: start the wall (\"start the show\", \"show time\", \"put it on the projector\"), check it is ready (\"preflight\", \"are we ready\"), get a safe look back when the wall goes wrong (\"panic\", \"it's black\", \"it froze\", \"get it back\"), play a setlist (\"play the sun set\", \"next beat\"), jam with no partner (\"just jam\", \"lite\"), or wrap up (\"end the show\", \"we're done\"). Puts the show on a draw board as Aaron's phone status board and control surface. Never for making a repo."
 allowed-tools: Bash Read Write Edit Grep Glob Agent Monitor TaskStop
 ---
 
@@ -9,17 +9,15 @@ allowed-tools: Bash Read Write Edit Grep Glob Agent Monitor TaskStop
 | Say | Does |
 |---|---|
 | `/show [shader] [audio=<label>] [gain=<x>] [board=<name>]` | launch: check, wall, board, bridge, then the `/partner` lane |
-| `/show check` | preflight only (`node scripts/vj/context.js`, then [check.md](check.md)), as ✅/❌ cards on the board |
+| `/show check` | preflight only, as ✅/❌ cards on the board; read [check.md](check.md) |
 | `/show lite [shader] [audio_file=<url>]` | a jam: wall, status and controls; no partner, critic or setlist |
 | `/show panic [fork]` | a known-good look now, no reload |
-| `/show setlist <name> [list\|next\|prev\|<n>\|auto]` | play `setlists/<name>.json` |
-| `/show end` | stop lanes, process keeps, tell the set's story on the board |
+| `/show setlist <name> [list\|next\|prev\|<n>\|auto]` | play `setlists/<name>.json`; read [setlists.md](setlists.md) |
+| `/show end` | stop lanes, process keeps, tell the set's story; read [story.md](story.md) |
 
 Default shader: `clit-set/2` with `controller=clit-set` (knobs: `shaders/clit-set/clit-set.md`).
-Load a reference file only when its step comes up:
-[check.md](check.md) (preflight), [board.md](board.md) (board, controls, bridge),
-[setlists.md](setlists.md) (setlists, the sun set), and
-[docs/show-playbook.md](../../../docs/show-playbook.md) (runbook, failure fixes).
+Read a reference file only when its row or step says so. Failure fixes:
+[docs/show-playbook.md](../../../docs/show-playbook.md) section 7.
 
 ## Rules
 
@@ -34,23 +32,24 @@ Load a reference file only when its step comes up:
 
 ## Launch
 
-1. **Check** ([check.md](check.md)), then launch:
+1. **Check, then launch.** Every line ✅: go on. Any ❌: read [check.md](check.md) for its fix.
    ```bash
    P=$(./scripts/dev-port)
+   node scripts/vj/preflight.js --shader <shader>            # server, checkout, branch, projector
    node scripts/vj/show.js stop
    node scripts/vj/show.js launch "http://localhost:$P/jam.html?shader=<shader>&controller=<controller>&wavelet=true&vj=1&remote=display[&audio_device=<label>][&audio_gain=<x>]"
+   node scripts/vj/preflight.js --after --shader <shader>    # display, audio + input label, runtime, controller, gate, pad
    ```
-   Run check.md's page checks. Edits go to a `-wip` copy; the boot shader stays the PANIC fork.
+   Say its `say:` line to Aaron. Never launch past a wrong input. Edits go to a `-wip` copy; the
+   boot shader stays the PANIC fork.
 2. **Write `.claude/vj-state.json`**: `{shaderPath, showUrl, audioDevice, audioGain, board, port, panic, setlist, startedAt}`.
-3. **Board and bridge** ([board.md](board.md)): board `show-<yyyy-mm-dd>`, frames `check`,
-   `status`, `controls`, `proposals`, `kept`; then `scripts/vj/board-bridge.js` in the background
-   so his taps reach the page with no model. Fly his tab to `controls`.
+3. **Board and bridge**: read [board.md](board.md) and [controls.md](controls.md). Fly his tab to `controls`.
 4. **Watch** (Monitors, re-armed on expiry):
    ```bash
-   PORT=$P node scripts/vj/watch-events.js keep panic pad-alive boot
+   PORT=$P node scripts/vj/watch-events.js panic pad-alive boot
    node scripts/vj/stray-guard.mjs
    ```
-   - `keep`: put its screenshot in frame `kept` (board.md, "KEEP").
+   - KEEP needs nothing from you: the bridge puts it in frame `kept` ([kept.md](kept.md)).
    - `pad-alive` false: paint `st-wall` blocked, tell him in one line.
    - `panic`: tell `/partner` to drop its move.
 5. **Start `/partner`** (not in lite) as one background `Agent` with the shader, board and port.
@@ -74,8 +73,7 @@ Away from a line feed, play a real file: `&audio_file=<url>` (docs/audio-file-pl
 1. Tell `/partner` to stop and wait for its last line. Stop the bridge, Monitors and your listener.
    Leave the wall up unless asked.
 2. Run `/keep process` in a background agent.
-3. Story on the board ([board.md](board.md), "Story"): frames `story-setlist`, `story-kept`,
-   `story-forks`, Present path `show-story`; give Aaron the path link.
+3. The set's story on the board: [story.md](story.md).
 4. Journal `journals/<yyyy-mm-dd>-<show>.md`: what played, what was kept, what broke and the fix,
    his words verbatim, the board link.
 5. Paint every status card `done`, stop every listener, delete `.claude/vj-state.json`.
