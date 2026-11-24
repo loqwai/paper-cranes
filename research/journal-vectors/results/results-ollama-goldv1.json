@@ -1,0 +1,917 @@
+{
+  "backend": "ollama",
+  "gold": "v1",
+  "at": "2026-11-24T10:12:29.010Z",
+  "chunks": 1772,
+  "questions": 38,
+  "table": {
+    "all": {
+      "n": 38,
+      "random": {
+        "r1": 0.0011842105263157893,
+        "r3": 0.004342105263157892,
+        "r5": 0.00631578947368421,
+        "mrr": 0.0035194235588972443
+      },
+      "a bm25": {
+        "r1": 0.2894736842105263,
+        "r3": 0.5263157894736842,
+        "r5": 0.631578947368421,
+        "mrr": 0.42412280701754385
+      },
+      "b field-guide": {
+        "r1": 0.3684210526315789,
+        "r3": 0.6578947368421053,
+        "r5": 0.7368421052631579,
+        "mrr": 0.5197368421052632
+      },
+      "c vectors": {
+        "r1": 0.5,
+        "r3": 0.5789473684210527,
+        "r5": 0.631578947368421,
+        "mrr": 0.5550751879699248
+      },
+      "d hybrid bm25+vec": {
+        "r1": 0.47368421052631576,
+        "r3": 0.5789473684210527,
+        "r5": 0.6842105263157895,
+        "mrr": 0.5469298245614035
+      },
+      "d2 hybrid fg+vec": {
+        "r1": 0.5,
+        "r3": 0.6842105263157895,
+        "r5": 0.7631578947368421,
+        "mrr": 0.6062134502923977
+      }
+    },
+    "paraphrase": {
+      "n": 15,
+      "random": {
+        "r1": 0.0013333333333333333,
+        "r3": 0.004666666666666666,
+        "r5": 0.006999999999999999,
+        "mrr": 0.0036861111111111105
+      },
+      "a bm25": {
+        "r1": 0.13333333333333333,
+        "r3": 0.26666666666666666,
+        "r5": 0.3333333333333333,
+        "mrr": 0.21296296296296297
+      },
+      "b field-guide": {
+        "r1": 0.06666666666666667,
+        "r3": 0.3333333333333333,
+        "r5": 0.4666666666666667,
+        "mrr": 0.22222222222222224
+      },
+      "c vectors": {
+        "r1": 0.3333333333333333,
+        "r3": 0.4666666666666667,
+        "r5": 0.4666666666666667,
+        "mrr": 0.40952380952380957
+      },
+      "d hybrid bm25+vec": {
+        "r1": 0.3333333333333333,
+        "r3": 0.4,
+        "r5": 0.4,
+        "mrr": 0.3777777777777778
+      },
+      "d2 hybrid fg+vec": {
+        "r1": 0.26666666666666666,
+        "r3": 0.5333333333333333,
+        "r5": 0.6,
+        "mrr": 0.40685185185185185
+      }
+    },
+    "literal": {
+      "n": 23,
+      "random": {
+        "r1": 0.0010869565217391304,
+        "r3": 0.004130434782608694,
+        "r5": 0.005869565217391301,
+        "mrr": 0.0034107142857142865
+      },
+      "a bm25": {
+        "r1": 0.391304347826087,
+        "r3": 0.6956521739130435,
+        "r5": 0.8260869565217391,
+        "mrr": 0.5618357487922705
+      },
+      "b field-guide": {
+        "r1": 0.5652173913043478,
+        "r3": 0.8695652173913043,
+        "r5": 0.9130434782608695,
+        "mrr": 0.7137681159420289
+      },
+      "c vectors": {
+        "r1": 0.6086956521739131,
+        "r3": 0.6521739130434783,
+        "r5": 0.7391304347826086,
+        "mrr": 0.65
+      },
+      "d hybrid bm25+vec": {
+        "r1": 0.5652173913043478,
+        "r3": 0.6956521739130435,
+        "r5": 0.8695652173913043,
+        "mrr": 0.6572463768115943
+      },
+      "d2 hybrid fg+vec": {
+        "r1": 0.6521739130434783,
+        "r3": 0.782608695652174,
+        "r5": 0.8695652173913043,
+        "mrr": 0.736231884057971
+      }
+    },
+    "consumer: guide": {
+      "n": 10,
+      "random": {
+        "r1": 0.0005,
+        "r3": 0.002,
+        "r5": 0.0045000000000000005,
+        "mrr": 0.00201170634920635
+      },
+      "a bm25": {
+        "r1": 0.3,
+        "r3": 0.6,
+        "r5": 0.8,
+        "mrr": 0.47833333333333333
+      },
+      "b field-guide": {
+        "r1": 0.3,
+        "r3": 0.6,
+        "r5": 0.8,
+        "mrr": 0.495
+      },
+      "c vectors": {
+        "r1": 0.6,
+        "r3": 0.7,
+        "r5": 0.7,
+        "mrr": 0.65
+      },
+      "d hybrid bm25+vec": {
+        "r1": 0.6,
+        "r3": 0.7,
+        "r5": 0.8,
+        "mrr": 0.6533333333333333
+      },
+      "d2 hybrid fg+vec": {
+        "r1": 0.6,
+        "r3": 0.7,
+        "r5": 0.8,
+        "mrr": 0.675
+      }
+    },
+    "consumer: partner": {
+      "n": 14,
+      "random": {
+        "r1": 0.0014285714285714286,
+        "r3": 0.004285714285714284,
+        "r5": 0.0053571428571428555,
+        "mrr": 0.003446286848072561
+      },
+      "a bm25": {
+        "r1": 0.21428571428571427,
+        "r3": 0.5,
+        "r5": 0.5714285714285714,
+        "mrr": 0.37103174603174605
+      },
+      "b field-guide": {
+        "r1": 0.35714285714285715,
+        "r3": 0.7142857142857143,
+        "r5": 0.7142857142857143,
+        "mrr": 0.5309523809523808
+      },
+      "c vectors": {
+        "r1": 0.42857142857142855,
+        "r3": 0.5,
+        "r5": 0.5714285714285714,
+        "mrr": 0.48214285714285715
+      },
+      "d hybrid bm25+vec": {
+        "r1": 0.42857142857142855,
+        "r3": 0.5,
+        "r5": 0.5714285714285714,
+        "mrr": 0.47023809523809523
+      },
+      "d2 hybrid fg+vec": {
+        "r1": 0.42857142857142855,
+        "r3": 0.6428571428571429,
+        "r5": 0.7142857142857143,
+        "mrr": 0.5571428571428572
+      }
+    },
+    "consumer: phone": {
+      "n": 14,
+      "random": {
+        "r1": 0.0014285714285714286,
+        "r3": 0.00607142857142857,
+        "r5": 0.008571428571428568,
+        "mrr": 0.004669501133786847
+      },
+      "a bm25": {
+        "r1": 0.35714285714285715,
+        "r3": 0.5,
+        "r5": 0.5714285714285714,
+        "mrr": 0.43849206349206354
+      },
+      "b field-guide": {
+        "r1": 0.42857142857142855,
+        "r3": 0.6428571428571429,
+        "r5": 0.7142857142857143,
+        "mrr": 0.5261904761904762
+      },
+      "c vectors": {
+        "r1": 0.5,
+        "r3": 0.5714285714285714,
+        "r5": 0.6428571428571429,
+        "mrr": 0.5602040816326531
+      },
+      "d hybrid bm25+vec": {
+        "r1": 0.42857142857142855,
+        "r3": 0.5714285714285714,
+        "r5": 0.7142857142857143,
+        "mrr": 0.5476190476190477
+      },
+      "d2 hybrid fg+vec": {
+        "r1": 0.5,
+        "r3": 0.7142857142857143,
+        "r5": 0.7857142857142857,
+        "mrr": 0.6061507936507936
+      }
+    }
+  },
+  "paired": {
+    "c vectors": {
+      "vs": "b field-guide",
+      "diff": -0.07894736842105263,
+      "lo": -0.23684210526315788,
+      "hi": 0.07894736842105263,
+      "wins": 4,
+      "losses": 7
+    },
+    "d hybrid bm25+vec": {
+      "vs": "b field-guide",
+      "diff": -0.07894736842105263,
+      "lo": -0.21052631578947367,
+      "hi": 0.05263157894736842,
+      "wins": 3,
+      "losses": 6
+    },
+    "d2 hybrid fg+vec": {
+      "vs": "b field-guide",
+      "diff": 0.02631578947368421,
+      "lo": -0.13157894736842105,
+      "hi": 0.18421052631578946,
+      "wins": 5,
+      "losses": 4
+    }
+  },
+  "perQuestion": [
+    {
+      "id": "show-sunset",
+      "kind": "show",
+      "paraphrase": false,
+      "a bm25": 3,
+      "b field-guide": 1,
+      "c vectors": 1,
+      "d hybrid bm25+vec": 1,
+      "d2 hybrid fg+vec": 1,
+      "top1": {
+        "a bm25": "docs/show-playbook.md#2",
+        "b field-guide": ".claude/skills/sun-set/JOURNEY.md#2",
+        "c vectors": ".claude/skills/sun-set/JOURNEY.md#2",
+        "d hybrid bm25+vec": ".claude/skills/sun-set/JOURNEY.md#2",
+        "d2 hybrid fg+vec": ".claude/skills/sun-set/JOURNEY.md#2"
+      }
+    },
+    {
+      "id": "show-coaster",
+      "kind": "show",
+      "paraphrase": false,
+      "a bm25": 3,
+      "b field-guide": 3,
+      "c vectors": 1,
+      "d hybrid bm25+vec": 1,
+      "d2 hybrid fg+vec": 1,
+      "top1": {
+        "a bm25": "journals/2026-11-22-clit-coaster-show.md#6",
+        "b field-guide": "journals/2026-11-22-clit-coaster-show.md#6",
+        "c vectors": "journals/2026-11-22-clit-coaster-show.md#0",
+        "d hybrid bm25+vec": "journals/2026-11-22-clit-coaster-show.md#0",
+        "d2 hybrid fg+vec": "journals/2026-11-22-clit-coaster-show.md#0"
+      }
+    },
+    {
+      "id": "show-crash",
+      "kind": "show",
+      "paraphrase": false,
+      "a bm25": 9,
+      "b field-guide": 1,
+      "c vectors": 5,
+      "d hybrid bm25+vec": 4,
+      "d2 hybrid fg+vec": 3,
+      "top1": {
+        "a bm25": "journals/lattice-vj-7-cool-moments.md#14",
+        "b field-guide": ".claude/skills/sun-set/JOURNEY.md#2",
+        "c vectors": "docs/show-playbook.md#9",
+        "d hybrid bm25+vec": "docs/show-playbook.md#9",
+        "d2 hybrid fg+vec": "docs/show-playbook.md#9"
+      }
+    },
+    {
+      "id": "show-techno",
+      "kind": "show",
+      "paraphrase": false,
+      "a bm25": 1,
+      "b field-guide": 1,
+      "c vectors": null,
+      "d hybrid bm25+vec": 4,
+      "d2 hybrid fg+vec": 4,
+      "top1": {
+        "a bm25": "journals/2026-11-22-clit-coaster-show.md#3",
+        "b field-guide": "journals/2026-11-22-clit-coaster-show.md#3",
+        "c vectors": "shaders/redaphid/taco/README.md#3",
+        "d hybrid bm25+vec": "shaders/clit-set/clit-set.md#12",
+        "d2 hybrid fg+vec": "shaders/clit-set/clit-set.md#12"
+      }
+    },
+    {
+      "id": "show-blacklink",
+      "kind": "show",
+      "paraphrase": false,
+      "a bm25": 1,
+      "b field-guide": 1,
+      "c vectors": 1,
+      "d hybrid bm25+vec": 1,
+      "d2 hybrid fg+vec": 1,
+      "top1": {
+        "a bm25": "journals/2026-11-22-clit-coaster-show.md#6",
+        "b field-guide": "journals/2026-11-22-clit-coaster-show.md#6",
+        "c vectors": "journals/2026-11-22-clit-coaster-show.md#6",
+        "d hybrid bm25+vec": "journals/2026-11-22-clit-coaster-show.md#6",
+        "d2 hybrid fg+vec": "journals/2026-11-22-clit-coaster-show.md#6"
+      }
+    },
+    {
+      "id": "show-tendrils",
+      "kind": "show",
+      "paraphrase": false,
+      "a bm25": 4,
+      "b field-guide": 1,
+      "c vectors": 3,
+      "d hybrid bm25+vec": 3,
+      "d2 hybrid fg+vec": 1,
+      "top1": {
+        "a bm25": "shaders/redaphid/wip/lattice-interactive/lattice-interactive.md#2",
+        "b field-guide": "journals/2026-11-22-clit-coaster-show.md#4",
+        "c vectors": "journals/clit-2-cool-moments.md#14",
+        "d hybrid bm25+vec": "shaders/redaphid/wip/lattice-interactive/lattice-interactive.md#2",
+        "d2 hybrid fg+vec": "journals/2026-11-22-clit-coaster-show.md#4"
+      }
+    },
+    {
+      "id": "show-beatlengths",
+      "kind": "show",
+      "paraphrase": false,
+      "a bm25": 1,
+      "b field-guide": 2,
+      "c vectors": 1,
+      "d hybrid bm25+vec": 1,
+      "d2 hybrid fg+vec": 1,
+      "top1": {
+        "a bm25": ".claude/skills/sun-set/JOURNEY.md#4",
+        "b field-guide": ".claude/skills/sun-set/JOURNEY.md#0",
+        "c vectors": ".claude/skills/sun-set/JOURNEY.md#4",
+        "d hybrid bm25+vec": ".claude/skills/sun-set/JOURNEY.md#4",
+        "d2 hybrid fg+vec": ".claude/skills/sun-set/JOURNEY.md#4"
+      }
+    },
+    {
+      "id": "para-walldark",
+      "kind": "paraphrase",
+      "paraphrase": true,
+      "a bm25": 1,
+      "b field-guide": 3,
+      "c vectors": 3,
+      "d hybrid bm25+vec": 1,
+      "d2 hybrid fg+vec": 1,
+      "top1": {
+        "a bm25": "docs/show-playbook.md#9",
+        "b field-guide": "docs/vj-preferences.md#7",
+        "c vectors": "shaders/claude/wip/clit-vibej/clit-vibej.md#5",
+        "d hybrid bm25+vec": "docs/show-playbook.md#9",
+        "d2 hybrid fg+vec": "docs/show-playbook.md#9"
+      }
+    },
+    {
+      "id": "para-glitter",
+      "kind": "paraphrase",
+      "paraphrase": true,
+      "a bm25": 9,
+      "b field-guide": 5,
+      "c vectors": null,
+      "d hybrid bm25+vec": null,
+      "d2 hybrid fg+vec": 9,
+      "top1": {
+        "a bm25": "shaders/claude/wip/clit-vibej/clit-vibej.md#6",
+        "b field-guide": "shaders/claude/wip/clit-vibej/clit-vibej.md#6",
+        "c vectors": "journals/bear-cool-moments.md#11",
+        "d hybrid bm25+vec": "journals/bear-cool-moments.md#11",
+        "d2 hybrid fg+vec": "shaders/claude/wip/clit-vibej/clit-vibej.md#6"
+      }
+    },
+    {
+      "id": "para-internet",
+      "kind": "paraphrase",
+      "paraphrase": true,
+      "a bm25": null,
+      "b field-guide": null,
+      "c vectors": 1,
+      "d hybrid bm25+vec": 6,
+      "d2 hybrid fg+vec": 8,
+      "top1": {
+        "a bm25": "journals/lattice-vj-7-cool-moments.md#9",
+        "b field-guide": "journals/lattice-vj-7-cool-moments.md#9",
+        "c vectors": ".claude/skills/sun-set/JOURNEY.md#2",
+        "d hybrid bm25+vec": ".claude/skills/sun-set/JOURNEY.md#4",
+        "d2 hybrid fg+vec": ".claude/skills/sun-set/JOURNEY.md#4"
+      }
+    },
+    {
+      "id": "para-repetitive",
+      "kind": "paraphrase",
+      "paraphrase": true,
+      "a bm25": null,
+      "b field-guide": null,
+      "c vectors": 6,
+      "d hybrid bm25+vec": null,
+      "d2 hybrid fg+vec": 2,
+      "top1": {
+        "a bm25": "docs/live-session-insights.md#1",
+        "b field-guide": "shaders/redaphid/wip/the-coat-fur-coat/docs/the-coat-fur-coat-reactive.md#3",
+        "c vectors": "journals/taco-kandi-1-cool-moments.md#6",
+        "d hybrid bm25+vec": "docs/live-session-insights.md#6",
+        "d2 hybrid fg+vec": "docs/live-session-insights.md#6"
+      }
+    },
+    {
+      "id": "para-car",
+      "kind": "paraphrase",
+      "paraphrase": true,
+      "a bm25": null,
+      "b field-guide": null,
+      "c vectors": 1,
+      "d hybrid bm25+vec": 2,
+      "d2 hybrid fg+vec": 3,
+      "top1": {
+        "a bm25": "docs/debugging-twitchy-shaders.md#2",
+        "b field-guide": "journals/taco-kandi-6-cool-moments.md#6",
+        "c vectors": "journals/2026-11-22-clit-coaster-show.md#3",
+        "d hybrid bm25+vec": "docs/debugging-twitchy-shaders.md#2",
+        "d2 hybrid fg+vec": "journals/taco-kandi-6-cool-moments.md#6"
+      }
+    },
+    {
+      "id": "para-rotation",
+      "kind": "paraphrase",
+      "paraphrase": true,
+      "a bm25": null,
+      "b field-guide": null,
+      "c vectors": null,
+      "d hybrid bm25+vec": null,
+      "d2 hybrid fg+vec": null,
+      "top1": {
+        "a bm25": "journals/lattice-vj-2-cool-moments.md#44",
+        "b field-guide": "journals/the-coat-8-cool-moments.md#14",
+        "c vectors": "shaders/claude/wip/eclipse/eclipse.md#5",
+        "d hybrid bm25+vec": "docs/vj-preferences.md#5",
+        "d2 hybrid fg+vec": "docs/vj-preferences.md#5"
+      }
+    },
+    {
+      "id": "para-quietroom",
+      "kind": "paraphrase",
+      "paraphrase": true,
+      "a bm25": null,
+      "b field-guide": null,
+      "c vectors": null,
+      "d hybrid bm25+vec": null,
+      "d2 hybrid fg+vec": null,
+      "top1": {
+        "a bm25": "docs/advanced-shader-techniques.md#4",
+        "b field-guide": "docs/advanced-shader-techniques.md#4",
+        "c vectors": "shaders/claude/wip/eclipse/eclipse.md#5",
+        "d hybrid bm25+vec": "shaders/claude/wip/eclipse/eclipse.md#5",
+        "d2 hybrid fg+vec": "journals/plasma-cool-moments.md#4"
+      }
+    },
+    {
+      "id": "para-glasses",
+      "kind": "paraphrase",
+      "paraphrase": true,
+      "a bm25": null,
+      "b field-guide": null,
+      "c vectors": null,
+      "d hybrid bm25+vec": null,
+      "d2 hybrid fg+vec": null,
+      "top1": {
+        "a bm25": "shaders/tesla/chromadepth/README.md#0",
+        "b field-guide": "docs/MAKING_A_NEW_SHADER.md#66",
+        "c vectors": "docs/MAKING_A_NEW_SHADER.md#66",
+        "d hybrid bm25+vec": "docs/MAKING_A_NEW_SHADER.md#66",
+        "d2 hybrid fg+vec": "docs/MAKING_A_NEW_SHADER.md#66"
+      }
+    },
+    {
+      "id": "para-uniquephone",
+      "kind": "paraphrase",
+      "paraphrase": true,
+      "a bm25": 1,
+      "b field-guide": 2,
+      "c vectors": 1,
+      "d hybrid bm25+vec": 1,
+      "d2 hybrid fg+vec": 1,
+      "top1": {
+        "a bm25": "docs/advanced-shader-techniques.md#8",
+        "b field-guide": "journals/2026-11-22-clit-coaster-show.md#3",
+        "c vectors": "docs/advanced-shader-techniques.md#8",
+        "d hybrid bm25+vec": "docs/advanced-shader-techniques.md#8",
+        "d2 hybrid fg+vec": "docs/advanced-shader-techniques.md#8"
+      }
+    },
+    {
+      "id": "para-learn",
+      "kind": "paraphrase",
+      "paraphrase": true,
+      "a bm25": 3,
+      "b field-guide": 1,
+      "c vectors": 1,
+      "d hybrid bm25+vec": 1,
+      "d2 hybrid fg+vec": 1,
+      "top1": {
+        "a bm25": "docs/vjpad-v2-design.md#1",
+        "b field-guide": "docs/live-session-architecture.md#2",
+        "c vectors": "docs/live-session-architecture.md#2",
+        "d hybrid bm25+vec": "docs/live-session-architecture.md#2",
+        "d2 hybrid fg+vec": "docs/live-session-architecture.md#2"
+      }
+    },
+    {
+      "id": "para-dancetrails",
+      "kind": "paraphrase",
+      "paraphrase": true,
+      "a bm25": null,
+      "b field-guide": null,
+      "c vectors": 7,
+      "d hybrid bm25+vec": null,
+      "d2 hybrid fg+vec": 3,
+      "top1": {
+        "a bm25": "shaders/wip/claude/the-coat.md#1",
+        "b field-guide": "shaders/sun/lamp/lamp.md#6",
+        "c vectors": "journals/line-dance-iteration-log.md#1",
+        "d hybrid bm25+vec": "journals/the-coat-19-cool-moments.md#5",
+        "d2 hybrid fg+vec": "journals/line-dance-iteration-log.md#1"
+      }
+    },
+    {
+      "id": "why-coat-pitch",
+      "kind": "why",
+      "paraphrase": false,
+      "a bm25": 4,
+      "b field-guide": 1,
+      "c vectors": 6,
+      "d hybrid bm25+vec": 2,
+      "d2 hybrid fg+vec": 1,
+      "top1": {
+        "a bm25": "journals/the-coat-22-cool-moments.md#5",
+        "b field-guide": "shaders/redaphid/wip/the-coat-fur-coat/the-coat-22.md#3",
+        "c vectors": "journals/beat-trip-cool-moments.md#5",
+        "d hybrid bm25+vec": "journals/the-coat-22-cool-moments.md#5",
+        "d2 hybrid fg+vec": "shaders/redaphid/wip/the-coat-fur-coat/the-coat-22.md#3"
+      }
+    },
+    {
+      "id": "why-coaster-optin",
+      "kind": "why",
+      "paraphrase": false,
+      "a bm25": 2,
+      "b field-guide": 1,
+      "c vectors": 1,
+      "d hybrid bm25+vec": 1,
+      "d2 hybrid fg+vec": 1,
+      "top1": {
+        "a bm25": "docs/vj-deep-voyage-recipe.md#7",
+        "b field-guide": "journals/2026-11-22-clit-coaster-show.md#6",
+        "c vectors": "docs/show-quickstart.md#6",
+        "d hybrid bm25+vec": "docs/show-quickstart.md#6",
+        "d2 hybrid fg+vec": "docs/show-quickstart.md#6"
+      }
+    },
+    {
+      "id": "why-isnan",
+      "kind": "why",
+      "paraphrase": false,
+      "a bm25": 1,
+      "b field-guide": 1,
+      "c vectors": 1,
+      "d hybrid bm25+vec": 1,
+      "d2 hybrid fg+vec": 1,
+      "top1": {
+        "a bm25": "docs/show-playbook.md#9",
+        "b field-guide": "docs/show-playbook.md#9",
+        "c vectors": "docs/show-playbook.md#9",
+        "d hybrid bm25+vec": "docs/show-playbook.md#9",
+        "d2 hybrid fg+vec": "docs/show-playbook.md#9"
+      }
+    },
+    {
+      "id": "why-k1-zero",
+      "kind": "why",
+      "paraphrase": false,
+      "a bm25": 3,
+      "b field-guide": 2,
+      "c vectors": 1,
+      "d hybrid bm25+vec": 1,
+      "d2 hybrid fg+vec": 1,
+      "top1": {
+        "a bm25": ".claude/skills/sun-set/JOURNEY.md#7",
+        "b field-guide": ".claude/skills/sun-set/JOURNEY.md#7",
+        "c vectors": ".claude/skills/sun-set/JOURNEY.md#6",
+        "d hybrid bm25+vec": ".claude/skills/sun-set/JOURNEY.md#6",
+        "d2 hybrid fg+vec": ".claude/skills/sun-set/JOURNEY.md#6"
+      }
+    },
+    {
+      "id": "why-frameblend",
+      "kind": "why",
+      "paraphrase": false,
+      "a bm25": 1,
+      "b field-guide": 1,
+      "c vectors": 1,
+      "d hybrid bm25+vec": 1,
+      "d2 hybrid fg+vec": 1,
+      "top1": {
+        "a bm25": "docs/sparkle-score.md#7",
+        "b field-guide": "docs/sparkle-score.md#7",
+        "c vectors": "docs/sparkle-score.md#7",
+        "d hybrid bm25+vec": "docs/sparkle-score.md#7",
+        "d2 hybrid fg+vec": "docs/sparkle-score.md#7"
+      }
+    },
+    {
+      "id": "partner-drops",
+      "kind": "partner",
+      "paraphrase": false,
+      "a bm25": 9,
+      "b field-guide": 6,
+      "c vectors": null,
+      "d hybrid bm25+vec": null,
+      "d2 hybrid fg+vec": null,
+      "top1": {
+        "a bm25": "journals/2026-11-22-clit-coaster-show.md#0",
+        "b field-guide": "journals/2026-11-22-clit-coaster-show.md#0",
+        "c vectors": "shaders/wip/claude/the-coat.md#5",
+        "d hybrid bm25+vec": "shaders/claude/wip/clit-vibej/clit-vibej.md#0",
+        "d2 hybrid fg+vec": "shaders/clit-set/clit-set.md#12"
+      }
+    },
+    {
+      "id": "partner-knobs-clit",
+      "kind": "partner",
+      "paraphrase": false,
+      "a bm25": null,
+      "b field-guide": null,
+      "c vectors": null,
+      "d hybrid bm25+vec": null,
+      "d2 hybrid fg+vec": null,
+      "top1": {
+        "a bm25": "shaders/claude/wip/clit-vibej/clit-vibej.md#0",
+        "b field-guide": "journals/2026-11-22-clit-coaster-show.md#3",
+        "c vectors": "journals/2026-11-22-clit-coaster-show.md#0",
+        "d hybrid bm25+vec": "journals/2026-11-22-clit-coaster-show.md#0",
+        "d2 hybrid fg+vec": "journals/2026-11-22-clit-coaster-show.md#3"
+      }
+    },
+    {
+      "id": "partner-mostmoved",
+      "kind": "partner",
+      "paraphrase": false,
+      "a bm25": 1,
+      "b field-guide": 1,
+      "c vectors": 1,
+      "d hybrid bm25+vec": 1,
+      "d2 hybrid fg+vec": 1,
+      "top1": {
+        "a bm25": ".claude/skills/sun-set/JOURNEY.md#8",
+        "b field-guide": ".claude/skills/sun-set/JOURNEY.md#8",
+        "c vectors": ".claude/skills/sun-set/JOURNEY.md#8",
+        "d hybrid bm25+vec": ".claude/skills/sun-set/JOURNEY.md#8",
+        "d2 hybrid fg+vec": ".claude/skills/sun-set/JOURNEY.md#8"
+      }
+    },
+    {
+      "id": "partner-pushpull",
+      "kind": "partner",
+      "paraphrase": true,
+      "a bm25": null,
+      "b field-guide": 10,
+      "c vectors": null,
+      "d hybrid bm25+vec": null,
+      "d2 hybrid fg+vec": null,
+      "top1": {
+        "a bm25": "docs/vj-deep-voyage-recipe.md#6",
+        "b field-guide": "docs/vj-deep-voyage-recipe.md#6",
+        "c vectors": "journals/magic-peach-cool-moments.md#5",
+        "d hybrid bm25+vec": "docs/show-quickstart.md#6",
+        "d2 hybrid fg+vec": "docs/show-quickstart.md#6"
+      }
+    },
+    {
+      "id": "partner-flicker",
+      "kind": "partner",
+      "paraphrase": false,
+      "a bm25": null,
+      "b field-guide": 3,
+      "c vectors": null,
+      "d hybrid bm25+vec": null,
+      "d2 hybrid fg+vec": 10,
+      "top1": {
+        "a bm25": "docs/show-quickstart.md#12",
+        "b field-guide": "journals/2026-11-22-clit-coaster-show.md#2",
+        "c vectors": "docs/debugging-twitchy-shaders.md#2",
+        "d hybrid bm25+vec": "shaders/redaphid/wip/lattice-vj/explore-2026-08-18/NOTES.md#7",
+        "d2 hybrid fg+vec": "shaders/redaphid/wip/lattice-vj/explore-2026-08-18/NOTES.md#7"
+      }
+    },
+    {
+      "id": "partner-dimfrozen",
+      "kind": "partner",
+      "paraphrase": true,
+      "a bm25": null,
+      "b field-guide": 2,
+      "c vectors": null,
+      "d hybrid bm25+vec": null,
+      "d2 hybrid fg+vec": 5,
+      "top1": {
+        "a bm25": "docs/show-quickstart.md#3",
+        "b field-guide": "docs/show-quickstart.md#3",
+        "c vectors": "shaders/claude/wip/eclipse/eclipse.md#4",
+        "d hybrid bm25+vec": "shaders/redaphid/wip/lattice-vj/explore-2026-08-18/NOTES.md#1",
+        "d2 hybrid fg+vec": "shaders/redaphid/wip/lattice-vj/explore-2026-08-18/NOTES.md#1"
+      }
+    },
+    {
+      "id": "partner-panic",
+      "kind": "partner",
+      "paraphrase": false,
+      "a bm25": 2,
+      "b field-guide": 3,
+      "c vectors": 1,
+      "d hybrid bm25+vec": 1,
+      "d2 hybrid fg+vec": 2,
+      "top1": {
+        "a bm25": "docs/twister-cheatsheet.md#4",
+        "b field-guide": "docs/twister-cheatsheet.md#4",
+        "c vectors": "docs/show-playbook.md#8",
+        "d hybrid bm25+vec": "docs/show-playbook.md#8",
+        "d2 hybrid fg+vec": "docs/twister-cheatsheet.md#4"
+      }
+    },
+    {
+      "id": "partner-supernova",
+      "kind": "partner",
+      "paraphrase": false,
+      "a bm25": 2,
+      "b field-guide": 1,
+      "c vectors": 4,
+      "d hybrid bm25+vec": 4,
+      "d2 hybrid fg+vec": 2,
+      "top1": {
+        "a bm25": "shaders/sun/sun.md#5",
+        "b field-guide": "docs/show-playbook.md#4",
+        "c vectors": "shaders/claude/wip/black-sun/black-sun.md#27",
+        "d hybrid bm25+vec": "shaders/sun/sun.md#5",
+        "d2 hybrid fg+vec": "shaders/sun/sun.md#5"
+      }
+    },
+    {
+      "id": "partner-taco-knob7",
+      "kind": "partner",
+      "paraphrase": false,
+      "a bm25": 1,
+      "b field-guide": 1,
+      "c vectors": 1,
+      "d hybrid bm25+vec": 1,
+      "d2 hybrid fg+vec": 1,
+      "top1": {
+        "a bm25": "journals/taco-live-show-playbook.md#7",
+        "b field-guide": "journals/taco-live-show-playbook.md#7",
+        "c vectors": "journals/taco-live-show-playbook.md#7",
+        "d hybrid bm25+vec": "journals/taco-live-show-playbook.md#7",
+        "d2 hybrid fg+vec": "journals/taco-live-show-playbook.md#7"
+      }
+    },
+    {
+      "id": "guide-register",
+      "kind": "guide",
+      "paraphrase": false,
+      "a bm25": 1,
+      "b field-guide": 2,
+      "c vectors": 1,
+      "d hybrid bm25+vec": 1,
+      "d2 hybrid fg+vec": 1,
+      "top1": {
+        "a bm25": "docs/vj-mcp.md#1",
+        "b field-guide": "docs/vj-mcp.md#2",
+        "c vectors": "docs/vj-mcp.md#1",
+        "d hybrid bm25+vec": "docs/vj-mcp.md#1",
+        "d2 hybrid fg+vec": "docs/vj-mcp.md#1"
+      }
+    },
+    {
+      "id": "guide-lockroom",
+      "kind": "guide",
+      "paraphrase": true,
+      "a bm25": 4,
+      "b field-guide": 5,
+      "c vectors": 1,
+      "d hybrid bm25+vec": 1,
+      "d2 hybrid fg+vec": 2,
+      "top1": {
+        "a bm25": "docs/vj-mcp.md#2",
+        "b field-guide": "docs/vj-mcp.md#2",
+        "c vectors": "docs/vj-mcp.md#11",
+        "d hybrid bm25+vec": "docs/vj-mcp.md#11",
+        "d2 hybrid fg+vec": "docs/vj-mcp.md#2"
+      }
+    },
+    {
+      "id": "guide-wait",
+      "kind": "guide",
+      "paraphrase": false,
+      "a bm25": 1,
+      "b field-guide": 1,
+      "c vectors": null,
+      "d hybrid bm25+vec": 5,
+      "d2 hybrid fg+vec": 4,
+      "top1": {
+        "a bm25": "docs/vj-mcp.md#8",
+        "b field-guide": "docs/vj-mcp.md#8",
+        "c vectors": "docs/testing.md#3",
+        "d hybrid bm25+vec": "docs/vj-telemetry.md#0",
+        "d2 hybrid fg+vec": "docs/vj-telemetry.md#0"
+      }
+    },
+    {
+      "id": "guide-tabaudio",
+      "kind": "guide",
+      "paraphrase": false,
+      "a bm25": 2,
+      "b field-guide": 2,
+      "c vectors": 1,
+      "d hybrid bm25+vec": 1,
+      "d2 hybrid fg+vec": 1,
+      "top1": {
+        "a bm25": "docs/tab-audio.md#5",
+        "b field-guide": "docs/tab-audio.md#5",
+        "c vectors": "docs/tab-audio.md#2",
+        "d hybrid bm25+vec": "docs/tab-audio.md#2",
+        "d2 hybrid fg+vec": "docs/tab-audio.md#2"
+      }
+    },
+    {
+      "id": "guide-pilot",
+      "kind": "guide",
+      "paraphrase": true,
+      "a bm25": 2,
+      "b field-guide": 2,
+      "c vectors": 2,
+      "d hybrid bm25+vec": 1,
+      "d2 hybrid fg+vec": 1,
+      "top1": {
+        "a bm25": "shaders/redaphid/wip/lattice-vj/8.md#1",
+        "b field-guide": "shaders/redaphid/wip/lattice-vj/8.md#1",
+        "c vectors": "shaders/redaphid/wip/lattice-vj/6.md#5",
+        "d hybrid bm25+vec": "docs/vj-deep-voyage-recipe.md#8",
+        "d2 hybrid fg+vec": "docs/vj-deep-voyage-recipe.md#8"
+      }
+    },
+    {
+      "id": "guide-knobnames",
+      "kind": "guide",
+      "paraphrase": false,
+      "a bm25": 5,
+      "b field-guide": 4,
+      "c vectors": 1,
+      "d hybrid bm25+vec": 3,
+      "d2 hybrid fg+vec": 1,
+      "top1": {
+        "a bm25": "docs/vjpad.md#4",
+        "b field-guide": "docs/vjpad.md#2",
+        "c vectors": "docs/vjpad.md#3",
+        "d hybrid bm25+vec": "docs/vjpad.md#4",
+        "d2 hybrid fg+vec": "docs/vjpad.md#3"
+      }
+    }
+  ]
+}

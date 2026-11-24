@@ -1,0 +1,799 @@
+[
+ {
+  "id": "show-sunset",
+  "kind": "show",
+  "consumer": "phone",
+  "paraphrase": false,
+  "q": "what did we do at the sun set show",
+  "src": "brief (Aaron's phone example); mindmeld 102145",
+  "gold": [
+   {
+    "file": ".claude/skills/sun-set/JOURNEY.md",
+    "start": 1,
+    "end": 54
+   }
+  ]
+ },
+ {
+  "id": "show-coaster",
+  "kind": "show",
+  "consumer": "phone",
+  "paraphrase": false,
+  "q": "what happened at the clit coaster show and what made it good",
+  "src": "mindmeld 102906, 103488",
+  "gold": [
+   {
+    "file": "journals/2026-11-22-clit-coaster-show.md",
+    "start": 1,
+    "end": 10
+   },
+   {
+    "file": "journals/2026-11-22-clit-coaster-show.md",
+    "start": 129,
+    "end": 141
+   },
+   {
+    "file": "docs/vj-deep-voyage-recipe.md",
+    "start": 1,
+    "end": 27
+   }
+  ]
+ },
+ {
+  "id": "show-crash",
+  "kind": "show",
+  "consumer": "phone",
+  "paraphrase": false,
+  "q": "when did the dev server crash during the sun set and the wall went solid black",
+  "src": "JOURNEY J17; mindmeld 102145",
+  "gold": [
+   {
+    "file": ".claude/skills/sun-set/JOURNEY.md",
+    "start": 50,
+    "end": 50
+   }
+  ],
+  "goldAdded": [
+   {
+    "file": "shaders/claude/wip/black-sun/black-sun.md",
+    "start": 413,
+    "end": 418
+   }
+  ]
+ },
+ {
+  "id": "show-techno",
+  "kind": "show",
+  "consumer": "phone",
+  "paraphrase": false,
+  "q": "at the hard techno club the shader was almost still, what fixed the music reactivity",
+  "src": "Aaron 2026-11-22 00:44 (preferences.md); mindmeld 103381",
+  "gold": [
+   {
+    "file": "journals/2026-11-22-clit-coaster-show.md",
+    "start": 35,
+    "end": 50
+   },
+   {
+    "file": "journals/2026-11-22-clit-coaster-show.md",
+    "start": 149,
+    "end": 149
+   }
+  ],
+  "goldAdded": [
+   {
+    "file": "journals/2026-11-22-clit-coaster-show.md",
+    "start": 129,
+    "end": 134
+   }
+  ]
+ },
+ {
+  "id": "show-blacklink",
+  "kind": "show",
+  "consumer": "phone",
+  "paraphrase": false,
+  "q": "why did the prod link look black at the end of the coaster night",
+  "src": "coaster journal 06:32; mindmeld 102145",
+  "gold": [
+   {
+    "file": "journals/2026-11-22-clit-coaster-show.md",
+    "start": 123,
+    "end": 127
+   },
+   {
+    "file": "journals/2026-11-22-clit-coaster-show.md",
+    "start": 156,
+    "end": 156
+   },
+   {
+    "file": "docs/vj-deep-voyage-recipe.md",
+    "start": 176,
+    "end": 176
+   }
+  ]
+ },
+ {
+  "id": "show-tendrils",
+  "kind": "show",
+  "consumer": "partner",
+  "paraphrase": false,
+  "q": "which dial settings found the jellyfish tendrils coiling in the fractal",
+  "src": "Aaron 01:49 'I wanna see those tendrils coil'",
+  "gold": [
+   {
+    "file": "journals/2026-11-22-clit-coaster-show.md",
+    "start": 67,
+    "end": 71
+   }
+  ]
+ },
+ {
+  "id": "show-beatlengths",
+  "kind": "show",
+  "consumer": "partner",
+  "paraphrase": false,
+  "q": "how long did each beat of the sun set last on the night",
+  "src": "sun-set skill",
+  "gold": [
+   {
+    "file": ".claude/skills/sun-set/JOURNEY.md",
+    "start": 55,
+    "end": 76
+   }
+  ]
+ },
+ {
+  "id": "para-walldark",
+  "kind": "paraphrase",
+  "consumer": "phone",
+  "paraphrase": true,
+  "q": "the bit where the wall went dark and we swapped forks",
+  "src": "brief example",
+  "gold": [
+   {
+    "file": "docs/show-playbook.md",
+    "start": 185,
+    "end": 195
+   },
+   {
+    "file": "journals/2026-11-22-clit-coaster-show.md",
+    "start": 25,
+    "end": 33
+   },
+   {
+    "file": ".claude/skills/sun-set/JOURNEY.md",
+    "start": 50,
+    "end": 50
+   }
+  ]
+ },
+ {
+  "id": "para-glitter",
+  "kind": "paraphrase",
+  "consumer": "phone",
+  "paraphrase": true,
+  "q": "that time the thin threads shimmered like glitter and we fixed it by taking more looks inside each pixel",
+  "src": "preferences.md 2026-11-22 lace sparkle; mindmeld 102151",
+  "gold": [
+   {
+    "file": "docs/sparkle-score.md",
+    "start": 117,
+    "end": 160
+   }
+  ],
+  "goldAdded": [
+   {
+    "file": "shaders/claude/wip/clit-vibej/clit-vibej.md",
+    "start": 111,
+    "end": 142
+   }
+  ]
+ },
+ {
+  "id": "para-internet",
+  "kind": "paraphrase",
+  "consumer": "phone",
+  "paraphrase": true,
+  "q": "the night our connection to the outside world dropped in the middle of the set",
+  "src": "JOURNEY J6/J14",
+  "gold": [
+   {
+    "file": ".claude/skills/sun-set/JOURNEY.md",
+    "start": 39,
+    "end": 39
+   },
+   {
+    "file": ".claude/skills/sun-set/JOURNEY.md",
+    "start": 47,
+    "end": 47
+   }
+  ]
+ },
+ {
+  "id": "para-repetitive",
+  "kind": "paraphrase",
+  "consumer": "partner",
+  "paraphrase": true,
+  "q": "when he says it feels repetitive and the same for a while, what should we change",
+  "src": "Aaron 04:07 'It's been pretty samey for a while'",
+  "gold": [
+   {
+    "file": "journals/2026-11-22-clit-coaster-show.md",
+    "start": 95,
+    "end": 101
+   },
+   {
+    "file": "journals/2026-11-22-clit-coaster-show.md",
+    "start": 140,
+    "end": 141
+   },
+   {
+    "file": "docs/vj-deep-voyage-recipe.md",
+    "start": 156,
+    "end": 165
+   }
+  ]
+ },
+ {
+  "id": "para-car",
+  "kind": "paraphrase",
+  "consumer": "phone",
+  "paraphrase": true,
+  "q": "the gig where we beamed the visuals out of the back of my car",
+  "src": "Aaron 01:11 'project the same thing out of my trunk'",
+  "gold": [
+   {
+    "file": "journals/2026-11-22-clit-coaster-show.md",
+    "start": 59,
+    "end": 72
+   }
+  ]
+ },
+ {
+  "id": "para-rotation",
+  "kind": "paraphrase",
+  "consumer": "guide",
+  "paraphrase": true,
+  "q": "why shouldn't loudness push a spinning thing's position directly, it keeps rocking back and forth",
+  "src": "advanced-shader-techniques; mindmeld 102906 (sine on geometry)",
+  "gold": [
+   {
+    "file": "docs/advanced-shader-techniques.md",
+    "start": 15,
+    "end": 36
+   },
+   {
+    "file": "docs/vj-deep-voyage-recipe.md",
+    "start": 74,
+    "end": 88
+   }
+  ],
+  "goldAdded": [
+   {
+    "file": "shaders/claude/wip/eclipse/eclipse.md",
+    "start": 73,
+    "end": 88
+   },
+   {
+    "file": "journals/lattice-vj-2-cool-moments.md",
+    "start": 386,
+    "end": 392
+   }
+  ]
+ },
+ {
+  "id": "para-quietroom",
+  "kind": "paraphrase",
+  "consumer": "guide",
+  "paraphrase": true,
+  "q": "how do I keep a silent room's background hiss from wiggling everything",
+  "src": "advanced-shader-techniques quietGate",
+  "gold": [
+   {
+    "file": "docs/advanced-shader-techniques.md",
+    "start": 15,
+    "end": 36
+   }
+  ]
+ },
+ {
+  "id": "para-glasses",
+  "kind": "paraphrase",
+  "consumer": "phone",
+  "paraphrase": true,
+  "q": "what makes the cardboard 3D glasses effect really jump out at people",
+  "src": "CLAUDE.md ChromaDepth; advanced-shader-techniques",
+  "gold": [
+   {
+    "file": "docs/advanced-shader-techniques.md",
+    "start": 52,
+    "end": 69
+   }
+  ],
+  "goldAdded": [
+   {
+    "file": "docs/MAKING_A_NEW_SHADER.md",
+    "start": 1140,
+    "end": 1152
+   }
+  ]
+ },
+ {
+  "id": "para-uniquephone",
+  "kind": "paraphrase",
+  "consumer": "phone",
+  "paraphrase": true,
+  "q": "how do we make everybody's phone show its own one-of-a-kind look",
+  "src": "preferences.md clit-set NFC variants 'phone seeds'",
+  "gold": [
+   {
+    "file": "docs/advanced-shader-techniques.md",
+    "start": 122,
+    "end": 128
+   }
+  ]
+ },
+ {
+  "id": "para-learn",
+  "kind": "paraphrase",
+  "consumer": "guide",
+  "paraphrase": true,
+  "q": "the phone button that guesses which sound my hand was imitating, why does it answer so fast now",
+  "src": "CLAUDE.md live sessions; live-session-architecture",
+  "gold": [
+   {
+    "file": "docs/live-session-architecture.md",
+    "start": 22,
+    "end": 37
+   }
+  ]
+ },
+ {
+  "id": "para-dancetrails",
+  "kind": "paraphrase",
+  "consumer": "phone",
+  "paraphrase": true,
+  "q": "the old dancing-figure visual where the streaks behind it were too short",
+  "src": "line-dance iteration log",
+  "gold": [
+   {
+    "file": "journals/line-dance-iteration-log.md",
+    "start": 29,
+    "end": 45
+   }
+  ],
+  "goldAdded": [
+   {
+    "file": "journals/line-dance-iteration-log.md",
+    "start": 1,
+    "end": 91
+   }
+  ]
+ },
+ {
+  "id": "why-coat-pitch",
+  "kind": "why",
+  "consumer": "phone",
+  "paraphrase": false,
+  "q": "why does the coat shader use pitch_change",
+  "src": "brief (Aaron's phone example)",
+  "gold": [
+   {
+    "file": "shaders/redaphid/wip/the-coat-fur-coat/the-coat-22.md",
+    "start": 33,
+    "end": 48
+   },
+   {
+    "file": "shaders/redaphid/wip/the-coat-fur-coat/the-coat-23.md",
+    "start": 33,
+    "end": 40
+   },
+   {
+    "file": "shaders/redaphid/the-coat/painterly-groove.md",
+    "start": 1,
+    "end": 20
+   }
+  ],
+  "goldAdded": [
+   {
+    "file": "journals/the-coat-22-cool-moments.md",
+    "start": 6,
+    "end": 40
+   }
+  ]
+ },
+ {
+  "id": "why-coaster-optin",
+  "kind": "why",
+  "consumer": "partner",
+  "paraphrase": false,
+  "q": "why is coaster mode opt-in instead of the default",
+  "src": "coaster journal 05:12",
+  "gold": [
+   {
+    "file": "journals/2026-11-22-clit-coaster-show.md",
+    "start": 116,
+    "end": 122
+   },
+   {
+    "file": "docs/show-quickstart.md",
+    "start": 78,
+    "end": 81
+   }
+  ]
+ },
+ {
+  "id": "why-isnan",
+  "kind": "why",
+  "consumer": "guide",
+  "paraphrase": false,
+  "q": "why are isnan and isinf banned in shaders",
+  "src": "show-playbook black wall lesson",
+  "gold": [
+   {
+    "file": "docs/show-playbook.md",
+    "start": 185,
+    "end": 195
+   }
+  ]
+ },
+ {
+  "id": "why-k1-zero",
+  "kind": "why",
+  "consumer": "partner",
+  "paraphrase": false,
+  "q": "why is K1 replayed as 0 in the sun set knob replay",
+  "src": "JOURNEY knob journey",
+  "gold": [
+   {
+    "file": ".claude/skills/sun-set/JOURNEY.md",
+    "start": 104,
+    "end": 104
+   },
+   {
+    "file": ".claude/skills/sun-set/JOURNEY.md",
+    "start": 143,
+    "end": 143
+   }
+  ]
+ },
+ {
+  "id": "why-frameblend",
+  "kind": "why",
+  "consumer": "phone",
+  "paraphrase": false,
+  "q": "why was frame blending rejected as the fix for the lace sparkle",
+  "src": "sparkle-score; preferences.md 2026-11-22 evening",
+  "gold": [
+   {
+    "file": "docs/sparkle-score.md",
+    "start": 133,
+    "end": 144
+   }
+  ]
+ },
+ {
+  "id": "partner-drops",
+  "kind": "partner",
+  "consumer": "partner",
+  "paraphrase": false,
+  "q": "what worked on drops with this shader last time (clit-set coaster)",
+  "src": "brief (/partner example)",
+  "gold": [
+   {
+    "file": "docs/show-quickstart.md",
+    "start": 83,
+    "end": 96
+   },
+   {
+    "file": "docs/vj-deep-voyage-recipe.md",
+    "start": 74,
+    "end": 88
+   },
+   {
+    "file": "docs/show-quickstart.md",
+    "start": 150,
+    "end": 160
+   }
+  ]
+ },
+ {
+  "id": "partner-knobs-clit",
+  "kind": "partner",
+  "consumer": "partner",
+  "paraphrase": false,
+  "q": "which knobs did Aaron reach for on clit-set",
+  "src": "brief (/partner example); mindmeld 102156",
+  "gold": [
+   {
+    "file": "journals/2026-11-22-clit-coaster-show.md",
+    "start": 67,
+    "end": 72
+   },
+   {
+    "file": "docs/show-quickstart.md",
+    "start": 62,
+    "end": 77
+   }
+  ],
+  "goldAdded": [
+   {
+    "file": "shaders/clit-set/clit-set.md",
+    "start": 30,
+    "end": 50
+   }
+  ]
+ },
+ {
+  "id": "partner-mostmoved",
+  "kind": "partner",
+  "consumer": "partner",
+  "paraphrase": false,
+  "q": "which dial did he move the most during the sun set",
+  "src": "JOURNEY arc per knob",
+  "gold": [
+   {
+    "file": ".claude/skills/sun-set/JOURNEY.md",
+    "start": 139,
+    "end": 160
+   }
+  ]
+ },
+ {
+  "id": "partner-pushpull",
+  "kind": "partner",
+  "consumer": "partner",
+  "paraphrase": true,
+  "q": "which controls does he keep cranking all the way up, and which does he keep turning down",
+  "src": "vj-preferences 2026-10-09 'communicate wordlessly through the dials'",
+  "gold": [
+   {
+    "file": "docs/vj-preferences.md",
+    "start": 183,
+    "end": 183
+   },
+   {
+    "file": ".claude/skills/sun-set/JOURNEY.md",
+    "start": 159,
+    "end": 160
+   },
+   {
+    "file": ".claude/skills/sun-set/JOURNEY.md",
+    "start": 139,
+    "end": 158
+   }
+  ]
+ },
+ {
+  "id": "partner-flicker",
+  "kind": "partner",
+  "consumer": "partner",
+  "paraphrase": false,
+  "q": "the wall is flickering and shivering, what do I check first",
+  "src": "show-playbook failure runbook",
+  "gold": [
+   {
+    "file": "docs/show-playbook.md",
+    "start": 154,
+    "end": 170
+   },
+   {
+    "file": "docs/vj-preferences.md",
+    "start": 145,
+    "end": 152
+   }
+  ],
+  "goldAdded": [
+   {
+    "file": "docs/debugging-twitchy-shaders.md",
+    "start": 19,
+    "end": 33
+   },
+   {
+    "file": "shaders/redaphid/wip/lattice-vj/explore-2026-08-18/NOTES.md",
+    "start": 158,
+    "end": 173
+   }
+  ]
+ },
+ {
+  "id": "partner-dimfrozen",
+  "kind": "partner",
+  "consumer": "partner",
+  "paraphrase": true,
+  "q": "music is clearly playing but the picture barely reacts and stays murky",
+  "src": "show-playbook runbook; coaster Act 1",
+  "gold": [
+   {
+    "file": "docs/show-playbook.md",
+    "start": 154,
+    "end": 170
+   },
+   {
+    "file": "journals/2026-11-22-clit-coaster-show.md",
+    "start": 35,
+    "end": 50
+   },
+   {
+    "file": "docs/vj-deep-voyage-recipe.md",
+    "start": 156,
+    "end": 160
+   }
+  ],
+  "goldAdded": [
+   {
+    "file": "docs/show-quickstart.md",
+    "start": 32,
+    "end": 48
+   }
+  ]
+ },
+ {
+  "id": "partner-panic",
+  "kind": "partner",
+  "consumer": "partner",
+  "paraphrase": false,
+  "q": "which sun fork is a known-good look to panic to",
+  "src": "show-playbook fork library",
+  "gold": [
+   {
+    "file": "docs/show-playbook.md",
+    "start": 131,
+    "end": 153
+   },
+   {
+    "file": "docs/show-playbook.md",
+    "start": 170,
+    "end": 191
+   }
+  ]
+ },
+ {
+  "id": "partner-supernova",
+  "kind": "partner",
+  "consumer": "partner",
+  "paraphrase": false,
+  "q": "what K5 value forces the supernova",
+  "src": "show-playbook knob map",
+  "gold": [
+   {
+    "file": "docs/show-playbook.md",
+    "start": 92,
+    "end": 94
+   },
+   {
+    "file": "docs/show-playbook.md",
+    "start": 127,
+    "end": 129
+   }
+  ],
+  "goldAdded": [
+   {
+    "file": "shaders/sun/sun.md",
+    "start": 42,
+    "end": 47
+   },
+   {
+    "file": "docs/show-playbook.md",
+    "start": 141,
+    "end": 141
+   }
+  ]
+ },
+ {
+  "id": "partner-taco-knob7",
+  "kind": "partner",
+  "consumer": "partner",
+  "paraphrase": false,
+  "q": "on the taco shaders which knob must never be changed during the set",
+  "src": "taco-live-show-playbook",
+  "gold": [
+   {
+    "file": "journals/taco-live-show-playbook.md",
+    "start": 49,
+    "end": 53
+   }
+  ]
+ },
+ {
+  "id": "guide-register",
+  "kind": "guide",
+  "consumer": "guide",
+  "paraphrase": false,
+  "q": "how do I register the live VJ MCP for a room",
+  "src": "Field Guide lane; vj-mcp.md",
+  "gold": [
+   {
+    "file": "docs/vj-mcp.md",
+    "start": 22,
+    "end": 40
+   },
+   {
+    "file": "docs/vj-mcp.md",
+    "start": 140,
+    "end": 175
+   }
+  ]
+ },
+ {
+  "id": "guide-lockroom",
+  "kind": "guide",
+  "consumer": "guide",
+  "paraphrase": true,
+  "q": "how do I stop strangers from joining my room as a fake screen",
+  "src": "preferences.md 'build the secret on 3'; vj-mcp.md display secret",
+  "gold": [
+   {
+    "file": "docs/vj-mcp.md",
+    "start": 227,
+    "end": 280
+   }
+  ]
+ },
+ {
+  "id": "guide-wait",
+  "kind": "guide",
+  "consumer": "guide",
+  "paraphrase": false,
+  "q": "how do I wait for the page to report something instead of polling",
+  "src": "vj-mcp.md tools",
+  "gold": [
+   {
+    "file": "docs/vj-mcp.md",
+    "start": 176,
+    "end": 202
+   }
+  ]
+ },
+ {
+  "id": "guide-tabaudio",
+  "kind": "guide",
+  "consumer": "guide",
+  "paraphrase": false,
+  "q": "how do I capture audio from a browser tab instead of the microphone",
+  "src": "CLAUDE.md audio=tab",
+  "gold": [
+   {
+    "file": "docs/tab-audio.md",
+    "start": 1,
+    "end": 25
+   }
+  ]
+ },
+ {
+  "id": "guide-pilot",
+  "kind": "guide",
+  "consumer": "guide",
+  "paraphrase": true,
+  "q": "can the music steer the wall by itself with no model in the loop",
+  "src": "Aaron 06:30 'using the controller etc and no llm'",
+  "gold": [
+   {
+    "file": "docs/show-quickstart.md",
+    "start": 144,
+    "end": 188
+   },
+   {
+    "file": "docs/vj-deep-voyage-recipe.md",
+    "start": 119,
+    "end": 124
+   }
+  ]
+ },
+ {
+  "id": "guide-knobnames",
+  "kind": "guide",
+  "consumer": "guide",
+  "paraphrase": false,
+  "q": "how do I name knobs in a shader so the vj pad shows labels",
+  "src": "CLAUDE.md knob naming; vjpad.md",
+  "gold": [
+   {
+    "file": "docs/vjpad.md",
+    "start": 81,
+    "end": 101
+   }
+  ]
+ }
+]
