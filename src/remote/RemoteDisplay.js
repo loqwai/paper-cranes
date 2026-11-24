@@ -64,8 +64,9 @@ export const initRemoteDisplay = () => {
     console.log('[Remote Display] Status:', status)
     if (status === 'connected' && onTrustedSocket()) inspector?.hello()
     else inspector?.unwelcome()
-    // Only show indicator for connection problems
-    if (status !== 'connected') {
+    // Show the badge only for connection problems, but once one is up, a reconnect must clear it:
+    // skipping 'connected' left "Reconnecting..." lit on the wall after every drop.
+    if (status !== 'connected' || document.getElementById('remote-status-indicator')) {
       updateStatusIndicator(status)
     }
   }

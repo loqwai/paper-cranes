@@ -82,3 +82,17 @@ describe('RemoteDisplay update-params from a room peer', () => {
     expect(query().get('remote')).toBe('display')
   })
 })
+
+describe('RemoteDisplay status badge', () => {
+  it('stops showing "Reconnecting..." once the socket is back', async () => {
+    const client = await boot()
+    client.onStatusChange('disconnected')
+    client.onStatusChange('reconnecting')
+    client.isConnected = true
+    client.onStatusChange('connected')
+    vi.advanceTimersByTime(5000)
+    const badge = elements['remote-status-indicator']
+    expect(badge.textContent).not.toBe('Reconnecting...')
+    expect(Number(badge.style.opacity)).toBeLessThan(1)
+  })
+})
