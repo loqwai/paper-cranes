@@ -31,7 +31,8 @@ const DISPLAY_ORIGIN = /^(https:\/\/([a-z0-9-]+\.)*(beadfamous\.com|paper-cranes
 export const displayOriginAllowed = (origin) => Boolean(origin) && DISPLAY_ORIGIN.test(origin)
 
 const cap = (s, n) => (typeof s === 'string' ? s.slice(0, n) : s)
-// An attachment holds at most 2 KiB, so a hello is trimmed to what list_displays shows.
+// An attachment holds at most 16 KiB; a hello is trimmed to what list_displays shows (about 3 KiB at
+// most, counting two bytes per UTF-16 unit).
 const pack = (d) => ({
   id: d.id,
   key: cap(d.key, 64),
