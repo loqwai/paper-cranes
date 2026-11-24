@@ -201,9 +201,11 @@ describe('pad client', () => {
     // answers 200: a console error every few seconds for the whole show, and battery.
     const made = []
     const makeSocket = (...a) => (made.push(a), fakeSocket().make(...a))
-    const pad = createPadClient(() => {}, () => {}, { loc: loc(''), makeSocket, BroadcastChannel: makeBus() })
+    const statuses = []
+    const pad = createPadClient(() => {}, (s) => statuses.push(s), { loc: loc(''), makeSocket, BroadcastChannel: makeBus() })
     pad.connect()
     expect(made).toEqual([])
+    expect(statuses).toEqual(['disconnected']) // NO SERVER at once, not "reconnecting…" forever
     expect(pad.send('update-params', { knob_1: 0.1 })).toBe(false)
     expect(pad.isConnected).toBe(false)
     pad.disconnect()

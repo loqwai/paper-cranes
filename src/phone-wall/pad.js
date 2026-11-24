@@ -53,6 +53,9 @@ export const createPadClient = (onMessage, onStatus, { dev = false, loc = global
     connect() {
       link.start()
       socket?.connect()
+      // With no socket nothing else ever reports, and the pad would say "reconnecting…" forever
+      // until a wall links. Say so now: NO SERVER, or connected if a wall already answered.
+      if (!socket) report()
     },
     send(type, data, extra) {
       if (!link.linked || !(TO_WALL.has(type) || TO_BOTH.has(type))) return Boolean(socket?.send(type, data, extra))
