@@ -298,6 +298,20 @@ describe('wall client', () => {
     pad.disconnect(); wall.disconnect()
   })
 
+  it('a status line from the wall reaches a pad in the room once, though it goes over the link and the room', () => {
+    const BC = makeBus()
+    const room = makeRoom()
+    const padGot = []
+    const wall = createWallClient(() => {}, () => {}, { loc: loc('?wall=1&room=r'), nav: {}, BroadcastChannel: BC, makeSocket: room.make })
+    wall.connect()
+    const pad = createPadClient((m) => padGot.push(m.type), () => {}, { loc: loc('?room=r'), makeSocket: room.make, BroadcastChannel: BC })
+    pad.connect()
+    wall.send('vj-status', { kind: 'swap', text: 'PANIC → plasma' })
+    wall.send('proposal', { id: 'p1', label: 'x' })
+    expect(padGot).toEqual(['vj-status', 'proposal'])
+    pad.disconnect(); wall.disconnect()
+  })
+
   it('opens the room socket when the link has a room', () => {
     const made = []
     createWallClient(() => {}, () => {}, { loc: loc('?wall=1&room=abc'), nav: {}, link: createLink({ role: 'wall', BroadcastChannel: null }), makeSocket: (...a) => (made.push(a), fakeSocket().make(...a)) })

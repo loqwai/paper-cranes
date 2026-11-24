@@ -62,7 +62,9 @@ room socket is up, so a second display in the room still gets every move. Each s
 carries a `pwid` (the pad's link id and a count); the wall, which hears the room too, acts on the
 first copy and drops the other (`createOnce` in `link.js`). Bank claims (`vjpad-peer`) stay on the
 room. The wall sends the pad only what a pad uses
-(`proposal`, `proposal-clear`, `vj-status`); the inspector's canvas shots stay on the room socket.
+(`proposal`, `proposal-clear`, `vj-status`, `vj-learn-result`), over the link and the room both,
+tagged the same way, so a pad in a room shows each loop line once; the inspector's canvas shots
+stay on the room socket.
 With no wall linked, the pad uses the room exactly as before.
 
 **The room is the mirror.** With `?room=` on the pad, the wall joins the same room as a display,

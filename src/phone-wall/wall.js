@@ -32,6 +32,7 @@ export const createWallClient = (onMessage, onStatus, { dev = false, loc = windo
   const socket = wantsSocket ? (makeSocket ?? ((m, s) => new WebSocketClient(m, s)))((msg) => { if (once(msg)) onMessage(msg) }, onStatus) : null
   const boot = Math.random().toString(36).slice(2, 10)
   const stats = { fromLink: 0, toLink: 0 }
+  let count = 0
   // Has any pad moved this wall yet? Only a fresh wall (just opened or replugged) takes a pad's
   // whole state: a second pad page (the NFC fallback tab, a reloaded or restored pad) linking to a
   // wall mid-set must not reset every knob on it to that page's defaults.
@@ -73,8 +74,10 @@ export const createWallClient = (onMessage, onStatus, { dev = false, loc = windo
     },
     send(type, data, extra) {
       let sent = false
-      if (TO_PAD.has(type) && link.send({ ...extra, type, data })) { stats.toLink++; sent = true }
-      if (socket) sent = socket.send(type, data, extra) || sent
+      // What a pad uses goes over the link and the room both; `pwid` lets a pad in the room act once.
+      const env = TO_PAD.has(type) ? { ...extra, pwid: `${link.id}.${++count}` } : extra
+      if (TO_PAD.has(type) && link.send({ ...env, type, data })) { stats.toLink++; sent = true }
+      if (socket) sent = socket.send(type, data, env) || sent
       return sent
     },
     disconnect() {
