@@ -43,6 +43,7 @@ export const createWallClient = (onMessage, onStatus, { dev = false, loc = windo
       .catch((e) => console.warn('[phone-wall] presentation receiver:', e))
   }
   globalThis.addEventListener?.('pagehide', () => link.stop())
+  globalThis.addEventListener?.('pageshow', (e) => { if (e.persisted) link.start() })
 
   return {
     wall: true,

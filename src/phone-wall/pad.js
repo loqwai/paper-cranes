@@ -30,7 +30,10 @@ export const createPadClient = (onMessage, onStatus, { makeSocket, BroadcastChan
     onPeers: (walls) => { report(); listeners.forEach((fn) => fn(walls)) },
   })
   const socket = (makeSocket ?? ((m, s) => new WebSocketClient(m, s)))(onMessage, (s) => { socketStatus = s; report() })
+  // Say bye on the way out, so the wall drops this pad at once; come back from the back-forward
+  // cache (DIALS and back) linked again.
   globalThis.addEventListener?.('pagehide', () => link.stop())
+  globalThis.addEventListener?.('pageshow', (e) => { if (e.persisted) link.start() })
 
   return {
     link,
