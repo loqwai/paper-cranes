@@ -354,6 +354,8 @@ uniform float another;   // = 1.2
 - `fullscreen` - Start in fullscreen
 - `remote` - Remote mode: `display` (receive commands) or `control` (send commands)
 - `audio=tab` - Capture audio from a browser tab instead of mic. Chrome/Edge only. See [docs/tab-audio.md](docs/tab-audio.md)
+- `audio_send=true` - Broadcast this page's audio features over the remote WebSocket (works with mic, `audio=tab`, or `audio_file`)
+- `audio=remote` - Take audio features from a machine running `audio_send=true` instead of the local mic. Same dev server or `room=`
 - `audio_file=<url>` - Play a deterministic audio file through the analyzer. See [docs/audio-file-playback.md](docs/audio-file-playback.md)
 - `wavelet=true` - Enable opt-in wavelet (DWT) analysis alongside FFT. Adds `wavelet*` uniforms (octave bands, centroid/spread, bassHit trigger, FFT×wavelet combos). See [docs/wavelet-analysis.md](docs/wavelet-analysis.md)
 - `audio_device=<label substring>` - Open the mic input whose label contains this (e.g. `USB Audio CODEC`); no match means no audio, never a different device. Omitted → the OS default input
@@ -416,6 +418,25 @@ full frame (~16ms) of lag whenever the renderer's rAF is queued first. The genui
 per-message work has been moved out instead: the URL mirror is debounced to 750ms (it only exists
 so a refresh preserves state) and per-message DOM work was removed outright.
 
+### VJ MCP (any agent harness)
+An MCP server (streamable HTTP, stateless, never SSE) whose tools read and drive every display:
+`list_displays`, `list_shaders`, `get_state`, `screenshot`, `set_params`, `set_shader`,
+`read_shader`, `write_shader`, `wait_for_event`. It runs in two places with the same code
+(`vite-plugins/vj-mcp/server.js` + `hub-core.js`):
+- **Live:** `https://relay.beadfamous.com/mcp/<room>` on the relay Worker. Displays are any
+  `?remote=display&room=<room>` page; the room's Durable Object is the broker. Cloudflare Access
+  managed OAuth in front (`claude mcp add --transport http paper-cranes-live
+  https://relay.beadfamous.com/mcp/<room>`, then sign in from `/mcp`), the JWT checked again in the
+  Worker. `write_shader` there applies code live and saves nothing (`persisted: false`). The room
+  drops any `inspect` a client sends; everything else is relayed verbatim as before.
+- **Dev:** `http://localhost:6969/mcp` on the dev server (`claude mcp add --transport http
+  paper-cranes-vj http://localhost:6969/mcp`), displays are `?remote=display` pages there, and
+  `write_shader` writes `shaders/<x>.frag` and hot-swaps.
+
+Knobs go out as `update-params` on the display's own socket; reads come back over a point-to-point
+`inspect` channel the broker never broadcasts, answered only after the broker welcomed the page.
+See [docs/vj-mcp.md](docs/vj-mcp.md).
+
 ### ParamsManager
 The `ParamsManager` (`src/params/ParamsManager.js`) is the unified system for handling all shader parameters:
 - Single source of truth for knobs, settings, and shader code
@@ -456,6 +477,7 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   ├── remote/
 │   │   ├── RemoteController.js # Sends commands to displays
 │   │   ├── RemoteDisplay.js    # Receives commands from controllers
+│   │   ├── inspect.js          # Display side of the VJ MCP (state, shot, logs, validate)
 │   │   └── WebSocketClient.js  # WebSocket client wrapper
 │   ├── vj/
 │   │   └── runtime.js          # ?vj=1 page runtime (validator, meter, jank probe, signals)
@@ -475,6 +497,7 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │       ├── show.js             #   the show browser: fullscreen Chrome driven over CDP (launch/eval/shot)
 │       ├── aesthetic-meter.js  #   FETCHED BY URL at runtime; do not move
 │       ├── remote-send.js      #   push update-params to the display from a shell
+│       ├── mcp-call.js         #   call one VJ MCP tool from a shell
 │       ├── watch-release.js    #   emit a line when a fader is released
 │       └── knob-correlate.js   #   which audio feature was that gesture imitating?
 ├── jam.js                       # Jam page: canvas only, MIDI + spacebar snapshots, no on-screen UI
@@ -486,6 +509,9 @@ paramsManager.setShader(code)      // Syncs shader to remote
     ├── remote-ws-plugin.js      # WebSocket server for remote control
     ├── editor-sync-plugin.js    # Bidirectional editor↔disk sync (dev only)
     ├── vj-signal-plugin.js      # /__vj-signal endpoint; writes .Codex/vj-signals.jsonl (dev only)
+    ├── vj-mcp-plugin.js         # /mcp: VJ MCP server, streamable HTTP (dev only) — docs/vj-mcp.md
+    ├── vj-mcp/server.js, hub-core.js  # the tool set and display hub, shared with the relay Worker
+    ├── vj-mcp/hub.js, tools.js  #   their dev-server hosts (Node ws sockets, shaders on disk)
     └── shader-plugin.js         # Shader discovery, metadata, and manifest generation
 ```
 
@@ -846,12 +872,15 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 | `/solo` | Toggle a shader between knob mode and audio mode. Auto-detects current mode and switches. Use `/solo knobs` or `/solo audio` to force a mode. Defaults to the modified `.frag` in the worktree. |
 | `/changelog` | Update docs/CHANGELOG.md and README with recent features. |
 | `/pr` | Create a PR, request review, and open in browser. |
+| `/show-repo` | One show, one repo: strip to one shader + controller (shared git history), build, verify headless, then publish to `<show>.beadfamous.com` on Aaron's go-ahead. Its front page is `show.html`: canvas only, MIDI, `?room=` remote jamming, snapshots. See [docs/show-repos.md](docs/show-repos.md). |
 
 ## Live Sessions: the Parent Stays Responsive
 
 **Show day:** run `/show`. It does the preflight, launch, watchers and hand-off. Follow
 [docs/show-playbook.md](docs/show-playbook.md) for the runbook, knob map, story, fork library and
 failure fixes.
+
+**Getting a set into "explore it for hours" depth:** [docs/vj-deep-voyage-recipe.md](docs/vj-deep-voyage-recipe.md), from the [2026-11-22 clit coaster show](journals/2026-11-22-clit-coaster-show.md).
 
 During any **live session** — a VJ set (`/vibej2`), a jam, a `/live-session`, anything where the
 user has a hand on a controller — the main Codex session is a **dispatcher, not a worker**. It
