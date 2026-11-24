@@ -100,7 +100,8 @@ exactly as for the on-screen/vjpad/MIDI control.
 | `update-params` | any -> display | params; envelope may carry `source` |
 | `vj-keep` | pad/MCP -> display | `{}` |
 | `vj-panic` | pad/MCP -> display | `{fork?}` |
-| `proposal` | MCP -> display; display -> room | `{id, label, params, shader?, expiresAt}` |
+| `vj-propose` | MCP -> display | `{id, label, params, shader?}` |
+| `proposal` | display -> room (pads render it; displays ignore it) | `{id, label, params, shader?, expiresAt}` |
 | `proposal-answer` | pad/MCP -> display | `{id, take}` |
 | `proposal-clear` | display -> room | `{id, why}` |
 | `pad-hello` | vjpad -> room, every 2 s | `{pad}` (a per-tab id) |
