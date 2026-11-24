@@ -8,6 +8,10 @@ allowed-tools: Bash Read Write Edit Grep Glob Agent mcp__claude-in-chrome__tabs_
 
 Record the WebGL canvas as a WebM video file using the browser's MediaRecorder API. Optionally restarts the music track so the video starts from the beginning.
 
+**Studio and post-show only.** This drives Aaron's own Chrome through claude-in-chrome, whose
+cursor and infobar are "unacceptable for live shows" (Aaron, 2026-10-06). Never run it against the
+show wall during a set; to keep a moment mid-set, press KEEP (`/keep`).
+
 ## Context
 
 Arguments (optional duration in seconds, default 30):
@@ -21,7 +25,7 @@ Call `tabs_context_mcp` to find:
 - The shader tab (jam page or editor — look for `jam.html` or `edit.html` in the URL)
 - The music tab (Spotify, SoundCloud, YouTube — look for these domains)
 
-If no shader tab is found, tell the user to open one first (suggest `/jam`).
+If no shader tab is found, tell the user to open one first (`/show lite` puts the jam page up).
 
 ### 2. Parse duration
 

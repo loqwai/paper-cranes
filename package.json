@@ -19,7 +19,8 @@
     "delete": "node scripts/delete-shader.js",
     "delete:interactive": "node scripts/delete-shader.js --interactive",
     "pilot": "node scripts/show/pilot.js",
-    "test:pilot": "node --test scripts/show/pilot-brain.node-test.js"
+    "test:pilot": "node --test scripts/show/pilot-brain.node-test.js",
+    "test:setlists": "node --test setlists/*/*.node-test.mjs"
   },
   "author": "hypnodroid",
   "license": "UNLICENSED",
