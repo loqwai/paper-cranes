@@ -85,3 +85,21 @@ describe('loadShader given code that did not come through the fetch helper', () 
     expect((await getInitialShader()).code).toBe(DEFAULT_FRAG)
   })
 })
+
+describe('getInitialShader with ?shaderCode=', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('loads code that uses the % operator', async () => {
+    const code = 'void mainImage(out vec4 c, in vec2 f){ int i = 7 % 4; c = vec4(float(i)); }'
+    stubPage(`?shaderCode=${encodeURIComponent(code)}`)
+    const { getInitialShader } = await import('./shaderLoader.js')
+    expect((await getInitialShader()).code).toBe(code)
+  })
+
+  it('still loads code that was encoded twice', async () => {
+    const code = 'void mainImage(out vec4 c, in vec2 f){ c = vec4(1.); }'
+    stubPage(`?shaderCode=${encodeURIComponent(encodeURIComponent(code))}`)
+    const { getInitialShader } = await import('./shaderLoader.js')
+    expect((await getInitialShader()).code).toBe(code)
+  })
+})

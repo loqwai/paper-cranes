@@ -44,6 +44,16 @@ export const loadShader = async (shaderPath, { updateUrl = false } = {}) => {
   return { code, fullscreen }
 }
 
+// URLSearchParams has already decoded the value once. The second decode is kept for links that
+// were encoded twice, but GLSL's `%` operator makes it throw (URIError), which killed the boot.
+const decodeShaderCode = (code) => {
+  try {
+    return decodeURIComponent(code)
+  } catch {
+    return code
+  }
+}
+
 /**
  * A link to a shader this host does not have (#207) must not be a silent black screen.
  * A small corner note says which shader is missing while the default one plays.
@@ -70,7 +80,7 @@ export const getInitialShader = async () => {
 
   // Check for inline shader code first
   if (params.get('shaderCode')) {
-    const code = decodeURIComponent(params.get('shaderCode'))
+    const code = decodeShaderCode(params.get('shaderCode'))
     const fullscreen = code.includes('@fullscreen: true')
     return { code, fullscreen }
   }
