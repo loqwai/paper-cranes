@@ -1,6 +1,6 @@
 import { WebSocketClient } from './WebSocketClient.js'
 import { loadShader } from '../shaderLoader.js'
-import { inspectorAllowedOn, withoutPinned } from './relay.js'
+import { inspectorAllowedOn, withoutPinned, displaySecretFrom, secretFor } from './relay.js'
 
 // The VJ MCP (docs/vj-mcp.md) reaches this display through a broker: the dev server's /ws, or on
 // `?room=` the relay Worker's room, which drops any `inspect` a client sends. The inspector loads
@@ -25,6 +25,9 @@ export const initRemoteDisplay = () => {
 
   // Read when a message or connect arrives, so it always judges the socket that is open now.
   const onTrustedSocket = () => inspectorAllowedOn(client.socket?.url, { dev })
+  // The room's display secret is read once, from the link the page loaded with, like relay and
+  // room (relay.js PINNED): a later hash edit or update-params can neither change nor read it.
+  const displaySecret = displaySecretFrom(window.location)
 
   const handleMessage = (message) => {
     if (message.type !== 'audio-features') console.log('[Remote Display] Received:', message.type, message.data)
@@ -47,6 +50,10 @@ export const initRemoteDisplay = () => {
 
       case 'display-welcome':
         if (onTrustedSocket()) inspector?.welcome(message.data)
+        break
+
+      case 'display-refused':
+        if (onTrustedSocket()) inspector?.refused(message.data)
         break
 
       case 'status':
@@ -75,7 +82,9 @@ export const initRemoteDisplay = () => {
   if (inspectorAllowedOn(client.url, { dev })) {
     import('./inspect.js')
       .then(({ createInspector }) => {
-        inspector = createInspector((type, data) => client.send(type, data))
+        inspector = createInspector((type, data) => client.send(type, data), {
+          secret: () => secretFor(client.socket?.url, displaySecret),
+        })
         if (client.isConnected && onTrustedSocket()) inspector.hello()
       })
       .catch((e) => console.warn('[Remote Display] inspect unavailable:', e))

@@ -4,7 +4,7 @@ In dev mode, the editor and the filesystem stay in sync bidirectionally: saves i
 
 ## Editor → Disk
 
-Pressing **Ctrl+S** (or Cmd+S) in the editor sends the shader code to a `/__save-shader` POST endpoint provided by the `editor-sync` Vite plugin. The plugin writes the code to the corresponding `.frag` file on disk.
+Pressing **Ctrl+S** (or Cmd+S) in the editor sends the shader code to a `/__save-shader` POST endpoint provided by the `editor-sync` Vite plugin. The plugin writes the code to the corresponding `.frag` file on disk. A POST whose `Origin` is another site gets 403 (`vite-plugins/same-origin.js`, also on `/__snapshot-preset`, `/__capture` and `/__vj-signal`); scripts that send no `Origin` (curl, node) still pass.
 
 ## Disk → Editor
 

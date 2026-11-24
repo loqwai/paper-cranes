@@ -110,8 +110,10 @@ Show pages are static files. Only two runtime services exist, and both already r
   Worker (`workers/remote-relay`), one Durable Object per room. A show needs nothing new, only a
   room name that is hard to guess: **the room name is the only access control**, so treat it as a
   password and keep it out of the repo, `show.json` and posters.
-- **Snapshots and `?vj=1` signals** (`/__snapshot-preset`, `/__vj-signal`) are dev-only. On a
-  static host, snapshots fall back to localStorage. The VJ runtime's signals fail quietly.
+- **Snapshots and `?vj=1` signals** (`/__snapshot-preset`, `/__vj-signal`) are dev-only endpoints. On a
+  static host, snapshots fall back to localStorage. A `?vj=1` page on a room (`?remote=display&room=`)
+  sends its signals down the room socket to the relay MCP's `wait_for_event` (`src/vj/signals.js`);
+  without a room they go nowhere.
 
 ### Options compared
 

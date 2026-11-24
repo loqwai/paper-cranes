@@ -84,7 +84,7 @@ export const createParamsManager = (options = {}) => {
     window.history.replaceState({}, '', url.toString())
   })
 
-  // Remote sync (debounced, faster for smooth updates)
+  // Remote sync (throttled: at most one merged send per remoteSyncDelay, even mid-gesture)
   const syncToRemoteDebounced = merging(everyMs(remoteSyncDelay), (data) => {
     if (!remoteController?.isConnected) return
     remoteController.sendParams(data)

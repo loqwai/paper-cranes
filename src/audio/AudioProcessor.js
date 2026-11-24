@@ -2,8 +2,9 @@ import { StatTypes, AudioFeatures } from 'hypnosound'
 import { WorkerRPC } from './WorkerRPC.js'
 import { OnsetProcessor } from './OnsetProcessor.js'
 
-// Workers compute these but hypnosound's StatTypes doesn't include them
-const AllStatTypes = [...StatTypes, 'slope', 'intercept', 'rSquared']
+// Workers compute the regression stats. hypnosound's StatTypes lists them from
+// 1.10 on; the Set keeps one copy whichever version is loaded.
+const AllStatTypes = [...new Set([...StatTypes, 'slope', 'intercept', 'rSquared'])]
 
 // Neutral values for each stat type during warm-up (what the shader sees when audio hasn't "arrived" yet)
 const neutralValues = {
@@ -110,7 +111,7 @@ export class AudioProcessor {
                 // Exponential smoothing formula
                 // For z-scores and normalized values, use less smoothing to maintain responsiveness
                 // Capped at 1 (no smoothing): a weight above 1 overshoots every step,
-                // and audio_file's default 0.85 * 1.5 = 1.275 pushed 0-1 features out of range.
+                // and ?smoothing=0.85 (audio_file's default before 2.1.0) * 1.5 = 1.275 pushed 0-1 features out of range.
                 const smoothingFactor = Math.min(1, key.includes('ZScore') || key.includes('Normalized')
                     ? currentSmoothing * 1.5
                     : currentSmoothing)

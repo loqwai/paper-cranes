@@ -43,8 +43,8 @@ describe('createAudioFileSource', () => {
       expect(result.fftSize).toBe(4096)
     })
 
-    it('defaults smoothing to 0.85', () => {
-      expect(result.smoothing).toBe(0.85)
+    it('defaults smoothing to 0.15, the same as the mic', () => {
+      expect(result.smoothing).toBe(0.15)
     })
   })
 

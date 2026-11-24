@@ -4,6 +4,7 @@
 // signals to /__vj-signal (picked up by a Monitor on .claude/vj-signals.jsonl). On a relay room
 // they go down the display's socket instead, to the relay MCP's wait_for_event (signals.js).
 import { createSignalPoster } from './signals.js'
+import { withoutSecret, SECRET_PARAM } from '../remote/relay.js'
 
 const post = createSignalPoster({ getClient: () => window.cranes?.remoteClient, dev: import.meta.env.DEV, search: location.search })
 
@@ -75,8 +76,9 @@ export const startVjRuntime = async () => {
   // matter (wavelet, audio, noaudio, controller) behind the knob list.
   {
     const sp = new URLSearchParams(location.search), flags = {}
-    for (const [k, v] of sp) if (!k.startsWith('knob_')) flags[k] = v
-    post({ type: 'boot', url: location.href.slice(0, 600), flags })
+    // Never the room's display secret: the boot beacon goes to the agent (docs/vj-mcp.md).
+    for (const [k, v] of sp) if (!k.startsWith('knob_') && k !== SECRET_PARAM) flags[k] = v
+    post({ type: 'boot', url: withoutSecret(location.href).slice(0, 600), flags })
   }
   // 5. watchdog — page-side health alerts, 5 s cadence, per-type cooldown so the file stays small
   const last = {}

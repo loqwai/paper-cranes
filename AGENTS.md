@@ -19,11 +19,11 @@ Microphone → MediaStream → AudioContext → WindowNode (Hanning) → FFT Ana
 
 #### 1. AudioProcessor (`src/audio/AudioProcessor.js`)
 - **FFT Size**: 4096 (optimized from 32768 for ~85ms latency)
-- **Smoothing**: the EMA weight on each new worker value (`?smoothing=`; mic default 0.15, `audio_file` default 0.85). Higher is more responsive and more jittery; lower is smoother and later. `*Normalized`/`*ZScore` use 1.5x that weight, capped at 1
+- **Smoothing**: the EMA weight on each new worker value (`?smoothing=`; default 0.15 for both the mic and `audio_file`). Higher is more responsive and more jittery; lower is smoother and later. `*Normalized`/`*ZScore` use 1.5x that weight, capped at 1
 - **Analyzer Smoothing**: 0.4 `smoothingTimeConstant`
-- **Onsets**: `OnsetProcessor` reads the raw spectrum every display frame, outside the workers and the EMA, and publishes `onsetKick`/`Snare`/`Hat`/`Full` plus `Trigger`, `Strength` and `Age`. Its detector is vendored in `src/audio/vendor/` until hypnosound publishes it. It counts frames, so triggers misfire more on 120/144 Hz displays. See [docs/onset-detection.md](docs/onset-detection.md)
+- **Onsets**: `OnsetProcessor` reads the raw spectrum every display frame, outside the workers and the EMA, and publishes `onsetKick`/`Snare`/`Hat`/`Full` plus `Trigger`, `Strength` and `Age`. Its detector is hypnosound's `makeOnsetDetector`/`makeOnsetEnvelope` (2.1.0 on). It counts frames, so triggers misfire more on 120/144 Hz displays. See [docs/onset-detection.md](docs/onset-detection.md)
 - Uses Web Workers for parallel feature extraction
-- Extracts 15 audio features from hypnosound library
+- Extracts 16 audio features from hypnosound 2.1.0. The browser loads it from esm.sh, pinned in `src/audio/analyzer.js` (workers) and the `vite.config.js` `hypnosound` alias (main thread). Bump both pins and `package.json` together; a mismatch once left the main thread on 1.10.2 while the workers ran 1.14.0
 
 #### 2. WorkerRPC (`src/audio/WorkerRPC.js`)
 - One worker per feature, fire-and-forget: each frame posts the FFT, and `getResult()` returns the latest reply
@@ -55,12 +55,12 @@ Each feature has 11 statistical variations:
 - SpectralRoughness, SpectralKurtosis, SpectralEntropy, SpectralCrest
 - SpectralSkew, PitchClass
 - Bass, Mids, Treble
-- Energy
+- Energy, Rms, Dbfs
 - Beat detection (`beat`: `spectralFlux` zScore above 0.9; never true while the history is flat, as in silence)
 
 ## Audio Features Reference (Hypnosound)
 
-### The 14 Core Features
+### The Core Features (16)
 
 | Feature | Range | Measures | Musical Meaning | Independence |
 |---------|-------|----------|-----------------|--------------|
@@ -68,6 +68,8 @@ Each feature has 11 statistical variations:
 | **mids** | 0-1 | Mid-range energy | Body/warmth | Semi-independent |
 | **treble** | 0-1 | High freq energy | Brightness/air | Independent from bass |
 | **energy** | 0-1 | Total amplitude | Loudness | Correlates with bass |
+| **rms** | 0-1 | Root mean square of the spectrum | Loudness | Correlates with energy |
+| **dbfs** | 0-1 | rms in dB, -100..0 dB mapped to 0..1 | Perceived loudness | Correlates with energy |
 | **pitchClass** | 0-1 | Note (0-11)/12 | Which note playing | Independent from timbre |
 | **spectralCentroid** | 0-1+ | Center of mass | Brightness/pitch center | Semi-correlates with pitchClass |
 | **spectralSpread** | 0-1+ | Frequency variance | Harmonic width | Independent from centroid |
@@ -86,7 +88,7 @@ Each audio feature provides 11 statistical variations calculated over a rolling 
 1. **value** - Raw current value from the analyzer
 2. **normalized** - Min-max normalized to 0-1 range (relative to history)
 3. **mean** - Historical average (baseline character)
-4. **median** - Historical median (robust center)
+4. **median** - Historical median (robust center). Exact from hypnosound 2.1.0; before that it was wrong on most frames once the window filled
 5. **min** - Historical minimum (lower bound)
 6. **max** - Historical maximum (upper bound)
 7. **standardDeviation** - Variability measure
@@ -244,6 +246,7 @@ vec3 position = vec3(CIRCLE_RADIUS, 0.1, 0.1);
 - `iFrame` - Frame number
 - `iChannel0-3` - Texture samplers
 - `beat` - Boolean beat detection
+- `onsetKick`, `onsetSnare`, `onsetHat`, `onsetFull` (plus `…Trigger`, `…Strength`, `…Age`) - onset envelopes from hypnosound's `makeOnsetDetector`/`makeOnsetEnvelope`. See [docs/onset-detection.md](docs/onset-detection.md)
 
 ### Utility Functions
 - `rgb2hsl(vec3)` / `hsl2rgb(vec3)` - Color space conversion
@@ -340,12 +343,12 @@ uniform float my_param;  // = 0.5
 uniform float another;   // = 1.2
 ```
 
-**Note:** Only numeric values work. Known params (`shader`, `noaudio`, `fft_size`, etc.) and `knob_*` params are excluded.
+**Note:** Only numeric values work. Known params (`shader`, `noaudio`, `fft_size`, etc.) and `knob_*` params are excluded. A hyphen becomes an underscore (`?my-param=0.5` is `uniform float my_param`), a name that is not a legal GLSL identifier (`?3d=1`, `?gl_x=1`, `?a__b=1`) is skipped, and a name the shader already declares is not declared again (`src/shader-transformers/shader-wrapper.js`).
 
 ## Query Parameters
 
 ### Core Parameters
-- `shader` - Shader file to load (e.g., `?shader=star`)
+- `shader` - Shader file to load (e.g., `?shader=star`). A path the host does not have plays the default shader with a small `shader not found: <path>` note
 - `fft_size` - FFT window size (default: 4096)
 - `smoothing` - Smoothing factor (default: 0.15)
 - `history_size` - Statistical history buffer (default: 500)
@@ -356,12 +359,12 @@ uniform float another;   // = 1.2
 - `audio=tab` - Capture audio from a browser tab instead of mic. Chrome/Edge only. See [docs/tab-audio.md](docs/tab-audio.md)
 - `audio_send=true` - Broadcast this page's audio features over the remote WebSocket (works with mic, `audio=tab`, or `audio_file`)
 - `audio=remote` - Take audio features from a machine running `audio_send=true` instead of the local mic. Same dev server or `room=`
-- `audio_file=<url>` - Play a deterministic audio file through the analyzer. See [docs/audio-file-playback.md](docs/audio-file-playback.md)
+- `audio_file=<url>` - Play a deterministic audio file through the analyzer. Smoothing defaults to 0.15, the same as the mic. See [docs/audio-file-playback.md](docs/audio-file-playback.md)
 - `wavelet=true` - Enable opt-in wavelet (DWT) analysis alongside FFT. Adds `wavelet*` uniforms (octave bands, centroid/spread, bassHit trigger, FFT×wavelet combos). See [docs/wavelet-analysis.md](docs/wavelet-analysis.md)
 - `audio_device=<label substring>` - Open the mic input whose label contains this (e.g. `USB Audio CODEC`); no match means no audio, never a different device. Omitted → the OS default input
 - `audio_time=<seconds>` - Start audio file playback at this offset (default: 0)
 - `time=<seconds>` - Hold time constant (useful for deterministic screenshots/testing)
-- `vj=1` - Install the VJ runtime on the display: cursor-hide, GL validator, aesthetic meter, frame-time probe, and health signals POSTed to `/__vj-signal`. This is how the auto-VJ loop sees a page it cannot screenshot. See [docs/vj-telemetry.md](docs/vj-telemetry.md)
+- `vj=1` - Install the VJ runtime on the display: cursor-hide, GL validator, aesthetic meter, frame-time probe, and health signals (POSTed to `/__vj-signal` on the dev server; on a `?remote=display&room=` page, production included, also sent down the room socket to the relay MCP's `wait_for_event`). This is how the auto-VJ loop sees a page it cannot screenshot. See [docs/vj-telemetry.md](docs/vj-telemetry.md)
 - `vjtrack=1` - With `vj=1`, also log every knob move at 10Hz with the full audio-feature vector, for working out which feature a fader is imitating. **Off by default and not for use during a show** — it is a ~17KB JSON serialise + fetch every 2s on the render thread
 
 ### Dynamic Override
@@ -421,7 +424,7 @@ so a refresh preserves state) and per-message DOM work was removed outright.
 ### VJ MCP (any agent harness)
 An MCP server (streamable HTTP, stateless, never SSE) whose tools read and drive every display:
 `list_displays`, `list_shaders`, `get_state`, `screenshot`, `set_params`, `set_shader`,
-`read_shader`, `write_shader`, `wait_for_event`. It runs in two places with the same code
+`read_shader`, `write_shader`, `wait_for_event`, plus `display_secret` on the relay only. It runs in two places with the same code
 (`vite-plugins/vj-mcp/server.js` + `hub-core.js`):
 - **Live:** `https://relay.beadfamous.com/mcp/<room>` on the relay Worker. Displays are any
   `?remote=display&room=<room>` page; the room's Durable Object is the broker. Cloudflare Access
@@ -429,6 +432,11 @@ An MCP server (streamable HTTP, stateless, never SSE) whose tools read and drive
   https://relay.beadfamous.com/mcp/<room>`, then sign in from `/mcp`), the JWT checked again in the
   Worker. `write_shader` there applies code live and saves nothing (`persisted: false`). The room
   drops any `inspect` a client sends; everything else is relayed verbatim as before.
+  **Display secret:** `display_secret {action: "rotate"}` locks the room and returns a display link
+  ending `#display_secret=ds_…`; from then on only a page opened from that link registers as a
+  display (others get `display-refused` and stay plain room peers). The room stores only its
+  SHA-256; `rotate` again drops every display, `clear` reopens the room, and a room never locked
+  behaves as before. The page never reports the secret and a peer cannot set it.
 - **Dev:** `http://localhost:6969/mcp` on the dev server (`claude mcp add --transport http
   paper-cranes-vj http://localhost:6969/mcp`), displays are `?remote=display` pages there, and
   `write_shader` writes `shaders/<x>.frag` and hot-swaps.
@@ -465,6 +473,7 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   │   ├── analyzer.js         # Worker analyzer loader
 │   │   ├── tabAudioSource.js   # ?audio=tab capture via getDisplayMedia
 │   │   ├── tabAudioButton.js   # Tab audio overlay UI
+│   │   ├── micWatchdog.js      # Re-acquires the mic after a phone lock / OS takeover (?debug_audio=true)
 │   │   └── audioFileSource.js  # ?audio_file= deterministic playback
 │   ├── midi/
 │   │   └── MidiMapper.js       # MIDI CC→knob mapping with profiles
@@ -478,11 +487,14 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   │   ├── RemoteController.js # Sends commands to displays
 │   │   ├── RemoteDisplay.js    # Receives commands from controllers
 │   │   ├── inspect.js          # Display side of the VJ MCP (state, shot, logs, validate)
+│   │   ├── relay.js            # Which relay a page may answer on; PINNED boot-time keys update-params cannot set
 │   │   └── WebSocketClient.js  # WebSocket client wrapper
 │   ├── vj/
-│   │   └── runtime.js          # ?vj=1 page runtime (validator, meter, jank probe, signals)
+│   │   ├── runtime.js          # ?vj=1 page runtime (validator, meter, jank probe, signals)
+│   │   └── signals.js          # where ?vj=1 signals go: /__vj-signal (dev) and/or the relay room socket
 │   ├── Visualizer.js           # WebGL rendering
 │   ├── shaderLoader.js         # Centralized shader loading
+│   ├── listStore.js            # list page's localStorage (cranes-list-*), shape-checked reads
 │   └── shader-transformers/     # Shader preprocessing
 ├── shaders/                     # GLSL visualization shaders
 │   ├── wip/Codex/             # Codex-created shaders go here
@@ -493,13 +505,19 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   └── the-coat.js             # Drop sustain with exponential decay
 ├── scripts/
 │   ├── remap-knobs.js          # Utility to remap knob assignments in shaders
+│   ├── validate-shader.js      # Compile one shader through the real wrapper
+│   ├── production-shaders.test.js # npm test: every shader outside wip/ must compile
 │   └── vj/                     # Live-VJ tooling — see docs/vj-telemetry.md
 │       ├── show.js             #   the show browser: fullscreen Chrome driven over CDP (launch/eval/shot)
-│       ├── aesthetic-meter.js  #   FETCHED BY URL at runtime; do not move
+│       ├── aesthetic-meter.js  #   dev fetches it by URL, a build bundles it (src/vj/runtime.js); do not move
 │       ├── remote-send.js      #   push update-params to the display from a shell
 │       ├── mcp-call.js         #   call one VJ MCP tool from a shell
 │       ├── watch-release.js    #   emit a line when a fader is released
 │       └── knob-correlate.js   #   which audio feature was that gesture imitating?
+├── public/
+│   └── service-worker.js        # The only service worker (Vite copies public/ as-is)
+├── workers/
+│   └── remote-relay/            # relay.beadfamous.com: /ws/<room> broker + live VJ MCP (Durable Object)
 ├── jam.js                       # Jam page: canvas only, MIDI + spacebar snapshots, no on-screen UI
 ├── index.js                     # Main entry point
 ├── edit.js                      # Editor interface
@@ -508,6 +526,7 @@ paramsManager.setShader(code)      // Syncs shader to remote
 └── vite-plugins/
     ├── remote-ws-plugin.js      # WebSocket server for remote control
     ├── editor-sync-plugin.js    # Bidirectional editor↔disk sync (dev only)
+    ├── same-origin.js           # 403 for cross-site POSTs to the dev write endpoints (/__save-shader, /__vj-signal, ...)
     ├── vj-signal-plugin.js      # /__vj-signal endpoint; writes .claude/vj-signals.jsonl (dev only)
     ├── vj-mcp-plugin.js         # /mcp: VJ MCP server, streamable HTTP (dev only) — docs/vj-mcp.md
     ├── vj-mcp/server.js, hub-core.js  # the tool set and display hub, shared with the relay Worker
@@ -821,6 +840,9 @@ This will check for:
 - Missing required uniforms
 - Common mistakes
 
+`npm test` also compiles every shader outside `wip/` through the same wrapper
+(`scripts/production-shaders.test.js`), so a broken production shader fails the suite.
+
 ## Mobile Optimization for Raymarching Shaders
 
 Raymarching (fractals, SDFs) is expensive. Use these limits for mobile:
@@ -881,7 +903,7 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 3. **Not handling aspect ratio**: Use `uv.x *= iResolution.x / iResolution.y` for non-square viewports
 4. **Too much feedback**: `mix(prev, new, 0.1)` can accumulate to white - use `mix(prev * 0.99, new, 0.1)`
 5. **Hardcoded resolution**: Always use `iResolution`, never hardcode 1920x1080
-6. **Metadata before #version**: If your shader has `#version 300 es`, it MUST be the first line. Put metadata comments (`// @fullscreen: true`) on line 2, not line 1. Shaders without `#version` (ShaderToy-style) can have metadata on line 1.
+6. **Metadata before #version**: If your shader has `#version 300 es`, keep it on the first line and put metadata comments (`// @fullscreen: true`) on line 2. The wrapper hoists a `#version` that only `//` comments precede, so such a shader still compiles, but any other code above `#version` is an error. Shaders without `#version` (ShaderToy-style) can have metadata on line 1.
 
 ## Codex Skills
 
