@@ -259,8 +259,18 @@ export function shaderPlugin() {
 
       const regenerate = async (eventType, path) => {
         if (!path.endsWith('.frag')) return
-        const count = await generateShadersJson()
-        await generateManifests()
+        // A shader deleted between the listing and its read (git checkout, a rebase, a scratch
+        // file written then removed) rejects here, and a rejection in a watcher callback is
+        // unhandled: Node exits, taking the dev server, the /ws broker and the VJ MCP with it.
+        // The delete fires its own `unlink` event, which regenerates again.
+        let count
+        try {
+          count = await generateShadersJson()
+          await generateManifests()
+        } catch (e) {
+          console.error(`[shaders] regenerate after ${eventType} ${path} failed:`, e.message)
+          return
+        }
         console.log(`[shaders] ${eventType}: ${path} (${count} total)`)
 
         // Send a custom event instead of full-reload so the editor page

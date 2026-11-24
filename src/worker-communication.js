@@ -60,8 +60,8 @@ export const receive = async (event) => {
     window.cranes.shader = shaderCode
   }
 
-  // Update shader code if provided
-  if (shader) window.cranes.shader = shader
+  // Update shader code if provided. (A line here used to assign the shader NAME as code, so every
+  // {shader: 'plasma'} message ended in a compile error and a black canvas.)
   if(data.shaderCode) window.cranes.shader = data.shaderCode
 
   // Store all params

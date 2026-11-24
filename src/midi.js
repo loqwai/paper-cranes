@@ -57,7 +57,15 @@ const mapper = createMidiMapper()
 window.cranes = window.cranes || {}
 window.cranes.midiMapper = mapper
 
+// statechange fires "connected" again when open() opens the port, and on every replug of the same
+// MIDIInput object; attaching each time stacked listeners, so each CC was handled twice or more
+// and a relative encoder moved its knob 2x, 3x, ... as fast.
+const attached = new WeakSet()
+
 const attachInput = (input) => {
+  // Re-open on a replug (a no-op on an open port), but listen only once.
+  if (attached.has(input)) return input.open()
+  attached.add(input)
   input.addEventListener('midimessage', (message) => {
     const [command, control, value] = message.data
 

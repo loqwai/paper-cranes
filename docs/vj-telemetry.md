@@ -74,7 +74,8 @@ serves the last 50 lines anyway.
   the display's URL.
   ```bash
   node scripts/vj/remote-send.js '{"knob_141":0.62}'    # set
-  node scripts/vj/remote-send.js '{"noaudio":null}'     # release + strip from URL
+  node scripts/vj/remote-send.js '{"knob_141":null}'    # release + strip from URL
+  # boot-time keys (noaudio, controller, image, audio, midi, ...) are pinned and ignored: src/remote/relay.js
   ```
 - **`watch-release.js`** — emits one line the moment a fader is released (movement, then 2.5 s of
   stillness). Run under a `Monitor` to wake the loop at exactly the right instant.

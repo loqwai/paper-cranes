@@ -140,13 +140,14 @@ const commands = {
     return out
   },
 
-  // Capped at 960 px: the JPEG encode runs on the render thread, and a 1920 px one can drop a
-  // frame mid-show.
+  // Long side capped at 960 px: the JPEG encode runs on the render thread, and a 1920 px one can
+  // drop a frame mid-show. Capping only the width let a portrait phone send 960x2080.
   shot: async ({ width = 480, quality = 0.7 } = {}) => {
     const src = canvasEl()
     if (!src) throw new Error('no canvas on the page')
     await nextFrameOr(100)
-    const w = Math.max(16, Math.min(width, 960, src.width))
+    const maxW = Math.min(960, (960 * src.width) / src.height)
+    const w = Math.max(16, Math.round(Math.min(width, maxW, src.width)))
     const h = Math.round((src.height / src.width) * w)
     const c = document.createElement('canvas'); c.width = w; c.height = h
     c.getContext('2d').drawImage(src, 0, 0, w, h)
