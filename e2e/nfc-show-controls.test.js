@@ -39,7 +39,9 @@ const startRelay = () => new Promise((resolve) => {
     })
     ws.on('close', () => { rooms.get(room).delete(ws); status(room) })
   })
-  server.listen(RELAY_PORT, '127.0.0.1', () => resolve({ close: () => new Promise((r) => { wss.close(); server.close(r) }) }))
+  // terminate() first: server.close() waits for every open socket, and a page still connected
+  // when afterAll runs held the hook past its timeout.
+  server.listen(RELAY_PORT, '127.0.0.1', () => resolve({ close: () => new Promise((r) => { for (const c of wss.clients) c.terminate(); wss.close(); server.close(r) }) }))
 })
 
 // Web NFC as Chrome on Android exposes it, driven from the test: window.__tap(url) is a sticker.
@@ -116,7 +118,8 @@ describe.skipIf(!hasTarget() || process.env.E2E_BASE_URL)('NFC smiley stickers d
     await pad.page.evaluate((u) => window.__tap(u), tag('s99'))
     await pad.page.evaluate(() => window.__tap('https://2cb.pw/clit-new/4'))
     await new Promise((r) => setTimeout(r, 400))
-    expect(inbound.slice(before).filter((m) => m.type !== 'status' && m.type !== 'pad-hello' && m.type !== 'vjpad-peer')).toEqual([])
+    // Only a sticker's own messages count: the room also carries the display's ?vj=1 signals.
+    expect(inbound.slice(before).filter((m) => m.via === 'nfc')).toEqual([])
     expect(await pad.page.locator('#nfc').textContent()).toBe('?')
 
     // The fallback: the tag's URL opened by Android in a new tab with no room. It goes to the room
