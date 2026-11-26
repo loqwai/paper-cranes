@@ -974,9 +974,9 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 
 | Skill | Purpose |
 |-------|---------|
-| `/show` | The one door for a live show: `check` (preflight as ✅/❌ cards on the show's draw board), launch (the wall, the board as status board and phone control surface, the no-model board bridge, then the `/partner` lane), `lite` (a jam: what `/jam` was), `panic [fork]`, `setlist <name>` (e.g. the sun set), `end` (story on the board, journal). See [docs/show-playbook.md](docs/show-playbook.md). |
+| `/show` | The one door for a live show: `check` (preflight as ✅/❌ cards on the show's draw board), launch (the wall, the board as status board and phone control surface, the no-model board bridge, then the `/partner` lane), `lite` (a jam: what `/jam` was), `panic [fork]`, `setlist <name>` (e.g. the sun set), `end` (story on the board, journal). With no shader it runs the default show, `/clit-show`. See [docs/show-playbook.md](docs/show-playbook.md). |
 | `/sun-show` | The sun show: black-sun `sun-1` + `controller=black-sun`, plays the `sun-set` setlist. Holds the sun's knob map, K5 act values, companion, panic forks (`sun/7`) and its own failures (the latched `__blackSunState` NaN). |
-| `/clit-show` | The clit-set show: `clit-set/2` + `controller=clit-set`, the coaster (`coaster=1`), the `clit-set` setlist. Holds the Twister knob map, coaster controls, panic forks, input notes, the pilot and the 2026-11-22 lessons. |
+| `/clit-show` | The default show (what `/show` runs with no shader). The clit-set show: `clit-set/2` + `controller=clit-set`, the coaster (`coaster=1`), the `clit-set` setlist. Holds the Twister knob map, coaster controls, panic forks, input notes, the pilot and the 2026-11-22 lessons. |
 | `/partner` | Aaron's VJ partner while he plays the dials: its own background lane, one step per event, PROPOSES changes he takes or dismisses (KEEP on the pad or board), applies only health fixes, never while his hands are on. The art critic runs between tracks. Was `/vibej2`. |
 | `/keep` | KEEP lives in the page (vjpad, MIDI, `k`, the board); `/keep process` turns kept moments into numbered forks and named presets with docs. Was `/fork` + `/preset`. |
 | `/jam` | Alias: use `/show lite`. |
@@ -989,11 +989,11 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 
 Retired 2026-11-24 (board [live-show-skills](https://draw.hypnodroid.com/b/live-show-skills), Aaron: "Yes to all"): `/vibej`, `/vj`, `/live-session` (deleted), `/vibej2` (now `/partner`), `/fork` and `/preset` (now `/keep`), `/sun-set` (now the setlist `setlists/sun-set.json`, played by `/show setlist sun-set`; `/sun-show` plays it), `/remap` (now the "Forget all mappings" button on `/midi.html`).
 
-Edit `.agents/skills/`; `.claude/skills/` is generated for Claude Code by `node scripts/sync-claude-skills.js`; a test fails on drift; don't edit `.claude/skills/` by hand.
+Edit `.agents/skills/`; `.claude/skills/` is generated for Claude Code by `node scripts/sync-claude-skills.js`; a test fails on drift; don't edit `.claude/skills/` by hand. The sync replaces only the skills `.agents/skills/` has, so a local skill folder in `.claude/skills/` is left alone.
 
 ## Live Sessions: the Parent Stays Responsive
 
-**Show day:** run `/show`. It does the preflight, launch, board, watchers and hand-off to the
+**Show day:** run `/show` (no shader: the default show, `/clit-show`). It does the preflight, launch, board, watchers and hand-off to the
 `/partner` lane. Follow [docs/show-playbook.md](docs/show-playbook.md) for the general runbook and
 failure fixes, and the show's own skill (`/sun-show`, `/clit-show`) for its knob map, story and
 panic forks.

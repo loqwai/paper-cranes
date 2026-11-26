@@ -10,9 +10,11 @@ The mechanics (preflight, launch, board, `/partner`, panic, end) are `/show`'s:
 [../show/SKILL.md](../show/SKILL.md) and [docs/show-playbook.md](../../../docs/show-playbook.md).
 This skill holds only what is specific to clit-set.
 
+**This is the default show** (Aaron, 2026-11-25): `/show` with no shader, or "start the show", runs it.
+
 | What | Where |
 |---|---|
-| Shader + controller | `clit-set/2` + `controller=clit-set` (`/show`'s default) |
+| Shader + controller | `clit-set/2` + `controller=clit-set` (the default show) |
 | Setlist | `/show setlist clit-set` ([clit-set.json](../../../setlists/clit-set.json)), a starter; rewrite its beats from `/keep process` |
 | Shader reference | [shaders/clit-set/clit-set.md](../../../shaders/clit-set/clit-set.md): waypoints, colour, audio map, iterations |
 | Keeping it deep for hours | [docs/vj-deep-voyage-recipe.md](../../../docs/vj-deep-voyage-recipe.md) |
@@ -103,6 +105,14 @@ tick. Ctrl-C stops it; the knobs stay where they are. `npm run test:pilot` check
 | Frame rate halves | TRAILS high with ZOOM high. Drop TRAILS |
 | Shiver | Something sways geometry back and forth. Geometry only evolves one way; audio changes rates and light |
 | A new fork's link is black on prod | The `.frag` is only on a branch. Merge and deploy first |
+
+## Known gap: the NFC bead links
+
+`2cb.pw/clit-new/2` to `/201` (the NFC bead variants) point at prod `clit-set/3`, `/4` and `/5`.
+Those frags come with PR [#180](https://github.com/loqwai/paper-cranes/pull/180). Until it is
+merged and deployed they don't render. Checked 2026-11-25: #180 still open, and only
+`clit-set/1` and `/2` exist. `clit-now` and `clit-new/1` work. Don't hand out a bead past `/1`
+before then.
 
 ## Lessons from 2026-11-22
 

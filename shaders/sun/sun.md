@@ -28,9 +28,15 @@ Open a fork with `jam.html?shader=sun/N&controller=sun-N&wavelet=true&vj=1&remot
 | 16 | Same code and dials as 15, forked again at 02:16 to mark a story moment (act 1, fan spread wide) | Cold-start baked, like 15 |
 | 17 | Same code and dials as 15. Marks the companion transiting the giant (02:21) | Cold-start baked, like 15 |
 
-Forks 2, 3, 5, 7, 8 and `sun.js` keep state on `window.__blackSunState`, the same global as the
-live controller. Load them with their own controller only in a fresh page; never hot-swap one of
-those controllers into the live page.
+`controllers/sun.js` and `sun-2`, `3`, `5`, `7`, `8`, `9` and `12` to `17` keep state on
+`window.__blackSunState`, the same global as the live `black-sun` controller. Load them only in a
+fresh page; never hot-swap one of those controllers into the live page. `sun-4`, `sun-6`, `sun-10`
+and `sun-11` keep their own (`__sun4State` and so on). Checked on 2026-11-25 with
+`grep -oE '(window|globalThis)\.__[A-Za-z0-9]+State' controllers/sun*.js`; run it again rather
+than trusting this list.
+
+Knobs differ by fork; read the fork's `#define` lines. Since 2026-10-10 `controllers/black-sun.js`
+reads K7 as SPEED, not KISS, even where a fork's `@knob:` line still says KISS.
 
 ## 1.frag — fork of live black-sun/sun-1 (2026-10-06, rehearsal for the Friday show)
 
