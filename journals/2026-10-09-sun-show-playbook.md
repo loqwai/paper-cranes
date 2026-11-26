@@ -1,16 +1,24 @@
-# Show playbook: Friday 2026-10-09
+# 2026-10-09: the sun show playbook
+
+> **A record, not the current runbook.** This is the playbook as it stood for the Friday 2026-10-09
+> sun show, written on one Mac (BlackHole input, the `peter-show` branch, port 6969). It was
+> `docs/show-playbook.md` until 2026-11-25. Now:
+> - the general runbook for any show: [docs/show-playbook.md](../docs/show-playbook.md);
+> - the sun show itself (launch, knobs, story, panic forks, its failures): the `/sun-show` skill,
+>   [.agents/skills/sun-show/SKILL.md](../.agents/skills/sun-show/SKILL.md);
+> - the fork library: [shaders/sun/sun.md](../shaders/sun/sun.md#fork-library).
 
 The operating runbook for the user and Claude, written from the 2026-10-06 rehearsal. It lists
 the commands to run, the roles during the set, the knob and story maps, the fork library and
 fixes for every failure seen in rehearsal. For taste and rules, see
-[vj-preferences.md](vj-preferences.md). For how the story engine works, see
-[storylines.md](storylines.md).
+[vj-preferences.md](../docs/vj-preferences.md). For how the story engine works, see
+[storylines.md](../docs/storylines.md).
 
-For a fractal-voyage set (clit-set and the coaster), use [show-quickstart.md](show-quickstart.md)
-for the setup and [vj-deep-voyage-recipe.md](vj-deep-voyage-recipe.md) for how to keep a set deep
-for hours. The night it comes from: [2026-11-22 clit coaster show](../journals/2026-11-22-clit-coaster-show.md).
+For a fractal-voyage set (clit-set and the coaster), use [show-quickstart.md](../docs/show-quickstart.md)
+for the setup and [vj-deep-voyage-recipe.md](../docs/vj-deep-voyage-recipe.md) for how to keep a set deep
+for hours. The night it comes from: [2026-11-22 clit coaster show](2026-11-22-clit-coaster-show.md).
 
-No laptop, just the phone on a USB-C cable to the projector? Use [phone-wall.md](phone-wall.md):
+No laptop, just the phone on a USB-C cable to the projector? Use [phone-wall.md](../docs/phone-wall.md):
 PROJECT on the vjpad puts the visuals on the projector and keeps the phone as the pad, with no
 network needed.
 
@@ -34,7 +42,7 @@ network needed.
 ## 2. Launch sequence
 
 ```bash
-node scripts/vj/preflight.js     # one ✅/❌ line per check; fixes: .claude/skills/show/check.md
+node scripts/vj/preflight.js     # one ✅/❌ line per check; fixes: .agents/skills/show/check.md
 node scripts/vj/show.js stop     # always first: clears a leftover page-less show browser ("not running" is fine)
 node scripts/vj/show.js launch "http://localhost:6969/jam.html?shader=clit-set/2&controller=clit-set&wavelet=true&vj=1&remote=display"
 node scripts/vj/preflight.js --after --shader clit-set/2   # display, audio.input + energy, controller clock, pad
@@ -71,7 +79,7 @@ for `eval` into the page. The one exception is in section 7.
 | **You** | Dials, KEEP, PANIC, TAKE / dismiss, plain-language feedback | — |
 
 The page does the instant parts with no model in the path: the HANDS lock, KEEP, PANIC and the
-proposal cards ([live-show-contract.md](live-show-contract.md)).
+proposal cards ([live-show-contract.md](../docs/live-show-contract.md)).
 
 **The board.** Every show gets a [draw](https://draw.hypnodroid.com) board, `show-<yyyy-mm-dd>`:
 the preflight as ✅/❌ cards, the wall's live status, `/partner`'s proposal cards, every KEEP with
@@ -213,7 +221,7 @@ or the meter backs it up.
 
 ## 8. Show rules
 
-Full list: [vj-preferences.md](vj-preferences.md).
+Full list: [vj-preferences.md](../docs/vj-preferences.md).
 
 1. **Nothing flashes or reloads the wall.** Swap shaders and controllers by hot-swap only.
 2. **Every layer visibly reacts to the music.** Size reactions for the back of the room.
