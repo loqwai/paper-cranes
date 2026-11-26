@@ -9,7 +9,7 @@ Launch an instance of your own, check it is the build you mean, drive one featur
 [`features/`](features/README.md), keep the evidence, tear down what you started.
 
 ```bash
-B=.claude/skills/verify-paper-cranes/bin/pc-verify.mjs     # run from the repo root
+B=.agents/skills/verify-paper-cranes/bin/pc-verify.mjs     # run from the repo root
 $B launch                 # dev server on a free port in 7140-7149
 $B doctor                 # read-only: ours? which build? WebGL2? rendering?
 $B render --video         # feature 1: plasma at rest vs injected audio features, plus headful video

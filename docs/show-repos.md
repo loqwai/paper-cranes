@@ -42,7 +42,7 @@ never break a show by being left out.
 | `show.html` → `index.html`, `show.js`, `jam.css` | every shader except `shaders/<shader>.frag` and its `<dir>.md` |
 | `midi.html` (mapping page), `vjpad.html` + `vjpad-layouts.json` | every controller outside the named ones' import closure (`.test.js` files kept) |
 | the named controllers + what they import from `controllers/` | `public/images/*` except `placeholder-image.png` |
-| `scripts/`, `.claude/skills/`, `docs/`, `vite-plugins/`, `public/` worklets and icons | `journals/`, `prompts/`, `e2e/`, `vscode-extension/`, `workers/`, main's `.github/workflows/`, handoff notes |
+| `scripts/`, `.agents/skills/` and its `.claude/skills/` copy, `docs/`, `vite-plugins/`, `public/` worklets and icons | `journals/`, `prompts/`, `e2e/`, `vscode-extension/`, `workers/`, main's `.github/workflows/`, handoff notes |
 
 The multiplayer editor code stays in `src/` but nothing imports it, so Vite never bundles it. The
 PWA manifests shrink to one automatically, because the shader plugin only sees one shader.

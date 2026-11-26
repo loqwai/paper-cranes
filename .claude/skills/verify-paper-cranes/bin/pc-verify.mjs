@@ -27,7 +27,7 @@ import {
 export const SCRATCH_SHADER_DIR = join(REPO, 'shaders/claude/wip/verify-scratch')
 // Generated test audio goes here as verify-*.mp3 (the folder is gitignored); cleanup removes those.
 export const SCRATCH_AUDIO_DIR = join(REPO, 'public/test-audio')
-// Starting the dev server or a build refreshes this baked file (docs: CLAUDE.md, shader dates).
+// Starting the dev server or a build refreshes this baked file (docs: AGENTS.md, shader dates).
 const RESTORABLE_SIDE_EFFECTS = ['shader-dates.json']
 
 const [cmd, ...rest] = process.argv.slice(2)

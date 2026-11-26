@@ -1013,7 +1013,7 @@ For more complex parameter relationships, use `#ifdef` blocks to switch entire p
 3. **Find aesthetic ranges** by adjusting knob values
 4. **Document each knob** with comments explaining what low/high values produce
 5. **Switch to audio** by commenting out `#define KNOB_MODE`
-6. **Choose appropriate audio features** from different domains (see Feature Domains in CLAUDE.md)
+6. **Choose appropriate audio features** from different domains (see Feature Domains in AGENTS.md)
 
 ### Testing with Playwright
 
