@@ -22,7 +22,7 @@ scenarios differ only in their input. It writes a PNG per scenario and `summary.
 | Check | Rule it encodes | Threshold |
 |---|---|---|
 | `silence@T look` | resting picture at 3 s, 37 s, 400 s, no audio, knobs 0 | FAIL if `lit` < 0.2 or `lum` < 0.03 (black), `clip` >= 0.5 (white) or fewer than 50 colours (flat) |
-| `knob_N=1 look`, `all knobs=1 look` | no knob value breaks the look | same look checks |
+| `knob_N=1 look`, `all knobs=1 look` | no knob value breaks the look | same look checks, except a dark frame only WARNs (a pan knob can reach empty space: clit-vibej/2's knob_1 and knob_2 do) |
 | `clip` | white-out | WARN > 0.03, FAIL >= 0.5 |
 | `grey` | "It's gray" | WARN > 0.15 (share of pixels with OKLab C < 0.03, 0.3 < L < 0.8) |
 | `hotPink` | no hot magenta | WARN > 0.15 of vivid pixels with OKLab hue 300°-15° |
@@ -40,8 +40,9 @@ Calibration (2026-11-25, 390x844, SwiftShader):
 
 | Shader | Result |
 |---|---|
-| `claude/wip/clit-vibej/2` + `controller=clit-set&wavelet=true` (the 11-22 show) | every check PASS. silence lum 0.265, grey 0.024, hotPink 0.001; quiet to loud diff 47.7; loud/quiet lum 1.05; kick/loud 1.21; silent motion 32.1 |
-| `plasma` (2014 Ether port, before these rules) | WARN on every still: hotPink 0.34-0.84, clip 0.05-0.08, hueConc up to 0.93 |
+| `claude/wip/clit-vibej/2` + `controller=clit-set&wavelet=true` (the 11-22 show) | exit 0, no FAIL. Audio and motion checks all PASS: quiet to loud diff 47.7, loud/quiet lum 1.05, kick/loud 1.21, silent motion 32.1; silence lum 0.265, grey 0.024, hotPink 0.001. WARNs: knob_1 and knob_2 at 1 pan onto the dark rails (lit 0.10, 0.02); knobs 11, 13, 15 at 1 narrow the hue (hueConc 0.85-0.99) |
+| `wip/silk-vortex/1` (the worked example) | exit 0, no FAIL, no WARN |
+| `plasma` (2014 Ether port, before these rules) | exit 0, no FAIL; WARN on every still: hotPink 0.34-0.84, clip 0.05-0.08, hueConc up to 0.93 |
 
 The script exits 1 on any FAIL. FAILs mean broken, and the references clear them widely (min 728
 colours, max clip 0.08, loud/quiet at most 1.23, silent motion at least 6.6). `npm run test:shader-check`

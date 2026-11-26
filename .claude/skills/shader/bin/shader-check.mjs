@@ -213,8 +213,10 @@ const run = async (name, { params = {}, clock = HOLD, features = {}, frames = 90
 // The look, judged on every frame. Thresholds come from references/taste.md. FAIL is a broken
 // shader (calibrated so plasma, clit-vibej/2 and silk-vortex/1 clear it by a wide margin); WARN
 // means open the PNG.
-const judge = (name, s) => {
-  if (s.lit < 0.2 || s.lum < 0.03) return check('FAIL', `${name} black`, `lit ${s.lit}, lum ${s.lum} ("Looks black to me")`)
+// A knob at its extreme only WARNs on a dark frame: a pan knob can legitimately reach empty space
+// (clit-vibej/2's knob_1/knob_2 pan off the fractal onto the dark rails).
+const judge = (name, s, { knob = false } = {}) => {
+  if (s.lit < 0.2 || s.lum < 0.03) return check(knob ? 'WARN' : 'FAIL', `${name} black`, `lit ${s.lit}, lum ${s.lum} ("Looks black to me")${knob ? '; a pan knob can reach empty space, open the PNG' : ''}`)
   if (s.clip >= 0.5) return check('FAIL', `${name} white-out`, `clip ${s.clip} >= 0.5 (references max 0.08)`)
   if (s.colours < 50) return check('FAIL', `${name} flat fill`, `${s.colours} colours < 50 (references min 728)`)
   const bad = []
@@ -229,8 +231,8 @@ const judge = (name, s) => {
 
 try {
   for (const t of times) judge(`silence@${t}`, (await run(`silence-${t}`, { clock: t })).s)
-  for (const k of knobs) judge(`knob_${k}=1`, (await run(`knob${k}-1`, { params: { [`knob_${k}`]: 1 } })).s)
-  if (knobs.length > 1) judge('all knobs=1', (await run('knobs-all-1', { params: Object.fromEntries(knobs.map((k) => [`knob_${k}`, 1])) })).s)
+  for (const k of knobs) judge(`knob_${k}=1`, (await run(`knob${k}-1`, { params: { [`knob_${k}`]: 1 } })).s, { knob: true })
+  if (knobs.length > 1) judge('all knobs=1', (await run('knobs-all-1', { params: Object.fromEntries(knobs.map((k) => [`knob_${k}`, 1])) })).s, { knob: true })
 
   const sil = await run('silence-ref', {})
   const quiet = await run('quiet', { features: QUIET })
