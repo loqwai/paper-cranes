@@ -1,5 +1,5 @@
 // preflight — the /show checks as one line each, so a launch reads a few lines instead of a
-// checklist and a page of get_state JSON. Fixes for a ❌ live in .claude/skills/show/check.md.
+// checklist and a page of get_state JSON. Fixes for a ❌ live in .agents/skills/show/check.md.
 //
 //   node scripts/vj/preflight.js [--shader clit-set/2]          before launch: server, checkout, branch, projector
 //   node scripts/vj/preflight.js --after [--shader clit-set/2]  after launch, over the VJ MCP: display, audio,

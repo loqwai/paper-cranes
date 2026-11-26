@@ -3,7 +3,7 @@
 How work is divided during a live set so the user never waits on the machine. Written
 2026-08-20 after a VJ set where a button press waited three minutes for an answer.
 
-The rule in one line, from [CLAUDE.md](../CLAUDE.md#live-sessions-the-parent-stays-responsive):
+The rule in one line, from [AGENTS.md](../AGENTS.md#live-sessions-the-parent-stays-responsive):
 **the parent session dispatches, forks do the work, and anything that must be instant lives in
 the page.**
 

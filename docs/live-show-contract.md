@@ -56,7 +56,7 @@ While `hands` is on, `source:"agent"` writes are HELD in the page:
 - `set_shader` / `write_shader` (shader name or code): held, newest wins, applied when the lock ends.
   A shader write is never applied mid-lock.
 - Aaron's own writes (no source, or `"board"`) apply synchronously on arrival, exactly as before
-  (CLAUDE.md "Hot-path rule"). The gate adds nothing to that path but a timestamp.
+  (AGENTS.md "Hot-path rule"). The gate adds nothing to that path but a timestamp.
 - PANIC clears everything held.
 - Held writes and open proposals live only in the page's memory. A display reload drops both
   without a `proposal-dropped`; the page's `boot` signal is the agent's cue to re-check

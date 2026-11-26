@@ -6,6 +6,38 @@ A psychedelic plasma sun: a glowing plasma ball radiating curling sun rays over 
 
 Knobs: K1 HOLE SIZE, K2 HUE SPIN, K3 LATTICE, K4 ZOOM. At 0 they give the designed look.
 
+Played at a show by the `/sun-show` skill (`.agents/skills/sun-show/SKILL.md`).
+
+## Fork library
+
+Open a fork with `jam.html?shader=sun/N&controller=sun-N&wavelet=true&vj=1&remote=display`. Use
+`controller=sun` for N=1. Forks 9 to 14 are described in their own sections below and in
+`N.md`; the setlist (`setlists/sun-set/SETLIST.md`) says which beat each one plays.
+
+| N | Look | Caveat |
+|---|---|---|
+| 1 | Orange plasma disc with coral/gold bands, broad amber rays, teal/violet tiles | Pre-plasma-ball. The controller has the latent missing-field NaN bug; it can't trigger on a fresh load |
+| 2 | Defined orange ball, slim yellow-amber rays, blue tiles, LSD cloud bands | Before the story engine |
+| 3 | Night: magenta-orange ball low right, violet rays, indigo sky | Story engine present |
+| 4 | **First natural SUPERNOVA**: huge gold ball, abstract LSD plasma | Own state (`__sun4State`). Starts at MAIN; K5 0.64 forces the nova |
+| 5 | REBIRTH with long reach: small hot star upper left, rays across the frame | Background darkened to dim gas veils over indigo (`SPACE-DARK`) |
+| 6 | Deep-space REBIRTH, full reach, navy nebula | **Has the flicker bug (1.4)** unless the fix has been ported. Check before using |
+| 7 | **First companion kiss era**: peach-gold sun plus a rose companion, tangled tendrils | Healthy (flicker 0.22). The usual panic fork |
+| 8 | Two small stars dancing in a DYING night, swirling nebula | Dim, with a grey veil over the sky; before the brightness fixes |
+| 15 | **Giant orbited sun**: ember limb lower right, cyan Julia fan from a luminous gold root, indigo starfield (show, 02:06 on 2026-10-10) | Cold-start baked: shows the finished look at once, even on a fresh boot. Its controller shares `__blackSunState` |
+| 16 | Same code and dials as 15, forked again at 02:16 to mark a story moment (act 1, fan spread wide) | Cold-start baked, like 15 |
+| 17 | Same code and dials as 15. Marks the companion transiting the giant (02:21) | Cold-start baked, like 15 |
+
+`controllers/sun.js` and `sun-2`, `3`, `5`, `7`, `8`, `9` and `12` to `17` keep state on
+`window.__blackSunState`, the same global as the live `black-sun` controller. Load them only in a
+fresh page; never hot-swap one of those controllers into the live page. `sun-4`, `sun-6`, `sun-10`
+and `sun-11` keep their own (`__sun4State` and so on). Checked on 2026-11-25 with
+`grep -oE '(window|globalThis)\.__[A-Za-z0-9]+State' controllers/sun*.js`; run it again rather
+than trusting this list.
+
+Knobs differ by fork; read the fork's `#define` lines. Since 2026-10-10 `controllers/black-sun.js`
+reads K7 as SPEED, not KISS, even where a fork's `@knob:` line still says KISS.
+
 ## 1.frag — fork of live black-sun/sun-1 (2026-10-06, rehearsal for the Friday show)
 
 Look at fork time:
@@ -27,7 +59,7 @@ Preset: `jam.html?shader=sun/2&controller=sun-2&vj=1&remote=display`
 
 ## Storylines (live in black-sun/sun-1 + controllers/black-sun.js, 2026-10-06)
 
-The sun now plays a stellar life cycle over minutes: MAIN SEQUENCE → RED GIANT → DYING → COLLAPSE → SUPERNOVA → NEBULA → REBIRTH → MAIN. The music moves it: a sustained build arms COLLAPSE, the drop fires SUPERNOVA, calm and quiet stretches age the star. Every act has a max-dwell fallback. **K5 STORY** (knob_5) forces an act (0 = auto). Story params (`bs_heat/size/power/dark/abstract/chaos/pull/nova/shell`) glide with long eases; the supernova is one eased event with an expanding LSD shell and a shock front. Full design, act table, how to add or retarget an arc, and the decision log: [docs/storylines.md](../../../../docs/storylines.md). Act screenshots: `.claude/vj-shots/act-0..6.png`, `acts-sheet.png`.
+The sun now plays a stellar life cycle over minutes: MAIN SEQUENCE → RED GIANT → DYING → COLLAPSE → SUPERNOVA → NEBULA → REBIRTH → MAIN. The music moves it: a sustained build arms COLLAPSE, the drop fires SUPERNOVA, calm and quiet stretches age the star. Every act has a max-dwell fallback. **K5 STORY** (knob_5) forces an act (0 = auto). Story params (`bs_heat/size/power/dark/abstract/chaos/pull/nova/shell`) glide with long eases; the supernova is one eased event with an expanding LSD shell and a shock front. Full design, act table, how to add or retarget an arc, and the decision log: [docs/storylines.md](../../docs/storylines.md). Act screenshots: `.claude/vj-shots/act-0..6.png`, `acts-sheet.png`.
 
 Distortion fronts now fire only on LARGE changes (z-jump > 1.3 over the 3 s envelope, a big flux spike, a section change, COLLAPSE, or SUPERNOVA). Refractory 8 s, life 6 s, ~0.25/s, ~2.4× the lensing. Kicks keep their light response only.
 

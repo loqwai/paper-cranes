@@ -148,7 +148,7 @@ them (pin a specific look for presets/NFC tags). `wooli/chromadepth-*` use `seed
   ```
   Capture a "rest" frame vs a "kick/loud" frame to see the reactivity. To prove real audio flows,
   play `audio_file=` in Playwright Firefox ([audio-file-playback.md](audio-file-playback.md)).
-- **The scripted way:** the `/verify-paper-cranes` skill (`.claude/skills/verify-paper-cranes/`)
+- **The scripted way:** the `/verify-paper-cranes` skill (`.agents/skills/verify-paper-cranes/`)
   launches its own server on a free port, runs this A/B (`pc-verify render`), records the headful
   video, and keeps the evidence in `~/paper-cranes-proof/`.
 - **Test touch/knob controllers** by driving real pointer/touch events (`page.mouse` / touch) and

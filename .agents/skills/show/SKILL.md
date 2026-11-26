@@ -1,6 +1,6 @@
 ---
 name: show
-description: "Run a live show on the wall tonight: start the wall (\"start the show\", \"show time\", \"put it on the projector\"), check it is ready (\"preflight\", \"are we ready\"), get a safe look back when the wall goes wrong (\"panic\", \"it's black\", \"it froze\", \"get it back\"), play a setlist (\"play the sun set\", \"next beat\"), jam with no partner (\"just jam\", \"lite\"), or wrap up (\"end the show\", \"we're done\"). Puts the show on a draw board as Aaron's phone status board and control surface. Never for making a repo."
+description: "Run a live show on the wall tonight: start the wall (\"start the show\", \"show time\", \"put it on the projector\"), check it is ready (\"preflight\", \"are we ready\"), get a safe look back when the wall goes wrong (\"panic\", \"it's black\", \"it froze\", \"get it back\"), play a setlist (\"play the sun set\", \"next beat\"), jam with no partner (\"just jam\", \"lite\"), or wrap up (\"end the show\", \"we're done\"). Puts the show on a draw board as Aaron's phone status board and control surface. With no shader it starts the default show, clit-set (`/clit-show`). A named show (the sun show, clit-set) also has its own skill. Never for making a repo."
 allowed-tools: Bash Read Write Edit Grep Glob Agent Monitor TaskStop
 ---
 
@@ -15,9 +15,22 @@ allowed-tools: Bash Read Write Edit Grep Glob Agent Monitor TaskStop
 | `/show setlist <name> [list\|next\|prev\|<n>\|auto]` | play `setlists/<name>.json`; read [setlists.md](setlists.md) |
 | `/show end` | stop lanes, process keeps, tell the set's story; read [story.md](story.md) |
 
-Default shader: `clit-set/2` with `controller=clit-set` (knobs: `shaders/clit-set/clit-set.md`).
+**Default show: `/clit-show`** (Aaron, 2026-11-25). `/show` with no shader loads
+[`/clit-show`](../clit-show/SKILL.md) and launches what it says (`clit-set/2` +
+`controller=clit-set` + `wavelet=true`). It does not play the `clit-set` setlist, which is a starter.
+An explicit `/show <shader>` or another show's skill overrides it.
 Read a reference file only when its row or step says so. Failure fixes:
 [docs/show-playbook.md](../../../docs/show-playbook.md) section 7.
+
+## Show skills
+
+A named show has its own skill with its shader, controller, setlist, knob map, panic forks and
+its own fixes. Load it when Aaron names the show, then launch through this skill.
+
+| Show | Skill | Setlist |
+|---|---|---|
+| the sun (black-sun / `sun/N`) | [`/sun-show`](../sun-show/SKILL.md) | `sun-set` |
+| clit-set, the coaster | [`/clit-show`](../clit-show/SKILL.md) | `clit-set` |
 
 ## Rules
 
@@ -59,8 +72,8 @@ Read a reference file only when its row or step says so. Failure fixes:
 
 His PANIC (vjpad, its MIDI pad, `Esc Esc` on the jam page, the board) is faster; use this when
 he asks you. `PORT=$P node scripts/vj/mcp-call.js panic '{"fork":"<fork>"}'` (no fork: the boot
-fork). Pick a fork that reads the running controller: `clit-set/2` on clit-set, `sun/7` on the sun
-line. Confirm with `screenshot {"width":256}`. Frozen picture: playbook section 7. Never `goto`.
+fork). Pick a fork that reads the running controller; the show skill lists them (`clit-set/2` on
+clit-set, `sun/7` on the sun line). Confirm with `screenshot {"width":256}`. Frozen picture: playbook section 7. Never `goto`.
 
 ## Lite: `/show lite`
 

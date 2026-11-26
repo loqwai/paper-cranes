@@ -1,4 +1,4 @@
-// `npm test` broke twice by collecting files it should not: .claude/skills node:test files
+// `npm test` broke twice by collecting files it should not: node:test files under .claude/
 // (no vitest suite, so the run fails) and dist/** copies after a build (every controller test
 // run twice, against stale code). Ask vitest itself what it would collect, with a decoy test
 // planted in each place that must stay out, and check every file is inside the intended roots.

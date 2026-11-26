@@ -545,7 +545,7 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   ├── listStore.js            # list page's localStorage (cranes-list-*), shape-checked reads
 │   └── shader-transformers/     # Shader preprocessing
 ├── shaders/                     # GLSL visualization shaders
-│   ├── wip/Codex/             # Codex-created shaders go here
+│   ├── wip/claude/             # agent-created shaders go here
 │   ├── plasma.frag
 │   └── melted-satin/2.frag
 ├── setlists/                    # /show setlist <name>: beats as hot-swaps (sun-set.json, clit-set.json)
@@ -631,23 +631,29 @@ When creating a PR that adds shaders, **always include preview links** in the PR
 
 This lets reviewers click through and test each shader directly.
 
-## Codex-Specific Instructions
+## Agent-Specific Instructions
+
+### Docs are general; each show is a skill
+
+Docs under `docs/` are general: no single machine, branch, date or show. Each show is a skill
+(`.agents/skills/<show>-show/`, copied to `.claude/skills/` by the sync); a show's history goes in
+`journals/`. A shader's knobs, story and forks go in its own `.md`.
 
 ### Where to Put Your Shaders
 
 Shaders go under `shaders/<github-username>/wip/<shader-name>/`. Iterations are numbered files. Each shader in `wip/` gets a single markdown doc named `<shader-name>.md` in the same directory.
 
 ```
-shaders/Codex/wip/cosmic-bloom/
+shaders/claude/wip/cosmic-bloom/
 ├── 1.frag              # First iteration
 ├── 2.frag              # Second iteration
 └── cosmic-bloom.md     # Design intent, audio mapping, iteration notes
 ```
 
 ```bash
-shaders/Codex/wip/cosmic-bloom/1.frag           # Good
-shaders/Codex/wip/cosmic-bloom/cosmic-bloom.md   # Good — one doc per shader
-shaders/wip/Codex/my-shader.frag                 # Old convention, still works
+shaders/claude/wip/cosmic-bloom/1.frag           # Good
+shaders/claude/wip/cosmic-bloom/cosmic-bloom.md   # Good — one doc per shader
+shaders/wip/claude/my-shader.frag                 # Old convention, still works
 shaders/my-shader.frag                             # Bad - don't put in root
 ```
 
@@ -747,6 +753,11 @@ Look at these for reference:
 - `plasma.frag` - Simple but effective
 - `subtronics.frag` - Image-based with audio modulation
 - `redaphid/zebra/tie-dye.frag` - Complex knob-based control
+
+## Repo Instructions
+
+- **This file is the one source.** `CLAUDE.md` only imports it (`@AGENTS.md`) for Claude Code. Edit here.
+- **Checked out on Windows: no symlinks in the repo.**
 
 ## Code Style Guidelines
 - Use arrow functions
@@ -885,7 +896,7 @@ Full guide: [docs/testing.md](docs/testing.md).
 
 Use the CLI to validate shader syntax before committing:
 ```bash
-node scripts/validate-shader.js shaders/wip/Codex/my-shader.frag
+node scripts/validate-shader.js shaders/wip/claude/my-shader.frag
 ```
 
 This will check for:
@@ -958,11 +969,13 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 5. **Hardcoded resolution**: Always use `iResolution`, never hardcode 1920x1080
 6. **Metadata before #version**: If your shader has `#version 300 es`, keep it on the first line and put metadata comments (`// @fullscreen: true`) on line 2. The wrapper hoists a `#version` that only `//` comments precede, so such a shader still compiles, but any other code above `#version` is an error. Shaders without `#version` (ShaderToy-style) can have metadata on line 1.
 
-## Codex Skills
+## Skills
 
 | Skill | Purpose |
 |-------|---------|
-| `/show` | The one door for a live show: `check` (preflight as ✅/❌ cards on the show's draw board), launch (the wall, the board as status board and phone control surface, the no-model board bridge, then the `/partner` lane), `lite` (a jam: what `/jam` was), `panic [fork]`, `setlist <name>` (e.g. the sun set), `end` (story on the board, journal). See [docs/show-playbook.md](docs/show-playbook.md). |
+| `/show` | The one door for a live show: `check` (preflight as ✅/❌ cards on the show's draw board), launch (the wall, the board as status board and phone control surface, the no-model board bridge, then the `/partner` lane), `lite` (a jam: what `/jam` was), `panic [fork]`, `setlist <name>` (e.g. the sun set), `end` (story on the board, journal). With no shader it runs the default show, `/clit-show`. See [docs/show-playbook.md](docs/show-playbook.md). |
+| `/sun-show` | The sun show: black-sun `sun-1` + `controller=black-sun`, plays the `sun-set` setlist. Holds the sun's knob map, K5 act values, companion, panic forks (`sun/7`) and its own failures (the latched `__blackSunState` NaN). |
+| `/clit-show` | The default show (what `/show` runs with no shader). The clit-set show: `clit-set/2` + `controller=clit-set`, the coaster (`coaster=1`), the `clit-set` setlist. Holds the Twister knob map, coaster controls, panic forks, input notes, the pilot and the 2026-11-22 lessons. |
 | `/partner` | Aaron's VJ partner while he plays the dials: its own background lane, one step per event, PROPOSES changes he takes or dismisses (KEEP on the pad or board), applies only health fixes, never while his hands are on. The art critic runs between tracks. Was `/vibej2`. |
 | `/keep` | KEEP lives in the page (vjpad, MIDI, `k`, the board); `/keep process` turns kept moments into numbered forks and named presets with docs. Was `/fork` + `/preset`. |
 | `/jam` | Alias: use `/show lite`. |
@@ -971,17 +984,18 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 | `/changelog` | Update docs/CHANGELOG.md and README with recent features. |
 | `/pr` | Create a PR, request review, and open in browser. |
 | `/show-repo` | One show, one repo: strip to one shader + controller (shared git history), build, verify headless, then publish to `<show>.beadfamous.com` on Aaron's go-ahead. Its front page is `show.html`: canvas only, MIDI, `?room=` remote jamming, snapshots. See [docs/show-repos.md](docs/show-repos.md). |
-| `/verify-paper-cranes` | Prove a change in the real app: launch an instance on a free port (never 6969/6977/6978/6991), doctor it, drive a mapped feature with Playwright, keep screenshots, pixel stats, logs and a headful video in `~/paper-cranes-proof/`, then clean up. Feature map in `.claude/skills/verify-paper-cranes/features/`. |
+| `/verify-paper-cranes` | Prove a change in the real app: launch an instance on a free port (never 6969/6977/6978/6991), doctor it, drive a mapped feature with Playwright, keep screenshots, pixel stats, logs and a headful video in `~/paper-cranes-proof/`, then clean up. Feature map in `.agents/skills/verify-paper-cranes/features/`. |
 
-Retired 2026-11-24 (board [live-show-skills](https://draw.hypnodroid.com/b/live-show-skills), Aaron: "Yes to all"): `/vibej`, `/vj`, `/live-session` (deleted), `/vibej2` (now `/partner`), `/fork` and `/preset` (now `/keep`), `/sun-set` (now the setlist `setlists/sun-set.json`, played by `/show setlist sun-set`), `/remap` (now the "Forget all mappings" button on `/midi.html`).
+Retired 2026-11-24 (board [live-show-skills](https://draw.hypnodroid.com/b/live-show-skills), Aaron: "Yes to all"): `/vibej`, `/vj`, `/live-session` (deleted), `/vibej2` (now `/partner`), `/fork` and `/preset` (now `/keep`), `/sun-set` (now the setlist `setlists/sun-set.json`, played by `/show setlist sun-set`; `/sun-show` plays it), `/remap` (now the "Forget all mappings" button on `/midi.html`).
 
-The same skills live in `.agents/skills/`, generated from `.claude/skills/` by `node scripts/sync-agents-skills.js` (a test fails when they drift).
+Edit `.agents/skills/`; `.claude/skills/` is generated for Claude Code by `node scripts/sync-claude-skills.js`; a test fails on drift; don't edit `.claude/skills/` by hand. The sync replaces only the skills `.agents/skills/` has, so a local skill folder in `.claude/skills/` is left alone.
 
 ## Live Sessions: the Parent Stays Responsive
 
-**Show day:** run `/show`. It does the preflight, launch, board, watchers and hand-off to the
-`/partner` lane. Follow [docs/show-playbook.md](docs/show-playbook.md) for the runbook, knob map,
-story, fork library and failure fixes.
+**Show day:** run `/show` (no shader: the default show, `/clit-show`). It does the preflight, launch, board, watchers and hand-off to the
+`/partner` lane. Follow [docs/show-playbook.md](docs/show-playbook.md) for the general runbook and
+failure fixes, and the show's own skill (`/sun-show`, `/clit-show`) for its knob map, story and
+panic forks.
 
 **The show's phone surface is a [draw](https://draw.hypnodroid.com) board** (`show-<date>`): the
 wall's status, the preflight, `/partner`'s proposal cards, kept moments, and big PANIC / KEEP /
@@ -992,7 +1006,7 @@ in the path. The page owns the instant parts (HANDS lock, KEEP, PANIC, proposal 
 **Getting a set into "explore it for hours" depth:** [docs/vj-deep-voyage-recipe.md](docs/vj-deep-voyage-recipe.md), from the [2026-11-22 clit coaster show](journals/2026-11-22-clit-coaster-show.md).
 
 During any **live session** — a show (`/show`), a jam (`/show lite`), anything where the
-user has a hand on a controller — the main Codex session is a **dispatcher, not a worker**. It
+user has a hand on a controller — the main agent session is a **dispatcher, not a worker**. It
 triages what the user says, reads the meter, makes the ONE decision, and hands execution to a
 subagent (`Agent` tool, `subagent_type: "fork"` — a fork inherits the full session context). Then
 it goes back to listening.

@@ -22,7 +22,7 @@ Preconditions:
 
 - Any target: `$B launch`, or `--base https://visuals.beadfamous.com`, or a Pages preview.
 
-- **Whole path.** Run `.claude/skills/verify-paper-cranes/bin/list-page.mjs` (add `--base <url>`,
+- **Whole path.** Run `.agents/skills/verify-paper-cranes/bin/list-page.mjs` (add `--base <url>`,
   `--query <text>`, `--video`). At 390x844 it waits for `.shader-list a[href*="shader="]` rows,
   checks `scrollWidth <= 390`, fills `.find-input`, reads `.status-text`, clicks the first
   `button[title="Add to set"]`, clicks `.bar-btn` "Set", reads `.set-row .nm`, clicks

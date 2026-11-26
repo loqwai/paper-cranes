@@ -23,7 +23,7 @@ Preconditions:
 - A dev instance from `$B launch` (preview and deployed sites have no `/ws` and no disk writes).
 - No other display on this instance you care about: a save reaches every display on it.
 
-- **Whole path.** Run `.claude/skills/verify-paper-cranes/bin/editor-sync.mjs` (`--video` for
+- **Whole path.** Run `.agents/skills/verify-paper-cranes/bin/editor-sync.mjs` (`--video` for
   headful video of both pages). It writes a solid-blue scratch shader
   `claude/wip/verify-scratch/1`, opens the display and checks it draws blue (mean RGB
   `[0,0,255]`), opens the editor with `remote=control`, sets the Monaco model to solid red, clicks

@@ -2,7 +2,7 @@
 // list-page: drive /list.html on a phone (390x844) the way a performer does: search, queue a
 // shader with +, open the Set sheet, GO, and check the perform overlay plays it. Evidence:
 // <proof>/list-page/. Works on dev, preview, a Pages preview or production (--base).
-//   .claude/skills/verify-paper-cranes/bin/list-page.mjs [--query plasma] [--base URL] [--video]
+//   .agents/skills/verify-paper-cranes/bin/list-page.mjs [--query plasma] [--base URL] [--video]
 import { join } from 'node:path'
 import { baseUrl, proofDir, startBrowser, newPage, until, writeJson, writeLog, PHONE } from './lib.mjs'
 

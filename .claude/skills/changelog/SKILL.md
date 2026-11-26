@@ -42,7 +42,7 @@ Existing feature docs:
 
 6. **Update README.md**: Keep the "What's New" section near the top with the 3-5 most recent major features. This should read like highlights, not a full log — link to the changelog for the rest. Also update the Documentation table and "Fun developer features" bullets if new docs were created.
 
-7. **Update CLAUDE.md** if new features add query params, new files, or architectural concepts. Keep additions minimal — one-line summaries with doc links.
+7. **Update AGENTS.md** if new features add query params, new files, or architectural concepts. Keep additions minimal — one-line summaries with doc links.
 
 8. **Group changelog entries by date**, newest first. Use `## YYYY-MM-DD` headers.
 

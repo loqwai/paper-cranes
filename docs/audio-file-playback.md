@@ -38,7 +38,7 @@ on the no-audio stub, silently: the canvas renders and every audio feature is em
 `Object.keys(window.cranes.measuredAudioFeatures).length > 0` before trusting an audio assertion.
 What works: system Google Chrome (`channel: 'chrome'`, as `e2e/audio-file.test.js` uses),
 Playwright Firefox, and the soul Playwright lanes with a CORS-OK file URL. See
-`.claude/skills/verify-paper-cranes/features/shader-render.md`.
+`.agents/skills/verify-paper-cranes/features/shader-render.md`.
 
 ## Key Files
 

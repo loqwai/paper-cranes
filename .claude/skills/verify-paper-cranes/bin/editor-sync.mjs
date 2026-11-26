@@ -2,7 +2,7 @@
 // editor-sync: prove that saving in edit.html (remote=control) reaches a display page and disk.
 // Dev server only (pc-verify launch). Writes a scratch shader under shaders/claude/wip/verify-scratch/,
 // which pc-verify cleanup removes. Evidence: <proof>/editor-sync/.
-//   .claude/skills/verify-paper-cranes/bin/editor-sync.mjs [--headful] [--video]
+//   .agents/skills/verify-paper-cranes/bin/editor-sync.mjs [--headful] [--video]
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { REPO, baseUrl, proofDir, startBrowser, newPage, until, framesAdvance, canvasShot, writeJson, writeLog, DESKTOP } from './lib.mjs'

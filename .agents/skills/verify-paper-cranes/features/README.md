@@ -2,7 +2,7 @@
 
 The maintained source for verifying what a Paper Cranes user sees and does. Read this index, then
 use the matching feature file as the recipe. `B` below is
-`.claude/skills/verify-paper-cranes/bin/pc-verify.mjs`, run from the repo root.
+`.agents/skills/verify-paper-cranes/bin/pc-verify.mjs`, run from the repo root.
 
 ## Baseline preconditions
 
