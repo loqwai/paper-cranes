@@ -68,4 +68,37 @@ describe('midi.js', () => {
     input.send([0xb0, 1, 64])
     expect(calls).toHaveLength(1)
   })
+
+  it('a wall with the permission at "prompt" asks only on its first gesture', async () => {
+    const listeners = {}
+    window.location = new URL('http://localhost/?remote=display')
+    window.addEventListener = (type, fn) => { (listeners[type] ??= []).push(fn) }
+    window.removeEventListener = () => {}
+    let asked = 0
+    vi.stubGlobal('navigator', {
+      requestMIDIAccess: async () => { asked++; return midi.access },
+      permissions: { query: async () => ({ state: 'prompt' }) },
+    })
+    await import('./midi.js')
+    await flush()
+    expect(asked).toBe(0)
+    expect(window.cranes.midiState).toBe('waiting')
+    listeners.pointerdown[0]()
+    await flush()
+    expect(asked).toBe(1)
+    midi.access.inputs.get('a').send([0xb0, 1, 64])
+    expect(calls).toHaveLength(1)
+  })
+
+  it('a wall with the permission granted connects at load', async () => {
+    window.location = new URL('http://localhost/?vj=1')
+    window.addEventListener = () => {}
+    vi.stubGlobal('navigator', {
+      requestMIDIAccess: async () => midi.access,
+      permissions: { query: async () => ({ state: 'granted' }) },
+    })
+    await import('./midi.js')
+    await flush()
+    expect(window.cranes.midiAccess).toBe(midi.access)
+  })
 })

@@ -84,7 +84,7 @@ The show page lives on main so every show repo inherits it and its fixes.
   `show.json` (inlined at build time by `vite-plugins/show-config-plugin.js`): shader, controllers,
   params. Anything already in the URL wins. On main, the block is `{}` and `/show.html?shader=…`
   works like the jam page.
-- **MIDI always on.** `src/midi.js` loads on every page load. Knob moves go through ParamsManager
+- **MIDI always on.** `src/midi.js` loads on every page load unless `?midi=false`. Knob moves go through ParamsManager
   into the URL, so a refresh keeps the set's state. `show.json` may carry `midiProfiles`
   (the `cranes-midi-profiles` shape), which seeds devices this browser has never mapped. A browser's
   own mapping is never overwritten. Pass `--midi-profiles <file>` to `create.js` to ship one.

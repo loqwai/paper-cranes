@@ -1,5 +1,6 @@
 import { createMidiMapper } from './midi/MidiMapper.js'
 import { createMidiActions } from './midi/MidiActions.js'
+import { midiStart, startGated } from './midi/midiPolicy.js'
 
 const relativeKnobs = new Set()
 
@@ -114,8 +115,9 @@ const attachInput = (input) => {
   input.open()
 }
 
-// MIDI Access request
-navigator
+// MIDI Access request. A wall (src/midi/midiPolicy.js, live mode without ?midi=true) asks only when
+// the permission is already granted or on its first user gesture, so no prompt lands on it unasked.
+const connect = () => navigator
   .requestMIDIAccess()
   .then((midiAccess) => {
     // Exposed so a page check (scripts/show-repo/verify.js) can tell MIDI actually started
@@ -132,3 +134,7 @@ navigator
   .catch((error) => {
     console.error('MIDI failed to start', error)
   })
+
+const start = midiStart(new URLSearchParams(window.location.search))
+window.cranes.midiStart = start
+if (start === 'now') { window.cranes.midiState = 'requested'; connect() } else startGated({ connect }).then((state) => { window.cranes.midiState = state })

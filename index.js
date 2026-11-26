@@ -15,6 +15,7 @@ const maybeStartWavelet = async (params, audioContext, sourceNode) => {
 import { makeVisualizer, askForWakeLock } from './src/Visualizer.js'
 import { getInitialShader, loadShader, shaderOnScreen } from './src/shaderLoader.js'
 import { loadControllers, composeControllers } from './src/controllerChain.js'
+import { shouldLoadMidi } from './src/midi/midiPolicy.js'
 
 
 const SEED_KEY = 'paperCranes.seeds'
@@ -374,8 +375,9 @@ const main = async () => {
     setupCranesState()
     startTime = performance.now()
 
-    // Lazy-load MIDI support when opted in via ?midi=true
-    if (params.get('midi') === 'true') import('./src/midi.js')
+    // MIDI: opt-in with ?midi=true, on by default in live mode (a display, wall or ?vj=1 page),
+    // off with ?midi=false. jam.js and show.js load it themselves. See src/midi/midiPolicy.js.
+    if (shouldLoadMidi(params)) import('./src/midi.js')
 
     // Initialize remote display mode if ?remote=display
     if (params.get('remote') === 'display') {

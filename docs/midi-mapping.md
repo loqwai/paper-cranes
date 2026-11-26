@@ -2,6 +2,22 @@
 
 Physical MIDI controllers (knobs, sliders, buttons) can drive shader parameters in real time. The system auto-maps MIDI CC messages to `knob_1`–`knob_200` uniforms and persists profiles per device in `localStorage`.
 
+## Turning MIDI on
+
+`src/midi/midiPolicy.js` decides, from the URL alone:
+
+| Page | MIDI | When it asks for the permission |
+|---|---|---|
+| `index.html` | off; `?midi=true` turns it on | at load |
+| `index.html` in live mode (`?remote=display`, `?wall=1` or `?vj=1`) | on; `?midi=false` turns it off | granted: at load. Would prompt: on the first tap (the tap that starts audio). Denied or no Web MIDI (Safari, Firefox without the add-on): never, one console line |
+| `jam.html`, `show.html` | always; `?midi=false` turns it off | as `index.html`: at load, or gated in live mode |
+| `vjpad.html`, `mirror.html` | never: the pad sends knobs over its socket or link, the mirror only watches | |
+
+An explicit `?midi=true` always asks at load, live mode or not. The show browser
+(`scripts/vj/show.js`) grants MIDI over CDP and in its profile, so a wall there connects at load
+with no prompt. `window.cranes.midiState` says what happened: `requested` (asked at load),
+`connected`, `waiting` (for a tap), `denied` or `unsupported`.
+
 ## Mapping Page (`/midi.html`)
 
 Open `/midi.html` to manage mappings visually. Three columns:

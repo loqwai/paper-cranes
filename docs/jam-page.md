@@ -35,7 +35,7 @@ Snapshots are written as JSON to `shaders/<shader>/docs/.snapshots/` and process
 | Knob drawer | No | No (MIDI / vjpad / URL) | Yes |
 | Code editor | No | No | Yes (Monaco) |
 | Snapshot queue | No | Yes | No |
-| MIDI support | Opt-in (`?midi=true`) | Always | Always |
+| MIDI support | Opt-in (`?midi=true`); on in live mode | Always (`?midi=false` turns it off) | Always |
 | Hot-reload shaders | Full page reload | Hot-swap (no reload) | Hot-swap via editor |
 
 ## Hot-Swap Shader Updates

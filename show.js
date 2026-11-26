@@ -13,6 +13,7 @@ import { loadControllers, composeControllers } from './src/controllerChain.js'
 import { buildSnapshot, postSnapshot, undoSnapshot } from './src/snapshot.js'
 import { installLiveKeys } from './src/vj/live-keys.js'
 import { shaderOnScreen } from './src/shaderLoader.js'
+import { shouldLoadMidi } from './src/midi/midiPolicy.js'
 
 const SNAPSHOTS_KEY = 'cranes-show-snapshots'
 const searchParams = new URLSearchParams(window.location.search)
@@ -71,7 +72,8 @@ document.addEventListener('keydown', (event) => {
 // index.js (the module before this one) built window.cranes synchronously in main(). MIDI writes
 // knobs through cranes.updateFeature; route it through paramsManager so moves reach the URL too.
 window.cranes.updateFeature = (name, value) => paramsManager.set(name, value)
-import('./src/midi.js')
+// Always on here, unless ?midi=false (src/midi/midiPolicy.js).
+if (shouldLoadMidi(new URLSearchParams(window.location.search), { always: true })) import('./src/midi.js')
 
 // Dev only: hot-swap the shader and the controller chain without a reload, as the jam page does.
 if (import.meta.hot) {

@@ -5,6 +5,7 @@ import { loadControllers, composeControllers } from './src/controllerChain.js'
 import { buildSnapshot, postSnapshot, undoSnapshot } from './src/snapshot.js'
 import { installLiveKeys } from './src/vj/live-keys.js'
 import { shaderOnScreen } from './src/shaderLoader.js'
+import { shouldLoadMidi } from './src/midi/midiPolicy.js'
 
 const searchParams = new URLSearchParams(window.location.search)
 
@@ -46,7 +47,8 @@ document.addEventListener('keydown', (event) => {
 // index.js (an earlier module) has already built window.cranes synchronously in main().
 // MIDI writes knobs through cranes.updateFeature; route it via paramsManager so it reaches the URL too.
 window.cranes.updateFeature = (name, value) => paramsManager.set(name, value)
-import('./src/midi.js')
+// Always on here, unless ?midi=false (src/midi/midiPolicy.js).
+if (shouldLoadMidi(new URLSearchParams(window.location.search), { always: true })) import('./src/midi.js')
 
 // Hot-swap shader code without reloading (preserves the audio pipeline and its feature history)
 if (import.meta.hot) {
