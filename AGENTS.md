@@ -633,6 +633,12 @@ This lets reviewers click through and test each shader directly.
 
 ## Agent-Specific Instructions
 
+### Docs are general; each show is a skill
+
+Docs under `docs/` are general: no single machine, branch, date or show. Each show is a skill
+(`.agents/skills/<show>-show/`, copied to `.claude/skills/` by the sync); a show's history goes in
+`journals/`. A shader's knobs, story and forks go in its own `.md`.
+
 ### Where to Put Your Shaders
 
 Shaders go under `shaders/<github-username>/wip/<shader-name>/`. Iterations are numbered files. Each shader in `wip/` gets a single markdown doc named `<shader-name>.md` in the same directory.
@@ -968,6 +974,8 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 | Skill | Purpose |
 |-------|---------|
 | `/show` | The one door for a live show: `check` (preflight as ✅/❌ cards on the show's draw board), launch (the wall, the board as status board and phone control surface, the no-model board bridge, then the `/partner` lane), `lite` (a jam: what `/jam` was), `panic [fork]`, `setlist <name>` (e.g. the sun set), `end` (story on the board, journal). See [docs/show-playbook.md](docs/show-playbook.md). |
+| `/sun-show` | The sun show: black-sun `sun-1` + `controller=black-sun`, plays the `sun-set` setlist. Holds the sun's knob map, K5 act values, companion, panic forks (`sun/7`) and its own failures (the latched `__blackSunState` NaN). |
+| `/clit-show` | The clit-set show: `clit-set/2` + `controller=clit-set`, the coaster (`coaster=1`), the `clit-set` setlist. Holds the Twister knob map, coaster controls, panic forks, input notes, the pilot and the 2026-11-22 lessons. |
 | `/partner` | Aaron's VJ partner while he plays the dials: its own background lane, one step per event, PROPOSES changes he takes or dismisses (KEEP on the pad or board), applies only health fixes, never while his hands are on. The art critic runs between tracks. Was `/vibej2`. |
 | `/keep` | KEEP lives in the page (vjpad, MIDI, `k`, the board); `/keep process` turns kept moments into numbered forks and named presets with docs. Was `/fork` + `/preset`. |
 | `/jam` | Alias: use `/show lite`. |
@@ -978,15 +986,16 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 | `/show-repo` | One show, one repo: strip to one shader + controller (shared git history), build, verify headless, then publish to `<show>.beadfamous.com` on Aaron's go-ahead. Its front page is `show.html`: canvas only, MIDI, `?room=` remote jamming, snapshots. See [docs/show-repos.md](docs/show-repos.md). |
 | `/verify-paper-cranes` | Prove a change in the real app: launch an instance on a free port (never 6969/6977/6978/6991), doctor it, drive a mapped feature with Playwright, keep screenshots, pixel stats, logs and a headful video in `~/paper-cranes-proof/`, then clean up. Feature map in `.agents/skills/verify-paper-cranes/features/`. |
 
-Retired 2026-11-24 (board [live-show-skills](https://draw.hypnodroid.com/b/live-show-skills), Aaron: "Yes to all"): `/vibej`, `/vj`, `/live-session` (deleted), `/vibej2` (now `/partner`), `/fork` and `/preset` (now `/keep`), `/sun-set` (now the setlist `setlists/sun-set.json`, played by `/show setlist sun-set`), `/remap` (now the "Forget all mappings" button on `/midi.html`).
+Retired 2026-11-24 (board [live-show-skills](https://draw.hypnodroid.com/b/live-show-skills), Aaron: "Yes to all"): `/vibej`, `/vj`, `/live-session` (deleted), `/vibej2` (now `/partner`), `/fork` and `/preset` (now `/keep`), `/sun-set` (now the setlist `setlists/sun-set.json`, played by `/show setlist sun-set`; `/sun-show` plays it), `/remap` (now the "Forget all mappings" button on `/midi.html`).
 
 Edit `.agents/skills/`; `.claude/skills/` is generated for Claude Code by `node scripts/sync-claude-skills.js`; a test fails on drift; don't edit `.claude/skills/` by hand.
 
 ## Live Sessions: the Parent Stays Responsive
 
 **Show day:** run `/show`. It does the preflight, launch, board, watchers and hand-off to the
-`/partner` lane. Follow [docs/show-playbook.md](docs/show-playbook.md) for the runbook, knob map,
-story, fork library and failure fixes.
+`/partner` lane. Follow [docs/show-playbook.md](docs/show-playbook.md) for the general runbook and
+failure fixes, and the show's own skill (`/sun-show`, `/clit-show`) for its knob map, story and
+panic forks.
 
 **The show's phone surface is a [draw](https://draw.hypnodroid.com) board** (`show-<date>`): the
 wall's status, the preflight, `/partner`'s proposal cards, kept moments, and big PANIC / KEEP /

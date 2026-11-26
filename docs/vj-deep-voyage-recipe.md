@@ -5,7 +5,7 @@ hours" (11-22 19:31, about the [2026-11-22 clit coaster show](../journals/2026-1
 Written for a Claude starting a set cold. Every rule here was either earned that night or broken that
 night; the journal has the evidence.
 
-Read with: [show-quickstart.md](show-quickstart.md) (links, knob map, pilot),
+Read with: the [`/clit-show` skill](../.agents/skills/clit-show/SKILL.md) (links, knob map, pilot),
 [vj-preferences.md](vj-preferences.md) (his taste),
 [advanced-shader-techniques.md](advanced-shader-techniques.md) (signal conditioning),
 [live-session-architecture.md](live-session-architecture.md) (who does what).
