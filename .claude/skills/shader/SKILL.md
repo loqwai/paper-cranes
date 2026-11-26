@@ -36,8 +36,8 @@ He has almost always discussed the shader before. Before writing code:
 
 1. **Write the intent in one sentence**: what the picture is, and what the music does to it. A place
    to explore beats a picture to look at (taste.md, "Form").
-2. **Make the files.** `shaders/claude/wip/<name>/1.frag` plus one doc, `<name>.md`, in the same
-   folder. A fork is the next number (`2.frag`), never an edit in place: the parent stays as the
+2. **Make the files.** `shaders/wip/<series>/1.frag` plus one doc, `<series>.md`, in the same
+   folder. No author folder: not `claude/wip`, not `wip/claude`. A fork is the next number (`2.frag`), never an edit in place: the parent stays as the
    fallback. Line 1 is `#version 300 es` if you use one, then metadata (`// @fullscreen: true`,
    `// @mobile: true`, `// @tags: ...`); a ShaderToy-style `mainImage` needs no `#version`. Put a
    `// preset: <url>` line with the params it needs (`controller=`, `wavelet=true`).
@@ -54,10 +54,10 @@ He has almost always discussed the shader before. Before writing code:
    ALL-CAPS name (`vite-plugins/shader-plugin.js`). Knob 0 must look good; no knob value may break the
    look. Pick numbers that don't collide with the series you forked.
 7. **Pass the gate** (below). Fix every FAIL; fix or explain every WARN.
-8. **Document and commit.** In `<name>.md`: intent, the audio map and why, the knob map, and per
+8. **Document and commit.** In `<series>.md`: intent, the audio map and why, the knob map, and per
    iteration what changed and the numbers. Commit, run `npm run shader-dates`, commit
    `shader-dates.json`, push, and give the preview link
-   `https://<branch>.paper-cranes-visuals.pages.dev/?shader=claude/wip/<name>/1&<preset params>`.
+   `https://<branch>.paper-cranes-visuals.pages.dev/?shader=wip/<series>/1&<preset params>`.
 
 ## Taste rules (hard)
 
@@ -155,8 +155,8 @@ value>` (clit-vibej/2 does this for every input).
 Run the gate through `/verify-paper-cranes`: it starts the app and holds the base URL the scripts
 below use. Commands, thresholds and what each WARN means are in [references/verify.md](references/verify.md).
 
-1. `node scripts/validate-shader.js shaders/claude/wip/<name>/1.frag`: no errors.
-2. `node .agents/skills/shader/bin/shader-check.mjs --shader claude/wip/<name>/1 [--controller X] [--params wavelet=true]`:
+1. `node scripts/validate-shader.js shaders/wip/<series>/1.frag`: no errors.
+2. `node .agents/skills/shader/bin/shader-check.mjs --shader wip/<series>/1 [--controller X] [--params wavelet=true]`:
    no FAIL. Open every PNG it names in a WARN, and look at `silence-*`, `loud` and `kick` either way.
 3. `scripts/sparkle-score.mjs` with `--trace synth`: report `flipMean` and `motion`, look at
    `heat.png`, and with `--bench 20` compare `msPerFrame` with the reference shaders in verify.md.
@@ -167,7 +167,7 @@ below use. Commands, thresholds and what each WARN means are in [references/veri
 
 ## Example
 
-`shaders/claude/wip/silk-vortex/1.frag` and `silk-vortex.md` were written from this skill alone as
+`shaders/wip/silk-vortex/1.frag` and `silk-vortex.md` were written from this skill alone as
 its worked example: a log-polar vortex on one-way clocks, a presence-gated conditioning block, the
 `#define` swap on every audio term, the OKLCH kit with one encode, and a soft knee. The doc lists each
 gate run and what it changed.

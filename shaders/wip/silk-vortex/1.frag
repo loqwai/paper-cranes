@@ -1,7 +1,7 @@
 // @fullscreen: true
 // @mobile: true
 // @tags: silk, vortex, tunnel, oklch, ember, teal
-// preset: https://visuals.beadfamous.com/?shader=claude/wip/silk-vortex/1
+// preset: https://visuals.beadfamous.com/?shader=wip/silk-vortex/1
 //
 // SILK VORTEX/1. The worked example of the `shader` skill (.agents/skills/shader), written from the
 // skill alone. Ember silk ribbons line a slow vortex that you drift down forever. Shader only, no

@@ -3,7 +3,7 @@
 The worked example of the `shader` skill (`.agents/skills/shader/SKILL.md`). It was written from
 the skill alone, then put through the skill's gate until every check passed. No controller.
 
-Preview: https://skill-shader.paper-cranes-visuals.pages.dev/?shader=claude/wip/silk-vortex/1
+Preview: https://skill-shader.paper-cranes-visuals.pages.dev/?shader=wip/silk-vortex/1
 
 ## Intent
 

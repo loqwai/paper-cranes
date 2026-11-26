@@ -2,7 +2,7 @@
 // shader-check: the numbers the shader skill's gate asks for, in one run.
 // Needs a running instance (verify-paper-cranes: `pc-verify launch`) or --base <url>.
 //
-//   node .claude/skills/shader/bin/shader-check.mjs --shader claude/wip/<name>/1
+//   node .claude/skills/shader/bin/shader-check.mjs --shader wip/<series>/1
 //        [--controller <name>]...   repeatable, same as ?controller=
 //        [--params "wavelet=true&knob_3=0.4"]   extra query params for every scenario
 //        [--knobs 1,2,5]            knobs to push to 1 one at a time (default: every knob_N the .frag reads)

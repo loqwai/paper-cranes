@@ -5,7 +5,7 @@ and the commands you ran. A claim with no count, ratio or file in it is not veri
 
 ```bash
 B=.agents/skills/verify-paper-cranes/bin/pc-verify.mjs
-S=claude/wip/<name>/1
+S=wip/<series>/1
 node scripts/validate-shader.js shaders/$S.frag          # compiles through the real wrapper
 node $B launch                                           # the app, per /verify-paper-cranes
 node .agents/skills/shader/bin/shader-check.mjs --shader $S [--controller X] [--params "wavelet=true"]
@@ -121,5 +121,5 @@ feature a fader gesture tracked. A dial he rides like a fader is a mapping to wi
 - `npm test`: the unit suite, plus every shader outside `wip/` compiling.
 - `node $B cleanup`: restores `shader-dates.json` if the dev server rewrote it and removes
   `public/test-audio/verify-*`.
-- Write the numbers into `<name>.md` under the iteration that produced them, and into the PR body
+- Write the numbers into `<series>.md` under the iteration that produced them, and into the PR body
   with the preview link.
