@@ -69,7 +69,7 @@ lot.
 - **`iTime` wraps at 1000 s** (`index.js`: `% 1000`). Any `iTime`-driven motion jumps every 16.7
   minutes unless its period divides 1000 s (200 s, 250 s, 500 s). Use `fract(iTime / 200.0)` style
   clocks or a controller clock.
-- **`?time=T` holds only the `time` uniform.** `iTime` keeps running (measured 2026-11-26: two
+- **`?time=T` holds only the `time` uniform.** `iTime` keeps running (measured 2026-11-25: two
   screenshots of plasma 1 s apart at `?time=5` differ, and match with `&iTime=5` added). For a still,
   pass both.
 - **Shader-only motion:** constant-rate clocks from `iTime`, with audio on amplitude, thickness,

@@ -207,7 +207,7 @@ if (args.length === 0) {
   console.log(`Usage: node scripts/validate-shader.js <shader-path>
 
 Examples:
-  node scripts/validate-shader.js shaders/wip/claude/my-shader.frag
+  node scripts/validate-shader.js shaders/wip/my-shader/1.frag
   node scripts/validate-shader.js shaders/plasma.frag
 
 Options:

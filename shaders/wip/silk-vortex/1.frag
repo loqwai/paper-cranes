@@ -64,7 +64,9 @@
 #define BUILD clamp(energySlope * energyRSquared * 40.0 * PRESENCE, 0.0, 1.0) // confident build: rim reach
 // #define BUILD 0.0
 #define WARMTH spectralCentroidMedian                                    // slow: base hue warmth
+// #define WARMTH 0.5
 #define KEY pitchClassMedian                                             // slow: base hue key
+// #define KEY 0.25
 
 // ============================================================================
 // OKLCH KIT (docs/oklch-palettes.md): hue in turns, display sRGB out, gamut-fit

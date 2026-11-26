@@ -154,7 +154,7 @@ them (pin a specific look for presets/NFC tags). `wooli/chromadepth-*` use `seed
 - **Test touch/knob controllers** by driving real pointer/touch events (`page.mouse` / touch) and
   reading back `window.cranes.manualFeatures` / `window.cranes.controllerFeatures`.
 - **Deterministic stills:** `?time=<seconds>&iTime=<seconds>` holds both clock uniforms (pair with
-  `?noaudio=true`). `time=` alone holds only `time`; `iTime` keeps running (measured 2026-11-26).
+  `?noaudio=true`). `time=` alone holds only `time`; `iTime` keeps running (measured 2026-11-25).
   Controller phases still advance in real time either way. `.agents/skills/shader/bin/shader-check.mjs`
   steps a virtual clock instead, which freezes controllers too.
 - **Measure flicker, don't eyeball it:** `node scripts/sparkle-score.mjs` renders a deterministic frame

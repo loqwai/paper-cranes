@@ -76,9 +76,9 @@ Switching to another shader that exists:
 Editing a shader safely (the code is always compiled on a display before anything changes):
 
 1. Read the current source: `read_shader {shader: "clit-set/2"}` returns `{code, hash, knobs}`.
-2. Edit it, ideally as a new numbered iteration (`claude/wip/<name>/2`) rather than over a show
-   shader.
-3. `write_shader {shader: "claude/wip/<name>/2", code: "<full GLSL>"}`. `validate` defaults to
+2. Edit it, ideally as a new numbered iteration (`wip/<series>/N`, no author folder) rather than
+   over a show shader.
+3. `write_shader {shader: "wip/<series>/N", code: "<full GLSL>"}`. `validate` defaults to
    true: the code compiles on a connected display first, and a compile error refuses the write and
    returns the error log, leaving the screen and the file untouched.
 4. Dev server: the file is written to `shaders/<name>.frag`, every display showing that shader

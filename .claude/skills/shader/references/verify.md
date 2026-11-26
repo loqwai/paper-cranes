@@ -21,27 +21,32 @@ scenarios differ only in their input. It writes a PNG per scenario and `summary.
 
 | Check | Rule it encodes | Threshold |
 |---|---|---|
-| `silence@T look` | resting picture at 3 s, 37 s, 400 s, no audio, knobs 0 | FAIL if `lit` < 0.2 or `lum` < 0.03 |
+| `silence@T look` | resting picture at 3 s, 37 s, 400 s, no audio, knobs 0 | FAIL if `lit` < 0.2 or `lum` < 0.03 (black), `clip` >= 0.5 (white) or fewer than 50 colours (flat) |
 | `knob_N=1 look`, `all knobs=1 look` | no knob value breaks the look | same look checks |
-| `clip` | white-out | WARN > 0.03 |
+| `clip` | white-out | WARN > 0.03, FAIL >= 0.5 |
 | `grey` | "It's gray" | WARN > 0.15 (share of pixels with OKLab C < 0.03, 0.3 < L < 0.8) |
 | `hotPink` | no hot magenta | WARN > 0.15 of vivid pixels with OKLab hue 300°-15° |
 | `hueConc` | "multiple colors, not just one shade" | WARN > 0.85 |
 | `dark` | a dark floor (not washed out) | WARN < 0.03 (share with Rec.709 L < 0.08) |
-| `colours` | banding or a flat fill | WARN < 300 distinct 15-bit colours |
+| `colours` | banding or a flat fill | WARN < 300 distinct 15-bit colours, FAIL < 50 |
 | audio moves the picture | his freeze-time test: clock held, only audio differs | WARN if quiet to loud diff < 2 (mean abs, 0-255) |
 | a kick shows | the hit is visible on its frame | WARN if loud to kick diff < 1 |
-| no brightness pump | "global brightness shift" | WARN if loud/quiet mean luminance > 1.30 |
-| quiet not brighter than loud | "very bright when it is quiet" | WARN if quiet > loud × 1.1 |
+| no brightness pump | "global brightness shift" | WARN if loud/quiet mean luminance > 1.30, FAIL > 2 |
+| quiet not brighter than loud | "very bright when it is quiet" | WARN if quiet > loud × 1.1, FAIL > × 1.5 |
 | kick is local | no strobe on the beat | WARN if kick/loud luminance > 1.25 |
-| alive in silence | "almost still except for time" | WARN if 1 s of frames differ by < 0.5 |
+| alive in silence | "almost still except for time" | WARN if 1 s of frames differ by < 0.5, FAIL < 0.05 |
 
-Calibration (2026-11-26, 390x844, SwiftShader):
+Calibration (2026-11-25, 390x844, SwiftShader):
 
 | Shader | Result |
 |---|---|
 | `claude/wip/clit-vibej/2` + `controller=clit-set&wavelet=true` (the 11-22 show) | every check PASS. silence lum 0.265, grey 0.024, hotPink 0.001; quiet to loud diff 47.7; loud/quiet lum 1.05; kick/loud 1.21; silent motion 32.1 |
 | `plasma` (2014 Ether port, before these rules) | WARN on every still: hotPink 0.34-0.84, clip 0.05-0.08, hueConc up to 0.93 |
+
+The script exits 1 on any FAIL. FAILs mean broken, and the references clear them widely (min 728
+colours, max clip 0.08, loud/quiet at most 1.23, silent motion at least 6.6). `npm run test:shader-check`
+proves each FAIL fires: it serves four broken copies of silk-vortex/1 with `--frag` (white when loud,
+frozen in silence, brighter when quiet, black) and expects a non-zero exit from each.
 
 What it does not catch:
 
@@ -53,7 +58,7 @@ What it does not catch:
   shifts as complexity grows. A long run with `?vj=1` and the aesthetic meter catches these
   (`window.__vjMeter.summary(60)`: `flicker` under ~0.7, `hueDriftPerMin` under ~0.03).
 - **Controller clocks past a few seconds.** Each scenario jumps the clock once, and controllers clamp
-  dt (0.25 s), so their clocks only reach a few seconds.
+  dt (wavelet-ease at 0.05 s, clit-set at 0.25 s), so their clocks only reach a few seconds.
 - **ChromaDepth**: `hotPink` and `hueConc` are tuned for OKLCH palettes; a red-heavy depth map can
   trip them. Look at the PNG.
 
@@ -79,7 +84,7 @@ against a shader known to hold up on his phone:
 node scripts/sparkle-score.mjs --shader $S --base $URL --trace synth --frames 10 --warmup 10 --bench 20 --out <dir>
 ```
 
-Measured 2026-11-26 at 408x816 (`msPerFrame`): plasma 19.6, silk-vortex/1 51.0, clit-vibej/2 with
+Measured 2026-11-25 at 408x816 (`msPerFrame`): plasma 19.6, silk-vortex/1 51.0, clit-vibej/2 with
 `controller=clit-set&wavelet=true` 194.9 (it ran the 11-22 show on a phone). Well above clit-vibej/2
 means cut iterations or noise octaves before you ship. `pc-verify render --video` FAILs "render loop
 ran during sweep" below 60 frames in 8 s at 1280x800: on SwiftShader that is a cost signal (plasma
@@ -97,7 +102,7 @@ node $B open "/?shader=$S&audio_file=/test-audio/verify-beat.mp3" --browser fire
   --name real-audio --eval "(() => { const f = window.cranes.measuredAudioFeatures; return { keys: Object.keys(f).length, energy: f.energy, onsetKick: f.onsetKick } })()"
 ```
 
-Measured 2026-11-26 on clit-vibej/2: 193 feature keys, energy 0.018, onsetKick 0.34. A key count of
+Measured 2026-11-25 on clit-vibej/2: 193 feature keys, energy 0.018, onsetKick 0.34. A key count of
 0 means the audio path never started; then nothing about audio is proven.
 
 ## Motion on video

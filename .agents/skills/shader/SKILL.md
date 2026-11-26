@@ -1,6 +1,6 @@
 ---
 name: shader
-description: Make, design, fork or fix a Paper Cranes shader so it is good enough for Aaron's wall. Use for "make a shader", "design a visual", "new visualization", "fork / iterate this shader", "make a chromadepth version", "map audio (or knobs) into this shader", and for complaints about a shader such as "it's twitchy", "shivery", "samey", "washed out", "grey", "flickers", "sparkles", "too flashy", "banding", "dead in the quiet parts", "it isn't moving". Covers file layout, his taste rules, signal conditioning, a failure-to-fix table, mobile limits, when a controller is justified, and a measured verification gate. Not for running a show (/show), live partnering (/partner), saving kept moments (/keep), knob/audio toggling (/solo) or recording (/record).
+description: Make, design, fork or fix a Paper Cranes shader so it is good enough for Aaron's wall. Use for "make a shader", "design a visual", "new visualization", "iterate on this shader", "fork this shader" to change its look by hand, "make a chromadepth version", "map audio (or knobs) into this shader", and for complaints about a shader such as "it's twitchy", "shivery", "samey", "washed out", "grey", "flickers", "sparkles", "too flashy", "banding", "dead in the quiet parts", "it isn't moving". Covers file layout, his taste rules, signal conditioning, a failure-to-fix table, mobile limits, when a controller is justified, and a measured verification gate. Not for running a show (/show), live partnering (/partner), saving a kept moment or turning it into a fork or preset (/keep: "keep this", "fork it" after a KEEP), knob/audio toggling (/solo) or recording (/record).
 ---
 
 # Shader
@@ -157,7 +157,9 @@ below use. Commands, thresholds and what each WARN means are in [references/veri
 
 1. `node scripts/validate-shader.js shaders/wip/<series>/1.frag`: no errors.
 2. `node .agents/skills/shader/bin/shader-check.mjs --shader wip/<series>/1 [--controller X] [--params wavelet=true]`:
-   no FAIL. Open every PNG it names in a WARN, and look at `silence-*`, `loud` and `kick` either way.
+   it exits 1 on any FAIL: a black, white or flat frame, loud more than 2x brighter than quiet,
+   quiet more than 1.5x brighter than loud, or a frozen picture in silence. Exit 0 is the floor, not
+   the verdict: open every PNG it names in a WARN, and look at `silence-*`, `loud` and `kick` either way.
 3. `scripts/sparkle-score.mjs` with `--trace synth`: report `flipMean` and `motion`, look at
    `heat.png`, and with `--bench 20` compare `msPerFrame` with the reference shaders in verify.md.
 4. Real audio in Firefox (`audio_file=`), and a headful video of the sweep (`pc-verify render --video`):

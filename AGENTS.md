@@ -366,7 +366,7 @@ uniform float another;   // = 1.2
 - `wavelet=true` - Enable opt-in wavelet (DWT) analysis alongside FFT. Adds `wavelet*` uniforms (octave bands, centroid/spread, bassHit trigger, FFT×wavelet combos). See [docs/wavelet-analysis.md](docs/wavelet-analysis.md)
 - `audio_device=<label substring>` - Open the mic input whose label contains this (e.g. `USB Audio CODEC`); no match means no audio, never a different device. Omitted → the OS default input
 - `audio_time=<seconds>` - Start audio file playback at this offset (default: 0)
-- `time=<seconds>` - Hold the `time` uniform constant (useful for deterministic screenshots/testing). It does not hold `iTime`: add `iTime=<seconds>` too, or a shader that reads `iTime` keeps moving (measured 2026-11-26)
+- `time=<seconds>` - Hold the `time` uniform constant (useful for deterministic screenshots/testing). It does not hold `iTime`: add `iTime=<seconds>` too, or a shader that reads `iTime` keeps moving (measured 2026-11-25)
 - `vj=1` - Install the VJ runtime on the display: cursor-hide, GL validator, aesthetic meter, frame-time probe, and health signals (POSTed to `/__vj-signal` on the dev server; on a `?remote=display&room=` page, production included, also sent down the room socket to the relay MCP's `wait_for_event`). This is how the auto-VJ loop sees a page it cannot screenshot. See [docs/vj-telemetry.md](docs/vj-telemetry.md)
 - `hands_ms=<ms>` - The live show's HANDS lock: how long after Aaron's last dial/pad/MIDI move agent writes stay held (default 8000). See [docs/live-show-contract.md](docs/live-show-contract.md)
 - `release_ms=<ms>` - How long a dial must be still before the `release` signal (default 50)
@@ -641,7 +641,7 @@ Docs under `docs/` are general: no single machine, branch, date or show. Each sh
 
 ### Where to Put Your Shaders
 
-New shaders go under `shaders/wip/<series>/`, with no author folder (Aaron, 2026-11-26: "don't put it in wip/claude or claude/wip or whatever - just wip/<series>/"). Iterations are numbered files. Each series gets a single markdown doc named `<series>.md` in the same directory. Existing shaders keep their paths; old paths keep working.
+New shaders go under `shaders/wip/<series>/`, with no author folder (Aaron, 2026-11-25: "don't put it in wip/claude or claude/wip or whatever - just wip/<series>/"). Iterations are numbered files. Each series gets a single markdown doc named `<series>.md` in the same directory. Existing shaders keep their paths; old paths keep working.
 
 ```
 shaders/wip/cosmic-bloom/

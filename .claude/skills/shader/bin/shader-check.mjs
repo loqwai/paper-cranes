@@ -5,10 +5,12 @@
 //   node .claude/skills/shader/bin/shader-check.mjs --shader wip/<series>/1
 //        [--controller <name>]...   repeatable, same as ?controller=
 //        [--params "wavelet=true&knob_3=0.4"]   extra query params for every scenario
-//        [--knobs 1,2,5]            knobs to push to 1 one at a time (default: every knob_N the .frag reads)
+//        [--knobs 1,2,5|none]       knobs to push to 1 one at a time (default: every knob_N the .frag reads)
 //        [--times 3,37,400]         clock values (seconds) for the silence stills
 //        [--viewport 390x844]       canvas size; default a phone
 //        [--base URL]               default: the pc-verify instance
+//        [--frag FILE]              serve this file as the shader instead of shaders/<shader>.frag
+//                                   (nothing is written under shaders/; the tests use it)
 //
 // The page runs on a virtual clock (the same trick as scripts/sparkle-score.mjs): every scenario is a
 // fresh load that steps the same frames with the same dt, so two scenarios differ ONLY in the input
@@ -40,10 +42,11 @@ const base = baseUrl(opt('base'))
 const [vw, vh] = opt('viewport', '390x844').split('x').map(Number)
 const times = opt('times', '3,37,400').split(',').map(Number)
 const HOLD = times[Math.min(1, times.length - 1)]
-const src = readFileSync(join(REPO, 'shaders', `${shader}.frag`), 'utf8')
+const fragFile = opt('frag')
+const src = readFileSync(fragFile ?? join(REPO, 'shaders', `${shader}.frag`), 'utf8')
 // Knobs the shader reads, ignoring commented-out lines (the #define swap pattern leaves those around)
 const live = src.split('\n').map((l) => l.replace(/\/\/.*$/, '')).join('\n')
-const knobs = opt('knobs') ? opt('knobs').split(',').filter(Boolean).map(Number)
+const knobs = opt('knobs') === 'none' ? [] : opt('knobs') ? opt('knobs').split(',').filter(Boolean).map(Number)
   : [...new Set([...live.matchAll(/\bknob_(\d+)\b/g)].map((m) => Number(m[1])))].sort((a, b) => a - b)
 
 // Phone-mic levels: energy sits at 0.01-0.07 on a phone at a club (journals/2026-11-22-clit-coaster-show.md).
@@ -170,6 +173,11 @@ const run = async (name, { params = {}, clock = HOLD, features = {}, frames = 90
   for (const c of all('controller')) q.append('controller', c)
   for (const [k, v] of new URLSearchParams(opt('params', ''))) q.set(k, v)
   for (const [k, v] of Object.entries(params)) q.set(k, String(v))
+  if (fragFile) {
+    // A shader that is not in shaders/ has no built PWA manifest either; index.html parses it as JSON.
+    await page.route(`**/shaders/${shader}.frag*`, (route) => route.fulfill({ status: 200, contentType: 'text/plain', body: src }))
+    await page.route(`**/manifests/${shader.replace(/\//g, '--')}.json*`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{"name":"shader-check","icons":[]}' }))
+  }
   await page.goto(`${base}/?${q}`, { waitUntil: 'load' })
   for (let i = 0; i < 400; i++) {
     await page.evaluate(() => window.__step(1))
@@ -178,8 +186,8 @@ const run = async (name, { params = {}, clock = HOLD, features = {}, frames = 90
     if (st.ok) break
     await page.waitForTimeout(50)
   }
-  // One jump to the clock value. iTime lands on it; controllers clamp dt (0.25 s in wavelet-ease and
-  // clit-set), so their own clocks only move a little, the same in every scenario.
+  // One jump to the clock value. iTime lands on it; controllers clamp dt (0.05 s in wavelet-ease,
+  // 0.25 s in clit-set), so their own clocks only move a little, the same in every scenario.
   const target = clock * 1000 - frames * DT
   if (target > 0) await page.evaluate((ms) => window.__step(ms), target)
   for (let i = 0; i < frames; i++) await page.evaluate(([ms, f]) => window.__step(ms, f), [DT, i === frames - 1 && last ? last : features])
@@ -202,9 +210,13 @@ const run = async (name, { params = {}, clock = HOLD, features = {}, frames = 90
   return { rgb, later, s: stats[name], grabMs, size: [g.w, g.h] }
 }
 
-// The look, judged on every frame. Thresholds come from references/taste.md.
+// The look, judged on every frame. Thresholds come from references/taste.md. FAIL is a broken
+// shader (calibrated so plasma, clit-vibej/2 and silk-vortex/1 clear it by a wide margin); WARN
+// means open the PNG.
 const judge = (name, s) => {
   if (s.lit < 0.2 || s.lum < 0.03) return check('FAIL', `${name} black`, `lit ${s.lit}, lum ${s.lum} ("Looks black to me")`)
+  if (s.clip >= 0.5) return check('FAIL', `${name} white-out`, `clip ${s.clip} >= 0.5 (references max 0.08)`)
+  if (s.colours < 50) return check('FAIL', `${name} flat fill`, `${s.colours} colours < 50 (references min 728)`)
   const bad = []
   if (s.clip > 0.03) bad.push(`clip ${s.clip} > 0.03 (white-out)`)
   if (s.grey > 0.15) bad.push(`grey ${s.grey} > 0.15 ("It's gray")`)
@@ -229,15 +241,15 @@ try {
   check(dQL >= 2 ? 'PASS' : 'WARN', 'audio moves the picture', `quiet->loud diff ${dQL} (want >= 2; "It is not moving"); silence->quiet ${dSQ}`)
   check(dLK >= 1 ? 'PASS' : 'WARN', 'a kick shows on its frame', `loud->kick diff ${dLK} (want >= 1)`)
   const pump = loud.s.lum / Math.max(quiet.s.lum, 1e-3)
-  check(pump <= 1.3 ? 'PASS' : 'WARN', 'no whole-frame brightness pump', `lum loud/quiet ${pump.toFixed(2)} (want <= 1.30; "global brightness shift")`)
-  check(quiet.s.lum <= loud.s.lum * 1.1 ? 'PASS' : 'WARN', 'quiet is not brighter than loud', `lum quiet ${quiet.s.lum} vs loud ${loud.s.lum} ("very bright when it is quiet")`)
+  check(pump > 2 ? 'FAIL' : pump <= 1.3 ? 'PASS' : 'WARN', 'no whole-frame brightness pump', `lum loud/quiet ${pump.toFixed(2)} (want <= 1.30, FAIL > 2; "global brightness shift")`)
+  check(quiet.s.lum > loud.s.lum * 1.5 ? 'FAIL' : quiet.s.lum <= loud.s.lum * 1.1 ? 'PASS' : 'WARN', 'quiet is not brighter than loud', `lum quiet ${quiet.s.lum} vs loud ${loud.s.lum} (WARN > loud x 1.1, FAIL > x 1.5; "very bright when it is quiet")`)
   const kickPump = kick.s.lum / Math.max(loud.s.lum, 1e-3)
   check(kickPump <= 1.25 ? 'PASS' : 'WARN', 'the kick is local, not a strobe', `lum kick/loud ${kickPump.toFixed(2)} (want <= 1.25)`)
 
   const mSil = await run('motion-silent', { also: 60 })
   const mLoud = await run('motion-loud', { features: LOUD, also: 60 })
   const ds = diff(mSil.rgb, mSil.later), dl = diff(mLoud.rgb, mLoud.later)
-  check(ds >= 0.5 ? 'PASS' : 'WARN', 'alive in silence', `1 s frame diff ${ds} (want >= 0.5; "almost still except for time")`)
+  check(ds < 0.05 ? 'FAIL' : ds >= 0.5 ? 'PASS' : 'WARN', 'alive in silence', `1 s frame diff ${ds} (want >= 0.5, FAIL < 0.05; "almost still except for time")`)
   check('INFO', 'motion over 1 s', `loud ${dl} vs silent ${ds}; canvas ${mSil.size.join('x')}`)
 } catch (e) {
   check('FAIL', 'run', e.message)
