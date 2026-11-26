@@ -16,7 +16,7 @@
 // KNOBS (all 0 = home)
 //   K1 FLOW     travel speed, 1x .. 3x (a constant rate, never audio)
 //   K2 DENSITY  ribbon count around the vortex
-//   K3 HUE      ember -> gold -> sea-green base hue (stays out of the magenta arc)
+//   K3 HUE      amber -> gold -> lime base hue; the teal half follows (stays out of the magenta arc)
 //   K4 REACT    audio light gain, 1x .. 2.5x
 
 #define PI 3.14159265359
@@ -144,26 +144,35 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float rim = clamp((h - hd) * 6.0, 0.0, 1.0);
 
     // Ribbons: bands of the height field. Bass thickens them (light/coverage, not position)
-    float thick = 0.10 + 0.06 * BODY * REACT;
-    float band = 1.0 - smoothstep(thick, thick + 0.05, abs(fract(h * 3.0) - 0.5));
+    float thick = 0.10 + 0.12 * BODY * REACT;
+    float hb = h * 3.0;
+    float band = 1.0 - smoothstep(thick, thick + 0.05, abs(fract(hb) - 0.5));
     float crest = smoothstep(0.62, 0.8, h);
+    // Two halves of the scheme as two spiral arms down the vortex (periodic in depth and angle, so
+    // no seam): ember/gold on one arm, teal on the other, blending through gold-green, never magenta.
+    float odd = smoothstep(-0.35, 0.35, sin(TAU * (2.0 * q.y / per.y + q.x / per.x)));
 
-    // Slow colour: one base hue from medians and the knob, ember..gold..sea-green, never magenta
-    float baseH = 0.04 + 0.08 * clamp(WARMTH, 0.0, 1.0) + 0.03 * fract(KEY + seed * 0.5) + HUE_KNOB;
-    vec3 silkLab = palAnalogousLab(h, baseH, 0.12);
-    silkLab.yz *= 0.85 + 0.45 * CHROMA_LIFT * REACT;                           // mids lift chroma
-    vec3 rimLab = lchT(0.86, 0.10, baseH + 0.48);                              // teal-blue rim, the complement
-    vec3 voidLab = lchT(0.13, 0.05, 0.72);                                      // deep indigo void
+    // Slow colour. OKLab hue in turns: red 0.08, amber 0.15, gold 0.25, green 0.40, teal 0.55,
+    // blue 0.70, violet 0.80, magenta 0.90. Base stays in ember..gold; accents stay off 0.83..0.04.
+    float baseH = 0.11 + 0.06 * clamp(WARMTH, 0.0, 1.0) + 0.03 * fract(KEY + seed * 0.5) + HUE_KNOB;
+    float drift = 0.05 * sin(TAU * q.x / per.x);                                 // hue varies with depth, periodic
+    float ribbonH = mix(baseH + drift, baseH + 0.42 + drift * 0.5, odd);         // ember/gold ribbons, teal ribbons
+    vec3 silkLab = palAnalogousLab(h, ribbonH, 0.10);
+    silkLab.x *= 0.62 + 0.38 * h;                                                // shade in OKLab L, not by an RGB multiply
+    silkLab.yz *= 1.05 + 0.5 * CHROMA_LIFT * REACT;                              // mids lift chroma (okFit keeps it in gamut)
+    vec3 rimLab = lchT(0.88, 0.11, mix(baseH + 0.44, baseH + 0.02, odd));       // each ribbon's rim is the other half
+    float gas = fbm(q * 0.5 + 9.0, per * 0.5, 0.0);                             // faint violet veil in the void
+    vec3 voidLab = lchT(0.10 + 0.10 * gas * gas, 0.04 + 0.05 * gas, 0.68 + 0.08 * gas);
 
     // Composite in LINEAR light (okFit returns linear sRGB); encode once at the end
     float far = smoothstep(0.03, 0.30, r);                                      // dark far core hides the singularity
     float fog = smoothstep(0.0, 1.0, r * 0.9);                                  // ribbons fade toward the core
-    vec3 col = okFit(voidLab) * (0.6 + 0.4 * fog);
-    vec3 silkCol = okFit(silkLab) * (0.30 + 0.70 * h);
+    vec3 col = okFit(voidLab) * (0.5 + 0.5 * fog);
+    vec3 silkCol = okFit(silkLab);
     col = mix(col, silkCol, band * far * (0.55 + 0.45 * fog));
 
     // Rims: always lit a little; the kick flares them, a confident build lengthens their reach
-    float rimAmt = rim * band * far * (0.35 + (0.9 * KICK + 0.4 * BUILD) * REACT);
+    float rimAmt = rim * band * far * (0.45 + (0.8 * KICK + 0.5 * BUILD) * REACT);
     col += okFit(rimLab) * rimAmt * 0.6;
 
     // Sparks (snare) and pearls (crest) on ribbon crests, cell-sized so they never alias
@@ -173,7 +182,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float dot1 = smoothstep(0.22, 0.0, length(cf));
     float spark = dot1 * crest * band * step(1.0 - (0.08 + 0.5 * SNARE * REACT), rnd);
     float pearl = dot1 * crest * step(1.0 - 0.15 * PEARL, fract(rnd * 7.13));
-    col += okFit(lchT(0.9, 0.09, baseH + 0.02)) * (spark * 0.9 + pearl * 0.35) * far;
+    col += okFit(lchT(0.92, 0.08, baseH + 0.06)) * (spark * 0.9 + pearl * 0.35) * far;
 
     // Glints (hats): the rim brightens in a sparse set of cells
     float glint = HAT * REACT * rim * step(0.82, fract(rnd * 3.7)) * band;

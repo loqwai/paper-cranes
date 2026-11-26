@@ -99,6 +99,10 @@ people get wrong most:
 - The wrapper's `oklch2rgb(vec3)` takes hue in radians and returns LINEAR sRGB. Encode once for
   display, or use the kit's `oklch2rgb(L, C, h)` (turns, gamut-fit, display sRGB) from
   [docs/oklch-palettes.md](../../../docs/oklch-palettes.md). A double encode greys everything.
+- OKLab hue in turns is not HSL hue: red 0.08, amber 0.15, gold 0.25, green 0.40, teal 0.55, blue
+  0.70, violet 0.80, magenta 0.90. "Ember" at 0.04 already reads pink. Keep warm bases at 0.10 or more.
+- Split hues by geometry (a spiral arm, a depth band), not by an fbm value: fbm clusters near 0.5,
+  so a threshold on it paints nearly the whole frame one hue (silk-vortex iterations 2-3).
 
 ## Failure to fix (short)
 
@@ -164,8 +168,10 @@ Commands, numbers and what each WARN means: [references/verify.md](references/ve
 
 ## Example
 
-`shaders/claude/wip/<dry-run name>/1.frag` and its doc were written from this skill alone as its
-worked example; the doc lists the gate numbers.
+`shaders/claude/wip/silk-vortex/1.frag` and `silk-vortex.md` were written from this skill alone as
+its worked example: a log-polar vortex on one-way clocks, a presence-gated conditioning block, the
+`#define` swap on every audio term, the OKLCH kit with one encode, and a soft knee. The doc lists each
+gate run and what it changed.
 
 ## Sources
 

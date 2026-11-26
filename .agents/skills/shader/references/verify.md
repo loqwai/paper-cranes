@@ -65,6 +65,9 @@ What it does not catch:
 node scripts/sparkle-score.mjs --shader $S --base http://127.0.0.1:<port> --trace synth --frames 90 --out <dir>
 ```
 
+It has no `--help`: any run without `--base`, `--help` included, loads a page from 6969. Read its
+usage in the header comment of `scripts/sparkle-score.mjs` instead.
+
 Report `flipMean` (one-frame flips, 0-255) next to `motion` and `meanLuma`, and look at `heat.png`.
 A fix that only blurs or darkens also lowers `flipMean`; to judge a fix, use `--ss 4 --keep` for an
 aliasing-free reference, then `--ref` and `--before` ([docs/sparkle-score.md](../../../../docs/sparkle-score.md)).
