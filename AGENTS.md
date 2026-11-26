@@ -366,7 +366,7 @@ uniform float another;   // = 1.2
 - `wavelet=true` - Enable opt-in wavelet (DWT) analysis alongside FFT. Adds `wavelet*` uniforms (octave bands, centroid/spread, bassHit trigger, FFT×wavelet combos). See [docs/wavelet-analysis.md](docs/wavelet-analysis.md)
 - `audio_device=<label substring>` - Open the mic input whose label contains this (e.g. `USB Audio CODEC`); no match means no audio, never a different device. Omitted → the OS default input
 - `audio_time=<seconds>` - Start audio file playback at this offset (default: 0)
-- `time=<seconds>` - Hold time constant (useful for deterministic screenshots/testing)
+- `time=<seconds>` - Hold the `time` uniform constant (useful for deterministic screenshots/testing). It does not hold `iTime`: add `iTime=<seconds>` too, or a shader that reads `iTime` keeps moving (measured 2026-11-25)
 - `vj=1` - Install the VJ runtime on the display: cursor-hide, GL validator, aesthetic meter, frame-time probe, and health signals (POSTed to `/__vj-signal` on the dev server; on a `?remote=display&room=` page, production included, also sent down the room socket to the relay MCP's `wait_for_event`). This is how the auto-VJ loop sees a page it cannot screenshot. See [docs/vj-telemetry.md](docs/vj-telemetry.md)
 - `hands_ms=<ms>` - The live show's HANDS lock: how long after Aaron's last dial/pad/MIDI move agent writes stay held (default 8000). See [docs/live-show-contract.md](docs/live-show-contract.md)
 - `release_ms=<ms>` - How long a dial must be still before the `release` signal (default 50)
@@ -546,7 +546,7 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   ├── listStore.js            # list page's localStorage (cranes-list-*), shape-checked reads
 │   └── shader-transformers/     # Shader preprocessing
 ├── shaders/                     # GLSL visualization shaders
-│   ├── wip/claude/             # agent-created shaders go here
+│   ├── wip/<series>/           # new shaders go here: N.frag + <series>.md
 │   ├── plasma.frag
 │   └── melted-satin/2.frag
 ├── setlists/                    # /show setlist <name>: beats as hot-swaps (sun-set.json, clit-set.json)
@@ -642,28 +642,27 @@ Docs under `docs/` are general: no single machine, branch, date or show. Each sh
 
 ### Where to Put Your Shaders
 
-Shaders go under `shaders/<github-username>/wip/<shader-name>/`. Iterations are numbered files. Each shader in `wip/` gets a single markdown doc named `<shader-name>.md` in the same directory.
+New shaders go under `shaders/wip/<series>/`, with no author folder (Aaron, 2026-11-25: "don't put it in wip/claude or claude/wip or whatever - just wip/<series>/"). Iterations are numbered files. Each series gets a single markdown doc named `<series>.md` in the same directory. Existing shaders keep their paths; old paths keep working.
 
 ```
-shaders/claude/wip/cosmic-bloom/
+shaders/wip/cosmic-bloom/
 ├── 1.frag              # First iteration
 ├── 2.frag              # Second iteration
 └── cosmic-bloom.md     # Design intent, audio mapping, iteration notes
 ```
 
 ```bash
-shaders/claude/wip/cosmic-bloom/1.frag           # Good
-shaders/claude/wip/cosmic-bloom/cosmic-bloom.md   # Good — one doc per shader
-shaders/wip/claude/my-shader.frag                 # Old convention, still works
-shaders/my-shader.frag                             # Bad - don't put in root
+shaders/wip/cosmic-bloom/1.frag            # Good
+shaders/wip/cosmic-bloom/cosmic-bloom.md   # Good — one doc per series
+shaders/my-shader.frag                     # Bad - don't put in root
 ```
 
-**Document as you iterate.** The `<shader-name>.md` should include:
+**Document as you iterate.** The `<series>.md` should include:
 - Visual intent and design concept
 - Which audio features drive what and why
 - What changed between numbered iterations (e.g. "2.frag: switched from spectralFlux to spectralEntropy for the color shift — less jittery on sparse tracks")
 
-The `wip/` directory is filtered from the mobile list by default, so experimental shaders won't clutter the production list.
+Any path with a `wip` segment is filtered from the mobile list by default (`list.js`) and skipped by the production compile test (`scripts/production-shaders.test.js`), so experimental shaders won't clutter the production list.
 
 ### Shader Metadata System
 Add metadata comments at the top of shader files to control list page behavior:
@@ -897,7 +896,7 @@ Full guide: [docs/testing.md](docs/testing.md).
 
 Use the CLI to validate shader syntax before committing:
 ```bash
-node scripts/validate-shader.js shaders/wip/claude/my-shader.frag
+node scripts/validate-shader.js shaders/wip/my-shader/1.frag
 ```
 
 This will check for:
@@ -981,6 +980,7 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 | `/keep` | KEEP lives in the page (vjpad, MIDI, `k`, the board); `/keep process` turns kept moments into numbered forks and named presets with docs. Was `/fork` + `/preset`. |
 | `/jam` | Alias: use `/show lite`. |
 | `/record` | Record a music video from the shader canvas (MediaRecorder). Studio and post-show only: it drives Chrome through claude-in-chrome. |
+| `/shader` | Make, fork or fix a shader so it is good enough for the wall: file layout, Aaron's taste rules in his words, signal conditioning (channel hierarchy, presence gate, one-way clocks), failure-to-fix table, mobile limits, when a controller is justified, and a measured gate (`bin/shader-check.mjs`: silence, every knob at 1, phone-level audio at a held clock, brightness pump, motion). Worked example: `shaders/wip/silk-vortex/`. |
 | `/solo` | Toggle a shader between knob mode and audio mode. Auto-detects current mode and switches. Use `/solo knobs` or `/solo audio` to force a mode. Defaults to the modified `.frag` in the worktree. |
 | `/changelog` | Update docs/CHANGELOG.md and README with recent features. |
 | `/pr` | Create a PR, request review, and open in browser. |

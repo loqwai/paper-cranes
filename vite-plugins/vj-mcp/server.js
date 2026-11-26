@@ -234,7 +234,7 @@ export const createVjMcpServer = ({ hub, shaders, venue, onCall, displaySecret, 
       ? 'Write shaders/<shader>.frag (dev server only). First compiles the code on a connected display and refuses to write on a compile error; displays showing that shader hot-swap to it (HMR, no reload). Reports which displays picked it up.'
       : 'Put new GLSL on a live display. There is no disk here: the code is compiled on the display first (refused on a compile error), then applied in place on that display only, and NOT saved anywhere (the reply says persisted: false). A reload brings back the shader in the URL.',
     inputSchema: {
-      shader: z.string().describe(persists ? 'path under shaders/ without .frag; new paths are created' : 'a name for this code (path-like, e.g. "claude/wip/x/1"); used to pick the display showing it and in the reply'),
+      shader: z.string().describe(persists ? 'path under shaders/ without .frag; new paths are created' : 'a name for this code (path-like, e.g. "wip/x/1"); used to pick the display showing it and in the reply'),
       code: z.string().min(1).describe('full GLSL source'),
       display: displayArg.describe(persists ? 'display to compile on (default: the only one, or the one showing this shader)' : 'display to apply it to (default: the one showing this shader, else the only one)'),
       validate: z.boolean().optional().describe(persists ? 'compile on a display before writing (default true; false skips, e.g. with no display)' : 'always true here: unvalidated code never reaches a live display'),

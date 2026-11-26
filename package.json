@@ -20,7 +20,8 @@
     "delete:interactive": "node scripts/delete-shader.js --interactive",
     "pilot": "node scripts/show/pilot.js",
     "test:pilot": "node --test scripts/show/pilot-brain.node-test.js",
-    "test:setlists": "node --test setlists/*/*.node-test.mjs"
+    "test:setlists": "node --test setlists/*/*.node-test.mjs",
+    "test:shader-check": "node --test .agents/skills/shader/bin/shader-check.node-test.mjs"
   },
   "author": "hypnodroid",
   "license": "UNLICENSED",

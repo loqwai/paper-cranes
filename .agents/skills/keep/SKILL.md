@@ -1,6 +1,6 @@
 ---
 name: keep
-description: "Save a moment from the visuals: \"keep this\", \"save this\", \"that was good\", \"fork it\", \"make a preset\", \"process the keeps\". During a set, KEEP in the page records the moment; after it, `/keep process` turns kept moments into numbered shader forks and named presets, with docs."
+description: "Save a moment from the visuals: \"keep this\", \"save this\", \"that was good\", \"fork it\", \"make a preset\", \"process the keeps\". During a set, KEEP in the page records the moment; after it, `/keep process` turns kept moments into numbered shader forks and named presets, with docs. A fork from a kept moment is /keep; iterating on a look by hand (a new numbered fork you design) is /shader."
 allowed-tools: Bash Read Write Edit Grep Glob Agent
 ---
 
