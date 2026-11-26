@@ -14,6 +14,9 @@ The page half lives in `src/vj/live.js` (the state machine) and is wired by
 `src/remote/RemoteDisplay.js` (any `?remote=display` page: jam, show, index). The agent half is the
 VJ MCP (`vite-plugins/vj-mcp/server.js`, served by the dev server and by the relay room).
 
+MIDI is on by default on any live page (`remote=display`, `wall=1`, `vj=1`; `midi=false` turns it
+off), and never puts a permission prompt on the wall: [docs/midi-mapping.md](midi-mapping.md#turning-midi-on).
+
 ## Who wrote it: `source`
 
 Every `update-params` message may carry a top-level `source` beside `type` and `data`:

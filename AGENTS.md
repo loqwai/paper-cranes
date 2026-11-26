@@ -374,6 +374,7 @@ uniform float another;   // = 1.2
 - `show_proposals=1` - With `vj=1`, show a small chip on the display naming open proposals (they live on the vjpad otherwise)
 - `wall=1` - This display is a phone wall: it also hears a vjpad on the same phone over a local link (no network), opens a room socket only for `room=` or the dev server, and never shows the reconnect badge. The vjpad's PROJECT opens it. See [docs/phone-wall.md](docs/phone-wall.md)
 - `wall_url=<same-origin path>` - On the vjpad: the page PROJECT opens as the wall (default `/`)
+- `midi=true` / `midi=false` - Turn MIDI on or off. On a plain `index.html` MIDI is off unless `midi=true`. In live mode (`remote=display`, `wall=1` or `vj=1`) it is on unless `midi=false`; there the page asks for the MIDI permission only if it is already granted or on its first tap, so no prompt lands on the wall. `jam.html` and `show.html` always load it (`midi=false` turns it off). See [docs/midi-mapping.md](docs/midi-mapping.md#turning-midi-on)
 - `midi_panic=cc:N|note:N[:ch]`, `midi_keep=…` - Bind a MIDI control to PANIC / KEEP (persisted). See [docs/midi-mapping.md](docs/midi-mapping.md)
 - `vjtrack=1` - With `vj=1`, also log every knob move at 10Hz with the full audio-feature vector, for working out which feature a fader is imitating. **Off by default and not for use during a show** — it is a ~17KB JSON serialise + fetch every 2s on the render thread
 
