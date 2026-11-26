@@ -988,7 +988,7 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 
 Retired 2026-11-24 (board [live-show-skills](https://draw.hypnodroid.com/b/live-show-skills), Aaron: "Yes to all"): `/vibej`, `/vj`, `/live-session` (deleted), `/vibej2` (now `/partner`), `/fork` and `/preset` (now `/keep`), `/sun-set` (now the setlist `setlists/sun-set.json`, played by `/show setlist sun-set`; `/sun-show` plays it), `/remap` (now the "Forget all mappings" button on `/midi.html`).
 
-Edit `.agents/skills/`; `.claude/skills/` is generated for Claude Code by `node scripts/sync-claude-skills.js`; a test fails on drift; don't edit `.claude/skills/` by hand.
+Edit `.agents/skills/`; `.claude/skills/` is generated for Claude Code by `node scripts/sync-claude-skills.js`; a test fails on drift; don't edit `.claude/skills/` by hand. The sync replaces only the skills `.agents/skills/` has, so a local skill folder in `.claude/skills/` is left alone.
 
 ## Live Sessions: the Parent Stays Responsive
 

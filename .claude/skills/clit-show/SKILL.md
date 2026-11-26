@@ -104,6 +104,14 @@ tick. Ctrl-C stops it; the knobs stay where they are. `npm run test:pilot` check
 | Shiver | Something sways geometry back and forth. Geometry only evolves one way; audio changes rates and light |
 | A new fork's link is black on prod | The `.frag` is only on a branch. Merge and deploy first |
 
+## Known gap: the NFC bead links
+
+`2cb.pw/clit-new/2` to `/201` (the NFC bead variants) point at prod `clit-set/3`, `/4` and `/5`.
+Those frags come with PR [#180](https://github.com/loqwai/paper-cranes/pull/180). Until it is
+merged and deployed they don't render. Checked 2026-11-25: #180 still open, and only
+`clit-set/1` and `/2` exist. `clit-now` and `clit-new/1` work. Don't hand out a bead past `/1`
+before then.
+
 ## Lessons from 2026-11-22
 
 - **One short link he never has to change** (`2cb.pw/clit-now`): repoint it, he reloads.
