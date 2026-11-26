@@ -119,11 +119,14 @@ float fbm(vec2 p, vec2 per, float detail) {
     return s;
 }
 
-// The silk height field on the vortex torus: q.x = depth (tiles), q.y = angle (tiles around)
-float silk(vec2 q, vec2 per, float detail) {
-    vec2 w = vec2(fbm(q, per, 0.0), fbm(q + vec2(3.1, 1.7), per, 0.0));
-    float h = fbm(q + 1.6 * w + vec2(0.0, WEAVE * per.y), per, detail);   // WEAVE: whole tiles per wrap
-    return h;
+// Two cheap octaves for the domain warp: it only bends the silk, fine detail there is wasted work
+float fbm2(vec2 p, vec2 per) { return 0.5 * pnoise(p, per) + 0.25 * pnoise(p * 2.0, per * 2.0); }
+
+// The silk height field on the vortex torus: q.x = depth (tiles), q.y = angle (tiles around).
+// The warp w is computed once per pixel and shared by the rim sample (it barely changes over e).
+vec2 silkWarp(vec2 q, vec2 per) { return vec2(fbm2(q, per), fbm2(q + vec2(3.1, 1.7), per)) * 1.33; }
+float silk(vec2 q, vec2 w, vec2 per, float detail) {
+    return fbm(q + 1.6 * w + vec2(0.0, WEAVE * per.y), per, detail);   // WEAVE: whole tiles per wrap
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
@@ -137,14 +140,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 q = vec2(depth, ang + 0.35 * sin(TAU * depth / per.x));  // a twist that is periodic in depth
 
     float detail = DETAIL;
-    float h = silk(q, per, detail);
+    vec2 w = silkWarp(q, per);
+    float h = silk(q, w, per, detail);
     // directional-derivative rim light (the plasma.frag trick): light comes from the outer edge
     float e = 0.08;
-    float hd = silk(q + vec2(-e, e * 0.5), per, detail);
+    float hd = silk(q + vec2(-e, e * 0.5), w, per, detail);
     float rim = clamp((h - hd) * 6.0, 0.0, 1.0);
 
     // Ribbons: bands of the height field. Bass thickens them (light/coverage, not position)
-    float thick = 0.10 + 0.12 * BODY * REACT;
+    float thick = 0.10 + 0.09 * BODY * REACT;
     float hb = h * 3.0;
     float band = 1.0 - smoothstep(thick, thick + 0.05, abs(fract(hb) - 0.5));
     float crest = smoothstep(0.62, 0.8, h);
@@ -161,7 +165,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     silkLab.x *= 0.62 + 0.38 * h;                                                // shade in OKLab L, not by an RGB multiply
     silkLab.yz *= 1.05 + 0.5 * CHROMA_LIFT * REACT;                              // mids lift chroma (okFit keeps it in gamut)
     vec3 rimLab = lchT(0.88, 0.11, mix(baseH + 0.44, baseH + 0.02, odd));       // each ribbon's rim is the other half
-    float gas = fbm(q * 0.5 + 9.0, per * 0.5, 0.0);                             // faint violet veil in the void
+    float gas = fbm2(q * 0.5 + 9.0, per * 0.5) * 1.33;                            // faint violet veil in the void
     vec3 voidLab = lchT(0.10 + 0.10 * gas * gas, 0.04 + 0.05 * gas, 0.68 + 0.08 * gas);
 
     // Composite in LINEAR light (okFit returns linear sRGB); encode once at the end
