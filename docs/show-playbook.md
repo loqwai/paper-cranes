@@ -98,7 +98,7 @@ lessons. The long reference stays in the shader's own `.md`; a night's history g
 | Skill | Show | Shader + controller | Setlist |
 |---|---|---|---|
 | [`/sun-show`](../.agents/skills/sun-show/SKILL.md) | the sun set, stellar life cycle | `claude/wip/black-sun/sun-1` + `black-sun` | [`sun-set`](../setlists/sun-set/SETLIST.md) |
-| [`/clit-show`](../.agents/skills/clit-show/SKILL.md) | the clit-set voyage and coaster | `clit-set/2` + `clit-set` | [`clit-set`](../setlists/clit-set.json) |
+| [`/clit-show`](../.agents/skills/clit-show/SKILL.md) | the clit-set voyage and coaster. **The default:** `/show` with no shader runs it | `clit-set/2` + `clit-set` | [`clit-set`](../setlists/clit-set.json) |
 
 A new show gets a new skill in `.agents/skills/<name>-show/` (then `node scripts/sync-claude-skills.js`), a
 setlist in `setlists/` if it has beats ([setlists.md](../.agents/skills/show/setlists.md)), and a

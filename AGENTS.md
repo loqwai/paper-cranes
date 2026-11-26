@@ -973,9 +973,9 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 
 | Skill | Purpose |
 |-------|---------|
-| `/show` | The one door for a live show: `check` (preflight as ✅/❌ cards on the show's draw board), launch (the wall, the board as status board and phone control surface, the no-model board bridge, then the `/partner` lane), `lite` (a jam: what `/jam` was), `panic [fork]`, `setlist <name>` (e.g. the sun set), `end` (story on the board, journal). See [docs/show-playbook.md](docs/show-playbook.md). |
+| `/show` | The one door for a live show: `check` (preflight as ✅/❌ cards on the show's draw board), launch (the wall, the board as status board and phone control surface, the no-model board bridge, then the `/partner` lane), `lite` (a jam: what `/jam` was), `panic [fork]`, `setlist <name>` (e.g. the sun set), `end` (story on the board, journal). With no shader it runs the default show, `/clit-show`. See [docs/show-playbook.md](docs/show-playbook.md). |
 | `/sun-show` | The sun show: black-sun `sun-1` + `controller=black-sun`, plays the `sun-set` setlist. Holds the sun's knob map, K5 act values, companion, panic forks (`sun/7`) and its own failures (the latched `__blackSunState` NaN). |
-| `/clit-show` | The clit-set show: `clit-set/2` + `controller=clit-set`, the coaster (`coaster=1`), the `clit-set` setlist. Holds the Twister knob map, coaster controls, panic forks, input notes, the pilot and the 2026-11-22 lessons. |
+| `/clit-show` | The default show (what `/show` runs with no shader). The clit-set show: `clit-set/2` + `controller=clit-set`, the coaster (`coaster=1`), the `clit-set` setlist. Holds the Twister knob map, coaster controls, panic forks, input notes, the pilot and the 2026-11-22 lessons. |
 | `/partner` | Aaron's VJ partner while he plays the dials: its own background lane, one step per event, PROPOSES changes he takes or dismisses (KEEP on the pad or board), applies only health fixes, never while his hands are on. The art critic runs between tracks. Was `/vibej2`. |
 | `/keep` | KEEP lives in the page (vjpad, MIDI, `k`, the board); `/keep process` turns kept moments into numbered forks and named presets with docs. Was `/fork` + `/preset`. |
 | `/jam` | Alias: use `/show lite`. |
@@ -992,7 +992,7 @@ Edit `.agents/skills/`; `.claude/skills/` is generated for Claude Code by `node 
 
 ## Live Sessions: the Parent Stays Responsive
 
-**Show day:** run `/show`. It does the preflight, launch, board, watchers and hand-off to the
+**Show day:** run `/show` (no shader: the default show, `/clit-show`). It does the preflight, launch, board, watchers and hand-off to the
 `/partner` lane. Follow [docs/show-playbook.md](docs/show-playbook.md) for the general runbook and
 failure fixes, and the show's own skill (`/sun-show`, `/clit-show`) for its knob map, story and
 panic forks.

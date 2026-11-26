@@ -1,6 +1,6 @@
 ---
 name: show
-description: "Run a live show on the wall tonight: start the wall (\"start the show\", \"show time\", \"put it on the projector\"), check it is ready (\"preflight\", \"are we ready\"), get a safe look back when the wall goes wrong (\"panic\", \"it's black\", \"it froze\", \"get it back\"), play a setlist (\"play the sun set\", \"next beat\"), jam with no partner (\"just jam\", \"lite\"), or wrap up (\"end the show\", \"we're done\"). Puts the show on a draw board as Aaron's phone status board and control surface. A named show (the sun show, clit-set) also has its own skill. Never for making a repo."
+description: "Run a live show on the wall tonight: start the wall (\"start the show\", \"show time\", \"put it on the projector\"), check it is ready (\"preflight\", \"are we ready\"), get a safe look back when the wall goes wrong (\"panic\", \"it's black\", \"it froze\", \"get it back\"), play a setlist (\"play the sun set\", \"next beat\"), jam with no partner (\"just jam\", \"lite\"), or wrap up (\"end the show\", \"we're done\"). Puts the show on a draw board as Aaron's phone status board and control surface. With no shader it starts the default show, clit-set (`/clit-show`). A named show (the sun show, clit-set) also has its own skill. Never for making a repo."
 allowed-tools: Bash Read Write Edit Grep Glob Agent Monitor TaskStop
 ---
 
@@ -15,7 +15,10 @@ allowed-tools: Bash Read Write Edit Grep Glob Agent Monitor TaskStop
 | `/show setlist <name> [list\|next\|prev\|<n>\|auto]` | play `setlists/<name>.json`; read [setlists.md](setlists.md) |
 | `/show end` | stop lanes, process keeps, tell the set's story; read [story.md](story.md) |
 
-Default shader: `clit-set/2` with `controller=clit-set`.
+**Default show: `/clit-show`** (Aaron, 2026-11-25). `/show` with no shader loads
+[`/clit-show`](../clit-show/SKILL.md) and launches what it says (`clit-set/2` +
+`controller=clit-set` + `wavelet=true`). It does not play the `clit-set` setlist, which is a starter.
+An explicit `/show <shader>` or another show's skill overrides it.
 Read a reference file only when its row or step says so. Failure fixes:
 [docs/show-playbook.md](../../../docs/show-playbook.md) section 7.
 

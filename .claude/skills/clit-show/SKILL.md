@@ -10,9 +10,11 @@ The mechanics (preflight, launch, board, `/partner`, panic, end) are `/show`'s:
 [../show/SKILL.md](../show/SKILL.md) and [docs/show-playbook.md](../../../docs/show-playbook.md).
 This skill holds only what is specific to clit-set.
 
+**This is the default show** (Aaron, 2026-11-25): `/show` with no shader, or "start the show", runs it.
+
 | What | Where |
 |---|---|
-| Shader + controller | `clit-set/2` + `controller=clit-set` (`/show`'s default) |
+| Shader + controller | `clit-set/2` + `controller=clit-set` (the default show) |
 | Setlist | `/show setlist clit-set` ([clit-set.json](../../../setlists/clit-set.json)), a starter; rewrite its beats from `/keep process` |
 | Shader reference | [shaders/clit-set/clit-set.md](../../../shaders/clit-set/clit-set.md): waypoints, colour, audio map, iterations |
 | Keeping it deep for hours | [docs/vj-deep-voyage-recipe.md](../../../docs/vj-deep-voyage-recipe.md) |
