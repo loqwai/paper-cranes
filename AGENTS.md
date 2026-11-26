@@ -366,7 +366,7 @@ uniform float another;   // = 1.2
 - `wavelet=true` - Enable opt-in wavelet (DWT) analysis alongside FFT. Adds `wavelet*` uniforms (octave bands, centroid/spread, bassHit trigger, FFT×wavelet combos). See [docs/wavelet-analysis.md](docs/wavelet-analysis.md)
 - `audio_device=<label substring>` - Open the mic input whose label contains this (e.g. `USB Audio CODEC`); no match means no audio, never a different device. Omitted → the OS default input
 - `audio_time=<seconds>` - Start audio file playback at this offset (default: 0)
-- `time=<seconds>` - Hold time constant (useful for deterministic screenshots/testing)
+- `time=<seconds>` - Hold the `time` uniform constant (useful for deterministic screenshots/testing). It does not hold `iTime`: add `iTime=<seconds>` too, or a shader that reads `iTime` keeps moving (measured 2026-11-26)
 - `vj=1` - Install the VJ runtime on the display: cursor-hide, GL validator, aesthetic meter, frame-time probe, and health signals (POSTed to `/__vj-signal` on the dev server; on a `?remote=display&room=` page, production included, also sent down the room socket to the relay MCP's `wait_for_event`). This is how the auto-VJ loop sees a page it cannot screenshot. See [docs/vj-telemetry.md](docs/vj-telemetry.md)
 - `hands_ms=<ms>` - The live show's HANDS lock: how long after Aaron's last dial/pad/MIDI move agent writes stay held (default 8000). See [docs/live-show-contract.md](docs/live-show-contract.md)
 - `release_ms=<ms>` - How long a dial must be still before the `release` signal (default 50)
@@ -980,6 +980,7 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 | `/keep` | KEEP lives in the page (vjpad, MIDI, `k`, the board); `/keep process` turns kept moments into numbered forks and named presets with docs. Was `/fork` + `/preset`. |
 | `/jam` | Alias: use `/show lite`. |
 | `/record` | Record a music video from the shader canvas (MediaRecorder). Studio and post-show only: it drives Chrome through claude-in-chrome. |
+| `/shader` | Make, fork or fix a shader so it is good enough for the wall: file layout, Aaron's taste rules in his words, signal conditioning (channel hierarchy, presence gate, one-way clocks), failure-to-fix table, mobile limits, when a controller is justified, and a measured gate (`bin/shader-check.mjs`: silence, every knob at 1, phone-level audio at a held clock, brightness pump, motion). Worked example: `shaders/claude/wip/silk-vortex/`. |
 | `/solo` | Toggle a shader between knob mode and audio mode. Auto-detects current mode and switches. Use `/solo knobs` or `/solo audio` to force a mode. Defaults to the modified `.frag` in the worktree. |
 | `/changelog` | Update docs/CHANGELOG.md and README with recent features. |
 | `/pr` | Create a PR, request review, and open in browser. |

@@ -153,8 +153,10 @@ them (pin a specific look for presets/NFC tags). `wooli/chromadepth-*` use `seed
   video, and keeps the evidence in `~/paper-cranes-proof/`.
 - **Test touch/knob controllers** by driving real pointer/touch events (`page.mouse` / touch) and
   reading back `window.cranes.manualFeatures` / `window.cranes.controllerFeatures`.
-- **Deterministic stills:** `?time=<seconds>` holds `iTime` (pair with `?noaudio=true`). Note that
-  controller phases still advance in real time even when `time=` is held.
+- **Deterministic stills:** `?time=<seconds>&iTime=<seconds>` holds both clock uniforms (pair with
+  `?noaudio=true`). `time=` alone holds only `time`; `iTime` keeps running (measured 2026-11-26).
+  Controller phases still advance in real time either way. `.agents/skills/shader/bin/shader-check.mjs`
+  steps a virtual clock instead, which freezes controllers too.
 - **Measure flicker, don't eyeball it:** `node scripts/sparkle-score.mjs` renders a deterministic frame
   sequence (stepped clock, replayed audio features) and scores one-frame flips, with a heat map of where they
   are. `--ss 4` is the aliasing-free reference; `--video` scores a recording. Any temporal filter lowers the

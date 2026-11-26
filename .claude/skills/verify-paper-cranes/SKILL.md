@@ -94,7 +94,7 @@ on this box.
 
 **Deterministic inputs** (all URL params; see AGENTS.md "Query Parameters"):
 
-- `noaudio=true`: no mic prompt, no audio. Pair with `time=<s>` to hold `iTime`, so a frame is
+- `noaudio=true`: no mic prompt, no audio. Pair with `time=<s>&iTime=<s>` to hold the clock, so a frame is
   repeatable. Controller phases still advance in real time.
 - Audio features: inject them as the page's own manual channel, the one MIDI and knobs write
   (`src/midi.js` `updateFeature`): `page.evaluate(f => Object.assign(window.cranes.manualFeatures, f), {...})`.
