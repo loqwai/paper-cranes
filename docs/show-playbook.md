@@ -30,6 +30,13 @@ network needed.
 - [ ] Turn on Do Not Disturb, and quit any break-reminder or screen-dimming app. One dimmed the
       whole wall during the 10-06 test.
 - [ ] Do a test launch (section 2) and confirm the input label before doors open.
+- [ ] Share the show's draw board by link, not by name. Make it unlisted with
+      `node scripts/unlisted-link.ts <board>` in the draw repo, or from an agent with
+      `open({ boardName, unlisted: {} })`. The link it prints is `2cb.pw/<show>-xxxxxx` and opens the board
+      view-only with no login, so it can go on stickers. Give each DJ a link of their own with a label
+      (`... <board> dj-ana`), so you can revoke theirs after their set (`--revoke`). If a link
+      leaks, run the same command again to rotate it: the old token stops working and the
+      2cb.pw link follows the new one. See "Unlisted boards" in draw's `CLAUDE.md`.
 
 ## 2. Launch sequence
 
