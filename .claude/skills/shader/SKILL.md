@@ -152,18 +152,17 @@ value>` (clit-vibej/2 does this for every input).
 
 ## The gate
 
-Run all of it on your own instance. Never touch ports 6969, 6977, 6978 or 6991, or ComfyUI on 8189.
-Commands, numbers and what each WARN means: [references/verify.md](references/verify.md).
+Run the gate through `/verify-paper-cranes`: it starts the app and holds the base URL the scripts
+below use. Commands, thresholds and what each WARN means are in [references/verify.md](references/verify.md).
 
 1. `node scripts/validate-shader.js shaders/claude/wip/<name>/1.frag`: no errors.
-2. `node .agents/skills/verify-paper-cranes/bin/pc-verify.mjs launch`, then
-   `node .agents/skills/shader/bin/shader-check.mjs --shader claude/wip/<name>/1 [--controller X] [--params wavelet=true]`.
-   No FAIL. Open every PNG it names in a WARN, and look at `silence-*`, `loud` and `kick` either way.
-3. `node scripts/sparkle-score.mjs --shader claude/wip/<name>/1 --base http://127.0.0.1:<port> --trace synth --frames 90 --out <dir>`:
-   report `flipMean` and `motion`, and look at `heat.png`.
+2. `node .agents/skills/shader/bin/shader-check.mjs --shader claude/wip/<name>/1 [--controller X] [--params wavelet=true]`:
+   no FAIL. Open every PNG it names in a WARN, and look at `silence-*`, `loud` and `kick` either way.
+3. `scripts/sparkle-score.mjs` with `--trace synth`: report `flipMean` and `motion`, look at
+   `heat.png`, and with `--bench 20` compare `msPerFrame` with the reference shaders in verify.md.
 4. Real audio in Firefox (`audio_file=`), and a headful video of the sweep (`pc-verify render --video`):
    Aaron counts a missing video of motion as not verified.
-5. `npm test` green. `pc-verify cleanup`.
+5. `npm test` green.
 6. In the PR and the shader doc: the numbers, the PNG paths, and anything you could not verify.
 
 ## Example

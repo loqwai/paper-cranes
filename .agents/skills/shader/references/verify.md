@@ -1,19 +1,17 @@
 # The verification gate, with numbers
 
-Prove the shader on your own instance, the way `/verify-paper-cranes` does it. Report numbers, PNG
-paths and the commands you ran. A claim with no count, ratio or file in it is not verification.
+Prove the shader in the real app, started through `/verify-paper-cranes`. Report numbers, PNG paths
+and the commands you ran. A claim with no count, ratio or file in it is not verification.
 
 ```bash
-B=.agents/skills/verify-paper-cranes/bin/pc-verify.mjs   # from the repo root; .claude/skills/... is the same file
+B=.agents/skills/verify-paper-cranes/bin/pc-verify.mjs
 S=claude/wip/<name>/1
-node scripts/validate-shader.js shaders/$S.frag          # 1. compiles through the real wrapper
-node $B launch                                           # 2. own dev server on 7140-7149
+node scripts/validate-shader.js shaders/$S.frag          # compiles through the real wrapper
+node $B launch                                           # the app, per /verify-paper-cranes
 node .agents/skills/shader/bin/shader-check.mjs --shader $S [--controller X] [--params "wavelet=true"]
 ```
 
-Never bind, drive or kill ports 6969, 6977, 6978 or 6991 (Aaron's server and the live show), and
-never use ComfyUI on 8189. `scripts/sparkle-score.mjs` and `scripts/vj/mcp-call.js` default to
-6969: always pass your own port.
+`URL` below is the base URL `pc-verify launch` printed.
 
 ## shader-check
 
@@ -62,25 +60,39 @@ What it does not catch:
 ## Flicker and sparkle
 
 ```bash
-node scripts/sparkle-score.mjs --shader $S --base http://127.0.0.1:<port> --trace synth --frames 90 --out <dir>
+node scripts/sparkle-score.mjs --shader $S --base $URL --trace synth --frames 90 --out <dir>
 ```
 
-It has no `--help`: any run without `--base`, `--help` included, loads a page from 6969. Read its
-usage in the header comment of `scripts/sparkle-score.mjs` instead.
+Always pass `--base`. The script has no `--help`; its options are in its header comment.
 
 Report `flipMean` (one-frame flips, 0-255) next to `motion` and `meanLuma`, and look at `heat.png`.
 A fix that only blurs or darkens also lowers `flipMean`; to judge a fix, use `--ss 4 --keep` for an
 aliasing-free reference, then `--ref` and `--before` ([docs/sparkle-score.md](../../../../docs/sparkle-score.md)).
 Add `--controller X` for a controller shader.
 
+## Cost
+
+SwiftShader frame rates say nothing absolute about a phone, but they rank shaders. Bench yours
+against a shader known to hold up on his phone:
+
+```bash
+node scripts/sparkle-score.mjs --shader $S --base $URL --trace synth --frames 10 --warmup 10 --bench 20 --out <dir>
+```
+
+Measured 2026-11-26 at 408x816 (`msPerFrame`): plasma 19.6, silk-vortex/1 51.0, clit-vibej/2 with
+`controller=clit-set&wavelet=true` 194.9 (it ran the 11-22 show on a phone). Well above clit-vibej/2
+means cut iterations or noise octaves before you ship. `pc-verify render --video` FAILs "render loop
+ran during sweep" below 60 frames in 8 s at 1280x800: on SwiftShader that is a cost signal (plasma
+120 frames, silk-vortex/1 39), not a broken loop, if the strip shows motion.
+
 ## Real audio
 
 Playwright's bundled Chromium never loads the AudioWorklet, so `audio_file=` gives no features
 there. Use Firefox. The repo ships no audio: copy a file into `public/test-audio/` with a `verify-`
-prefix (gitignored; `pc-verify cleanup` removes it). The main checkout has `test-audio/beat.mp3`.
+prefix (gitignored; `pc-verify cleanup` removes it).
 
 ```bash
-cp /home/hypnodroid/Projects/paper-cranes/test-audio/beat.mp3 public/test-audio/verify-beat.mp3
+cp <a track, e.g. the main checkout's test-audio/beat.mp3> public/test-audio/verify-beat.mp3
 node $B open "/?shader=$S&audio_file=/test-audio/verify-beat.mp3" --browser firefox --canvas --wait 8000 \
   --name real-audio --eval "(() => { const f = window.cranes.measuredAudioFeatures; return { keys: Object.keys(f).length, energy: f.energy, onsetKick: f.onsetKick } })()"
 ```
@@ -94,7 +106,7 @@ Aaron's rule: visual behaviour over time gets a headful video. Skipping it is "r
 (vault `kb/rules/rule-record-proof-video-headful.md`).
 
 ```bash
-DISPLAY=:0 node $B render --shader $S --video --features '{"bassNormalized":1,"onsetKick":1,"midsNormalized":0.8,"energy":0.05}'
+node $B render --shader $S --video --features '{"bassNormalized":1,"onsetKick":1,"midsNormalized":0.8,"energy":0.05}'
 ```
 
 It writes `render-sweep.webm` and a 6-frame `sweep-strip.png`. Look at the strip.
@@ -107,7 +119,7 @@ feature a fader gesture tracked. A dial he rides like a fader is a mapping to wi
 ## Finish
 
 - `npm test`: the unit suite, plus every shader outside `wip/` compiling.
-- `node $B cleanup`: stops your server, restores `shader-dates.json` if the dev server rewrote it,
-  removes `public/test-audio/verify-*`.
+- `node $B cleanup`: restores `shader-dates.json` if the dev server rewrote it and removes
+  `public/test-audio/verify-*`.
 - Write the numbers into `<name>.md` under the iteration that produced them, and into the PR body
   with the preview link.
