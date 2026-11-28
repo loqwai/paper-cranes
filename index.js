@@ -1,4 +1,5 @@
 import { AudioProcessor } from './src/audio/AudioProcessor.js'
+import { watchMic } from './src/audio/micWatchdog.js'
 import { createAudioFileSource, initAudioFromFile } from './src/audio/audioFileSource.js'
 
 // PROTOTYPE: opt-in multiresolution (wavelet) analysis alongside the FFT pipeline.
@@ -12,8 +13,9 @@ const maybeStartWavelet = async (params, audioContext, sourceNode) => {
     window.cranes.waveletProcessor = wavelet
 }
 import { makeVisualizer, askForWakeLock } from './src/Visualizer.js'
-import { getInitialShader, loadShader } from './src/shaderLoader.js'
+import { getInitialShader, loadShader, shaderOnScreen } from './src/shaderLoader.js'
 import { loadControllers, composeControllers } from './src/controllerChain.js'
+import { shouldLoadMidi } from './src/midi/midiPolicy.js'
 
 
 const SEED_KEY = 'paperCranes.seeds'
@@ -37,8 +39,9 @@ let startTime = 0
 const params = new URLSearchParams(window.location.search)
 
 // ?vj=1 — load the VJ runtime (validator + aesthetic meter + cursor-hide + /__vj-signal
-// watchdog) at page boot, so reloads can never strip the /vibej loop's tooling and the page
-// itself can wake the loop. Dev-only in practice (/__vj-signal exists only on the dev server).
+// watchdog) at page boot, so reloads can never strip the /partner loop's tooling and the page
+// itself can wake the loop. /__vj-signal exists only on the dev server; a ?remote=display&room=
+// page (production too) also sends its signals down the room socket (src/vj/signals.js).
 if (params.get('vj') === '1') import('./src/vj/runtime.js').then(m => m.startVjRuntime()).catch(e => console.warn('[vj] runtime failed', e))
 
 const getVisualizerDOMElement = () => {
@@ -97,6 +100,18 @@ const getAudioStream = async (config) => {
     return stream;
 };
 
+// The mic watchdog re-acquires the device in use, which scripts/show/audio-swap.js can change
+// after load. The load-time ?audio_device is only used when there is no track or that device is gone.
+const reacquireStream = async (deviceId) => {
+    if (!deviceId) return getAudioStream(audioConfig);
+    try {
+        return await navigator.mediaDevices.getUserMedia({ audio: { ...audioConfig, deviceId: { exact: deviceId } } });
+    } catch (err) {
+        if (err.name !== 'OverconstrainedError' && err.name !== 'NotFoundError') throw err;
+        return getAudioStream(audioConfig);
+    }
+};
+
 // Factor out coordinate handling
 const coordsHandler = {
     coords: { x: 0.5, y: 0.5 },
@@ -146,7 +161,9 @@ const setupMicAudio = async () => {
         // speaker across the room arrives 10-30x quieter and never opens them. The node is exposed so
         // the gain can be trimmed live: window.cranes.inputGain.gain.value = 8
         const inputGain = new GainNode(audioContext, { gain: parseFloat(params.get('audio_gain') ?? '1') });
-        audioContext.createMediaStreamSource(stream).connect(inputGain);
+        // audioSource is kept so scripts/show/audio-swap.js can swap the input device in place
+        window.cranes.audioSource = audioContext.createMediaStreamSource(stream);
+        window.cranes.audioSource.connect(inputGain);
         window.cranes.inputGain = inputGain;
         const sourceNode = inputGain;
         const historySize = parseInt(params.get('history_size') ?? '500');
@@ -157,6 +174,7 @@ const setupMicAudio = async () => {
         audioProcessor.start();
 
         await maybeStartWavelet(params, audioContext, sourceNode);
+        watchMic({ audioContext, inputGain, getStream: reacquireStream, debug: params.get('debug_audio') === 'true' });
         return audioProcessor;
     } catch (err) {
         console.error('Audio initialization failed:', err);
@@ -280,9 +298,12 @@ const animateShader = ({ render, fragmentShader }) => {
         const features = window.cranes.flattenFeatures()
         // Update frame count
         window.cranes.frameCount++
+        const time = ((performance.now() - startTime) / 1000) % 1000
+        // What this frame drew with, for a board mirror's feed (src/remote/mirrorFeed.js) to copy.
+        window.cranes.lastRender = { time, features }
         // Render the shader
         render({
-            time: ((performance.now() - startTime) / 1000) % 1000,
+            time,
             features,
             fragmentShader: window.cranes?.shader ?? fragmentShader,
         })
@@ -354,8 +375,9 @@ const main = async () => {
     setupCranesState()
     startTime = performance.now()
 
-    // Lazy-load MIDI support when opted in via ?midi=true
-    if (params.get('midi') === 'true') import('./src/midi.js')
+    // MIDI: opt-in with ?midi=true, on by default in live mode (a display, wall or ?vj=1 page),
+    // off with ?midi=false. jam.js and show.js load it themselves. See src/midi/midiPolicy.js.
+    if (shouldLoadMidi(params)) import('./src/midi.js')
 
     // Initialize remote display mode if ?remote=display
     if (params.get('remote') === 'display') {
@@ -418,8 +440,10 @@ if (import.meta.hot) {
         const changed = String(path ?? '')
             .replace(/^.*?shaders\//, '')
             .replace(/\.frag$/, '')
-        const showing = new URLSearchParams(window.location.search).get('shader')
+        const showing = shaderOnScreen()
         if (!changed || !showing || changed !== showing) return
+        // An agent's write_shader mid HANDS lock waits for his hands to come off (RemoteDisplay).
+        if (window.cranes?.holdHmr?.({ shader: showing })) return
 
         // Same shader: swap the source in place. window.cranes.shader is what
         // animateShader reads every frame, so assigning it recompiles without

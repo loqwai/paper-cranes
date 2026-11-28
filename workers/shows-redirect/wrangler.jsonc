@@ -1,0 +1,8 @@
+{
+  // shows.beadfamous.com/<show> -> <show>.beadfamous.com. Deploy once: npx wrangler deploy
+  "name": "paper-cranes-shows-redirect",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-22",
+  "workers_dev": false,
+  "routes": [{ "pattern": "shows.beadfamous.com", "custom_domain": true }]
+}

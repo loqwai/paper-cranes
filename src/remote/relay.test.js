@@ -1,0 +1,100 @@
+// Which socket a page opens, and whether it may answer the VJ MCP's inspect (docs/vj-mcp.md).
+// A crafted link (?remote=display&room=x&relay=evil.example) must not let a stranger's relay
+// welcome the display and read its canvas, features, knobs and logs.
+import { describe, it, expect } from 'vitest'
+import { wsUrlFor, inspectorAllowed, inspectorAllowedOn, withoutPinned, DEFAULT_RELAY_HOST, displaySecretFrom, withoutSecret, secretFor } from './relay.js'
+
+const at = (search, { protocol = 'https:', host = 'visuals.beadfamous.com' } = {}) => ({ search, protocol, host })
+
+describe('wsUrlFor', () => {
+  it('uses the default relay for a room, the dev server without one', () => {
+    expect(wsUrlFor(at('?room=abc'))).toBe(`wss://${DEFAULT_RELAY_HOST}/ws/abc`)
+    expect(wsUrlFor(at('', { protocol: 'http:', host: 'localhost:6969' }))).toBe('ws://localhost:6969/ws')
+  })
+  it('still relays through any ?relay= host, plain ws only for loopback', () => {
+    expect(wsUrlFor(at('?room=abc&relay=other.example'))).toBe('wss://other.example/ws/abc')
+    expect(wsUrlFor(at('?room=abc&relay=127.0.0.1:8787'))).toBe('ws://127.0.0.1:8787/ws/abc')
+  })
+})
+
+describe('inspectorAllowed', () => {
+  it('answers inspect on the real relay and on a loopback relay', () => {
+    expect(inspectorAllowed(at('?room=abc'), { dev: false })).toBe(true)
+    expect(inspectorAllowed(at('?room=abc&relay=relay.beadfamous.com'), { dev: false })).toBe(true)
+    expect(inspectorAllowed(at('?room=abc&relay=127.0.0.1:8787'), { dev: false })).toBe(true)
+    expect(inspectorAllowed(at('?room=abc&relay=localhost:8787'), { dev: true })).toBe(true)
+  })
+  it('never answers inspect through any other relay, in production or dev', () => {
+    for (const relay of ['evil.example', 'relay.beadfamous.com.evil.example', 'relay.beadfamous.com@evil.example', '127.0.0.1:8787@evil.example', 'paper-cranes-remote.loqwai.workers.dev']) {
+      expect(inspectorAllowed(at(`?room=abc&relay=${encodeURIComponent(relay)}`), { dev: false }), relay).toBe(false)
+      expect(inspectorAllowed(at(`?room=abc&relay=${encodeURIComponent(relay)}`), { dev: true }), relay).toBe(false)
+    }
+  })
+  it('without a room: only the dev server is a broker', () => {
+    expect(inspectorAllowed(at('', { protocol: 'http:', host: 'localhost:6969' }), { dev: true })).toBe(true)
+    expect(inspectorAllowed(at(''), { dev: false })).toBe(false)
+  })
+})
+
+// A room peer can send update-params. If it could set relay or room, the URL mirror would carry
+// them into location and the next reconnect would take the display to a host the peer chose.
+describe('withoutPinned', () => {
+  it('drops relay and room from what update-params may set or mirror, keeps the rest', () => {
+    const data = { relay: 'evil.example', room: 'elsewhere', knob_1: 0.5, shader: 'plasma', zoom: null }
+    expect(withoutPinned(data)).toEqual({ knob_1: 0.5, shader: 'plasma', zoom: null })
+    expect(data.relay).toBe('evil.example') // not mutated
+  })
+})
+
+// The second layer: judge the socket that is actually connected, on every connect.
+describe('inspectorAllowedOn', () => {
+  it('answers inspect on a socket to the real relay or a loopback relay', () => {
+    expect(inspectorAllowedOn(`wss://${DEFAULT_RELAY_HOST}/ws/abc`, { dev: false })).toBe(true)
+    expect(inspectorAllowedOn('ws://127.0.0.1:8787/ws/abc', { dev: false })).toBe(true)
+    expect(inspectorAllowedOn('ws://localhost:8787/ws/abc', { dev: true })).toBe(true)
+  })
+  it('never on a socket to any other host, whatever the page URL says', () => {
+    for (const url of ['wss://evil.example/ws/abc', 'wss://relay.beadfamous.com.evil.example/ws/abc', 'wss://relay.beadfamous.com@evil.example/ws/abc', 'wss://paper-cranes-remote.loqwai.workers.dev/ws/abc', 'not a url', undefined]) {
+      expect(inspectorAllowedOn(url, { dev: false }), String(url)).toBe(false)
+      expect(inspectorAllowedOn(url, { dev: true }), String(url)).toBe(false)
+    }
+  })
+  it("the dev server's own /ws only in a dev build", () => {
+    expect(inspectorAllowedOn('ws://localhost:6969/ws', { dev: true })).toBe(true)
+    expect(inspectorAllowedOn('wss://visuals.beadfamous.com/ws', { dev: false })).toBe(false)
+  })
+})
+
+describe('display secret', () => {
+  const S = 'ds_abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG'
+  it('is read from the hash, or the query as a fallback', () => {
+    expect(displaySecretFrom({ hash: `#display_secret=${S}`, search: '?room=x' })).toBe(S)
+    expect(displaySecretFrom({ hash: `#knob_1=0.5&display_secret=${S}`, search: '' })).toBe(S)
+    expect(displaySecretFrom({ hash: '', search: `?room=x&display_secret=${S}` })).toBe(S)
+    expect(displaySecretFrom({ hash: '', search: '?room=x' })).toBeNull()
+  })
+  it('is cut out of every href the page reports, wherever it sits', () => {
+    expect(withoutSecret(`https://v.example/?shader=a&room=x#display_secret=${S}`)).toBe('https://v.example/?shader=a&room=x')
+    expect(withoutSecret(`https://v.example/?room=x#knob_1=0.5&display_secret=${S}`)).toBe('https://v.example/?room=x#knob_1=0.5')
+    expect(withoutSecret(`https://v.example/?display_secret=${S}&room=x`)).toBe('https://v.example/?room=x')
+    expect(withoutSecret('https://v.example/?room=x#knob_1=0.5')).toBe('https://v.example/?room=x#knob_1=0.5')
+  })
+  it('cuts a percent-encoded key too, since the page reads one', () => {
+    const href = `https://v.example/?room=x#display%5Fsecret=${S}`
+    expect(displaySecretFrom(new URL(href))).toBe(S)
+    expect(withoutSecret(href)).not.toContain(S)
+    expect(withoutSecret(`https://v.example/?display%5fsecret=${S}&room=x`)).toBe('https://v.example/?room=x')
+  })
+  it('goes only to a relay room we run: never the dev server, never another relay', () => {
+    expect(secretFor(`wss://${DEFAULT_RELAY_HOST}/ws/x`, S)).toBe(S)
+    expect(secretFor('ws://127.0.0.1:8798/ws/x', S)).toBe(S)
+    expect(secretFor('ws://localhost:6969/ws', S)).toBeUndefined()
+    expect(secretFor('wss://evil.example/ws/x', S)).toBeUndefined()
+    expect(secretFor(undefined, S)).toBeUndefined()
+    expect(secretFor(`wss://${DEFAULT_RELAY_HOST}/ws/x`, null)).toBeUndefined()
+  })
+  it('cannot be set or released by a room peer', () => {
+    expect(withoutPinned({ display_secret: 'ds_evil', knob_1: 0.5 })).toEqual({ knob_1: 0.5 })
+    expect(withoutPinned({ display_secret: null })).toEqual({})
+  })
+})

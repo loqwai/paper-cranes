@@ -130,6 +130,7 @@
   <h1>MIDI Mapping</h1>
   <div class="toolbar">
     <span class="status" id="status">Requesting MIDI access…</span>
+    <button id="forget-all" type="button" title="Clears every saved CC to knob mapping on this browser, so the next CC you move auto-assigns afresh. Reload any open jam page afterwards.">Forget all mappings</button>
   </div>
   <div class="layout">
     <div class="panel">
@@ -148,6 +149,14 @@
     </div>
   </div>
   <script type="module" src="./src/midi-mapping-page.js"></script>
+  <script>
+    // Was the /remap skill: one button, no model. The key is MidiMapper's STORAGE_KEY.
+    document.getElementById('forget-all').addEventListener('click', () => {
+      if (!confirm('Forget every MIDI mapping on this browser?')) return
+      localStorage.removeItem('cranes-midi-profiles')
+      location.reload()
+    })
+  </script>
 </body>
 
 </html>

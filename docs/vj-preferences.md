@@ -2,7 +2,7 @@
 
 These rules hold across shaders: what the user wants on the wall and how the user wants to work
 live. Each comes from the user's own feedback during sessions. Read this before any VJ or
-shader-design session (`/vibej2`, `/jam`, `/live-session`) and brief every sub-agent and the art
+shader-design session (`/show`, `/partner`, `/show lite`) and brief every sub-agent and the art
 critic with it. **When a session produces new feedback, add it here in the same session**, with
 a date.
 
@@ -155,7 +155,7 @@ For running a show, see [show-playbook.md](show-playbook.md) and the `/show` ski
   glow or infobars. Audio comes from the OS default input; don't pass `audio_device` unless asked.
 - **The parent session stays responsive.** Heavy work goes to sub-agents, and the user's words
   are triaged first.
-- **Fork good moments freely** (`/fork`). The user forks often and likes autonomous forks of cool
+- **Fork good moments freely** (KEEP, then `/keep process`). The user forks often and likes autonomous forks of cool
   moments. Fork the controller alongside the shader whenever the shader depends on it.
 - **Once a good core exists, the user is happy to let it "get creative and run with it over
   time"**, one verified change at a time.

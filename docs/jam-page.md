@@ -25,7 +25,7 @@ Each spacebar press captures:
 - The browser tab title (music source)
 - Timestamp
 
-Snapshots are written as JSON to `shaders/<shader>/docs/.snapshots/` and processed later with `/preset process` — Claude reads each snapshot, interprets the musical moment, generates a name, and writes it to `presets.md`.
+Snapshots are written as JSON to `shaders/<shader>/docs/.snapshots/` and processed later with `/keep process` — Claude reads each snapshot, interprets the musical moment, generates a name, and writes it to `presets.md`.
 
 ## How It Differs from Other Pages
 
@@ -35,7 +35,7 @@ Snapshots are written as JSON to `shaders/<shader>/docs/.snapshots/` and process
 | Knob drawer | No | No (MIDI / vjpad / URL) | Yes |
 | Code editor | No | No | Yes (Monaco) |
 | Snapshot queue | No | Yes | No |
-| MIDI support | Opt-in (`?midi=true`) | Always | Always |
+| MIDI support | Opt-in (`?midi=true`); on in live mode | Always (`?midi=false` turns it off) | Always |
 | Hot-reload shaders | Full page reload | Hot-swap (no reload) | Hot-swap via editor |
 
 ## Hot-Swap Shader Updates
@@ -53,4 +53,4 @@ the param the page opens the OS default input.
 
 Project it from the show browser, not your everyday Chrome: `node scripts/vj/show.js launch '<jam url>'`
 spawns a dedicated fullscreen Chrome with no automation bar, no extension, and mic + MIDI
-pre-granted. See `/vibej2`.
+pre-granted. `/show` launches it; see [show-playbook.md](show-playbook.md).

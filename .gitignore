@@ -159,3 +159,11 @@ public/images/*.webp
 .claude/vj-signals.jsonl
 .claude/vj-signals.jsonl.prev
 .claude/vj-shots/
+.claude/keeps/
+.claude/keeps.jsonl
+.claude/board-bridge.jsonl
+.claude/setlist-state.json
+
+# show repos made by scripts/show-repo/create.js (each is its own git repo)
+.show-repos/
+shaders/claude/wip/black-sun/sun-set-live.frag

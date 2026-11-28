@@ -58,10 +58,11 @@
  * all, and each carries an explicit `knobBase` so its mirror range stays put no
  * matter where it lands in the list.
  */
-import { WebSocketClient } from './src/remote/WebSocketClient.js'
+import { createPadClient, mountPhoneWall } from './src/phone-wall/pad.js'
 import LAYOUTS from './vjpad-layouts.json'
 import { resolveBanks, loadOverrides, saveOverrides, mirrorKnob, parseKnobs } from './src/vj/vjpad-layout.js'
 import { mountEditor } from './src/vj/vjpad-edit.js'
+import { mountVjpadNfc } from './src/vj/vjpad-nfc.js'
 
 const $ = (id) => document.getElementById(id)
 const clamp01 = (t) => (t < 0 ? 0 : t > 1 ? 1 : t)
@@ -126,19 +127,27 @@ const loadShaderKnobs = async () => {
 const SHADERS = LAYOUTS.shaders ?? []
 
 /* ── transport ────────────────────────────────────────────────────────────
-   We drive WebSocketClient directly rather than initRemoteController because we
+   We drive the socket directly rather than initRemoteController because we
    need to see peer messages (the bank claims below), and RemoteController only
-   surfaces `status`. Nothing in src/ is modified. */
+   surfaces `status`. createPadClient is the room's WebSocketClient plus the
+   phone wall's local link (docs/phone-wall.md): while a wall on this same phone
+   is linked, display-bound messages go to it over the link, with no network. */
 let displays = 0
 let status = 'reconnecting'
 
-const client = new WebSocketClient(
+let nfc = null // NFC smiley stickers (docs/nfc-show-controls.md), mounted once client exists
+const client = createPadClient(
     (msg) => {
+        nfc?.onMessage(msg)
         if (msg.type === 'status') {
             displays = Math.max(0, (msg.data?.connectedClients || 0) - 1)
             paint()
         } else if (msg.type === 'vjpad-peer' && msg.data?.id !== myId) {
             onPeer(msg.data)
+        } else if (msg.type === 'proposal') {
+            showProposal(msg.data)
+        } else if (msg.type === 'proposal-clear') {
+            clearProposal(msg.data?.id)
         } else if (msg.type === 'vj-status' || msg.type === 'vj-learn-result') {
             /* the VJ loop's feedback channel (vjpad-v2 Phase 1) — beat notes, LEARN verdicts,
                health actions. vj-learn-result kept as an alias for older loop tooling. */
@@ -147,10 +156,16 @@ const client = new WebSocketClient(
     },
     (s) => {
         status = s
-        if (s === 'connected') announce()
+        if (s === 'connected') {
+            announce()
+            padHello()
+        }
         paint()
-    }
+        nfc?.onStatus(s)
+    },
+    { dev: import.meta.env.DEV }
 )
+nfc = mountVjpadNfc({ client, buzz: (ms) => buzz(ms), chip: document.getElementById('nfc') })
 
 const sendRaw = (type, data) => client.send(type, data)
 
@@ -159,9 +174,13 @@ const sendRaw = (type, data) => client.send(type, data)
    we would flood the socket with five redundant messages per frame. */
 let pending = null
 let queued = false
+// Keys RELEASE handed back to the music (sent as null) until he moves them again. A replugged
+// wall gets the pad's state (getState below), and must not get these pinned again.
+const released = new Set()
 const flush = () => {
     queued = false
     if (!pending) return
+    for (const k in pending) pending[k] === null ? released.add(k) : released.delete(k)
     sendRaw('update-params', pending)
     pending = null
 }
@@ -464,7 +483,8 @@ const paintFingers = () => {
 const paint = () => {
     const dot = $('dot')
     const txt = $('status')
-    dot.className = 'dot ' + (status === 'connected' ? (displays > 0 ? 'live' : 'wait') : 'dead')
+    const wall = client.link.linked
+    dot.className = 'dot ' + (status === 'connected' ? (displays > 0 || wall ? 'live' : 'wait') : 'dead')
     const others = livePeers().size
     if (status !== 'connected') {
         txt.textContent = status === 'reconnecting' ? 'reconnecting…' : 'NO SERVER'
@@ -472,7 +492,8 @@ const paint = () => {
         const b = banks[bank] ?? { name: '—' }
         txt.textContent =
             `${b.name}${pinned ? ' ◉' : ''} · ` +
-            (displays > 0 ? `${displays} display${displays === 1 ? '' : 's'}` : 'no display') +
+            (wall ? 'wall' + (displays > 0 ? ' + ' : '') : '') +
+            (displays > 0 ? `${displays} display${displays === 1 ? '' : 's'}` : wall ? '' : 'no display') +
             (others ? ` · ${others} other phone${others === 1 ? '' : 's'}` : '')
     }
     ;[...bankHost.children].forEach((c, i) => {
@@ -562,6 +583,72 @@ $('learnfeed').addEventListener('click', () => {
     if (dr) dr.hidden = !dr.hidden
 })
 
+/* ── live show: KEEP, PANIC, proposals (docs/live-show-contract.md) ────────
+   The display does the work in-page (src/vj/live.js); these only send one message
+   each, so a press reaches the wall in one socket hop with no model in the path.
+   pad-hello every 2 s is how the display knows a pad is in a hand (pad-alive). */
+const padHello = () => sendRaw('pad-hello', { pad: myId })
+setInterval(() => { if (status === 'connected') padHello() }, 2000)
+
+$('keep').addEventListener('click', () => {
+    sendRaw('vj-keep', {})
+    buzz([40])
+})
+$('panic').addEventListener('click', () => {
+    sendRaw('vj-panic', {})
+    buzz([120, 60, 120])
+})
+
+const cards = new Map() // id -> { el, timer }
+const clearProposal = (id) => {
+    const c = cards.get(id)
+    if (!c) return
+    clearInterval(c.timer)
+    c.el.remove()
+    cards.delete(id)
+}
+const showProposal = (p) => {
+    if (!p || typeof p.id !== 'string') return
+    clearProposal(p.id)
+    const el = document.createElement('div')
+    el.className = 'proposal'
+    el.dataset.id = p.id
+    const label = document.createElement('span')
+    label.className = 'label'
+    label.textContent = String(p.label ?? p.id)
+    const ttl = document.createElement('span')
+    ttl.className = 'ttl'
+    const take = document.createElement('button')
+    take.type = 'button'
+    take.className = 'take'
+    take.textContent = 'KEEP'
+    const drop = document.createElement('button')
+    drop.type = 'button'
+    drop.className = 'drop'
+    drop.textContent = '✕'
+    drop.setAttribute('aria-label', 'dismiss')
+    const answer = (yes) => {
+        sendRaw('proposal-answer', { id: p.id, take: yes })
+        clearProposal(p.id)
+        buzz(yes ? [40] : [15])
+    }
+    take.addEventListener('click', () => answer(true))
+    drop.addEventListener('click', () => answer(false))
+    el.append(label, ttl, take, drop)
+    $('proposals').appendChild(el)
+    // ttlMs, not the display's expiresAt: this phone's clock may be seconds off the display's.
+    const ttlMs = Number(p.ttlMs)
+    const expiresAt = Date.now() + (Number.isFinite(ttlMs) ? ttlMs : 30000)
+    const tick = () => {
+        const left = Math.ceil((expiresAt - Date.now()) / 1000)
+        if (left <= 0) return clearProposal(p.id)
+        ttl.textContent = `${left}s`
+    }
+    tick()
+    cards.set(p.id, { el, timer: setInterval(tick, 1000) })
+    buzz([20, 30, 20])
+}
+
 /* ── LEARN — confirm the gesture ──────────────────────────────────────────
    User 2026-08-20: "I need to be able to click some button to 'confirm' the
    learning. Sometimes I'm just playing with the knobs." Riding a fader is only
@@ -612,6 +699,25 @@ document.addEventListener('visibilitychange', async () => {
             lock = await navigator.wakeLock.request('screen')
         } catch {}
     }
+})
+
+/* ── phone wall (docs/phone-wall.md) ──────────────────────────────────────
+   Plugged into a projector, this phone can be the pad AND the wall: PROJECT
+   opens the visuals on the external display, and this page stays the pad. The
+   bar stays hidden on a phone with no second screen. A fresh wall is handed
+   the pad's shader and every value the pad holds, so a replugged cable picks up
+   where it left off. */
+const phoneWall = mountPhoneWall({
+    client,
+    host: $('wallbar'),
+    getShader: () => activeShader,
+    // Every value the pad holds, minus its own bookkeeping (__gate) and what RELEASE gave back.
+    getState: () => Object.fromEntries(Object.entries(state).filter(([k]) => !k.startsWith('__') && !released.has(k))),
+    onProject: () => {
+        if (wakeSupported && !lock) wakeBtn.click()
+        buzz([30])
+    },
+    onChange: () => paint(),
 })
 
 /* ── the setup screen ──────────────────────────────────────────────────────
@@ -674,6 +780,7 @@ window.vjpad = {
     active,
     send,
     client,
+    phoneWall,
     setBank,
     setShader,
     relayout,

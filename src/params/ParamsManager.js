@@ -1,6 +1,33 @@
 import debounce from 'debounce'
 import { initRemoteController } from '../remote/RemoteController.js'
 
+// Collect every change made before `schedule` fires and hand the merged set to `flush`. A plain
+// debounce passes on only the LAST call's argument, so set(a) then set(b) in one window synced
+// only b, and edit.js deleting a knob with its .min/.max left two of the three in the URL.
+const merging = (schedule, flush) => {
+  let pending = null
+  const run = schedule(() => {
+    const changes = pending
+    pending = null
+    if (changes) flush(changes)
+  })
+  return (changes) => {
+    pending = { ...pending, ...changes }
+    run()
+  }
+}
+
+// At most one call per `ms`, never pushed back by new calls. A debounce restarts its timer on
+// every call, so a fader streaming MIDI faster than the delay sent the display nothing until it
+// was released: the hot path went dead for the whole gesture.
+const everyMs = (ms) => (fn) => {
+  let timer = null
+  return () => {
+    if (timer) return
+    timer = setTimeout(() => { timer = null; fn() }, ms)
+  }
+}
+
 /**
  * ParamsManager - Single source of truth for all shader parameters
  *
@@ -43,7 +70,7 @@ export const createParamsManager = (options = {}) => {
   }
 
   // URL sync (debounced)
-  const syncToUrlDebounced = debounce((changedParams) => {
+  const syncToUrlDebounced = merging((fn) => debounce(fn, urlSyncDelay), (changedParams) => {
     if (!syncToUrl) return
 
     const url = new URL(window.location)
@@ -55,13 +82,13 @@ export const createParamsManager = (options = {}) => {
       }
     }
     window.history.replaceState({}, '', url.toString())
-  }, urlSyncDelay)
+  })
 
-  // Remote sync (debounced, faster for smooth updates)
-  const syncToRemoteDebounced = debounce((data) => {
+  // Remote sync (throttled: at most one merged send per remoteSyncDelay, even mid-gesture)
+  const syncToRemoteDebounced = merging(everyMs(remoteSyncDelay), (data) => {
     if (!remoteController?.isConnected) return
     remoteController.sendParams(data)
-  }, remoteSyncDelay)
+  })
 
   // Initialize remote controller if in remote mode
   if (remoteMode) {

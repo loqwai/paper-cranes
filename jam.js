@@ -2,6 +2,10 @@
 // no drawer, no toasts, no indicators. Feedback goes to the console.
 import { createParamsManager } from './src/params/ParamsManager.js'
 import { loadControllers, composeControllers } from './src/controllerChain.js'
+import { buildSnapshot, postSnapshot, undoSnapshot } from './src/snapshot.js'
+import { installLiveKeys } from './src/vj/live-keys.js'
+import { shaderOnScreen } from './src/shaderLoader.js'
+import { shouldLoadMidi } from './src/midi/midiPolicy.js'
 
 const searchParams = new URLSearchParams(window.location.search)
 
@@ -14,52 +18,18 @@ const paramsManager = createParamsManager({
 })
 window.paramsManager = paramsManager
 
-const AUDIO_FEATURES = [
-    'bass', 'energy', 'mids', 'treble',
-    'spectralCentroid', 'spectralFlux', 'spectralEntropy',
-    'spectralRoughness', 'spectralKurtosis', 'spectralSpread',
-    'spectralCrest', 'spectralRolloff', 'spectralSkew', 'pitchClass',
-]
-
-const round = (n, places) => Math.round((n || 0) * 10 ** places) / 10 ** places
-
-// Spacebar snapshot — captures everything /preset needs so Claude can process offline
 const snapshotPreset = async () => {
-    const shader = searchParams.get('shader')
-    if (!shader) throw new Error('No shader in URL — cannot snapshot')
-
-    const knobs = Object.fromEntries(Object.entries(window.cranes.manualFeatures).filter(([k]) => k.startsWith('knob_')))
-    const flat = window.cranes.flattenFeatures()
-    const audio = Object.fromEntries(AUDIO_FEATURES.map(name => [name, {
-        normalized: round(flat[name + 'Normalized'], 3),
-        zScore: round(flat[name + 'ZScore'], 3),
-        slope: round(flat[name + 'Slope'], 4),
-        rSquared: round(flat[name + 'RSquared'], 3),
-    }]))
-
-    const res = await fetch('/__snapshot-preset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shader, knobs, audio, name: null, musicTab: window.cranes.tabAudioLabel || null, userNote: null }),
-    })
-    const data = await res.json()
-    if (!data.ok) throw new Error(`Snapshot failed: ${data.error}`)
+    const data = await postSnapshot(buildSnapshot(window.cranes, shaderOnScreen()))
     console.log('[jam] snapshot saved', data)
 }
 
 const undoLastSnapshot = async () => {
-    const shader = searchParams.get('shader')
-    if (!shader) throw new Error('No shader in URL')
-
-    const res = await fetch('/__snapshot-preset', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shader }),
-    })
-    const data = await res.json()
-    if (!data.ok) throw new Error(data.error || 'Nothing to undo')
+    const data = await undoSnapshot(shaderOnScreen())
     console.log(`[jam] deleted ${data.deleted} (${data.remaining} left)`)
 }
+
+// k = KEEP, Escape twice = PANIC (src/vj/live-keys.js); KEEP saves through this page's snapshot path.
+installLiveKeys({ snapshot: snapshotPreset })
 
 document.addEventListener('keydown', (event) => {
     if (event.target.matches('input, textarea, select')) return
@@ -77,12 +47,15 @@ document.addEventListener('keydown', (event) => {
 // index.js (an earlier module) has already built window.cranes synchronously in main().
 // MIDI writes knobs through cranes.updateFeature; route it via paramsManager so it reaches the URL too.
 window.cranes.updateFeature = (name, value) => paramsManager.set(name, value)
-import('./src/midi.js')
+// Always on here, unless ?midi=false (src/midi/midiPolicy.js).
+if (shouldLoadMidi(new URLSearchParams(window.location.search), { always: true })) import('./src/midi.js')
 
 // Hot-swap shader code without reloading (preserves the audio pipeline and its feature history)
 if (import.meta.hot) {
     import.meta.hot.on('shader-update', ({ shader, code }) => {
-        if (shader !== searchParams.get('shader')) return
+        if (shader !== shaderOnScreen()) return
+        // An agent's write_shader mid HANDS lock waits for his hands to come off (RemoteDisplay).
+        if (window.cranes.holdHmr?.({ shader, code })) return
         window.cranes.shader = code
     })
 

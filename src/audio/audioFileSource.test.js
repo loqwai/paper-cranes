@@ -43,8 +43,8 @@ describe('createAudioFileSource', () => {
       expect(result.fftSize).toBe(4096)
     })
 
-    it('defaults smoothing to 0.85', () => {
-      expect(result.smoothing).toBe(0.85)
+    it('defaults smoothing to 0.15, the same as the mic', () => {
+      expect(result.smoothing).toBe(0.15)
     })
   })
 
@@ -168,6 +168,30 @@ describe('initAudioFromFile', () => {
 
     it('returns a startSource function for re-seeking', () => {
       expect(typeof result.startSource).toBe('function')
+    })
+  })
+
+  // AudioBufferSourceNode.start(when, offset) throws on a negative or
+  // non-finite offset (checked in Chrome: RangeError / TypeError), and the
+  // throw sent the page to no audio at all. ?audio_time=-5, =abc, or a bare
+  // ?audio_time= did that.
+  describe.each([
+    ['-5', 0],
+    ['abc', 0],
+    ['', 0],
+    ['12.5', 12.5],
+  ])('with audio_time=%s', (audioTime, expected) => {
+    it('starts at a valid offset instead of throwing', async () => {
+      const sourceNode = makeMockSourceNode()
+      sourceNode.start = vi.fn((when, offset) => {
+        if (!Number.isFinite(offset)) throw new TypeError('The provided double value is non-finite.')
+        if (offset < 0) throw new RangeError(`The offset provided (${offset}) is less than the minimum bound (0).`)
+      })
+      globalThis.fetch = vi.fn(() => Promise.resolve({ ok: true, arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)) }))
+      const config = createAudioFileSource({ params: new URLSearchParams(`?audio_file=a.mp3&audio_time=${audioTime}`) })
+
+      await initAudioFromFile({ config, audioContext: makeMockAudioContext(sourceNode) })
+      expect(sourceNode.start.mock.calls[0][1]).toBeCloseTo(expected, 6)
     })
   })
 

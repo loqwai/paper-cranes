@@ -189,12 +189,14 @@ const main = async () => {
 
     const shouldShuffle = params.get('shuffle') !== 'false'
     const playlist = shouldShuffle ? shuffle(favorites) : favorites
-    const duration = parseInt(params.get('duration') ?? '30') * 1000
+    // A missing, zero or unparseable ?duration= falls back to 30s: setInterval(fn, NaN) fires every few ms.
+    const seconds = Number(params.get('duration') ?? '30')
+    const duration = (Number.isFinite(seconds) && seconds > 0 ? seconds : 30) * 1000
     let currentIndex = 0
 
     // Load first shader
     const { code: fragmentShader } = await loadShader(playlist[0].name)
-    document.title = `Paper Cranes - Playlist: ${playlist[0].displayName || playlist[0].name}`
+    document.title = `Paper Cranes - Playlist: ${playlist[0].prettyName || playlist[0].name}`
 
     // Setup audio and canvas
     const audio = await setupAudio()
@@ -236,7 +238,7 @@ const main = async () => {
         currentIndex = (currentIndex + 1) % playlist.length
         const shader = playlist[currentIndex]
         console.log(`Playlist: switching to ${shader.name} (${currentIndex + 1}/${playlist.length})`)
-        document.title = `Paper Cranes - Playlist: ${shader.displayName || shader.name}`
+        document.title = `Paper Cranes - Playlist: ${shader.prettyName || shader.name}`
         await loadShader(shader.name)
     }
 

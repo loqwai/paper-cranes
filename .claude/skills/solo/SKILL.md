@@ -96,7 +96,7 @@ Every knob `#define` must have a commented-out audio-reactive version directly b
 
 ### 5. Choose good audio feature mappings for the commented alternatives
 
-When creating the audio alternative, pick features from **different domains** (see CLAUDE.md Feature Independence Matrix). The commented-out audio mapping should make musical sense:
+When creating the audio alternative, pick features from **different domains** (see AGENTS.md Feature Independence Matrix). The commented-out audio mapping should make musical sense:
 
 - Visual intensity/size/brightness -> `energy`, `bass`, `mids`, `treble` (frequency bands)
 - Color/hue shifts -> `pitchClass`, `spectralCentroid` (tonal)

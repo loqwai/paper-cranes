@@ -19,15 +19,16 @@ Microphone → MediaStream → AudioContext → WindowNode (Hanning) → FFT Ana
 
 #### 1. AudioProcessor (`src/audio/AudioProcessor.js`)
 - **FFT Size**: 4096 (optimized from 32768 for ~85ms latency)
-- **Smoothing**: 0.15 exponential smoothing factor
-- **Analyzer Smoothing**: 0.2 time constant
+- **Smoothing**: the EMA weight on each new worker value (`?smoothing=`; default 0.15 for both the mic and `audio_file`). Higher is more responsive and more jittery; lower is smoother and later. `*Normalized`/`*ZScore` use 1.5x that weight, capped at 1
+- **Analyzer Smoothing**: 0.4 `smoothingTimeConstant`
+- **Onsets**: `OnsetProcessor` reads the raw spectrum every display frame, outside the workers and the EMA, and publishes `onsetKick`/`Snare`/`Hat`/`Full` plus `Trigger`, `Strength` and `Age`. Its detector is hypnosound's `makeOnsetDetector`/`makeOnsetEnvelope` (2.1.0 on). It counts frames, so triggers misfire more on 120/144 Hz displays. See [docs/onset-detection.md](docs/onset-detection.md)
 - Uses Web Workers for parallel feature extraction
-- Extracts 15 audio features from hypnosound library
+- Extracts 16 audio features from hypnosound 2.1.0. The browser loads it from esm.sh, pinned in `src/audio/analyzer.js` (workers) and the `vite.config.js` `hypnosound` alias (main thread). Bump both pins and `package.json` together; a mismatch once left the main thread on 1.10.2 while the workers ran 1.14.0
 
 #### 2. WorkerRPC (`src/audio/WorkerRPC.js`)
-- Manages worker communication with 30ms timeout
-- Handles feature calculation in parallel
-- Returns smoothed default values on timeout
+- One worker per feature, fire-and-forget: each frame posts the FFT, and `getResult()` returns the latest reply
+- No timeout: a slow or dead worker leaves its last value in place
+- Replaces any non-finite stat with 0 before it reaches the shader
 
 #### 3. Visualizer (`src/Visualizer.js`)
 - WebGL2 context with frame buffer ping-ponging
@@ -54,12 +55,12 @@ Each feature has 11 statistical variations:
 - SpectralRoughness, SpectralKurtosis, SpectralEntropy, SpectralCrest
 - SpectralSkew, PitchClass
 - Bass, Mids, Treble
-- Energy
-- Beat detection
+- Energy, Rms, Dbfs
+- Beat detection (`beat`: `spectralFlux` zScore above 0.9; never true while the history is flat, as in silence)
 
 ## Audio Features Reference (Hypnosound)
 
-### The 14 Core Features
+### The Core Features (16)
 
 | Feature | Range | Measures | Musical Meaning | Independence |
 |---------|-------|----------|-----------------|--------------|
@@ -67,6 +68,8 @@ Each feature has 11 statistical variations:
 | **mids** | 0-1 | Mid-range energy | Body/warmth | Semi-independent |
 | **treble** | 0-1 | High freq energy | Brightness/air | Independent from bass |
 | **energy** | 0-1 | Total amplitude | Loudness | Correlates with bass |
+| **rms** | 0-1 | Root mean square of the spectrum | Loudness | Correlates with energy |
+| **dbfs** | 0-1 | rms in dB, -100..0 dB mapped to 0..1 | Perceived loudness | Correlates with energy |
 | **pitchClass** | 0-1 | Note (0-11)/12 | Which note playing | Independent from timbre |
 | **spectralCentroid** | 0-1+ | Center of mass | Brightness/pitch center | Semi-correlates with pitchClass |
 | **spectralSpread** | 0-1+ | Frequency variance | Harmonic width | Independent from centroid |
@@ -85,7 +88,7 @@ Each audio feature provides 11 statistical variations calculated over a rolling 
 1. **value** - Raw current value from the analyzer
 2. **normalized** - Min-max normalized to 0-1 range (relative to history)
 3. **mean** - Historical average (baseline character)
-4. **median** - Historical median (robust center)
+4. **median** - Historical median (robust center). Exact from hypnosound 2.1.0; before that it was wrong on most frames once the window filled
 5. **min** - Historical minimum (lower bound)
 6. **max** - Historical maximum (upper bound)
 7. **standardDeviation** - Variability measure
@@ -208,9 +211,8 @@ Group features by domain and pick from DIFFERENT domains for variety:
 ### Latency Reduction (from ~1000ms to ~100ms)
 1. **FFT Size**: Reduced from 16384 to 4096 
    - Query param: `?fft_size=4096`
-2. **Smoothing**: Reduced from 0.8 to 0.05-0.2
-   - Query param: `?smoothing=0.15`
-3. **Worker Timeout**: Optimized to 30ms
+2. **Smoothing**: `?smoothing=0.15` (mic default) is the weight on the newest value, so raising it cuts lag and adds jitter
+3. **No worker wait**: features come from each worker's latest reply; nothing awaits a round trip
 
 ### Jitter Reduction
 - Exponential smoothing on all features
@@ -218,7 +220,7 @@ Group features by domain and pick from DIFFERENT domains for variety:
 - Smart initialization to prevent jumps
 
 ### Browser-Specific Fixes
-- Firefox: Automatic microphone reconnection every 5 seconds
+- Mic watchdog (`src/audio/micWatchdog.js`): resumes a suspended AudioContext and re-acquires an ended or frozen mic; `?debug_audio=true` shows its state
 - Chrome: Proper async initialization of audio worklet
 
 ## Shader Development
@@ -244,6 +246,7 @@ vec3 position = vec3(CIRCLE_RADIUS, 0.1, 0.1);
 - `iFrame` - Frame number
 - `iChannel0-3` - Texture samplers
 - `beat` - Boolean beat detection
+- `onsetKick`, `onsetSnare`, `onsetHat`, `onsetFull` (plus `…Trigger`, `…Strength`, `…Age`) - onset envelopes from hypnosound's `makeOnsetDetector`/`makeOnsetEnvelope`. See [docs/onset-detection.md](docs/onset-detection.md)
 
 ### Utility Functions
 - `rgb2hsl(vec3)` / `hsl2rgb(vec3)` - Color space conversion
@@ -270,6 +273,8 @@ Controllers are JavaScript modules (`controllers/*.js`) that run once per frame 
 - Set via URL query params (e.g., `?knob_1=0.5`), MIDI controllers, or the ParamsManager API
 - MIDI controllers auto-map CCs to knobs with per-device profiles persisted in localStorage. Manage mappings visually at `/midi.html`. See [docs/midi-mapping.md](docs/midi-mapping.md)
 - The phone touch surface at `/vjpad.html` builds its pads from `vjpad-layouts.json` plus whatever knobs the shader declares. See [docs/vjpad.md](docs/vjpad.md)
+- NFC smiley stickers on the arm are show controls: the vjpad reads them with Web NFC (Android Chrome) and sends KEEP, PANIC, NEXT, TAKE or a favourite look down its room socket, with no model in the path. Tags hold only an id; `nfc-show-controls.json` says what each does; write them at `/nfc-writer.html#show`. See [docs/nfc-show-controls.md](docs/nfc-show-controls.md)
+- Phone plugged into a projector (USB-C DP Alt Mode): PROJECT on the vjpad opens the visuals on the external display and keeps the phone as the pad; the two talk over a BroadcastChannel or PresentationConnection, no network needed, and HANDS/KEEP/PANIC/proposals/NFC work unchanged. See [docs/phone-wall.md](docs/phone-wall.md)
 
 ### Naming a knob in the shader (convention)
 
@@ -340,12 +345,12 @@ uniform float my_param;  // = 0.5
 uniform float another;   // = 1.2
 ```
 
-**Note:** Only numeric values work. Known params (`shader`, `noaudio`, `fft_size`, etc.) and `knob_*` params are excluded.
+**Note:** Only numeric values work. Known params (`shader`, `noaudio`, `fft_size`, etc.) and `knob_*` params are excluded. A hyphen becomes an underscore (`?my-param=0.5` is `uniform float my_param`), a name that is not a legal GLSL identifier (`?3d=1`, `?gl_x=1`, `?a__b=1`) is skipped, and a name the shader already declares is not declared again (`src/shader-transformers/shader-wrapper.js`).
 
 ## Query Parameters
 
 ### Core Parameters
-- `shader` - Shader file to load (e.g., `?shader=star`)
+- `shader` - Shader file to load (e.g., `?shader=star`). A path the host does not have plays the default shader with a small `shader not found: <path>` note
 - `fft_size` - FFT window size (default: 4096)
 - `smoothing` - Smoothing factor (default: 0.15)
 - `history_size` - Statistical history buffer (default: 500)
@@ -354,20 +359,32 @@ uniform float another;   // = 1.2
 - `fullscreen` - Start in fullscreen
 - `remote` - Remote mode: `display` (receive commands) or `control` (send commands)
 - `audio=tab` - Capture audio from a browser tab instead of mic. Chrome/Edge only. See [docs/tab-audio.md](docs/tab-audio.md)
-- `audio_file=<url>` - Play a deterministic audio file through the analyzer. See [docs/audio-file-playback.md](docs/audio-file-playback.md)
+- `audio_send=true` - Broadcast this page's audio features over the remote WebSocket (works with mic, `audio=tab`, or `audio_file`)
+- `audio=remote` - Take audio features from a machine running `audio_send=true` instead of the local mic. Same dev server or `room=`
+- `mirror.html?view=<view id>` - A watch-only copy of a relay room's wall, drawn locally from the uniforms the wall drew with (a few KB/s, no video, no mic, no room name). For a draw board or a second screen. `scale=` (default 0.5) and `fps=` (default 30) cap its cost. See [docs/board-mirror.md](docs/board-mirror.md)
+- `audio_file=<url>` - Play a deterministic audio file through the analyzer. Smoothing defaults to 0.15, the same as the mic. See [docs/audio-file-playback.md](docs/audio-file-playback.md)
 - `wavelet=true` - Enable opt-in wavelet (DWT) analysis alongside FFT. Adds `wavelet*` uniforms (octave bands, centroid/spread, bassHit trigger, FFT×wavelet combos). See [docs/wavelet-analysis.md](docs/wavelet-analysis.md)
 - `audio_device=<label substring>` - Open the mic input whose label contains this (e.g. `USB Audio CODEC`); no match means no audio, never a different device. Omitted → the OS default input
 - `audio_time=<seconds>` - Start audio file playback at this offset (default: 0)
-- `time=<seconds>` - Hold time constant (useful for deterministic screenshots/testing)
-- `vj=1` - Install the VJ runtime on the display: cursor-hide, GL validator, aesthetic meter, frame-time probe, and health signals POSTed to `/__vj-signal`. This is how the auto-VJ loop sees a page it cannot screenshot. See [docs/vj-telemetry.md](docs/vj-telemetry.md)
+- `time=<seconds>` - Hold the `time` uniform constant (useful for deterministic screenshots/testing). It does not hold `iTime`: add `iTime=<seconds>` too, or a shader that reads `iTime` keeps moving (measured 2026-11-25)
+- `vj=1` - Install the VJ runtime on the display: cursor-hide, GL validator, aesthetic meter, frame-time probe, and health signals (POSTed to `/__vj-signal` on the dev server; on a `?remote=display&room=` page, production included, also sent down the room socket to the relay MCP's `wait_for_event`). This is how the auto-VJ loop sees a page it cannot screenshot. See [docs/vj-telemetry.md](docs/vj-telemetry.md)
+- `hands_ms=<ms>` - The live show's HANDS lock: how long after Aaron's last dial/pad/MIDI move agent writes stay held (default 8000). See [docs/live-show-contract.md](docs/live-show-contract.md)
+- `release_ms=<ms>` - How long a dial must be still before the `release` signal (default 50)
+- `panic=<shader>` - The fork PANIC swaps to (default: the shader the page loaded with)
+- `show_proposals=1` - With `vj=1`, show a small chip on the display naming open proposals (they live on the vjpad otherwise)
+- `wall=1` - This display is a phone wall: it also hears a vjpad on the same phone over a local link (no network), opens a room socket only for `room=` or the dev server, and never shows the reconnect badge. The vjpad's PROJECT opens it. See [docs/phone-wall.md](docs/phone-wall.md)
+- `wall_url=<same-origin path>` - On the vjpad: the page PROJECT opens as the wall (default `/`)
+- `midi=true` / `midi=false` - Turn MIDI on or off. On a plain `index.html` MIDI is off unless `midi=true`. In live mode (`remote=display`, `wall=1` or `vj=1`) it is on unless `midi=false`; there the page asks for the MIDI permission only if it is already granted or on its first tap, so no prompt lands on the wall. `jam.html` and `show.html` always load it (`midi=false` turns it off). See [docs/midi-mapping.md](docs/midi-mapping.md#turning-midi-on)
+- `midi_panic=cc:N|note:N[:ch]`, `midi_keep=…` - Bind a MIDI control to PANIC / KEEP (persisted). See [docs/midi-mapping.md](docs/midi-mapping.md)
 - `vjtrack=1` - With `vj=1`, also log every knob move at 10Hz with the full audio-feature vector, for working out which feature a fader is imitating. **Off by default and not for use during a show** — it is a ~17KB JSON serialise + fetch every 2s on the render thread
 
 ### Dynamic Override
-All parameters can be overridden at runtime via:
+Two audio parameters can be changed at runtime:
 ```javascript
-window.cranes.manualFeatures.smoothing = 0.2
-window.cranes.manualFeatures.fft_size = 8192
+window.cranes.manualFeatures.smoothing = 0.2      // next frame
+window.cranes.manualFeatures.history_size = 1000  // restarts every feature's stats history
 ```
+`fft_size` is read once at startup; changing it needs a reload with `?fft_size=`.
 
 ## Remote Control Mode
 
@@ -415,6 +432,60 @@ full frame (~16ms) of lag whenever the renderer's rAF is queued first. The genui
 per-message work has been moved out instead: the URL mirror is debounced to 750ms (it only exists
 so a refresh preserves state) and per-message DOM work was removed outright.
 
+### VJ MCP (any agent harness)
+An MCP server (streamable HTTP, stateless, never SSE) whose tools read and drive every display:
+`list_displays`, `list_shaders`, `get_state`, `screenshot`, `set_params`, `set_shader`,
+`read_shader`, `write_shader`, `wait_for_event`, `guide`, the live show's `propose`, `answer_proposal`, `keep`, `panic`
+(docs/live-show-contract.md), plus `display_secret` on the relay only. It runs in two places with
+the same code (`vite-plugins/vj-mcp/server.js` + `hub-core.js`):
+- **Ask the server how to use it:** `guide` (no args: contents; `{topic}`: one section;
+  `{question: "how do I ..."}`: the best matching section plus close-match ids, keyword-ranked, no model). Its
+  workflows (pick a display, change knobs, hot-swap a shader, watch signals, judge a screenshot,
+  run a relay room, partner on a live show) are also MCP prompts and `vj://guide/...` resources,
+  and its orientation is the server `instructions`. All of it comes from one file,
+  [docs/vj-mcp-guide.md](docs/vj-mcp-guide.md): edit that, never the JS.
+- **Live:** `https://relay.beadfamous.com/mcp/<room>` on the relay Worker. Displays are any
+  `?remote=display&room=<room>` page; the room's Durable Object is the broker. Cloudflare Access
+  managed OAuth in front (`claude mcp add --transport http paper-cranes-live
+  https://relay.beadfamous.com/mcp/<room>`, then sign in from `/mcp`), the JWT checked again in the
+  Worker. `write_shader` there applies code live and saves nothing (`persisted: false`). The room
+  drops any `inspect` a client sends; everything else is relayed verbatim as before.
+  **Display secret:** `display_secret {action: "rotate"}` locks the room and returns a display link
+  ending `#display_secret=ds_…`; from then on only a page opened from that link registers as a
+  display (others get `display-refused` and stay plain room peers). The room stores only its
+  SHA-256; `rotate` again drops every display, `clear` reopens the room, and a room never locked
+  behaves as before. The page never reports the secret and a peer cannot set it.
+- **Dev:** `http://localhost:6969/mcp` on the dev server (`claude mcp add --transport http
+  paper-cranes-vj http://localhost:6969/mcp`), displays are `?remote=display` pages there, and
+  `write_shader` writes `shaders/<x>.frag` and hot-swaps.
+
+Knobs go out as `update-params` on the display's own socket; reads come back over a point-to-point
+`inspect` channel the broker never broadcasts, answered only after the broker welcomed the page.
+
+**Live show ([docs/live-show-contract.md](docs/live-show-contract.md)):** the page owns everything
+that must be instant (`src/vj/live.js`, wired in `RemoteDisplay.js`). While Aaron's hands are on a
+dial, pad, MIDI or board control (`hands` signal), agent writes (`update-params` marked
+`source: "agent"`, which every MCP write is) are HELD and land 8 s after his last move; his own
+writes are never held and still apply synchronously (hot-path rule). Agents change his look with
+`propose` (a card on the vjpad; he presses KEEP), never by setting his dials. PANIC (vjpad, MIDI,
+Escape twice on jam/show, `panic` tool) hot-swaps to the boot fork with no reload; KEEP (vjpad, MIDI,
+`k` on jam/show, `keep` tool) saves a snapshot and signals `keep`. The draw board bridge
+(`scripts/vj/board-bridge.js`) maps board taps to these calls with `source: "board"`, and board
+faders/XY (draw widgets from `scripts/vj/board-controls.js`) to `update-params` on the display's
+socket, no model in the path: [docs/draw-control-surface.md](docs/draw-control-surface.md)
+(buttons ~155 ms Send→wall; faders ~170 ms, draw's push throttle is the floor).
+See [docs/vj-mcp.md](docs/vj-mcp.md).
+
+### Board mirror (watch-only viewer)
+`mirror.html?view=<view id>` shows a relay room's wall on any page, such as a draw board, without
+video: while a mirror watches, the display sends the uniforms its shader reads (~20 Hz, a few hundred
+bytes each) and the mirror renders the same shader at half size. The mirror joins the relay at
+`/view/<view id>`, the room's Durable Object id (`GET /view-key/<room>` gives it). It holds no room
+name, so a mirror link on a shared board cannot steer the wall. The relay drops everything a viewer
+sends, never lists it as a display, gives it only the feed, and counts it in `status.viewers`, not in
+`connectedClients`. Relay rooms only: the dev server's `/ws` has no viewers. See
+[docs/board-mirror.md](docs/board-mirror.md).
+
 ### ParamsManager
 The `ParamsManager` (`src/params/ParamsManager.js`) is the unified system for handling all shader parameters:
 - Single source of truth for knobs, settings, and shader code
@@ -443,6 +514,7 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   │   ├── analyzer.js         # Worker analyzer loader
 │   │   ├── tabAudioSource.js   # ?audio=tab capture via getDisplayMedia
 │   │   ├── tabAudioButton.js   # Tab audio overlay UI
+│   │   ├── micWatchdog.js      # Re-acquires the mic after a phone lock / OS takeover (?debug_audio=true)
 │   │   └── audioFileSource.js  # ?audio_file= deterministic playback
 │   ├── midi/
 │   │   └── MidiMapper.js       # MIDI CC→knob mapping with profiles
@@ -452,30 +524,53 @@ paramsManager.setShader(code)      // Syncs shader to remote
 │   │   └── multiplayer.css     # Cursor and peer chip styles
 │   ├── params/
 │   │   └── ParamsManager.js    # Unified params (URL, remote, features)
+│   ├── phone-wall/             # One phone, two screens: pad + wall over a local link (docs/phone-wall.md)
+│   │   ├── link.js             #   BroadcastChannel / PresentationConnection link, hello + TTL
+│   │   ├── pad.js              #   vjpad client (room + link) and the PROJECT / WALL / NO WALL bar
+│   │   ├── wall.js             #   ?wall=1 display client for RemoteDisplay
+│   │   ├── project.js          #   find the second screen, open the wall on it
+│   │   └── state.js            #   none / available / connecting / presenting / lost
 │   ├── remote/
 │   │   ├── RemoteController.js # Sends commands to displays
 │   │   ├── RemoteDisplay.js    # Receives commands from controllers
+│   │   ├── inspect.js          # Display side of the VJ MCP (state, shot, logs, validate)
+│   │   ├── relay.js            # Which relay a page may answer on; PINNED boot-time keys update-params cannot set
+│   │   ├── mirrorFeed.js       # Display side of a board mirror: the uniforms it drew with, while a mirror watches
 │   │   └── WebSocketClient.js  # WebSocket client wrapper
 │   ├── vj/
-│   │   └── runtime.js          # ?vj=1 page runtime (validator, meter, jank probe, signals)
+│   │   ├── runtime.js          # ?vj=1 page runtime (validator, meter, jank probe, signals)
+│   │   └── signals.js          # where ?vj=1 signals go: /__vj-signal (dev) and/or the relay room socket
+│   ├── mirror/                 # mirror.html: watch-only wall copy for boards (docs/board-mirror.md)
 │   ├── Visualizer.js           # WebGL rendering
 │   ├── shaderLoader.js         # Centralized shader loading
+│   ├── listStore.js            # list page's localStorage (cranes-list-*), shape-checked reads
 │   └── shader-transformers/     # Shader preprocessing
 ├── shaders/                     # GLSL visualization shaders
-│   ├── wip/Codex/             # Codex-created shaders go here
+│   ├── wip/<series>/           # new shaders go here: N.frag + <series>.md
 │   ├── plasma.frag
 │   └── melted-satin/2.frag
+├── setlists/                    # /show setlist <name>: beats as hot-swaps (sun-set.json, clit-set.json)
 ├── controllers/                 # JS companions to shaders (frame-persistent state)
 │   ├── example.js              # Documented example
-│   └── griz-coat.js            # Drop sustain with exponential decay
+│   └── the-coat.js             # Drop sustain with exponential decay
 ├── scripts/
 │   ├── remap-knobs.js          # Utility to remap knob assignments in shaders
+│   ├── validate-shader.js      # Compile one shader through the real wrapper
+│   ├── production-shaders.test.js # npm test: every shader outside wip/ must compile
 │   └── vj/                     # Live-VJ tooling — see docs/vj-telemetry.md
 │       ├── show.js             #   the show browser: fullscreen Chrome driven over CDP (launch/eval/shot)
-│       ├── aesthetic-meter.js  #   FETCHED BY URL at runtime; do not move
+│       ├── aesthetic-meter.js  #   dev fetches it by URL, a build bundles it (src/vj/runtime.js); do not move
 │       ├── remote-send.js      #   push update-params to the display from a shell
+│       ├── mcp-call.js         #   call one VJ MCP tool from a shell
 │       ├── watch-release.js    #   emit a line when a fader is released
-│       └── knob-correlate.js   #   which audio feature was that gesture imitating?
+│       ├── watch-events.js     #   one line per page signal (keep, panic, release, …): a Monitor's feed
+│       ├── stray-guard.mjs     #   closes any page in the show Chrome that isn't the wall
+│       ├── knob-correlate.js   #   which audio feature was that gesture imitating?
+│       └── mirror-bench.js     #   board mirror vs WebRTC vs snapshots, measured (docs/board-mirror.md)
+├── public/
+│   └── service-worker.js        # The only service worker (Vite copies public/ as-is)
+├── workers/
+│   └── remote-relay/            # relay.beadfamous.com: /ws/<room> broker + live VJ MCP (Durable Object)
 ├── jam.js                       # Jam page: canvas only, MIDI + spacebar snapshots, no on-screen UI
 ├── index.js                     # Main entry point
 ├── edit.js                      # Editor interface
@@ -484,7 +579,12 @@ paramsManager.setShader(code)      // Syncs shader to remote
 └── vite-plugins/
     ├── remote-ws-plugin.js      # WebSocket server for remote control
     ├── editor-sync-plugin.js    # Bidirectional editor↔disk sync (dev only)
-    ├── vj-signal-plugin.js      # /__vj-signal endpoint; writes .Codex/vj-signals.jsonl (dev only)
+    ├── same-origin.js           # 403 for cross-site POSTs to the dev write endpoints (/__save-shader, /__vj-signal, ...)
+    ├── vj-signal-plugin.js      # /__vj-signal endpoint; writes .claude/vj-signals.jsonl (dev only)
+    ├── vj-mcp-plugin.js         # /mcp: VJ MCP server, streamable HTTP (dev only) — docs/vj-mcp.md
+    ├── vj-mcp/server.js, hub-core.js  # the tool set and display hub, shared with the relay Worker
+    ├── vj-mcp/hub.js, tools.js  #   their dev-server hosts (Node ws sockets, shaders on disk)
+    ├── vj-mcp/guide.js          #   guide tool, workflow prompts, vj://guide resources, from docs/vj-mcp-guide.md
     └── shader-plugin.js         # Shader discovery, metadata, and manifest generation
 ```
 
@@ -532,32 +632,37 @@ When creating a PR that adds shaders, **always include preview links** in the PR
 
 This lets reviewers click through and test each shader directly.
 
-## Codex-Specific Instructions
+## Agent-Specific Instructions
+
+### Docs are general; each show is a skill
+
+Docs under `docs/` are general: no single machine, branch, date or show. Each show is a skill
+(`.agents/skills/<show>-show/`, copied to `.claude/skills/` by the sync); a show's history goes in
+`journals/`. A shader's knobs, story and forks go in its own `.md`.
 
 ### Where to Put Your Shaders
 
-Shaders go under `shaders/<github-username>/wip/<shader-name>/`. Iterations are numbered files. Each shader in `wip/` gets a single markdown doc named `<shader-name>.md` in the same directory.
+New shaders go under `shaders/wip/<series>/`, with no author folder (Aaron, 2026-11-25: "don't put it in wip/claude or claude/wip or whatever - just wip/<series>/"). Iterations are numbered files. Each series gets a single markdown doc named `<series>.md` in the same directory. Existing shaders keep their paths; old paths keep working.
 
 ```
-shaders/Codex/wip/cosmic-bloom/
+shaders/wip/cosmic-bloom/
 ├── 1.frag              # First iteration
 ├── 2.frag              # Second iteration
 └── cosmic-bloom.md     # Design intent, audio mapping, iteration notes
 ```
 
 ```bash
-shaders/Codex/wip/cosmic-bloom/1.frag           # Good
-shaders/Codex/wip/cosmic-bloom/cosmic-bloom.md   # Good — one doc per shader
-shaders/wip/Codex/my-shader.frag                 # Old convention, still works
-shaders/my-shader.frag                             # Bad - don't put in root
+shaders/wip/cosmic-bloom/1.frag            # Good
+shaders/wip/cosmic-bloom/cosmic-bloom.md   # Good — one doc per series
+shaders/my-shader.frag                     # Bad - don't put in root
 ```
 
-**Document as you iterate.** The `<shader-name>.md` should include:
+**Document as you iterate.** The `<series>.md` should include:
 - Visual intent and design concept
 - Which audio features drive what and why
 - What changed between numbered iterations (e.g. "2.frag: switched from spectralFlux to spectralEntropy for the color shift — less jittery on sparse tracks")
 
-The `wip/` directory is filtered from the mobile list by default, so experimental shaders won't clutter the production list.
+Any path with a `wip` segment is filtered from the mobile list by default (`list.js`) and skipped by the production compile test (`scripts/production-shaders.test.js`), so experimental shaders won't clutter the production list.
 
 ### Shader Metadata System
 Add metadata comments at the top of shader files to control list page behavior:
@@ -587,12 +692,19 @@ Metadata is extracted at build time and included in `dist/shaders.json`.
   and no visible symptom because every shader still *has* a date. So real history is
   baked into a committed **`shader-dates.json`** (`scripts/shader-dates.js`), and the
   build prefers it whenever live history is shallow or degenerate. Live git still wins
-  when it is genuinely usable (local dev), and the baked file is refreshed
-  automatically on any local dev-server start or build — regenerate manually with
-  `npm run shader-dates`. The build refuses to overwrite the baked file from a shallow
-  clone, and logs a loud warning if the result has fewer than 2 distinct dates.
-  If dates are genuinely unavailable, `modified` is `null` and the list page hides ages
-  and removes the "newest" sort rather than showing a fabricated order.
+  when it is genuinely usable (local dev). The baked file holds only shaders that still
+  exist, keyed in code-point order, and is written only when its text changes. A
+  dev-server start, a `.frag` save or a build refreshes it only while the tree has
+  uncommitted `.frag` changes, so the refresh rides with that commit and a clean
+  checkout stays clean. That refresh reads committed history, so it cannot see the
+  commit it rides in: a shader you add or edit gets its baked date at the next refresh.
+  Until then the live site shows a new shader with no date (it sorts last under
+  "newest first") and an edited one at its previous date. After committing shader work,
+  run `npm run shader-dates` and commit `shader-dates.json`. The build never writes
+  the baked file from a shallow clone, `npm run shader-dates` refuses to run on one, and
+  the build logs a loud warning if the result has fewer than 2 distinct dates. If no
+  shader has a usable date, the list page hides ages and removes the "newest" sort
+  rather than showing a fabricated order.
 - `presets` — preset URLs read from the shader source. The list page used to fetch all
   345 `.frag` files (6.5MB) on every load to find these; it now ships in `shaders.json`.
 - `prettyName` — display name, and `tags` normalised to always be an array (a single
@@ -642,6 +754,11 @@ Look at these for reference:
 - `subtronics.frag` - Image-based with audio modulation
 - `redaphid/zebra/tie-dye.frag` - Complex knob-based control
 
+## Repo Instructions
+
+- **This file is the one source.** `CLAUDE.md` only imports it (`@AGENTS.md`) for Claude Code. Edit here.
+- **Checked out on Windows: no symlinks in the repo.**
+
 ## Code Style Guidelines
 - Use arrow functions
 - Early returns (single line when possible)
@@ -672,7 +789,7 @@ The installed PWA opens with whatever URL the user was on when they installed. F
 - `index.html` — manifest link injection + 7-tap install trigger
 - `vite-plugins/shader-plugin.js` — `prettifyShaderName()`, `makeManifest()`, `generateManifests()`
 - `public/icons/` — shared PWA icons (all shaders use the same set)
-- `service-worker.js` — offline caching
+- `public/service-worker.js` — offline caching (the only copy; Vite ships public/ as-is)
 
 ## ChromaDepth Shader Variants
 
@@ -688,7 +805,7 @@ ChromaDepth 3D glasses create depth from color: red=near, green=middle, blue/vio
 
 **Full guide:** See [docs/MAKING_A_NEW_SHADER.md](docs/MAKING_A_NEW_SHADER.md#creating-chromadepth-versions-of-existing-shaders)
 
-**Reference shaders:** `wooli/chromadepth-1.frag`, `wooli/chromadepth-2.frag`, `Codex/chromadepth-julia.frag`
+**Reference shaders:** `wooli/chromadepth-1.frag`, `wooli/chromadepth-2.frag`, `claude/chromadepth-julia.frag`
 
 ## Common Issues & Solutions
 
@@ -759,17 +876,36 @@ float complexity = spectralEntropyNormalized * spectralFluxZScore;
 
 6. **Shader Philosophy**: Shaders should be artistic, reactive, and performant - avoiding dead zones while maintaining visual coherence.
 
+## Testing
+
+Full guide: [docs/testing.md](docs/testing.md).
+
+- `npm test` - unit tests (vitest, node).
+- `npm run test:smoke` - builds, serves `dist/` like Cloudflare Pages on :7129, and drives every page in
+  headless Chromium (Playwright): plasma paints real pixels, a missing shader shows the default plus
+  `shader not found: <name>`, the list fills on a phone, the editor holds GLSL, no service-worker
+  reload loop, `?vj=1` runtime, vjpad, midi.
+- `npm run test:smoke:prod` - the same against https://visuals.beadfamous.com, plus `e2e/relay.test.js`
+  (a peer in a live `?room=` sets a knob but cannot set `controller`; `vj-signal` is not relayed).
+  Point it at a Pages preview with `E2E_BASE_URL=<url>`; record videos with `E2E_VIDEO_DIR=<dir>`.
+- `npm run test:e2e` - every `e2e/*.test.js`, including the dev-server VJ MCP suites.
+- Smoke checks wait on conditions, never sleeps, and pin `time=` + `noaudio=true`. Run the smoke
+  suite against the Pages preview before merging a change to a page.
+
 ## Shader Validation
 
 Use the CLI to validate shader syntax before committing:
 ```bash
-node scripts/validate-shader.js shaders/wip/Codex/my-shader.frag
+node scripts/validate-shader.js shaders/wip/my-shader/1.frag
 ```
 
 This will check for:
 - GLSL syntax errors
 - Missing required uniforms
 - Common mistakes
+
+`npm test` also compiles every shader outside `wip/` through the same wrapper
+(`scripts/production-shaders.test.js`), so a broken production shader fails the suite.
 
 ## Mobile Optimization for Raymarching Shaders
 
@@ -831,29 +967,47 @@ vec3 rd = normalize(uv.x * right + uv.y * up + fov * forward);
 3. **Not handling aspect ratio**: Use `uv.x *= iResolution.x / iResolution.y` for non-square viewports
 4. **Too much feedback**: `mix(prev, new, 0.1)` can accumulate to white - use `mix(prev * 0.99, new, 0.1)`
 5. **Hardcoded resolution**: Always use `iResolution`, never hardcode 1920x1080
-6. **Metadata before #version**: If your shader has `#version 300 es`, it MUST be the first line. Put metadata comments (`// @fullscreen: true`) on line 2, not line 1. Shaders without `#version` (ShaderToy-style) can have metadata on line 1.
+6. **Metadata before #version**: If your shader has `#version 300 es`, keep it on the first line and put metadata comments (`// @fullscreen: true`) on line 2. The wrapper hoists a `#version` that only `//` comments precede, so such a shader still compiles, but any other code above `#version` is an error. Shaders without `#version` (ShaderToy-style) can have metadata on line 1.
 
-## Codex Skills
+## Skills
 
 | Skill | Purpose |
 |-------|---------|
-| `/jam` | Launch a jam session — open the jam page with shader + controller + music source. Lighter than `/live-session`: no editor, just knobs + snapshots. |
-| `/live-session` | Launch a live creative session — open Chrome with shader editor + audio source, connect Codex-in-Chrome, and jam. Optionally pass a shader path or SoundCloud/Spotify URL. See [docs/live-session-insights.md](docs/live-session-insights.md). |
-| `/fork` | Save the current shader + knob state as a new numbered iteration. Reads knobs from the browser, copies the `.frag`, writes a companion doc. |
-| `/record` | Record a music video from the current shader canvas. Uses MediaRecorder API, restarts the music track, auto-stops after duration. |
-| `/preset` | Save knob state as a named preset (live) or batch-process the snapshot queue (`/preset process`). |
+| `/show` | The one door for a live show: `check` (preflight as ✅/❌ cards on the show's draw board), launch (the wall, the board as status board and phone control surface, the no-model board bridge, then the `/partner` lane), `lite` (a jam: what `/jam` was), `panic [fork]`, `setlist <name>` (e.g. the sun set), `end` (story on the board, journal). With no shader it runs the default show, `/clit-show`. See [docs/show-playbook.md](docs/show-playbook.md). |
+| `/sun-show` | The sun show: black-sun `sun-1` + `controller=black-sun`, plays the `sun-set` setlist. Holds the sun's knob map, K5 act values, companion, panic forks (`sun/7`) and its own failures (the latched `__blackSunState` NaN). |
+| `/clit-show` | The default show (what `/show` runs with no shader). The clit-set show: `clit-set/2` + `controller=clit-set`, the coaster (`coaster=1`), the `clit-set` setlist. Holds the Twister knob map, coaster controls, panic forks, input notes, the pilot and the 2026-11-22 lessons. |
+| `/partner` | Aaron's VJ partner while he plays the dials: its own background lane, one step per event, PROPOSES changes he takes or dismisses (KEEP on the pad or board), applies only health fixes, never while his hands are on. The art critic runs between tracks. Was `/vibej2`. |
+| `/keep` | KEEP lives in the page (vjpad, MIDI, `k`, the board); `/keep process` turns kept moments into numbered forks and named presets with docs. Was `/fork` + `/preset`. |
+| `/jam` | Alias: use `/show lite`. |
+| `/record` | Record a music video from the shader canvas (MediaRecorder). Studio and post-show only: it drives Chrome through claude-in-chrome. |
+| `/shader` | Make, fork or fix a shader so it is good enough for the wall: file layout, Aaron's taste rules in his words, signal conditioning (channel hierarchy, presence gate, one-way clocks), failure-to-fix table, mobile limits, when a controller is justified, and a measured gate (`bin/shader-check.mjs`: silence, every knob at 1, phone-level audio at a held clock, brightness pump, motion). Worked example: `shaders/wip/silk-vortex/`. |
 | `/solo` | Toggle a shader between knob mode and audio mode. Auto-detects current mode and switches. Use `/solo knobs` or `/solo audio` to force a mode. Defaults to the modified `.frag` in the worktree. |
 | `/changelog` | Update docs/CHANGELOG.md and README with recent features. |
 | `/pr` | Create a PR, request review, and open in browser. |
+| `/show-repo` | One show, one repo: strip to one shader + controller (shared git history), build, verify headless, then publish to `<show>.beadfamous.com` on Aaron's go-ahead. Its front page is `show.html`: canvas only, MIDI, `?room=` remote jamming, snapshots. See [docs/show-repos.md](docs/show-repos.md). |
+| `/verify-paper-cranes` | Prove a change in the real app: launch an instance on a free port (never 6969/6977/6978/6991), doctor it, drive a mapped feature with Playwright, keep screenshots, pixel stats, logs and a headful video in `~/paper-cranes-proof/`, then clean up. Feature map in `.agents/skills/verify-paper-cranes/features/`. |
+
+Retired 2026-11-24 (board [live-show-skills](https://draw.hypnodroid.com/b/live-show-skills), Aaron: "Yes to all"): `/vibej`, `/vj`, `/live-session` (deleted), `/vibej2` (now `/partner`), `/fork` and `/preset` (now `/keep`), `/sun-set` (now the setlist `setlists/sun-set.json`, played by `/show setlist sun-set`; `/sun-show` plays it), `/remap` (now the "Forget all mappings" button on `/midi.html`).
+
+Edit `.agents/skills/`; `.claude/skills/` is generated for Claude Code by `node scripts/sync-claude-skills.js`; a test fails on drift; don't edit `.claude/skills/` by hand. The sync replaces only the skills `.agents/skills/` has, so a local skill folder in `.claude/skills/` is left alone.
 
 ## Live Sessions: the Parent Stays Responsive
 
-**Show day:** run `/show`. It does the preflight, launch, watchers and hand-off. Follow
-[docs/show-playbook.md](docs/show-playbook.md) for the runbook, knob map, story, fork library and
-failure fixes.
+**Show day:** run `/show` (no shader: the default show, `/clit-show`). It does the preflight, launch, board, watchers and hand-off to the
+`/partner` lane. Follow [docs/show-playbook.md](docs/show-playbook.md) for the general runbook and
+failure fixes, and the show's own skill (`/sun-show`, `/clit-show`) for its knob map, story and
+panic forks.
 
-During any **live session** — a VJ set (`/vibej2`), a jam, a `/live-session`, anything where the
-user has a hand on a controller — the main Codex session is a **dispatcher, not a worker**. It
+**The show's phone surface is a [draw](https://draw.hypnodroid.com) board** (`show-<date>`): the
+wall's status, the preflight, `/partner`'s proposal cards, kept moments, and big PANIC / KEEP /
+beat / knob buttons whose taps reach the page through `scripts/vj/board-bridge.js` with no model
+in the path. The page owns the instant parts (HANDS lock, KEEP, PANIC, proposal cards):
+[docs/live-show-contract.md](docs/live-show-contract.md).
+
+**Getting a set into "explore it for hours" depth:** [docs/vj-deep-voyage-recipe.md](docs/vj-deep-voyage-recipe.md), from the [2026-11-22 clit coaster show](journals/2026-11-22-clit-coaster-show.md).
+
+During any **live session** — a show (`/show`), a jam (`/show lite`), anything where the
+user has a hand on a controller — the main agent session is a **dispatcher, not a worker**. It
 triages what the user says, reads the meter, makes the ONE decision, and hands execution to a
 subagent (`Agent` tool, `subagent_type: "fork"` — a fork inherits the full session context). Then
 it goes back to listening.

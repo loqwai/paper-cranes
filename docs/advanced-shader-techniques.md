@@ -139,15 +139,28 @@ them (pin a specific look for presets/NFC tags). `wooli/chromadepth-*` use `seed
 
 - **Screenshot every iteration** (headless Chromium / Playwright vs the dev server). Reactivity bugs
   (no red, washed pastel, banding) jump out of a *still*; motion bugs do not — so also...
-- **A/B audio-reactive states by injecting features** — there's no mic in headless:
+- **A/B audio-reactive states by injecting features** — there's no mic in headless, and in
+  Playwright's bundled Chromium `audio_file=` gives no features either (the AudioWorklet module
+  never loads, headless or headful; measured 2026-11-24):
   ```js
   await page.evaluate(f => Object.assign(window.cranes.manualFeatures, f),
     { quietGate: 1, energySpring: 0.6, waveletBassSpring: 0.9, melodyFlow: 0.7 })
   ```
-  Capture a "rest" frame vs a "kick/loud" frame to see the reactivity.
+  Capture a "rest" frame vs a "kick/loud" frame to see the reactivity. To prove real audio flows,
+  play `audio_file=` in Playwright Firefox ([audio-file-playback.md](audio-file-playback.md)).
+- **The scripted way:** the `/verify-paper-cranes` skill (`.agents/skills/verify-paper-cranes/`)
+  launches its own server on a free port, runs this A/B (`pc-verify render`), records the headful
+  video, and keeps the evidence in `~/paper-cranes-proof/`.
 - **Test touch/knob controllers** by driving real pointer/touch events (`page.mouse` / touch) and
   reading back `window.cranes.manualFeatures` / `window.cranes.controllerFeatures`.
-- **Deterministic stills:** `?time=<seconds>` holds `iTime` (pair with `?noaudio=true`). Note that
-  controller phases still advance in real time even when `time=` is held.
+- **Deterministic stills:** `?time=<seconds>&iTime=<seconds>` holds both clock uniforms (pair with
+  `?noaudio=true`). `time=` alone holds only `time`; `iTime` keeps running (measured 2026-11-25).
+  Controller phases still advance in real time either way. `.agents/skills/shader/bin/shader-check.mjs`
+  steps a virtual clock instead, which freezes controllers too.
+- **Measure flicker, don't eyeball it:** `node scripts/sparkle-score.mjs` renders a deterministic frame
+  sequence (stepped clock, replayed audio features) and scores one-frame flips, with a heat map of where they
+  are. `--ss 4` is the aliasing-free reference; `--video` scores a recording. Any temporal filter lowers the
+  flicker score, blur included, so judge a fix with `--ref` (distance to the `--ss 4` run) and `--before`
+  (the gate), and look at a frame strip. See [sparkle-score.md](sparkle-score.md).
 - **Validate before committing:** `node scripts/validate-shader.js <path>` (GLSL compile + warnings).
   Watch for reserved-word collisions (e.g. `patch` is reserved) and duplicate-uniform redefinitions.

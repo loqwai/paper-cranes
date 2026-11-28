@@ -1,5 +1,27 @@
 import { WebSocketClient } from './WebSocketClient.js'
-import { loadShader } from '../shaderLoader.js'
+import { loadShader, shaderOnScreen } from '../shaderLoader.js'
+import { inspectorAllowedOn, withoutPinned, displaySecretFrom, secretFor } from './relay.js'
+import { createMirrorFeed } from './mirrorFeed.js'
+import { getRelativeOrAbsoluteShaderUrl } from '../utils.js'
+import { hashSource } from './hash.js'
+import { createLiveShow } from '../vj/live.js'
+import { createSignalPoster } from '../vj/signals.js'
+import { nfcFlash } from '../vj/nfc-flash.js'
+import { isWallPage, createWallClient } from '../phone-wall/wall.js'
+
+// The VJ MCP (docs/vj-mcp.md) reaches this display through a broker: the dev server's /ws, or on
+// `?room=` the relay Worker's room, which drops any `inspect` a client sends. The inspector loads
+// only where that broker is one we run (relay.js: a dev build with no room, or a room on
+// relay.beadfamous.com or a loopback relay); a `?relay=` link to any other host relays as before
+// but never answers inspect. Even where it loads, the inspector answers nothing until the broker
+// itself has welcomed it (inspect.js), so a page on a relay that predates the broker does not
+// answer a forged inspect (deploy the relay first).
+//
+// The socket's host is fixed at page load (WebSocketClient) and update-params can never set relay
+// or room (withoutPinned). As a second layer, the host is judged again on the socket actually
+// open, on every connect and on every welcome and inspect, not once at load.
+const dev = import.meta.env.DEV
+let inspector = null
 
 /**
  * Initialize remote display mode
@@ -8,44 +30,206 @@ import { loadShader } from '../shaderLoader.js'
 export const initRemoteDisplay = () => {
   console.log('[Remote Display] Initializing...')
 
+  // Read when a message or connect arrives, so it always judges the socket that is open now.
+  const onTrustedSocket = () => inspectorAllowedOn(client.socket?.url, { dev })
+  // The room's display secret is read once, from the link the page loaded with, like relay and
+  // room (relay.js PINNED): a later hash edit or update-params can neither change nor read it.
+  const displaySecret = displaySecretFrom(window.location)
+
   const handleMessage = (message) => {
     if (message.type !== 'audio-features') console.log('[Remote Display] Received:', message.type, message.data)
 
     switch (message.type) {
       case 'update-params':
+        // The live-show HANDS gate (docs/live-show-contract.md). Aaron's own writes (no source, or
+        // the draw board's "board") apply first and synchronously, as always; only then are they
+        // stamped as hands. An agent's write is the only kind that can be held.
+        if (message.source === 'agent') {
+          live.fromAgent(message.data)
+          break
+        }
         applyParams(message.data)
+        live.fromHands(message.data)
+        break
+
+      case 'vj-agent-shader':
+        expectAgentShader(message.data)
         break
 
       case 'audio-features':
         break
 
+      case 'inspect':
+        if (onTrustedSocket()) inspector?.handle(message.data)
+        break
+
+      case 'display-rekey':
+        inspector?.rekey()
+        break
+
+      case 'display-welcome':
+        if (onTrustedSocket()) inspector?.welcome(message.data)
+        break
+
+      case 'display-refused':
+        if (onTrustedSocket()) inspector?.refused(message.data)
+        break
+
       case 'status':
-        // Connection status updates
+        // Connection status updates. A relay room also counts board mirrors (docs/board-mirror.md);
+        // the feed runs only while there is one to watch it.
         console.log('[Remote Display] Connected clients:', message.data?.connectedClients)
+        mirrorFeed.viewers(message.data?.viewers)
         break
 
       default:
+        if (live.onMessage(message)) break
         // Forward unknown messages via postMessage for extensibility
         window.postMessage(message, '*')
     }
+    // After the apply, never before it (CLAUDE.md hot-path rule): a sticker's own params land first.
+    nfcFlash(message)
   }
 
   const handleStatusChange = (status) => {
     console.log('[Remote Display] Status:', status)
-    // Only show indicator for connection problems
-    if (status !== 'connected') {
+    if (status === 'connected' && onTrustedSocket()) inspector?.hello()
+    else inspector?.unwelcome()
+    // Show the badge only for connection problems, but once one is up, a reconnect must clear it:
+    // skipping 'connected' left "Reconnecting..." lit on the wall after every drop.
+    // Never on a phone wall: its pad is on the local link, and nobody at the projector can act on it.
+    if (wall) return
+    if (status !== 'connected' || document.getElementById('remote-status-indicator')) {
       updateStatusIndicator(status)
     }
   }
 
-  const client = new WebSocketClient(handleMessage, handleStatusChange)
+  // A phone wall (docs/phone-wall.md) hears its pad over the local link as well as the room socket,
+  // through the same handler, so the live show behaves the same either way.
+  const wall = isWallPage()
+  const client = wall
+    ? createWallClient(handleMessage, handleStatusChange, { dev })
+    : new WebSocketClient(handleMessage, handleStatusChange)
+  const mirrorFeed = createMirrorFeed({
+    send: (type, data) => { if (client.isConnected) client.send(type, data) },
+    // What animateShader draws: window.cranes.shader once anything loaded one, else the boot shader.
+    read: () => ({ code: window.cranes?.shader ?? window.shader, shader: shaderOnScreen(), last: window.cranes?.lastRender }),
+  })
+  const { live, expectAgentShader } = startLiveShow(client)
+  if (inspectorAllowedOn(client.url, { dev })) {
+    import('./inspect.js')
+      .then(({ createInspector }) => {
+        inspector = createInspector((type, data) => client.send(type, data), {
+          secret: () => secretFor(client.socket?.url, displaySecret),
+        })
+        if (client.isConnected && onTrustedSocket()) inspector.hello()
+      })
+      .catch((e) => console.warn('[Remote Display] inspect unavailable:', e))
+  }
   client.connect()
 
   // Expose client for debugging
   window.cranes = window.cranes || {}
   window.cranes.remoteClient = client
+  window.cranes.mirrorFeed = mirrorFeed
 
   return client
+}
+
+const numberParam = (params, key, fallback) => {
+  const n = parseFloat(params.get(key))
+  return Number.isFinite(n) && n >= 0 ? n : fallback
+}
+
+// The in-page half of the live show (src/vj/live.js, docs/live-show-contract.md): the HANDS lock,
+// release, KEEP, PANIC, vjpad presence and proposals, with no model in any of their paths.
+const startLiveShow = (client) => {
+  const params = new URLSearchParams(window.location.search)
+  const vj = params.get('vj') === '1'
+  const poster = vj ? createSignalPoster({ getClient: () => client, dev, search: window.location.search }) : null
+  const post = (sig) => poster?.(sig)
+
+  // PANIC's fork is read once, at load: ?panic=, else the shader the page booted with. Its source
+  // is fetched now, so the press itself does no network work.
+  const bootFork = params.get('panic') || params.get('shader') || null
+  const forkCode = new Map()
+  const prefetch = (fork) => getRelativeOrAbsoluteShaderUrl(fork).then((code) => { forkCode.set(fork, code); return code })
+  if (bootFork) prefetch(bootFork).catch((e) => console.warn('[live] PANIC fork prefetch failed:', e))
+
+  const swap = async (fork) => {
+    const mine = ++latestShader // any switch still queued is now stale
+    const code = forkCode.get(fork) ?? await prefetch(fork)
+    if (mine !== latestShader) return
+    window.cranes.shader = code
+    const canvas = document.getElementById('visualizer')
+    if (canvas) canvas.classList.toggle('fullscreen', code.includes('@fullscreen: true'))
+    const url = new URL(window.location.href)
+    url.searchParams.set('shader', fork)
+    window.history.replaceState({}, '', url.toString())
+    // The debounced URL mirror may still hold the shader PANIC just replaced; it would put it back.
+    if (urlPending && 'shader' in urlPending) urlPending.shader = fork
+    inspector?.hello()
+  }
+
+  const state = () => {
+    // Small on purpose (it rides a signal to agents): knobs, plus whatever the room pinned.
+    const knobs = Object.entries(window.cranes?.manualFeatures ?? {}).filter(([k]) => /^knob_\d+$/.test(k))
+    const out = {}
+    for (const [k, v] of [...knobs, ...Object.entries(window.cranes?.messageParams ?? {})]) if (typeof v === 'number' && Number.isFinite(v)) out[k] = +v.toFixed(3)
+    return { shader: new URLSearchParams(window.location.search).get('shader'), params: out }
+  }
+
+  const chip = vj && params.get('show_proposals') === '1'
+  const live = createLiveShow({
+    apply: (data) => { applyParams(data) },
+    post,
+    broadcast: (type, data) => client.send(type, data),
+    swap,
+    snapshot: () => window.cranes?.snapshot?.(),
+    state,
+    bootFork,
+    handsMs: numberParam(params, 'hands_ms', 8000),
+    releaseMs: numberParam(params, 'release_ms', 50),
+    onChange: chip ? () => renderProposalChip(live.status().proposals) : undefined,
+  })
+
+  // An agent's write_shader on the dev server lands as an HMR swap, not as update-params. The MCP
+  // announces the hash first (vj-agent-shader), so the page's HMR handlers can hold exactly that
+  // code mid-lock while Aaron's own editor saves go straight through.
+  const expected = new Map() // shader -> { hash, until }
+  const expectAgentShader = ({ shader, hash } = {}) => {
+    if (typeof shader === 'string' && typeof hash === 'string') expected.set(shader, { hash, until: Date.now() + 30000 })
+  }
+  const holdHmr = ({ shader, code } = {}) => {
+    const e = expected.get(shader)
+    if (!e || e.until < Date.now()) return false
+    if (code !== undefined && hashSource(code) !== e.hash) return false
+    expected.delete(shader)
+    if (!live.handsOn) return false
+    live.fromAgent(code !== undefined ? { shaderCode: code } : { shader })
+    return true
+  }
+
+  window.cranes = window.cranes || {}
+  window.cranes.live = live
+  window.cranes.holdHmr = holdHmr
+  window.cranes.keep = () => live.keep()
+  window.cranes.panic = (fork) => live.panic({ fork })
+  return { live, expectAgentShader }
+}
+
+// ?vj=1&show_proposals=1: a small chip on the display naming each open proposal. Off by default;
+// the cards belong on the vjpad, not on the wall.
+const renderProposalChip = (proposals) => {
+  let el = document.getElementById('vj-proposal-chip')
+  if (!el) {
+    el = document.createElement('div')
+    el.id = 'vj-proposal-chip'
+    el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:10000;pointer-events:none;font:12px system-ui,sans-serif;color:#fff;background:rgba(40,20,80,.7);padding:3px 8px;border-radius:10px;opacity:.8'
+    document.body.appendChild(el)
+  }
+  el.textContent = proposals.map((p) => p.label).join(' · ')
+  el.style.display = proposals.length ? 'block' : 'none'
 }
 
 // NOTE (2026-08-19): params are applied SYNCHRONOUSLY on arrival, deliberately. An earlier pass
@@ -58,8 +242,11 @@ export const initRemoteDisplay = () => {
 /**
  * Apply received parameters to the visualizer
  */
-const applyParams = async (data) => {
-  if (!data || typeof data !== 'object') return
+const applyParams = async (incoming) => {
+  if (!incoming || typeof incoming !== 'object') return
+  // A room peer chooses these, so never relay, room, controller or any other boot-time key
+  // (relay.js PINNED): what the socket and the next reload load is fixed at page load.
+  const data = withoutPinned(incoming)
 
   // Ensure cranes state exists
   window.cranes = window.cranes || {}
@@ -75,16 +262,6 @@ const applyParams = async (data) => {
     const canvas = document.getElementById('visualizer')
     if (canvas) {
       canvas.classList.toggle('fullscreen', fullscreen)
-    }
-  }
-
-  // Handle shader switching by path (from list page remote mode)
-  if (data.shader) {
-    console.log('[Remote Display] Switching shader to:', data.shader)
-    try {
-      await loadShader(data.shader, { updateUrl: true })
-    } catch (e) {
-      console.error('[Remote Display] Failed to load shader:', e)
     }
   }
 
@@ -113,6 +290,31 @@ const applyParams = async (data) => {
 
   // Mirror non-shaderCode params into the URL so a refresh preserves display state
   syncParamsToUrl(data)
+
+  // Shader switching by path (list page, VJ MCP set_shader) goes last, so the knobs in the same
+  // message never wait on a fetch (the hot-path rule above).
+  if (data.shader) await switchShader(data.shader)
+}
+
+// Switches run one at a time and only the newest one loads. Run concurrently, two quick picks
+// raced: when the first fetch was slower (a first Vite transform), it landed second and the
+// display ended on the shader that was NOT picked last.
+let shaderLoads = Promise.resolve()
+let latestShader = 0
+const switchShader = (name) => {
+  const mine = ++latestShader
+  console.log('[Remote Display] Switching shader to:', name)
+  shaderLoads = shaderLoads.then(async () => {
+    if (mine !== latestShader) return
+    try {
+      // Checked again after the fetch: a PANIC (swap) pressed while it was in flight must win.
+      const loaded = await loadShader(name, { updateUrl: true, stillWanted: () => mine === latestShader })
+      if (loaded) inspector?.hello() // the broker's display list shows the shader on screen
+    } catch (e) {
+      console.error('[Remote Display] Failed to load shader:', e)
+    }
+  })
+  return shaderLoads
 }
 
 // PERF (2026-08-19): this used to run on EVERY update-params message. vjpad coalesces to one

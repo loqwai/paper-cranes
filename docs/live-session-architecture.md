@@ -3,9 +3,32 @@
 How work is divided during a live set so the user never waits on the machine. Written
 2026-08-20 after a VJ set where a button press waited three minutes for an answer.
 
-The rule in one line, from [CLAUDE.md](../CLAUDE.md#live-sessions-the-parent-stays-responsive):
+The rule in one line, from [AGENTS.md](../AGENTS.md#live-sessions-the-parent-stays-responsive):
 **the parent session dispatches, forks do the work, and anything that must be instant lives in
 the page.**
+
+## The shape since 2026-11-24
+
+Aaron approved one shape for live skills (board
+[live-show-skills](https://draw.hypnodroid.com/b/live-show-skills), "Yes to all"):
+
+- **`/show`** is the parent's only door: launch, preflight, the board, PANIC, setlists, the end.
+  The parent stays free for his words.
+- **`/partner`** (was `/vibej2`) is the editing tier as its **own background lane**, not the
+  parent's loop. It long-polls `wait_for_event`, makes one move per event, and **proposes**; he
+  takes or dismisses on the vjpad or the board. It applies only health fixes, and never while his
+  hands are on (the page holds agent writes for 8 s after his last move).
+- **The page tier grew**: HANDS lock, KEEP, PANIC and proposal cards live in the page
+  ([live-show-contract.md](live-show-contract.md)), so none of them waits on a model.
+- **A fourth surface, the board**: a [draw](https://draw.hypnodroid.com) board is his phone status
+  board and control surface. Taps reach the page through `scripts/vj/board-bridge.js`, no model,
+  about 0.8 s tap to confirmed. Instant control stays in the page and the dials (~16 ms).
+- **One control plane**: agents reach the page only through the VJ MCP. No claude-in-chrome, no
+  devtools eval.
+- **Token budget**: Aaron, 2026-11-24: "I don't want to be egregious when it comes to token use."
+  Skill files stay short and load detail on demand; the partner screenshots only to judge.
+
+The rest of this document is the 2026-08-20 reasoning that produced the tiers; it still holds.
 
 ## The three tiers
 
@@ -117,8 +140,11 @@ Rules:
 - Shader `.frag` edits are safe — they hot-swap via the atomic edit macro.
 - Everything else waits for **between sets**. Stage it as a patch file (see
   [vj-auto-learn-patch.md](vj-auto-learn-patch.md)) and apply it when nothing is on the wall.
-- To inject behaviour *now* without a reload, run it through `javascript_tool` into the live page.
-  That is how the auto-LEARN poller was installed mid-set.
+- Do not inject behaviour into the live page. On 2026-08-20 the auto-LEARN poller went in mid-set
+  through claude-in-chrome's `javascript_tool`; that path is retired (its cursor reaches the wall).
+  Live changes go through the VJ MCP (`set_params`, `set_shader`, `write_shader`, `panic`) or wait
+  for between sets. The one page-eval exception left is the frozen-picture fix in
+  [show-playbook.md](show-playbook.md) section 7.
 - Recovery if it happens anyway: `node scripts/vj/remote-send.js '{"evoPhase":<value>}'` pins the
   clock back (the pad-pin path overrides controller outputs; `window.cranes.manualFeatures` does
   **not**), and `null` releases it. But note a pin *freezes* the clock — it restores the look while

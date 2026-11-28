@@ -1,0 +1,245 @@
+# 2026-10-09: the sun show playbook
+
+> **A record, not the current runbook.** This is the playbook as it stood for the Friday 2026-10-09
+> sun show, written on one Mac (BlackHole input, the `peter-show` branch, port 6969). It was
+> `docs/show-playbook.md` until 2026-11-25. Now:
+> - the general runbook for any show: [docs/show-playbook.md](../docs/show-playbook.md);
+> - the sun show itself (launch, knobs, story, panic forks, its failures): the `/sun-show` skill,
+>   [.agents/skills/sun-show/SKILL.md](../.agents/skills/sun-show/SKILL.md);
+> - the fork library: [shaders/sun/sun.md](../shaders/sun/sun.md#fork-library).
+
+The operating runbook for the user and Claude, written from the 2026-10-06 rehearsal. It lists
+the commands to run, the roles during the set, the knob and story maps, the fork library and
+fixes for every failure seen in rehearsal. For taste and rules, see
+[vj-preferences.md](../docs/vj-preferences.md). For how the story engine works, see
+[storylines.md](../docs/storylines.md).
+
+For a fractal-voyage set (clit-set and the coaster), use [show-quickstart.md](../docs/show-quickstart.md)
+for the setup and [vj-deep-voyage-recipe.md](../docs/vj-deep-voyage-recipe.md) for how to keep a set deep
+for hours. The night it comes from: [2026-11-22 clit coaster show](2026-11-22-clit-coaster-show.md).
+
+No laptop, just the phone on a USB-C cable to the projector? Use [phone-wall.md](../docs/phone-wall.md):
+PROJECT on the vjpad puts the visuals on the projector and keeps the phone as the pad, with no
+network needed.
+
+## 1. The day before: setup
+
+- [ ] `git checkout peter-show && git pull --ff-only`, then run `npm install` if `package.json`
+      changed.
+- [ ] Confirm that the no-reload controller fix is present. In
+      `vite-plugins/editor-sync-plugin.js`, `handleHotUpdate` must return `[]` for
+      `controllers/*.js`. This is PR #144, which is also on this branch.
+- [ ] Find the port with `./scripts/dev-port` (6969 on this branch), then start the server with
+      `npm run dev`.
+- [ ] Set **BlackHole 2ch** as the input in macOS Sound settings. Route the music into it, through
+      a Multi-Output Device if you also want to hear it.
+- [ ] Attach the projector, then run `node scripts/vj/show.js displays`. `launch` uses the
+      **last** display.
+- [ ] Turn on Do Not Disturb, and quit any break-reminder or screen-dimming app. One dimmed the
+      whole wall during the 10-06 test.
+- [ ] Do a test launch (section 2) and confirm the input label before doors open.
+
+## 2. Launch sequence
+
+```bash
+node scripts/vj/preflight.js     # one ✅/❌ line per check; fixes: .agents/skills/show/check.md
+node scripts/vj/show.js stop     # always first: clears a leftover page-less show browser ("not running" is fine)
+node scripts/vj/show.js launch "http://localhost:6969/jam.html?shader=clit-set/2&controller=clit-set&wavelet=true&vj=1&remote=display"
+node scripts/vj/preflight.js --after --shader clit-set/2   # display, audio.input + energy, controller clock, pad
+```
+
+After `launch`, only the VJ MCP touches the page (`scripts/vj/mcp-call.js` or the registered
+`paper-cranes-vj` tools: `get_state`, `screenshot`, `set_params`, `set_shader`, `panic`).
+`show.js` is for the browser itself (`launch`, `stop`, `status`, `displays`, `focus`, `shot`), never
+for `eval` into the page. The one exception is in section 7.
+
+- **Expected input:** `"BlackHole 2ch (Virtual)"` with an energy reading above 0. If the label is
+  wrong, **don't start**: fix the OS default input. Add `&audio_device=<label>` only to
+  deliberately override the default.
+- **What to open:**
+  - **Default (2026-11-21):** `clit-set/2` + `controller=clit-set`, the knob-steered fractal voyage.
+    Knob map: `shaders/clit-set/clit-set.md`.
+  - **Sun live line:** `black-sun/sun-1` + `controller=black-sun`. It has every fix, the
+    story engine, the companion and K7 KISS.
+  - **Frozen fork:** `sun/N` + `controller=sun-N` (see section 6). Use a fork when you want a known
+    look that won't change.
+- **Boot-shader trap:** HMR follows the shader the page **booted** with, not the one in the URL. If
+  you hot-swap to another shader and then something writes the boot shader's `.frag` to disk, HMR
+  pushes it back over the wall. Boot on the file you'll be editing.
+- **Never `goto` mid-set.** It reloads the page, which resets the audio history and the story. To
+  change shaders, hot-swap them (section 7, the "panic" row).
+
+## 3. Roles during the set
+
+| Who | Does | Never |
+|---|---|---|
+| **Your session** (`/show`) | The door: launch, the board, watchers, PANIC on request, the story at the end. Stays free for your words | Shader edits, long waits inline |
+| **`/partner`** (its own background lane) | Holds the page and `-wip` token. One step per event: proposes a change you take or dismiss (TAKE on the vjpad or the board); applies only health fixes (white-out, black, NaN, fps) | Acts while your hands are on (8 s after your last move); reloads |
+| **Art critic** | Between tracks only (`gate-drop` then `gate-clean`): one verdict, which becomes at most one proposal | Edits anything. **Your words outrank it.** |
+| **You** | Dials, KEEP, PANIC, TAKE / dismiss, plain-language feedback | — |
+
+The page does the instant parts with no model in the path: the HANDS lock, KEEP, PANIC and the
+proposal cards ([live-show-contract.md](../docs/live-show-contract.md)).
+
+**The board.** Every show gets a [draw](https://draw.hypnodroid.com) board, `show-<yyyy-mm-dd>`:
+the preflight as ✅/❌ cards, the wall's live status, `/partner`'s proposal cards, every KEEP with
+its screenshot, and big PANIC / KEEP / ◀ ▶ / knob-preset buttons. Select one and press Send: the
+board bridge (`scripts/vj/board-bridge.js`) makes the VJ MCP call, measured at a median 0.8 s
+from tap to the page confirming. Fine for beats, KEEP and PANIC; the dials stay the instrument.
+At the end the set's story goes on the board with a Present path. We build draw too, so a surface
+that falls short here becomes draw work.
+
+Your commands:
+
+- `/show`, `/show check`, `/show lite`, `/show panic [fork]`, `/show setlist <name> next`, `/show end`.
+- KEEP (vjpad, its MIDI pad, `k`, the board): save the moment. `/keep process` afterwards writes
+  the forks (`sun/N.frag`, controller frozen as `controllers/sun-N.js`) and presets.
+- `/partner pause`: no proposals, health fixes continue. `/partner stop`: end it. The wall stays up.
+
+## 4. Knob map (live line)
+
+| Knob | Name | Does | At 0 |
+|---|---|---|---|
+| `knob_1` | K1 HOLE SIZE | Sun/eye core radius | designed size |
+| `knob_2` | K2 HUE SPIN | Rotates the whole palette | designed palette |
+| `knob_3` | K3 LATTICE | Strength of the spiral lattice | 0.55 |
+| `knob_4` | K4 ZOOM | Scales the sun, rays and lens about the centre, 0.55×–1.5× on an exp curve | eye at ~28% of screen height |
+| `knob_5` | K5 STORY | Forces an act: act = floor(k × 7) | automatic story |
+| `knob_6` | K6 REACH | Forces the huge-ray mode amount | automatic windows |
+| `knob_7` | K7 KISS | A rising edge past 0.5 calls a companion kiss now (10 s guard) | musical kisses only |
+
+K5 values that land in the middle of each act: MAIN **0.07** · RED GIANT **0.21** · DYING **0.36**
+· COLLAPSE **0.50** · SUPERNOVA **0.64** · NEBULA **0.79** · REBIRTH **0.93**. Set it back to **0**
+to return to the automatic story.
+
+## 5. The story
+
+| # | Act | Look | Moves on when | Max |
+|---|---|---|---|---|
+| 0 | MAIN SEQUENCE | Gold sun with radiant rays, day sky | building for 45 s → COLLAPSE; calm for 60 s → RED GIANT | 180 s |
+| 1 | RED GIANT | Swollen, cooler red-orange, heavier rays | building → COLLAPSE; low for 45 s → DYING | 150 s |
+| 2 | DYING | Small, red, dark, sun sinking, night | building for 30 s → COLLAPSE | 120 s |
+| 3 | COLLAPSE | Pinprick, pull inward, near-dark tension | **drop** after 15 s → SUPERNOVA | 90 s |
+| 4 | SUPERNOVA | Detonation: flash, LSD shell, giant front | fixed 25 s | 25 s |
+| 5 | NEBULA | Scene dissolves into psychedelic gas | calm for 60 s → REBIRTH | 150 s |
+| 6 | REBIRTH | Tiny hot star, often long-reach rays | after 60 s → MAIN | 75 s |
+
+The musical states come from `controllers/black-sun.js`:
+
+| State | Condition |
+|---|---|
+| building | sustained build for more than 8 s |
+| drop | energyZScore spike over a sustained baseline |
+| calm | 15 s or more |
+| low | 10 s or more |
+
+**The binary companion** is a small dark-red star.
+
+- **Entrance:** it enters from off-screen upper left, spirals in over a few minutes, then dances a
+  slow, precessing orbit. Mids speed the dance.
+- **Kiss triggers:** a drop or section change (30 s refractory), a scripted approach after 150 s
+  without a kiss, or **K7** by hand.
+- **The kiss:** the orbit dips until the coronas overlap, a distortion front fires from the contact
+  point, and the two drift apart.
+- **Supernova:** SUPERNOVA flings the companion away. It re-forms and re-enters in REBIRTH.
+- **Kiss log:** `window.__blackSunState.kissLog`.
+- **Planned, not yet built:** the orbit decays one way across kisses until a final collision fires
+  the SUPERNOVA, with a manual K8 COLLIDE. Until that lands, force a supernova with
+  **K5 = 0.64**.
+
+## 6. Fork library (`shaders/sun/`)
+
+Open a fork with `jam.html?shader=sun/N&controller=sun-N&wavelet=true&vj=1&remote=display`. Use
+`controller=sun` for N=1.
+
+| N | Look | Caveat |
+|---|---|---|
+| 1 | Orange plasma disc with coral/gold bands, broad amber rays, teal/violet tiles | Pre-plasma-ball. The controller has the latent missing-field NaN bug; it can't trigger on a fresh load |
+| 2 | Defined orange ball, slim yellow-amber rays, blue tiles, LSD cloud bands | Before the story engine |
+| 3 | Night: magenta-orange ball low right, violet rays, indigo sky | Story engine present |
+| 4 | **First natural SUPERNOVA**: huge gold ball, abstract LSD plasma | Own state (`__sun4State`). Starts at MAIN; K5 0.64 forces the nova |
+| 5 | REBIRTH with long reach: small hot star upper left, rays across the frame | Background darkened to dim gas veils over indigo (`SPACE-DARK`) |
+| 6 | Deep-space REBIRTH, full reach, navy nebula | **Has the flicker bug (1.4)** unless the fix has been ported. Check before using |
+| 7 | **First companion kiss era**: peach-gold sun plus a rose companion, tangled tendrils | Healthy (flicker 0.22) |
+| 8 | Two small stars dancing in a DYING night, swirling nebula | Dim, with a grey veil over the sky; before the brightness fixes |
+| 15 | **Giant orbited sun**: ember limb lower right, cyan Julia fan from a luminous gold root, indigo starfield (show, 02:06 on 2026-10-10) | Cold-start baked: shows the finished look at once, even on a fresh boot. Its controller shares `__blackSunState` |
+| 16 | Same code and dials as 15, forked again at 02:16 to mark a story moment (act 1, fan spread wide) | Cold-start baked, like 15 |
+| 17 | Same code and dials as 15. Marks the companion transiting the giant (02:21) | Cold-start baked, like 15 |
+
+- **Controllers that share state:** forks 2, 3, 5, 7, 8 and `sun.js` keep state on
+  `window.__blackSunState`, the same global as the live controller. Load them in a fresh page; never
+  hot-swap one of them into the live page.
+
+## 7. Failure runbook
+
+| Symptom | Check | Fix |
+|---|---|---|
+| Every `show.js` command errors ("must have exactly one page" / context error) | `curl -s 127.0.0.1:9333/json/list` returns `[]` | `node scripts/vj/show.js stop`, then `launch` |
+| **Picture frozen**, but the page is alive | `get_state` twice, 2 s apart: `frameCount` rises (the page is alive), `controller.bs_time` does not, and `recentErrors` names a "non-finite bs_…" field | A NaN is latched in `window.__blackSunState`. The lasting fix is in the controller file: `make()` backfills a finite default, and saving the controller hot-swaps it with no reload. **The one exception to "only the VJ MCP touches the page":** if the wall must move before that lands, set the named field to a finite default with `node scripts/vj/show.js eval '() => { window.__blackSunState.<field> = 0 }'`, once, and say so in the journal |
+| Black flash or reload when a controller is saved | `boot` signal in `.claude/vj-signals.jsonl` | Confirm the PR #144 plugin fix is present. Never restart the server or `goto` for a controller change |
+| Flicker or shiver (meter flicker above 0.7, or a `flicker` alert) | Make sure your hands weren't on the knobs. Take two shots about 100 ms apart | Audio is driving a background **phase or position**. Move it to a monotonic controller accumulator where audio sets only the rate, and run brightness through attack/release envelopes, not raw z-scores |
+| Whole frame blows bright on loud **or quiet** moments | `lumMax` jumps in the pulses; clip stays 0 | Use a frame-level brightness budget (one soft knee), gate light terms by energy presence, and clamp z-scores in silence |
+| Grey veil over the night sky | Shot: empty space reads grey, not navy | Fade the tiles toward the space colour, not grey, and lower the black point |
+| Dev server down (background `npm run dev` exited 143) | `curl -s -o /dev/null -w '%{http_code}' localhost:6969/` | Restart `npm run dev`. The wall reconnects |
+| Jank spikes (130–150 ms worst-case frames) | `jank.over100` in the pulses | Usually a shader recompile during a hot-swap. If they come with no edits, look for expensive event branches |
+| Wrong or silent input | `get_state`: `audio.input` (the track label), `audio.energy` | Fix the OS default input (macOS Sound / Windows Sound settings). `audio_device=` only overrides it |
+| Scene dim and nearly frozen while music plays | `energyMean` vs the GATE thresholds; `bs_presence` | The input is quieter than the gates expect (a mic, or a low OS input volume). Raise the OS input volume first; `audio_gain=<x>` on the next launch scales the input (a Surface mic needed ×32). It is a URL param, so changing it means a reload: do it between sets. Rescaling GATE/SLOW_GATE/presence in the `-wip` shader and controller is the last resort |
+| Looks samey; rays short; the story never builds | `bs_power`/`bs_build` flat for minutes | The story envelopes were tuned on another set. Sample features for ~25 s, find the 2–3 that move with this music and are independent, and drive ray reach/brightness from smoothed envelopes of those (rate and light only, never phase) |
+| Ghost copies of the suns, or a smeared second exposure | A composition offset or pan was added recently | The previous-frame feedback UV must get the same offset as the frame, or last frame's bright objects come back misregistered |
+| **Panic: get a known-good look on the wall now** | — | `panic` hot-swaps in place. Never `goto` (below) |
+
+```bash
+PORT=6969 node scripts/vj/mcp-call.js panic '{"fork":"sun/7"}'          # no fork: the boot fork
+PORT=6969 node scripts/vj/mcp-call.js screenshot '{"width":256}'         # confirm the look came back
+```
+
+His own PANIC (the vjpad, its MIDI pad, `Esc Esc` on the jam page, `ctl-panic` on the board) does
+the same and is faster. `set_shader '{"shader":"sun/7"}'` is the same swap without the `panic`
+signal.
+
+The live controller keeps running. A fork's look depends mostly on its shader, and its
+`bs_*` uniforms come from whichever controller is loaded.
+
+### Lesson from rehearsal: the black wall (2026-10-06)
+
+The wall went fully black mid-set. The cause was a shader output guard using `isnan()`/`isinf()`,
+which the show Chrome's GPU path (ANGLE/Metal) mis-evaluates, zeroing every pixel; the
+previous-frame feedback kept it black.
+
+- **Recovery:** `/show panic sun/7` (a live hot-swap) brought the picture back in 2 s.
+- **Never** use `isnan`/`isinf`. Clamp at the source.
+- **Never** write the page's boot shader while it is on the wall. HMR pushes it over any
+  hot-swap, which is how a broken edit reached the wall. Iterate on a `-wip.frag` copy, verify
+  it in a separate headless page, then promote it.
+
+### Lesson from 2026-10-17: the art critic contradicts itself
+
+Over a long set the critic undoes its own advice. It asked for the gas palette to be narrowed
+(#82), then for a second hue family to be added back, driven by bass (#88). Hold each palette
+decision once it's made, keep colour off fast audio, and act on a critic note only when it repeats
+or the meter backs it up.
+
+## 8. Show rules
+
+Full list: [vj-preferences.md](../docs/vj-preferences.md).
+
+1. **Nothing flashes or reloads the wall.** Swap shaders and controllers by hot-swap only.
+2. **Every layer visibly reacts to the music.** Size reactions for the back of the room.
+3. **Color follows only slow music.** No hue jumps from short-term features.
+4. **Backgrounds stream forward.** Use monotonic clocks with no shiver.
+5. **No clipping, no washout.** White is allowed. Quiet must never mean brighter.
+6. **No painted rings.** Ripples are distortion only, fired by big audio changes.
+7. **Keep 60 fps.** "Too slow" stops everything.
+8. **Fork good moments.** Your words outrank the critic.
+
+## 9. Open at the end of rehearsal
+
+The editing agent may already have fixed some of these. Check `shaders/sun/sun.md`.
+
+- Frame-level brightness budget, so loud and **quiet** moments don't wash out the frame.
+- Grey veil over the night sky.
+- Small or distant sun pulsing harder on kicks, and the ball's radius swelling.
+- Binary inspiral leading to a **collision supernova**, plus K8 COLLIDE.
+- Musicality: rResid is still near 0 or negative, and motion sometimes rises when the music is
+  quiet.
+- Porting the flicker fix into `sun/6.frag`.

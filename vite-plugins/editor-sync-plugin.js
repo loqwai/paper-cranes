@@ -1,6 +1,8 @@
 import { readFile, writeFile, mkdir, readdir, unlink } from 'fs/promises'
 import { join, dirname, resolve } from 'path'
 import chokidar from 'chokidar'
+import { saveShader } from './shader-files.js'
+import { refuseOtherSites } from './same-origin.js'
 
 const SHADER_DIR = 'shaders'
 
@@ -15,6 +17,8 @@ export function editorSyncPlugin() {
     },
 
     configureServer(server) {
+      server.middlewares.use(refuseOtherSites(['/__save-shader', '/__snapshot-preset', '/__capture']))
+
       server.middlewares.use(async (req, res, next) => {
         if (req.method !== 'POST' || req.url !== '/__save-shader') return next()
 
@@ -28,10 +32,7 @@ export function editorSyncPlugin() {
               return res.end(JSON.stringify({ error: 'Missing shader or code' }))
             }
 
-            const normalized = shader.replace(/\.\./g, '').replace(/^\//, '')
-            const filePath = join(SHADER_DIR, `${normalized}.frag`)
-
-            await writeFile(filePath, code, 'utf-8')
+            const { relative: filePath } = await saveShader(server.config.root, shader, code, { create: false })
             console.log(`[editor-sync] Saved ${filePath} (${code.length} bytes)`)
 
             res.writeHead(200, { 'Content-Type': 'application/json' })

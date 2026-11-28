@@ -173,6 +173,7 @@ These are measured and characterized in hypnosound's `src/utils/onset.js` header
 1. **Narrow bands false-fire on unsmoothed frames.** An 8-bin band drops to P=0.633 on frame-uncorrelated input. This is why the bands here are wider than textbook drum ranges, and why `smoothingTimeConstant` is not 0.
 2. **Sustained modulation fires once per cycle.** A 4 Hz tremolo with no transients yields ~40 onsets in 10s. There is no local-maximum peak-picking stage. Relevant to heavily sidechained/pumping material.
 3. **On a perfectly steady spectrum, `sensitivity` is bypassed** and the threshold collapses to `fluxFloor`.
+4. **The detector runs once per display frame, so its behaviour depends on the refresh rate.** `OnsetProcessor` runs in `AudioProcessor.updateFftData`, a `requestAnimationFrame` loop, and the detector counts its window and warmup in frames (64 and 12). At 144 Hz the window is 0.44 s, and consecutive 4096-point spectra overlap by about 90%. Measured on a 128 BPM synthetic kick and noise-hat loop, fed to fresh processors from the same live analyser in one session: at 63 calls/s the kick band fired 2.1 times per beat (the kick and the hat, both real); at 166 calls/s it fired 3.1 times per beat, adding misfires about 130 ms apart in the kick's tail. The full and hat bands fired once per event at every rate. Shaders using `onsetKickTrigger` see extra kicks on 120/144 Hz displays. A fix is to run the processor at a fixed rate instead of per rAF (PR #232 review).
 
 ---
 
@@ -180,4 +181,4 @@ These are measured and characterized in hypnosound's `src/utils/onset.js` header
 
 The detector and envelope live in **hypnosound** (`makeOnsetDetector`, `makeOnsetEnvelope`), so the ESP32 badge firmware can run the identical algorithm rather than a lookalike.
 
-**This needs hypnosound ≥ 2.1, which is not yet published.** `package.json` currently pins `^1.14.0`. Until that lands, `OnsetProcessor` detects the missing exports, logs one warning, and leaves every onset uniform at rest — shaders still compile and read 0, nothing breaks, but nothing fires either.
+They first shipped in **hypnosound 2.1.0**, byte-identical to the copy paper-cranes vendored from hypnosound PR #18 (`c5384ab3`) before the release. `package.json` requires `^2.1.0`, and the browser loads it from esm.sh at `2.1.0`: the `vite.config.js` `hypnosound` alias on the main thread, and the pins in `src/audio/analyzer.js` in the workers. `src/audio/hypnosound-pins.test.js` fails if those three disagree. With an older hypnosound, `OnsetProcessor` warns once and keeps every onset uniform at rest. It does not throw.

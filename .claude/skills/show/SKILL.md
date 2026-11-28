@@ -1,198 +1,92 @@
 ---
 name: show
-description: "Show-day launcher: preflight checklist (✅/❌), launch the show browser on the show shader + controller, verify audio and runtime, arm the health and art-critic monitors, then hand off to /vibej2. Usage: `/show [shader-path] [audio=<label>]`, `/show check` (preflight only), `/show panic <fork>` (hot-swap to a known-good fork, no reload)."
+description: "Run a live show on the wall tonight: start the wall (\"start the show\", \"show time\", \"put it on the projector\"), check it is ready (\"preflight\", \"are we ready\"), get a safe look back when the wall goes wrong (\"panic\", \"it's black\", \"it froze\", \"get it back\"), play a setlist (\"play the sun set\", \"next beat\"), jam with no partner (\"just jam\", \"lite\"), or wrap up (\"end the show\", \"we're done\"). Puts the show on a draw board as Aaron's phone status board and control surface. With no shader it starts the default show, clit-set (`/clit-show`). A named show (the sun show, clit-set) also has its own skill. Never for making a repo."
 allowed-tools: Bash Read Write Edit Grep Glob Agent Monitor TaskStop
 ---
 
-# show: show-day launcher
+# /show: the one door for a live show
 
-This skill gets the wall up correctly and quickly. The runbook, knob map, story table, fork
-library and failure fixes live in **[docs/show-playbook.md](../../../docs/show-playbook.md)**.
-Read it once, and use it for anything this skill doesn't cover. Brief every agent you start with
-**docs/vj-preferences.md**.
-
-## Arguments
-
-- **No args:** the clit-set voyage, `shader=clit-set/2` + `controller=clit-set`. Knob map in
-  [clit-set](#clit-set-the-default-series) below.
-- **`<shader-path>`:** every `clit-set/N` pairs with `controller=clit-set`. The sun line is still one
-  argument away: `/show claude/wip/black-sun/sun-1` pairs with `controller=black-sun`. For a sun
-  fork, `sun/N` pairs with `controller=sun-N`, and `sun/1` pairs with `controller=sun`. For any
-  other shader, add `&controller=` only if a matching `controllers/*.js` exists.
-- **`audio=<label>`:** appends `&audio_device=<label>`. Without it, the page uses the OS default
-  input: the line feed (BlackHole 2ch on macOS; Voicemeeter or VB-Cable on Windows) or a mic.
-  Don't pass `audio_device` otherwise, unless step 3 shows Chrome opened something else: with the
-  Background Music app installed, Chrome's default input can differ from the macOS default
-  (2026-10-10). Then relaunch with `audio=BlackHole`.
-- **`gain=<x>`:** appends `&audio_gain=<x>`. Needed on a microphone: the gates are tuned for a
-  line feed and a mic hearing the room arrives 10–30× quieter. Calibrate per /vibej2 setup step 3.
-- **`check`:** run step 1 only, then stop.
-- **`panic <fork>`:** run the Panic section only.
-
-## 1. Preflight: run these, then print a ✅/❌ table
-
-Same commands on macOS, Windows (Bash tool / Git Bash) and Linux; see "Runs on macOS, Windows
-and Linux" in `/vibej2` for the per-OS table. Read `.claude/skills/local-rig/SKILL.md` first if
-this machine has one.
-
-```bash
-node scripts/vj/context.js                     # platform, port, dev server, show browser
-P=$(./scripts/dev-port)
-curl -s "http://localhost:$P/shaders/<shader>.frag" | cmp -s - shaders/<shader>.frag && echo "serving this checkout" || echo "SERVING ANOTHER CHECKOUT"
-git branch --show-current; git fetch -q origin && git status -sb | head -1
-grep -n "'\*\*/controllers/\*\*'" vite.config.js && grep -n "chokidar.watch('controllers'" vite-plugins/editor-sync-plugin.js
-node scripts/vj/show.js displays
-```
-
-| Check | ✅ when |
+| Say | Does |
 |---|---|
-| Dev server | HTTP `200`. If not, start `npm run dev` in a background Bash, then recheck. |
-| Server checkout | `serving this checkout`: the served `.frag` is byte-identical to the one on disk here. Edits in any other checkout never reach the wall (2026-10-09: the server ran from the main checkout while edits went to `peter-show`). |
-| Branch | The show branch and not `behind`. If behind, ask before running `git pull --ff-only`. |
-| No-reload controller fix (PR #144) | Both greps hit: `vite.config.js` ignores `**/controllers/**`, and `editor-sync-plugin.js` runs its own `chokidar.watch('controllers')` |
-| Projector | `displays` lists more than the built-in panel. `launch` uses the **last** display, so confirm with the user if there's only one. |
-| Input | Verified after launch in step 3: the label is the line feed or mic you expect, and `energy` reaches 0.02+ on loud music (else set `gain=`). |
+| `/show [shader] [audio=<label>] [gain=<x>] [board=<name>]` | launch: check, wall, board, bridge, then the `/partner` lane |
+| `/show check` | preflight only, as ✅/❌ cards on the board; read [check.md](check.md) |
+| `/show lite [shader] [audio_file=<url>]` | a jam: wall, status and controls; no partner, critic or setlist |
+| `/show panic [fork]` | a known-good look now, no reload |
+| `/show setlist <name> [list\|next\|prev\|<n>\|auto]` | play `setlists/<name>.json`; read [setlists.md](setlists.md) |
+| `/show end` | stop lanes, process keeps, tell the set's story; read [story.md](story.md) |
 
-Any ❌ means fix it or tell the user before launching. Never launch past a wrong-input ❌.
+**Default show: `/clit-show`** (Aaron, 2026-11-25). `/show` with no shader loads
+[`/clit-show`](../clit-show/SKILL.md) and launches what it says (`clit-set/2` +
+`controller=clit-set` + `wavelet=true`). It does not play the `clit-set` setlist, which is a starter.
+An explicit `/show <shader>` or another show's skill overrides it.
+Read a reference file only when its row or step says so. Failure fixes:
+[docs/show-playbook.md](../../../docs/show-playbook.md) section 7.
 
-## 2. Out-of-band reminders: say these to the user in one line
+## Show skills
 
-No command can check these: **Do Not Disturb on** (macOS Focus; Windows Win+N), any **overlay,
-break-reminder or screen-dimming app quit** (one dimmed the wall in rehearsal; on Windows also
-Xbox Game Bar, Discord, Steam and GeForce overlays), the **OS input** set to the line feed with
-music routed into it (or the mic, with `gain=`), and on **Windows, the show window kept in
-front**: Windows stops painting a covered window. Any `show.js` timeout there: `show.js focus`.
+A named show has its own skill with its shader, controller, setlist, knob map, panic forks and
+its own fixes. Load it when Aaron names the show, then launch through this skill.
 
-## 3. Launch and verify
+| Show | Skill | Setlist |
+|---|---|---|
+| the sun (black-sun / `sun/N`) | [`/sun-show`](../sun-show/SKILL.md) | `sun-set` |
+| clit-set, the coaster | [`/clit-show`](../clit-show/SKILL.md) | `clit-set` |
 
-```bash
-node scripts/vj/show.js stop
-node scripts/vj/show.js launch "http://localhost:$P/jam.html?shader=<shader>&controller=<controller>&wavelet=true&vj=1&remote=display"
-node scripts/vj/show.js eval 'async () => { await new Promise(r => setTimeout(r, 2000)); return { input: window.cranes.audioInputLabel ?? null, energy: window.cranes.flattenFeatures().energy, meter: typeof window.__vjMeter, validate: typeof window.__vjValidate } }'
-node scripts/vj/show.js eval 'async () => { const t = () => { const c = window.cranes.controllerFeatures || {}; return c.cs_time ?? c.bs_time }; const a = t(); await new Promise(r => setTimeout(r, 1000)); return { before: a, after: t(), keys: Object.keys(window.cranes.controllerFeatures || {}).length } }'
-```
+## Rules
 
-| Check | ✅ when |
-|---|---|
-| Input | `input` is the expected device and `energy > 0`. If not, stop and fix the OS input. On a mic, calibrate `gain` (/vibej2 setup step 3). |
-| Runtime | `meter` = `object` and `validate` = `function` |
-| Controller | `after > before`, with keys present. If the time doesn't advance, the controller is throwing; see playbook section 7, "Picture frozen". |
-| Shader gate | With music playing, the shader's own quiet gate (`cs_presence` on clit-set; `smoothstep` on `energyMean` × `bs_presence`, or `quietGate`, on the sun line) sits near 1. If it sits low, the input is quieter than the line feed the gates were tuned for, and the scene reads as silence: dim and nearly frozen. `energy > 0` alone doesn't prove this. Fix the **level**, not the shader, in this order: (1) raise the OS input volume (macOS mic at 27% barely registered, 80% worked, 2026-11-14); (2) `audio_gain`, live via `window.cranes.inputGain` (/vibej2 setup step 3); (3) only if neither reaches it, rescale the gate thresholds in the `-wip` copy, and note it in the shader doc, since a line feed then holds the gates open. The meter's `gate` is `quietGate` when the controller provides it, else the same energy formula, so it also reads low at a low input level. |
+- **Only the VJ MCP touches the page**: `PORT=$P node scripts/vj/mcp-call.js <tool> '<json>'` or the
+  registered `paper-cranes-vj` tools. `scripts/vj/show.js` only for `launch`, `stop`, `status`,
+  `displays`, `focus`, `move`, `shot`, `unstick`. Never `show.js eval`, devtools or
+  claude-in-chrome (its cursor reaches the wall: "unacceptable for live shows", 2026-10-06).
+- **Events, not polling**: `PORT=$P node scripts/vj/watch-events.js <types…>` as a Monitor.
+- **You are the door, not the VJ.** You stay free for Aaron. Shader moves belong to `/partner`.
+- **Spend few tokens.** No screenshot unless you must judge a picture (`screenshot {"width":256}`
+  first); no board redraw when nothing changed; answer in one line.
 
-Then take one look with `node scripts/vj/show.js shot .claude/vj-shots/show-start.png`, and Read it.
-A black frame while `energy` moves is a poisoned feedback buffer: `node scripts/vj/show.js unstick`.
+## Launch
 
-## 4. Arm the watchers
+1. **Check, then launch.** Every line ✅: go on. Any ❌: read [check.md](check.md) for its fix.
+   ```bash
+   P=$(./scripts/dev-port)
+   node scripts/vj/preflight.js --shader <shader>            # server, checkout, branch, projector
+   node scripts/vj/show.js stop
+   node scripts/vj/show.js launch "http://localhost:$P/jam.html?shader=<shader>&controller=<controller>&wavelet=true&vj=1&remote=display[&audio_device=<label>][&audio_gain=<x>]"
+   node scripts/vj/preflight.js --after --shader <shader>    # display, audio + input label, runtime, controller, gate, pad
+   ```
+   Say its `say:` line to Aaron. Never launch past a wrong input. Edits go to a `-wip` copy; the
+   boot shader stays the PANIC fork.
+2. **Write `.claude/vj-state.json`**: `{shaderPath, showUrl, audioDevice, audioGain, board, port, panic, setlist, startedAt}`.
+3. **Board and bridge**: read [board.md](board.md) and [controls.md](controls.md). Fly his tab to `controls`.
+4. **Watch** (Monitors, re-armed on expiry):
+   ```bash
+   PORT=$P node scripts/vj/watch-events.js panic pad-alive boot
+   node scripts/vj/stray-guard.mjs
+   ```
+   - KEEP needs nothing from you: the bridge puts it in frame `kept` ([kept.md](kept.md)).
+   - `pad-alive` false: paint `st-wall` blocked, tell him in one line.
+   - `panic`: tell `/partner` to drop its move.
+5. **Start `/partner`** (not in lite) as one background `Agent` with the shader, board and port.
+   Tell Aaron in one line: wall up, input label, board link.
 
-Three always-on Monitors, each with a 30-minute timeout and re-armed whenever it expires.
+## Panic: `/show panic [fork]`
 
-The page writes `.claude/vj-signals.jsonl`, and the critic logs to `.claude/vj-critic.md`, in the
-**serving checkout**: the dev server's cwd from the preflight. Point both tails there. A tail on a
-different checkout never fires.
+His PANIC (vjpad, its MIDI pad, `Esc Esc` on the jam page, the board) is faster; use this when
+he asks you. `PORT=$P node scripts/vj/mcp-call.js panic '{"fork":"<fork>"}'` (no fork: the boot
+fork). Pick a fork that reads the running controller; the show skill lists them (`clit-set/2` on
+clit-set, `sun/7` on the sun line). Confirm with `screenshot {"width":256}`. Frozen picture: playbook section 7. Never `goto`.
 
-Health alerts:
+## Lite: `/show lite`
 
-```bash
-tail -n 0 -F .claude/vj-signals.jsonl | grep -E --line-buffered '"type":"(clip|too-dark|boot)"|"type":"flicker","flicker":([2-9]|[1-9][0-9])'
-```
+Launch as above with the board's `status` and `controls` only; no partner, critic or setlist.
+Away from a line feed, play a real file: `&audio_file=<url>` (docs/audio-file-playback.md), or
+`&audio=tab` (docs/tab-audio.md). KEEP or spacebar saves moments for `/keep process`.
 
-**The art critic:**
+## End: `/show end`
 
-1. Start one background `general-purpose` agent that reads and adopts `.claude/agents/art-critic.md`.
-   Don't use the `art-critic` type itself: it is Read/Glob/Grep only, so it can't take shots or
-   append to the log (confirmed in the 2026-10-09 test drive).
-2. Allow it read-only access only: `show.js shot`, plus `show.js eval` to read
-   `__vjMeter`/`controllerFeatures` and for its waits.
-   Have it summarise `__vjMeter` in the browser (e.g. average the last 100 samples): returning the
-   raw object prints its whole 900-sample buffer, about 330KB.
-3. It loops about every 2.5 min for ~40 min. Each cycle it takes a shot pair and the meter, and
-   appends a `### critic #N — <time> — <score>/10` verdict with a `**Fix next:**` line to
-   `.claude/vj-critic.md`.
-4. Restart it when it finishes.
-5. Put a Monitor on the critic's log:
-
-```bash
-touch .claude/vj-critic.md; tail -n 0 -F .claude/vj-critic.md | grep -E --line-buffered '^### critic|^\*\*Fix next|^1\.|WALL DOWN'
-```
-
-Weigh the critic's fixes against the user's words and docs/vj-preferences.md; the user always
-wins.
-
-**Dial releases:** one line each time the user lets go of a dial, naming the knobs that moved
-and their old and new values. It polls over CDP, so it needs no `vjtrack=1`.
-
-```bash
-while true; do node scripts/vj/watch-dials.js 2>&1 | grep --line-buffered RELEASE; sleep 2; done
-```
-
-The loop matters: one failed CDP poll kills `watch-dials.js`. The health grep leaves out `shiver`
-because the detector reads 0.9–1.0 constantly; recalibrate it before trusting it again.
-
-**Stray pages:** on macOS, Chrome is often the default browser, so any link opened anywhere on the
-laptop (an OAuth login, a Slack link) can land in the show Chrome, on the wall. (On Windows the
-show Chrome is a separate profile and links open in the normal one, but the guard is harmless.) Arm a guard that closes them:
-
-```bash
-node .claude/skills/sun-set/stray-guard.mjs 2>&1
-```
-
-## 5. Write the recovery snapshot
-
-Write `.claude/vj-state.json`:
-`{ shaderPath, showUrl, audioDevice, room: "show", port, moveStyle: "default", mode: "live-loop", startedAt }`
-
-## 6. Hand off
-
-Tell the user in one line: the wall is up, the input label, and all three watchers are armed.
-Then invoke `/vibej2` with the shader path. This is required: the show always runs the live loop,
-which listens for dial releases and steers the visual from them. (`/show check` is the
-preflight-only path.)
-
-**Scratch copy:** edits go to a `-wip` copy of the boot shader (for example `clit-set/2-wip` or `sun-1-wip`),
-hot-swapped in. The boot shader itself stays untouched as the panic fallback. Check `git status`
-first: if the `-wip` file is already tracked, it holds an earlier set's live state, so don't copy
-over it. Start the session from it, or make a fresh copy under a new name. At wind-down, save the
-session's result as the next numbered fork rather than leaving it in the `-wip` file.
-
-## Panic: `/show panic <fork>`
-
-This gets a known-good look on the wall without a reload. **Never use `goto` mid-set.** Pick a
-fork that reads the controller already running: on clit-set, `clit-set/2` (or `clit-set/1`); on
-the sun line, a fork from the playbook's fork library, `sun/7` being the healthy default. A sun
-fork under the clit-set controller reads no `bs_*` uniforms and falls back to raw audio.
-
-```bash
-node scripts/vj/show.js eval 'async (path) => {
-  const src = await fetch("/shaders/" + path + ".frag?t=" + Date.now()).then(r => r.text())
-  const v = window.__vjValidate(src); if (!v.ok) return { ok: false, info: v.info }
-  window.cranes.shader = src
-  const u = new URL(location.href); u.searchParams.set("shader", path); history.replaceState({}, "", u)
-  return { ok: true }
-}' '["<fork-path>"]'
-```
-
-- **The controller stays:** the live controller keeps running, and the fork reads its `cs_*` (clit-set)
-  or `bs_*` (sun) uniforms.
-- **Wait first if needed:** if an editing agent holds the page token, stop it before swapping.
-- **Confirm:** take a shot afterwards.
-- **If the picture is frozen** (the controller is throwing), fix the state first. See the
-  playbook's failure runbook.
-
-## clit-set: the default series
-
-`clit-set/2` is a slow, knob-steered voyage through the clit/2 fractal. Every dial at 0 is the
-autopilot: it drifts through six waypoints and comes home every 10 minutes, so a reload (all dials
-read 0) still looks right. Full doc: `shaders/clit-set/clit-set.md`.
-
-| Row | Dial 1 | Dial 2 | Dial 3 | Dial 4 |
-|-----|--------|--------|--------|--------|
-| 1 navigate | k1 X | k2 Y | k3 VOYAGE | k4 ZOOM |
-| 2 shape | k5 TURN | k6 POWER | k7 BODY | k8 CURL |
-| 3 colour | k9 HUE | k10 NEBULA | k11 TRAILS | k12 REACT |
-| 4 light | k13 GLASSES | k14 EMBER | k15 SPOT | k16 LACE |
-
-- **k1, k2 and k3 at 0 = autopilot.** Manual control blends in over the first 8% of the dial. Past
-  that, X and Y are centred at 0.54, and k3 scrubs the voyage loop by hand.
-- k4 to k8 add on top of the voyage. Zoom stops at 3x, because past that the lace turns to speckle.
-- Audio never moves the camera. It drives lace breath, rim, stars, the ember and the drop spotlight.
-- `&voyage0=<0..6>` starts the autopilot at a different waypoint (used by the NFC variants).
+1. Tell `/partner` to stop and wait for its last line. Stop the bridge, Monitors and your listener.
+   Leave the wall up unless asked.
+2. Run `/keep process` in a background agent.
+3. The set's story on the board: [story.md](story.md).
+4. Journal `journals/<yyyy-mm-dd>-<show>.md`: what played, what was kept, what broke and the fix,
+   his words verbatim, the board link.
+5. Paint every status card `done`, stop every listener, delete `.claude/vj-state.json`.

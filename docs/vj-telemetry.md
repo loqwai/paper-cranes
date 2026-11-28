@@ -1,12 +1,17 @@
 # VJ Telemetry (`?vj=1`) — the page as a sensor
 
-The auto-VJ loop (`/vibej`) needs to know what the display actually looks like. Screenshots are
+The VJ partner (`/partner`) needs to know what the display actually looks like. Screenshots are
 the ground truth, but they are not always available: a display tab opened by a previous session
 lives outside the current Chrome tab group and **cannot be scripted or screenshotted at all**.
 
 `?vj=1` closes that gap by making the page volunteer its own numbers. The page installs a runtime
 at boot (`src/vj/runtime.js`) and POSTs signals to `/__vj-signal`, which the dev server appends to
 `.claude/vj-signals.jsonl` (gitignored). A `Monitor` on that file wakes the loop within seconds.
+
+A display on a relay room (`?remote=display&room=<room>`, including a production page) also sends
+each signal down its room socket, where the relay VJ MCP's `wait_for_event` sees it as a
+`vj-signal` event (`src/vj/signals.js`, [vj-mcp.md](vj-mcp.md)). A production build has no
+`/__vj-signal` and bundles the aesthetic meter instead of fetching `/scripts/vj/`.
 
 ```
 http://localhost:6969/?shader=<path>&vj=1
@@ -37,6 +42,14 @@ Each line in `.claude/vj-signals.jsonl` is one JSON object with a server-stamped
 - **Health alerts** — a 5 s watchdog with a 30 s per-type cooldown: `clip`, `flicker` (> 0.7),
   `too-dark` (`lumMin` < 0.06 at a clean gate), `shiver` (> 0.45), and `gate-drop` / `gate-clean`
   marking track boundaries.
+- **Live show** ([contract](live-show-contract.md)), from `src/vj/live.js` via `RemoteDisplay`, on
+  any `?vj=1&remote=display` page:
+  - `hands {on, knob}`: on at his first dial, pad, MIDI or board move; off 8 s after the last
+    (`?hands_ms=`). Agent writes wait while it is on.
+  - `release {knob, value}`: a dial went still for 50 ms (`?release_ms=`). This replaces polling
+    with `scripts/vj/watch-release.js`.
+  - `keep {shader, params, t}`, `panic {fork}`, `pad-alive {alive, pads}`,
+    `proposal-taken {id}`, `proposal-dropped {id, why}`.
 - **`knobtrack`** — **opt-in, see below.**
 
 ### `?vjtrack=1` — gesture logging (off by default)
@@ -60,8 +73,9 @@ serves the last 50 lines anyway.
 
 ## Tools (`scripts/vj/`)
 
-> `scripts/vj/aesthetic-meter.js` is **fetched by URL** at runtime (`/scripts/vj/…`). Moving it
-> breaks the meter, and the failure is swallowed into an `error` signal rather than thrown.
+> `scripts/vj/aesthetic-meter.js` is **fetched by URL** on the dev server (`/scripts/vj/…`, fresh on
+> every reload) and **bundled** into a build (`?raw` import in `src/vj/runtime.js`). Moving it breaks
+> both: in dev the failure is swallowed into an `error` signal rather than thrown.
 
 - **`remote-send.js`** — push `update-params` to the display from a shell. The display joins the
   dev-server WebSocket when it has no `?room`, and `remote-ws-plugin` rebroadcasts. This is the
@@ -69,7 +83,8 @@ serves the last 50 lines anyway.
   the display's URL.
   ```bash
   node scripts/vj/remote-send.js '{"knob_141":0.62}'    # set
-  node scripts/vj/remote-send.js '{"noaudio":null}'     # release + strip from URL
+  node scripts/vj/remote-send.js '{"knob_141":null}'    # release + strip from URL
+  # boot-time keys (noaudio, controller, image, audio, midi, ...) are pinned and ignored: src/remote/relay.js
   ```
 - **`watch-release.js`** — emits one line the moment a fader is released (movement, then 2.5 s of
   stillness). Run under a `Monitor` to wake the loop at exactly the right instant.

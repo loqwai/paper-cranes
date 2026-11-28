@@ -1,12 +1,14 @@
-// vj-signal-plugin — dev-only endpoint that lets the DISPLAY PAGE wake the /vibej loop.
+// vj-signal-plugin — dev-only endpoint that lets the DISPLAY PAGE wake the /partner loop.
 // The ?vj=1 runtime (src/vj/runtime.js) POSTs health alerts + boot beacons here; each becomes a
 // JSONL line in .claude/vj-signals.jsonl, which the vibej session watches with a Monitor —
 // so Claude is woken by the page itself within seconds of a reload or a health breach,
 // instead of discovering it a beat later. (vibej v2 design, 2026-08-19.)
 import { appendFileSync, mkdirSync, readFileSync, existsSync, renameSync } from 'fs'
 import { resolve } from 'path'
+import { refuseOtherSites } from './same-origin.js'
 
-export const vjSignalPlugin = () => ({
+// onSignal: the VJ MCP hub's event feed (wait_for_event), called with each parsed signal.
+export const vjSignalPlugin = ({ onSignal } = {}) => ({
   name: 'vj-signal',
   apply: 'serve',
   configureServer(server) {
@@ -16,6 +18,7 @@ export const vjSignalPlugin = () => ({
     // last 50 lines, and an agent reading the whole file blows its own context — so each dev
     // session starts clean and the previous run is kept as one .prev for post-mortem.
     try { if (existsSync(file)) renameSync(file, file + '.prev') } catch {}
+    server.middlewares.use(refuseOtherSites(['/__vj-signal']))
     server.middlewares.use('/__vj-signal', (req, res) => {
       if (req.method === 'POST') {
         let body = ''
@@ -26,6 +29,7 @@ export const vjSignalPlugin = () => ({
             sig.t = new Date().toISOString()
             mkdirSync(resolve(server.config.root, '.claude'), { recursive: true })
             appendFileSync(file, JSON.stringify(sig) + '\n')
+            onSignal?.(sig)
             res.statusCode = 204; res.end()
           } catch (e) { res.statusCode = 400; res.end(String(e)) }
         })

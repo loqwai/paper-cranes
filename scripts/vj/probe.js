@@ -4,6 +4,8 @@
 //   await import('/scripts/vj/probe.js'); await window.__vjProbe(40)
 //   node scripts/vj/show.js eval "async () => { await import('/scripts/vj/probe.js'); return window.__vjProbe(40) }"
 //
+// Studio only: never on the show page (only the VJ MCP touches it; get_state carries the meter).
+//
 // For a hot line input without one, play a file through the analyser at gain:
 //   jam.html?shader=…&controller=…&wavelet=true&vj=1&audio_file=/test-audio/x.mp3&audio_gain=12&smoothing=0.15
 // (smoothing=0.15 matches the mic path; the file path defaults to 0.85)

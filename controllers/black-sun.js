@@ -646,6 +646,8 @@ export function make() {
       bs_trip: S.trip, bs_tripAct: S.tripAct, bs_tripActT: S.tripActT, bs_julia: S.julia, bs_jR: S.jR,
       bs_descend: S.descend, bs_fractal: S.fractal, bs_dive: fract(S.dive), bs_jTurn: fract(S.jTurn), bs_tripHue: S.tripHue / 360,
       bs_budPh: S.budPh,
+      // the story's musical timers (s), for setlist cues read over get_state (setlists/sun-set/cue.mjs)
+      bs_buildT: S.buildT, bs_lowT: S.lowT, bs_calmT: S.calmT,
       bs_spT: S.spT, bs_spB: S.spB, bs_flowPh: S.flowPh,
       ...Object.fromEntries(S.fb.map((v, i) => [`bs_f${i}`, v])),
     }

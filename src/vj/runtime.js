@@ -1,8 +1,12 @@
 // VJ runtime — loaded by ?vj=1 (see index.js). Closes the 2026-08-18 journal todo "bake VJ
 // tooling into the display page": validator, aesthetic meter and cursor-hide now survive every
 // reload because the PAGE installs them at boot, and the page WAKES the vibej loop by POSTing
-// signals to /__vj-signal (picked up by a Monitor on .claude/vj-signals.jsonl).
-const post = sig => fetch('/__vj-signal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sig) }).catch(() => {})
+// signals to /__vj-signal (picked up by a Monitor on .claude/vj-signals.jsonl). On a relay room
+// they go down the display's socket instead, to the relay MCP's wait_for_event (signals.js).
+import { createSignalPoster } from './signals.js'
+import { withoutSecret, SECRET_PARAM } from '../remote/relay.js'
+
+const post = createSignalPoster({ getClient: () => window.cranes?.remoteClient, dev: import.meta.env.DEV, search: location.search })
 
 export const startVjRuntime = async () => {
   // 1. cursor hygiene (live-show rule: a corner-parked hover still shows a pointer)
@@ -28,7 +32,14 @@ export const startVjRuntime = async () => {
   }
   // 3. aesthetic meter (5-probe kit + shiver probe; IIFE that installs window.__vjMeter)
   if (!window.__vjMeter) {
-    try { eval(await fetch('/scripts/vj/aesthetic-meter.js?t=' + Date.now()).then(r => r.text())) } catch (e) { post({ type: 'error', what: 'meter-install', info: String(e) }) }
+    // Dev fetches it fresh, so the vibej loop's edits land on the next reload. A build has no
+    // /scripts/ (the static host answers its HTML shell, and eval of that is a SyntaxError), so it
+    // bundles the source instead: without it, a production ?vj=1 page had no meter, no alerts and
+    // no pulses.
+    const meterSource = () => import.meta.env.DEV
+      ? fetch('/scripts/vj/aesthetic-meter.js?t=' + Date.now()).then(r => r.text())
+      : import('../../scripts/vj/aesthetic-meter.js?raw').then(m => m.default)
+    try { eval(await meterSource()) } catch (e) { post({ type: 'error', what: 'meter-install', info: String(e) }) }
     if (window.__vjMeter && !window.__vjMeter.timer) window.__vjMeter.timer = setInterval(() => window.__vjMeter.sample(), window.__vjMeter.PERIOD_MS)
   }
   // 3b. JANK PROBE — the loop kept being told "the visual stutters" with no way to confirm it.
@@ -65,8 +76,9 @@ export const startVjRuntime = async () => {
   // matter (wavelet, audio, noaudio, controller) behind the knob list.
   {
     const sp = new URLSearchParams(location.search), flags = {}
-    for (const [k, v] of sp) if (!k.startsWith('knob_')) flags[k] = v
-    post({ type: 'boot', url: location.href.slice(0, 600), flags })
+    // Never the room's display secret: the boot beacon goes to the agent (docs/vj-mcp.md).
+    for (const [k, v] of sp) if (!k.startsWith('knob_') && k !== SECRET_PARAM) flags[k] = v
+    post({ type: 'boot', url: withoutSecret(location.href).slice(0, 600), flags })
   }
   // 5. watchdog — page-side health alerts, 5 s cadence, per-type cooldown so the file stays small
   const last = {}

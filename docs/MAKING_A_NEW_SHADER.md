@@ -41,7 +41,7 @@ The shader files live in `/shaders/` and are loaded via query parameter: `?shade
 
 ### File Structure
 
-Create a `.frag` file in the `/shaders/` directory. The system uses a ShaderToy-compatible format:
+Create a new shader as `/shaders/wip/<series>/1.frag`, with `<series>.md` beside it (no author folder; see the repo AGENTS.md). The system uses a ShaderToy-compatible format:
 
 ```glsl
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
@@ -882,7 +882,7 @@ P = sqrt(z + (z - z*z*z) * cos(atan(Z.y, Z.x) - vec4(0, 2.1, 4.2, 0)));
 
 ## Workflow Summary
 
-1. **Create file:** `/shaders/your-name.frag`
+1. **Create file:** `/shaders/wip/<series>/1.frag`
 
 2. **Start with template:**
 ```glsl
@@ -1013,7 +1013,7 @@ For more complex parameter relationships, use `#ifdef` blocks to switch entire p
 3. **Find aesthetic ranges** by adjusting knob values
 4. **Document each knob** with comments explaining what low/high values produce
 5. **Switch to audio** by commenting out `#define KNOB_MODE`
-6. **Choose appropriate audio features** from different domains (see Feature Domains in CLAUDE.md)
+6. **Choose appropriate audio features** from different domains (see Feature Domains in AGENTS.md)
 
 ### Testing with Playwright
 

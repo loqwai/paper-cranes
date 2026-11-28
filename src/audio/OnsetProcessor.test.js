@@ -153,3 +153,30 @@ describe('degradation when hypnosound predates the detector', () => {
         warn.mockRestore()
     })
 })
+
+// hypnosound before 2.1.0 had no makeOnsetDetector, so with no injected deps the
+// processor came up with available=false and every onset uniform sat at rest
+// forever. Reported by mcp-0e lanes. This runs against the installed release.
+describe('with the real detector (no injected deps)', () => {
+    it('is available and fires on a kick after a quiet lead-in', () => {
+        const processor = new OnsetProcessor(SAMPLE_RATE, BINS)
+        expect(processor.available).toBe(true)
+
+        const quiet = new Uint8Array(BINS).fill(10)
+        const kick = new Uint8Array(BINS).fill(10)
+        const kickTop = hzToBin(200, SAMPLE_RATE, BINS)
+        for (let i = 0; i < kickTop; i++) kick[i] = 220
+
+        const out = {}
+        let t = 0
+        for (let f = 0; f < 60; f++, t += 16) processor.process(quiet, t, out)
+        expect(out.onsetKickTrigger).toBe(0)
+
+        processor.process(kick, t, out)
+        expect(out.onsetKickTrigger).toBe(1)
+        expect(out.onsetKickStrength).toBeGreaterThan(0)
+
+        processor.process(kick, t + 16, out)
+        expect(out.onsetKick).toBeGreaterThan(0)
+    })
+})

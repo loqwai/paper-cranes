@@ -30,6 +30,7 @@
     --clit-cd: #e8402a;
     --clit-neb: #3fb6c8;
     --clit-man: #f0b232;
+    --smiley: #ffd43b;
     --ok: #2ecc71;
     --err: #e74c3c;
     --warn: #f39c12;
@@ -91,6 +92,7 @@
   .current.color-clit-cd { border-left: 4px solid var(--clit-cd); }
   .current.color-clit-neb { border-left: 4px solid var(--clit-neb); }
   .current.color-clit-man { border-left: 4px solid var(--clit-man); }
+  .current.color-smiley { border-left: 4px solid var(--smiley); }
   .label {
     font-size: 12px;
     text-transform: uppercase;
@@ -261,7 +263,22 @@
 </details>
 
 <script>
+// #show: the smiley stickers for Aaron's arm (docs/nfc-show-controls.md). Each tag holds only its
+// id; what it does lives in nfc-show-controls.json, so the labels below are what the default map
+// says today, a reminder for which sticker goes where, not what the tag carries.
+const SHOW_CONTROL_TAG = (id, label) => ({ name: `${id} ${label}`, url: `https://visuals.beadfamous.com/vjpad#nfc=${id}`, color: "smiley" })
+
 const QUEUES = {
+  show: [
+    SHOW_CONTROL_TAG("s1", "KEEP"),
+    SHOW_CONTROL_TAG("s2", "PANIC"),
+    SHOW_CONTROL_TAG("s3", "NEXT"),
+    SHOW_CONTROL_TAG("s4", "TAKE"),
+    SHOW_CONTROL_TAG("s5", "FAV A"),
+    SHOW_CONTROL_TAG("s6", "FAV B"),
+    SHOW_CONTROL_TAG("s7", "PREV"),
+    SHOW_CONTROL_TAG("s8", "DROP"),
+  ],
   taco: [
     // plasma
     { name: "taco-1", url: "https://visuals.beadfamous.com/?shader=redaphid/taco/plasma&image=images/taco-stencil.png&controller=taco-kandi&seed=0.618&seed2=0.936&seed3=0.254&seed4=0.572&knob_7=0.0&fft_size=2048&smoothing=0.3", color: "taco-plasma" },
@@ -385,11 +402,18 @@ QUEUES["clit-set"] = Array.from({ length: 200 }, (_, i) => ({
   name: `clit-new-${i + 2}`, url: `https://2cb.pw/clit-new/${i + 2}`, color: "clit-set",
 }))
 
-// URL hash selects queue: #iris / #taco / #coat, default = clit-set
-const QUEUE_NAME = (location.hash.replace("#", "") || "clit-set")
-const QUEUE = QUEUES[QUEUE_NAME] || QUEUES["clit-set"]
+// URL hash selects queue: #iris / #taco / #coat / #show, default = clit-set. #clit is an alias.
+// An unknown hash must not title the page with its name while it writes the default queue's URLs
+// onto the tags: the name, title and saved progress all follow the queue used.
+const QUEUE_ALIASES = { clit: "clit-set" }
+const ASKED_QUEUE = location.hash.replace("#", "")
+const ASKED_NAME = QUEUE_ALIASES[ASKED_QUEUE] || ASKED_QUEUE
+const QUEUE_NAME = QUEUES[ASKED_NAME] ? ASKED_NAME : "clit-set"
+const QUEUE = QUEUES[QUEUE_NAME]
 document.getElementById("title").textContent = QUEUE_NAME + " NFC writer"
 document.title = QUEUE_NAME + " NFC writer"
+// A show-control tag opens the vjpad, not a shader: there is nothing to preview.
+if (QUEUE_NAME === "show") document.getElementById("preview-wrap").style.display = "none"
 
 const STORAGE_KEY = QUEUE_NAME + "-nfc-writer-state"
 
@@ -581,6 +605,9 @@ if (!("NDEFReader" in window)) {
 }
 
 render()
+if (ASKED_QUEUE && ASKED_NAME !== QUEUE_NAME) {
+  setStatus(`No "${ASKED_QUEUE}" queue here, showing ${QUEUE_NAME}. Queues: ${Object.keys(QUEUES).join(", ")}`, "err")
+}
 </script>
 </body>
 </html>

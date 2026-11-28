@@ -1,0 +1,175 @@
+# clit-vibej
+
+A live /vibej show fork of `clit-set/2` (the voyage), made 2026-11-22 for a show on Aaron's phone
+(`cranes-local.hypnodroid.com`, phone mic at a techno venue).
+
+```
+?shader=claude/wip/clit-vibej/2&controller=clit-set&wavelet=true
+```
+
+`1.frag` is the voyage fork the roller coaster grew from, and was the show's fallback. Its iteration
+notes below apply to 2.frag too (coil, undulate, pearls, magenta guard, speckle gates).
+
+Runs with the `clit-set` controller. Without it, every `cs_*` reads 0 and the knobs drive the camera
+directly, as in clit-set/2.
+
+The session journal is `journals/clit-vibej-cool-moments.md`. The vibej skill would name it
+`journals/1-cool-moments.md` (after the file name `1.frag`), but "1" is ambiguous across shaders, so
+it uses the folder name.
+
+## Intent
+
+clit-set/2's voyage, kept as it is, with the VJ adding music response one small move at a time.
+
+- **Audio never moves the fractal.** A, B, C, zoom, pan, rotation and curl evolve one way only and
+  never oscillate. Audio may drive colour, light on the lace, rim and ember, chroma, hue, local
+  punch, twinkle and nebula.
+- **The beat stays luminance-neutral.** The existing kick hue-step and chroma lift are scaled back to
+  each pixel's luminance, so the show's flicker and shiver meters do not see them.
+- **Visual limits.** No flashing or whole-frame strobe, no white-out, no grey, no hot magenta. Every
+  knob at 0 still looks good.
+- **Built for a quiet mic.** The phone mic sits at energy 0.01 to 0.07, so responses must read at
+  that level. Prefer controller envelopes (`cs_punch`, `cs_thump`, `cs_treb`, `cs_beat`), which are
+  normalised and presence-gated, over raw feature values.
+- **At most ~6 overlay effects** at once.
+
+## Audio mapping
+
+Inherited from clit-set/2 (see `shaders/clit-set/clit-set.md` for the full table). Changes made
+during the show are listed per iteration below.
+
+## Iterations
+
+- **1.frag**: copy of clit-set/2 at 0de6d953. Header retagged. Live edits follow, one per tick.
+- **1.frag, iter 1** (03:28): `cs_mids` (mids z-score envelope, unused in clit-set/2) lifts lace and
+  rim chroma: `CHROMA_GAIN = 0.85 + 0.3·BREATH + 0.25·MIDS_ENV·REACT`. Colour only. Audio:
+  mid-dominant quiet mic (energy 0.015, mids 0.67).
+- **iter 2** (03:30): bass thump (`BASS_ENV`) leans the nebula dust toward deep ember red at the
+  same lightness (`lchGamut(0.30, 0.12, 29°)`, up to 60%). Audio: bass 0.78, centroid 0.12.
+- **iter 3** (03:31): magenta guard. The luminance-neutral beat rotation (`0.5·punch + 0.2·kick +
+  0.35·wave`) could turn violet forward, or red backward on the signed wave, into the hot-magenta arc.
+  Now the rotated hue is clamped to the arc's edge (OKLab atan -1.25..0.45 rad, 288° to 26°). Seen at
+  bass 0.77 / bZ 0.9 / thump 0.99 with mids lifting chroma (iter 1): hot-pink specks in the dense lace.
+- **iter 4** (03:35, Aaron: "We need it to undulate and coil much more"). Two traveling waves on one
+  one-way phase, `WAVE_PHASE = cs_flow·TAU·3 + cs_drift·20` (measured 1.82 rad/s at energy 0.04; about
+  0.6 rad/s silent and 3 loud). Audio sets only the rate; the amplitudes are constant.
+  - **COIL**: a barber-pole twist inside the iteration, `rot(0.22·w_k·sin(1.3·log|V|² − 1.1·phase))`,
+    with `w_k` ramping in over iterations 1 to 6, so the silhouette holds and the filaments coil. Bounded,
+    and the pattern only travels one way.
+  - **UNDULATE**: crossed traveling waves on the input domain, `p += 0.045·(sin(5.5y − φ), sin(4.7x − 0.83φ + 1.7))`.
+    Directional, not radial, so there are no zoom rings.
+  - Fades in over the first 10 s after page load. No controller change, so prod clit-set/2 is untouched.
+  - Census after it: hot pink 0.18 to 0.28 of vivid pixels (baseline 0.15), grey 5 to 6%, white 0.
+- **iter 5** (03:38): a final hot-magenta guard. A census split by lightness showed the excess was
+  orchid lace at 300–330° (OKLab), mid lightness. Three things fed it: the trails blending red over
+  violet once the filaments moved (iter 4), the mids chroma lift (iter 1), and the per-channel output
+  gamma (R 0.88, B 0.95) leaning violet toward pink. At the output, hues inside the arc between 288°
+  and 26° are now squeezed toward the arc's two edges with a cubic curve, and the arc's middle loses up
+  to 45% chroma. L is kept. Result: hot-pink share 0.18–0.28 → 0.06–0.13, white 0, grey ≤ 4%.
+- **iter 6** (03:40): every kick surges the coil and undulate waves forward: `WAVE_PHASE += cs_beat·TAU·0.35` (~0.24 rad per full kick, eased 0.12 s, never back). Rhythm in the motion, not the light.
+- **iter 7** (03:43): pearls are back. `PEARL` (spectral crest) was defined but unused. It now drives sparse soft pinpoints on the braid: fractal-space cells that ride the geometry and shimmer as the waves pass, each on its own twinkle phase, at density 5%·PEARL/0.3 and gain 0.55.
+- **iter 8** (03:44): treble (`TREB_ENV`) cools the rim hue toward teal (palette t 0.66, up to 50%), the mirror of a build warming it to red. Colour only.
+- **iter 9** (03:47): a timbre shift (`cs_shift`, spectral flux and entropy change, unused before) turns the lace palette up to 0.6 rad. Colour only.
+- **iter 10** (03:48): the braid (`lace_fine`, which carries the treble sparkle, punch and pearls) now fades where it changes faster than a pixel (`fwidth(lx+ly)` 1.5 to 4) at any depth, not only past 3x. The dense lace at home was churning into chalky speckle on the 408 px phone canvas. Grey 8.6% → 2.8%.
+- **iter 11** (03:50): the main lace also dims, by up to half, where it is sub-pixel (`fwidth(min(lx,ly))` 2 to 6) at any depth. At voyage 2.25 the bass-thickened, coil-churned lace mass filled the frame as chalky speckle (grey 9%, vivid 0.26). After: grey 3%, vivid 0.39.
+- **iter 12** (03:52): treble brings out stars in the voids. Near and far star density rise by +0.15 and +0.10 × `TREB_ENV`, and star brightness becomes `max(neb, 0.35 + 0.5·TREB_ENV)`. At voyage 3.0 half the frame was an empty black void with ~1 px stars at 0.35.
+- **iter 13** (03:54): fixed an artefact from iters 10 and 11. `lx` and `ly` are logs of trap distance and run to −∞ on the thread cores, so `fwidth` spiked there and the gates dotted the cleanest threads dark (chains of dark dots along ribbons). Both gates now measure `fwidth` on the logs clamped to the lace's transition band `[lace_hi − 0.5, lace_lo + 0.5]`.
+- **iter 14** (04:03): roughness (`cs_grit`) adds a fine grain to the nebula dust that drifts on the flow clock: `dust *= 1 + 0.9·GRIT·(noise − 0.35)`. It is subtle, because the darkness pass holds the voids near black.
+
+## 2.frag: the roller coaster (fork of 1.frag, 04:11)
+
+Aaron: "It's been pretty samey for a while. Give me a 'roller coaster' view going down the fractal
+tube." A dramatic move, so it is a fork. 1.frag stays as the fallback.
+
+```
+?shader=claude/wip/clit-vibej/2&controller=clit-set&wavelet=true
+```
+
+- **The tube.** The screen becomes log-polar around a vanishing point: `u = log r − TRAVEL` and
+  `θ = atan + NAV_ROT + ROLL`. The fractal is sampled at
+  `C = home + (0.23, 0.33) + 0.30·e^{i·u} + 0.15·e^{2iθ}`. That is periodic in both u and θ, so the
+  tube has no seam and never ends. The walls repeat twice around, and the scale is conformal
+  (R1·K = 2·R2), so the wall shows rings and not radial streaks.
+- **Travel** (one-way): `cs_flow·TAU·1.6 + cs_beat·1.2 + cs_jump·0.8`. That is a cruise of about
+  0.2 u/s in silence that runs faster on loud passages, a 0.13 u surge per full kick and a 0.8 u lunge
+  per drop.
+- **Banking**: `ROLL = cs_drift·2.5`, the music-rate spin integral, so the roll's rate swells and eases
+  but never reverses (a corkscrew).
+- **The curve**: the vanishing point circles a small ellipse (0.08 × 0.22), always the same way, at
+  `cs_flow·TAU·0.4`.
+- **Depth**: the far core is dark (`smoothstep(0.02, 0.16, r)`), which hides the singularity, and the
+  light runs 0.12 → 1 from far to near (log r −2.6 → 0.1).
+- **The track**: two amber rails on the tube floor, banked by 0.6·ROLL, and dark-red cross-ties every
+  half e-fold of depth. Equal steps in log r are perspective-correct in a tube.
+- 1.frag's coil, undulate, pearls, magenta guard and speckle gates all carry over.
+- Checked with a local headless render (`noaudio`, 408 × 997) before the phone saw it.
+- **2.frag iter 2** (04:18): the tube kept running through empty fractal (phone frames at meanL 0.17). A local headless sweep over all six waypoints (`?voyage0=0..5`) compared four tube variants. Shrinking the depth loop (R1 0.30 → 0.12, K 1.0 → 2.5, still conformal), centred on the lace-dense dive point, raised the worst-waypoint vivid share from 0.09 to 0.24.
+- **2.frag iter 3** (04:20): the sub-pixel lace dim is stronger in the tube (0.5 → 0.7, starting at fwidth 1.5), because the walls compress the lace toward the core. Grey 7–8% → 2.5–5.5%.
+- **2.frag iter 4** (04:21): the rails are thicker (0.006 + 0.012·r) and have a soft amber glow that lifts on the kick (`PUNCH`, rails only). The ties are ember-red (L 0.48) instead of dark shadows.
+- **2.frag iter 5** (04:25): bass thickening of the lace is halved on the tube (0.9 → 0.45). A wall-scale sweep (R1 and R2 × 1.0 / 0.6 / 0.4, no audio, six waypoints) found the current scale cleanest, so it stays. On the phone the walls are still speckly (grey 6–12%, hot pink up to 0.18 where red and violet speckle blend).
+
+## LACE AA (2026-11-22, all of clit-vibej/1, clit-vibej/2, clit-set/1, clit-set/2)
+
+The lace sparkled (show journal: "Tube walls speckle with live audio"). Measured with
+`scripts/sparkle-score.mjs` and the diagnostic fork `lace-lab/1` (see [docs/sparkle-score.md](../../../../docs/sparkle-score.md)):
+
+- **Cause: aliasing of a chaotic function.** In the dense lace the orbit is chaotic, so one pixel step in C
+  moves the trap logs across the whole lace band. One sample per pixel is noise, and any motion (the spin,
+  the voyage, a kick's lurch, the tube's travel) reshuffles it every frame. Audio makes it worse only by
+  speeding the motion up. 16 samples per pixel cut the flicker 30% to 65% depending on the shader;
+  rendering at 1/4 resolution did nothing.
+- **Ruled out:** float precision of the clocks (controller state two hours in: no worse), the coil, the
+  undulate, bass on the lace threshold, the treble braid light, each within 1% when removed.
+- **First fix, rejected in review:** carry `dV/dC` through the loop, call a pixel unresolved when
+  `|dV/dC| * pixel / trap` is large, and blend 90% of last frame there. The footprint runs to infinity at
+  every clean thread's core (the trap passes through 0), so it drew dark seams down clean threads and red
+  ghost lines behind moving ones, and it lowered flicker by blurring real motion: `motion` 16.5 to 9.1
+  (reference 13.6), distance to the `--ss 4` reference 6.87 to 11.20, worse than no fix.
+- **Fix: spatial supersampling.** The orbit loop is now `orbit()`, and the lace fields one orbit gives
+  (coverage, braid, rainbow lightness, palette position, colour) are `laceSample()`. `unres` is how much
+  those change across the pixel's 2x2 quad (`fwidth`): 0 inside a clean thread, high in the chaotic lace.
+  There the pixel runs `orbit()` `LACE_AA_SAMPLES` (1) more times on a ring inside its own footprint
+  (`C + o.x * dFdx(C) + o.y * dFdy(C)`) and averages coverage, lightness and palette position, with the
+  colour weighted by coverage so dark samples do not grey it. No frame history: nothing trails or ghosts.
+  The rim edge is taken from the averaged `z`.
+- **Removed:** iters 10, 11 and 13 `fwidth` gates. They dimmed the noisy lace instead of resolving it.
+- **Numbers** (synth trace, 90 frames, 408 x 816; `ref` = unfixed shader at `--ss 4`). Shipped, 1 sample:
+  2.frag flipMean 10.57 / 9.74 / 7.39 (before / fix / ref), motion 16.50 / 15.74 / 13.58, distance to ref
+  6.87 / 6.12. With 2 samples: 1.frag flipMean 9.05 / 6.86 / 4.05 (before / fix / ref), motion 14.05 / 11.93 / 9.36, distance to ref
+  8.12 / 6.33. 2.frag flipMean 10.57 / 9.15 / 7.39, motion 16.50 / 15.19 / 13.58, distance 6.87 / 5.50.
+  Live split-screen recording (same frames, sides swapped halfway): 2.frag 9.0 to 7.3, 1.frag 7.7 to 5.7.
+  The recording ran 2 samples.
+- **Cost:** SwiftShader (CPU, a stand-in for a phone), median of 3 runs: 2.frag 106 to 157 ms per frame
+  at 1 sample (+48%), 190 at 2; 1.frag 112 to 198 at 2. Nothing measured on a real phone yet.
+- **`LACE_AA_SAMPLES` is 1 for phones.** Keep the define: the desktop show machine can raise it to 2
+  (flicker about 6% lower again, +20% frame time) or 3 (about 9%, +38%). Table in docs/sparkle-score.md.
+- **NaN guard:** `atan(0, 0)` is NaN on some mobile GPUs. The orbit direction goes through `unitDir()` (+x for
+  a zero vector), and the averaged direction falls back to the centre sample's if the samples cancel.
+
+## Colour: OKLCH kit, theme EMBER & NEBULA (2026-11-22, 1.frag and 2.frag)
+
+Aaron: "We also need to reinplement using oklh like this repo currently recommends with a thematic color palette".
+Both files now build colour on the repo's OKLCH harmony kit ([docs/oklch-palettes.md](../../../../docs/oklch-palettes.md)),
+the same theme as clit-set: an ember and burnt-amber body in a teal and indigo galaxy, one base hue (`THEME_H`,
+turned by the seed within 27..41°), dials and audio moving only the position along the palette. The full
+write-up, the rules kept and the numbers for all four shaders are in
+[clit-set.md](../../../clit-set/clit-set.md#colour-oklch-kit-theme-ember--nebula-2026-11-22).
+
+What changed here, colour only (lace geometry, LACE AA, beat and tone map untouched):
+
+- `lchGamut()` / `paletteHue()` are gone: the lace, rim, nebula dust, ties and rails take the theme, gamut-fitted
+  by `okFit`. The lace lightness band is OKLab L 0.16..0.70.
+- The iter 3 beat-rotation clamp also keeps the burnt amber out of the green gap (90..160°). Green, phone:
+  1.frag 7% to 2%, 2.frag 9% to 3%.
+- The iter 3 clamp also wraps the turned hue into (-π, π] and stops a pixel already inside the magenta arc from
+  turning deeper into it.
+- The iter 5 output squeeze ("NEVER HOT MAGENTA") reads the DISPLAYED hue now: it decodes with `srgb2lin`
+  before `rgb2oklab`, which takes linear sRGB, and writes back through `okOut`. On the gamma-encoded output
+  its 288..26° arc had been somewhere else than the eye sees it. Hot magenta, phone: 1.frag 1.5% to 0.4%,
+  2.frag 1.2% to 0.4%.
+- Every hue angle goes through `okHue()` (0 for a grey): `atan(0, 0)` is NaN on some mobile GPUs.
+- Sparkle gate (`sparkle-score.mjs --before`), 2.frag: flipMean 9.739 to 9.365, motion 15.744 to 15.458
+  (reference 13.318), refMAE 5.999 to 5.759. Pass.
+- Frame time (SwiftShader 408x816, median of 3 against main): 1.frag 139.6 to 138.9 ms, 2.frag 131.9 to 140.4 ms.
+- Opening view (no controller), 2.frag: 13.2% of lit pixels perceptually grey against main's 10.9%, in the
+  dense filigree; the OKLab-average fix for it failed the sparkle gate. See clit-set.md.
