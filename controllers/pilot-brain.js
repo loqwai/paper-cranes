@@ -1,4 +1,4 @@
-// pilot-brain: the pure half of scripts/show/pilot.js. No I/O: the loop feeds it the page's
+// pilot-brain: the pure half of scripts/show/pilot.js and controllers/clit-pilot.js (lives in controllers/ so prod ships it). No I/O: the loop feeds it the page's
 // features, the live knob values and the meter, and it returns the knob values to write.
 //
 // Channel discipline (docs/vj-preferences.md, controllers/clit-set.js):

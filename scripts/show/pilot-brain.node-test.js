@@ -1,7 +1,7 @@
 // node --test scripts/show/pilot-brain.node-test.js   (npm run test:pilot)
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { init, step, meter, takeNotes, setCoaster, ZOOM_CAP, PAN_MAX, YIELD_SECS, GEOMETRY, ENGAGE_GAP, STEER_SPAN } from './pilot-brain.js'
+import { init, step, meter, takeNotes, setCoaster, ZOOM_CAP, PAN_MAX, YIELD_SECS, GEOMETRY, ENGAGE_GAP, STEER_SPAN } from '../../controllers/pilot-brain.js'
 
 const DT = 1 / 15
 const calm = {

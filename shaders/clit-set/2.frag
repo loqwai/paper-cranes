@@ -53,7 +53,9 @@ uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 #define PAN_SPAN 0.8                                   // PAN_SPAN in controllers/clit-set.js
 #define NAV_CX  (HAS_CTL ? cs_cx  : HOME_CX - knob_2 * PAN_SPAN)
 #define NAV_CY  (HAS_CTL ? cs_cy  : knob_1 * PAN_SPAN)
-#define NAV_LZ  (HAS_CTL ? cs_lz  : knob_4 * ZOOM_MAX)
+// ?lz_bias=<lz> adds depth on top of either path: a test hook for the depth sweeps (sparkle at depth, the dive cap)
+uniform float lz_bias;
+#define NAV_LZ  ((HAS_CTL ? cs_lz  : knob_4 * ZOOM_MAX) + lz_bias)
 #define NAV_ROT (HAS_CTL ? cs_rot : knob_5 * TAU)
 #define NAV_A   (HAS_CTL ? cs_navA : 1.5 + knob_6 * 1.4)
 #define NAV_B   (HAS_CTL ? cs_navB : 0.55 - knob_7 * 0.4)
@@ -110,10 +112,8 @@ uniform float cs_k9, cs_k10, cs_k11, cs_k12, cs_k13, cs_k14, cs_k15, cs_k16;
 // Slow colour only: the 8 s centroid mean leans the palette warm on bright music, cool on dark
 #define TONE_LEAN ((HAS_CTL ? cs_tone : 0.5) - 0.5)
 // Loudness (1.5 s) lifts chroma a little: loud is more vivid, quiet more velvet
-#define CHROMA_GAIN (0.85 + 0.3 * BREATH)
+#define CHROMA_GAIN (0.9 + 0.2 * BREATH)
 // Trails do not grow with loudness: more smear on loud passages made the loud frames move LESS
-#define LACE_AA_SAMPLES 1   // extra orbit samples per pixel where the lace is unresolved (see LACE AA). 1 for phones;
-                            // the desktop show machine can raise it (2: flicker -6% more, 3: -9%, at +20% / +38% frame time)
 #define FEEDBACK_MIX clamp(0.22 + K_TRAILS * 0.55, 0.0, 0.85)
 #define VIGN_OPEN 0.03
 
@@ -333,13 +333,24 @@ struct LaceSample { float lace, fine, z, luma, pal_t; vec3 lab; };
 
 // The lace one orbit sample paints: coverage (lace, and the braid where both traps cross), the rainbow's
 // lightness, the palette position and the lace colour. A function so LACE AA can average several.
-LaceSample laceSample(float x, float y, vec2 Z, float lace_lo, float lace_hi) {
+// Box filter of the lace ramp over a pixel footprint w (both in trap-log units, ramp width RAMP): the analytic
+// mean of a clamped ramp over [t - w/2, t + w/2], smoothstep-shaped after. A thread whose trap value changes
+// by more than its ramp across one pixel resolves to its coverage there instead of popping on or off.
+float rampInt(float t) { return t <= 0.0 ? 0.0 : t >= 1.0 ? t - 0.5 : 0.5 * t * t; }
+float laceRamp(float l, float lo, float hi, float w) {
+    float t = (l - lo) / (hi - lo);
+    float tw = max(w / abs(hi - lo), 1e-4);
+    float f = (rampInt(t + 0.5 * tw) - rampInt(t - 0.5 * tw)) / tw;
+    return f * f * (3.0 - 2.0 * f);
+}
+
+LaceSample laceSample(float x, float y, vec2 Z, float lace_lo, float lace_hi, float wx, float wy) {
     LaceSample r;
     vec2 zu = unitDir(Z);                  // atan(0, 0) is NaN on some mobile GPUs
     float lx = log(max(x, 1e-12)), ly = log(max(y, 1e-12));
     float z = 1. - smoothstep(1., -6., ly) * smoothstep(1., -6., lx);
-    float lace_x = smoothstep(lace_lo, lace_hi, lx);
-    float lace_y = smoothstep(lace_lo, lace_hi, ly);
+    float lace_x = laceRamp(lx, lace_lo, lace_hi, wx);
+    float lace_y = laceRamp(ly, lace_lo, lace_hi, wy);
     r.lace = pow(max(lace_x, lace_y), 3.0);
     r.fine = lace_x * lace_y;
     r.z = z;
@@ -355,12 +366,17 @@ LaceSample laceSample(float x, float y, vec2 Z, float lace_lo, float lace_hi) {
     // Threads that cross the x trap and the y trap sit half a leg apart, so the filigree braids colours.
     // Bright music leans warm (8 s centroid mean).
     float pal_t = abs(fract((phi + 1.07) / TAU + (lace_x - lace_y) * 0.12 + (luma - 0.6) * 0.6 - TONE_LEAN * 0.1) * 2.0 - 1.0);
-    // The darkest lace (the fan petals) goes deep violet, the velvet body: never brown or grey
-    pal_t = mix(pal_t, 0.85 + 0.15 * pal_t, smoothstep(0.3, 0.05, luma));
-    // The pale star (the smooth high-z body, z ~0.8) is the landmark: keep it pale, tinted periwinkle
-    // (far), so the red ember pops in front of it
+    // The darkest lace (the fan petals) goes deep ember, the one theme key with gamut room in the dark: at
+    // OKLab L 0.22 sRGB holds C ~0.09 at the ember's hue but only 0.04 at teal's (dark teal is grey), and
+    // indigo, which does hold chroma there, read as the grey-purple glow (Aaron, 2026-11-27).
+    // Past teal the walk only reaches sea-blue (0.78), never the indigo key: indigo threads were the bright
+    // periwinkle ribbons (hue 270-290 on screen, 10% of lit pixels on voyage0=2).
+    pal_t = min(pal_t, 2.0 / 3.0 + 0.35 * (pal_t - 2.0 / 3.0));
+    pal_t = mix(pal_t, 0.06 * pal_t, smoothstep(0.3, 0.05, luma));
+    // The pale star (the smooth high-z body, z ~0.8) is the landmark: pale teal (far), so the red ember pops
+    // in front of it. It was periwinkle, which on a phone read as the lavender haze.
     float pale = smoothstep(0.66, 0.78, z);
-    pal_t = mix(pal_t, 0.93, pale);
+    pal_t = mix(pal_t, 0.62, pale);
     r.pal_t = pal_t;
     // LACE COLOUR, built in OKLCH: the orbit rainbow's lightness (its structure) with the palette's hue
     // at full chroma. The raw rainbow went grey wherever z sat near 0 or 1 (the dark fan petals and the
@@ -369,8 +385,10 @@ LaceSample laceSample(float x, float y, vec2 Z, float lace_lo, float lace_hi) {
     // Lightness floor 0.16. At 0.13 the fan petals went near-black, and the braid's cream over them read khaki
     // (review of #215; 11% of lit pixels grey on the opening view). 0.20 fixed them too but lit the fine lace's
     // shimmer: sparkle gate flipMean +0.3, refMAE above main's.
-    float lace_L = 0.16 + 0.54 * luma;
-    float lace_C = (0.20 + 0.08 * (1.0 - luma)) * (1.0 - 0.1 * pale) * CHROMA_GAIN;
+    // Chroma 0.12..0.19 (was 0.20..0.28, past the sRGB edge on most hues: okFit pinned large areas to the gamut
+    // boundary, which read flat, harsh and clipped). Lightness carries the shading, chroma stays rich.
+    float lace_L = 0.15 + 0.57 * luma;
+    float lace_C = (0.12 + 0.06 * (1.0 - luma)) * (1.0 - 0.1 * pale) * CHROMA_GAIN;
     // Kept in OKLab (unfitted) until the pixel needs it. GLASSES (K_DEPTH) mixes toward chromadepth only when
     // it is up: a uniform branch, free when it is down.
     r.lab = themeLab(pal_t, lace_L, lace_C);
@@ -378,9 +396,38 @@ LaceSample laceSample(float x, float y, vec2 Z, float lace_lo, float lace_hi) {
     return r;
 }
 
+// One LOD level of the lace: its sample, filtered over the pixel's footprint, and ok = how well this pixel resolves
+// it (1 clean, 0 noise): the trap's jump across the pixel in ramp widths, and the colour's jump where there is lace.
+LaceSample lodSample(float x, float y, vec2 Z, float lo, float hi, out float ok, out float lxc) {
+    float lx = log(max(x, 1e-12)), ly = log(max(y, 1e-12));
+    // clamped to the band around the ramp: a thread's core (log -> -inf) is lace on every side, not a fast change
+    lxc = clamp(lx, hi - 3.0, lo + 3.0);
+    float lyc = clamp(ly, hi - 3.0, lo + 3.0);
+    float wx = fwidth(lxc), wy = fwidth(lyc);
+    LaceSample s = laceSample(x, y, Z, lo, hi, wx, wy);
+    float noise = s.lace * (fwidth(s.luma) + fwidth(s.pal_t));
+    ok = (1.0 - smoothstep(1.2, 3.5, max(wx, wy))) * (1.0 - smoothstep(0.06, 0.35, noise));
+    return s;
+}
+// Blend two levels. Colour in OKLab at the blended chroma: a straight mix of an amber and a teal level is grey.
+LaceSample lodMix(LaceSample a, LaceSample b, float t) {
+    LaceSample r;
+    r.lace = mix(a.lace, b.lace, t); r.fine = mix(a.fine, b.fine, t); r.z = mix(a.z, b.z, t);
+    r.luma = mix(a.luma, b.luma, t); r.pal_t = mix(a.pal_t, b.pal_t, t);
+    r.lab = mix(a.lab, b.lab, t);
+    r.lab.yz = unitDir(r.lab.yz) * mix(length(a.lab.yz), length(b.lab.yz), t);
+    return r;
+}
+
 // One orbit of the lace map from C: the two axis traps (x, y), the closest approach Z, and the focal trap.
-// A function so LACE AA can run it again at other points inside the pixel.
-void orbit(vec2 C, float a_pow, float b_off, mat2 curl, float wph, out float x, out float y, out vec2 Z, out float focal_trap) {
+// LOD: the traps and the closest approach are also recorded after LOD_K0, LOD_K1 and LOD_K2 steps (xs/ys .xyz,
+// Z0..Z2; the full orbit is x, y, Z). A truncated orbit is a coarser picture of the same fractal and is smooth in
+// C for longer, so mainImage shows each pixel the finest level it can resolve (see LACE LOD).
+#define LOD_K0 6
+#define LOD_K1 12
+#define LOD_K2 24
+void orbit(vec2 C, float a_pow, float b_off, mat2 curl, out float x, out float y, out vec2 Z, out float focal_trap,
+           out vec3 xs, out vec3 ys, out vec2 Z0, out vec2 Z1, out vec2 Z2) {
     vec2 V = C;
     float v, z = 9.;
     x = y = 9.;
@@ -388,6 +435,9 @@ void orbit(vec2 C, float a_pow, float b_off, mat2 curl, float wph, out float x, 
     focal_trap = 9.0;
     vec2 focal_center = vec2(0.0, 0.12);
     for (int k = 0; k < 50; k++) {
+        if (k == LOD_K0) { xs.x = x; ys.x = y; Z0 = Z; }
+        if (k == LOD_K1) { xs.y = x; ys.y = y; Z1 = Z; }
+        if (k == LOD_K2) { xs.z = x; ys.z = y; Z2 = Z; }
         float a = atan(V.y, V.x),
         d = dot(V, V) * a_pow;
         float c = dot(V, vec2(a, log(d) / 2.));
@@ -424,9 +474,9 @@ void mainImage(out vec4 P, vec2 V) {
     float b_off = NAV_B;
     mat2 curl = rot2(NAV_CURL);
     float x, y, focal_trap;
-    vec2 Z;
-    orbit(C, a_pow, b_off, curl, 0.0, x, y, Z, focal_trap);
-    float lx = log(max(x, 1e-12)), ly = log(max(y, 1e-12));
+    vec2 Z, Z0, Z1, Z2;
+    vec3 xs, ys;
+    orbit(C, a_pow, b_off, curl, x, y, Z, focal_trap, xs, ys, Z0, Z1, Z2);
 
     // Lace from the orbit traps. Thresholds slide with depth so deep zooms keep a dark floor.
     // The lace threshold is geometry: audio does not move it. Timbre shifts (cs_shift, 0.3 s attack) and
@@ -434,51 +484,28 @@ void mainImage(out vec4 P, vec2 V) {
     // Bass thickens the filigree (cs_bass: 40 ms attack, 0.5 s release); the threshold returns, never drifts
     float lace_lo = -2.0 + SEED_LACE + K_LACE * 0.9 + BASS_ENV * 0.9 * REACT - lz * 0.6;
     float lace_hi = lace_lo - 3.0;
-    // Coherence gate, depth only: past ~3x, drop lace that changes faster than a pixel (speckle)
-    float coh = smoothstep(0.6, 1.6, lz);
-    float coh_gate = 1.0 - coh * smoothstep(1.5, 5.0, fwidth(min(lx, ly)));
 
-    // LACE AA. In the dense lace the orbit is chaotic: one pixel step in C moves the traps across the whole lace
-    // band, so one sample per pixel is noise, and any motion (spin, voyage, kick lurch) reshuffles it every frame.
-    // That is the sparkle (scripts/sparkle-score.mjs: 1/4 resolution sparkles as much, a 16x supersample is the
-    // clean reference; clock precision and every audio term ruled out). unres = how much the lace VALUE changes
-    // across this pixel's 2x2 quad: 0 inside a clean thread (its core is lace on both sides), up in the noise.
-    // There the pixel runs the orbit LACE_AA_SAMPLES more times inside its own footprint and averages the lace's
-    // light and colour: spatial supersampling, no frame history, so nothing trails or ghosts.
-    LaceSample ls = laceSample(x, y, Z, lace_lo, lace_hi);
-    float unres = smoothstep(0.05, 0.25, fwidth(ls.lace) + fwidth(ls.fine) + ls.lace * fwidth(ls.luma));
-    vec2 dCx = dFdx(C), dCy = dFdy(C);
+    // LACE LOD (2026-11-27). In the dense lace the full orbit is chaotic: one pixel step in C moves its traps across
+    // the whole lace band, so one sample per pixel is noise that any motion reshuffles every frame (the sparkle,
+    // docs/sparkle-score.md). Supersampling one extra orbit halved it at +80% cost; the depth coherence gate hid
+    // the lace past 2x instead. Here every pixel shows the finest LEVEL of the fractal it can resolve, the way a
+    // texture picks its mip: the orbit truncated after 6, 12, 24 and 50 steps (coarse to fine; a truncated orbit is
+    // the same fractal with less detail, smooth in C for longer). lodSample measures, with derivatives, how much a
+    // level's trap and colour jump between neighbouring pixels; a finer level fades in only where it and every
+    // coarser level are resolved. Nothing is sub-pixel, nothing reshuffles, and a deeper zoom (smaller footprint)
+    // resolves finer levels, so a dive gains lace instead of losing it. One orbit, no extra samples.
+    float ok0, ok1, ok2, ok3, w0, w1, w2, w3;
+    LaceSample q0 = lodSample(xs.x, ys.x, Z0, lace_lo, lace_hi, ok0, w0);
+    LaceSample q1 = lodSample(xs.y, ys.y, Z1, lace_lo, lace_hi, ok1, w1);
+    LaceSample q2 = lodSample(xs.z, ys.z, Z2, lace_lo, lace_hi, ok2, w2);
+    LaceSample q3 = lodSample(x, y, Z, lace_lo, lace_hi, ok3, w3);
+    float a1 = ok1, a2 = a1 * ok2, a3 = a2 * ok3;
+    LaceSample ls = lodMix(lodMix(lodMix(q0, q1, a1), q2, a2), q3, a3);
+    vec2 zdir = unitDir(mix(mix(mix(unitDir(Z0), unitDir(Z1), a1), unitDir(Z2), a2), unitDir(Z), a3));
+    float wave_l = mix(mix(mix(w0, w1, a1), w2, a2), w3, a3);
     float lace = ls.lace, lace_fine = ls.fine, z = ls.z, luma = ls.luma, pal_t = ls.pal_t;
-    vec3 lace_col = okOut(ls.lab);
-    vec2 zdir = unitDir(Z);
-    if (unres > 0.0) {
-        float s_lace = ls.lace, s_fine = ls.fine, s_z = ls.z, s_luma = ls.luma, s_pal = ls.pal_t;
-        vec3 s_col = lace_col * (ls.lace + ls.fine);
-        vec2 s_dir = zdir;
-        for (int s = 0; s < LACE_AA_SAMPLES; s++) {
-            float ang = 0.7 + TAU * float(s) / float(LACE_AA_SAMPLES);
-            vec2 o = 0.42 * vec2(cos(ang), sin(ang));      // a ring inside the pixel, the centre sample above
-            float sx, sy, sft;
-            vec2 sZ;
-            orbit(C + o.x * dCx + o.y * dCy, a_pow, b_off, curl, 0.0, sx, sy, sZ, sft);
-            LaceSample t = laceSample(sx, sy, sZ, lace_lo, lace_hi);
-            s_lace += t.lace; s_fine += t.fine; s_z += t.z; s_luma += t.luma; s_pal += t.pal_t;
-            s_col += okOut(t.lab) * (t.lace + t.fine);
-            s_dir += unitDir(sZ);
-        }
-        float inv = 1.0 / float(LACE_AA_SAMPLES + 1);
-        // the colour is weighted by how much lace each sample has, so dark samples do not grey it
-        vec3 avg_col = s_col / max(s_lace + s_fine, 1e-4);
-        lace = mix(lace, s_lace * inv, unres);
-        lace_fine = mix(lace_fine, s_fine * inv, unres);
-        z = mix(z, s_z * inv, unres);
-        luma = mix(luma, s_luma * inv, unres);
-        pal_t = mix(pal_t, s_pal * inv, unres);
-        lace_col = mix(lace_col, avg_col, unres);
-        zdir = mix(zdir, s_dir, unres);
-    }
-    lace *= coh_gate;
-    lace_fine *= 1.0 - coh * 0.7;
+    vec3 lab = ls.lab;
+    vec3 lace_col = okOut(lab);
     zdir = dot(zdir, zdir) > 1e-12 ? zdir : unitDir(Z);  // the averaged directions can cancel to 0
     float phi = atan(zdir.y, zdir.x) + HUE_TURN;
     float pale = smoothstep(0.66, 0.78, z);
@@ -498,7 +525,8 @@ void mainImage(out vec4 P, vec2 V) {
     depth = mix(depth, depth * 1.3, drop * (1.0 - focal));
     depth = clamp(mix(depth, 0.0, drop * focal), 0.0, 1.0);
 
-    // GALAXY BEHIND THE BODY: velvet violet, nebula dust tinted by the orbit colour, parallax stars.
+    // GALAXY BEHIND THE BODY: black space, faint nebula dust in the theme's own ember-to-teal colours (OKLCH, never
+    // the violet floor it had: that floor was the grey-purple haze), parallax stars.
     // Stars sit on a far plane: they drift at a fraction of the camera's move, so travel reads as travel.
     vec2 cam = vec2(NAV_CY, NAV_CX - HOME_CX);
     vec2 sky = rot2(NAV_ROT * 0.5) * uv;
@@ -506,20 +534,21 @@ void mainImage(out vec4 P, vec2 V) {
     vec2 dustP = sky * 2.2 / (1.0 + lz * 0.15) + cam * 1.6 + vec2(FLOW * 0.4, 0.0);
     float dust = vnoise(dustP) * 0.6 + vnoise(dustP * 2.3 + 4.0) * 0.4;
     dust = smoothstep(0.45, 0.95, dust);
-    vec3 dust_col = vec3(0.10, 0.03, 0.22);
-    dust_col = mix(dust_col, shadeTo(lace_col, 0.13), 0.5);   // the lace's hue, dimmed (the theme at L 0.18)
+    float dust_t = 0.7 * vnoise(dustP * 0.35 + 11.0);              // ember .. amber .. teal, drifting with the dust
+    vec3 dust_col = themeCol(dust_t, 0.24, 0.09);
     float s1 = stars(sky * 38.0 / (1.0 + lz * 0.25) + cam * 22.0, 0.10 + 0.25 * K_NEBULA);
     float s2 = stars(sky * 17.0 / (1.0 + lz * 0.45) + cam * 48.0 + 31.0, 0.05 + 0.15 * K_NEBULA);
     float star = (s1 * 0.6 + s2) * (0.4 + 0.9 * TWINKLE);
-    vec3 bg = vec3(0.04, 0.015, 0.08) + dust_col * dust * neb * 0.45 * (0.9 + 0.2 * BREATH + 0.15 * GRIT);
+    vec3 bg = dust_col * dust * neb * 0.45 * (0.9 + 0.2 * BREATH + 0.15 * GRIT);
 
     vec3 col = mix(bg, lace_col * LACE_GAIN, lace);
-    // The braid (where both traps cross) is where the beat lands: a bass punch lights the filigree, locally
-    // Over the darkest lace (the fan petals) the braid's cream turns violet: cream over near-black read as
-    // khaki-grey (review of #215). A fixed tint, not the lace's own hue lifted: that shimmered in the fine braid
-    // (sparkle gate flipMean +0.7).
+    // The braid (where both traps cross) is where the beat lands: a bass punch lights the filigree, locally.
+    // The lace's own hue, lifted in lightness at a fixed OKLCH chroma. A fixed tint mixed in RGB with the lace
+    // greyed wherever the two were opposite (ember tint over teal petals: the grey fan, 2026-11-27); cream read
+    // khaki (#215) and lavender read as the grey-purple glow. The own-hue lift once shimmered, but that was the
+    // unresolved hue: LACE LOD resolves it now.
     if (lace_fine > 0.0) {
-        vec3 braid = mix(lace_col, mix(vec3(1.0, 0.88, 0.7), vec3(0.56, 0.48, 1.0), smoothstep(0.35, 0.10, luma)), 0.55);
+        vec3 braid = okOut(vec3(mix(lab.x, 0.82, 0.5), unitDir(lab.yz) * 0.13 * CHROMA_GAIN));
         col += braid * lace_fine * (0.3 + 0.9 * TREB_ENV * REACT + 0.6 * PUNCH * REACT);   // treble sparkles the braid
     }
 
@@ -527,26 +556,32 @@ void mainImage(out vec4 P, vec2 V) {
     float rim = smoothstep(0.1, 0.5, edge * 20.0) * (1.0 - smoothstep(0.8, 2.2, lz));
     rim *= smoothstep(0.0, 0.15, abs(C.y));
     // Rim hue walks its own way round the palette (a quarter turn off the lace); a build warms it to red
-    float rim_t = mix(0.5 - 0.5 * cos(phi + 1.6), 0.0, RIM_WARMTH * 0.6);
-    if (rim > 0.0) col += themeCol(rim_t, 0.50, 0.26 * CHROMA_GAIN) * rim * RIM_INTENSITY * 0.45;
+    // Ember to teal only (0..0.7): the indigo end of the walk haloed the ribbons lavender
+    float rim_t = mix(0.35 - 0.35 * cos(phi + 1.6), 0.0, RIM_WARMTH * 0.6);
+    if (rim > 0.0) col += themeCol(rim_t, 0.50, 0.15 * CHROMA_GAIN) * rim * RIM_INTENSITY * 0.45;
 
     if (focal > 0.0) col = mix(col, chromadepth(depth) * 1.2, focal * 0.3);
 
     float spotlight = mix(mix(1.0, 0.2, drop), 1.0, focal);
     col *= spotlight;
 
-    vec3 hot_red = vec3(1.0, 0.15, 0.05);
     // Ember steady: it sits at the centre of the frame, and a kick-pulsed ember breathed the centre
     // rings (the show's shiver probe). The beat now lives in the spin rate.
-    float ember = focal * (0.22 + 0.6 * PUNCH * REACT);
-    float blaze = focal * mix(1.0, 2.5, drop) * 0.5 * drop;
-    col += hot_red * (ember + blaze);
-    col += vec3(1.0, 0.7, 0.4) * pow(focal, 3.0) * drop * 0.6;
+    if (focal > 0.0) {
+        float ember = focal * (0.22 + 0.6 * PUNCH * REACT);
+        float blaze = focal * mix(1.0, 2.5, drop) * 0.5 * drop;
+        col += themeCol(0.0, 0.62, 0.20) * (ember + blaze);                       // hot ember
+        col += themeCol(0.2, 0.86, 0.11) * pow(focal, 3.0) * drop * 0.6;         // its warm core
+    }
 
-
+    // TRAILS keep their chroma: a plain RGB blend of a teal thread over last frame's amber is grey, and that grey
+    // smear around every moving ribbon was the pale halo. Blend in OKLab at the blended chroma.
     vec4 prev = getLastFrameColor(gl_FragCoord.xy / iResolution.xy);
-    vec3 prevc = clamp(prev.rgb, 0.0, 1.0);
-    col = mix(col, prevc * 0.95, FEEDBACK_MIX);
+    vec3 prevc = clamp(prev.rgb, 0.0, 1.0) * 0.95;
+    vec3 la = rgb2oklab(max(col, vec3(0.0))), lb = rgb2oklab(prevc);
+    vec3 lm = mix(la, lb, FEEDBACK_MIX);
+    lm.yz = unitDir(lm.yz) * mix(length(la.yz), length(lb.yz), FEEDBACK_MIX);
+    col = max(oklab2rgb(lm), vec3(0.0));
 
     float vign = 1.0 - pow(length(uv) * (0.65 - VIGN_OPEN), 1.8);
     vign = mix(vign, pow(max(vign, 0.0), 1.0 + K_DROP * 2.0), K_DROP);   // the SPOT knob only: radial
@@ -556,18 +591,18 @@ void mainImage(out vec4 P, vec2 V) {
     float lit = max(max(lace, rim * 0.5), focal);
     col *= mix(0.15 + 0.35 * dust * neb, 1.0, lit);
     // Stars after the darkness pass, only in the dark gaps, dimmed in the drop spotlight
-    col += vec3(0.85, 0.8, 1.0) * star * (1.0 - lit) * neb * mix(1.0, 0.3, drop) * max(vign, 0.0);
+    if (star > 0.0) col += oklch2rgb(0.93, 0.03, THEME_H + KEY_TEAL) * star * (1.0 - lit) * neb * mix(1.0, 0.3, drop) * max(vign, 0.0);
 
     // Tone map on luminance, not per channel: per-channel Reinhard pulled every bright hue toward grey
-    // (the dusty look). Same curve for brightness; hue and saturation survive. Anything that still
-    // overshoots is pulled toward its own grey just far enough to fit, so no channel clips.
+    // (the dusty look). Same curve for brightness; hue and saturation survive.
     float lum = dot(max(col, vec3(0.0)), vec3(0.2126, 0.7152, 0.0722));
     col = max(col, vec3(0.0)) / (lum + 0.7);
-    float tl = lum / (lum + 0.7);
-    // Knee at 0.94, not 1.0: a hot red ember landed exactly on 1.0 and counted as clipped (show clip 0.01-0.04)
+    // SOFT KNEE, lightness before chroma (docs/vj-preferences.md): a colour whose brightest channel passes 0.8
+    // is scaled down along a curve that approaches 0.95, keeping its hue and saturation. The old pull toward its
+    // own grey at a hard 0.94 whitened every bright stack (lace + braid + rim) and flattened it to one value.
     float hi = max(max(col.r, col.g), col.b);
-    if (hi > 0.94) col = mix(vec3(tl), col, max(0.94 - tl, 0.0) / max(hi - tl, 1e-4));
-    col = pow(max(col, vec3(0.0)), vec3(0.88, 0.9, 0.95));
+    if (hi > 0.8) col *= (0.8 + 0.15 * (1.0 - exp(-(hi - 0.8) / 0.15))) / hi;
+    col = pow(max(col, vec3(0.0)), vec3(0.9));   // one gamma for all channels: the old warm cast (0.88/0.9/0.95) turned blues violet
 
     // THE BEAT, IN COLOUR ONLY. The show's meters (scripts/vj/aesthetic-meter.js) read Rec.709 luminance
     // of the output: flicker and motion from |ΔL|, shiver from L edges and L in rings. So the beat turns
@@ -579,7 +614,7 @@ void mainImage(out vec4 P, vec2 V) {
     //           along the filaments (orbit angle + trap depth) one notch per beat
     float beatOn = HAS_CTL ? 1.0 : 0.0;
     float L0 = dot(col, vec3(0.2126, 0.7152, 0.0722));
-    float wave = sin(phi * 2.0 + lx * 0.7 - cs_beat * TAU);
+    float wave = sin(phi * 2.0 + wave_l * 0.7 - cs_beat * TAU);   // wave_l: the band-limited trap (raw lx sparkled)
     float ang = (PUNCH * 0.5 + kick * 0.2 + 0.35 * wave) * REACT * lit * beatOn;
     float cgain = 1.0 + 1.0 * PUNCH * REACT * lit * beatOn;
     if (ang != 0.0 || cgain != 1.0) {
@@ -624,5 +659,8 @@ void mainImage(out vec4 P, vec2 V) {
         col = okOut(gl);
     }
 
+    // DITHER: +-0.5 of an 8-bit step, fixed in screen space (interleaved gradient noise, no time term, so it adds
+    // no flicker): the dark nebula and lace gradients stop stair-stepping into bands.
+    col += (fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))) - 0.5) / 255.0;
     P = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

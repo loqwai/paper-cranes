@@ -200,6 +200,66 @@ statistics only.
 cs_shift, cs_hue, cs_breath, cs_pearl, cs_focus, cs_spread, cs_grit, cs_tone`, plus navigation: `cs_cx, cs_cy, cs_lz, cs_rot, cs_navA, cs_navB, cs_curl`,
 plus eased knobs `cs_k9..cs_k16`. The behaviour test is `controllers/clit-set.test.js`.
 
+## Variant frags: 3, 4, 5
+
+Three structural forks of 2.frag, made for the NFC giveaway. Each one keeps the clit motif (the same
+fractal, the same voyage, the same knob map and controller outputs) and changes how it is drawn. Every
+dial at 0 is a good look on all three, and all three are high-chroma by construction (the render gate
+rejects any variant whose lit pixels average below 0.075 OKLab chroma).
+
+| Frag | Name | What is different |
+|------|------|-------------------|
+| 3 | chromadepth | Strict ChromaDepth: HSL hue is depth (red near, violet far), saturation 0.95, lightness ≤ 0.55, no white. Lace and focal near (red to gold by orbit angle), body mid, galaxy far. k9 = depth temperature (0.25 hot, 0.75 cool, 0/0.5/1 neutral). k13 = depth contrast. |
+| 4 | nebula | Emission nebula: the body glows as lit gas, the lace burns as two filament families in two hues, and the sky is layered multi-colour dust with cross-star sparkle. OKLCH on a curated wheel (no hot magenta, olive rushed through, dark layers kept cool so nothing goes brown). k13 = filament colour split. |
+| 5 | mandala | 4's colour, folded into a slowly turning kaleidoscope. The fractal is mirror-symmetric, so each fold joins seamlessly; the silhouette repeats as petals around a lit hub. Petal count 5 to 8 comes from `seed4`, so each phone differs. |
+
+Motion and audio on 3/4/5 (geometry only goes forward, docs/vj-preferences.md; every kick lands):
+
+- Their own motion runs on the `time` uniform and never reverses: a one-way spin about the centre
+  (one turn per 200 s) and a one-way zoom creep (+0.22 log depth per 100 s) that wraps under a 1.5 s
+  feedback dissolve at t = 50, 150, ... (never at `?time=0`, where a held dissolve smeared the frame).
+- The techno controller (55fec755) drives the rest, and it still moves with time held: loudness speeds
+  the spin inside `cs_rot`, and every kick (found against the bass's own last 0.45 s, so a constant
+  four-on-the-floor fires) gives `cs_lurch` (the view jumps forward, doubled in the frag; the dust
+  pushes on), `cs_punch` (30 ms up, 0.2 s down: lit lace, filaments, rim and ember jump in lightness
+  and chroma; on 3 the body and sky lift and lean red too, since the lace sits at the 0.55 cap) and
+  `cs_beat` (the filament colour, or 3's lace depth, steps forward a notch). `cs_thump` thickens the lace.
+- Aaron's phone test, 2026-11-22: `wavelet=true&time=0`, beat.mp3 at mic level (energy 0.024-0.028),
+  30 s window after a discarded 30 s; on/off = mean frame luminance with `cs_punch` > 0.35 vs < 0.02:
+
+  | frag | motion (time held) | flicker | clip | on-kick / off-kick lum | on vs off pixel diff |
+  |---|---|---|---|---|---|
+  | 3 | 0.066 | 0.56 | 0 | 0.374 / 0.331 | 0.071 |
+  | 4 | 0.066 | 0.63 | 0 | 0.342 / 0.208 | 0.162 |
+  | 5 | 0.068 | 0.37 | 0 | 0.225 / 0.152 | 0.100 |
+
+  The shiver score is about 1 on all three: the probe reads a lace that lights up on each kick as the
+  radial profile breathing. That is the cost of the punch; the earlier colour-only build scored
+  0.30-0.47 and sat still on a phone mic.
+
+Seeds per frag: `seed` palette or depth phase, `seed2` lace density, `seed3` rim hue or dust hue,
+`seed4` star scatter (and petal count on 5).
+
+## NFC variants (clit-new/2 .. clit-new/201)
+
+- `node scripts/nfc/clit-set-variants.mjs` writes `nfc-variants.json` and `nfc-variants.md`: 200 tags,
+  frags 3/4/5 weighted 60/70/70 and interleaved, so tags written back to back alternate. Each tag has a
+  mood (3 per frag) plus golden-ratio jitter on the look knobs, clamped to the safe bands, and
+  `voyage0 = frac(n × 0.618) × 6`, parked there with `knob_3` (the autopilot's legs go out and back,
+  which the shiver probe flags; the frags' own motion only goes one way). Seeds are not baked; k1/k2 = 0.
+  Every URL carries `controller=clit-set&wavelet=true` (wavelet kicks; the stickers run on phone mics).
+- `node scripts/nfc/render-gate.mjs shaders/clit-set/nfc-variants.json <dir> <port>` renders every
+  variant headless (`noaudio=true&time=20`, 360×740) and rejects dark, white-out, grey, low-chroma,
+  speckle, hot-magenta, flat (one colour field), one-hue (a 60° hue slice over 65% of the frame) and static frames (the `time` uniform moves 20 → 22 and
+  the frame must change). `node scripts/nfc/gate-loop.mjs <dir> <port>` then gives each failing tag a
+  retry in `nfc-nudges.json` (a retry moves its start place and thins the lace; after 4 retries the tag
+  moves to the chromadepth frag), regenerates and re-gates until all pass.
+- `node scripts/nfc/short-links.mjs shaders/clit-set/nfc-variants.json` puts the slugs into the 2cb.pw
+  KV (never overwriting a slug that points outside clit-set) and verifies each one answers 301 to its
+  `full`. `--verify-only` re-checks.
+- Write tags at `https://visuals.beadfamous.com/nfc-writer.html` (clit-set is the default queue;
+  `#clit` is an alias; `#iris`, `#taco`, `#coat`, `#show` still work). Tags hold only `https://2cb.pw/clit-new/<n>`.
+
 ## Iterations
 
 - **1.frag**: clit/2's anatomy moved onto the controller: per-device seeds, eased knobs and envelopes.
@@ -247,6 +307,24 @@ plus eased knobs `cs_k9..cs_k16`. The behaviour test is `controllers/clit-set.te
   paced by travel (shape + camera), loop ~24 min at 1x. A colour beat (hue step + chroma lift, scaled
   back to each pixel's luminance) and a beat-stepped colour wave along the filaments (`cs_beat`).
   `?time=<s>` now also stops the controller's time-driven clocks; the audio-driven jumps keep going.
+- **2.frag, 2026-11-27 no grey-purple, LACE LOD** (Aaron: "I'm not a fan of that grey-purple glow", "use oklch
+  ALWAYS for color", the lace "constantly sparking", colours "harsh, like they're clipped with banding").
+  Grey-purple sources removed: the violet galaxy floor and dust (now black, dust in theme OKLCH ember..teal at
+  L 0.24), the braid's lavender tint (now the lace's own hue lifted, fixed C), the lace palette's indigo end
+  (capped at sea-blue) and its dark petals (deep ember: dark teal has no gamut room, C 0.04 at L 0.22), the
+  rim's indigo leg, RGB trail blending (now OKLab at blended chroma), the per-channel warm gamma that pushed
+  blue violet, and the tone map's pull to grey (now a hue-keeping soft knee from 0.8). Stars and ember are
+  OKLCH. Lace chroma 0.12..0.18; a static ±0.5/255 dither. LACE LOD replaces both the extra AA orbit and the
+  depth coherence gate (see LACE AA). `?lz_bias=<lz>` adds depth on top of the controller for depth tests.
+  Synth trace, voyage0 0 / 2 / 4, before → after: flipMean 8.31 → 5.65, 15.31 → 8.92, 7.70 → 5.34;
+  grey-purple share of lit pixels 0.127 → 0, 0.140 → 0, 0.200 → 0; HSV-grey 0.070 → 0.034, 0.113 → 0.018,
+  0.070 → 0.044; clipped 0.0004 → 0; flat 5x5 plateaus up to 0.026 → 0. Depth (`lz_bias`, voyage0 0): flipMean per unit of
+  motion 0.50 at home, 0.57 / 0.53 / 0.45 / 0.50 / 0.53 at +1.0 / 1.5 / 2.0 / 2.5 / 3.0: the lace stays crisp
+  and present to at least lz +3.0 (the old gate faded it from +0.6). Deep views go almost all teal (the deep orbit
+  angles bunch on one hue); not addressed here.
+- **3.frag**: chromadepth twin (see Variant frags).
+- **4.frag**: nebula, high-chroma OKLCH on a curated hue wheel.
+- **5.frag**: mandala, 4's colour folded into 5 to 8 petals by `seed4`.
 
 ## LACE AA (2026-11-22, 1.frag and 2.frag)
 
@@ -261,3 +339,13 @@ Synth trace, before / fix / `--ss 4` reference, shipped 1 sample: 2.frag flipMea
 1.frag flipMean 0.82 / 0.69 / 0.29, distance 2.99 / 2.27. Cost on SwiftShader at 2 samples, median of 3 runs:
 2.frag 75 to 135 ms per frame (+79%), 1.frag 66 to 102 (+54%); 1 sample costs less (not re-measured here).
 `atan(0, 0)` is guarded (NaN on some mobile GPUs): the orbit direction goes through `unitDir()`.
+
+**2.frag, 2026-11-27: LACE LOD replaces the extra sample and the coherence gate.** The orbit also records its
+traps and closest approach after 6, 12 and 24 steps. A truncated orbit is the same fractal with less detail and
+stays smooth in C for longer, so each level is a mip of the lace. `lodSample` measures with `fwidth` how far a
+level's trap (clamped to the band around the ramp, so thread cores don't count) and its colour jump between
+neighbouring pixels; a finer level fades in only where it and every coarser level resolve. The ramp itself is
+box-filtered over the footprint (`laceRamp`). Levels blend in OKLab at blended chroma. One orbit per pixel, no
+extra samples, no frame history; a deeper zoom resolves finer levels, so a dive gains lace instead of losing it
+to the old gate. A first try that filled the chaotic lace with a smooth colour field from the early orbit
+lowered sparkle less and read as mud: amber-to-teal passes olive.

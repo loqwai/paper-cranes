@@ -165,6 +165,126 @@ export const nav = (k, autoU, spin = 0, coaster = false) => {
     curl: base.curl + k[7] * 0.45,
   }
 }
+export const PRESENCE_FLOOR = 0.0004   // the gate's top never drops below this energy: room noise stays shut
+
+// FLIGHT (?fly=1): the NFC stickers' camera. A bird / ship flying forward through the fractal, never backing
+// out and never sliding sideways on a held rate (the coaster's steer pinned an unattended phone on the track
+// wall). Forward is depth: lz only grows, at a cruise the music speeds up. Heading is the screen-centre point,
+// which follows a destination on a critically damped spring with a capped on-screen speed, so every turn is a
+// curve. Every SCAN_SECS the controller runs 2.frag's orbit on the CPU ahead of the camera and picks the
+// densest filigree it can reach without turning back. 2.frag is not self-similar under zoom, so at FLY.cap
+// (or on a drop past half of it) it WARPS: a short forward rush with the trails up, then a cut to the next
+// voyage landmark, framed fresh. Never a pull-back.
+export const FLY = { cruise: 0.025, loud: 0.07, kick: 0.05, cap: 2.0, warpSecs: 0.6, turn: 0.45, maxSpeed: 0.12 }
+const SCAN_SECS = 1.5
+const DIVE = [0.23, 0.33]           // 2.frag: dive = home + (0.23, 0.33); screen centre = home + DIVE * (1 - 1/zoom)
+const VIEW = 0.6                    // 2.frag: C = dive + (home + 0.6 * p.yx - dive) / zoom → half screen height 0.6/zoom
+
+// 2.frag's orbit(): the two axis traps of the lace map at C, for scoring places on the CPU
+export const traps = (cx, cy, aPow, bOff, curl) => {
+  let vx = cx, vy = cy, x = 9, y = 9
+  const cc = Math.cos(curl), sc = Math.sin(curl)
+  for (let k = 0; k < 50; k++) {
+    const a = Math.atan2(vy, vx)
+    const d = (vx * vx + vy * vy) * aPow
+    const c = vx * a + vy * Math.log(d) / 2
+    const m = Math.exp(-a * vy) * Math.pow(d, vx / 2)
+    const nx = m * Math.cos(c), ny = m * Math.sin(c)
+    const sx = nx * nx - ny * ny - cx * bOff, sy = 2 * nx * ny - cy * bOff
+    vx = cc * sx + sc * sy                // GLSL rot2(curl) * V, column-major mat2(c, -s, s, c)
+    vy = -sc * sx + cc * sy
+    if (!Number.isFinite(vx) || !Number.isFinite(vy)) break
+    x = Math.min(x, Math.abs(vx))
+    y = Math.min(y, Math.abs(vy))
+  }
+  return [x, y]
+}
+
+// How good a view centred on (cx, cy) at log zoom lz is: STRUCTURE (lace against dark space at the view's
+// scale: coverage near half, changing between the 5x5 samples) minus NOISE (lace that flips between a sample
+// and a point ~1.5 phone pixels away: the speckle mush). The first version scored only density and dived
+// straight into the mush on the phone (2026-11-27).
+const laceAt = (x, y, shape, lo, hi) => {
+  const [tx, ty] = traps(x, y, shape.A, shape.B, shape.curl)
+  return Math.max(smoothstep(lo, hi, Math.log(Math.max(tx, 1e-12))), smoothstep(lo, hi, Math.log(Math.max(ty, 1e-12)))) ** 3
+}
+export const interest = (cx, cy, lz, shape, laceKnob = 0) => {
+  const lo = -2 + laceKnob * 0.9 - lz * 0.6, hi = lo - 3
+  const screen = 2 * VIEW / Math.exp(lz)          // fractal units per screen height
+  const h = screen / 4
+  const px = screen / 1000 * 1.5                   // ~1.5 pixels of a 1000-px-tall phone canvas
+  const mid = screen / 25                          // ~40 px: the filigree scale an eye reads
+  let sum = 0, noise = 0, fili = 0, n = 0
+  for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
+    const x = cx + (i - 1.5) / 1.5 * h, y = cy + (j - 1.5) / 1.5 * h * 0.5
+    const l = laceAt(x, y, shape, lo, hi)
+    sum += l
+    noise += Math.abs(l - laceAt(x + px, y + px * 0.7, shape, lo, hi))
+    fili += Math.abs(l - laceAt(x - mid * 0.6, y + mid, shape, lo, hi))
+    n++
+  }
+  const mean = sum / n
+  // coverage near half × filigree at the readable scale × no pixel-scale speckle. Flat ribbons (no filigree),
+  // empty space (no coverage) and mush (speckle) all lose; v1-v3 of this score each fell into one of those.
+  return 4 * mean * (1 - mean) * (0.1 + 3 * fili / n) * Math.max(0.05, 1 - 2.5 * noise / n)
+}
+
+// Screen centre T at log zoom lz → the home point 2.frag wants as NAV_CX / NAV_CY
+export const homeFor = (tx, ty, lz) => {
+  const k = 1 - Math.exp(-lz)
+  return { cx: tx - DIVE[0] * k, cy: ty - DIVE[1] * k }
+}
+const centreOf = (p) => {
+  const k = 1 - Math.exp(-p.lz)
+  return [p.cx + DIVE[0] * k, p.cy + DIVE[1] * k]
+}
+
+// Where to start in a landmark: its framing was composed for the landscape wall, and on a portrait phone some
+// open on a pale empty field (warp landings, 2026-11-27). Score a 5x5 grid over the landmark's view and start
+// on the best-structured point, within a third of a screen of the composed centre.
+const landing = (tx, ty, lz, shape, laceKnob) => {
+  const span = 2 * VIEW / Math.exp(lz) / 3
+  let best = { at: [tx, ty], score: interest(tx, ty, lz + 0.2, shape, laceKnob) }
+  for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) {
+    if (!i && !j) continue
+    const at = [tx + i / 2 * span, ty + j / 2 * span * 0.5]
+    const score = interest(at[0], at[1], lz + 0.2, shape, laceKnob)
+    if (score > best.score) best = { at, score }
+  }
+  return best.at
+}
+
+// Pick the best place ahead: candidates on two rings round the current destination, a little deeper than now,
+// scored by interest; a candidate behind the direction of travel is penalised so the camera never turns back.
+// Incremental: SCAN_PER_FRAME candidates a frame (a whole scan in one frame cost ~8 ms on a desktop, a dropped
+// frame on a phone every scan), then the best becomes the destination.
+const SCAN_PER_FRAME = 2
+const scanStart = (F) => {
+  const r = VIEW / Math.exp(F.lz + 0.4)
+  const cands = [F.dest]
+  for (const ring of [0.5, 1.1]) for (let i = 0; i < 8; i++) {
+    const a = F.scanPhase + i * Math.PI / 4
+    cands.push([F.dest[0] + Math.cos(a) * r * ring, F.dest[1] + Math.sin(a) * r * ring])
+  }
+  F.scanPhase += 0.37    // rotate the rings between scans so the search covers every heading
+  F.job = { cands, i: 0, best: null, lz: F.lz + 0.4 }
+}
+const scanStep = (F, shape, laceKnob) => {
+  const J = F.job
+  const [vx, vy] = F.v
+  const sp = Math.hypot(vx, vy)
+  for (let k = 0; k < SCAN_PER_FRAME && J.i < J.cands.length; k++, J.i++) {
+    const at = J.cands[J.i]
+    const dx = at[0] - F.t[0], dy = at[1] - F.t[1]
+    const back = J.i > 0 && sp > 1e-6 ? Math.max(0, -(dx * vx + dy * vy) / (Math.hypot(dx, dy) * sp + 1e-9)) : 0
+    const score = interest(at[0], at[1], J.lz, shape, laceKnob) * (J.i === 0 ? 1.2 : 1 - 0.8 * back)   // 1.2: hysteresis
+    if (!J.best || score > J.best.score) J.best = { at, score }
+  }
+  if (J.i < J.cands.length) return
+  F.dest = J.best.at
+  F.job = null
+}
+
 export const KICK_SECS = 0.4
 export const BEAT_STEP = 0.11    // cs_beat turns per full kick
 export const DROP_REFRACTORY = 8
@@ -179,7 +299,7 @@ const toward = (cur, target, dt, tau) => cur + (target - cur) * (1 - Math.exp(-d
 const env = (cur, target, dt, attack, release) => toward(cur, target, dt, target > cur ? attack : release)
 
 export const fresh = () => ({
-  time: 0, last: null, flow: 0, presence: 0,
+  time: 0, last: null, flow: 0, presence: 0, eRef: 0,
   A: 1.6, B: 0.55, bass: 0, mids: 0, treb: 0,
   kick: 0, kickAmp: 0, kickAge: 1, kickRefr: 0, bassWas: 0,
   build: 0, drop: 0, dropHold: 0, dropRefr: 0, jump: 0, jumpTo: 0,
@@ -189,19 +309,87 @@ export const fresh = () => ({
   bFast: 0, bSlow: 0, eFast: 0, eSlow: 0, localWas: 0, thump: 0,
   pearl: 0, focus: 0, spread: 0, grit: 0, tone: 0.5,
   throttle: 0, surge: 0, kickSurge: 0, dive: 0, diveTo: 0, panX: 0, panY: 0, steerX: 0, steerY: 0, climb: 0,
+  F: null,
 })
+
+const flightOut = (F) => {
+  const h = homeFor(F.t[0], F.t[1], F.lz)
+  return { cs_cx: h.cx, cs_cy: h.cy, cs_lz: F.lz, cs_warp: F.warp }
+}
+
+// FLIGHT step (?fly=1). S.nav already holds the glided voyage (shape A/B/curl, landmark framing); this owns
+// the camera centre and depth.
+const flight = (S, f, dt) => {
+  const shape = { A: S.nav.A, B: S.nav.B, curl: S.nav.curl }
+  const laceKnob = S.knobs[15] ?? 0
+  if (!S.F) {
+    // Start on the voyage's own framing (the landmark voyage0 names), so the opening is composed, not a lurch
+    const [tx, ty] = landing(...centreOf(S.nav), S.nav.lz, shape, laceKnob)
+    S.F = { t: [tx, ty], v: [0, 0], dest: [tx, ty], lz: S.nav.lz, rate: FLY.cruise, scan: 0.5, scanPhase: 0, warp: 0, warped: false }
+  }
+  const F = S.F
+  // SPEED: cruise, faster with loudness, a kick surges it. Eased 0.3 s so a kick is a push, never a jerk.
+  const want = FLY.cruise + (FLY.loud - FLY.cruise) * S.drive + FLY.kick * S.kick + (F.warp > 0 ? 0.8 * F.warp : 0)
+  F.rate = toward(F.rate, want, dt, 0.3)
+  F.lz += F.rate * dt
+
+  // HEADING: critically damped spring toward the destination, on-screen speed capped (screen heights / s)
+  const w = FLY.turn
+  for (let i = 0; i < 2; i++) F.v[i] += (w * w * (F.dest[i] - F.t[i]) - 2 * w * F.v[i]) * dt
+  const cap = FLY.maxSpeed * 2 * VIEW / Math.exp(F.lz)
+  const sp = Math.hypot(F.v[0], F.v[1])
+  if (sp > cap) { F.v[0] *= cap / sp; F.v[1] *= cap / sp }
+  F.t[0] += F.v[0] * dt
+  F.t[1] += F.v[1] * dt
+
+  F.scan -= dt
+  if (F.scan <= 0 && !F.job) {
+    F.scan = SCAN_SECS
+    scanStart(F)
+  }
+  if (F.job) scanStep(F, shape, laceKnob)
+
+  // WARP: at the cap, or on a drop once half way down. A forward rush (rate up, trails up via cs_warp), then
+  // at its peak a cut to the next landmark's framing. Every frame of it moves forward.
+  if (F.warp === 0 && (F.lz >= FLY.cap || (S.dropHold > 0 && F.lz > FLY.cap * 0.5))) {
+    F.warp = 1
+    F.warped = false
+  }
+  if (F.warp > 0) {
+    F.warp = Math.max(0, F.warp - dt / FLY.warpSecs)
+    if (!F.warped && F.warp < 0.5) {
+      F.warped = true
+      const n = WAYPOINTS.length
+      S.voyage = (Math.floor(S.voyage) + 1) % n
+      const p = place(S.voyage)
+      const [tx, ty] = landing(...centreOf(p), p.lz, { A: p.A, B: p.B, curl: p.curl }, laceKnob)
+      Object.assign(F, { t: [tx, ty], v: [0, 0], dest: [tx, ty], lz: p.lz, scan: 0.3, job: null })
+      // jump the glided shape too: the cut hides it, and a 1.8 s morph after it would read as a wobble
+      S.navMid = { ...S.navMid, ...p }
+      S.nav = { ...S.nav, ...p }
+    }
+  }
+}
 
 export const step = (S, f, dt) => {
   const coaster = num(f.coaster, 0) > 0.5
+  const fly = !coaster && num(f.fly, 0) > 0.5
+  const still = coaster || fly   // no spin, no kick lurch: the ride is the motion
   S.time += dt
 
   // PRESENCE: everything that adds light is multiplied by this, so silence relaxes to the resting look
   // (quiet must never mean brighter: noise z-scores spike when the music stops)
   const energy = num(f.energy, 0)
-  // The gate is for true silence only: a phone mic in a loud club reads energy 0.01-0.03, which the old
-  // 0.002..0.02 line-level ramp held near half-shut, multiplying every audio term toward nothing
+  // The gate is for true silence only, and it is RELATIVE: energy against the loudest this input has
+  // been lately (S.eRef, 0.3 s attack, 30 s release). Input level spans 20x across rigs: a line feed
+  // reads 0.03, a phone mic across a club 0.002-0.03 (Android voice processing alone took one from 0.016
+  // to 0.002 on 2026-11-27). The old absolute 0.0008..0.006 ramp held that phone at 0.14, multiplying
+  // every audio term toward nothing: brightness moved, nothing else did.
+  // Open at -18 dB under the recent peak, shut at -30 dB, never above PRESENCE_FLOOR (true silence).
   // 0.25 s to open, 3 s to close: the gaps between techno kicks must not shut the gate every beat
-  S.presence = env(S.presence, smoothstep(0.0008, 0.006, energy), dt, 0.25, 3)
+  S.eRef = env(S.eRef, energy, dt, 0.3, 30)
+  const gateHi = Math.max(PRESENCE_FLOOR, S.eRef * 0.125)
+  S.presence = env(S.presence, smoothstep(gateHi * 0.25, gateHi, energy), dt, 0.25, 3)
   // ?time=<s> holds time: the time-driven clocks stop, the audio-driven parts keep going (Aaron's test)
   const clock = Number.isFinite(f.time) ? 0 : 1
   // LOCAL loudness: bass and energy against their own last ~0.45 s, not the 500-frame history. On a
@@ -239,7 +427,7 @@ export const step = (S, f, dt) => {
     S.kickAmp = Math.max(S.kick, clamp01(0.6 + 0.4 * Math.max(bz, bassLocal * 1.5))) * live
     S.kickAge = 0
     S.beatTo += BEAT_STEP * S.kickAmp
-    S.lurchTo += LURCH * S.kickAmp
+    if (!still) S.lurchTo += LURCH * S.kickAmp   // coaster / fly: the kick surges the ride instead of turning the view
     S.punchFrom = S.punch
     S.punchAge = 0
     S.kickRefr = 0.18
@@ -322,8 +510,10 @@ export const step = (S, f, dt) => {
   // SPIN: always forward. Loudness (0.08 s attack, 0.35 s release) speeds it up, so the turn visibly
   // quickens with the music; it never reverses and never stops. Never wrapped: the glide would unwind it.
   S.drive = env(S.drive, clamp01(0.5 + 0.5 * num(f.energyZScore, 0) + 1.5 * eLocal) * live, dt, 0.08, 0.35)
-  S.drift += dt * SPIN.base * (SPIN.lo * clock + (SPIN.hi - SPIN.lo) * S.drive)
-  const target = nav(S.knobs.map(v => v ?? 0), S.voyage, 0, coaster)
+  // Coaster: no spin. The dive is the motion; a turning view on top of it was the least interesting part
+  // (Aaron, 2026-11-27: "the rotation for this thing is by far the least interesting part")
+  if (!still) S.drift += dt * SPIN.base * (SPIN.lo * clock + (SPIN.hi - SPIN.lo) * S.drive)
+  const target = nav(S.knobs.map(v => v ?? 0), S.voyage, 0, still)
   S.navMid ??= { ...target }
   S.nav ??= { ...target }
   for (const key in target) {
@@ -364,6 +554,9 @@ export const step = (S, f, dt) => {
     S.panY = toward(S.panY, 0, dt, 1)
   }
 
+  if (fly) flight(S, f, dt)
+  else S.F = null
+
   const turn = clamp01(num(f.knob_5, 0)) * SCRATCH
   S.scratch = S.scratch === null ? turn : toward(S.scratch, turn, dt, SCRATCH_TAU)
 
@@ -374,9 +567,9 @@ export const step = (S, f, dt) => {
     cs_breath: S.breath, cs_pearl: S.pearl, cs_focus: S.focus, cs_spread: S.spread, cs_grit: S.grit, cs_tone: S.tone,
     // The spin goes on after the glide: it is already smooth (an integral of an eased rate), and through
     // the 1.8 s glide its beat-scale quickening landed a beat late (rResid went negative)
-    cs_cx: S.nav.cx - S.panY, cs_cy: S.nav.cy + S.panX, cs_lz: S.nav.lz + S.dive,
+    ...(S.F ? flightOut(S.F) : { cs_cx: S.nav.cx - S.panY, cs_cy: S.nav.cy + S.panX, cs_lz: S.nav.lz + S.dive }),
     cs_rot: S.nav.rot + S.drift + S.lurch + S.scratch,
-    cs_throttle: S.throttle, cs_dive: S.dive, cs_climb: S.climb,
+    cs_throttle: S.throttle, cs_dive: S.dive, cs_climb: S.climb, cs_panX: S.panX, cs_panY: S.panY,
     cs_navA: S.nav.A, cs_navB: S.nav.B, cs_curl: S.nav.curl,
     cs_voyage: S.voyage, cs_drift: S.drift, cs_drive: S.drive, cs_beat: S.beat, cs_punch: S.punch, cs_lurch: S.lurch, cs_scratch: S.scratch, cs_thump: S.thump,
   }
