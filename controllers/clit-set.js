@@ -175,7 +175,7 @@ export const PRESENCE_FLOOR = 0.0004   // the gate's top never drops below this 
 // densest filigree it can reach without turning back. 2.frag is not self-similar under zoom, so at FLY.cap
 // (or on a drop past half of it) it WARPS: a short forward rush with the trails up, then a cut to the next
 // voyage landmark, framed fresh. Never a pull-back.
-export const FLY = { cruise: 0.025, loud: 0.07, kick: 0.05, cap: 1.0, warpSecs: 0.6, turn: 0.45, maxSpeed: 0.12 }
+export const FLY = { cruise: 0.025, loud: 0.07, kick: 0.05, cap: 2.0, warpSecs: 0.6, turn: 0.45, maxSpeed: 0.12 }
 const SCAN_SECS = 1.5
 const DIVE = [0.23, 0.33]           // 2.frag: dive = home + (0.23, 0.33); screen centre = home + DIVE * (1 - 1/zoom)
 const VIEW = 0.6                    // 2.frag: C = dive + (home + 0.6 * p.yx - dive) / zoom → half screen height 0.6/zoom
