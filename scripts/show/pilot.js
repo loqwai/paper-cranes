@@ -4,7 +4,7 @@
 // Stop with Ctrl-C or `kill <pid>`: the knobs stay where they are and are printed, so the dials
 // carry on from there. The decisions live in pilot-brain.js; this file is only the CDP loop.
 import { chromium } from 'playwright'
-import { init, step, meter, takeNotes, setCoaster, FEATURES, NAMES } from './pilot-brain.js'
+import { init, step, meter, takeNotes, setCoaster, FEATURES, NAMES } from '../../controllers/pilot-brain.js'
 
 const CDP_URL = `http://127.0.0.1:${process.env.SHOW_CDP_PORT || '9333'}`
 const HZ = 15
